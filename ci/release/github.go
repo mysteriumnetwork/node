@@ -21,12 +21,12 @@ import (
 	"io/ioutil"
 	"path"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/github"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type releaseGithubOpts struct {
@@ -69,14 +69,13 @@ func releaseGithub(opts *releaseGithubOpts) error {
 		}
 	}
 
-	log.Info("artifacts uploaded successfully")
+	log.Info().Msg("Artifacts uploaded successfully")
 	return nil
 }
 
 // ReleaseGithubSnapshot releases snapshot to github
 func ReleaseGithubSnapshot() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 
 	err := env.EnsureEnvVars(
 		env.SnapshotBuild,
@@ -89,7 +88,7 @@ func ReleaseGithubSnapshot() error {
 		return err
 	}
 	if !env.Bool(env.SnapshotBuild) {
-		log.Info("not a snapshot build, skipping ReleaseGithubSnapshot action...")
+		log.Info().Msg("Not a snapshot build, skipping ReleaseGithubSnapshot action...")
 		return nil
 	}
 
@@ -105,7 +104,6 @@ func ReleaseGithubSnapshot() error {
 // ReleaseGithubTag releases tag to github
 func ReleaseGithubTag() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 
 	err := env.EnsureEnvVars(
 		env.SnapshotBuild,
@@ -118,7 +116,7 @@ func ReleaseGithubTag() error {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
-		log.Info("not a tag build, skipping ReleaseGithubTag action...")
+		log.Info().Msg("Not a tag build, skipping ReleaseGithubTag action...")
 		return nil
 	}
 

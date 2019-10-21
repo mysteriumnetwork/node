@@ -22,11 +22,9 @@ import (
 	"net/http/httputil"
 
 	"github.com/hashicorp/go-retryablehttp"
-
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // HTTPTraceLog adapter for go-retryablehttp
 type HTTPTraceLog struct {
@@ -34,23 +32,23 @@ type HTTPTraceLog struct {
 
 // Printf printf
 func (*HTTPTraceLog) Printf(format string, params ...interface{}) {
-	log.Tracef(format, params...)
+	log.Debug().Msgf(format, params...)
 }
 
 // LogRequest log request
 func (*HTTPTraceLog) LogRequest(logger retryablehttp.Logger, r *http.Request, retryNumber int) {
-	if !log.IsTrace() {
+	if !logconfig.CurrentLogOptions.LogHTTP {
 		return
 	}
 	dumpRequest, _ := httputil.DumpRequest(r, true)
-	log.Tracef("Request: %v", string(dumpRequest))
+	log.Debug().Msgf("Request: %v", string(dumpRequest))
 }
 
 // LogResponse log response
 func (*HTTPTraceLog) LogResponse(logger retryablehttp.Logger, response *http.Response) {
-	if !log.IsTrace() {
+	if !logconfig.CurrentLogOptions.LogHTTP {
 		return
 	}
 	dumpResponse, _ := httputil.DumpResponse(response, true)
-	log.Tracef("Response: %v", string(dumpResponse))
+	log.Debug().Msgf("Response: %v", string(dumpResponse))
 }

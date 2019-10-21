@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -87,6 +88,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // NatPinger is responsible for pinging nat holes
@@ -174,8 +176,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.BootstrapWith(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
 
-	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
-	log.Infof("Build information (%s)", metadata.BuildAsString())
+	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
 	// check early for presence of an already running node
 	tequilaListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort))
@@ -315,7 +316,7 @@ func (di *Dependencies) Shutdown() (err error) {
 	var errs []error
 	defer func() {
 		for i := range errs {
-			log.Error("Dependencies shutdown failed: ", errs[i])
+			log.Error().Err(errs[i]).Msg("Dependencies shutdown failed")
 			if err == nil {
 				err = errs[i]
 			}
@@ -351,7 +352,6 @@ func (di *Dependencies) Shutdown() (err error) {
 	}
 
 	firewall.Reset()
-	log.Flush()
 	return nil
 }
 
@@ -604,14 +604,14 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.MysteriumAPI = mysterium.NewClient(options.BindAddress, network.MysteriumAPIAddress)
 
-	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
+	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
 
 	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
 		return err
 	}
 
-	log.Info("Using Eth contract at address: ", network.PaymentsContractAddress.String())
-	log.Info("options.ExperimentIdentityCheck: ", optionsNetwork.ExperimentIdentityCheck)
+	log.Info().Msg("Using Eth contract at address: " + network.PaymentsContractAddress.String())
+	log.Info().Msg("options.ExperimentIdentityCheck: " + strconv.FormatBool(optionsNetwork.ExperimentIdentityCheck))
 	if optionsNetwork.ExperimentIdentityCheck {
 		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Transactor.AccountantID)); err != nil {
 			return err
@@ -761,7 +761,7 @@ func (di *Dependencies) bootstrapBandwidthTracker() error {
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
-		log.Trace("experimental NAT punching enabled, creating a pinger")
+		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
 			di.NATTracker,
 			config.NewConfigParser(),

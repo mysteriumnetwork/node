@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/model"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // PeerPromiseSender knows how to send a promise message to the peer
@@ -63,8 +63,6 @@ func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender Peer
 
 // balanceDifferenceThreshold determines the threshold where we'll cancel the session if there's a missmatch larger than the threshold provided between the provider and the consumer balances
 const balanceDifferenceThreshold uint64 = 20
-
-const sessionPaymentsLogPrefix = "[session-payments] "
 
 // ErrBalanceMissmatch represents an error that occurs when balances do not match
 var ErrBalanceMissmatch = errors.New("balance missmatch")
@@ -115,7 +113,7 @@ func (cpo *SessionPayments) issuePromise(balance balance.Message) error {
 		Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
 	})
 	if err != nil {
-		log.Warn(sessionPaymentsLogPrefix, "Failed to send promise: ", err)
+		log.Warn().Err(err).Msg("Failed to send promise")
 	} else {
 		cpo.balanceTracker.Add(amountToExtend)
 	}

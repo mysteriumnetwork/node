@@ -34,10 +34,6 @@
   revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[constraint]]
-  name = "github.com/cihub/seelog"
-  version = "2.6.0"
-
-[[constraint]]
   name = "github.com/ethereum/go-ethereum"
   version = "=1.8.23"
 
@@ -172,3 +168,7 @@
 [[constraint]]
   name = "github.com/mysteriumnetwork/feedback"
   version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/rs/zerolog"
+  version = "1.15.0"

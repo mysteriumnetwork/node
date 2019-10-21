@@ -22,13 +22,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -39,8 +39,6 @@ var (
 	// ErrorWrongSessionOwner returned when consumer tries to destroy session that does not belongs to him
 	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
-
-const managerLogPrefix = "[session-manager] "
 
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
@@ -158,14 +156,14 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	// TODO: this whole block needs to go when we deprecate the old payment pingpong
 	var paymentEngine PaymentEngine
 	if consumerInfo.PaymentVersion == PaymentVersionV2 {
-		log.Info("using new payments")
+		log.Info().Msg("Using new payments")
 		engine, err := manager.paymentEngineFactory()
 		if err != nil {
 			return sessionInstance, err
 		}
 		paymentEngine = engine
 	} else {
-		log.Info("using legacy payments")
+		log.Info().Msg("Using legacy payments")
 		balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.IssuerID)
 		if err != nil {
 			return sessionInstance, err
@@ -183,10 +181,10 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	go func() {
 		err := paymentEngine.Start()
 		if err != nil {
-			log.Error(managerLogPrefix, "payment engine error: ", err)
+			log.Error().Err(err).Msg("Payment engine error")
 			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
 			if destroyErr != nil {
-				log.Error(managerLogPrefix, "session cleanup failed: ", err)
+				log.Error().Err(err).Msg("Session cleanup failed")
 			}
 		}
 	}()

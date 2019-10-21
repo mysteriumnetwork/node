@@ -22,12 +22,10 @@ import (
 	"os/exec"
 	"strconv"
 
-	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-const logPrefix = "[wireguard-windows] "
 
 func assignIP(iface string, subnet net.IPNet) error {
 	out, err := exec.Command("powershell", "-Command", "netsh interface ip set address name=\""+iface+"\" source=static "+subnet.String()).CombinedOutput()
@@ -84,7 +82,7 @@ func interfaceInfo(name string) (id, gw string, err error) {
 	for _, addr := range addrs {
 		ip, _, err := net.ParseCIDR(addr.String())
 		if err != nil {
-			log.Error(logPrefix, "failed to parse an interface IP address: ", err)
+			log.Error().Err(err).Msg("Failed to parse an interface IP address")
 		}
 
 		if ip.To4() == nil {

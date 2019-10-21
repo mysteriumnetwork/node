@@ -76,9 +76,8 @@ func TestConnectionErrorIsReturnedByClientInsteadOfDoubleParsing(t *testing.T) {
 				StatusCode: 500,
 				Body:       responseBody,
 			}),
-			baseURL:   "http://test-api-whatever",
-			logPrefix: "test prefix ",
-			ua:        "test-agent",
+			baseURL: "http://test-api-whatever",
+			ua:      "test-agent",
 		},
 	}
 
@@ -96,7 +95,7 @@ func mockHTTPClient(t *testing.T, method, url string, statusCode int, response s
 		w.Write([]byte(response))
 		w.WriteHeader(statusCode)
 	}))
-	return newHTTPClient(server.URL, "", "")
+	return newHTTPClient(server.URL, "")
 }
 
 type requestDoer func(req *http.Request) (*http.Response, error)

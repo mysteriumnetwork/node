@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/rs/zerolog/log"
 )
 
 // NewManager creates new instance of Wireguard service
@@ -98,10 +99,10 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		dns.ResolveViaConfigured(),
 	)
 
-	log.Info("starting DNS on: ", dnsServer.Addr)
+	log.Info().Msg("Starting DNS on: " + dnsServer.Addr)
 	go func() {
 		if err := dnsServer.Run(); err != nil {
-			log.Error("failed to start DNS server: ", err)
+			log.Error().Err(err).Msg("Failed to start DNS server")
 		}
 	}()
 
@@ -117,13 +118,13 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 
 	destroy := func() {
 		if err := dnsServer.Stop(); err != nil {
-			log.Error("failed to stop DNS server", err)
+			log.Error().Err(err).Msg("Failed to stop DNS server")
 		}
 		if err := manager.natService.Del(natRule); err != nil {
-			log.Error("failed to delete NAT forwarding rule: ", err)
+			log.Error().Err(err).Msg("Failed to delete NAT forwarding rule")
 		}
 		if err := connectionEndpoint.Stop(); err != nil {
-			log.Error("failed to stop connection endpoint: ", err)
+			log.Error().Err(err).Msg("Failed to stop connection endpoint")
 		}
 	}
 
@@ -133,7 +134,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.wg.Add(1)
-	log.Info("wireguard service started successfully")
+	log.Info().Msg("Wireguard service started successfully")
 
 	manager.wg.Wait()
 	return nil
@@ -143,6 +144,6 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
 
-	log.Info("wireguard service stopped")
+	log.Info().Msg("Wireguard service stopped")
 	return nil
 }

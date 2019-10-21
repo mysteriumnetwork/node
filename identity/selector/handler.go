@@ -19,11 +19,9 @@ package selector
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // IdentityRegistry exposes identity registration method
 type IdentityRegistry interface {
@@ -55,19 +53,19 @@ func NewHandler(
 
 func (h *handler) UseOrCreate(address, passphrase string) (id identity.Identity, err error) {
 	if len(address) > 0 {
-		log.Debug("using existing identity")
+		log.Debug().Msg("Using existing identity")
 		return h.useExisting(address, passphrase)
 	}
 
 	identities := h.manager.GetIdentities()
 	if len(identities) == 0 {
-		log.Debug("creating new identity")
+		log.Debug().Msg("Creating new identity")
 		return h.useNew(passphrase)
 	}
 
 	id, err = h.useLast(passphrase)
 	if err != nil || !h.manager.HasIdentity(id.Address) {
-		log.Debug("using existing identity")
+		log.Debug().Msg("Using existing identity")
 		return h.useExisting(identities[0].Address, passphrase)
 	}
 
@@ -75,7 +73,7 @@ func (h *handler) UseOrCreate(address, passphrase string) (id identity.Identity,
 }
 
 func (h *handler) useExisting(address, passphrase string) (id identity.Identity, err error) {
-	log.Trace("attempting to use existing identity")
+	log.Debug().Msg("Attempting to use existing identity")
 	id, err = h.manager.GetIdentity(address)
 	if err != nil {
 		return id, err
@@ -90,7 +88,7 @@ func (h *handler) useExisting(address, passphrase string) (id identity.Identity,
 		return id, errors.Wrap(err, "failed to verify registration status of local identity")
 	}
 	if !registered {
-		log.Info("existing identity is not registered, attempting to register")
+		log.Info().Msg("Existing identity is not registered, attempting to register")
 		if err = h.registry.RegisterIdentity(id, h.signerFactory(id)); err != nil {
 			return id, errors.Wrap(err, "failed to register identity")
 		}
@@ -101,23 +99,23 @@ func (h *handler) useExisting(address, passphrase string) (id identity.Identity,
 }
 
 func (h *handler) useLast(passphrase string) (identity identity.Identity, err error) {
-	log.Trace("attempting to use last identity")
+	log.Debug().Msg("Attempting to use last identity")
 	identity, err = h.cache.GetIdentity()
 	if err != nil || !h.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
 	}
-	log.Tracef("found identity in cache: %s", identity.Address)
+	log.Debug().Msg("Found identity in cache: " + identity.Address)
 
 	if err = h.manager.Unlock(identity.Address, passphrase); err != nil {
 		return identity, errors.Wrap(err, "failed to unlock identity")
 	}
-	log.Tracef("unlocked identity: %s", identity.Address)
+	log.Debug().Msg("Unlocked identity: " + identity.Address)
 
 	return identity, nil
 }
 
 func (h *handler) useNew(passphrase string) (id identity.Identity, err error) {
-	log.Trace("attempting to use new identity")
+	log.Debug().Msg("Attempting to use new identity")
 	// if all fails, create a new one
 	id, err = h.manager.CreateNewIdentity(passphrase)
 	if err != nil {

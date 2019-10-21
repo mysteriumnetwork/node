@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/rs/zerolog/log"
 )
 
 // StubPublisherEvent represents the event in publishers history
@@ -245,7 +246,7 @@ func (md *mockDialog) Close() error {
 	defer md.Unlock()
 
 	md.closed = true
-	log.Info(mockDialogLog, "dialog closed")
+	log.Info().Msg("Dialog closed")
 	return nil
 }
 

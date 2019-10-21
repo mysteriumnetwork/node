@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -150,7 +151,7 @@ func (sender *Sender) SendSessionEvent(e interface{}) {
 		serviceType = state.SessionInfo.Proposal.ServiceType
 		providerCountry = state.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
 	default:
-		log.Warn("unknown session event type", e)
+		log.Warn().Msgf("Unknown session event type %v", e)
 		return
 	}
 
@@ -210,7 +211,7 @@ func (sender *Sender) sendEvent(eventName string, context interface{}) {
 		Context:   context,
 	})
 	if err != nil {
-		log.Warnf("failed to send metric %q. %s", eventName, err)
+		log.Warn().Err(err).Msg("Failed to send metric: " + eventName)
 	}
 }
 
@@ -234,7 +235,7 @@ func (sender *Sender) setCurrentSession(s *connection.SessionInfo) {
 func (sender *Sender) originCountry() string {
 	location, err := sender.location.GetOrigin()
 	if err != nil {
-		log.Warn("failed to get consumer origin country")
+		log.Warn().Msg("Failed to get consumer origin country")
 	}
 	return location.Country
 }

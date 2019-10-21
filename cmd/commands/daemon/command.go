@@ -20,14 +20,12 @@ package daemon
 import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
-	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/shared"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
-
-var log = logconfig.NewLogger()
 
 // NewCommand function creates run command
 func NewCommand() *cli.Command {
@@ -62,9 +60,9 @@ func NewCommand() *cli.Command {
 
 func describeQuit(err error) error {
 	if err == nil {
-		log.Info("stopping application")
+		log.Info().Msg("Stopping application")
 	} else {
-		log.Errorf("terminating application due to error: %+v\n", err)
+		log.Error().Msgf("Terminating application due to error: %+v\n", err)
 	}
 	return err
 }

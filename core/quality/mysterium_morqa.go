@@ -28,6 +28,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 )
@@ -71,20 +72,20 @@ func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
 func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
 	request, err := m.newRequestJSON(http.MethodGet, "providers/sessions", nil)
 	if err != nil {
-		log.Warn("failed to create proposals metrics request: ", err)
+		log.Warn().Err(err).Msg("Failed to create proposals metrics request")
 		return nil
 	}
 
 	response, err := m.http.Do(request)
 	if err != nil {
-		log.Warn("failed to request or parse proposals metrics: ", err)
+		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
 		return nil
 	}
 	defer response.Body.Close()
 
 	var metricsResponse ServiceMetricsResponse
 	if err = parseResponseJSON(response, &metricsResponse); err != nil {
-		log.Warn("failed to request or parse proposals metrics: ", err)
+		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
 		return nil
 	}
 

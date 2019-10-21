@@ -23,6 +23,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +38,7 @@ func TestCollector_List_ListsAllLogFilesMatchingPattern(t *testing.T) {
 	defer func() { _ = os.Remove(fn2) }()
 
 	opts := LogOptions{
-		LogLevel: "Debug",
+		LogLevel: zerolog.DebugLevel,
 		Filepath: path.Join(path.Dir(fn1), baseName),
 	}
 	collector := NewCollector(&opts)
@@ -62,7 +63,7 @@ func TestCollector_Archive(t *testing.T) {
 	defer func() { _ = os.Remove(fn2) }()
 
 	opts := LogOptions{
-		LogLevel: "Debug",
+		LogLevel: zerolog.DebugLevel,
 		Filepath: path.Join(path.Dir(fn1), baseName),
 	}
 	collector := NewCollector(&opts)

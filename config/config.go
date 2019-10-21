@@ -23,13 +23,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/utils/jsonutil"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 )
-
-var log = logconfig.NewLogger()
 
 // Topic returns event bus topic for the given config key to listen for its updates
 func Topic(configKey string) string {
@@ -73,7 +71,7 @@ func (cfg *Config) EnableEventPublishing(eb eventbus.EventBus) {
 
 // LoadUserConfig loads and remembers user config location
 func (cfg *Config) LoadUserConfig(location string) error {
-	log.Debug("loading user configuration: ", location)
+	log.Debug().Msg("Loading user configuration: " + location)
 	cfg.userConfigLocation = location
 	_, err := toml.DecodeFile(cfg.userConfigLocation, &cfg.user)
 	if err != nil {
@@ -83,13 +81,13 @@ func (cfg *Config) LoadUserConfig(location string) error {
 	if err != nil {
 		return err
 	}
-	log.Info("user configuration loaded: \n", cfgJson)
+	log.Info().Msg("user configuration loaded: \n" + cfgJson)
 	return nil
 }
 
 // SaveUserConfig saves user configuration to the file from which it was loaded
 func (cfg *Config) SaveUserConfig() error {
-	log.Debug("saving user configuration")
+	log.Info().Msg("Saving user configuration")
 	if !cfg.userConfigLoaded() {
 		return errors.New("user configuration cannot be saved, because it must be loaded first")
 	}
@@ -106,7 +104,7 @@ func (cfg *Config) SaveUserConfig() error {
 	if err != nil {
 		return err
 	}
-	log.Info("user configuration written: \n", cfgJson)
+	log.Info().Msg("User configuration written: \n" + cfgJson)
 	return nil
 }
 
@@ -172,16 +170,16 @@ func (cfg *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
 	cliValue := cfg.searchMap(cfg.cli, segments)
 	if cliValue != nil {
-		log.Debug("returning CLI value ", key, ": ", cliValue)
+		log.Debug().Msgf("Returning CLI value %v:%v", key, cliValue)
 		return cliValue
 	}
 	userValue := cfg.searchMap(cfg.user, segments)
 	if userValue != nil {
-		log.Debug("returning user config value ", key, ": ", userValue)
+		log.Debug().Msgf("Returning user config value %v:%v", key, userValue)
 		return userValue
 	}
 	defaultValue := cfg.searchMap(cfg.defaults, segments)
-	log.Debug("returning default value ", key, ": ", defaultValue)
+	log.Debug().Msgf("Returning default value %v:%v", key, defaultValue)
 	return defaultValue
 }
 

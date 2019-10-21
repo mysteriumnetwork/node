@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/go-ci/shell"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -45,17 +45,17 @@ func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 	return func(identity string) {
 		outboundIp, err := resolver.GetOutboundIPAsString()
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to get Outbound IP"))
+			log.Error().Err(err).Msg("Failed to get Outbound IP")
 		}
 
 		mac, err := ip.GetMACAddressForIP(outboundIp)
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to MAC address"))
+			log.Error().Err(err).Msg("Failed to MAC address")
 		}
 
 		info := getNodeInformation()
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to get NodeInformation for MMN"))
+			log.Error().Err(err).Msg("Failed to get NodeInformation for MMN")
 			return
 		}
 
@@ -66,10 +66,10 @@ func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 		info.Identity = identity
 
 		if err = client.RegisterNode(info); err != nil {
-			log.Error(errors.Wrap(err, "failed to send NodeInformation to MMN"))
+			log.Error().Err(err).Msg("failed to send NodeInformation to MMN")
 		}
 
-		log.Info("Registered node to my.mysterium.network")
+		log.Info().Msg("Registered node to my.mysterium.network")
 	}
 }
 
@@ -88,7 +88,7 @@ func getOS() string {
 	case "darwin":
 		output, err := shell.NewCmd("sw_vers -productVersion").Output()
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to get OS information"))
+			log.Error().Err(err).Msg("Failed to get OS information")
 			return ""
 		}
 		return "MAC OS X - " + strings.TrimSpace(string(output))
@@ -96,7 +96,7 @@ func getOS() string {
 	case "linux":
 		output, err := shell.NewCmd("lsb_release -d").Output()
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to get OS information"))
+			log.Error().Err(err).Msg("Failed to get OS information")
 			return ""
 		}
 		return strings.TrimSpace(strings.Replace(string(output), "Description:", "", 1))

@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/zerolog/log"
 )
 
 // ApplicationStopper stops application and performs required cleanup tasks
@@ -40,7 +41,7 @@ func AddRouteForStop(router *httprouter.Router, stop ApplicationStopper) {
 //     description: Request accepted, stopping
 func newStopHandler(stop ApplicationStopper) httprouter.Handle {
 	return func(response http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		log.Info("Application stop requested")
+		log.Info().Msg("Application stop requested")
 
 		go callStopWhenNotified(req.Context().Done(), stop)
 		response.WriteHeader(http.StatusAccepted)

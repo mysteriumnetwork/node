@@ -20,13 +20,13 @@ package openvpn
 import (
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // ErrProcessNotStarted represents the error we return when the process is not started yet
@@ -55,14 +55,14 @@ type Client struct {
 
 // Start starts the connection
 func (c *Client) Start(options connection.ConnectOptions) error {
-	log.Info("starting connection")
+	log.Info().Msg("Starting connection")
 	proc, clientConfig, err := c.processFactory(options)
 	if err != nil {
-		log.Info("client config factory error: ", err)
+		log.Info().Err(err).Msg("Client config factory error")
 		return err
 	}
 	c.process = proc
-	log.Infof("client config: %v", clientConfig)
+	log.Info().Msgf("client config: %v", clientConfig)
 	removeAllowedIPRule, err := firewall.AllowIPAccess(clientConfig.VpnConfig.RemoteIP)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 
 	switch c.natPinger.(type) {
 	case *traversal.NoopPinger:
-		log.Infof("noop pinger detected, returning nil client config.")
+		log.Info().Msg("Noop pinger detected, returning nil client config.")
 		return nil, nil
 	}
 

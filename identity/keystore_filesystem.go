@@ -19,15 +19,16 @@ package identity
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/rs/zerolog/log"
 )
 
 // NewKeystoreFilesystem create new keystore, which keeps keys in filesystem
 func NewKeystoreFilesystem(directory string, lightweight bool) *keystore.KeyStore {
 	if lightweight {
-		log.Trace("using lightweight keystore")
+		log.Debug().Msg("Using lightweight keystore")
 		return keystore.NewKeyStore(directory, keystore.LightScryptN, keystore.LightScryptP)
 	}
 
-	log.Trace("using heavyweight keystore")
+	log.Debug().Msg("using heavyweight keystore")
 	return keystore.NewKeyStore(directory, keystore.StandardScryptN, keystore.StandardScryptP)
 }

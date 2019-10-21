@@ -31,7 +31,6 @@ func NewClient(ip string, port int) *Client {
 	return &Client{
 		http: newHTTPClient(
 			fmt.Sprintf("http://%s:%d", ip, port),
-			"[Tequilapi.Client] ",
 			"goclient-v0.1",
 		),
 	}

@@ -19,6 +19,7 @@ package connectivity
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/rs/zerolog/log"
 )
 
 // StatusSender is responsible for sending session connectivity status to other peer.
@@ -39,6 +40,6 @@ func (s *statusSender) Send(dialog communication.Sender, msg *StatusMessage) {
 		message: msg,
 	}
 	if err := dialog.Send(producer); err != nil {
-		log.Errorf("could not send connectivity status: %v", err)
+		log.Error().Err(err).Msg("Could not send connectivity status")
 	}
 }

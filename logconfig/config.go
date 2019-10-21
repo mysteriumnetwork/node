@@ -18,61 +18,46 @@
 package logconfig
 
 import (
-	"bytes"
-	"text/template"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-const seewayLogXMLConfigTemplate = `
-<seelog minlevel="{{.LogLevel}}">
-	<outputs formatid="main">
-		<console/>
-		{{ if (ne .Filepath "") }}
-		<rollingfile
-			formatid="main"
-			filename="{{.Filepath}}"
-			maxrolls="7"
-			type="date"
-			datepattern="2006.01.02"
-		/>
-		{{ end }}
-	</outputs>
-	<formats>
-		<format id="main" format="%UTCDate(2006-01-02T15:04:05.999999999) [%Level] %Msg%n"/>
-	</formats>
-</seelog>
-`
-
-func buildXmlConfig(opts LogOptions) string {
-	tmpl := template.Must(template.New("seelogcfg").Parse(seewayLogXMLConfigTemplate))
-
-	var tpl bytes.Buffer
-	err := tmpl.Execute(&tpl, opts)
-	if err != nil {
-		panic(err)
-	}
-
-	return tpl.String()
-}
+// TODO remove this after log rotation is re-done on zerolog
+// leaving for the reference
+//const seewayLogXMLConfigTemplate = `
+//<seelog minlevel="{{.LogLevel}}">
+//	<outputs formatid="main">
+//		<console/>
+//		{{ if (ne .Filepath "") }}
+//		<rollingfile
+//			formatid="main"
+//			filename="{{.Filepath}}"
+//			maxrolls="7"
+//			type="date"
+//			datepattern="2006.01.02"
+//		/>
+//		{{ end }}
+//	</outputs>
+//	<formats>
+//		<format id="main" format="%UTCDate(2006-01-02T15:04:05.999999999) [%Level] %Msg%n"/>
+//	</formats>
+//</seelog>
+//`
 
 // BootstrapWith loads log package into the overall system
 func BootstrapWith(opts *LogOptions) {
 	if opts != nil {
 		CurrentLogOptions = *opts
 	}
-	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(CurrentLogOptions))
-	if err != nil {
-		log.Warn("Error parsing log configuration", err)
-		return
-	}
-	err = log.UseLogger(newLogger)
-	if err != nil {
-		log.Warn("Error setting new logger for log", err)
-	}
-	log.Infof("Log level: %s", CurrentLogOptions.LogLevel)
+	configureZerolog(opts)
+	log.Info().Msgf("Log level: %s", CurrentLogOptions.LogLevel)
 	if CurrentLogOptions.Filepath != "" {
-		log.Infof("Log file path: %s", CurrentLogOptions.Filepath)
+		log.Info().Msg("Log file path: " + CurrentLogOptions.Filepath)
 	}
 }
 
@@ -80,7 +65,41 @@ func BootstrapWith(opts *LogOptions) {
 func Bootstrap() {
 	BootstrapWith(
 		&LogOptions{
-			LogLevel: log.DebugStr,
+			LogLevel: zerolog.DebugLevel,
 		},
 	)
+}
+
+func padRight(s string, length int) string {
+	if len(s) >= length {
+		return s
+	}
+	return s + strings.Repeat(" ", length-len(s))
+}
+
+const rootPkg = "github.com/mysteriumnetwork/node"
+
+func configureZerolog(opts *LogOptions) {
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.CallerMarshalFunc = func(file string, line int) string {
+		pkgStart := strings.Index(file, rootPkg)
+		var relFile string
+		if pkgStart > 0 {
+			relFile = file[pkgStart+len(rootPkg):]
+		} else {
+			relFile = file
+		}
+		caller := relFile + ":" + strconv.Itoa(line)
+		return padRight(caller, 35)
+	}
+	writer := zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		TimeFormat: "2006-01-02T15:04:05.000",
+	}
+	log.Logger = log.Output(writer).
+		Level(opts.LogLevel).
+		With().
+		Caller().
+		Timestamp().
+		Logger()
 }

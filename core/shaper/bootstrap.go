@@ -17,7 +17,10 @@
 
 package shaper
 
-import "github.com/mysteriumnetwork/node/eventbus"
+import (
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/rs/zerolog/log"
+)
 
 // Shaper shapes traffic on a network interface
 type Shaper interface {
@@ -30,7 +33,7 @@ type Shaper interface {
 func Bootstrap(eventBus eventbus.EventBus) (shaper Shaper) {
 	shaper, err := newWonderShaper(eventBus)
 	if err != nil {
-		log.Error("Could not create wonder shaper, using noop: ", err)
+		log.Warn().Err(err).Msg("Could not create wonder shaper, using noop")
 		shaper = newNoopShaper()
 	}
 	return shaper

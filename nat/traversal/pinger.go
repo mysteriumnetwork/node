@@ -24,11 +24,11 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/net/ipv4"
 )
 
@@ -115,12 +115,12 @@ type Params struct {
 
 // Start starts NAT pinger and waits for PingTarget to ping
 func (p *Pinger) Start() {
-	log.Info(prefix, "Starting a NAT pinger")
+	log.Info().Msg("Starting a NAT pinger")
 
 	for {
 		select {
 		case <-p.stop:
-			log.Info(prefix, "stop pinger called")
+			log.Info().Msg("Stop pinger called")
 			return
 		case pingParams := <-p.pingTarget:
 			if isPunchingRequired(pingParams) {
@@ -144,7 +144,7 @@ func (p *Pinger) Stop() {
 
 // PingProvider pings provider determined by destination provided in sessionConfig
 func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error {
-	log.Info(prefix, "NAT pinging to provider")
+	log.Info().Msg("NAT pinging to provider")
 
 	conn, err := p.getConnection(ip, port, consumerPort)
 	if err != nil {
@@ -154,7 +154,7 @@ func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan
 	go func() {
 		err := p.ping(conn)
 		if err != nil {
-			log.Warn(prefix, "Error while pinging: ", err)
+			log.Warn().Err(err).Msg("Error while pinging")
 		}
 	}()
 
@@ -174,7 +174,7 @@ func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan
 
 	if consumerPort > 0 {
 		consumerAddr := fmt.Sprintf("127.0.0.1:%d", consumerPort+1)
-		log.Info(prefix, "Handing connection to consumer NATProxy: ", consumerAddr)
+		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
 		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	}
 	return nil
@@ -200,7 +200,7 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			return nil
 
 		case <-time.After(pingInterval * time.Millisecond):
-			log.Trace(prefix, "pinging.. ")
+			log.Debug().Msg("Pinging... ")
 			// This is the essence of the TTL based udp punching.
 			// We're slowly increasing the TTL so that the packet is held.
 			// After a few attempts we're setting the value to 128 and assuming we're through.
@@ -245,14 +245,14 @@ func (p *Pinger) getConnection(ip string, port int, pingerPort int) (*net.UDPCon
 		return nil, err
 	}
 
-	log.Info(prefix, "remote socket: ", udpAddr.String())
+	log.Info().Msg("Remote socket: " + udpAddr.String())
 
 	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: pingerPort}, udpAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info(prefix, "local socket: ", conn.LocalAddr().String())
+	log.Info().Msg("Local socket: " + conn.LocalAddr().String())
 
 	return conn, nil
 }
@@ -264,7 +264,7 @@ func (p *Pinger) PingTarget(target *Params) {
 		return
 	// do not block if ping target is not received
 	case <-time.After(100 * time.Millisecond):
-		log.Info(prefix, "ping target timeout: ", target)
+		log.Info().Msgf("Ping target timeout: %v", target)
 		return
 	}
 }
@@ -290,12 +290,12 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Errorf("%sfailed to read remote peer: %s cause: %s - attempting to continue", prefix, conn.RemoteAddr().String(), err)
+			log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", conn.RemoteAddr().String())
 			continue
 		}
 
 		if n > 0 {
-			log.Infof("%sremote peer data received: %s, len: %d", prefix, string(buf[:n]), n)
+			log.Info().Msgf("Remote peer data received: %s, len: %d", string(buf[:n]), n)
 			return nil
 		}
 	}
@@ -317,37 +317,37 @@ func (p *Pinger) Valid() bool {
 }
 
 func (p *Pinger) pingTargetConsumer(pingParams *Params) {
-	log.Info(prefix, "Pinging peer with: ", pingParams)
+	log.Info().Msgf("Pinging peer with: %v", pingParams)
 
 	// TODO: remove port parsing for consumer config
 	IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
 	if err != nil {
-		log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
+		log.Warn().Err(err).Msgf("Unable to parse ping message: %v", pingParams)
 		return
 	}
 
-	log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, pingParams.ConsumerPort)
+	log.Info().Msgf("Ping target received: IP: %v, port: %v", IP, pingParams.ConsumerPort)
 	if !p.natProxy.isAvailable(serviceType) {
-		log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
+		log.Warn().Msgf("NATProxy is not available for this transport protocol %v", serviceType)
 		return
 	}
 
 	conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
 	if err != nil {
-		log.Error(prefix, "failed to get connection: ", err)
+		log.Error().Err(err).Msg("Failed to get connection")
 		return
 	}
 
 	go func() {
 		err := p.ping(conn)
 		if err != nil {
-			log.Warn(prefix, "Error while pinging: ", err)
+			log.Warn().Err(err).Msg("Error while pinging")
 		}
 	}()
 
 	err = p.pingReceiver(conn, pingParams.Cancel)
 	if err != nil {
-		log.Error(prefix, "ping receiver error: ", err)
+		log.Error().Err(err).Msg("Ping receiver error")
 		return
 	}
 
@@ -355,7 +355,7 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 
 	p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 
-	log.Info(prefix, "ping received, waiting for a new connection")
+	log.Info().Msg("Ping received, waiting for a new connection")
 
 	go p.natProxy.handOff(serviceType, conn)
 }

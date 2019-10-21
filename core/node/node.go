@@ -21,6 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/tequilapi"
+	"github.com/rs/zerolog/log"
 )
 
 // NatPinger allows to send nat pings as well as stop it
@@ -77,13 +78,13 @@ func (node *Node) Start() error {
 	go func() {
 		err := node.uiServer.Serve()
 		if err != nil {
-			log.Error("UI server error", err)
+			log.Error().Err(err).Msg("UI server error")
 		}
 	}()
 
 	node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStarted})
 
-	log.Infof("API started on: %v", address)
+	log.Info().Msg("API started on: " + address)
 	go node.natPinger.Start()
 
 	return nil
@@ -101,22 +102,22 @@ func (node *Node) Kill() error {
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:
-			log.Info("no active connection - proceeding")
+			log.Info().Msg("No active connection - proceeding")
 		default:
 			return err
 		}
 	} else {
-		log.Info("connection closed")
+		log.Info().Msg("Connection closed")
 	}
 
 	node.httpAPIServer.Stop()
-	log.Info("API stopped")
+	log.Info().Msg("API stopped")
 
 	node.uiServer.Stop()
-	log.Info("web server stopped")
+	log.Info().Msg("Web UI server stopped")
 
 	node.natPinger.Stop()
-	log.Info("NAT pinger stopped")
+	log.Info().Msg("NAT pinger stopped")
 
 	return nil
 }

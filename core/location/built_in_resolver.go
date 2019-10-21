@@ -22,13 +22,14 @@ import (
 	"github.com/mysteriumnetwork/node/core/location/gendb"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 //go:generate go run generator/generator.go --dbname db/GeoLite2-Country.mmdb --output gendb --compress
 
 // NewBuiltInResolver returns new db resolver initialized from built in data
 func NewBuiltInResolver(ipResolver ip.Resolver) (*DBResolver, error) {
-	log.Debug("detecting with built-in resolver")
+	log.Debug().Msg("Detecting with built-in resolver")
 	dbBytes, err := gendb.LoadData()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load builtin db")

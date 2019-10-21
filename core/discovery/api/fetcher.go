@@ -22,7 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // FetchCallback does real fetch of proposals through Mysterium API
@@ -59,7 +59,7 @@ func (fetcher *Fetcher) Start() error {
 		// and user will have to wait for another 30 seconds for them to be populated.
 		time.Sleep(2 * time.Second)
 		if err := fetcher.fetchDo(); err != nil {
-			log.Warn(errors.Wrap(err, "initial proposal fetch failed, continuing"))
+			log.Warn().Err(err).Msg("Initial proposal fetch failed, continuing")
 		}
 	}()
 
@@ -93,11 +93,11 @@ func (fetcher *Fetcher) fetchLoop() {
 func (fetcher *Fetcher) fetchDo() error {
 	proposals, err := fetcher.fetch()
 	if err != nil {
-		log.Warnf("failed to fetch proposals: %s", err)
+		log.Warn().Err(err).Msg("Failed to fetch proposals")
 		return err
 	}
 
-	log.Infof("proposals fetched: %d", len(proposals))
+	log.Debug().Msgf("Proposals fetched: %d", len(proposals))
 	fetcher.proposalStorage.Set(proposals...)
 
 	for _, proposal := range proposals {

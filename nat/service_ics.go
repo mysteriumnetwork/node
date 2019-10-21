@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -132,7 +132,7 @@ func (ics *serviceICS) enableRemoteAccessService() error {
 func (ics *serviceICS) Add(rule RuleForwarding) error {
 	_, ipnet, err := net.ParseCIDR(rule.SourceSubnet)
 	if err != nil {
-		log.Warnf("%s Failed to parse IP-address: %s", natLogPrefix, rule.SourceSubnet)
+		log.Warn().Msg("Failed to parse IP-address: " + rule.SourceSubnet)
 	}
 
 	ip := incrementIP(ipnet.IP)
@@ -187,7 +187,7 @@ func (ics *serviceICS) Disable() (resErr error) {
 	}
 	for iface, rule := range ics.ifaces {
 		if err := ics.Del(rule); err != nil {
-			log.Errorf("%s Failed to cleanup internet connection sharing for '%s' interface: %v", natLogPrefix, iface, err)
+			log.Error().Err(err).Msg("Failed to cleanup internet connection sharing for interface: " + iface)
 			if resErr == nil {
 				resErr = err
 			}
@@ -197,7 +197,7 @@ func (ics *serviceICS) Disable() (resErr error) {
 	_, err := ics.powerShell("Set-Service -Name RemoteAccess -StartupType " + ics.remoteAccessStatus)
 	if err != nil {
 		err = errors.Wrap(err, "failed to revert RemoteAccess service startup type")
-		log.Errorf("%s %v", natLogPrefix, err)
+		log.Error().Err(err).Msg("")
 		if resErr == nil {
 			resErr = err
 		}
@@ -206,7 +206,7 @@ func (ics *serviceICS) Disable() (resErr error) {
 	ifaceName, err := ics.getPublicInterfaceName()
 	if err != nil {
 		err = errors.Wrap(err, "failed to get public interface name")
-		log.Errorf("%s %v", natLogPrefix, err)
+		log.Error().Err(err).Msg("")
 		if resErr == nil {
 			resErr = err
 		}
@@ -215,7 +215,7 @@ func (ics *serviceICS) Disable() (resErr error) {
 	_, err = ics.powerShell(getDisableSharingScript(ifaceName))
 	if err != nil {
 		err = errors.Wrap(err, "failed to disable internet connection sharing")
-		log.Errorf("%s %v", natLogPrefix, err)
+		log.Error().Err(err).Msg("")
 		if resErr == nil {
 			resErr = err
 		}

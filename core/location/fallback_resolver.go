@@ -19,6 +19,7 @@ package location
 
 import (
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // ErrLocationResolutionFailed represents a failure to resolve location and running out of fallbacks to try
@@ -38,11 +39,11 @@ func NewFallbackResolver(resolvers []Resolver) *FallbackResolver {
 
 // DetectLocation allows us to detect our current location
 func (fr *FallbackResolver) DetectLocation() (Location, error) {
-	log.Debug("detecting with fallback resolver")
+	log.Debug().Msg("Detecting with fallback resolver")
 	for _, v := range fr.LocationResolvers {
 		loc, err := v.DetectLocation()
 		if err != nil {
-			log.Warn("could not resolve location", err)
+			log.Warn().Err(err).Msg("Could not resolve location")
 		} else {
 			return loc, err
 		}

@@ -37,6 +37,7 @@ import (
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
+	"github.com/rs/zerolog/log"
 )
 
 const statisticsReportingIntervalInSeconds = 30
@@ -71,7 +72,7 @@ func NewManager(nodeOptions node.Options,
 				Down: int64(sbc.BytesIn),
 			})
 		} else {
-			log.Warnf("could not map sessions - expected a single session to exist for a user, got %v sessions instead", len(sessions))
+			log.Warn().Msgf("Could not map sessions - expected a single session to exist for a user, got %v sessions instead", len(sessions))
 		}
 	}
 
@@ -172,7 +173,7 @@ func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet
 	}
 
 	if isLocalnet {
-		log.Warnf(
+		log.Warn().Msgf(
 			`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
 Since it's localnet, will use %v for openvpn service`, publicIP,
 			outboundIP,
@@ -180,7 +181,7 @@ Since it's localnet, will use %v for openvpn service`, publicIP,
 		return outboundIP
 	}
 
-	log.Warnf(
+	log.Warn().Msgf(
 		`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
 You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 		publicIP,
@@ -195,7 +196,7 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 
 // primitiveFactory takes in the country and providerID and forms the tls primitives out of it
 func primitiveFactory(currentCountry, providerID string) (*tls.Primitives, error) {
-	log.Info("country detected: ", currentCountry)
+	log.Info().Msg("Country detected: " + currentCountry)
 
 	caSubject := pkix.Name{
 		Country:            []string{currentCountry},

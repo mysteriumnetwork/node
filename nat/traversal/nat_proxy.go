@@ -24,12 +24,10 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
-
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/rs/zerolog/log"
 )
 
-const logPrefix = "[NATProxy] "
 const bufferLen = 2048 * 1024
 
 // NATProxy provides traffic proxying functionality for registered services
@@ -56,11 +54,11 @@ func (np *NATProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn
 // Read from listener socket and write to remoteConn
 // Read from remoteConn and write to listener socket
 func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, stop chan struct{}) {
-	log.Info(logPrefix, "Inside consumer NATProxy")
+	log.Info().Msg("Inside consumer NATProxy")
 
 	laddr, err := net.ResolveUDPAddr("udp4", consumerAddr)
 	if err != nil {
-		log.Error(logPrefix, "failed to get local address for consumer NATProxy: ", err)
+		log.Error().Err(err).Msg("Failed to get local address for consumer NATProxy")
 		return
 	}
 
@@ -69,27 +67,27 @@ func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, 
 
 	fd, err := remoteConn.File()
 	if err != nil {
-		log.Error(logPrefix, "failed to fetch fd from: ", remoteConn)
+		log.Error().Msgf("Failed to fetch fd from: %v", remoteConn)
 		return
 	}
 	defer fd.Close()
 
-	log.Info(logPrefix, "protecting socket: ", int(fd.Fd()))
+	log.Info().Msgf("Protecting socket: %d", int(fd.Fd()))
 
 	np.socketProtect(int(fd.Fd()))
 
 	for {
-		log.Info(logPrefix, "waiting connect from openvpn3 client process")
+		log.Info().Msg("Waiting connect from openvpn3 client process")
 		// If for some reason consumer disconnects, new connection will be from different port
 		proxyConn, err := net.ListenUDP("udp4", laddr)
 		if err != nil {
-			log.Errorf("%sfailed to listen for consumer proxy on: %v, %v", logPrefix, laddr, err)
+			log.Error().Err(err).Msgf("Failed to listen for consumer proxy on: %v", laddr)
 			return
 		}
 
 		select {
 		case <-stop:
-			log.Info(logPrefix, "Stopping NATProxy handOff loop")
+			log.Info().Msg("Stopping NATProxy handOff loop")
 			proxyConn.Close()
 			remoteConn.Close()
 			return
@@ -105,24 +103,24 @@ func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, 
 }
 
 func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
-	log.Info(logPrefix, "start copying stream from consumer NATProxy to remote remoteConn")
+	log.Info().Msg("Start copying stream from consumer NATProxy to remote remoteConn")
 	buf := make([]byte, bufferLen)
 	for {
 		select {
 		case <-stop:
-			log.Info(logPrefix, "Stopping NATProxy joinUDPStreams")
+			log.Info().Msg("Stopping NATProxy joinUDPStreams")
 			return
 		default:
 		}
 		n, addr, err := conn.ReadFromUDP(buf)
 		if err != nil {
-			log.Errorf("%sFailed to read local process: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+			log.Error().Err(err).Msg("Failed to read local process: " + conn.LocalAddr().String())
 			return
 		}
 		if n > 0 {
 			_, err := remoteConn.Write(buf[:n])
 			if err != nil {
-				log.Errorf("%sFailed to write remote peer: %s cause: %s", logPrefix, remoteConn.RemoteAddr().String(), err)
+				log.Error().Err(err).Msg("Failed to write remote peer: " + remoteConn.RemoteAddr().String())
 				return
 			}
 			if np.addrLast.String() != addr.String() {
@@ -138,23 +136,23 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 	for {
 		select {
 		case <-stop:
-			log.Info(logPrefix, "Stopping NATProxy readWriteToAddr loop")
+			log.Info().Msg("Stopping NATProxy readWriteToAddr loop")
 			return
 		default:
 		}
 
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Errorf("%sFailed to read remote peer: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+			log.Error().Err(err).Msg("Failed to read remote peer: " + conn.LocalAddr().String())
 			return
 		}
 		for i := 0; i < n; {
 			written, err := remoteConn.WriteToUDP(buf[i:n], addr)
 			if written < n {
-				log.Trace("%sPartial write of %d bytes", logPrefix, written)
+				log.Debug().Msgf("Partial write of %d bytes", written)
 			}
 			if err != nil {
-				log.Errorf("%sFailed to write to local process: %s cause: %s", logPrefix, remoteConn.LocalAddr().String(), err)
+				log.Error().Err(err).Msg("Failed to write to local process: " + remoteConn.LocalAddr().String())
 				return
 			}
 			i += written
@@ -173,10 +171,10 @@ func NewNATProxy() *NATProxy {
 func (np *NATProxy) handOff(serviceType services.ServiceType, incomingConn *net.UDPConn) {
 	proxyConn, err := np.getConnection(serviceType)
 	if err != nil {
-		log.Error(logPrefix, "failed to connect to NATProxy: ", err)
+		log.Error().Err(err).Msg("Failed to connect to NATProxy")
 		return
 	}
-	log.Info(logPrefix, "handing off a connection to a service on ", proxyConn.RemoteAddr().String())
+	log.Info().Msg("Handing off a connection to a service on " + proxyConn.RemoteAddr().String())
 	go copyStreams(proxyConn, incomingConn)
 	go copyStreams(incomingConn, proxyConn)
 }
@@ -188,16 +186,16 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 	defer srcConn.Close()
 	totalBytes, err := io.CopyBuffer(dstConn, srcConn, buf)
 	if err != nil {
-		log.Error(logPrefix, "failed to writing / reading a stream to/from NATProxy: ", err)
+		log.Error().Err(err).Msg("Failed to write/read a stream to/from NATProxy")
 	}
-	log.Tracef("%stotal bytes transferred from %s to %s: %d", logPrefix,
+	log.Debug().Msgf("Total bytes transferred from %s to %s: %d",
 		srcConn.RemoteAddr().String(),
 		dstConn.RemoteAddr().String(),
 		totalBytes)
 }
 
 func (np *NATProxy) registerServicePort(serviceType services.ServiceType, port int) {
-	log.Infof("%sregistering service %s for port %d to NATProxy", logPrefix, serviceType, port)
+	log.Info().Msgf("Registering service %s for port %d to NATProxy", serviceType, port)
 	np.servicePorts[serviceType] = port
 }
 

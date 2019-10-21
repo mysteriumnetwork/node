@@ -24,14 +24,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/requests"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
@@ -174,7 +172,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 
 	signatureHex := common.Bytes2Hex(sig)
 	regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
-	log.Info("regReq: %v", regReq)
+	log.Info().Msgf("regReq: %v", regReq)
 	regReq.Identity = id
 
 	return regReq, nil

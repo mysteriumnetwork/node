@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -29,9 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-const logPrefix = "[service-noop] "
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times
 var ErrAlreadyStarted = errors.New("service already started")
@@ -54,7 +52,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.process.Add(1)
-	log.Info(logPrefix, "Noop service started successfully")
+	log.Info().Msg("Noop service started successfully")
 	manager.process.Wait()
 	return nil
 }
@@ -62,7 +60,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 // Stop stops service
 func (manager *Manager) Stop() error {
 	manager.process.Done()
-	log.Info(logPrefix, "Noop service stopped")
+	log.Info().Msg("Noop service stopped")
 	return nil
 }
 

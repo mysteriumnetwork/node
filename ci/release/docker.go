@@ -26,11 +26,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const dockerImagesDir = "build/docker-images"
@@ -64,12 +64,12 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 	}
 
 	for _, archive := range archives {
-		log.Info("Restoring from: ", archive)
+		log.Info().Msg("Restoring from: " + archive)
 		imageName, err := restoreDockerImage(archive)
 		if err != nil {
 			return err
 		}
-		log.Info("Restored image: ", imageName)
+		log.Info().Msg("Restored image: " + imageName)
 
 		var releasable *dockerReleasable
 		for i := range opts.releasables {
@@ -80,10 +80,10 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 			}
 		}
 		if releasable == nil {
-			log.Info("image didn't match any releasable definition, skipping: ", imageName)
+			log.Info().Msg("Image didn't match any releasable definition, skipping: " + imageName)
 			continue
 		}
-		log.Debug("resolved releasable info: ", releasable)
+		log.Debug().Msgf("Resolved releasable info: %v", releasable)
 
 		for _, tag := range releasable.tags {
 			err = pushDockerImage(imageName, releasable.repository, tag)
@@ -104,7 +104,6 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 // ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repository in docker hub
 func ReleaseDockerSnapshot() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 
 	err := env.EnsureEnvVars(
 		env.SnapshotBuild,
@@ -117,7 +116,7 @@ func ReleaseDockerSnapshot() error {
 	}
 
 	if !env.Bool(env.SnapshotBuild) {
-		log.Info("not a snapshot build, skipping ReleaseDockerSnapshot action...")
+		log.Info().Msg("Not a snapshot build, skipping ReleaseDockerSnapshot action...")
 		return nil
 	}
 
@@ -139,7 +138,6 @@ func ReleaseDockerSnapshot() error {
 // ReleaseDockerTag uploads docker tag release images to docker hub
 func ReleaseDockerTag() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 
 	err := env.EnsureEnvVars(
 		env.TagBuild,
@@ -153,7 +151,7 @@ func ReleaseDockerTag() error {
 	}
 
 	if !env.Bool(env.TagBuild) {
-		log.Info("not a tag build, skipping ReleaseDockerTag action...")
+		log.Info().Msg("Not a tag build, skipping ReleaseDockerTag action...")
 		return nil
 	}
 
@@ -198,11 +196,11 @@ func pushDockerImage(localImageName, repository, tag string) error {
 	imageName := fmt.Sprintf("%s:%s", repository, tag)
 	// docker and repositories don't like upper case letters in references
 	imageName = strings.ToLower(imageName)
-	log.Info("Tagging ", localImageName, " as ", imageName)
+	log.Info().Msg("Tagging " + localImageName + " as " + imageName)
 	if err := exec.Command("docker", "tag", localImageName, imageName).Run(); err != nil {
 		return errors.Wrapf(err, "error tagging docker image %q as %q", localImageName, imageName)
 	}
-	log.Info("Pushing ", imageName, " to remote repository")
+	log.Info().Msg("Pushing " + imageName + " to remote repository")
 	if err := exec.Command("docker", "push", imageName).Run(); err != nil {
 		return errors.Wrapf(err, "error pushing docker image %q", imageName)
 	}
@@ -216,7 +214,7 @@ func dockerLogin(username, password string) error {
 
 func dockerLogout() {
 	if err := exec.Command("docker", "logout").Run(); err != nil {
-		log.Warn("error logging out from docker: ", err)
+		log.Warn().Err(err).Msg("Error logging out from docker")
 	}
 }
 
@@ -278,7 +276,7 @@ func restoreDockerImage(archiveFile string) (restoredImage string, err error) {
 }
 
 func removeDockerImage(imageName string) error {
-	log.Info("Removing: ", imageName)
+	log.Info().Msg("Removing: " + imageName)
 	err := exec.Command("docker", "image", "rm", imageName).Run()
 	return errors.Wrapf(err, "error removing docker image %q", imageName)
 }

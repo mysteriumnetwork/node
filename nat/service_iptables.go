@@ -20,12 +20,10 @@ package nat
 import (
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-const natLogPrefix = "[nat] "
 
 type serviceIPTables struct {
 	mu        sync.Mutex
@@ -61,7 +59,7 @@ func (service *serviceIPTables) Del(rule RuleForwarding) error {
 func (service *serviceIPTables) Enable() error {
 	err := service.ipForward.Enable()
 	if err != nil {
-		log.Warn(natLogPrefix, "Failed to enable IP forwarding: ", err)
+		log.Warn().Err(err).Msg("Failed to enable IP forwarding")
 	}
 	return err
 }
@@ -87,10 +85,10 @@ func iptables(action string, rule RuleForwarding) error {
 		rule.TargetIP
 	cmd := utils.SplitCommand("sudo", arguments)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to "+action+" ip forwarding rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		log.Warn().Err(err).Msgf("Failed to %s IP forwarding rule: %v Cmd output: %s", action, cmd.Args, string(output))
 		return errors.Wrap(err, string(output))
 	}
 
-	log.Info(natLogPrefix, "Action '"+action+"' applied for forwarding packets from '", rule.SourceSubnet, "' to IP: ", rule.TargetIP)
+	log.Info().Msgf("Action %q applied for forwarding packets from %s to IP: %s", action, rule.SourceSubnet, rule.TargetIP)
 	return nil
 }

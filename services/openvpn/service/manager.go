@@ -38,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // ServerConfigFactory callback generates session config for remote client
@@ -129,13 +130,13 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	// register service port to which NATProxy will forward connects attempts to
 	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
-	log.Info("Starting OpenVPN server on port: ", m.vpnServerPort)
+	log.Info().Msgf("Starting OpenVPN server on port: %d", m.vpnServerPort)
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return errors.Wrap(err, "failed to add firewall rule")
 	}
 	defer func() {
 		if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
-			log.Error("Failed to delete firewall rule for OpenVPN", err)
+			log.Error().Err(err).Msg("Failed to delete firewall rule for OpenVPN")
 		}
 	}()
 
@@ -144,19 +145,19 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	}
 
 	m.dnsServer = dns.NewServer(net.JoinHostPort(dnsIP, "53"), dns.ResolveViaConfigured())
-	log.Info("starting DNS on: ", m.dnsServer.Addr)
+	log.Info().Msg("Starting DNS on: " + m.dnsServer.Addr)
 	go func() {
 		if err := m.dnsServer.Run(); err != nil {
-			log.Error("failed to start DNS server: ", err)
+			log.Error().Err(err).Msg("Failed to start DNS server")
 		}
 	}()
 
 	err = m.shaper.Start(m.vpnServer.DeviceName())
 	if err != nil {
-		log.Error("Could not start traffic shaper: ", err)
+		log.Error().Err(err).Msg("Could not start traffic shaper")
 	}
 
-	log.Info("OpenVPN server waiting")
+	log.Info().Msg("OpenVPN server waiting")
 	return m.vpnServer.Wait()
 }
 
@@ -242,14 +243,14 @@ func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.
 		for state := range stateChannel {
 			switch state {
 			case openvpn.ProcessStarted:
-				log.Info("OpenVPN service booting up")
+				log.Info().Msg("OpenVPN service booting up")
 			case openvpn.ProcessExited:
-				log.Info("OpenVPN service exited")
+				log.Info().Msg("OpenVPN service exited")
 			}
 		}
 	}()
 
-	log.Info("OpenVPN service started successfully")
+	log.Info().Msg("OpenVPN service started successfully")
 	return nil
 }
 

@@ -17,6 +17,8 @@
 
 package auth
 
+import "github.com/rs/zerolog/log"
+
 // Authenticator provides an authentication method for builtin UI.
 type Authenticator struct {
 	storage Storage
@@ -38,14 +40,14 @@ func (a *Authenticator) CheckCredentials(username, password string) error {
 func (a *Authenticator) ChangePassword(username, oldPassword, newPassword string) (err error) {
 	err = NewCredentials(username, oldPassword, a.storage).Validate()
 	if err != nil {
-		log.Info("bad credentials for changing password: ", err)
+		log.Info().Err(err).Msg("Bad credentials for changing password")
 		return ErrUnauthorized
 	}
 	err = NewCredentials(username, newPassword, a.storage).Set()
 	if err != nil {
-		log.Infof("error changing password: ", err)
+		log.Info().Err(err).Msg("Error changing password")
 		return err
 	}
-	log.Infof("%s user password changed successfully", username)
+	log.Info().Msgf("%q user password changed successfully", username)
 	return nil
 }

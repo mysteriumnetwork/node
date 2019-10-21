@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -196,7 +197,7 @@ func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog,
 func (manager *connectionManager) getPublicIP() string {
 	currentPublicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
-		log.Errorf("could not get current public IP: %v", err)
+		log.Error().Err(err).Msg("Could not get current public IP")
 		return ""
 	}
 	return currentPublicIP
@@ -221,7 +222,7 @@ func (manager *connectionManager) cleanConnection() {
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
 		err := manager.cleanup[i]()
 		if err != nil {
-			log.Warn("cleanup error:", err)
+			log.Warn().Err(err).Msg("Cleanup error")
 		}
 	}
 	manager.cleanup = make([]func() error, 0)
@@ -264,7 +265,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		acknowledge: func() {
 			err := session.AcknowledgeSession(dialog, string(s.ID))
 			if err != nil {
-				log.Warn("acknowledge failed", err)
+				log.Warn().Err(err).Msg("Acknowledge failed")
 			}
 		},
 	}
@@ -296,7 +297,7 @@ func (manager *connectionManager) startConnection(
 
 	defer func() {
 		if err != nil {
-			log.Info("cancelling connection initiation: ", err)
+			log.Info().Err(err).Msg("Cancelling connection initiation: ")
 			manager.Cancel()
 		}
 	}()
@@ -377,10 +378,10 @@ func (manager *connectionManager) Disconnect() error {
 func (manager *connectionManager) payForService(payments PaymentIssuer) {
 	err := payments.Start()
 	if err != nil {
-		log.Error("payment error: ", err)
+		log.Error().Err(err).Msg("Payment error")
 		err = manager.Disconnect()
 		if err != nil {
-			log.Error("could not disconnect gracefully:", err)
+			log.Error().Err(err).Msg("Could not disconnect gracefully")
 		}
 	}
 }
@@ -388,16 +389,16 @@ func (manager *connectionManager) payForService(payments PaymentIssuer) {
 func (manager *connectionManager) connectionWaiter(connection Connection) {
 	err := connection.Wait()
 	if err != nil {
-		log.Warn("connection exited with error: ", err)
+		log.Warn().Err(err).Msg("Connection exited with error")
 	} else {
-		log.Info("connection exited")
+		log.Info().Msg("Connection exited")
 	}
 
 	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
-	log.Trace("waiting for connected state")
+	log.Debug().Msg("waiting for connected state")
 	for {
 		select {
 		case state, more := <-stateChannel:
@@ -407,7 +408,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 
 			switch state {
 			case Connected:
-				log.Trace("connected started event received")
+				log.Debug().Msg("Connected started event received")
 				go manager.sessionInfo.acknowledge()
 				manager.onStateChanged(state)
 				return nil
@@ -425,7 +426,7 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 		manager.onStateChanged(state)
 	}
 
-	log.Debug("state updater stopCalled")
+	log.Debug().Msg("State updater stopCalled")
 	logDisconnectError(manager.Disconnect())
 }
 
@@ -436,7 +437,7 @@ func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
-	log.Trace("onStateChanged called")
+	log.Debug().Msg("onStateChanged called")
 	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
 		State:       state,
 		SessionInfo: manager.sessionInfo,
@@ -444,7 +445,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 
 	switch state {
 	case Connected:
-		log.Trace("connected state issued")
+		log.Debug().Msg("Connected state issued")
 		manager.setStatus(statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal))
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
@@ -469,6 +470,6 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 
 func logDisconnectError(err error) {
 	if err != nil && err != ErrNoConnection {
-		log.Error("disconnect error", err)
+		log.Error().Err(err).Msg("Disconnect error")
 	}
 }

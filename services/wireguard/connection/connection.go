@@ -26,14 +26,12 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/logconfig"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // Connection which does wireguard tunneling.
 type Connection struct {
@@ -145,10 +143,10 @@ func (c *Connection) Stop() {
 	c.sendStats()
 
 	if err := cleanDNS(c.configDir, c.connectionEndpoint.InterfaceName()); err != nil {
-		log.Error("failed to clear DNS: ", err)
+		log.Error().Err(err).Msg("Failed to clear DNS")
 	}
 	if err := c.connectionEndpoint.Stop(); err != nil {
-		log.Error("failed to close wireguard connection: ", err)
+		log.Error().Err(err).Msg("Failed to close wireguard connection")
 	}
 	c.removeAllowedIPRule()
 	c.stateChannel <- connection.NotConnected
@@ -173,7 +171,7 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 func (c *Connection) sendStats() {
 	stats, err := c.connectionEndpoint.PeerStats()
 	if err != nil {
-		log.Error("failed to receive peer stats: ", err)
+		log.Error().Err(err).Msg("Failed to receive peer stats")
 		return
 	}
 	c.statisticsChannel <- consumer.SessionStatistics{

@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
@@ -221,7 +222,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		case connection.ErrConnectionCancelled:
 			utils.SendError(resp, err, statusConnectCancelled)
 		default:
-			log.Error(err)
+			log.Error().Err(err).Msg("")
 			utils.SendError(resp, err, http.StatusInternalServerError)
 		}
 		return

@@ -21,11 +21,9 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var slog = logconfig.NewNamespaceLogger("sender")
 
 // NewSender constructs new Sender's instance which works thru NATS connection.
 // Codec packs/unpacks messages to byte payloads.
@@ -56,10 +54,10 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 	}
 
 	if err := sender.connection.Check(); err != nil {
-		slog.Warn("connection failed: ", err)
+		log.Warn().Err(err).Msg("Connection failed")
 	}
 
-	slog.Debugf("Message %q sending: %s", messageTopic, messageData)
+	log.Debug().Msgf("Message %q sending: %s", messageTopic, messageData)
 	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to send message '%s'", messageTopic)
@@ -80,21 +78,21 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 	}
 
 	if err := sender.connection.Check(); err != nil {
-		slog.Warn("connection failed: ", err)
+		log.Warn().Err(err).Msg("Connection failed")
 	}
 
-	slog.Debugf("request %q sending: %s", requestTopic, requestData)
+	log.Debug().Msgf("Request %q sending: %s", requestTopic, requestData)
 	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to send request '%s'", requestTopic)
 		return
 	}
 
-	slog.Debugf("received response for %q: %s", requestTopic, msg.Data)
+	log.Debug().Msgf("Received response for %q: %s", requestTopic, msg.Data)
 	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to unpack response '%s'", requestTopic)
-		slog.Error(err)
+		log.Error().Err(err).Msg("")
 		return
 	}
 

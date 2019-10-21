@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -103,7 +104,7 @@ func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
 	}
 	err := json.Unmarshal(*request, &requestOptions)
 	if err != nil {
-		log.Warn("failed to parse options from request, using effective options")
+		log.Warn().Err(err).Msg("Failed to parse options from request, using effective options")
 		return &Options{}, err
 	}
 	return requestOptions, nil

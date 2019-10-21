@@ -22,6 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/rs/zerolog/log"
 )
 
 // PromiseIssuer issues promises in such way, that no actual money is added to promise
@@ -78,9 +79,9 @@ func (issuer *PromiseIssuer) subscribePromiseBalance() error {
 
 func (issuer *PromiseIssuer) processBalanceMessage(message promise.BalanceMessage) error {
 	if !message.Accepted {
-		log.Warnf("promise balance rejected: %s", message.Balance.String())
+		log.Warn().Msg("Promise balance rejected: " + message.Balance.String())
 	}
 
-	log.Infof("promise balance notified: %s", message.Balance.String())
+	log.Info().Msg("Promise balance notified: " + message.Balance.String())
 	return nil
 }

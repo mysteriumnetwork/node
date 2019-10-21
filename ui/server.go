@@ -23,16 +23,14 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/ui/discovery"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
-const logPrefix = "[dvpn-web-server] "
 const tequilapiUrlPrefix = "/tequilapi"
 
 // Server represents our web UI server
@@ -94,12 +92,12 @@ func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jw
 
 // Serve starts the server
 func (s *Server) Serve() error {
-	log.Info(logPrefix, "server starting on: ", s.srv.Addr)
+	log.Info().Msg("Server starting on: " + s.srv.Addr)
 
 	go func() {
 		err := s.discovery.Start()
 		if err != nil {
-			log.Error(logPrefix, "failed to start local discovery service: ", err)
+			log.Error().Err(err).Msg("Failed to start local discovery service")
 		}
 	}()
 
@@ -114,15 +112,12 @@ func (s *Server) Serve() error {
 func (s *Server) Stop() {
 	err := s.discovery.Stop()
 	if err != nil {
-		log.Error(logPrefix, "failed to stop local discovery service: ", err)
+		log.Error().Err(err).Msg("Failed to stop local discovery service")
 	}
 
 	// give the server a few seconds to shut down properly in case a request is waiting somewhere
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	err = s.srv.Shutdown(ctx)
-	if err != nil {
-		log.Error(logPrefix, "server exit error: ", err)
-	}
-	log.Info(logPrefix, "server exited")
+	log.Info().Err(err).Msg("Server stopped")
 }

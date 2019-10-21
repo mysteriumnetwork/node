@@ -27,12 +27,12 @@ import (
 	awsExternal "github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
-	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // Storage wraps AWS S3 client, configures for s3.mysterium.network
@@ -117,20 +117,20 @@ func (s *Storage) GetCacheableFile(bucket string, predicate func(s3.Object) bool
 	var download bool
 	switch {
 	case err == nil && localFileInfo.Size() != remoteFileSize:
-		log.Infof(
-			"cached copy found: %s, but size mismatched, expected: %d, found: %d",
+		log.Info().Msgf(
+			"Cached copy found: %s, but size mismatched, expected: %d, found: %d",
 			localFilename, remoteFileSize, localFileInfo.Size(),
 		)
 		download = true
 	case err != nil && os.IsNotExist(err):
-		log.Infof("cached copy not found: %s", localFilename)
+		log.Info().Msgf("Cached copy not found: %s", localFilename)
 		download = true
 	case err != nil:
 		return "", errors.Wrap(err, "error looking up cached copy")
 	}
 
 	if download {
-		log.Infof("downloading file from the bucket")
+		log.Info().Msg("downloading file from the bucket")
 		file, err := os.OpenFile(localFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, cacheDirPermissions)
 		if err != nil {
 			return "", err
@@ -146,9 +146,9 @@ func (s *Storage) GetCacheableFile(bucket string, predicate func(s3.Object) bool
 		if err != nil {
 			return "", err
 		}
-		log.Infof("downloaded file: %s (%dMB)", localFilename, numBytes/1024/1024)
+		log.Info().Msgf("Downloaded file: %s (%dMB)", localFilename, numBytes/1024/1024)
 	} else {
-		log.Infof("returning cached copy")
+		log.Info().Msg("Returning cached copy")
 	}
 
 	return localFilename, nil
@@ -157,7 +157,6 @@ func (s *Storage) GetCacheableFile(bucket string, predicate func(s3.Object) bool
 // MakeBucket creates a bucket in s3 for the build (env.BuildNumber)
 func MakeBucket() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	return env.IfRelease(func() error {
 		url, err := bucketUrlForBuild()
 		if err != nil {
@@ -170,7 +169,6 @@ func MakeBucket() error {
 // RemoveBucket removes bucket
 func RemoveBucket() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	return env.IfRelease(func() error {
 		url, err := bucketUrlForBuild()
 		if err != nil {
@@ -231,7 +229,7 @@ func Sync(source, target string) error {
 	if err := sh.RunV("bin/s3", "sync", source, target); err != nil {
 		return errors.Wrap(err, "failed to sync artifacts")
 	}
-	log.Info("s3 sync successful")
+	log.Info().Msg("S3 sync successful")
 	return nil
 }
 
@@ -240,7 +238,7 @@ func Copy(source, target string) error {
 	if err := sh.RunV("bin/s3", "cp", source, target); err != nil {
 		return errors.Wrap(err, "failed to copy artifacts")
 	}
-	log.Info("s3 copy successful")
+	log.Info().Msg("S3 copy successful")
 	return nil
 }
 

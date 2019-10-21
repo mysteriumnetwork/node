@@ -26,16 +26,14 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // NodeOptions describes possible parameters of Openvpn configuration
 type NodeOptions struct {
 	BinaryPath string
 }
-
-var log = logconfig.NewLogger()
 
 // Check function checks that openvpn is available, given path to openvpn binary
 func (options *NodeOptions) Check() error {
@@ -47,7 +45,7 @@ func (options *NodeOptions) Check() error {
 	}
 	//openvpn returns exit code 1 in case of --version parameter, if anything else is returned - treat as error
 	if exitCode != 1 {
-		log.Error("check failed. Output of executed command: ", string(outputBuffer))
+		log.Error().Msg("Check failed. Output of executed command: " + string(outputBuffer))
 		return errors.New("unexpected openvpn exit code: " + strconv.Itoa(exitCode))
 	}
 
@@ -59,13 +57,13 @@ func (options *NodeOptions) Check() error {
 		if err != nil {
 			return err
 		}
-		log.Info(str)
+		log.Info().Msg(str)
 	}
 
 	//optional custom tag
 	str, err := stringReader.ReadLine()
 	if err == nil {
-		log.Info("custom tag: ", str)
+		log.Info().Msg("Custom tag: " + str)
 	} else if err != io.EOF {
 		//EOF is expected here and it doesn't fail openvpn check
 		return err

@@ -20,6 +20,7 @@ package location
 import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
@@ -54,7 +55,7 @@ func NewFailingResolver(err error) *StaticResolver {
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (d *StaticResolver) DetectLocation() (Location, error) {
-	log.Debug("detecting with static resolver")
+	log.Debug().Msg("Detecting with static resolver")
 	pubIP, err := d.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, errors.Wrap(err, "failed to get public IP")

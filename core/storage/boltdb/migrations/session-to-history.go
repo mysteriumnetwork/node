@@ -25,6 +25,7 @@ import (
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
+	"github.com/rs/zerolog/log"
 )
 
 // Status represents list of possible session statuses
@@ -83,7 +84,7 @@ func MigrateSessionToHistory(db *storm.DB) error {
 		if err != nil {
 			rollbackError := tx.Rollback()
 			if rollbackError != nil {
-				log.Critical("migrate session to history rollback failed!", err)
+				log.Error().Err(err).Stack().Msg("Migrate session to history rollback failed!")
 			}
 			return err
 		}

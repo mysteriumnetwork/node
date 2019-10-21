@@ -23,14 +23,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const promiseBucketPrefix = "stored-promise-"
 const firstPromiseID = uint64(1)
-const promiseLogPrefix = "[promise-storage] "
 
 var (
 	// ErrPromiseNotFound represents the error we return when trying to update a non existing promise
@@ -218,17 +217,17 @@ func (s *Storage) LoadPaymentInfo(consumerID, receiverID, issuerID identity.Iden
 	if err == errNoPromiseForConsumer {
 		seq, err := s.getNewSeqIDForIssuer(consumerID, receiverID, issuerID)
 		if err != nil {
-			log.Trace(promiseLogPrefix, "could not get new sequenceID ", err)
+			log.Debug().Err(err).Msg("Could not get new sequenceID")
 			return defaultPaymentInfo
 		}
 
-		log.Trace(promiseLogPrefix, "found payments for other consumers, will issue promiseID ", seq)
+		log.Debug().Msgf("Found payments for other consumers, will issue promiseID %v", seq)
 		defaultPaymentInfo.LastPromise.SequenceID = seq
 		return defaultPaymentInfo
 	}
 
 	if err != nil {
-		log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info ", err)
+		log.Debug().Err(err).Msg("Could not load promise info, defaulting to zero payment info ")
 		return defaultPaymentInfo
 	}
 
@@ -241,7 +240,7 @@ func (s *Storage) LoadPaymentInfo(consumerID, receiverID, issuerID identity.Iden
 
 	if sp.Message != nil {
 		pi.LastPromise.Amount = sp.Message.Amount
-		log.Trace(promiseLogPrefix, "payment info loaded")
+		log.Debug().Msg("Payment info loaded")
 	}
 	return pi
 }

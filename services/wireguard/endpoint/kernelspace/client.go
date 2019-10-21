@@ -21,11 +21,11 @@ import (
 	"encoding/base64"
 	"net"
 
-	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -158,7 +158,7 @@ func (c *client) Close() (err error) {
 	var errs []error
 	defer func() {
 		for i := range errs {
-			log.Error("failed to close wireguard kernelspace client: ", errs[i])
+			log.Error().Err(errs[i]).Msg("Failed to close wireguard kernelspace client")
 			if err == nil {
 				err = errs[i]
 			}

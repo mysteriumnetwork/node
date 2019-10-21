@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // PeerInvoiceSender allows to send invoices
@@ -79,7 +80,7 @@ func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time
 
 // Start stars the invoice tracker
 func (it *InvoiceTracker) Start() error {
-	log.Debug("Starting...")
+	log.Debug().Msg("Starting...")
 	// give the consumer a second to start up his payments before sending the first request
 	firstSend := time.After(time.Second)
 	for {
@@ -137,7 +138,7 @@ func (it *InvoiceTracker) handleExchangeMessageReceiveError(err error) error {
 		if it.getNotReceivedExchangeMessageCount() >= it.maxNotReceivedExchangeMessages {
 			return err
 		}
-		log.Warn("Failed to receive exchangeMessage: ", err)
+		log.Warn().Err(err).Msg("Failed to receive exchangeMessage")
 		return nil
 	}
 	return err
@@ -167,7 +168,7 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 // Stop stops the invoice tracker
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
-		log.Debug("Stopping...")
+		log.Debug().Msg("Stopping...")
 		close(it.stop)
 	})
 }

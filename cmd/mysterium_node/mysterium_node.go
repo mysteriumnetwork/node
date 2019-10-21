@@ -28,11 +28,11 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	log              = logconfig.NewLogger()
 	licenseCopyright = metadata.LicenseCopyright(
 		"run command 'license --warranty'",
 		"run command 'license --conditions'",
@@ -48,15 +48,13 @@ var (
 func main() {
 	app, err := NewCommand()
 	if err != nil {
-		log.Error("failed to create command: ", err)
-		log.Flush()
+		log.Error().Err(err).Msg("Failed to create command: ")
 		os.Exit(1)
 	}
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Error("failed to execute command: ", err)
-		log.Flush()
+		log.Error().Err(err).Msg("failed to execute command: ")
 		os.Exit(1)
 	}
 }

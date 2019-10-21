@@ -24,11 +24,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // PromiseStorage stores the promises and issues new sequenceID's
@@ -66,8 +66,6 @@ var errBoltNotFound = errors.New("not found")
 
 // errNoPromiseForConsumer represents the error when the storage layer is unable to find a promise for the given consumer
 var errNoPromiseForConsumer = errors.New("no promise for consumer")
-
-const sessionBalanceLogPrefix = "[session-balance] "
 
 const chargePeriodLeeway = time.Hour * 2
 
@@ -187,7 +185,7 @@ func (sb *SessionBalance) handlePromiseReceiveError(err error) error {
 		if sb.getNotReceivedPromiseCount() >= sb.maxNotReceivedPromises {
 			return err
 		}
-		log.Warn(sessionBalanceLogPrefix, "Failed to receive promise: ", err)
+		log.Warn().Err(err).Msg("Failed to receive promise")
 		return nil
 	}
 	return err

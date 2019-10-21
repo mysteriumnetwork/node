@@ -25,12 +25,10 @@ import (
 	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
-
-var log = logconfig.NewLogger()
 
 // Options describes options which are required to start Wireguard service
 type Options struct {
@@ -92,17 +90,17 @@ func configureCLI(ctx *cli.Context) {
 func ConfiguredOptions() Options {
 	_, ipnet, err := net.ParseCIDR(config.Current.GetString(subnet.Name))
 	if err != nil {
-		log.Warn("Failed to parse subnet option, using default value. ", err)
+		log.Warn().Err(err).Msg("Failed to parse subnet option, using default value")
 		ipnet = &DefaultOptions.Subnet
 	}
 
 	portRange, err := port.ParseRange(config.Current.GetString(ports.Name))
 	if err != nil {
-		log.Warn("Failed to parse listen port range, using default value. ", err)
+		log.Warn().Err(err).Msg("Failed to parse listen port range, using default value")
 		portRange = port.UnspecifiedRange()
 	}
 	if portRange.Capacity() > resources.MaxConnections {
-		log.Warnf("Specified port range exceeds maximum number of connections allowed for the platform (%d), "+
+		log.Warn().Msgf("Specified port range exceeds maximum number of connections allowed for the platform (%d), "+
 			"using default value", resources.MaxConnections)
 		portRange = port.UnspecifiedRange()
 	}

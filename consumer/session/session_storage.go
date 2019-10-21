@@ -18,16 +18,14 @@
 package session
 
 import (
-	"fmt"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/rs/zerolog/log"
 )
 
-const sessionStorageLogPrefix = "[session-storage] "
 const sessionStorageBucketName = "session-history"
 
 // StatsRetriever can fetch current session stats
@@ -85,9 +83,9 @@ func (repo *Storage) handleEndedEvent(sessionID session.ID) {
 	}
 	err := repo.storage.Update(sessionStorageBucketName, updatedSession)
 	if err != nil {
-		log.Error(sessionStorageLogPrefix, err)
+		log.Error().Err(err).Msg("")
 	} else {
-		log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v updated", sessionID))
+		log.Debug().Msgf("Session %v updated", sessionID)
 	}
 }
 
@@ -98,8 +96,8 @@ func (repo *Storage) handleCreatedEvent(sessionInfo connection.SessionInfo) {
 	)
 	err := repo.storage.Store(sessionStorageBucketName, se)
 	if err != nil {
-		log.Error(sessionStorageLogPrefix, err)
+		log.Error().Err(err).Msg("")
 	} else {
-		log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v saved", sessionInfo.SessionID))
+		log.Debug().Msgf("Session %v saved", sessionInfo.SessionID)
 	}
 }

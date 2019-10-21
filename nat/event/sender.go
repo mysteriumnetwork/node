@@ -18,10 +18,8 @@
 package event
 
 import (
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 )
-
-const senderLogPrefix = "[traversal-events-sender] "
 
 // Sender allows subscribing to NAT events and sends them to server
 type Sender struct {
@@ -53,7 +51,7 @@ func NewSender(metricsSender metricsSender, ipResolver ipResolver, gatewayLoader
 func (es *Sender) ConsumeNATEvent(event Event) {
 	publicIP, err := es.ipResolver()
 	if err != nil {
-		log.Warnf(senderLogPrefix, "resolving public ip failed: ", err)
+		log.Warn().Err(err).Msg("Resolving public IP failed")
 		return
 	}
 	if publicIP == es.lastIp && es.matchesLastEvent(event) {

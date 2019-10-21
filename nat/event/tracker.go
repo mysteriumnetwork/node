@@ -20,13 +20,11 @@ package event
 import (
 	"time"
 
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 )
 
 // Topic the topic that traversal events are published on
 const Topic = "Traversal"
-
-const eventsTrackerLogPrefix = "[traversal-events-tracker] "
 
 // Tracker is able to track NAT traversal events
 type Tracker struct {
@@ -51,7 +49,7 @@ func NewTracker() *Tracker {
 
 // ConsumeNATEvent consumes a NAT event
 func (et *Tracker) ConsumeNATEvent(event Event) {
-	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
+	log.Info().Msgf("Got NAT event: %v", event)
 
 	et.lastEvent = &event
 	select {
@@ -62,7 +60,7 @@ func (et *Tracker) ConsumeNATEvent(event Event) {
 
 // LastEvent returns the last known event and boolean flag, indicating if such event exists
 func (et *Tracker) LastEvent() *Event {
-	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
+	log.Info().Msgf("Getting last NAT event: %v", et.lastEvent)
 	return et.lastEvent
 }
 
@@ -72,7 +70,7 @@ func (et *Tracker) WaitForEvent() Event {
 		return *et.lastEvent
 	}
 	e := <-et.eventChan
-	log.Info(eventsTrackerLogPrefix, "got NAT event: ", e)
+	log.Info().Msgf("Got NAT event: %v", e)
 	return e
 }
 

@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error)
@@ -52,7 +53,7 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 		return err
 	}
 
-	log.Info("client config after session create: ", clientConfig)
+	log.Info().Msgf("Client config after session create: %v", clientConfig)
 	if clientConfig.LocalPort > 0 {
 		err := wrapper.natPinger.PingProvider(
 			clientConfig.VpnConfig.OriginalRemoteIP,
@@ -73,7 +74,7 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 func (wrapper *sessionWrapper) Stop() {
 	wrapper.stopOnce.Do(func() {
 		if wrapper.session != nil {
-			log.Info("Stopping NATProxy")
+			log.Info().Msg("Stopping NATProxy")
 			wrapper.natPinger.StopNATProxy()
 			wrapper.session.Stop()
 		}
@@ -96,7 +97,7 @@ func (wrapper *sessionWrapper) GetConfig() (connection.ConsumerConfig, error) {
 
 	switch wrapper.natPinger.(type) {
 	case *traversal.NoopPinger:
-		log.Info("noop pinger detected, returning nil client config.")
+		log.Info().Msg("Noop pinger detected, returning nil client config.")
 		return nil, nil
 	}
 
@@ -132,12 +133,12 @@ func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
 		close(adapter.stateChannel)
 		close(adapter.statisticsChannel)
 	default:
-		log.Infof("%v Unhandled event: %+v", openvpn3Log, event)
+		log.Info().Msgf("Unhandled event: %+v", event)
 	}
 }
 
 func (channelToCallbacksAdapter) Log(text string) {
-	log.Infof("%v Log: %+v", openvpn3Log, text)
+	log.Info().Msg("Openvpn log: " + text)
 }
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
@@ -148,7 +149,7 @@ func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistic
 	select {
 	case adapter.statisticsChannel <- sessionStats:
 	default:
-		log.Warn(openvpn3Log, " Statistics dropped. Channel full")
+		log.Warn().Msg("Statistics dropped. Channel full")
 	}
 }
 
@@ -224,7 +225,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 			return nil, nil, err
 		}
 
-		log.Info("client config on create: ", vpnClientConfig)
+		log.Info().Msgf("Client config on create: %v", vpnClientConfig)
 
 		profileContent, err := vpnClientConfig.ToConfigFileContent()
 		if err != nil {

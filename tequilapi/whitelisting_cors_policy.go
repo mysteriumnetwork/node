@@ -20,7 +20,7 @@ package tequilapi
 import (
 	"regexp"
 
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 )
 
 // RegexpCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting domains by regexp
@@ -42,7 +42,7 @@ func (policy RegexpCorsPolicy) isOriginAllowed(origin string) bool {
 	for _, allowedSuffix := range policy.AllowedOriginSuffixes {
 		match, err := regexp.MatchString(allowedSuffix, origin)
 		if err != nil {
-			log.Warn("Failed to check regexp for origin", err)
+			log.Warn().Err(err).Msg("Failed to check regexp for origin")
 		}
 		if match {
 			return true

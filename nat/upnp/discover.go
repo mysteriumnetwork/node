@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/rs/zerolog/log"
 
 	"github.com/huin/goupnp"
 	"github.com/huin/goupnp/httpu"
@@ -54,9 +55,9 @@ func (device GatewayDevice) String() string {
 }
 
 func printGatewayInfo(gateways []GatewayDevice) {
-	log.Infof("UPnP gateways detected: %d", len(gateways))
+	log.Info().Msgf("UPnP gateways detected: %d", len(gateways))
 	for _, device := range gateways {
-		log.Infof("UPnP gateway detected %v", device)
+		log.Info().Msgf("UPnP gateway detected %v", device)
 	}
 }
 
@@ -82,11 +83,11 @@ func discoverGateways() ([]GatewayDevice, error) {
 	for _, response := range responses {
 		device, err := parseDiscoveryResponse(response)
 		if err != nil {
-			log.Warnf("error parsing discovery response %v", err)
+			log.Warn().Err(err).Msg("Error parsing discovery response")
 			continue
 		}
 		if !isGateway(device) {
-			log.Debugf("not a gateway device: %v", device)
+			log.Debug().Msgf("not a gateway device: %v", device)
 			continue
 		}
 

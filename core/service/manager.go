@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -155,13 +156,13 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 		serveErr := service.Serve(providerID)
 		if serveErr != nil {
-			log.Error("Service serve failed: ", serveErr)
+			log.Error().Err(serveErr).Msg("Service serve failed")
 		}
 
 		// TODO: fix https://github.com/mysteriumnetwork/node/issues/855
 		stopErr := manager.servicePool.Stop(id)
 		if stopErr != nil {
-			log.Error("Service stop failed: ", stopErr)
+			log.Error().Err(stopErr).Msg("Service stop failed")
 		}
 
 		discovery.Wait()

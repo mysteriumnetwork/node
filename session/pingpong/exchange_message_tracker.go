@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // PeerExchangeMessageSender allows for sending of exchange messages
@@ -58,13 +59,13 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 
 // Start starts the message exchange tracker. Blocks.
 func (emt *ExchangeMessageTracker) Start() error {
-	log.Debug("Starting...")
+	log.Debug().Msg("Starting...")
 	for {
 		select {
 		case <-emt.stop:
 			return nil
 		case invoice := <-emt.invoiceChan:
-			log.Debug("Invoice received", invoice)
+			log.Debug().Msgf("Invoice received: %v", invoice)
 			err := emt.issueExchangeMessage(invoice)
 			if err != nil {
 				return err
@@ -78,10 +79,10 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
-	log.Debug("Sending message", *msg)
+	log.Debug().Msgf("Sending message %v", *msg)
 	err = emt.peerExchangeMessageSender.Send(*msg)
 	if err != nil {
-		log.Warn("Failed to send exchange message: ", err)
+		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
 	return nil
@@ -90,7 +91,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 // Stop stops the message tracker
 func (emt *ExchangeMessageTracker) Stop() {
 	emt.once.Do(func() {
-		log.Debug("Stopping...")
+		log.Debug().Msg("Stopping...")
 		close(emt.stop)
 	})
 }

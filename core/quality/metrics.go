@@ -19,6 +19,8 @@ package quality
 
 import (
 	"encoding/json"
+
+	"github.com/rs/zerolog/log"
 )
 
 // ServiceMetricsResponse represents response from the quality oracle service
@@ -33,18 +35,18 @@ func Parse(msg json.RawMessage, proposal interface{}) ([]byte, error) {
 	}
 
 	if err := json.Unmarshal(msg, &proposal); err != nil {
-		log.Warn("failed to parse proposal info")
+		log.Warn().Msg("Failed to parse proposal info")
 		return nil, err
 	}
 
 	if err := json.Unmarshal(msg, &metrics); err != nil {
-		log.Warn("failed to parse metrics")
+		log.Warn().Msg("Failed to parse metrics")
 		return nil, err
 	}
 
 	out, err := json.Marshal(metrics)
 	if err != nil {
-		log.Warn("failed to marshal metrics JSON")
+		log.Warn().Msg("Failed to marshal metrics JSON")
 		return nil, err
 	}
 	return out, err
