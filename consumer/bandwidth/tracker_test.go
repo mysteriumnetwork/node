@@ -78,7 +78,7 @@ func Test_ConsumeSessionEvent_ResetsOnConnect(t *testing.T) {
 		},
 	}
 	tracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionStatusCreated,
+		Status: connection.SessionEventStatusCreated,
 	})
 
 	assert.True(t, tracker.previousTime.IsZero())
@@ -95,7 +95,7 @@ func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 		},
 	}
 	tracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionStatusEnded,
+		Status: connection.SessionEventStatusEnded,
 	})
 
 	assert.True(t, tracker.previousTime.IsZero())

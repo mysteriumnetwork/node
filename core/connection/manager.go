@@ -268,10 +268,10 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		},
 	}
 
-	manager.publishSessionStatus(SessionStatusCreated)
+	manager.publishSessionStatus(SessionEventStatusCreated)
 
 	manager.cleanup = append(manager.cleanup, func() error {
-		manager.publishSessionStatus(SessionStatusEnded)
+		manager.publishSessionStatus(SessionEventStatusEnded)
 		return nil
 	})
 
@@ -456,7 +456,7 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 	return nil
 }
 
-func (manager *connectionManager) publishSessionStatus(status SessionStatus) {
+func (manager *connectionManager) publishSessionStatus(status SessionEventStatus) {
 	manager.eventPublisher.Publish(EventTopicSession, SessionEvent{
 		Status:      status,
 		SessionInfo: manager.sessionInfo,

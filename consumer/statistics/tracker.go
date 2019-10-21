@@ -79,9 +79,9 @@ func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(event connection.Ses
 // ConsumeSessionEvent handles the session state changes
 func (sst *SessionStatisticsTracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 	switch sessionEvent.Status {
-	case connection.SessionStatusEnded:
+	case connection.SessionEventStatusEnded:
 		sst.markSessionEnd()
-	case connection.SessionStatusCreated:
+	case connection.SessionEventStatusCreated:
 		sst.markSessionStart()
 	}
 }

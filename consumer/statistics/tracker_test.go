@@ -72,7 +72,7 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 func TestStatisticsTrackerConsumeSessionEventCreated(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionStatusCreated,
+		Status: connection.SessionEventStatusCreated,
 	})
 	assert.NotNil(t, statisticsTracker.sessionStart)
 }
@@ -82,7 +82,7 @@ func TestStatisticsTrackerConsumeSessionEventEnded(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.sessionStart = &now
 	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionStatusEnded,
+		Status: connection.SessionEventStatusEnded,
 	})
 	assert.Nil(t, statisticsTracker.sessionStart)
 }

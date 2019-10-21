@@ -35,19 +35,19 @@ type StateEvent struct {
 	SessionInfo SessionInfo
 }
 
-// SessionStatus represents session status types.
-type SessionStatus string
+// SessionEventStatus represents session status types for session event.
+type SessionEventStatus string
 
 const (
-	// SessionStatusCreated represents a session creation event.
-	SessionStatusCreated = SessionStatus("Created")
-	// SessionStatusEnded represents a session end.
-	SessionStatusEnded = SessionStatus("Ended")
+	// SessionEventStatusCreated represents a session creation event.
+	SessionEventStatusCreated = SessionEventStatus("Created")
+	// SessionEventStatusEnded represents a session end.
+	SessionEventStatusEnded = SessionEventStatus("Ended")
 )
 
 // SessionEvent represents a session related event.
 type SessionEvent struct {
-	Status      SessionStatus
+	Status      SessionEventStatus
 	SessionInfo SessionInfo
 }
 

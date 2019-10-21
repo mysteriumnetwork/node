@@ -94,7 +94,7 @@ func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	switch sessionEvent.Status {
-	case connection.SessionStatusEnded, connection.SessionStatusCreated:
+	case connection.SessionEventStatusEnded, connection.SessionEventStatusCreated:
 		t.previous = consumer.SessionStatistics{}
 		t.previousTime = time.Time{}
 		t.currentSpeed = CurrentSpeed{}
