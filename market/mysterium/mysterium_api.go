@@ -25,17 +25,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session"
-)
-
-const (
-	mysteriumAPILogPrefix = "[Mysterium.api] "
 )
 
 // MysteriumAPI provides access to mysterium owned central discovery service
@@ -82,7 +77,7 @@ func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Identity registered: ", id.Address)
+		log.Info().Msg("Identity registered: " + id.Address)
 	}
 	return err
 }
@@ -117,7 +112,7 @@ func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress stri
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Payout address ", ethAddress, " registered")
+		log.Info().Msg("Payout address registered: " + ethAddress)
 	}
 	return err
 }
@@ -135,7 +130,7 @@ func (mApi *MysteriumAPI) UpdateReferralInfo(id identity.Identity, referralCode 
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Referral code submitted for ", id.Address)
+		log.Info().Msg("Referral code submitted for: " + id.Address)
 	}
 	return err
 }
@@ -153,7 +148,7 @@ func (mApi *MysteriumAPI) UpdateEmail(id identity.Identity, email string, signer
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Email submitted for ", id.Address)
+		log.Info().Msg("Email submitted for: " + id.Address)
 	}
 	return err
 }
@@ -169,7 +164,7 @@ func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, sign
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal registered for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
+		log.Info().Msgf("Proposal registered for node: %s service type: %s", proposal.ProviderID, proposal.ServiceType)
 	}
 
 	return err
@@ -188,7 +183,7 @@ func (mApi *MysteriumAPI) UnregisterProposal(proposal market.ServiceProposal, si
 	err = mApi.http.DoRequest(req)
 
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", proposal.ProviderID)
+		log.Info().Msg("Proposal unregistered for node: " + proposal.ProviderID)
 	}
 
 	return err
@@ -206,7 +201,7 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
+		log.Info().Msgf("Proposal pinged for node: %s service type: %s", proposal.ProviderID, proposal.ServiceType)
 	}
 	return err
 }
@@ -271,7 +266,7 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	total := len(proposalsResponse.Proposals)
 	supported := supportedProposalsOnly(proposalsResponse.Proposals)
 	mApi.setLatestProposals(supported)
-	log.Trace(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
+	log.Debug().Msgf("Total proposals: %d supported: %d", total, len(supported))
 	return supported, nil
 }
 
@@ -309,7 +304,7 @@ func (mApi *MysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats Se
 
 	err = mApi.http.DoRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionID)
+		log.Info().Msg("Session stats sent: " + string(sessionID))
 	}
 
 	return nil

@@ -18,15 +18,13 @@
 package dialog
 
 import (
-	"fmt"
-
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
@@ -45,8 +43,6 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 	}
 }
 
-const establisherLogPrefix = "[NATS.DialogEstablisher] "
-
 type dialogEstablisher struct {
 	ID                 identity.Identity
 	Signer             identity.Signer
@@ -58,7 +54,7 @@ func (e *dialogEstablisher) EstablishDialog(
 	peerContact market.Contact,
 ) (communication.Dialog, error) {
 
-	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", peerContact))
+	log.Info().Msgf("Connecting to: %#v", peerContact)
 	peerAddress, err := e.peerAddressFactory(peerContact)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
@@ -74,7 +70,7 @@ func (e *dialogEstablisher) EstablishDialog(
 	}
 
 	dialog := e.newDialogToPeer(peerID, peerAddress, peerCodec, topic)
-	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", peerContact))
+	log.Info().Msgf("Dialog established with: %#v", peerContact)
 
 	return dialog, nil
 }

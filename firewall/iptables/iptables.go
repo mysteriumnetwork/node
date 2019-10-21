@@ -23,14 +23,12 @@ import (
 	"os/exec"
 	"strings"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
-	logPrefix = "[iptables] "
-
 	outputChain     = "OUTPUT"
 	killswitchChain = "CONSUMER_KILL_SWITCH"
 
@@ -64,10 +62,10 @@ const (
 
 var iptablesExec = func(args ...string) ([]string, error) {
 	args = append([]string{"/sbin/iptables"}, args...)
-	log.Trace(logPrefix, "[cmd] ", args)
+	log.Debug().Msgf("[cmd] %v", args)
 	output, err := exec.Command("sudo", args...).CombinedOutput()
 	if err != nil {
-		log.Trace(logPrefix, "[cmd error] ", err, " ", args, " ", string(output))
+		log.Debug().Err(err).Msgf("[cmd error] %v output: %v", args, string(output))
 		return nil, errors.Wrap(err, "iptables cmd error")
 	}
 	outputScanner := bufio.NewScanner(bytes.NewBuffer(output))
@@ -84,7 +82,7 @@ func checkVersion() error {
 		return err
 	}
 	for _, line := range output {
-		log.Info(logPrefix, "[version check] ", line)
+		log.Info().Msg("[version check] " + line)
 	}
 	return nil
 }
@@ -107,7 +105,7 @@ func cleanupStaleRules() error {
 
 	if _, err := iptablesExec(listRules, killswitchChain); err != nil {
 		//error means no such chain - log error just in case and bail out
-		log.Info(logPrefix, "[setup] Got error while listing kill switch chain rules. Probably nothing to worry about. Err: ", err)
+		log.Info().Err(err).Msg("[setup] Got error while listing kill switch chain rules. Probably nothing to worry about")
 		return nil
 	}
 
@@ -173,7 +171,7 @@ func (b Iptables) Setup() error {
 // Reset tries to cleanup all changes made by setup and leave system in the state before setup
 func (Iptables) Reset() {
 	if err := cleanupStaleRules(); err != nil {
-		log.Warn(logPrefix, "Error cleaning up iptables rules, you might want to do it yourself: ", err)
+		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
 }
 
@@ -184,7 +182,7 @@ func addRuleWithRemoval(chain chainInfo) (firewall.RemoveRule, error) {
 	return func() {
 		_, err := iptablesExec(chain.removeArgs()...)
 		if err != nil {
-			log.Warn(logPrefix, "Error executing rule: ", chain.removeArgs(), " you might wanna do it yourself. Error was: ", err)
+			log.Warn().Err(err).Msgf("Error executing rule: %v you might wanna do it yourself", chain.removeArgs())
 		}
 	}, nil
 }

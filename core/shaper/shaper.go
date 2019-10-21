@@ -24,13 +24,11 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/shared"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 const (
 	limitKbps = 5000
@@ -46,7 +44,7 @@ func newNoopShaper() *noopShaper {
 
 // Start noop
 func (noopShaper) Start(interfaceName string) error {
-	log.Info("Noop shaper: nothing will happen to interface %s", interfaceName)
+	log.Info().Msgf("Noop shaper: nothing will happen to interface %s", interfaceName)
 	return nil
 }
 
@@ -72,7 +70,7 @@ func newWonderShaper(eventBus eventbus.EventBus) (*wonderShaper, error) {
 // this works as a healthcheck considering that a compatible version of wondershaper is installed
 // If healthcheck passes, it returns an actual path of wondershaper binary.
 func healthcheck(cmd string) (path string, err error) {
-	log.Debug("Wondershaper healthcheck: starting")
+	log.Debug().Msg("Wondershaper healthcheck: starting")
 
 	path, err = exec.LookPath(cmd)
 	if err != nil {
@@ -90,7 +88,7 @@ func healthcheck(cmd string) (path string, err error) {
 		return path, errors.Wrapf(err, "failed to invoke wondershaper on %s", testInterface)
 	}
 
-	log.Debugf("Wondershaper healthcheck success on %s", testInterface)
+	log.Debug().Msgf("Wondershaper healthcheck success on %s", testInterface)
 	return path, nil
 }
 
@@ -111,10 +109,10 @@ func (s *wonderShaper) Start(interfaceName string) error {
 func (s *wonderShaper) apply() error {
 	enabled := config.Current.GetBool(shared.ShaperEnabledFlag.Name)
 	if enabled {
-		log.Info("Shaper enabled, limiting bandwidth")
+		log.Info().Msg("Shaper enabled, limiting bandwidth")
 		return s.limitBandwidth()
 	}
-	log.Info("Shaper disabled, removing bandwidth limit")
+	log.Info().Msg("Shaper disabled, removing bandwidth limit")
 	return s.unlimitBandwidth()
 }
 

@@ -32,6 +32,7 @@ import (
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/rs/zerolog/log"
 )
 
 // InvoiceFactoryCreator returns a payment engine factory
@@ -76,7 +77,7 @@ func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options
 		}
 		var payments connection.PaymentIssuer
 		if useNewPayments {
-			log.Info("using new payments")
+			log.Info().Msg("Using new payments")
 			invoices := make(chan crypto.Invoice)
 			sender := NewExchangeSender(dialog)
 			listener := NewInvoiceListener(invoices)
@@ -86,7 +87,7 @@ func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options
 			}
 			payments = NewExchangeMessageTracker(invoices, sender, keystore, consumer)
 		} else {
-			log.Info("using old payments")
+			log.Info().Msg("Using old payments")
 			messageChan := make(chan balance.Message, 1)
 			pFunc := payment_factory.PaymentIssuerFactoryFunc(options, signer)
 			p, err := pFunc(promiseState, payment, messageChan, dialog, consumer, provider)

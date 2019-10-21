@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/rs/zerolog/log"
 )
 
 // Status describes stage of proposal registration
@@ -102,7 +103,7 @@ func NewService(
 
 // Start launches discovery service
 func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
-	log.Info("starting discovery...")
+	log.Info().Msg("Starting discovery...")
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -157,7 +158,7 @@ func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
 }
 
 func (d *Discovery) stopLoop() {
-	log.Info("stopping discovery loop..")
+	log.Info().Msg("Stopping discovery loop..")
 	d.mu.RLock()
 	if d.status == WaitingForRegistration {
 		d.mu.RUnlock()
@@ -181,11 +182,11 @@ func (d *Discovery) registerIdentity() {
 		registerEvent := <-registerEventChan
 		switch registerEvent {
 		case identity_registry.Registered:
-			log.Info("identity registered, proceeding with proposal registration")
+			log.Info().Msg("Identity registered, proceeding with proposal registration")
 			go d.eventPublisher.Publish(IdentityRegistrationTopic, d.ownIdentity)
 			d.changeStatus(RegisterProposal)
 		case identity_registry.Cancelled:
-			log.Info("cancelled identity registration")
+			log.Info().Msg("Cancelled identity registration")
 			d.changeStatus(IdentityRegisterFailed)
 		}
 	}()
@@ -194,7 +195,7 @@ func (d *Discovery) registerIdentity() {
 func (d *Discovery) registerProposal() {
 	err := d.proposalRegistry.RegisterProposal(d.proposal, d.signer)
 	if err != nil {
-		log.Errorf("failed to register proposal, retrying after 1 min. %s", err.Error())
+		log.Error().Err(err).Msg("Failed to register proposal, retrying after 1 min")
 		time.Sleep(1 * time.Minute)
 		d.changeStatus(RegisterProposal)
 		return
@@ -207,7 +208,7 @@ func (d *Discovery) pingProposal() {
 	time.Sleep(1 * time.Minute)
 	err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
 	if err != nil {
-		log.Error("failed to ping proposal: ", err)
+		log.Error().Err(err).Msg("Failed to ping proposal")
 	}
 	d.eventPublisher.Publish(ProposalEventTopic, d.proposal)
 	d.changeStatus(PingProposal)
@@ -216,10 +217,10 @@ func (d *Discovery) pingProposal() {
 func (d *Discovery) unregisterProposal() {
 	err := d.proposalRegistry.UnregisterProposal(d.proposal, d.signer)
 	if err != nil {
-		log.Error("failed to unregister proposal: ", err)
+		log.Error().Err(err).Msg("Failed to unregister proposal: ")
 		d.changeStatus(UnregisterProposalFailed)
 	}
-	log.Info("proposal unregistered")
+	log.Info().Msg("Proposal unregistered")
 	d.changeStatus(ProposalUnregistered)
 }
 
@@ -227,14 +228,14 @@ func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
 	registered, err := d.identityRegistry.IsRegistered(d.ownIdentity)
 	if err != nil {
-		log.Error("checking identity registration failed: ", err)
+		log.Error().Err(err).Msg("Checking identity registration failed")
 		d.changeStatus(IdentityRegisterFailed)
 		return
 	}
 
 	if !registered {
 		// TODO: Maybe register here?
-		log.Infof("identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
+		log.Info().Msgf("identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
 		d.changeStatus(IdentityUnregistered)
 		return
 	}

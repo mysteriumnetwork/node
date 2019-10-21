@@ -28,15 +28,13 @@ import (
 	"text/template"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/koron/go-ssdp"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-const ssdpLogPrefix = "[SSDP] "
 
 const deviceDescriptionTemplate = `<?xml version="1.0"?>
 <root xmlns="urn:schemas-upnp-org:device-1-0" configId="1">
@@ -100,7 +98,7 @@ func (ss *ssdpServer) Start() (err error) {
 		select {
 		case <-time.After(30 * time.Second):
 			if err := ss.ssdp.Alive(); err != nil {
-				log.Warn(ssdpLogPrefix, "failed to sent SSDP Alive message: ", err)
+				log.Warn().Err(err).Msg("Failed to sent SSDP Alive message")
 			}
 		case <-ss.quit:
 			return nil
@@ -115,7 +113,7 @@ func (ss *ssdpServer) Stop() error {
 
 	if ss.ssdp != nil {
 		if err := ss.ssdp.Bye(); err != nil {
-			log.Error(ssdpLogPrefix, "failed to send SSDP bye message", err)
+			log.Error().Err(err).Msg("Failed to send SSDP bye message")
 		}
 		return errors.Wrap(ss.ssdp.Close(), "failed to send SSDP bye message")
 	}

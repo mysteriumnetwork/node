@@ -20,7 +20,7 @@ package nat
 import (
 	"strings"
 
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 )
 
 type serviceIPForward struct {
@@ -43,16 +43,16 @@ type Command interface {
 func (service *serviceIPForward) Enable() error {
 	if service.Enabled() {
 		service.forward = true
-		log.Info(natLogPrefix, "IP forwarding already enabled")
+		log.Info().Msg("IP forwarding already enabled")
 		return nil
 	}
 
 	if output, err := service.CommandFactory(service.CommandEnable[0], service.CommandEnable[1:]...).CombinedOutput(); err != nil {
-		log.Warn("Failed to enable IP forwarding: ", service.CommandEnable[1:], " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		log.Warn().Err(err).Msgf("Failed to enable IP forwarding: %v Cmd output: %v", service.CommandEnable[1:], string(output))
 		return err
 	}
 
-	log.Info(natLogPrefix, "IP forwarding enabled")
+	log.Info().Msg("IP forwarding enabled")
 	return nil
 }
 
@@ -62,16 +62,16 @@ func (service *serviceIPForward) Disable() {
 	}
 
 	if output, err := service.CommandFactory(service.CommandDisable[0], service.CommandDisable[1:]...).CombinedOutput(); err != nil {
-		log.Warn("Failed to disable IP forwarding: ", service.CommandDisable[1:], " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		log.Warn().Err(err).Msgf("Failed to disable IP forwarding: %v Cmd output: %v", service.CommandDisable[1:], string(output))
 	}
 
-	log.Info(natLogPrefix, "IP forwarding disabled")
+	log.Info().Msg("IP forwarding disabled")
 }
 
 func (service *serviceIPForward) Enabled() bool {
 	output, err := service.CommandFactory(service.CommandRead[0], service.CommandRead[1:]...).Output()
 	if err != nil {
-		log.Warn("Failed to check IP forwarding status: ", service.CommandRead[1:], " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		log.Warn().Err(err).Msgf("Failed to check IP forwarding status: %v Cmd output: %v", service.CommandRead[1:], string(output))
 	}
 
 	return strings.TrimSpace(string(output)) == "1"

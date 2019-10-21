@@ -26,8 +26,8 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type httpClientInterface interface {
@@ -41,23 +41,21 @@ type httpRequestInterface interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-func newHTTPClient(baseURL string, logPrefix string, ua string) *httpClient {
+func newHTTPClient(baseURL string, ua string) *httpClient {
 	return &httpClient{
 		http: &http.Client{
 			Transport: &http.Transport{},
 			Timeout:   100 * time.Second,
 		},
-		baseURL:   baseURL,
-		logPrefix: logPrefix,
-		ua:        ua,
+		baseURL: baseURL,
+		ua:      ua,
 	}
 }
 
 type httpClient struct {
-	http      httpRequestInterface
-	baseURL   string
-	logPrefix string
-	ua        string
+	http    httpRequestInterface
+	baseURL string
+	ua      string
 }
 
 func (client *httpClient) Get(path string, values url.Values) (*http.Response, error) {
@@ -88,7 +86,7 @@ func (client *httpClient) Delete(path string, payload interface{}) (*http.Respon
 func (client httpClient) doPayloadRequest(method, path string, payload interface{}) (*http.Response, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		log.Critical(client.logPrefix, err)
+		log.Error().Err(err).Msg("")
 		return nil, err
 	}
 
@@ -98,7 +96,7 @@ func (client httpClient) doPayloadRequest(method, path string, payload interface
 func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []byte) (*http.Response, error) {
 	request, err := http.NewRequest(method, fullPath, bytes.NewBuffer(payloadJSON))
 	if err != nil {
-		log.Critical(client.logPrefix, err)
+		log.Error().Err(err).Msg("")
 		return nil, err
 	}
 	request.Header.Set("User-Agent", client.ua)
@@ -108,13 +106,13 @@ func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []
 	response, err := client.http.Do(request)
 
 	if err != nil {
-		log.Error(client.logPrefix, err)
+		log.Error().Err(err).Msg("")
 		return response, err
 	}
 
 	err = parseResponseError(response)
 	if err != nil {
-		log.Error(client.logPrefix, err)
+		log.Error().Err(err).Msg("")
 		return response, err
 	}
 

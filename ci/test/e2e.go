@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type runner struct {
@@ -35,13 +34,9 @@ type runner struct {
 	services        string
 }
 
-func init() {
-	logconfig.Bootstrap()
-}
-
 // TestE2EBasic runs end-to-end tests
 func TestE2EBasic() error {
-	defer log.Flush()
+	logconfig.Bootstrap()
 	composeFiles := []string{
 		"bin/localnet/docker-compose.yml",
 		"e2e/docker-compose.yml",
@@ -57,7 +52,7 @@ func TestE2EBasic() error {
 
 // TestE2ENAT runs end-to-end tests in NAT environment
 func TestE2ENAT() error {
-	defer log.Flush()
+	logconfig.Bootstrap()
 	composeFiles := []string{
 		"e2e/traversal/docker-compose.yml",
 	}
@@ -83,11 +78,11 @@ func (r *runner) init() error {
 }
 
 func (r *runner) startAppContainers() error {
-	log.Info("starting other services")
+	log.Info().Msg("Starting other services")
 	if err := r.compose("up", "-d", "broker", "ganache", "ipify"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
-	log.Info("starting DB")
+	log.Info().Msg("Starting DB")
 	if err := r.compose("up", "-d", "db"); err != nil {
 		return errors.Wrap(err, "starting DB failed!")
 	}
@@ -96,9 +91,9 @@ func (r *runner) startAppContainers() error {
 	for start := time.Now(); !dbUp && time.Since(start) < 60*time.Second; {
 		err := r.compose("exec", "-T", "db", "mysqladmin", "ping", "--protocol=TCP", "--silent")
 		if err != nil {
-			log.Info("Waiting...")
+			log.Info().Msg("Waiting...")
 		} else {
-			log.Info("DB is up")
+			log.Info().Msg("DB is up")
 			dbUp = true
 			break
 		}
@@ -107,22 +102,22 @@ func (r *runner) startAppContainers() error {
 		return errors.New("starting DB timed out")
 	}
 
-	log.Info("starting transactor")
+	log.Info().Msg("Starting transactor")
 	if err := r.compose("up", "-d", "transactor"); err != nil {
 		return errors.Wrap(err, "starting transactor failed!")
 	}
 
-	log.Info("migrating DB")
+	log.Info().Msg("Migrating DB")
 	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "mysterium-api"); err != nil {
 		return errors.Wrap(err, "migrating DB failed!")
 	}
 
-	log.Info("starting mysterium-api")
+	log.Info().Msg("Starting mysterium-api")
 	if err := r.compose("up", "-d", "mysterium-api"); err != nil {
 		return errors.Wrap(err, "starting mysterium-api failed!")
 	}
 
-	log.Info("deploying contracts")
+	log.Info().Msg("Deploying contracts")
 	err := r.compose("run", "go-runner",
 		"go", "run", "bin/localnet/deployer/deployer.go",
 		"--keystore.directory=bin/localnet/deployer/keystore",
@@ -137,12 +132,12 @@ func (r *runner) startAppContainers() error {
 }
 
 func (r *runner) startProviderConsumerNodes() error {
-	log.Info("building app images")
+	log.Info().Msg("Building app images")
 	if err := r.compose("build"); err != nil {
 		return errors.Wrap(err, "building app images failed!")
 	}
 
-	log.Info("starting app containers")
+	log.Info().Msg("Starting app containers")
 	if err := r.compose("up", "-d", "myst-provider", "myst-consumer"); err != nil {
 		return errors.Wrap(err, "starting app containers failed!")
 	}
@@ -150,7 +145,7 @@ func (r *runner) startProviderConsumerNodes() error {
 }
 
 func (r *runner) test() error {
-	log.Info("running tests for env: ", r.testEnv)
+	log.Info().Msg("Running tests for env: " + r.testEnv)
 
 	err := r.compose("run", "go-runner",
 		"go", "test", "-v", "./e2e/...", "-args",
@@ -168,10 +163,10 @@ func (r *runner) test() error {
 }
 
 func (r *runner) cleanup() {
-	log.Info("cleaning up")
+	log.Info().Msg("Cleaning up")
 	_ = r.compose("logs")
 	if err := r.compose("down", "--volumes", "--remove-orphans", "--timeout", "30"); err != nil {
-		log.Warn("cleanup error", err)
+		log.Warn().Err(err).Msg("Cleanup error")
 	}
 }
 

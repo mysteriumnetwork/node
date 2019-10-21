@@ -22,7 +22,5 @@ import (
 )
 
 func SetupVendor() (firewall.Vendor, error) {
-	return firewall.NoopVendor{
-		LogPrefix: "[Noop firewall]",
-	}, nil
+	return firewall.NoopVendor{}, nil
 }

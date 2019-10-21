@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/requests"
 )
@@ -96,7 +97,7 @@ func (r *ResolverImpl) GetPublicIP() (string, error) {
 	request.Header.Set("User-Agent", apiClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
-		log.Critical(err)
+		log.Error().Err(err).Msg("")
 		return "", err
 	}
 
@@ -105,6 +106,6 @@ func (r *ResolverImpl) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	log.Trace("IP detected: ", ipResponse.IP)
+	log.Debug().Msg("IP detected: " + ipResponse.IP)
 	return ipResponse.IP, nil
 }

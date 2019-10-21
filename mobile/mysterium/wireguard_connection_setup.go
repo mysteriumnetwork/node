@@ -31,12 +31,12 @@ import (
 	"github.com/mysteriumnetwork/wireguard-go/device"
 	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
 	//taken from android-wireguard project
 	androidTunMtu = 1280
-	logPrefix     = "[wg connection] "
 )
 
 // WireguardTunnelSetup exposes api for caller to implement external tunnel setup
@@ -187,7 +187,7 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 
 	// Provider requests to delay consumer connection since it might be in a process of setting up NAT traversal for given consumer
 	if config.Consumer.ConnectDelay > 0 {
-		log.Infof("%s delaying tunnel creation for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
+		log.Info().Msgf("Delaying tunnel creation for %v milliseconds", config.Consumer.ConnectDelay)
 		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
 	}
 
@@ -195,12 +195,12 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 	if err != nil {
 		return nil, err
 	}
-	log.Info(logPrefix, "Tun value is: ", fd)
+	log.Info().Msgf("Tun value is: %d", fd)
 	tun, err := newDeviceFromFd(fd)
 	if err == nil {
 		//non-fatal
 		name, nameErr := tun.Name()
-		log.Info(logPrefix, "Name value: ", name, " Possible error: ", nameErr)
+		log.Info().Err(nameErr).Msg("Name value: " + name)
 	}
 
 	return tun, err
@@ -217,7 +217,7 @@ type wireguardConnection struct {
 }
 
 func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
-	log.Trace("creating device")
+	log.Debug().Msg("Creating device")
 	device, err := wg.deviceFactory(options)
 	if err != nil {
 		return errors.Wrap(err, "failed to start wireguard connection")
@@ -230,13 +230,13 @@ func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
 		return errors.Wrap(err, "failed to start wireguard connection")
 	}
 
-	log.Trace("emitting connected event")
+	log.Debug().Msg("Emitting connected event")
 	wg.stateChannel <- connection.Connected
 	return nil
 }
 
 func (wg *wireguardConnection) doInit() error {
-	log.Trace("starting doInit()")
+	log.Debug().Msg("Starting doInit()")
 	wg.stopCompleted.Add(1)
 	go wg.runPeriodically(time.Second)
 
@@ -270,7 +270,7 @@ func (wg *wireguardConnection) updateStatistics() {
 	var err error
 	defer func() {
 		if err != nil {
-			log.Error(logPrefix, "Error updating statistics: ", err)
+			log.Error().Err(err).Msg("Error updating statistics")
 		}
 	}()
 

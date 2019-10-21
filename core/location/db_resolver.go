@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // DBResolver struct represents ip -> country resolver which uses geoip2 data reader
@@ -46,7 +47,7 @@ func NewExternalDBResolver(databasePath string, ipResolver ip.Resolver) (*DBReso
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (r *DBResolver) DetectLocation() (loc Location, err error) {
-	log.Debug("detecting with DB resolver")
+	log.Debug().Msg("Detecting with DB resolver")
 	ipAddress, err := r.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, errors.Wrap(err, "failed to get public IP")

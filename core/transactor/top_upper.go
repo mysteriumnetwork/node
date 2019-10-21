@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/rs/zerolog/log"
 )
 
 type transactorCaller interface {
@@ -74,9 +75,9 @@ func (tu *TopUpper) handleRegistrationEvent(id identity.Identity) {
 	for i := 0; i < tu.retryAttempts; i++ {
 		err := tu.tc.TopUp(id.Address)
 		if err != nil {
-			log.Warnf("could not top up newly registered identity channel %v. Will retry", err)
+			log.Warn().Err(err).Msg("Could not top up newly registered identity channel, will retry")
 			if i+1 == tu.retryAttempts {
-				log.Errorf("top up failed after multiple attempts, aborting", err)
+				log.Error().Err(err).Msg("Top up failed after multiple attempts, aborting")
 			}
 		}
 

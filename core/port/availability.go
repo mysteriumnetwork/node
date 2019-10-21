@@ -22,6 +22,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // Tests port by opening a UDP listener on given port number
@@ -33,7 +34,7 @@ func available(port int) (bool, error) {
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Infof("cannot listen on UDP port %v: %v", port, err)
+		log.Info().Err(err).Msgf("Cannot listen on UDP port %d", port)
 		return false, nil
 	}
 	defer conn.Close()

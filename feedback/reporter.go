@@ -20,11 +20,9 @@ package feedback
 import (
 	"github.com/mysteriumnetwork/feedback/client"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // Reporter reports issues from users
 type Reporter struct {
@@ -39,7 +37,7 @@ func NewReporter(
 	identityProvider identityProvider,
 	feedbackURL string,
 ) (*Reporter, error) {
-	log.Info("Using feedback API at: " + feedbackURL)
+	log.Info().Msg("Using feedback API at: " + feedbackURL)
 	api, err := client.NewFeedbackAPI(feedbackURL)
 	if err != nil {
 		return nil, err

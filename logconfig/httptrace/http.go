@@ -20,14 +20,17 @@ package httptrace
 import (
 	"net/http"
 	"net/http/httputil"
+
+	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
 
 // TraceRequestResponse trace simple http request/response
 func TraceRequestResponse(req *http.Request, resp *http.Response) {
-	if !log.IsTrace() {
+	if !logconfig.CurrentLogOptions.LogHTTP {
 		return
 	}
 	dumpRequest, _ := httputil.DumpRequest(req, true)
 	dumpResponse, _ := httputil.DumpResponse(resp, true)
-	log.Tracef("\n== Request == \n%v\n== Response ==\n%v\n", string(dumpRequest), string(dumpResponse))
+	log.Debug().Msgf("\n== Request == \n%v\n== Response ==\n%v\n", string(dumpRequest), string(dumpResponse))
 }

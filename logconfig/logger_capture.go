@@ -18,45 +18,38 @@
 package logconfig
 
 import (
-	"github.com/cihub/seelog"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-// CaptureLogs captures all logger output done during callback execution
-func CaptureLogs(f func()) []string {
-	logs := make([]string, 0)
-
-	loggerOld := ReplaceLogger(NewLoggerCapture(&logs))
-	defer ReplaceLogger(loggerOld)
-
-	f()
-
-	return logs
+// LogCapturer captures logging messages to an in-memory slice
+type LogCapturer struct {
+	logs     []string
+	original zerolog.Logger
 }
 
-// NewLoggerCapture creates logger logs to given array of messages
-func NewLoggerCapture(messages *[]string) seelog.LoggerInterface {
-	logger, _ := seelog.LoggerFromCustomReceiver(
-		&captureReceiver{messages},
-	)
-	return logger
+// NewLogCapturer creates a LogCapturer
+func NewLogCapturer() *LogCapturer {
+	return &LogCapturer{logs: []string{}}
 }
 
-type captureReceiver struct {
-	Messages *[]string
+// Attach attaches LogCapturer hook to the global zerolog instance
+func (l *LogCapturer) Attach() {
+	l.original = log.Logger
+	log.Logger = log.Logger.Hook(l)
 }
 
-func (receiver *captureReceiver) ReceiveMessage(message string, level seelog.LogLevel, context seelog.LogContextInterface) error {
-	*receiver.Messages = append(*receiver.Messages, message)
-
-	return nil
+// Detach restores original global zerolog instance
+func (l *LogCapturer) Detach() {
+	log.Logger = l.original
 }
 
-func (receiver *captureReceiver) AfterParse(initArgs seelog.CustomReceiverInitArgs) error {
-	return nil
+// Run stores log message for later access (zerolog hook)
+func (l *LogCapturer) Run(e *zerolog.Event, level zerolog.Level, message string) {
+	l.logs = append(l.logs, message)
 }
-func (receiver *captureReceiver) Flush() {
 
-}
-func (receiver *captureReceiver) Close() error {
-	return nil
+// Messages returns all captures log messages
+func (l *LogCapturer) Messages() []string {
+	return l.logs
 }

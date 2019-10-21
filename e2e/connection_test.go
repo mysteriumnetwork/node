@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
@@ -72,7 +72,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
 	id, err := tequilapi.NewIdentity(idPassphrase)
 	assert.NoError(t, err)
-	seelog.Info("Created new identity: ", id.Address)
+	log.Info().Msg("Created new identity: " + id.Address)
 
 	return id.Address
 }
@@ -107,7 +107,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 		assert.FailNowf(t, "Exactly one proposal is expected - something is not right!", "Error was: %v", err)
 	}
 
-	seelog.Info("Selected proposal is: ", proposals[0], ", ServiceType:", serviceType)
+	log.Info().Msgf("Selected proposal is: %v, serviceType=%v", proposals[0], serviceType)
 	return proposals[0]
 }
 
@@ -121,7 +121,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	nonVpnIP, err := tequilapi.ConnectionIP()
 	assert.NoError(t, err)
-	seelog.Info("Original consumer IP: ", nonVpnIP)
+	log.Info().Msg("Original consumer IP: " + nonVpnIP)
 
 	err = waitForCondition(func() (bool, error) {
 		status, err := tequilapi.ConnectionStatus()
@@ -143,7 +143,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	vpnIP, err := tequilapi.ConnectionIP()
 	assert.NoError(t, err)
-	seelog.Info("Changed consumer IP: ", vpnIP)
+	log.Info().Msg("Changed consumer IP: " + vpnIP)
 
 	// sessions history should be created after connect
 	sessionsDTO, err := tequilapi.ConnectionSessionsByType(serviceType)

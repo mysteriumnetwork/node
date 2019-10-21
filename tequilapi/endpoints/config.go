@@ -25,6 +25,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/rs/zerolog/log"
 )
 
 type configProvider interface {
@@ -96,10 +97,10 @@ func (api *configAPI) SetUserConfig(writer http.ResponseWriter, httpReq *http.Re
 	}
 	for k, v := range req.Data {
 		if isNil(v) {
-			log.Debugf("clearing user config value: %q")
+			log.Debug().Msgf("Clearing user config value: %q", v)
 			api.config.RemoveUser(k)
 		} else {
-			log.Debugf("setting user config value: %q = %q", k, v)
+			log.Debug().Msgf("Setting user config value: %q = %q", k, v)
 			api.config.SetUser(k, v)
 		}
 	}

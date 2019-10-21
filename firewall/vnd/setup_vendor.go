@@ -25,7 +25,5 @@ import (
 
 // SetupVendor initializes default vendor or OSes which do not support it
 func SetupVendor() (firewall.Vendor, error) {
-	return firewall.NoopVendor{
-		LogPrefix: "[Noop firewall]",
-	}, nil
+	return firewall.NoopVendor{}, nil
 }

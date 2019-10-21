@@ -664,6 +664,19 @@
   revision = "15587285ef6b6e7a3f657e2e00f9f271883bcf22"
 
 [[projects]]
+  digest = "1:6cf4e9f5ea82d48699eed7a836781037621227fb8551d7571b82aabde422fec1"
+  name = "github.com/rs/zerolog"
+  packages = [
+    ".",
+    "internal/cbor",
+    "internal/json",
+    "log",
+  ]
+  pruneopts = "UT"
+  revision = "b806a5ecbe5347ad9ef05121fea8f4acc65fa5fc"
+  version = "v1.15.0"
+
+[[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -1046,7 +1059,6 @@
     "github.com/aws/aws-sdk-go-v2/service/s3/s3manager",
     "github.com/cheggaaa/pb",
     "github.com/chzyer/readline",
-    "github.com/cihub/seelog",
     "github.com/dgrijalva/jwt-go",
     "github.com/ethereum/go-ethereum",
     "github.com/ethereum/go-ethereum/accounts",
@@ -1104,6 +1116,8 @@
     "github.com/oleksandr/bonjour",
     "github.com/oschwald/geoip2-golang",
     "github.com/pkg/errors",
+    "github.com/rs/zerolog",
+    "github.com/rs/zerolog/log",
     "github.com/songgao/water",
     "github.com/spf13/cast",
     "github.com/stretchr/testify/assert",

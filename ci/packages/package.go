@@ -23,18 +23,17 @@ import (
 	"path/filepath"
 	"text/template"
 
-	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
 
 // PackageLinuxAmd64 builds and stores linux amd64 package
 func PackageLinuxAmd64() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := packageStandalone("build/myst/myst_linux_amd64", "linux", "amd64"); err != nil {
 		return err
 	}
@@ -44,7 +43,6 @@ func PackageLinuxAmd64() error {
 // PackageLinuxArm builds and stores linux arm package
 func PackageLinuxArm() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := packageStandalone("build/myst/myst_linux_arm", "linux", "arm"); err != nil {
 		return err
 	}
@@ -54,7 +52,6 @@ func PackageLinuxArm() error {
 // PackageLinuxDebianAmd64 builds and stores debian amd64 package
 func PackageLinuxDebianAmd64() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
@@ -70,7 +67,6 @@ func PackageLinuxDebianAmd64() error {
 // PackageLinuxDebianArm builds and stores debian arm package
 func PackageLinuxDebianArm() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
@@ -86,7 +82,6 @@ func PackageLinuxDebianArm() error {
 // PackageOsxAmd64 builds and stores OSX amd64 package
 func PackageOsxAmd64() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
 		return err
 	}
@@ -96,7 +91,6 @@ func PackageOsxAmd64() error {
 // PackageWindowsAmd64 builds and stores Windows amd64 package
 func PackageWindowsAmd64() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := packageStandalone("build/myst/myst_windows_amd64.exe", "windows", "amd64"); err != nil {
 		return err
 	}
@@ -106,7 +100,6 @@ func PackageWindowsAmd64() error {
 // PackageIOS builds and stores iOS package
 func PackageIOS() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
 		return err
 	}
@@ -116,7 +109,6 @@ func PackageIOS() error {
 // PackageAndroid builds and stores Android package
 func PackageAndroid() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
 	}
@@ -158,7 +150,6 @@ func PackageAndroid() error {
 // PackageDockerAlpine builds and stores docker alpine image
 func PackageDockerAlpine() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := sh.RunV("bin/package_docker"); err != nil {
 		return err
 	}
@@ -171,7 +162,6 @@ func PackageDockerAlpine() error {
 // PackageDockerUbuntu builds and stores docker ubuntu image
 func PackageDockerUbuntu() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
 	}
@@ -187,7 +177,6 @@ func PackageDockerUbuntu() error {
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
 	}
@@ -217,7 +206,7 @@ func goGet(pkg string) error {
 }
 
 func packageStandalone(binaryPath, os, arch string) error {
-	log.Info("packaging", binaryPath, os, arch)
+	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
 	envs := map[string]string{
 		"BINARY": binaryPath,
 	}

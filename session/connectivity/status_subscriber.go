@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/rs/zerolog/log"
 )
 
 // StatusSubscriber is responsible for handling status events for the peer.
@@ -53,7 +54,7 @@ func (s *statusSubscriber) Subscribe(dialog communication.Dialog) {
 		},
 	}
 	if err := dialog.Receive(consumer); err != nil {
-		log.Errorf("could not receive connectivity status: %v", err)
+		log.Error().Err(err).Msg("Could not receive connectivity status")
 		return
 	}
 }

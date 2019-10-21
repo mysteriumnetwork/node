@@ -18,8 +18,8 @@
 package registry
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/rs/zerolog/log"
 )
 
 // FakeRegistry fake register
@@ -38,7 +38,7 @@ func (registry *FakeRegistry) SubscribeToRegistrationEvent(id identity.Identity)
 	registrationEvent chan RegistrationEvent,
 	unsubscribe func(),
 ) {
-	log.Info("fake SubscribeToRegistrationEvent called ")
+	log.Info().Msg("Fake SubscribeToRegistrationEvent called")
 	registrationEvent = make(chan RegistrationEvent)
 	unsubscribe = func() {
 		registrationEvent <- Cancelled

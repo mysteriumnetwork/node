@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // Pool hands out ports for service use
@@ -63,7 +64,7 @@ func (pool *Pool) Acquire() (port Port, err error) {
 	if !available {
 		p, err = pool.seekAvailablePort()
 	}
-	log.Infof("supplying port %v, err %v", p, err)
+	log.Info().Err(err).Msgf("Supplying port %d", p)
 	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 

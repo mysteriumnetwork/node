@@ -22,54 +22,62 @@ import (
 	"path"
 	"strings"
 
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // LogOptions log options
 type LogOptions struct {
-	logLevelInt log.LogLevel
-	LogLevel    string
-	Filepath    string
+	LogLevel zerolog.Level
+	LogHTTP  bool
+	Filepath string
 }
 
 // CurrentLogOptions current log options
 var CurrentLogOptions = LogOptions{
-	logLevelInt: log.DebugLvl,
-	LogLevel:    log.DebugStr,
+	LogLevel: zerolog.DebugLevel,
+	LogHTTP:  false,
 }
 
 var (
 	logLevel = altsrc.NewStringFlag(cli.StringFlag{
 		Name: "log-level",
 		Usage: func() string {
-			allLevels := []string{log.TraceStr, log.DebugStr, log.InfoStr, log.WarnStr, log.ErrorStr, log.CriticalStr, log.OffStr}
+			allLevels := []string{
+				zerolog.DebugLevel.String(),
+				zerolog.InfoLevel.String(),
+				zerolog.WarnLevel.String(),
+				zerolog.FatalLevel.String(),
+				zerolog.PanicLevel.String(),
+				zerolog.Disabled.String(),
+			}
 			return fmt.Sprintf("Set the logging level (%s)", strings.Join(allLevels, "|"))
 		}(),
-		Value: func() string {
-			level := log.DebugStr
-			return level
-		}(),
+		Value: zerolog.DebugLevel.String(),
+	})
+	logHttp = altsrc.NewBoolFlag(cli.BoolFlag{
+		Name:  "log.http",
+		Usage: "Enable HTTP payload logging",
 	})
 )
 
 // RegisterFlags registers logger CLI flags
 func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, logLevel)
+	*flags = append(*flags, logLevel, logHttp)
 }
 
 // ParseFlags parses logger CLI flags from context
 func ParseFlags(ctx *cli.Context, logDir string) LogOptions {
-	level := ctx.GlobalString("log-level")
-	levelInt, found := log.LogLevelFromString(level)
-	if !found {
-		levelInt = log.DebugLvl
-		level = log.DebugStr
+	level, err := zerolog.ParseLevel(ctx.GlobalString(logLevel.Name))
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse logging level")
+		level = zerolog.DebugLevel
 	}
 	return LogOptions{
-		logLevelInt: levelInt,
-		LogLevel:    level,
-		Filepath:    path.Join(logDir, "mysterium-node.log"),
+		LogLevel: level,
+		Filepath: path.Join(logDir, "mysterium-node.log"),
+		LogHTTP:  ctx.GlobalBool(logHttp.Name),
 	}
 }

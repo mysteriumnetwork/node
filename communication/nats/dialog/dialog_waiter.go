@@ -18,10 +18,8 @@
 package dialog
 
 import (
-	"fmt"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
@@ -29,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type validator func(peerID identity.Identity) error
@@ -43,8 +42,6 @@ func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, val
 	}
 }
 
-const waiterLogPrefix = "[NATS.DialogWaiter] "
-
 type dialogWaiter struct {
 	address    *discovery.AddressNATS
 	signer     identity.Signer
@@ -56,7 +53,7 @@ type dialogWaiter struct {
 
 // Start registers dialogWaiter with broker (NATS) service
 func (waiter *dialogWaiter) Start() (market.Contact, error) {
-	log.Info(waiterLogPrefix, "Connecting to: ", waiter.address.GetContact())
+	log.Info().Msgf("Connecting to: %v", waiter.address.GetContact())
 
 	err := waiter.address.Connect()
 	if err != nil {
@@ -83,13 +80,13 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		err := waiter.validateDialogRequest(request)
 		if err != nil {
-			log.Error(waiterLogPrefix, "Validation check failed: ", err.Error())
+			log.Error().Err(err).Msg("Validation check failed")
 			return &responseInvalidIdentity, nil
 		}
 
 		uid, err := uuid.NewV4()
 		if err != nil {
-			log.Error(waiterLogPrefix, "Failed to generate unique topic: ", err)
+			log.Error().Err(err).Msg("Failed to generate unique topic")
 			return &responseInternalError, errors.Wrap(err, "failed to generate unique topic")
 		}
 
@@ -102,7 +99,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID), topic)
 		err = dialogHandler.Handle(dialog)
 		if err != nil {
-			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.PeerID, err))
+			log.Error().Err(err).Msgf("Failed dialog from: %q", request.PeerID)
 			return &responseInternalError, nil
 		}
 
@@ -110,7 +107,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		waiter.dialogs = append(waiter.dialogs, dialog)
 		waiter.Unlock()
 
-		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.PeerID))
+		log.Info().Msgf("Accepted dialog from: %q", request.PeerID)
 		return &dialogCreateResponse{
 			Reason:        responseOK.Reason,
 			ReasonMessage: responseOK.ReasonMessage,

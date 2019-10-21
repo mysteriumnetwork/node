@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -29,9 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-const statsSenderLogPrefix = "[session-stats-sender] "
 
 // ErrSessionNotStarted represents the error that occurs when the session has not been started yet
 var ErrSessionNotStarted = errors.New("session not started")
@@ -89,7 +87,7 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 	signer := sr.signerFactory(consumerID)
 	loc, err := sr.locationDetector.GetOrigin()
 	if err != nil {
-		log.Error(statsSenderLogPrefix, "Failed to resolve location: ", err)
+		log.Error().Err(err).Msg("Failed to resolve location")
 	}
 
 	sr.done = make(chan struct{})
@@ -99,25 +97,25 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 			select {
 			case <-sr.done:
 				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
-					log.Error(statsSenderLogPrefix, "Failed to send session stats to the remote service: ", err)
+					log.Error().Err(err).Msg("Failed to send session stats to the remote service")
 				} else {
-					log.Debug(statsSenderLogPrefix, "Final stats sent")
+					log.Debug().Msg("Final stats sent")
 				}
 				// reset the stats in preparation for a new session
 				sr.statisticsTracker.Reset()
 				return
 			case <-time.After(sr.sendInterval):
 				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
-					log.Error(statsSenderLogPrefix, "Failed to send session stats to the remote service: ", err)
+					log.Error().Err(err).Msg("Failed to send session stats to the remote service")
 				} else {
-					log.Debug(statsSenderLogPrefix, "Stats sent")
+					log.Debug().Msg("Stats sent")
 				}
 			}
 		}
 	}()
 
 	sr.started = true
-	log.Debug(statsSenderLogPrefix, "started")
+	log.Debug().Msg("Session statistics reporter started")
 }
 
 // stop stops the sending of stats
@@ -131,7 +129,7 @@ func (sr *SessionStatisticsReporter) stop() {
 
 	close(sr.done)
 	sr.started = false
-	log.Debug(statsSenderLogPrefix, "stopping")
+	log.Debug().Msg("Session statistics reporter stopping")
 }
 
 func (sr *SessionStatisticsReporter) send(serviceType, providerID, country string, sessionID session.ID, signer identity.Signer) error {

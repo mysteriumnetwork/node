@@ -43,6 +43,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
 )
@@ -88,7 +89,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			var portPool port.ServicePortSupplier
 			if wgOptions.Ports.IsSpecified() {
-				log.Infof("fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
+				log.Info().Msgf("Fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
 			} else {
 				portPool = port.NewPool()
@@ -188,7 +189,7 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) error {
 	di.NATService = nat.NewService()
 	if err := di.NATService.Enable(); err != nil {
-		log.Warn("Failed to enable NAT forwarding: ", err)
+		log.Warn().Err(err).Msg("Failed to enable NAT forwarding")
 	}
 	di.ServiceRegistry = service.NewRegistry()
 	storage := session.NewEventBasedStorage(di.EventBus, session.NewStorageMemory())
@@ -264,7 +265,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
 	if err := di.EventBus.Subscribe(service.StatusTopic, serviceCleaner.HandleServiceStatus); err != nil {
-		log.Error("failed to subscribe service cleaner")
+		log.Error().Msg("failed to subscribe service cleaner")
 	}
 
 	return nil
@@ -303,6 +304,6 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 	)
 
 	if err != nil {
-		log.Error("Failed to get register to mmn event", err.Error())
+		log.Error().Err(err).Msg("Failed to get register to mmn event")
 	}
 }

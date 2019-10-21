@@ -23,14 +23,12 @@ import (
 	"net/http"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-const logPrefix = "[sse-handler]"
 
 // EventType represents all the event types we're subscribing to
 type EventType string
@@ -121,7 +119,7 @@ func (h *Handler) Sub(resp http.ResponseWriter, req *http.Request, params httpro
 
 			_, err := fmt.Fprintf(resp, "data: %s\n\n", msg)
 			if err != nil {
-				log.Error(logPrefix, err)
+				log.Error().Err(err).Msg("")
 				return
 			}
 
@@ -176,7 +174,7 @@ func (h *Handler) stop() {
 func (h *Handler) send(e Event) {
 	marshaled, err := json.Marshal(e)
 	if err != nil {
-		log.Error(logPrefix, "could not marshal sse message", err)
+		log.Error().Err(err).Msg("Could not marshal SSE message")
 		return
 	}
 	h.messages <- string(marshaled)

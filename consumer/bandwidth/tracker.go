@@ -22,12 +22,11 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/rs/zerolog/log"
 )
 
-const trackerLogPrefix = "[bandwidth-tracker] "
 const bitsInByte = 8
 
 // Throughput represents the throughput
@@ -85,8 +84,8 @@ func (t *Tracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
 		Down: Throughput{BitsPerSecond: float64(byteDownDiff) / secondsSince * bitsInByte},
 	}
 
-	log.Tracef("%sDownload speed: %s", trackerLogPrefix, t.currentSpeed.Down)
-	log.Tracef("%sUpload speed: %s", trackerLogPrefix, t.currentSpeed.Up)
+	log.Debug().Msgf("Download speed: %s", t.currentSpeed.Down)
+	log.Debug().Msgf("Upload speed: %s", t.currentSpeed.Up)
 }
 
 // ConsumeSessionEvent handles the session state changes

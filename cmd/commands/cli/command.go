@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -40,6 +39,7 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -53,8 +53,6 @@ const serviceHelp = `service <action> [args]
 	sessions
 
 	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP`
-
-var log = logconfig.NewLogger()
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
@@ -77,10 +75,10 @@ func NewCommand() *cli.Command {
 
 func describeQuit(err error) error {
 	if err == nil || err == io.EOF || err == readline.ErrInterrupt {
-		log.Info("stopping application")
+		log.Info().Msg("Stopping application")
 		return nil
 	}
-	log.Errorf("terminating application due to error: %+v\n", err)
+	log.Error().Err(err).Stack().Msg("Terminating application due to error")
 	return err
 }
 

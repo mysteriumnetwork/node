@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/rs/zerolog"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -101,7 +102,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 // DefaultLogOptions default logging options for mobile
 func DefaultLogOptions() *MobileLogOptions {
 	return &MobileLogOptions{
-		LogLevel: "debug",
+		LogLevel: zerolog.DebugLevel,
 	}
 }
 

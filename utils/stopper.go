@@ -20,7 +20,7 @@ package utils
 import (
 	"os"
 
-	log "github.com/cihub/seelog"
+	"github.com/rs/zerolog/log"
 )
 
 // Killer kills some resource and performs cleanup
@@ -50,11 +50,11 @@ func newStopper(kill Killer, exit exitter) func() {
 
 func stop(kill Killer, exit exitter) {
 	if err := kill(); err != nil {
-		log.Errorf("Error while killing process: %v\n", err.Error())
+		log.Error().Err(err).Stack().Msg("Error while killing process")
 		exit(1)
 		return
 	}
 
-	log.Info("Good bye")
+	log.Info().Msg("Good bye")
 	exit(0)
 }

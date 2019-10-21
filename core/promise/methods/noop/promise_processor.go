@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -122,7 +123,7 @@ func (processor *PromiseProcessor) getBalanceState() balanceState {
 }
 
 func (processor *PromiseProcessor) balanceSend(message promise.BalanceMessage) error {
-	log.Infof("notifying balance %s", message.Balance.String())
+	log.Info().Msg("Notifying balance" + message.Balance.String())
 	return processor.dialog.Send(&promise.BalanceMessageProducer{
 		Message: message,
 	})

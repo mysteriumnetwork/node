@@ -17,35 +17,35 @@
 
 package firewall
 
-import "github.com/cihub/seelog"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 // NoopVendor is a Vendor implementation which only logs allow requests with no effects
 // used by default
 type NoopVendor struct {
-	LogPrefix string
 }
 
 // Reset noop vendor (just log call)
 func (nb NoopVendor) Reset() {
-	seelog.Info(nb.LogPrefix, "Rules reset was requested")
+	log.Info().Msg("Rules reset was requested")
 }
 
 // BlockOutgoingTraffic just logs the call
 func (nb NoopVendor) BlockOutgoingTraffic() (RemoveRule, error) {
-	seelog.Info(nb.LogPrefix, "Outgoing traffic block requested")
+	log.Info().Msg("Outgoing traffic block requested")
 	return nb.logRemoval("Outgoing traffic block removed"), nil
 }
 
 // AllowIPAccess logs ip for which access was requested
 func (nb NoopVendor) AllowIPAccess(ip string) (RemoveRule, error) {
-	seelog.Info(nb.LogPrefix, "Allow ", ip, " access")
+	log.Info().Msgf("Allow %s access", ip)
 	return nb.logRemoval("Rule for ip: ", ip, " removed"), nil
 }
 
 func (nb NoopVendor) logRemoval(vals ...interface{}) RemoveRule {
 	return func() {
-		vals := append([]interface{}{nb.LogPrefix}, vals...)
-		seelog.Info(vals...)
+		log.Info().Msgf("%+v", vals...)
 	}
 }
 

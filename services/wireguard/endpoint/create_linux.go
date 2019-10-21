@@ -20,13 +20,13 @@
 package endpoint
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/rs/zerolog/log"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
@@ -56,14 +56,14 @@ func getWGClient() (wgClient wgClient, err error) {
 		return kernelspace.NewWireguardClient()
 	}
 
-	log.Info("Wireguard kernel space is not supported. Switching to user space implementation.")
+	log.Info().Msg("Wireguard kernel space is not supported. Switching to user space implementation.")
 	return userspace.NewWireguardClient()
 }
 
 func isKernelSpaceSupported() bool {
 	err := utils.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
 	if err != nil {
-		log.Warn(logPrefix, "failed to create wireguard network interface: ", err)
+		log.Warn().Err(err).Msg("Failed to create wireguard network interface")
 	}
 
 	_ = utils.SudoExec("ip", "link", "del", "iswgsupported")

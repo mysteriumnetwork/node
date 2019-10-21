@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
+	"github.com/rs/zerolog/log"
 )
 
 const migrationIndexBucketName = "migrations"
@@ -61,12 +62,12 @@ func (m *Migrator) migrate(migration migrations.Migration) error {
 	if err != nil || isRun {
 		return err
 	}
-	log.Info("running migration ", migration.Name)
+	log.Info().Msg("Running migration " + migration.Name)
 	err = migration.Migrate(m.db.db)
 	if err != nil {
 		return err
 	}
-	log.Info("saving migration ", migration.Name)
+	log.Info().Msg("Saving migration " + migration.Name)
 	return m.saveMigrationRun(migration)
 }
 

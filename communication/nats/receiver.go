@@ -21,12 +21,10 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var rlog = logconfig.NewNamespaceLogger("receiver")
 
 // NewReceiver constructs new Receiver's instance which works through NATS connection.
 // Codec packs/unpacks messages to byte payloads.
@@ -53,19 +51,19 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		rlog.Debugf("message %q received: %s", messageTopic, msg.Data)
+		log.Debug().Msgf("Message %q received: %s", messageTopic, msg.Data)
 		messagePtr := consumer.NewMessage()
 		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to unpack message %q", messageTopic)
-			rlog.Error(err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 
 		err = consumer.Consume(messagePtr)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to process message %q", messageTopic)
-			rlog.Error(err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 	}
@@ -88,9 +86,9 @@ func (receiver *receiverNATS) Unsubscribe() {
 
 	for topic, s := range receiver.subs {
 		if err := s.Unsubscribe(); err != nil {
-			rlog.Error("failed to unsubscribe from topic: ", topic)
+			log.Error().Err(err).Msg("Failed to unsubscribe from topic: " + topic)
 		}
-		rlog.Infof(" unsubscribed from %s", topic)
+		log.Info().Msg("Unsubscribed from " + topic)
 	}
 }
 
@@ -98,34 +96,34 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		rlog.Debugf("request %q received: %s", requestTopic, msg.Data)
+		log.Debug().Msgf("Request %q received: %s", requestTopic, msg.Data)
 		requestPtr := consumer.NewRequest()
 		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to unpack request '%s'", requestTopic)
-			rlog.Error(err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 
 		response, err := consumer.Consume(requestPtr)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to process request '%s'", requestTopic)
-			rlog.Error(err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 
 		responseData, err := receiver.codec.Pack(response)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to pack response '%s'", requestTopic)
-			rlog.Error(err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 
-		rlog.Debugf("request %q response: %s", requestTopic, responseData)
+		log.Debug().Msgf("Request %q response: %s", requestTopic, responseData)
 		err = receiver.connection.Publish(msg.Reply, responseData)
 		if err != nil {
 			err = errors.Wrapf(err, "failed to send response '%s'", requestTopic)
-			rlog.Error(err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 	}
@@ -134,11 +132,11 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 	defer receiver.mu.Unlock()
 
 	if subscription, ok := receiver.subs[requestTopic]; ok && subscription.IsValid() {
-		rlog.Debugf("already subscribed to %q topic", requestTopic)
+		log.Debug().Msg("Already subscribed to topic: " + requestTopic)
 		return nil
 	}
 
-	rlog.Debugf("request %q topic has been subscribed to", requestTopic)
+	log.Debug().Msgf("Request %q topic has been subscribed to", requestTopic)
 
 	subscription, err := receiver.connection.Subscribe(requestTopic, messageHandler)
 	if err != nil {

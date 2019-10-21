@@ -19,6 +19,8 @@ package upnp
 
 import (
 	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
 // GatewayLoader fetches the gateways once and keeps them stored for further use
@@ -48,7 +50,7 @@ func (gl *GatewayLoader) Get() []GatewayDevice {
 func (gl *GatewayLoader) load() {
 	gateways, err := discoverGateways()
 	if err != nil {
-		log.Error("error discovering UPnP devices: ", err)
+		log.Error().Err(err).Msg("error discovering UPnP devices: ")
 		return
 	}
 	gl.gateways = gateways

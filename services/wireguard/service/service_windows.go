@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // NewManager creates new instance of Wireguard service
@@ -86,10 +87,10 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage, traversalParams
 
 	destroy := func() {
 		if err := manager.resourceAllocator.ReleaseIPNet(config.Consumer.IPAddress); err != nil {
-			log.Error("failed to release IP network", err)
+			log.Error().Err(err).Msg("Failed to release IP network")
 		}
 		if err := manager.connectionEndpoint.RemovePeer(key.PublicKey); err != nil {
-			log.Error("failed to remove peer: ", key.PublicKey, err)
+			log.Error().Err(err).Msg("failed to remove peer: " + key.PublicKey)
 		}
 	}
 
@@ -124,7 +125,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 	}
 	defer func() {
 		if err := firewall.RemoveInboundRule("UDP", config.Provider.Endpoint.Port); err != nil {
-			log.Error("failed to delete firewall rule for Wireguard", err)
+			log.Error().Err(err).Msg("Failed to delete firewall rule for Wireguard")
 		}
 	}()
 
@@ -134,7 +135,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 	}
 
 	manager.connectionEndpoint = connectionEndpoint
-	log.Info("wireguard service started successfully")
+	log.Info().Msg("Wireguard service started successfully")
 
 	manager.wg.Wait()
 	return nil
@@ -146,6 +147,6 @@ func (manager *Manager) Stop() error {
 
 	manager.connectionEndpoint.Stop()
 
-	log.Info("wireguard service stopped")
+	log.Info().Msg("Wireguard service stopped")
 	return nil
 }

@@ -27,10 +27,10 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -43,7 +43,6 @@ const (
 // ReleaseAndroidSDK releases Android SDK to Bintray
 func ReleaseAndroidSDK() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 
 	err := env.EnsureEnvVars(
 		env.TagBuild,
@@ -53,7 +52,7 @@ func ReleaseAndroidSDK() error {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
-		log.Info("not a tag build, skipping ReleaseAndroidSDK action...")
+		log.Info().Msg("Not a tag build, skipping ReleaseAndroidSDK action...")
 		return nil
 	}
 
@@ -116,7 +115,7 @@ func newBintrayReleaser(releaseOpts *releaseOpts, bintrayOpts *bintrayOpts) *bin
 }
 
 func (up *bintrayReleaser) upload(filename string) error {
-	log.Info("Uploading: ", filename)
+	log.Info().Msg("Uploading: " + filename)
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -129,13 +128,13 @@ func (up *bintrayReleaser) upload(filename string) error {
 }
 
 func (up *bintrayReleaser) publish() error {
-	log.Info("Publishing version: ", up.releaseOpts.version)
+	log.Info().Msg("Publishing version: " + up.releaseOpts.version)
 	requestURL := publishURL(*up.releaseOpts, *up.bintrayOpts)
 	return up.bintrayAPIRequest(http.MethodPost, *requestURL, nil)
 }
 
 func (up *bintrayReleaser) bintrayAPIRequest(method string, url url.URL, body io.Reader) error {
-	log.Infof("Bintray request [%s] %s", method, url)
+	log.Info().Msgf("Bintray request [%s] %s", method, url.String())
 	req, err := http.NewRequest(method, url.String(), body)
 	if err != nil {
 		return err
@@ -153,7 +152,7 @@ func (up *bintrayReleaser) bintrayAPIRequest(method string, url url.URL, body io
 		return err
 	}
 
-	log.Info("Bintray response: ", string(resBytes))
+	log.Info().Msgf("Bintray response: %v", string(resBytes))
 	return nil
 }
 

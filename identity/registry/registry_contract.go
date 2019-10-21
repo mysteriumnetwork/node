@@ -20,15 +20,13 @@ package registry
 import (
 	"context"
 
-	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/identity"
 )
-
-const logPrefix = "[registry] "
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
 func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress, accountantAddress common.Address) (*contractRegistry, error) {
@@ -102,13 +100,13 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 	}
 
 	go func() {
-		log.Info("waiting on", "identities", userIdentities[0].Hex(), "accountant", accountantIdentities[0].Hex())
+		log.Info().Msgf("Waiting on identities %s accountant %s", userIdentities[0].Hex(), accountantIdentities[0].Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 		subscription, err := registry.filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
 		defer subscription.Unsubscribe()
 		if err != nil {
 			registrationEvent <- Cancelled
-			log.Error(logPrefix, err)
+			log.Error().Err(err).Msg("")
 			return
 		}
 		select {
@@ -118,7 +116,7 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 			registrationEvent <- Registered
 		case err := <-subscription.Err():
 			if err != nil {
-				log.Error("subscription error", err)
+				log.Error().Err(err).Msg("Subscription error")
 			}
 		}
 	}()

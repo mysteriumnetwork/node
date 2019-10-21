@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/rs/zerolog/log"
 )
 
 // Cache allows us to cache location resolution
@@ -87,11 +88,11 @@ func (c *Cache) HandleConnectionEvent(se connection.StateEvent) {
 
 	loc, err := c.fetchAndSave()
 	if err != nil {
-		log.Error("location update failed", err)
+		log.Error().Err(err).Msg("Location update failed")
 		// reset time so a fetch is tried the next time a get is called
 		c.lastFetched = time.Time{}
 	} else {
-		log.Trace("location update succeeded", loc)
+		log.Debug().Msgf("Location update succeeded: %v", loc)
 	}
 }
 
@@ -106,8 +107,8 @@ func (c *Cache) HandleNodeEvent(se nodevent.Payload) {
 	var err error
 	c.origin, err = c.locationDetector.DetectLocation()
 	if err != nil {
-		log.Warn("failed to detect original location: ", err)
+		log.Warn().Err(err).Msg("Failed to detect original location")
 	} else {
-		log.Tracef("original location detected: %s (%s)", c.origin.Country, c.origin.NodeType)
+		log.Debug().Msgf("original location detected: %s (%s)", c.origin.Country, c.origin.NodeType)
 	}
 }

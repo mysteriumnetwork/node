@@ -45,16 +45,16 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 		returnError: errors.New("reject subscriptions"),
 	}
 
-	logs := make([]string, 0)
-	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
-	defer logconfig.ReplaceLogger(logger)
+	capturer := logconfig.NewLogCapturer()
+	capturer.Attach()
+	defer capturer.Detach()
 
 	issuer := &PromiseIssuer{dialog: dialog, signer: &identity.SignerFake{}}
 	err := issuer.Start(proposal)
 	defer issuer.Stop()
 
 	assert.EqualError(t, err, "reject subscriptions")
-	assert.Len(t, logs, 0)
+	assert.Len(t, capturer.Messages(), 0)
 }
 
 func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
@@ -62,16 +62,17 @@ func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 		returnReceiveMessage: promise.BalanceMessage{RequestID: 1, Accepted: true, Balance: testToken(10)},
 	}
 
-	logs := make([]string, 0)
-	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
-	defer logconfig.ReplaceLogger(logger)
+	capturer := logconfig.NewLogCapturer()
+	capturer.Attach()
+	defer capturer.Detach()
 
 	issuer := &PromiseIssuer{dialog: dialog, signer: &identity.SignerFake{}}
 	err := issuer.Start(proposal)
 	assert.NoError(t, err)
 
+	logs := capturer.Messages()
 	assert.Len(t, logs, 1)
-	assert.Contains(t, logs[0], "promise balance notified: 1000000000TEST")
+	assert.Contains(t, logs[0], "Promise balance notified: 1000000000TEST")
 }
 
 func testToken(amount float64) money.Money {

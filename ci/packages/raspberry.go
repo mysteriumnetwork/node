@@ -25,7 +25,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	log "github.com/cihub/seelog"
 	"github.com/mholt/archiver"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
@@ -33,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/ci/util/device"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -44,7 +44,6 @@ const (
 // PackageLinuxRaspberryImage builds and stores raspberry image
 func PackageLinuxRaspberryImage() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
@@ -62,7 +61,6 @@ func PackageLinuxRaspberryImage() error {
 
 func buildMystRaspbianImage() error {
 	logconfig.Bootstrap()
-	defer log.Flush()
 
 	imagePath, err := fetchRaspbianImage()
 	if err != nil {
@@ -100,7 +98,7 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	}
 	defer func() {
 		if err := device.DetachLoop(loopDevice); err != nil {
-			log.Warn(err)
+			log.Warn().Err(err).Msg("")
 		}
 	}()
 
@@ -114,7 +112,7 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	}
 	defer func() {
 		if err := shell.NewCmdf("sudo umount --recursive %s", raspbianMountPoint).Run(); err != nil {
-			log.Warn(err)
+			log.Warn().Err(err).Msg("")
 		}
 	}()
 	err = shell.NewCmdf("sudo sed -i s/^/#/g %s", raspbianMountPoint+"/etc/ld.so.preload").Run()
@@ -124,7 +122,7 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	defer func() {
 		err = shell.NewCmdf("sudo sed -i s/^#//g %s", raspbianMountPoint+"/etc/ld.so.preload").Run()
 		if err != nil {
-			log.Warn(err)
+			log.Warn().Err(err).Msg("")
 		}
 	}()
 
@@ -159,7 +157,7 @@ func fetchRaspbianImage() (filename string, err error) {
 		return "", err
 	}
 
-	log.Infof("looking up raspbian image file")
+	log.Info().Msg("Looking up Raspbian image file")
 	localRaspbianZip, err := storageClient.GetCacheableFile("raspbian", func(object s3.Object) bool {
 		return strings.Contains(aws.StringValue(object.Key), "-raspbian-buster-lite")
 	})
@@ -170,7 +168,7 @@ func fetchRaspbianImage() (filename string, err error) {
 	localRaspbianZipDir, localRaspbianZipFilename := filepath.Split(localRaspbianZip)
 	localRaspbianImgDir := filepath.Join(localRaspbianZipDir, localRaspbianZipFilename[0:len(localRaspbianZipFilename)-4])
 
-	log.Infof("extracting raspbian image to %s", localRaspbianImgDir)
+	log.Info().Msg("Extracting raspbian image to: " + localRaspbianImgDir)
 	err = os.RemoveAll(localRaspbianImgDir)
 	if err != nil {
 		return "", err

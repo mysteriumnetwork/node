@@ -20,12 +20,10 @@ package mapping
 import (
 	"time"
 
-	log "github.com/cihub/seelog"
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
+	"github.com/rs/zerolog/log"
 )
-
-const logPrefix = "[port mapping] "
 
 const (
 	mapTimeout        = 20 * time.Minute
@@ -67,10 +65,10 @@ func PortMapping(protocol string, port int, name string, publisher Publisher) fu
 // This function is typically invoked in its own goroutine.
 func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, intPort int, name string, publisher Publisher) {
 	defer func() {
-		log.Debug(logPrefix, "Deleting port mapping for port: ", extPort)
+		log.Debug().Msgf("Deleting port mapping for port: %d", extPort)
 
 		if err := m.DeleteMapping(protocol, extPort, intPort); err != nil {
-			log.Warn(logPrefix, "Couldn't delete port mapping: ", err)
+			log.Warn().Err(err).Msg("Couldn't delete port mapping")
 		}
 	}()
 	for {
@@ -85,14 +83,14 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 
 func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) {
 	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-		log.Warnf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
+		log.Warn().Err(err).Msgf("Couldn't add port mapping for port %d: retrying with permanent lease", extPort)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			publisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
-			log.Warnf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
+			log.Warn().Err(err).Msgf("Couldn't add port mapping for port %d", extPort)
 			return
 		}
 	}
 	publisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
-	log.Info(logPrefix, "Mapped network port: ", extPort)
+	log.Info().Msgf("Mapped network port: %d", extPort)
 }

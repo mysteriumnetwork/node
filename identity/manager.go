@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/eventbus"
 )
@@ -103,7 +104,7 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	defer idm.unlockedMu.Unlock()
 
 	if idm.unlocked[address] {
-		log.Tracef("unlocked identity found in cache, skipping keystore: %s", address)
+		log.Debug().Msg("unlocked identity found in cache, skipping keystore: %s" + address)
 		return nil
 	}
 
@@ -116,7 +117,7 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	if err != nil {
 		return errors.Wrapf(err, "keystore failed to unlock identity: %s", address)
 	}
-	log.Tracef("caching unlocked address: %s", address)
+	log.Debug().Msg("caching unlocked address: %s" + address)
 	idm.unlocked[address] = true
 
 	go idm.eventBus.Publish(IdentityUnlockTopic, address)

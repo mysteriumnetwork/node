@@ -24,12 +24,10 @@ import (
 	"path"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
-
-var log = logconfig.NewLogger()
 
 // LoadUserConfig determines config location from the context
 // and makes sure that the config file actually exists, creating it if necessary
@@ -53,7 +51,7 @@ func LoadUserConfig(ctx *cli.Context) error {
 func LoadUserConfigQuietly(ctx *cli.Context) error {
 	err := LoadUserConfig(ctx)
 	if err != nil {
-		log.Warn(err)
+		log.Warn().Err(err).Msg("Failed to load user config")
 	}
 	return nil
 }
@@ -67,7 +65,7 @@ func resolveLocation(ctx *cli.Context) (configDir string, configFilePath string)
 func createDirIfNotExists(dir string) error {
 	err := dirExists(dir)
 	if os.IsNotExist(err) {
-		log.Info("directory does not exist, creating a new one: ", dir)
+		log.Info().Msg("Directory does not exist, creating a new one: " + dir)
 		return os.MkdirAll(dir, 0700)
 	}
 	return err
@@ -75,7 +73,7 @@ func createDirIfNotExists(dir string) error {
 
 func createFileIfNotExists(filePath string) error {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		log.Info("config file does not exist, attempting to create: ", filePath)
+		log.Info().Msg("Config file does not exist, attempting to create: " + filePath)
 		_, err := os.Create(filePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to create config file")

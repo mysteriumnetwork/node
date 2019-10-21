@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // OptionsDirectory describes data structure holding directories as parameters
@@ -55,7 +56,7 @@ func (options *OptionsDirectory) Check() error {
 func ensureOrCreateDir(dir string) error {
 	err := ensureDirExists(dir)
 	if os.IsNotExist(err) {
-		log.Info("directory does not exist, creating a new one: ", dir)
+		log.Info().Msg("Directory does not exist, creating a new one: " + dir)
 		return os.MkdirAll(dir, 0700)
 	}
 	return err

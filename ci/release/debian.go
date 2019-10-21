@@ -20,9 +20,9 @@ package release
 import (
 	"strings"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/rs/zerolog/log"
 )
 
 type releaseDebianOpts struct {
@@ -68,7 +68,7 @@ func ReleaseDebianPPASnapshot() error {
 		return err
 	}
 	if !env.Bool(env.SnapshotBuild) {
-		log.Info("not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
+		log.Info().Msg("Not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
 		return nil
 	}
 	return releaseDebianPPA(&releaseDebianOpts{
@@ -89,7 +89,7 @@ func ReleaseDebianPPAPreRelease() error {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
-		log.Info("not a tag build, skipping ReleaseDebianPPAPreRelease action...")
+		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type oracleResolver struct {
@@ -39,10 +40,10 @@ func NewOracleResolver(srcIP, address string) *oracleResolver {
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (o *oracleResolver) DetectLocation() (location Location, err error) {
-	log.Debug("detecting with oracle resolver")
+	log.Debug().Msg("Detecting with oracle resolver")
 	request, err := requests.NewGetRequest(o.oracleResolverAddress, "", nil)
 	if err != nil {
-		log.Error(err)
+		log.Error().Err(err).Msg("")
 		return Location{}, errors.Wrap(err, "failed to create request")
 	}
 

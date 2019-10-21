@@ -21,10 +21,8 @@ import (
 	"net"
 
 	"github.com/miekg/dns"
-	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // ResolveViaConfigured create new dns.Server handler which handles incoming DNS requests
 func ResolveViaConfigured() dns.Handler {
@@ -36,7 +34,7 @@ func ResolveViaConfigured() dns.Handler {
 
 		config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 		if err != nil {
-			log.Error("Error loading DNS config: ", err)
+			log.Error().Err(err).Msg("Error loading DNS config")
 			writer.WriteMsg(resp)
 			return
 		}
@@ -45,7 +43,7 @@ func ResolveViaConfigured() dns.Handler {
 			forwardAddress := net.JoinHostPort(server, config.Port)
 			resp, _, err = client.Exchange(req, forwardAddress)
 			if err != nil {
-				log.Errorf(`Error proxying DNS query to "%s". %s`, forwardAddress, err)
+				log.Error().Err(err).Msg("Error proxying DNS query to " + forwardAddress)
 				continue
 			}
 		}

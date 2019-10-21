@@ -20,12 +20,10 @@ package firewall
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // AddInboundRule adds new inbound rule to the platform specific firewall.
 func AddInboundRule(proto string, port int) error {
@@ -38,7 +36,7 @@ func AddInboundRule(proto string, port int) error {
 
 	_, err := utils.PowerShell(cmd)
 	if err != nil {
-		log.Trace("failed to add firewall rule: ", err)
+		log.Warn().Err(err).Msg("Failed to add firewall rule")
 		return err
 	}
 
@@ -56,7 +54,7 @@ func RemoveInboundRule(proto string, port int) error {
 
 	_, err := utils.PowerShell(cmd)
 	if err != nil {
-		log.Trace("failed to remove firewall rule: ", err)
+		log.Warn().Err(err).Msg("Failed to remove firewall rule")
 		return err
 	}
 
@@ -67,7 +65,7 @@ func inboundRuleExists(name string) bool {
 	cmd := fmt.Sprintf(`netsh advfirewall firewall show rule name="%s" dir=in`, name)
 
 	if _, err := utils.PowerShell(cmd); err != nil {
-		log.Trace("failed to get firewall rule: ", err)
+		log.Warn().Err(err).Msg("Failed to get firewall rule")
 		return false
 	}
 

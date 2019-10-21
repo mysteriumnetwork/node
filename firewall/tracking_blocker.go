@@ -51,7 +51,7 @@ type referenceTrackingBlocker struct {
 
 func newTrackingBlocker() *referenceTrackingBlocker {
 	return &referenceTrackingBlocker{
-		vendor:           NoopVendor{LogPrefix: "[Noop firewall]"},
+		vendor:           NoopVendor{},
 		referenceTracker: make(map[string]refCount),
 		trafficLockScope: none,
 	}

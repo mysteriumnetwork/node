@@ -28,6 +28,7 @@ import (
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/rs/zerolog/log"
 )
 
 // DefaultDebounceDuration is the default time interval suggested for debouncing
@@ -176,7 +177,7 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 
 	event, ok := e.(natEvent.Event)
 	if !ok {
-		log.Warn("received a non nat event on nat status call - ignoring")
+		log.Warn().Msg("Received a non-NAT event on NAT status call - ignoring")
 		return
 	}
 

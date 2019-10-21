@@ -25,14 +25,12 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/shared"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/rs/zerolog/log"
 )
-
-var log = logconfig.NewLogger()
 
 // swagger:model ServiceRequestDTO
 type serviceRequest struct {
@@ -210,7 +208,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	log.Infof("service start options: %+v", sr)
+	log.Info().Msgf("Service start options: %+v", sr)
 	ap := getAccessPolicyData(sr, se.accessPolicyEndpointURL)
 
 	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)

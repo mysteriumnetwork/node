@@ -29,18 +29,16 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/shared"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
-
-var log = logconfig.NewLogger()
 
 var (
 	identityFlag = altsrc.NewStringFlag(cli.StringFlag{
@@ -109,9 +107,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 func describeQuit(err error) error {
 	if err == nil {
-		log.Info("stopping application")
+		log.Info().Msg("Stopping application")
 	} else {
-		log.Errorf("terminating application due to error: %+v\n", err)
+		log.Error().Err(err).Stack().Msg("Terminating application due to error")
 	}
 	return err
 }
@@ -132,7 +130,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	}
 
 	providerID := sc.unlockIdentity(parseIdentityFlags(ctx))
-	log.Infof("unlocked identity: %v", providerID.Address)
+	log.Info().Msgf("Unlocked identity: %v", providerID.Address)
 
 	if err := sc.runServices(ctx, providerID.Address, serviceTypes); err != nil {
 		return err
@@ -148,8 +146,8 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 		if err == nil {
 			return &identity.Identity{Address: id.Address}
 		}
-		log.Warnf("failed to get current identity: %v", err)
-		log.Warnf("retrying in %vs...", retryRate.Seconds())
+		log.Warn().Err(err).Msg("Failed to get current identity")
+		log.Warn().Msgf("retrying in %vs...", retryRate.Seconds())
 		time.Sleep(retryRate)
 	}
 }
