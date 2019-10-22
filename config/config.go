@@ -81,7 +81,7 @@ func (cfg *Config) LoadUserConfig(location string) error {
 	if err != nil {
 		return err
 	}
-	log.Info().Msg("user configuration loaded: \n" + cfgJson)
+	log.Info().Msg("User configuration loaded: \n" + cfgJson)
 	return nil
 }
 

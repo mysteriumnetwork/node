@@ -49,8 +49,13 @@ import (
 //</seelog>
 //`
 
-// BootstrapWith loads log package into the overall system
-func BootstrapWith(opts *LogOptions) {
+// Bootstrap loads log package into the overall system with debug defaults
+func Bootstrap() {
+	configureZerolog(&CurrentLogOptions)
+}
+
+// Configure loads log package into the overall system
+func Configure(opts *LogOptions) {
 	if opts != nil {
 		CurrentLogOptions = *opts
 	}
@@ -59,15 +64,6 @@ func BootstrapWith(opts *LogOptions) {
 	if CurrentLogOptions.Filepath != "" {
 		log.Info().Msg("Log file path: " + CurrentLogOptions.Filepath)
 	}
-}
-
-// Bootstrap loads log package into the overall system with debug defaults
-func Bootstrap() {
-	BootstrapWith(
-		&LogOptions{
-			LogLevel: zerolog.DebugLevel,
-		},
-	)
 }
 
 func padRight(s string, length int) string {
