@@ -46,7 +46,7 @@ echo "myst ($VERSION+build$BUILD+$DISTR) $DISTR; urgency=medium
 echo '#!/usr/bin/make -f
 
 export DH_VERBOSE := 1
-export PATH := /usr/lib/go-1.11/bin/:$(PATH)
+export PATH := /usr/lib/go-1.13/bin/:$(PATH)
 export GOPATH := $(CURDIR)/go
 export BUILD_COMMIT := '$BUILD_COMMIT'
 export BUILD_BRANCH := '$BUILD_BRANCH'

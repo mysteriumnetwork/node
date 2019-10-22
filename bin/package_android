@@ -14,17 +14,21 @@ set -e
 source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
-if ! [ -x "$(command -v xgo)" ]; then
-    go get github.com/karalabe/xgo
-fi
-
 DIR_BUILD="build/package"
 
-xgo \
-    -image=mysteriumnetwork/xgo:1.11 \
-    -ldflags="-w -s $(get_linker_ldflags)" \
-    -targets=android/* -out Mysterium -dest $DIR_BUILD \
- `pwd`/mobile/mysterium
+docker run --rm \
+    -v "$PWD"/$DIR_BUILD:/build \
+    -v "$GOPATH"/.xgo-cache:/deps-cache:ro \
+    -v "$GOPATH"/src:/ext-go/1/src:ro \
+    -e OUT=Mysterium \
+    -e FLAG_V=false \
+    -e FLAG_X=false \
+    -e FLAG_RACE=false \
+    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
+    -e FLAG_BUILDMODE=default \
+    -e TARGETS=android/. \
+    -e EXT_GOPATH=/ext-go/1 \
+    mysteriumnetwork/xgo:1.11 github.com/mysteriumnetwork/node/mobile/mysterium
 
 print_success "Android package '$PACKAGE_FILE' complete!"
 exit 0

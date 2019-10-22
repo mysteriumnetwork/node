@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cheggaaa/pb"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
@@ -94,7 +94,7 @@ func lookupBackend(rpcURL string) (*ethclient.Client, chan bool, error) {
 
 func trackGethProgress(client *ethclient.Client, lastProgress *ethereum.SyncProgress, completed chan<- bool) {
 	bar := pb.New64(int64(lastProgress.HighestBlock)).
-		SetTotal(int(lastProgress.CurrentBlock)).
+		SetTotal(int64(lastProgress.CurrentBlock)).
 		Start()
 	defer bar.Finish()
 	defer close(completed)
@@ -109,8 +109,8 @@ func trackGethProgress(client *ethclient.Client, lastProgress *ethereum.SyncProg
 			fmt.Println("Client in fully synced state. Proceeding...")
 			return
 		}
-		bar.Set(int(progress.CurrentBlock))
-		bar.SetTotal(int(progress.HighestBlock))
+		bar.Set(int(progress.CurrentBlock), true)
+		bar.SetTotal(int64(progress.HighestBlock))
 		time.Sleep(10 * time.Second)
 	}
 }

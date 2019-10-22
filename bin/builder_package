@@ -13,7 +13,7 @@ set -e
 # Build image and push to docker hub:
 #> bin/builder_package latest
 
-DOCKER_IMAGE="mysteriumnetwork/mysterium-node-builder"
+DOCKER_IMAGE="anjmao/mysterium-node-builder"
 
 printf "Building Docker image '$DOCKER_IMAGE' ..\n" \
     && docker build \

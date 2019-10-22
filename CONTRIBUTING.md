@@ -58,8 +58,7 @@ can run `sync-repo` to sync your fork with the upstream repository.
 
 * **Step 3.** Build
 
-Run `make help` to get a list of build targets (you may like to run `make dep`
-and `make dep-ensure` to install `dep` and to get dependencies).  Happy hacking!
+Run `make help` to get a list of build targets.  Happy hacking!
 
 ## Running
 
@@ -121,22 +120,7 @@ bin/swagger_generate
 
 ## Dependency management
 
-* Install project's frozen packages
-```bash
-dep ensure
-```
-
-* Add new package to project
-```bash
-dep ensure -add github.com/ccding/go-stun
-dep ensure -add github.com/ccding/go-stun@^0.1.0
-```
-
-* Update package in project
-```bash
-vim Gopkg.toml
-dep ensure -update
-```
+Dependencies are managed by go modules. Make sure you have at least go1.13 installed.
 
 ## Creating pull request
 
