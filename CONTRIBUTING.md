@@ -120,7 +120,7 @@ bin/swagger_generate
 
 ## Dependency management
 
-Dependencies are managed by go modules. Make sure you have at least go1.11 installed.
+Dependencies are managed by go modules. Make sure you have at least go1.13 installed.
 
 ## Creating pull request
 
