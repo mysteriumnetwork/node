@@ -18,11 +18,13 @@
 package logconfig
 
 import (
+	stdlog "log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cihub/seelog"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -82,6 +84,7 @@ func configureZerolog(opts *LogOptions) {
 		var relFile string
 		if pkgStart > 0 {
 			relFile = file[pkgStart+len(rootPkg):]
+			relFile = strings.TrimPrefix(relFile, "/vendor")
 		} else {
 			relFile = file
 		}
@@ -98,4 +101,11 @@ func configureZerolog(opts *LogOptions) {
 		Caller().
 		Timestamp().
 		Logger()
+	stdlog.SetFlags(0)
+	stdlog.SetOutput(log.Logger)
+	logger, err := seelog.LoggerFromWriterWithMinLevel(log.Logger, seelog.TraceLvl)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not configure seelog")
+	}
+	seelog.ReplaceLogger(logger)
 }
