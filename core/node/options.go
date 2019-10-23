@@ -52,6 +52,8 @@ type Options struct {
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall
+
+	Payments OptionsPayments
 }
 
 // OptionsKeystore stores the keystore configuration

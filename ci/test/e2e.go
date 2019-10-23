@@ -128,7 +128,7 @@ func (r *runner) startAppContainers() error {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
 
-	log.Info("starting accountant")
+	log.Info().Msg("starting accountant")
 	if err := r.compose("up", "-d", "accountant"); err != nil {
 		return errors.Wrap(err, "starting accountant failed!")
 	}

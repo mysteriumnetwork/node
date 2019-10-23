@@ -41,9 +41,6 @@ var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue pr
 // ErrAccountantFeeTooLarge indicates that we do not allow accountants with such high fees
 var ErrAccountantFeeTooLarge = errors.New("accountants fee exceeds")
 
-// DefaultMaxAllowedAccountantFee the default fee we allow the accountant to take from us
-const DefaultMaxAllowedAccountantFee uint16 = 1500
-
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
@@ -190,7 +187,7 @@ func (it *InvoiceTracker) Start() error {
 	}
 
 	if fee > it.maxAllowedAccountantFee {
-		log.Errorf("accountant fee too large, asking for %v where %v is the limit", fee, it.maxAllowedAccountantFee)
+		log.Error().Msgf("accountant fee too large, asking for %v where %v is the limit", fee, it.maxAllowedAccountantFee)
 		return ErrAccountantFeeTooLarge
 	}
 
@@ -241,7 +238,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	// Over the long run, this becomes redundant as the difference should become miniscule.
 	if it.lastExchangeMessage.AgreementTotal == 0 {
 		shouldBe = uint64(math.Trunc(float64(shouldBe) * 0.8))
-		log.Debugf("being lenient for the first payment, asking for %v", shouldBe)
+		log.Debug().Msgf("being lenient for the first payment, asking for %v", shouldBe)
 	}
 
 	// TODO: fill in the fee
@@ -300,7 +297,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
-		log.Warnf("consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
+		log.Warn().Msgf("consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
@@ -310,7 +307,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if !bytes.Equal(hashlock, em.Promise.Hashlock) {
-		log.Warnf("consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
+		log.Warn().Msgf("consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "missmatching hashlock")
 	}
 
@@ -325,7 +322,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
-		log.Warnf("consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
+		log.Warn().Msgf("consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
 	}
 	return nil
@@ -343,12 +340,12 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 
 		promise, err := it.accountantCaller.RequestPromise(pm)
 		if err != nil {
-			log.Warn("could not call accountant", err)
+			log.Warn().AnErr("could not call accountant", err)
 			it.incrementAccountantFailureCount()
 			if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
 				return errors.Wrap(err, "could not call accountant")
 			}
-			log.Warn("ignoring accountant error, we haven't reached the error threshold yet")
+			log.Warn().Msg("ignoring accountant error, we haven't reached the error threshold yet")
 			return nil
 		}
 		it.resetAccountantFailureCount()
@@ -356,12 +353,12 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		if err != nil {
 			return errors.Wrap(err, "could not store accountant promise")
 		}
-		log.Debug("accountant promise stored")
+		log.Debug().Msg("accountant promise stored")
 		hexR := hex.EncodeToString(it.lastInvoice.r)
 		err = it.accountantCaller.RevealR(hexR, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
 		if err != nil {
 			// TODO: need to think about handling this a bit better
-			log.Error("could not reveal R", err)
+			log.Error().AnErr("could not reveal R", err)
 		}
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout

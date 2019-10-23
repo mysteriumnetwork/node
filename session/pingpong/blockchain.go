@@ -28,9 +28,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DefaultBCTimeout represents the default timeout for a bc call
-const DefaultBCTimeout = time.Second * 30
-
 // Blockchain contains all the useful blockchain utilities for the payment off chain messaging
 type Blockchain struct {
 	client    *ethclient.Client
