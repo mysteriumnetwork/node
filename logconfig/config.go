@@ -18,6 +18,7 @@
 package logconfig
 
 import (
+	"fmt"
 	stdlog "log"
 	"os"
 	"strconv"
@@ -68,28 +69,19 @@ func Configure(opts *LogOptions) {
 	}
 }
 
-func padRight(s string, length int) string {
-	if len(s) >= length {
-		return s
-	}
-	return s + strings.Repeat(" ", length-len(s))
-}
-
-const rootPkg = "github.com/mysteriumnetwork/node"
-
 func configureZerolog(opts *LogOptions) {
+	var trimPrefixes = []string{
+		"/vendor",
+		"/go/pkg/mod",
+	}
+	cwd, _ := os.Getwd()
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.CallerMarshalFunc = func(file string, line int) string {
-		pkgStart := strings.Index(file, rootPkg)
-		var relFile string
-		if pkgStart > 0 {
-			relFile = file[pkgStart+len(rootPkg):]
-			relFile = strings.TrimPrefix(relFile, "/vendor")
-		} else {
-			relFile = file
+		relFile := strings.TrimPrefix(file, cwd)
+		for i := range trimPrefixes {
+			relFile = trimLeftInclusive(relFile, trimPrefixes[i])
 		}
-		caller := relFile + ":" + strconv.Itoa(line)
-		return padRight(caller, 35)
+		return fmt.Sprintf("%-41v", relFile+":"+strconv.Itoa(line))
 	}
 	writer := zerolog.ConsoleWriter{
 		Out:        os.Stderr,
@@ -108,4 +100,13 @@ func configureZerolog(opts *LogOptions) {
 		log.Warn().Err(err).Msg("Could not configure seelog")
 	}
 	seelog.ReplaceLogger(logger)
+}
+
+// trimLeftInclusive trims left pat of the string up to and including the prefix
+func trimLeftInclusive(s string, prefix string) string {
+	start := strings.Index(s, prefix)
+	if start != -1 {
+		return s[start+len(prefix):]
+	}
+	return s
 }
