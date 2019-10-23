@@ -93,9 +93,9 @@ services:
     depends_on:
       - ganache
     command: >
-      -mystSCAddress 0x427C2BAD22335710Aec5e477f3E3AdCd313A9bcb
+      -mystSCAddress 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -rpcEndpoint ws://ganache:8545
-      -registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -registry 0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -balanceCheckInterval 1s
     volumes:
@@ -204,12 +204,12 @@ services:
       --experiment-identity-check=true
       --ether.contract.payments=0x1955141ba8e77a5B56efBa8522034352c94f77Ea
       --keystore.lightweight
-      --transactor.channel-implementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
-      --transactor.registry-address=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --transactor.channel-implementation=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --transactor.registry-address=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
-      --ether.contract.payments=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --ether.contract.payments=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
       daemon
     dns: 172.30.0.254
     networks:
@@ -226,13 +226,13 @@ services:
       - ganache
     command: >
       -identityPassphrase ""
-      -myst 0x427C2BAD22335710Aec5e477f3E3AdCd313A9bcb
+      -myst 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       -rpcEndpoint ws://ganache:8545
-      -registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -registry 0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -chImplementation 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -keystoreDir /keystore
-      -accountantAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -accountantAddress 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
     volumes:
       - "./../bin/localnet/deployer/keystore:/keystore"
 
@@ -259,12 +259,12 @@ services:
       --broker-address=broker
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
-      --transactor.registry-address=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --transactor.registry-address=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --accountant.address=http://accountant:8889/api/v1
-      --transactor.channel-implementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      --transactor.channel-implementation=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --transactor.address=http://transactor:8888/api/v1
-      --ether.contract.payments=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --ether.contract.payments=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
       --keystore.lightweight
       service openvpn
       --agreed-terms-and-conditions
