@@ -65,7 +65,6 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --depends "sudo" \
         --depends "debconf" \
         --depends "wireguard" \
-        --depends "wondershaper" \
         --deb-templates bin/package/installation/templates \
         --before-install bin/package/installation/pre-install.sh \
         --after-install bin/package/installation/post-install.sh \

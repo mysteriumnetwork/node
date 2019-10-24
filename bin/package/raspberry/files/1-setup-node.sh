@@ -24,8 +24,8 @@ apt-get update --allow-releaseinfo-change
 # Install myst dependencies
 apt-get -y install \
   wireguard \
-  openvpn \
-  wondershaper
+  openvpn #\
+  #wondershaper
 
 # Setup unattended upgrades
 apt-get -y install \
