@@ -77,7 +77,7 @@ func ParseFlags(ctx *cli.Context, logDir string) LogOptions {
 	}
 	return LogOptions{
 		LogLevel: level,
-		Filepath: path.Join(logDir, "mysterium-node.log"),
+		Filepath: path.Join(logDir, "mysterium-node"),
 		LogHTTP:  ctx.GlobalBool(logHttp.Name),
 	}
 }
