@@ -71,12 +71,6 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	time.Sleep(time.Second * 3)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	migrationsAddress, tx, _, err := bindings.DeployMigrations(transactor, client)
-	checkError("Deploy migrations", err)
-	checkTxStatus(client, tx)
-	fmt.Println("v2 migrations address:", migrationsAddress.Hex())
-
-	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	mathSafeLibAddress, tx, _, err := bindings.DeploySafeMathLib(transactor, client)
 	checkError("Deploy migrations", err)
 	checkTxStatus(client, tx)

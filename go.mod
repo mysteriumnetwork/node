@@ -20,7 +20,7 @@ require (
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dsnet/compress v0.0.1 // indirect
-	github.com/ethereum/go-ethereum v1.8.23
+	github.com/ethereum/go-ethereum v1.9.6
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-gonic/gin v1.4.0
@@ -30,7 +30,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.5.4
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/gateway v1.0.5
-	github.com/joincivil/go-common v0.0.0-20191010210240-88ecdf41b6b6 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/magefile/mage v1.8.0
@@ -42,7 +41,7 @@ require (
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191007132044-c746550858a5
 	github.com/mysteriumnetwork/go-openvpn v0.0.18
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
-	github.com/mysteriumnetwork/payments v0.0.11-0.20191022120304-289e3cd94946
+	github.com/mysteriumnetwork/payments v0.0.11-0.20191024083444-cdb92c4ee990
 	github.com/mysteriumnetwork/wireguard-go v0.0.0-20190318074909-625d21fc42f3
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
@@ -62,7 +61,7 @@ require (
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392
-	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+	golang.org/x/net v0.0.0-20191021144547-ec77196f6094
 	golang.org/x/sys v0.0.0-20190922100055-0a153f010e69
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
 	gopkg.in/urfave/cli.v1 v1.20.0
