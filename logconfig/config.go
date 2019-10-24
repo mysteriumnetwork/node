@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/arthurkiller/rollingwriter"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -53,6 +54,7 @@ func Bootstrap() {
 		return fmt.Sprintf("%-41v", relFile+":"+strconv.Itoa(line))
 	}
 
+	openvpn.UseLogger(zerologOpenvpnLogger{})
 	logger := makeLogger(consoleWriter())
 	setGlobalLogger(&logger)
 }
