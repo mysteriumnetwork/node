@@ -114,10 +114,10 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
-	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`
+	topUpData := `{"identity": "0x599d43715DF3070f83355D9D90AE62c159E62A75"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/topup",
