@@ -64,7 +64,7 @@ func Configure(opts *LogOptions) {
 	CurrentLogOptions = *opts
 	log.Info().Msgf("Log level: %s", opts.LogLevel)
 	if opts.Filepath != "" {
-		log.Info().Msg("Log file path: " + opts.Filepath)
+		log.Info().Msgf("Log file path: %s", opts.Filepath)
 		fileWriter, err := fileWriter(opts)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to configure file logger")
