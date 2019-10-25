@@ -25,7 +25,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// TraceRequestResponse trace simple http request/response
+// TraceRequestResponse logs HTTP request and response if log.http is enabled.
 func TraceRequestResponse(req *http.Request, resp *http.Response) {
 	if !logconfig.CurrentLogOptions.LogHTTP {
 		return

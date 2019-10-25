@@ -8,6 +8,7 @@ require (
 	github.com/Sereal/Sereal v0.0.0-20190618215532-0b8ac451a863 // indirect
 	github.com/allegro/bigcache v1.2.0 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20180809135256-70ad3c3262ad // indirect
+	github.com/arthurkiller/rollingwriter v1.1.1
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm v2.1.2+incompatible
 	github.com/aws/aws-sdk-go-v2 v0.11.0
@@ -44,7 +45,7 @@ require (
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20190912064927-c54e2b0b3b5c
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191007132044-c746550858a5
-	github.com/mysteriumnetwork/go-openvpn v0.0.17
+	github.com/mysteriumnetwork/go-openvpn v0.0.18
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
 	github.com/mysteriumnetwork/payments v0.0.11-0.20190809092009-003973d4b083
 	github.com/mysteriumnetwork/wireguard-go v0.0.0-20190318074909-625d21fc42f3

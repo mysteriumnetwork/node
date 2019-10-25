@@ -26,17 +26,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Collector collects node logs
+// Collector collects node logs.
 type Collector struct {
 	options *LogOptions
 }
 
-// NewCollector creates a Collector instance
+// NewCollector creates a Collector instance.
 func NewCollector(options *LogOptions) *Collector {
 	return &Collector{options: options}
 }
 
-// Archive creates ZIP archive containing all node log files
+// Archive creates ZIP archive containing all node log files.
 func (c *Collector) Archive() (outputFilepath string, err error) {
 	filepaths, err := c.logFilepaths()
 	if err != nil {

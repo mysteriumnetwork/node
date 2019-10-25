@@ -22,34 +22,35 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// LogCapturer captures logging messages to an in-memory slice
+// LogCapturer captures logging messages to an in-memory slice for accessing later.
+// Typical use case is asserting certain log messages in tests.
 type LogCapturer struct {
 	logs     []string
 	original zerolog.Logger
 }
 
-// NewLogCapturer creates a LogCapturer
+// NewLogCapturer creates a LogCapturer.
 func NewLogCapturer() *LogCapturer {
 	return &LogCapturer{logs: []string{}}
 }
 
-// Attach attaches LogCapturer hook to the global zerolog instance
+// Attach attaches LogCapturer hook to the global zerolog instance.
 func (l *LogCapturer) Attach() {
 	l.original = log.Logger
 	log.Logger = log.Logger.Hook(l)
 }
 
-// Detach restores original global zerolog instance
+// Detach restores original global zerolog instance.
 func (l *LogCapturer) Detach() {
 	log.Logger = l.original
 }
 
-// Run stores log message for later access (zerolog hook)
+// Run appends log message to an in-memory slice (zerolog hook).
 func (l *LogCapturer) Run(e *zerolog.Event, level zerolog.Level, message string) {
 	l.logs = append(l.logs, message)
 }
 
-// Messages returns all captures log messages
+// Messages returns all captures log messages.
 func (l *LogCapturer) Messages() []string {
 	return l.logs
 }

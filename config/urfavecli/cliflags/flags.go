@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Package urfavecli/cliflags is an adapter to load configuration from urfave/cli.v1 flags
+// Package urfavecli/cliflags is an adapter to load configuration from urfave/cli.v1 flags.
 
 package cliflags
 

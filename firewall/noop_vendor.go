@@ -34,19 +34,17 @@ func (nb NoopVendor) Reset() {
 // BlockOutgoingTraffic just logs the call
 func (nb NoopVendor) BlockOutgoingTraffic() (RemoveRule, error) {
 	log.Info().Msg("Outgoing traffic block requested")
-	return nb.logRemoval("Outgoing traffic block removed"), nil
+	return func() {
+		log.Info().Msg("Outgoing traffic block removed")
+	}, nil
 }
 
-// AllowIPAccess logs ip for which access was requested
+// AllowIPAccess logs IP for which access was requested
 func (nb NoopVendor) AllowIPAccess(ip string) (RemoveRule, error) {
 	log.Info().Msgf("Allow %s access", ip)
-	return nb.logRemoval("Rule for ip: ", ip, " removed"), nil
-}
-
-func (nb NoopVendor) logRemoval(vals ...interface{}) RemoveRule {
 	return func() {
-		log.Info().Msgf("%+v", vals...)
-	}
+		log.Info().Msgf("Rule for IP: %s removed", ip)
+	}, nil
 }
 
 var _ Vendor = NoopVendor{}

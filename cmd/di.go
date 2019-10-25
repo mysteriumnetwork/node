@@ -173,7 +173,7 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
-	logconfig.BootstrapWith(&nodeOptions.LogOptions)
+	logconfig.Configure(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
@@ -255,6 +255,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	appconfig.Current.EnableEventPublishing(di.EventBus)
 
+	log.Info().Msg("Mysterium node started!")
 	return nil
 }
 

@@ -117,7 +117,7 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	if err != nil {
 		return errors.Wrapf(err, "keystore failed to unlock identity: %s", address)
 	}
-	log.Debug().Msg("caching unlocked address: %s" + address)
+	log.Debug().Msgf("Caching unlocked address: %s", address)
 	idm.unlocked[address] = true
 
 	go idm.eventBus.Publish(IdentityUnlockTopic, address)
