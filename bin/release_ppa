@@ -34,6 +34,12 @@ if [ -z "$DISTR" ]; then
     exit 1
 fi
 
+if ! [ -x "$(command -v vend)" ]; then
+    go get github.com/nomad-software/vend
+fi
+
+vend
+
 DATE=`date -R`
 
 echo "myst ($VERSION+build$BUILD+$DISTR) $DISTR; urgency=medium
@@ -52,6 +58,8 @@ export BUILD_COMMIT := '$BUILD_COMMIT'
 export BUILD_BRANCH := '$BUILD_BRANCH'
 export BUILD_NUMBER := '$BUILD_NUMBER'
 export BUILD_VERSION := '$BUILD_VERSION'
+export GO111MODULE := off
+export GOCACHE := $(GOPATH)/.cache
 
 override_dh_auto_build:
 	mkdir -p $(GOPATH)/src/github.com/mysteriumnetwork/
