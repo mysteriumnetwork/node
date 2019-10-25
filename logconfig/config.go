@@ -38,7 +38,7 @@ const (
 	timestampFmt = "2006-01-02T15:04:05.000"
 )
 
-// Bootstrap configures logger defaults (console)
+// Bootstrap configures logger defaults (console).
 func Bootstrap() {
 	var trimPrefixes = []string{
 		"/vendor",
@@ -59,7 +59,7 @@ func Bootstrap() {
 	setGlobalLogger(&logger)
 }
 
-// Configure configures logger using app config (console + file, level)
+// Configure configures logger using app config (console + file, level).
 func Configure(opts *LogOptions) {
 	CurrentLogOptions = *opts
 	log.Info().Msgf("Log level: %s", opts.LogLevel)
@@ -120,7 +120,7 @@ func setGlobalLogger(logger *zerolog.Logger) {
 	stdlog.SetOutput(log.Logger)
 }
 
-// trimLeftInclusive trims left pat of the string up to and including the prefix
+// trimLeftInclusive trims left part of the string up to and including the prefix.
 func trimLeftInclusive(s string, prefix string) string {
 	start := strings.Index(s, prefix)
 	if start != -1 {

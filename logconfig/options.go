@@ -28,14 +28,14 @@ import (
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
-// LogOptions log options
+// LogOptions describes logging options.
 type LogOptions struct {
 	LogLevel zerolog.Level
 	LogHTTP  bool
 	Filepath string
 }
 
-// CurrentLogOptions current log options
+// CurrentLogOptions stores global LogOptions.
 var CurrentLogOptions = LogOptions{
 	LogLevel: zerolog.DebugLevel,
 	LogHTTP:  false,
@@ -63,12 +63,12 @@ var (
 	})
 )
 
-// RegisterFlags registers logger CLI flags
+// RegisterFlags registers logger CLI flags.
 func RegisterFlags(flags *[]cli.Flag) {
 	*flags = append(*flags, logLevel, logHttp)
 }
 
-// ParseFlags parses logger CLI flags from context
+// ParseFlags parses logger CLI flags from context.
 func ParseFlags(ctx *cli.Context, logDir string) LogOptions {
 	level, err := zerolog.ParseLevel(ctx.GlobalString(logLevel.Name))
 	if err != nil {

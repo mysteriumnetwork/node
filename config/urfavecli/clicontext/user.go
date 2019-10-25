@@ -30,7 +30,7 @@ import (
 )
 
 // LoadUserConfig determines config location from the context
-// and makes sure that the config file actually exists, creating it if necessary
+// and makes sure that the config file actually exists, creating it if necessary.
 func LoadUserConfig(ctx *cli.Context) error {
 	configDir, configFilePath := resolveLocation(ctx)
 	err := createDirIfNotExists(configDir)

@@ -29,12 +29,18 @@ import (
 	"github.com/spf13/cast"
 )
 
-// Topic returns event bus topic for the given config key to listen for its updates
+// Topic returns event bus topic for the given config key to listen for its updates.
 func Topic(configKey string) string {
 	return "config:" + configKey
 }
 
-// Config stores app configuration: default values + user configuration + CLI flags
+// Config stores application configuration in 3 separate maps (listed from the lowest priority to the highest):
+//
+// • Default values
+//
+// • User configuration (config.toml)
+//
+// • CLI flags
 type Config struct {
 	userConfigLocation string
 	defaults           map[string]interface{}
@@ -43,14 +49,14 @@ type Config struct {
 	eventBus           eventbus.EventBus
 }
 
-// Current global configuration instance
+// Current global configuration instance.
 var Current *Config
 
 func init() {
 	Current = NewConfig()
 }
 
-// NewConfig creates a new configuration instance
+// NewConfig creates a new configuration instance.
 func NewConfig() *Config {
 	return &Config{
 		userConfigLocation: "",
@@ -64,12 +70,12 @@ func (cfg *Config) userConfigLoaded() bool {
 	return cfg.userConfigLocation != ""
 }
 
-// EnableEventPublishing enables config event publishing to the event bus
+// EnableEventPublishing enables config event publishing to the event bus.
 func (cfg *Config) EnableEventPublishing(eb eventbus.EventBus) {
 	cfg.eventBus = eb
 }
 
-// LoadUserConfig loads and remembers user config location
+// LoadUserConfig loads and remembers user config location.
 func (cfg *Config) LoadUserConfig(location string) error {
 	log.Debug().Msg("Loading user configuration: " + location)
 	cfg.userConfigLocation = location
@@ -85,7 +91,7 @@ func (cfg *Config) LoadUserConfig(location string) error {
 	return nil
 }
 
-// SaveUserConfig saves user configuration to the file from which it was loaded
+// SaveUserConfig saves user configuration to the file from which it was loaded.
 func (cfg *Config) SaveUserConfig() error {
 	log.Info().Msg("Saving user configuration")
 	if !cfg.userConfigLoaded() {
@@ -108,17 +114,17 @@ func (cfg *Config) SaveUserConfig() error {
 	return nil
 }
 
-// GetUserConfig returns user configuration
+// GetUserConfig returns user configuration.
 func (cfg *Config) GetUserConfig() map[string]interface{} {
 	return cfg.user
 }
 
-// SetDefault sets default value for key
+// SetDefault sets default value for key.
 func (cfg *Config) SetDefault(key string, value interface{}) {
 	cfg.set(&cfg.defaults, key, value)
 }
 
-// SetUser sets user configuration value for key
+// SetUser sets user configuration value for key.
 func (cfg *Config) SetUser(key string, value interface{}) {
 	if cfg.eventBus != nil {
 		cfg.eventBus.Publish(Topic(key), value)
@@ -126,22 +132,22 @@ func (cfg *Config) SetUser(key string, value interface{}) {
 	cfg.set(&cfg.user, key, value)
 }
 
-// SetCLI sets value passed via CLI flag for key
+// SetCLI sets value passed via CLI flag for key.
 func (cfg *Config) SetCLI(key string, value interface{}) {
 	cfg.set(&cfg.cli, key, value)
 }
 
-// RemoveUser removes user configuration value for key
+// RemoveUser removes user configuration value for key.
 func (cfg *Config) RemoveUser(key string) {
 	cfg.remove(&cfg.user, key)
 }
 
-// RemoveCLI removes configured CLI flag value by key
+// RemoveCLI removes configured CLI flag value by key.
 func (cfg *Config) RemoveCLI(key string) {
 	cfg.remove(&cfg.cli, key)
 }
 
-// set internal method for setting value in a certain configuration value map
+// set sets value to a particular configuration value map.
 func (cfg *Config) set(configMap *map[string]interface{}, key string, value interface{}) {
 	key = strings.ToLower(key)
 	segments := strings.Split(key, ".")
@@ -153,7 +159,7 @@ func (cfg *Config) set(configMap *map[string]interface{}, key string, value inte
 	deepestMap[lastKey] = value
 }
 
-// remove internal method for removing a configured value in a certain configuration map
+// remove removes a configured value from a particular configuration map.
 func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
 	key = strings.ToLower(key)
 	segments := strings.Split(key, ".")
@@ -165,7 +171,7 @@ func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
 	delete(deepestMap, lastKey)
 }
 
-// Get gets stored config value as-is
+// Get returns stored config value as-is.
 func (cfg *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
 	cliValue := cfg.searchMap(cfg.cli, segments)
@@ -183,17 +189,17 @@ func (cfg *Config) Get(key string) interface{} {
 	return defaultValue
 }
 
-// GetInt gets config value as int
+// GetInt returns config value as int.
 func (cfg *Config) GetInt(key string) int {
 	return cast.ToInt(cfg.Get(key))
 }
 
-// GetString gets config value as string
+// GetString returns config value as string.
 func (cfg *Config) GetString(key string) string {
 	return cast.ToString(cfg.Get(key))
 }
 
-// GetBool gets config value as bool
+// GetBool returns config value as bool.
 func (cfg *Config) GetBool(key string) bool {
 	return cast.ToBool(cfg.Get(key))
 }

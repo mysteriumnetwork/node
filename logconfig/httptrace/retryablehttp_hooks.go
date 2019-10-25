@@ -26,16 +26,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// HTTPTraceLog adapter for go-retryablehttp
+// HTTPTraceLog adapter for go-retryablehttp.
 type HTTPTraceLog struct {
 }
 
-// Printf printf
+// Printf printf adapter for go-retryablehttp.
 func (*HTTPTraceLog) Printf(format string, params ...interface{}) {
 	log.Debug().Msgf(format, params...)
 }
 
-// LogRequest log request
+// LogRequest go-retryablehttp hook for logging HTTP request.
 func (*HTTPTraceLog) LogRequest(logger retryablehttp.Logger, r *http.Request, retryNumber int) {
 	if !logconfig.CurrentLogOptions.LogHTTP {
 		return
@@ -44,7 +44,7 @@ func (*HTTPTraceLog) LogRequest(logger retryablehttp.Logger, r *http.Request, re
 	log.Debug().Msgf("Request: %v", string(dumpRequest))
 }
 
-// LogResponse log response
+// LogResponse go-retryablehttp hook for logging HTTP response.
 func (*HTTPTraceLog) LogResponse(logger retryablehttp.Logger, response *http.Response) {
 	if !logconfig.CurrentLogOptions.LogHTTP {
 		return
