@@ -58,9 +58,9 @@ services:
     depends_on:
       - ganache
     command: >
-      -mystSCAddress 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
-      -registry 0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -balanceCheckInterval 1s
     volumes:
@@ -76,9 +76,9 @@ services:
       - ganache
     command: >
       -identityPassphrase ""
-      -myst 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
-      -registry 0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -keystoreDir /keystore

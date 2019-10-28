@@ -32,7 +32,7 @@ import (
 )
 
 var identityRegData = `{
-  "beneficiary": "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC",
+  "beneficiary": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
   "fee": 1,
   "stake": 0
 }`
@@ -43,7 +43,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -66,7 +66,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "registryAddress", "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", "accountantID", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -89,10 +89,10 @@ func Test_TopUp_OK(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
-	topUpData := `{"identity": "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC"}`
+	topUpData := `{"identity": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/topup",

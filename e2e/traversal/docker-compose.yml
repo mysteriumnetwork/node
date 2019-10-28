@@ -93,9 +93,9 @@ services:
     depends_on:
       - ganache
     command: >
-      -mystSCAddress 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
-      -registry 0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -balanceCheckInterval 1s
     volumes:
@@ -205,11 +205,11 @@ services:
       --ether.contract.payments=0x1955141ba8e77a5B56efBa8522034352c94f77Ea
       --keystore.lightweight
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
-      --transactor.registry-address=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
-      --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
-      --ether.contract.payments=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
+      --ether.contract.payments=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       daemon
     dns: 172.30.0.254
     networks:
@@ -226,9 +226,9 @@ services:
       - ganache
     command: >
       -identityPassphrase ""
-      -myst 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
-      -registry 0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -keystoreDir /keystore
@@ -259,12 +259,12 @@ services:
       --broker-address=broker
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
-      --transactor.registry-address=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
-      --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --accountant.address=http://accountant:8889/api/v1
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --transactor.address=http://transactor:8888/api/v1
-      --ether.contract.payments=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC
+      --ether.contract.payments=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --keystore.lightweight
       service openvpn
       --agreed-terms-and-conditions

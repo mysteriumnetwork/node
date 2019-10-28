@@ -279,7 +279,6 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 
 	// TODO: pass in accountant id
 	channelAddress, err := pc.GenerateChannelAddress(identityAddress, metadata.TestnetDefinition.AccountantID, endpoint.registryAddress, endpoint.channelImplementationAddress)
-
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to calculate channel address"), http.StatusInternalServerError)
 		return
