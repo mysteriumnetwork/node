@@ -432,7 +432,10 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 
 func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
 	for stats := range statisticsChannel {
-		manager.eventPublisher.Publish(StatisticsEventTopic, stats)
+		manager.eventPublisher.Publish(StatisticsEventTopic, SessionStatsEvent{
+			Stats:       stats,
+			SessionInfo: manager.sessionInfo,
+		})
 	}
 }
 

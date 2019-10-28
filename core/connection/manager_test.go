@@ -357,9 +357,9 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	for _, v := range history {
 		if v.calledWithTopic == StatisticsEventTopic {
-			event := v.calledWithData.(consumer.SessionStatistics)
-			assert.True(tc.T(), event.BytesReceived == tc.mockStatistics.BytesReceived)
-			assert.True(tc.T(), event.BytesSent == tc.mockStatistics.BytesSent)
+			event := v.calledWithData.(SessionStatsEvent)
+			assert.True(tc.T(), event.Stats.BytesReceived == tc.mockStatistics.BytesReceived)
+			assert.True(tc.T(), event.Stats.BytesSent == tc.mockStatistics.BytesSent)
 		}
 		if v.calledWithTopic == StateEventTopic {
 			event := v.calledWithData.(StateEvent)

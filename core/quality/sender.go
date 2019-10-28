@@ -19,10 +19,8 @@ package quality
 
 import (
 	"runtime"
-	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node/event"
@@ -60,8 +58,6 @@ type Sender struct {
 	AppVersion     string
 	connection     connection.Manager
 	location       location.OriginResolver
-	currentSession *connection.SessionInfo
-	mu             sync.RWMutex
 }
 
 // Event contains data about event, which is sent using transport
@@ -106,15 +102,12 @@ type sessionContext struct {
 }
 
 // SendSessionData sends transferred information about session.
-func (sender *Sender) SendSessionData(data consumer.SessionStatistics) {
-	currentSession := sender.session()
-	if len(currentSession.SessionID) == 0 {
-		return
-	}
+func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
+	currentSession := e.SessionInfo
 
 	sender.sendEvent(sessionDataName, sessionDataContext{
-		Rx: data.BytesReceived,
-		Tx: data.BytesSent,
+		Rx: e.Stats.BytesReceived,
+		Tx: e.Stats.BytesSent,
 		sessionContext: sessionContext{
 			ID:              string(currentSession.SessionID),
 			Consumer:        currentSession.ConsumerID.Address,
@@ -126,43 +119,32 @@ func (sender *Sender) SendSessionData(data consumer.SessionStatistics) {
 	})
 }
 
+
 // SendSessionEvent sends session update events.
-func (sender *Sender) SendSessionEvent(e interface{}) {
-	var id, eventName, provider, consumer, serviceType, providerCountry string
-	switch state := e.(type) {
-	case connection.StateEvent:
-		id = string(state.SessionInfo.SessionID)
-		eventName = string(state.State)
-		consumer = state.SessionInfo.ConsumerID.Address
-		provider = state.SessionInfo.Proposal.ProviderID
-		serviceType = state.SessionInfo.Proposal.ServiceType
-		providerCountry = state.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
-	case connection.SessionEvent:
-		if state.Status == connection.SessionCreatedStatus {
-			sender.setCurrentSession(&state.SessionInfo)
-		} else if state.Status == connection.SessionEndedStatus {
-			sender.setCurrentSession(nil)
-		}
-
-		id = string(state.SessionInfo.SessionID)
-		eventName = state.Status
-		consumer = state.SessionInfo.ConsumerID.Address
-		provider = state.SessionInfo.Proposal.ProviderID
-		serviceType = state.SessionInfo.Proposal.ServiceType
-		providerCountry = state.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
-	default:
-		log.Warn().Msgf("Unknown session event type %v", e)
-		return
-	}
-
+func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
 	sender.sendEvent(sessionEventName, sessionEventContext{
-		Event: eventName,
+		Event: string(e.State),
 		sessionContext: sessionContext{
-			ID:              id,
-			Consumer:        consumer,
-			Provider:        provider,
-			ServiceType:     serviceType,
-			ProviderCountry: providerCountry,
+			ID:              string(e.SessionInfo.SessionID),
+			Consumer:        e.SessionInfo.ConsumerID.Address,
+			Provider:        e.SessionInfo.Proposal.ProviderID,
+			ServiceType:     e.SessionInfo.Proposal.ServiceType,
+			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
+			ConsumerCountry: sender.originCountry(),
+		},
+	})
+}
+
+// SendSessionEvent sends session update events.
+func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
+	sender.sendEvent(sessionEventName, sessionEventContext{
+		Event: e.Status,
+		sessionContext: sessionContext{
+			ID:              string(e.SessionInfo.SessionID),
+			Consumer:        e.SessionInfo.ConsumerID.Address,
+			Provider:        e.SessionInfo.Proposal.ProviderID,
+			ServiceType:     e.SessionInfo.Proposal.ServiceType,
+			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
 			ConsumerCountry: sender.originCountry(),
 		},
 	})
@@ -215,27 +197,11 @@ func (sender *Sender) sendEvent(eventName string, context interface{}) {
 	}
 }
 
-func (sender *Sender) session() connection.SessionInfo {
-	sender.mu.RLock()
-	defer sender.mu.RUnlock()
-
-	if sender.currentSession == nil {
-		return connection.SessionInfo{}
-	}
-	return *sender.currentSession
-}
-
-func (sender *Sender) setCurrentSession(s *connection.SessionInfo) {
-	sender.mu.Lock()
-	defer sender.mu.Unlock()
-
-	sender.currentSession = s
-}
-
 func (sender *Sender) originCountry() string {
-	location, err := sender.location.GetOrigin()
+	origin, err := sender.location.GetOrigin()
 	if err != nil {
 		log.Warn().Msg("Failed to get consumer origin country")
+		return ""
 	}
-	return location.Country
+	return origin.Country
 }

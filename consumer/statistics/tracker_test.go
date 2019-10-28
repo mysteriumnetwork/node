@@ -29,10 +29,12 @@ import (
 
 func TestStatsSavingWorks(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	stats := consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2}
+	e := connection.SessionStatsEvent{
+		Stats:       consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+	}
 
-	statisticsTracker.ConsumeStatisticsEvent(stats)
-	assert.Equal(t, stats, statisticsTracker.Retrieve())
+	statisticsTracker.ConsumeStatisticsEvent(e)
+	assert.Equal(t, e.Stats, statisticsTracker.Retrieve())
 }
 
 func TestGetSessionDurationReturnsFlooredDuration(t *testing.T) {
@@ -89,27 +91,31 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 	sst := &SessionStatisticsTracker{
 		timeGetter: time.Now,
 	}
-	stats := consumer.SessionStatistics{
-		BytesReceived: 1,
-		BytesSent:     1,
+	e := connection.SessionStatsEvent{
+		Stats:       consumer.SessionStatistics{
+			BytesReceived: 1,
+			BytesSent:     1,
+		},
 	}
-	sst.ConsumeStatisticsEvent(stats)
+	sst.ConsumeStatisticsEvent(e)
 
-	assert.EqualValues(t, stats, sst.lastStats)
-	assert.EqualValues(t, stats, sst.sessionStats)
+	assert.EqualValues(t, e.Stats, sst.lastStats)
+	assert.EqualValues(t, e.Stats, sst.sessionStats)
 
-	sst.ConsumeStatisticsEvent(stats)
-	assert.EqualValues(t, stats, sst.lastStats)
-	assert.EqualValues(t, stats, sst.sessionStats)
+	sst.ConsumeStatisticsEvent(e)
+	assert.EqualValues(t, e.Stats, sst.lastStats)
+	assert.EqualValues(t, e.Stats, sst.sessionStats)
 
-	updatedStats := consumer.SessionStatistics{
-		BytesReceived: 2,
-		BytesSent:     2,
+	e2 := connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesReceived: 2,
+			BytesSent:     2,
+		},
 	}
 
-	sst.ConsumeStatisticsEvent(updatedStats)
-	assert.EqualValues(t, updatedStats, sst.lastStats)
-	assert.EqualValues(t, updatedStats, sst.sessionStats)
+	sst.ConsumeStatisticsEvent(e2)
+	assert.EqualValues(t, e2.Stats, sst.lastStats)
+	assert.EqualValues(t, e2.Stats, sst.sessionStats)
 
 	statsAfterChain := consumer.SessionStatistics{
 		BytesReceived: 3,
@@ -117,12 +123,12 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 	}
 
 	// Simulate a reconnect now stats wise
-	sst.ConsumeStatisticsEvent(stats)
-	assert.EqualValues(t, stats, sst.lastStats)
+	sst.ConsumeStatisticsEvent(e)
+	assert.EqualValues(t, e.Stats, sst.lastStats)
 	assert.EqualValues(t, statsAfterChain, sst.sessionStats)
 
 	// Simulate no change in stats
-	sst.ConsumeStatisticsEvent(stats)
-	assert.EqualValues(t, stats, sst.lastStats)
+	sst.ConsumeStatisticsEvent(e)
+	assert.EqualValues(t, e.Stats, sst.lastStats)
 	assert.EqualValues(t, statsAfterChain, sst.sessionStats)
 }

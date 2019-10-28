@@ -404,7 +404,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// Quality metrics
-	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendConnStateEvent)
 	if err != nil {
 		return err
 	}
