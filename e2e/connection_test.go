@@ -32,7 +32,7 @@ var (
 	consumerPassphrase = "localconsumer"
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
-	accountantID       = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
+	accountantID       = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
 )
 
 func TestConsumerConnectsToProvider(t *testing.T) {

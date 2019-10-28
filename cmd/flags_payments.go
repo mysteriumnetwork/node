@@ -39,7 +39,7 @@ var (
 
 // RegisterFlagsPayments registers flags to control payments
 func RegisterFlagsPayments(flags *[]cli.Flag) {
-	*flags = append(*flags, maxAccountantFee)
+	*flags = append(*flags, maxAccountantFee, bcTimeout)
 }
 
 // ParsePaymentFlags parses registered flags and puts them into options structure

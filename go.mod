@@ -6,8 +6,6 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/Sereal/Sereal v0.0.0-20190618215532-0b8ac451a863 // indirect
-	github.com/allegro/bigcache v1.2.0 // indirect
-	github.com/aristanetworks/goarista v0.0.0-20180809135256-70ad3c3262ad // indirect
 	github.com/arthurkiller/rollingwriter v1.1.1
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm v2.1.2+incompatible
