@@ -115,7 +115,7 @@ func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
 	}
 
 	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
-		Stats:       consumer.SessionStatistics{
+		Stats: consumer.SessionStatistics{
 			BytesReceived: bytesTransfered,
 			BytesSent:     bytesTransfered,
 		},
@@ -131,7 +131,7 @@ func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
 func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	tracker := Tracker{}
 	e := connection.SessionStatsEvent{
-		Stats:       consumer.SessionStatistics{
+		Stats: consumer.SessionStatistics{
 			BytesReceived: 1,
 			BytesSent:     2,
 		},

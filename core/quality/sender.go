@@ -54,10 +54,10 @@ func NewSender(transport Transport, appVersion string, manager connection.Manage
 
 // Sender builds events and sends them using given transport
 type Sender struct {
-	Transport      Transport
-	AppVersion     string
-	connection     connection.Manager
-	location       location.OriginResolver
+	Transport  Transport
+	AppVersion string
+	connection connection.Manager
+	location   location.OriginResolver
 }
 
 // Event contains data about event, which is sent using transport
@@ -119,8 +119,7 @@ func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
 	})
 }
 
-
-// SendSessionEvent sends session update events.
+// SendConnStateEvent sends session update events.
 func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
 	sender.sendEvent(sessionEventName, sessionEventContext{
 		Event: string(e.State),

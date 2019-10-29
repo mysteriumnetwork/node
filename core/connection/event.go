@@ -50,6 +50,6 @@ type SessionEvent struct {
 
 // SessionStatsEvent represents a session statistics event
 type SessionStatsEvent struct {
-	Stats consumer.SessionStatistics
+	Stats       consumer.SessionStatistics
 	SessionInfo SessionInfo
 }

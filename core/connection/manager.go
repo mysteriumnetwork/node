@@ -20,6 +20,7 @@ package connection
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
@@ -46,6 +47,22 @@ var (
 	// ErrUnsupportedServiceType indicates that target proposal contains unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 )
+
+// IPCheckParams contains common params for connection ip check.
+type IPCheckParams struct {
+	MaxAttempts             int
+	SleepDurationAfterCheck time.Duration
+	Done                    chan struct{}
+}
+
+// DefaultIPCheckParams returns default params.
+func DefaultIPCheckParams() IPCheckParams {
+	return IPCheckParams{
+		MaxAttempts:             3,
+		SleepDurationAfterCheck: 1 * time.Second,
+		Done:                    make(chan struct{}, 1),
+	}
+}
 
 // Creator creates new connection by given options and uses state channel to report state changes
 type Creator func(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
@@ -82,14 +99,16 @@ type connectionManager struct {
 	eventPublisher           Publisher
 	connectivityStatusSender connectivity.StatusSender
 	ipResolver               ip.Resolver
+	ipCheckParams            IPCheckParams
 
 	// These are populated by Connect at runtime.
-	ctx         context.Context
-	status      Status
-	statusLock  sync.RWMutex
-	sessionInfo SessionInfo
-	cleanup     []func() error
-	cancel      func()
+	ctx            context.Context
+	status         Status
+	statusLock     sync.RWMutex
+	sessionInfo    SessionInfo
+	sessionInfoMux sync.Mutex
+	cleanup        []func() error
+	cancel         func()
 
 	discoLock sync.Mutex
 }
@@ -102,6 +121,7 @@ func NewManager(
 	eventPublisher Publisher,
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
+	ipCheckParams IPCheckParams,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -112,6 +132,7 @@ func NewManager(
 		connectivityStatusSender: connectivityStatusSender,
 		cleanup:                  make([]func() error, 0),
 		ipResolver:               ipResolver,
+		ipCheckParams:            ipCheckParams,
 	}
 }
 
@@ -163,22 +184,38 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 			return ErrConnectionCancelled
 		}
 		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+		manager.publishStateEvent(StateConnectionFailed)
 		return err
 	}
 
-	manager.checkSessionIP(dialog, sessionDTO.ID, originalPublicIP)
+	go manager.checkSessionIP(dialog, sessionDTO.ID, originalPublicIP)
 	return nil
 }
 
-// checkSessionIP checks if IP has changed after connection was established and notify peer.
+// checkSessionIP checks if IP has changed after connection was established.
 func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, originalPublicIP string) {
-	newPublicIP := manager.getPublicIP()
-	if originalPublicIP == newPublicIP {
-		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
-		return
+	isIpChanged := func() bool {
+		for i := 0; i < manager.ipCheckParams.MaxAttempts; i++ {
+			newPublicIP := manager.getPublicIP()
+			if originalPublicIP != newPublicIP {
+				return true
+			}
+			time.Sleep(manager.ipCheckParams.SleepDurationAfterCheck)
+		}
+		return false
 	}
 
-	manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
+	if isIpChanged() {
+		// If ip is changed notify peer about successful ip change after tunnel connection was established.
+		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
+	} else {
+		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
+		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
+		manager.publishStateEvent(StateIPNotChanged)
+	}
+
+	// Notify if check is done.
+	manager.ipCheckParams.Done <- struct{}{}
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
@@ -258,7 +295,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	manager.cleanup = append(manager.cleanup, func() error { return session.RequestSessionDestroy(dialog, s.ID) })
 
 	// set the session info for future use
-	manager.sessionInfo = SessionInfo{
+	sessionInfo := SessionInfo{
 		SessionID:  s.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
@@ -269,16 +306,17 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 			}
 		},
 	}
+	manager.setCurrentSession(sessionInfo)
 
 	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 		Status:      SessionCreatedStatus,
-		SessionInfo: manager.sessionInfo,
+		SessionInfo: manager.currentSession(),
 	})
 
 	manager.cleanup = append(manager.cleanup, func() error {
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 			Status:      SessionEndedStatus,
-			SessionInfo: manager.sessionInfo,
+			SessionInfo: manager.currentSession(),
 		})
 		return nil
 	})
@@ -368,10 +406,7 @@ func (manager *connectionManager) Disconnect() error {
 	manager.cleanConnection()
 	manager.setStatus(statusNotConnected())
 
-	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
-		State:       NotConnected,
-		SessionInfo: manager.sessionInfo,
-	})
+	manager.publishStateEvent(NotConnected)
 	return nil
 }
 
@@ -409,7 +444,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 			switch state {
 			case Connected:
 				log.Debug().Msg("Connected started event received")
-				go manager.sessionInfo.acknowledge()
+				go manager.currentSession().acknowledge()
 				manager.onStateChanged(state)
 				return nil
 			default:
@@ -434,22 +469,20 @@ func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer
 	for stats := range statisticsChannel {
 		manager.eventPublisher.Publish(StatisticsEventTopic, SessionStatsEvent{
 			Stats:       stats,
-			SessionInfo: manager.sessionInfo,
+			SessionInfo: manager.currentSession(),
 		})
 	}
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
 	log.Debug().Msg("onStateChanged called")
-	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
-		State:       state,
-		SessionInfo: manager.sessionInfo,
-	})
+	manager.publishStateEvent(state)
 
 	switch state {
 	case Connected:
 		log.Debug().Msg("Connected state issued")
-		manager.setStatus(statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal))
+		sessionInfo := manager.currentSession()
+		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal))
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
 	}
@@ -469,6 +502,27 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 		return nil
 	})
 	return nil
+}
+
+func (manager *connectionManager) publishStateEvent(state State) {
+	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
+		State:       state,
+		SessionInfo: manager.currentSession(),
+	})
+}
+
+func (manager *connectionManager) setCurrentSession(info SessionInfo) {
+	manager.sessionInfoMux.Lock()
+	defer manager.sessionInfoMux.Unlock()
+
+	manager.sessionInfo = info
+}
+
+func (manager *connectionManager) currentSession() SessionInfo {
+	manager.sessionInfoMux.Lock()
+	defer manager.sessionInfoMux.Unlock()
+
+	return manager.sessionInfo
 }
 
 func logDisconnectError(err error) {

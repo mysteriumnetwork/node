@@ -17,39 +17,60 @@
 
 package ip
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
-// NewResolverMock returns mockResolver which resolves statically entered IP
-func NewResolverMock(ipAddress string) Resolver {
+// NewResolverMock returns mockResolver which resolves statically entered IP.
+// If multiple addresses are provided then return will depend on call order.
+func NewResolverMock(ipAddresses ...string) Resolver {
 	return &mockResolver{
-		ipAddress: ipAddress,
-		error:     nil,
+		ipAddresses: ipAddresses,
+		error:       nil,
 	}
 }
 
 // NewResolverMockFailing returns mockResolver with entered error
 func NewResolverMockFailing(err error) Resolver {
 	return &mockResolver{
-		ipAddress: "",
-		error:     err,
+		ipAddresses: []string{""},
+		error:       err,
 	}
 }
 
 type mockResolver struct {
-	ipAddress string
-	error     error
+	ipAddresses []string
+	error       error
 }
 
 func (client *mockResolver) GetPublicIP() (string, error) {
-	return client.ipAddress, client.error
+	return client.getNextIP(), client.error
 }
 
 func (client *mockResolver) GetOutboundIP() (net.IP, error) {
-	ipAddress := net.ParseIP(client.ipAddress)
+	ipAddress := net.ParseIP(client.getNextIP())
 	localIPAddress := net.UDPAddr{IP: ipAddress}
 	return localIPAddress.IP, client.error
 }
 
 func (client *mockResolver) GetOutboundIPAsString() (string, error) {
-	return client.ipAddress, client.error
+	return client.getNextIP(), client.error
+}
+
+func (client *mockResolver) getNextIP() string {
+	// Return first address if only one provided.
+	if len(client.ipAddresses) == 1 {
+		fmt.Println("get first ip")
+		return client.ipAddresses[0]
+	}
+	// Return first address and dequeue from address list. This allows to
+	// mock to return different value for each call.
+	if len(client.ipAddresses) > 0 {
+		ip := client.ipAddresses[0]
+		client.ipAddresses = client.ipAddresses[1:]
+		fmt.Println("return ip", ip)
+		return ip
+	}
+	return ""
 }

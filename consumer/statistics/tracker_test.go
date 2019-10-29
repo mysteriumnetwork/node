@@ -30,7 +30,7 @@ import (
 func TestStatsSavingWorks(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	e := connection.SessionStatsEvent{
-		Stats:       consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+		Stats: consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
 	}
 
 	statisticsTracker.ConsumeStatisticsEvent(e)
@@ -92,7 +92,7 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 		timeGetter: time.Now,
 	}
 	e := connection.SessionStatsEvent{
-		Stats:       consumer.SessionStatistics{
+		Stats: consumer.SessionStatistics{
 			BytesReceived: 1,
 			BytesSent:     1,
 		},

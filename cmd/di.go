@@ -449,6 +449,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.EventBus,
 		connectivity.NewStatusSender(),
 		di.IPResolver,
+		connection.DefaultIPCheckParams(),
 	)
 
 	// TODO: switch this to channel implementation from params after #1325 is merged
