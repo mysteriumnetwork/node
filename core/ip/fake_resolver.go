@@ -69,7 +69,6 @@ func (client *mockResolver) getNextIP() string {
 	if len(client.ipAddresses) > 0 {
 		ip := client.ipAddresses[0]
 		client.ipAddresses = client.ipAddresses[1:]
-		fmt.Println("return ip", ip)
 		return ip
 	}
 	return ""

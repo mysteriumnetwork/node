@@ -59,7 +59,7 @@ type IPCheckParams struct {
 func DefaultIPCheckParams() IPCheckParams {
 	return IPCheckParams{
 		MaxAttempts:             3,
-		SleepDurationAfterCheck: 1 * time.Second,
+		SleepDurationAfterCheck: 2 * time.Second,
 		Done:                    make(chan struct{}, 1),
 	}
 }
@@ -310,13 +310,13 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 
 	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 		Status:      SessionCreatedStatus,
-		SessionInfo: manager.currentSession(),
+		SessionInfo: manager.getCurrentSession(),
 	})
 
 	manager.cleanup = append(manager.cleanup, func() error {
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 			Status:      SessionEndedStatus,
-			SessionInfo: manager.currentSession(),
+			SessionInfo: manager.getCurrentSession(),
 		})
 		return nil
 	})
@@ -444,7 +444,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 			switch state {
 			case Connected:
 				log.Debug().Msg("Connected started event received")
-				go manager.currentSession().acknowledge()
+				go manager.getCurrentSession().acknowledge()
 				manager.onStateChanged(state)
 				return nil
 			default:
@@ -469,7 +469,7 @@ func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer
 	for stats := range statisticsChannel {
 		manager.eventPublisher.Publish(StatisticsEventTopic, SessionStatsEvent{
 			Stats:       stats,
-			SessionInfo: manager.currentSession(),
+			SessionInfo: manager.getCurrentSession(),
 		})
 	}
 }
@@ -481,7 +481,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 	switch state {
 	case Connected:
 		log.Debug().Msg("Connected state issued")
-		sessionInfo := manager.currentSession()
+		sessionInfo := manager.getCurrentSession()
 		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal))
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
@@ -507,7 +507,7 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 func (manager *connectionManager) publishStateEvent(state State) {
 	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
 		State:       state,
-		SessionInfo: manager.currentSession(),
+		SessionInfo: manager.getCurrentSession(),
 	})
 }
 
@@ -518,7 +518,7 @@ func (manager *connectionManager) setCurrentSession(info SessionInfo) {
 	manager.sessionInfo = info
 }
 
-func (manager *connectionManager) currentSession() SessionInfo {
+func (manager *connectionManager) getCurrentSession() SessionInfo {
 	manager.sessionInfoMux.Lock()
 	defer manager.sessionInfoMux.Unlock()
 

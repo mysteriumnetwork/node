@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -41,7 +40,6 @@ type sessionConnectivityStatus struct {
 }
 
 type sessionConnectivityEndpoint struct {
-	http          requests.HTTPTransport
 	statusStorage connectivity.StatusStorage
 }
 
@@ -73,9 +71,8 @@ func (e *sessionConnectivityEndpoint) List(resp http.ResponseWriter, req *http.R
 }
 
 // AddRoutesForConnectivityStatus attaches connectivity statuses endpoints to router.
-func AddRoutesForConnectivityStatus(bindAddress string, router *httprouter.Router, statusStorage connectivity.StatusStorage) {
+func AddRoutesForConnectivityStatus(router *httprouter.Router, statusStorage connectivity.StatusStorage) {
 	e := &sessionConnectivityEndpoint{
-		http:          requests.NewHTTPClient(bindAddress, 20*time.Second),
 		statusStorage: statusStorage,
 	}
 	router.GET("/sessions-connectivity-status", e.List)
