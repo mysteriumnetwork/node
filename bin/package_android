@@ -28,7 +28,8 @@ docker run --rm \
     -e FLAG_BUILDMODE=default \
     -e TARGETS=android/. \
     -e EXT_GOPATH=/ext-go/1 \
-    mysteriumnetwork/xgo:1.11 github.com/mysteriumnetwork/node/mobile/mysterium
+    -e GO111MODULE=off \
+    mysteriumnetwork/xgo:1.13.1 github.com/mysteriumnetwork/node/mobile/mysterium
 
 print_success "Android package '$PACKAGE_FILE' complete!"
 exit 0
