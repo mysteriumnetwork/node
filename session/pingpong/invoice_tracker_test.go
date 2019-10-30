@@ -96,7 +96,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
-		BlockchainHelper:           &mockBlockchainHelper{},
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -107,6 +107,101 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 
 	err = invoiceTracker.Start()
 	assert.Nil(t, err)
+}
+
+func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
+	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+
+	mockSender := &MockPeerInvoiceSender{
+		chanToWriteTo: make(chan crypto.Invoice, 10),
+	}
+
+	exchangeMessageChan := make(chan crypto.ExchangeMessage)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		PaymentInfo:                dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: false},
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+
+	go func() {
+		time.Sleep(time.Nanosecond * 10)
+		invoiceTracker.Stop()
+	}()
+
+	err = invoiceTracker.Start()
+	assert.Equal(t, ErrConsumerNotRegistered, err)
+}
+
+func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
+	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+
+	mockSender := &MockPeerInvoiceSender{
+		chanToWriteTo: make(chan crypto.Invoice, 10),
+	}
+
+	exchangeMessageChan := make(chan crypto.ExchangeMessage)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	mockError := errors.New("explosions everywhere")
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		PaymentInfo:                dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+		BlockchainHelper:           &mockBlockchainHelper{isRegisteredError: mockError},
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+
+	go func() {
+		time.Sleep(time.Nanosecond * 10)
+		invoiceTracker.Stop()
+	}()
+
+	err = invoiceTracker.Start()
+	assert.Equal(t, mockError, err)
 }
 
 func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
@@ -144,7 +239,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		MaxAllowedAccountantFee:    1500,
-		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501},
+		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -192,7 +287,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
-		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr},
+		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -239,7 +334,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
-		BlockchainHelper:           &mockBlockchainHelper{},
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -288,7 +383,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
-		BlockchainHelper:           &mockBlockchainHelper{},
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -459,8 +554,15 @@ func (maps *mockAccountantPromiseStorage) Get(accountantID identity.Identity) (c
 type mockBlockchainHelper struct {
 	feeToReturn   uint16
 	errorToReturn error
+
+	isRegistered      bool
+	isRegisteredError error
 }
 
 func (mbh *mockBlockchainHelper) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
 	return mbh.feeToReturn, mbh.errorToReturn
+}
+
+func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
+	return mbh.isRegistered, mbh.isRegisteredError
 }

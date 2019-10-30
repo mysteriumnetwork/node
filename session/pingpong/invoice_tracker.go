@@ -48,6 +48,7 @@ type PeerInvoiceSender interface {
 
 type bcHelper interface {
 	GetAccountantFee(accountantAddress common.Address) (uint16, error)
+	IsRegistered(registryAddress, addressToCheck common.Address) (bool, error)
 }
 
 type providerInvoiceStorage interface {
@@ -72,6 +73,9 @@ var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
+
+// ErrConsumerNotRegistered represents the error that the consumer is not registered
+var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
 const chargePeriodLeeway = time.Hour * 2
 
@@ -180,6 +184,15 @@ func (it *InvoiceTracker) generateInitialInvoice() error {
 func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
 	it.timeTracker.StartTracking()
+
+	isConsumerRegistered, err := it.bcHelper.IsRegistered(common.HexToAddress(it.registryAddress), it.peer.ToCommonAddress())
+	if err != nil {
+		return err
+	}
+
+	if !isConsumerRegistered {
+		return ErrConsumerNotRegistered
+	}
 
 	fee, err := it.bcHelper.GetAccountantFee(common.HexToAddress(it.accountantID.Address))
 	if err != nil {
