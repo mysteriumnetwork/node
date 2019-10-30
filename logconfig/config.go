@@ -41,17 +41,20 @@ const (
 // Bootstrap configures logger defaults (console).
 func Bootstrap() {
 	var trimPrefixes = []string{
+		"/github.com/mysteriumnetwork/node",
 		"/vendor",
 		"/go/pkg/mod",
 	}
-	cwd, _ := os.Getwd()
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.CallerMarshalFunc = func(file string, line int) string {
-		relFile := strings.TrimPrefix(file, cwd)
-		for i := range trimPrefixes {
-			relFile = trimLeftInclusive(relFile, trimPrefixes[i])
+		var ok bool
+		for _, prefix := range trimPrefixes {
+			file, ok = trimLeftInclusive(file, prefix)
+			if ok {
+				break
+			}
 		}
-		return fmt.Sprintf("%-41v", relFile+":"+strconv.Itoa(line))
+		return fmt.Sprintf("%-41v", file+":"+strconv.Itoa(line))
 	}
 
 	openvpn.UseLogger(zerologOpenvpnLogger{})
@@ -121,10 +124,10 @@ func setGlobalLogger(logger *zerolog.Logger) {
 }
 
 // trimLeftInclusive trims left part of the string up to and including the prefix.
-func trimLeftInclusive(s string, prefix string) string {
+func trimLeftInclusive(s string, prefix string) (string, bool) {
 	start := strings.Index(s, prefix)
 	if start != -1 {
-		return s[start+len(prefix):]
+		return s[start+len(prefix):], true
 	}
-	return s
+	return s, false
 }
