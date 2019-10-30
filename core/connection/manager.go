@@ -102,13 +102,13 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 
 	// These are populated by Connect at runtime.
-	ctx            context.Context
-	status         Status
-	statusLock     sync.RWMutex
-	sessionInfo    SessionInfo
-	sessionInfoMux sync.Mutex
-	cleanup        []func() error
-	cancel         func()
+	ctx           context.Context
+	status        Status
+	statusLock    sync.RWMutex
+	sessionInfo   SessionInfo
+	sessionInfoMu sync.Mutex
+	cleanup       []func() error
+	cancel        func()
 
 	discoLock sync.Mutex
 }
@@ -214,7 +214,7 @@ func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, se
 		manager.publishStateEvent(StateIPNotChanged)
 	}
 
-	// Notify if check is done.
+	// Notify that check is done.
 	manager.ipCheckParams.Done <- struct{}{}
 }
 
@@ -512,15 +512,15 @@ func (manager *connectionManager) publishStateEvent(state State) {
 }
 
 func (manager *connectionManager) setCurrentSession(info SessionInfo) {
-	manager.sessionInfoMux.Lock()
-	defer manager.sessionInfoMux.Unlock()
+	manager.sessionInfoMu.Lock()
+	defer manager.sessionInfoMu.Unlock()
 
 	manager.sessionInfo = info
 }
 
 func (manager *connectionManager) getCurrentSession() SessionInfo {
-	manager.sessionInfoMux.Lock()
-	defer manager.sessionInfoMux.Unlock()
+	manager.sessionInfoMu.Lock()
+	defer manager.sessionInfoMu.Unlock()
 
 	return manager.sessionInfo
 }

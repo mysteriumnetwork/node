@@ -18,7 +18,6 @@
 package ip
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -61,7 +60,6 @@ func (client *mockResolver) GetOutboundIPAsString() (string, error) {
 func (client *mockResolver) getNextIP() string {
 	// Return first address if only one provided.
 	if len(client.ipAddresses) == 1 {
-		fmt.Println("get first ip")
 		return client.ipAddresses[0]
 	}
 	// Return first address and dequeue from address list. This allows to
