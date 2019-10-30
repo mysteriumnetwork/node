@@ -95,6 +95,19 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 	return id, err
 }
 
+// GetTransactorFees returns the transactor fees
+func (client *Client) GetTransactorFees() (transactor.Fees, error) {
+	res, err := client.http.Get("transactor/fees", nil)
+	if err != nil {
+		return transactor.Fees{}, err
+	}
+	defer res.Body.Close()
+
+	fees := transactor.Fees{}
+	err = parseResponseJSON(res, &fees)
+	return fees, err
+}
+
 // RegisterIdentity registers identity
 func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
 	payload := transactor.IdentityRegistrationRequestDTO{

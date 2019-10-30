@@ -23,6 +23,7 @@ import (
 	"io"
 	stdlog "log"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -557,21 +558,21 @@ func (c *cliApp) quit() {
 }
 
 func (c *cliApp) identities(argsString string) {
-	const usage = "identities command:\n    list\n    new [passphrase]"
+	const usage = "identities command:\n    list\n    new [passphrase]\n    register <identity> <stake> [beneficiary]"
 	if len(argsString) == 0 {
 		info(usage)
 		return
 	}
 
-	switch argsString {
-	case "new", "list": // Known sub-commands.
+	args := strings.Fields(argsString)
+	switch args[0] {
+	case "new", "list", "register": // Known sub-commands.
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
 		return
 	}
 
-	args := strings.Fields(argsString)
 	if len(args) < 1 {
 		info(usage)
 		return
@@ -612,6 +613,39 @@ func (c *cliApp) identities(argsString string) {
 			return
 		}
 		success("New identity created:", id.Address)
+	}
+
+	if action == "register" {
+		var address string
+		var beneficiary string
+		var stake uint64
+		if len(args) >= 3 {
+			address = args[1]
+			s, err := strconv.ParseUint(args[2], 10, 64)
+			if err != nil {
+				warn(errors.Wrap(err, "could not parse stake"))
+			}
+			stake = s
+		} else {
+			info(usage)
+			return
+		}
+
+		if len(args) == 4 {
+			beneficiary = args[3]
+		}
+
+		fees, err := c.tequilapi.GetTransactorFees()
+		if err != nil {
+			warn(err)
+			return
+		}
+
+		err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration)
+		if err != nil {
+			warn(err)
+			return
+		}
 	}
 }
 
@@ -720,6 +754,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"identities",
 			readline.PcItem("new"),
 			readline.PcItem("list"),
+			readline.PcItem("register"),
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),
