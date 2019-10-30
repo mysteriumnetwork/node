@@ -97,13 +97,14 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 
 // GetTransactorFees returns the transactor fees
 func (client *Client) GetTransactorFees() (transactor.Fees, error) {
+	fees := transactor.Fees{}
+
 	res, err := client.http.Get("transactor/fees", nil)
 	if err != nil {
-		return transactor.Fees{}, err
+		return fees, err
 	}
 	defer res.Body.Close()
 
-	fees := transactor.Fees{}
 	err = parseResponseJSON(res, &fees)
 	return fees, err
 }
@@ -117,6 +118,25 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee u
 	}
 
 	response, err := client.http.Post("identities/"+address+"/register", payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("expected 202 got %v", response.StatusCode)
+	}
+
+	return nil
+}
+
+// TopUp tops up identity
+func (client *Client) TopUp(identity string) error {
+	payload := transactor.TopUpRequest{
+		Identity: identity,
+	}
+
+	response, err := client.http.Post("transactor/topup", payload)
 	if err != nil {
 		return err
 	}
