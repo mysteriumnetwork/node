@@ -558,7 +558,7 @@ func (c *cliApp) quit() {
 }
 
 func (c *cliApp) identities(argsString string) {
-	const usage = "identities command:\n    list\n    new [passphrase]\n    register <identity> <stake> [beneficiary]"
+	const usage = "identities command:\n    list\n    new [passphrase]\n    register <identity> <stake> [beneficiary]\n    topup <identity>"
 	if len(argsString) == 0 {
 		info(usage)
 		return
@@ -566,7 +566,7 @@ func (c *cliApp) identities(argsString string) {
 
 	args := strings.Fields(argsString)
 	switch args[0] {
-	case "new", "list", "register": // Known sub-commands.
+	case "new", "list", "register", "topup": // Known sub-commands.
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -643,9 +643,27 @@ func (c *cliApp) identities(argsString string) {
 
 		err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration)
 		if err != nil {
+			warn(errors.Wrap(err, "could not register identity"))
+			return
+		}
+		success("identity registered")
+	}
+
+	if action == "topup" {
+		var address string
+		if len(args) != 2 {
+			info(usage)
+			return
+
+		}
+		address = args[1]
+
+		err := c.tequilapi.TopUp(address)
+		if err != nil {
 			warn(err)
 			return
 		}
+		success("identity topped up")
 	}
 }
 
@@ -755,6 +773,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItem("new"),
 			readline.PcItem("list"),
 			readline.PcItem("register"),
+			readline.PcItem("topup"),
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),
