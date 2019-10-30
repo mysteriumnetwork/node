@@ -61,3 +61,19 @@ func (bc *Blockchain) GetAccountantFee(accountantAddress common.Address) (uint16
 
 	return res.Value, err
 }
+
+// IsRegistered checks wether the given identity is registered or not
+func (bc *Blockchain) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
+	caller, err := bindings.NewRegistryCaller(registryAddress, bc.client)
+	if err != nil {
+		return false, errors.Wrap(err, "could not create registry caller")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), bc.bcTimeout)
+	defer cancel()
+
+	res, err := caller.IsRegistered(&bind.CallOpts{
+		Context: ctx,
+	}, addressToCheck)
+	return res, errors.Wrap(err, "could not check registration status")
+}

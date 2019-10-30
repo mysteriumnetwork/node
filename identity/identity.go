@@ -17,11 +17,20 @@
 
 package identity
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
+)
 
 // Identity represents unique user network identity
 type Identity struct {
 	Address string `json:"address"`
+}
+
+// ToCommonAddress returns the common address representation for identity
+func (i Identity) ToCommonAddress() common.Address {
+	return common.HexToAddress(i.Address)
 }
 
 // FromAddress converts address to identity
