@@ -55,7 +55,7 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 			},
 
 			PaymentMethodType: "PER_TIME",
-			PaymentMethod: dto.PaymentPerTime{
+			PaymentMethod: dto.PaymentRate{
 				Price:    money.Money{Amount: 12500000, Currency: money.Currency("MYST")},
 				Duration: 60 * time.Minute,
 			},

@@ -28,7 +28,7 @@ import (
 
 func Test_CorrectMoneyValueIsReturnedForTotalAmount(t *testing.T) {
 	aCalc := AmountCalc{
-		PaymentDef: dto.PaymentPerTime{
+		PaymentDef: dto.PaymentRate{
 			Duration: time.Minute,
 			Price: money.Money{
 				Amount:   100,

@@ -125,7 +125,7 @@ func (tc *testContext) SetupTest() {
 			}
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				initialState:      *paymentInfo,
-				paymentDefinition: dto.PaymentPerTime{},
+				paymentDefinition: dto.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
 			return tc.MockPaymentIssuer, nil
@@ -397,7 +397,7 @@ func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.L
 
 type MockPaymentIssuer struct {
 	initialState      promise.PaymentInfo
-	paymentDefinition dto.PaymentPerTime
+	paymentDefinition dto.PaymentRate
 	startCalled       bool
 	stopCalled        bool
 	MockError         error
