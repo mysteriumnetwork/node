@@ -18,11 +18,8 @@
 package discovery
 
 import (
-	"time"
-
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
@@ -41,10 +38,6 @@ func NewServiceProposalWithLocation(
 			Protocol:          protocol,
 		},
 		PaymentMethodType: dto.PaymentMethodPerTime,
-		PaymentMethod: dto.PaymentRate{
-			// 15 MYST/month = 0,5 MYST/day = 0,125 MYST/hour
-			Price:    money.NewMoney(0.125, money.CurrencyMyst),
-			Duration: 1 * time.Hour,
-		},
+		PaymentMethod:     dto.DefaultPaymentInfo,
 	}
 }

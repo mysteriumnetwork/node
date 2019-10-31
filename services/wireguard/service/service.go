@@ -44,7 +44,7 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		},
 		PaymentMethodType: wg.PaymentMethod,
 		PaymentMethod: wg.Payment{
-			Price: money.NewMoney(0, money.CurrencyMyst),
+			Price: money.NewMoney(1000000, money.CurrencyMyst),
 		},
 	}
 }
