@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -41,6 +42,7 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 	"github.com/rs/zerolog/log"
@@ -183,6 +185,18 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 			return service_noop.NewManager(), service_noop.GetProposal(location), nil
 		},
 	)
+}
+
+func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
+	cfg := pingpong.ProviderRegistrarConfig{
+		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
+		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
+		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
+		AccountantAddress:   common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+	}
+	di.ProviderRegistrar = pingpong.NewProviderRegistrar(di.Transactor, di.BCHelper, cfg)
+	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
