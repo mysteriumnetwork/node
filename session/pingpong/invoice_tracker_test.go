@@ -201,7 +201,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 	}()
 
 	err = invoiceTracker.Start()
-	assert.Equal(t, mockError, err)
+	assert.Equal(t, errors.Wrap(mockError, "could not check customer identity registration status").Error(), err.Error())
 }
 
 func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
@@ -297,7 +297,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	}()
 
 	err = invoiceTracker.Start()
-	assert.Equal(t, mockErr, err)
+	assert.Equal(t, errors.Wrap(mockErr, "could not get accountants fee").Error(), err.Error())
 }
 
 func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
