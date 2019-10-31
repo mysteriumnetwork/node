@@ -556,13 +556,7 @@ func newSessionManagerFactory(
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			dialog, payment_factory.BalanceSendPeriod,
 			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
-			dto.PaymentPerTime{
-				Price: money.Money{
-					Currency: money.CurrencyMyst,
-					Amount:   uint64(1),
-				},
-				Duration: time.Minute,
-			},
+			pingpong.DefaultPaymentInfo,
 			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,

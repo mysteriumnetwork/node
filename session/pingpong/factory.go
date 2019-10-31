@@ -38,6 +38,12 @@ import (
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
 const DefaultAccountantFailureCount uint64 = 3
 
+// DefaultPaymentInfo represents the default payment info for the alpha release
+var DefaultPaymentInfo = dto.PaymentPerTime{
+	Price:    money.NewMoney(0.001, money.CurrencyMyst),
+	Duration: 1 * time.Minute,
+}
+
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	dialog communication.Dialog,
@@ -136,13 +142,10 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Ks:                        keystore,
 				Identity:                  consumer,
 				Peer:                      dialog.PeerID(),
-				PaymentInfo: dto.PaymentPerTime{
-					Price:    money.NewMoney(1, money.CurrencyMyst),
-					Duration: 1 * time.Minute,
-				},
-				RegistryAddress:       registryAddress,
-				ChannelImplementation: channelImplementation,
-				AccountantAddress:     accountant.Address,
+				PaymentInfo:               DefaultPaymentInfo,
+				RegistryAddress:           registryAddress,
+				ChannelImplementation:     channelImplementation,
+				AccountantAddress:         accountant.Address,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {

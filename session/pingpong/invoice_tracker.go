@@ -243,7 +243,7 @@ func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
 
 func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	// TODO: this should be calculated according to the passed in payment period
-	shouldBe := uint64(math.Trunc(it.timeTracker.Elapsed().Minutes() * float64(it.paymentInfo.GetPrice().Amount) * 100000000))
+	shouldBe := uint64(math.Trunc(it.timeTracker.Elapsed().Minutes() * float64(it.paymentInfo.GetPrice().Amount)))
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
 	// This is due to the fact that both payment providers start at different times.
