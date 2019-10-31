@@ -187,7 +187,7 @@ func (it *InvoiceTracker) Start() error {
 
 	isConsumerRegistered, err := it.bcHelper.IsRegistered(common.HexToAddress(it.registryAddress), it.peer.ToCommonAddress())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not check customer identity registration status")
 	}
 
 	if !isConsumerRegistered {
@@ -196,7 +196,7 @@ func (it *InvoiceTracker) Start() error {
 
 	fee, err := it.bcHelper.GetAccountantFee(common.HexToAddress(it.accountantID.Address))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get accountants fee")
 	}
 
 	if fee > it.maxAllowedAccountantFee {
@@ -206,7 +206,7 @@ func (it *InvoiceTracker) Start() error {
 
 	err = it.generateInitialInvoice()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not generate initial invoice")
 	}
 
 	// give the consumer a second to start up his payments before sending the first request
