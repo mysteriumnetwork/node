@@ -75,8 +75,8 @@ type Discovery struct {
 	statusChan                  chan Status
 	status                      Status
 	proposalAnnouncementStopped *sync.WaitGroup
-	unsubscribe                 func()
-	stop                        func()
+	stop                        chan struct{}
+	once                        sync.Once
 
 	mu sync.RWMutex
 }
@@ -96,8 +96,7 @@ func NewService(
 		statusChan:                  make(chan Status),
 		status:                      StatusUndefined,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
-		unsubscribe:                 func() {},
-		stop:                        func() {},
+		stop:                        make(chan struct{}),
 	}
 }
 
@@ -111,17 +110,11 @@ func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.Service
 	d.signer = d.signerCreate(ownIdentity)
 	d.proposal = proposal
 
-	stopLoop := make(chan bool)
-	d.stop = func() {
-		// cancel (stop) discovery loop
-		stopLoop <- true
-	}
-
 	d.proposalAnnouncementStopped.Add(1)
 
 	go d.checkRegistration()
 
-	go d.mainDiscoveryLoop(stopLoop)
+	go d.mainDiscoveryLoop()
 }
 
 // Wait wait for proposal announcements to stop / unregister
@@ -131,14 +124,16 @@ func (d *Discovery) Wait() {
 
 // Stop stops discovery loop
 func (d *Discovery) Stop() {
-	d.stop()
+	d.once.Do(func() {
+		close(d.stop)
+	})
 }
 
-func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
+func (d *Discovery) mainDiscoveryLoop() {
 	for {
 		select {
-		case <-stopLoop:
-			d.stopLoop()
+		case <-d.stop:
+			return
 		case event := <-d.statusChan:
 			switch event {
 			case IdentityUnregistered:
@@ -162,7 +157,6 @@ func (d *Discovery) stopLoop() {
 	d.mu.RLock()
 	if d.status == WaitingForRegistration {
 		d.mu.RUnlock()
-		d.unsubscribe()
 		d.mu.RLock()
 	}
 
@@ -176,18 +170,22 @@ func (d *Discovery) stopLoop() {
 
 func (d *Discovery) registerIdentity() {
 	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(d.ownIdentity)
-	d.unsubscribe = unsubscribe
 	d.changeStatus(WaitingForRegistration)
 	go func() {
-		registerEvent := <-registerEventChan
-		switch registerEvent {
-		case identity_registry.Registered:
-			log.Info().Msg("Identity registered, proceeding with proposal registration")
-			go d.eventPublisher.Publish(IdentityRegistrationTopic, d.ownIdentity)
-			d.changeStatus(RegisterProposal)
-		case identity_registry.Cancelled:
-			log.Info().Msg("Cancelled identity registration")
-			d.changeStatus(IdentityRegisterFailed)
+		defer unsubscribe()
+		select {
+		case registerEvent := <-registerEventChan:
+			switch registerEvent {
+			case identity_registry.Registered:
+				log.Info().Msg("Identity registered, proceeding with proposal registration")
+				go d.eventPublisher.Publish(IdentityRegistrationTopic, d.ownIdentity)
+				d.changeStatus(RegisterProposal)
+			case identity_registry.Cancelled:
+				log.Info().Msg("Cancelled identity registration")
+				d.changeStatus(IdentityRegisterFailed)
+			}
+		case <-d.stop:
+			return
 		}
 	}()
 }
