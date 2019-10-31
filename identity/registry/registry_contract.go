@@ -103,12 +103,13 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 		log.Info().Msgf("Waiting on identities %s accountant %s", userIdentities[0].Hex(), accountantIdentities[0].Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 		subscription, err := registry.filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
-		defer subscription.Unsubscribe()
 		if err != nil {
 			registrationEvent <- Cancelled
 			log.Error().Err(err).Msg("")
 			return
 		}
+		defer subscription.Unsubscribe()
+
 		select {
 		case <-stopLoop:
 			registrationEvent <- Cancelled
