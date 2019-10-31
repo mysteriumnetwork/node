@@ -90,7 +90,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	topUpDTO := &transactor.TopUpRequest{}
+	topUpDTO := transactor.TopUpRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
 	if err != nil {
