@@ -531,7 +531,7 @@ func newSessionManagerFactory(
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
-			payment := dto.PaymentPerTime{
+			payment := dto.PaymentRate{
 				Price: money.Money{
 					Currency: money.CurrencyMyst,
 					Amount:   uint64(0),

@@ -26,7 +26,7 @@ import (
 
 // AmountCalc calculates the pay required given the amount
 type AmountCalc struct {
-	PaymentDef dto.PaymentPerTime
+	PaymentDef dto.PaymentRate
 }
 
 // TotalAmount gets the total amount of money to pay given the duration

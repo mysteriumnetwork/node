@@ -78,7 +78,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -126,7 +126,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		RegistryAddress:           acc.Address.Hex(),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -191,7 +191,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		RegistryAddress:           acc.Address.Hex(),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 	defer exchangeMessageTracker.Stop()
@@ -208,7 +208,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 	type fields struct {
 		peer        identity.Identity
 		timeTracker timeTracker
-		paymentInfo dto.PaymentPerTime
+		paymentInfo dto.PaymentRate
 	}
 	tests := []struct {
 		name    string
@@ -241,7 +241,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentPerTime{
+				paymentInfo: dto.PaymentRate{
 					Duration: time.Minute,
 					Price:    money.NewMoney(1, money.CurrencyMyst),
 				},
@@ -261,7 +261,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentPerTime{
+				paymentInfo: dto.PaymentRate{
 					Duration: time.Minute,
 					Price:    money.NewMoney(1, money.CurrencyMyst),
 				},

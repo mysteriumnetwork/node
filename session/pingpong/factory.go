@@ -39,7 +39,7 @@ import (
 const DefaultAccountantFailureCount uint64 = 3
 
 // DefaultPaymentInfo represents the default payment info for the alpha release
-var DefaultPaymentInfo = dto.PaymentPerTime{
+var DefaultPaymentInfo = dto.PaymentRate{
 	Price:    money.NewMoney(0.001, money.CurrencyMyst),
 	Duration: 1 * time.Minute,
 }
@@ -49,7 +49,7 @@ func InvoiceFactoryCreator(
 	dialog communication.Dialog,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
-	paymentInfo dto.PaymentPerTime,
+	paymentInfo dto.PaymentRate,
 	accountantCaller accountantCaller,
 	accountantPromiseStorage accountantPromiseStorage,
 	registryAddress string,
@@ -106,7 +106,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 		dialog communication.Dialog,
 		consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 		var promiseState promise.PaymentInfo
-		payment := dto.PaymentPerTime{
+		payment := dto.PaymentRate{
 			Price: money.Money{
 				Currency: money.CurrencyMyst,
 				Amount:   uint64(0),

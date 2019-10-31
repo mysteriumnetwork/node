@@ -78,7 +78,7 @@ type ExchangeMessageTracker struct {
 	consumerInvoiceStorage                                    consumerInvoiceStorage
 	consumerTotalsStorage                                     consumerTotalsStorage
 	timeTracker                                               timeTracker
-	paymentInfo                                               dto.PaymentPerTime
+	paymentInfo                                               dto.PaymentRate
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
@@ -90,7 +90,7 @@ type ExchangeMessageTrackerDeps struct {
 	TimeTracker                                               timeTracker
 	Ks                                                        *keystore.KeyStore
 	Identity, Peer                                            identity.Identity
-	PaymentInfo                                               dto.PaymentPerTime
+	PaymentInfo                                               dto.PaymentRate
 	RegistryAddress, ChannelImplementation, AccountantAddress string
 }
 

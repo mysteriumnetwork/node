@@ -42,7 +42,7 @@ const BalanceSendPeriod = time.Second * 20
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
 func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory) func(
 	initialState promise.PaymentInfo,
-	paymentDefinition dto.PaymentPerTime,
+	paymentDefinition dto.PaymentRate,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
@@ -51,13 +51,13 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 
 func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 	initialState promise.PaymentInfo,
-	paymentDefinition dto.PaymentPerTime,
+	paymentDefinition dto.PaymentRate,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return func(
 		initialState promise.PaymentInfo,
-		paymentDefinition dto.PaymentPerTime,
+		paymentDefinition dto.PaymentRate,
 		messageChan chan balance.Message,
 		dialog communication.Dialog,
 		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {

@@ -99,7 +99,7 @@ type InvoiceTracker struct {
 	invoiceStorage                  providerInvoiceStorage
 	accountantPromiseStorage        accountantPromiseStorage
 	timeTracker                     timeTracker
-	paymentInfo                     dto.PaymentPerTime
+	paymentInfo                     dto.PaymentRate
 	providerID                      identity.Identity
 	accountantID                    identity.Identity
 	lastInvoice                     lastInvoice
@@ -121,7 +121,7 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
-	PaymentInfo                dto.PaymentPerTime
+	PaymentInfo                dto.PaymentRate
 	ProviderID                 identity.Identity
 	AccountantID               identity.Identity
 	AccountantCaller           accountantCaller
