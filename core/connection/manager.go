@@ -58,8 +58,8 @@ type IPCheckParams struct {
 // DefaultIPCheckParams returns default params.
 func DefaultIPCheckParams() IPCheckParams {
 	return IPCheckParams{
-		MaxAttempts:             3,
-		SleepDurationAfterCheck: 2 * time.Second,
+		MaxAttempts:             6,
+		SleepDurationAfterCheck: 3 * time.Second,
 		Done:                    make(chan struct{}, 1),
 	}
 }
@@ -194,28 +194,34 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 
 // checkSessionIP checks if IP has changed after connection was established.
 func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, originalPublicIP string) {
-	isIpChanged := func() bool {
-		for i := 0; i < manager.ipCheckParams.MaxAttempts; i++ {
-			newPublicIP := manager.getPublicIP()
-			if originalPublicIP != newPublicIP {
-				return true
-			}
-			time.Sleep(manager.ipCheckParams.SleepDurationAfterCheck)
+	defer func() {
+		// Notify that check is done.
+		manager.ipCheckParams.Done <- struct{}{}
+	}()
+
+	for i := 1; i <= manager.ipCheckParams.MaxAttempts; i++ {
+		// Skip check if not connected. This may happen when context was canceled via Disconnect.
+		if manager.Status().State != Connected {
+			return
 		}
-		return false
-	}
 
-	if isIpChanged() {
-		// If ip is changed notify peer about successful ip change after tunnel connection was established.
-		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
-	} else {
+		newPublicIP := manager.getPublicIP()
+
+		// If ip is changed notify peer that connection is successful.
+		if originalPublicIP != newPublicIP {
+			manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
+			return
+		}
+
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
-		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
-		manager.publishStateEvent(StateIPNotChanged)
-	}
+		if i == manager.ipCheckParams.MaxAttempts {
+			manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
+			manager.publishStateEvent(StateIPNotChanged)
+			return
+		}
 
-	// Notify that check is done.
-	manager.ipCheckParams.Done <- struct{}{}
+		time.Sleep(manager.ipCheckParams.SleepDurationAfterCheck)
+	}
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
