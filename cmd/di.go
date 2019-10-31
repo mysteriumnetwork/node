@@ -165,7 +165,6 @@ type Dependencies struct {
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
 	Transactor       *transactor.Transactor
-	TopUpper         *transactor.TopUpper
 	BCHelper         *pingpong.Blockchain
 
 	LogCollector *logconfig.Collector
@@ -355,10 +354,6 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}
 
-	if di.TopUpper != nil {
-		di.TopUpper.Stop()
-	}
-
 	firewall.Reset()
 	return nil
 }
@@ -482,17 +477,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		channelImplementation,
 		di.SignerFactory,
 	)
-
-	di.TopUpper = transactor.NewTopUpper(
-		di.Transactor,
-		transactor.DefaultRetryCount,
-		transactor.DefaultDelayBetweenRetries,
-	)
-
-	err := di.TopUpper.Subscribe(di.EventBus)
-	if err != nil {
-		return errors.Wrap(err, "could not subscribe topper upper")
-	}
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
