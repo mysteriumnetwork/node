@@ -54,7 +54,7 @@ func Test_GetProposal(t *testing.T) {
 			PaymentMethodType: "WG",
 			PaymentMethod: wg.Payment{
 				Price: money.Money{
-					Amount:   0,
+					Amount:   1000000,
 					Currency: money.Currency("MYST"),
 				},
 			},

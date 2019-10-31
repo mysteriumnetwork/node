@@ -243,13 +243,13 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				},
 				paymentInfo: dto.PaymentRate{
 					Duration: time.Minute,
-					Price:    money.NewMoney(1, money.CurrencyMyst),
+					Price:    money.NewMoney(100000, money.CurrencyMyst),
 				},
 			},
 			invoice: crypto.Invoice{
 				TransactorFee:  0,
 				AgreementID:    1,
-				AgreementTotal: 105000001,
+				AgreementTotal: 150100,
 				Provider:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 			},
 			wantErr: true,
@@ -263,13 +263,13 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				},
 				paymentInfo: dto.PaymentRate{
 					Duration: time.Minute,
-					Price:    money.NewMoney(1, money.CurrencyMyst),
+					Price:    money.NewMoney(100000, money.CurrencyMyst),
 				},
 			},
 			invoice: crypto.Invoice{
 				TransactorFee:  0,
 				AgreementID:    1,
-				AgreementTotal: 100000000,
+				AgreementTotal: 100000,
 				Provider:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 			},
 			wantErr: false,

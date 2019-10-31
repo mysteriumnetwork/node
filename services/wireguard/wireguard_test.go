@@ -26,7 +26,7 @@ import (
 )
 
 func Test_PaymentMethod_Serialize(t *testing.T) {
-	price := money.NewMoney(0.5, money.CurrencyMyst)
+	price := money.NewMoney(50000000, money.CurrencyMyst)
 
 	var tests = []struct {
 		model        Payment
@@ -60,7 +60,7 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 }
 
 func Test_PaymentMethod_Unserialize(t *testing.T) {
-	price := money.NewMoney(0.5, money.CurrencyMyst)
+	price := money.NewMoney(50000000, money.CurrencyMyst)
 
 	var tests = []struct {
 		json          string
