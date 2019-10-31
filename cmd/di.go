@@ -404,7 +404,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// Quality metrics
-	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendConnStateEvent)
 	if err != nil {
 		return err
 	}
@@ -449,6 +449,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.EventBus,
 		connectivity.NewStatusSender(),
 		di.IPResolver,
+		connection.DefaultIPCheckParams(),
 	)
 
 	// TODO: switch this to channel implementation from params after #1325 is merged
@@ -498,7 +499,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
-	tequilapi_endpoints.AddRoutesForConnectivityStatus(nodeOptions.BindAddress, router, di.SessionConnectivityStatusStorage)
+	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 

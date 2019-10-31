@@ -40,6 +40,10 @@ const (
 	Unknown = State("Unknown")
 	// Canceled means that connection initialization was started, but failed never reaching Connected state
 	Canceled = State("Canceled")
+	// StateIPNotChanged means that consumer ip not changed after connection is created
+	StateIPNotChanged = State("IPNotChanged")
+	// StateConnectionFailed means that underlying connection is failed
+	StateConnectionFailed = State("ConnectionFailed")
 )
 
 // Status holds connection state, session id and proposal of the connection

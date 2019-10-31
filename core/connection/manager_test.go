@@ -46,6 +46,8 @@ type testContext struct {
 	stubPublisher         *StubPublisher
 	mockStatistics        consumer.SessionStatistics
 	fakeResolver          ip.Resolver
+	ipCheckParams         IPCheckParams
+	statusSender          *mockStatusSender
 	sync.RWMutex
 }
 
@@ -114,6 +116,15 @@ func (tc *testContext) SetupTest() {
 		},
 	}
 
+	tc.ipCheckParams = IPCheckParams{
+		MaxAttempts:             3,
+		SleepDurationAfterCheck: 1 * time.Millisecond,
+		Done:                    make(chan struct{}, 1),
+	}
+
+	tc.statusSender = &mockStatusSender{}
+	tc.fakeResolver = ip.NewResolverMock("ip")
+
 	tc.connManager = NewManager(
 		dialogCreator,
 		func(paymentInfo *promise.PaymentInfo,
@@ -131,8 +142,9 @@ func (tc *testContext) SetupTest() {
 		},
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
-		newMockStatusSender(),
-		ip.NewResolverMock("ip"),
+		tc.statusSender,
+		tc.fakeResolver,
+		tc.ipCheckParams,
 	)
 }
 
@@ -349,21 +361,30 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
+	<-tc.ipCheckParams.Done
 
 	waitABit()
 
 	history := tc.stubPublisher.GetEventHistory()
-	assert.Len(tc.T(), history, 3)
+	assert.Len(tc.T(), history, 4)
 
 	for _, v := range history {
 		if v.calledWithTopic == StatisticsEventTopic {
-			event := v.calledWithData.(consumer.SessionStatistics)
-			assert.True(tc.T(), event.BytesReceived == tc.mockStatistics.BytesReceived)
-			assert.True(tc.T(), event.BytesSent == tc.mockStatistics.BytesSent)
+			event := v.calledWithData.(SessionStatsEvent)
+			assert.True(tc.T(), event.Stats.BytesReceived == tc.mockStatistics.BytesReceived)
+			assert.True(tc.T(), event.Stats.BytesSent == tc.mockStatistics.BytesSent)
 		}
-		if v.calledWithTopic == StateEventTopic {
+		if v.calledWithTopic == StateEventTopic && v.calledWithData.(StateEvent).State == Connected {
 			event := v.calledWithData.(StateEvent)
 			assert.Equal(tc.T(), Connected, event.State)
+			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
+			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
+			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
+			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
+		}
+		if v.calledWithTopic == StateEventTopic && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+			event := v.calledWithData.(StateEvent)
+			assert.Equal(tc.T(), StateIPNotChanged, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
@@ -378,6 +399,71 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
 	}
+}
+
+func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
+	tc.stubPublisher.Clear()
+
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{
+		connectedState,
+	}
+
+	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	assert.NoError(tc.T(), err)
+	<-tc.ipCheckParams.Done
+
+	// Check that state event with StateIPNotChanged status was called.
+	history := tc.stubPublisher.GetEventHistory()
+	var ipNotChangedEvent *StubPublisherEvent
+	for _, v := range history {
+		if v.calledWithTopic == StateEventTopic && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+			ipNotChangedEvent = &v
+		}
+	}
+	assert.NotNil(tc.T(), ipNotChangedEvent)
+
+	// Check that status sender was called with status code.
+	expectedStatusMsg := connectivity.StatusMessage{
+		SessionID:  string(establishedSessionID),
+		StatusCode: connectivity.StatusSessionIPNotChanged,
+		Message:    "",
+	}
+	assert.NotNil(tc.T(), tc.statusSender.sentMsg)
+	assert.Equal(tc.T(), &expectedStatusMsg, tc.statusSender.sentMsg)
+}
+
+func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
+	tc.stubPublisher.Clear()
+
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{
+		connectedState,
+	}
+
+	// Simulate IP change.
+	tc.connManager.ipResolver = ip.NewResolverMock("10.0.0.4", "10.0.5")
+
+	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	assert.NoError(tc.T(), err)
+	<-tc.ipCheckParams.Done
+
+	// Check that state event with StateIPNotChanged status was not called.
+	history := tc.stubPublisher.GetEventHistory()
+	var ipNotChangedEvent *StubPublisherEvent
+	for _, v := range history {
+		if v.calledWithTopic == StateEventTopic && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+			ipNotChangedEvent = &v
+		}
+	}
+	assert.Nil(tc.T(), ipNotChangedEvent)
+
+	// Check that status sender was called with status code.
+	expectedStatusMsg := connectivity.StatusMessage{
+		SessionID:  string(establishedSessionID),
+		StatusCode: connectivity.StatusConnectionOk,
+		Message:    "",
+	}
+	assert.NotNil(tc.T(), tc.statusSender.sentMsg)
+	assert.Equal(tc.T(), &expectedStatusMsg, tc.statusSender.sentMsg)
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -431,14 +517,13 @@ func (mpm *MockPaymentIssuer) Stop() {
 	close(mpm.stopChan)
 }
 
-func newMockStatusSender() *mockStatusSender {
-	return &mockStatusSender{}
-}
-
 type mockStatusSender struct {
 	sentMsg *connectivity.StatusMessage
+	sync.Mutex
 }
 
-func (s mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
+func (s *mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
+	s.Lock()
+	defer s.Unlock()
 	s.sentMsg = msg
 }

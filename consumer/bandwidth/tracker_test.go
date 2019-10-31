@@ -114,9 +114,11 @@ func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
 		previousTime: startTime,
 	}
 
-	tracker.ConsumeStatisticsEvent(consumer.SessionStatistics{
-		BytesReceived: bytesTransfered,
-		BytesSent:     bytesTransfered,
+	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesReceived: bytesTransfered,
+			BytesSent:     bytesTransfered,
+		},
 	})
 
 	assert.NotEqual(t, tracker.previousTime, startTime)
@@ -128,13 +130,15 @@ func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
 
 func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	tracker := Tracker{}
-	input := consumer.SessionStatistics{
-		BytesReceived: 1,
-		BytesSent:     2,
+	e := connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesReceived: 1,
+			BytesSent:     2,
+		},
 	}
-	tracker.ConsumeStatisticsEvent(input)
+	tracker.ConsumeStatisticsEvent(e)
 	assert.False(t, tracker.previousTime.IsZero())
-	assert.Equal(t, input.BytesReceived, tracker.previous.BytesReceived)
-	assert.Equal(t, input.BytesSent, tracker.previous.BytesSent)
+	assert.Equal(t, e.Stats.BytesReceived, tracker.previous.BytesReceived)
+	assert.Equal(t, e.Stats.BytesSent, tracker.previous.BytesSent)
 	assert.Zero(t, tracker.Get().Down.BitsPerSecond)
 }
