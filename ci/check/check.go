@@ -34,12 +34,12 @@ func Check() {
 
 // CheckCopyright checks for copyright headers in files.
 func CheckCopyright() error {
-	return commands.Copyright("./...", "docs")
+	return commands.CopyrightD(".", "docs")
 }
 
 // CheckGoLint reports linting errors in the solution.
 func CheckGoLint() error {
-	return commands.GoLint("./...", "docs")
+	return commands.GoLintD(".", "docs")
 }
 
 // CheckGoVet checks that the source is compliant with go vet.
@@ -49,7 +49,7 @@ func CheckGoVet() error {
 
 // CheckGoImports checks for issues with go imports.
 func CheckGoImports() error {
-	return commands.GoImports("./...", "docs")
+	return commands.GoImportsD(".", "docs")
 }
 
 // CheckSwagger checks whether swagger spec at "tequilapi.json" is valid against swagger specification 2.0.
