@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -38,6 +39,7 @@ type NodeInformation struct {
 	Arch        string `json:"arch"`
 	NodeVersion string `json:"node_version"`
 	Identity    string `json:"identity"`
+	VendorID    string `json:"vendor_id"`
 }
 
 // CollectNodeData sends node information to MMN on identity unlock
@@ -64,6 +66,7 @@ func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 		info.MACAddress = hex.EncodeToString(sha256Bytes[:])
 		info.LocalIP = outboundIp
 		info.Identity = identity
+		info.VendorID = config.Current.GetString(config.VendorIDFlag.Name)
 
 		if err = client.RegisterNode(info); err != nil {
 			log.Error().Err(err).Msg("failed to send NodeInformation to MMN")

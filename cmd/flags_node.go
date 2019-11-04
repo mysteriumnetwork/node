@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"github.com/mysteriumnetwork/node/config"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 
@@ -66,7 +67,14 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag, bindAddressFlag, feedbackURLFlag)
+	*flags = append(*flags,
+		tequilapiAddressFlag,
+		tequilapiPortFlag,
+		keystoreLightweightFlag,
+		bindAddressFlag,
+		feedbackURLFlag,
+		config.VendorIDFlag,
+	)
 
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsDiscovery(flags)
