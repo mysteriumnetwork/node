@@ -26,6 +26,7 @@ import (
 type FakeRegistry struct {
 	RegistrationEventExists bool
 	Registered              bool
+	Events                  chan RegistrationEvent
 }
 
 // IsRegistered returns fake identity registration status within payments contract
@@ -40,13 +41,16 @@ func (registry *FakeRegistry) SubscribeToRegistrationEvent(id identity.Identity)
 ) {
 	log.Info().Msg("Fake SubscribeToRegistrationEvent called")
 	registrationEvent = make(chan RegistrationEvent)
-	unsubscribe = func() {
-		registrationEvent <- Cancelled
-	}
+	unsubscribe = func() {}
 	go func() {
 		if registry.RegistrationEventExists {
-			registrationEvent <- Registered
+			registry.Events <- Registered
 		}
 	}()
-	return registrationEvent, unsubscribe
+	return registry.Events, unsubscribe
+}
+
+// Cancel sends a cancel event
+func (registry *FakeRegistry) Cancel() {
+	registry.Events <- Cancelled
 }

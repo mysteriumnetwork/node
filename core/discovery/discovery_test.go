@@ -44,12 +44,13 @@ func discoveryWithMockedDependencies() *Discovery {
 		},
 		proposalRegistry: &mockedProposalRegistry{},
 		eventPublisher:   &mockedEventPublisher{},
+		stop:             make(chan struct{}),
 	}
 }
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true, Events: make(chan identity_registry.RegistrationEvent)}
 
 	d.Start(providerID, proposal)
 
@@ -59,7 +60,7 @@ func TestStartRegistersProposal(t *testing.T) {
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false, Events: make(chan identity_registry.RegistrationEvent)}
 
 	d.Start(providerID, proposal)
 
@@ -69,14 +70,16 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 
 func TestStartRegisterIdentityCancelled(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
+	mockRegistry := &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false, Events: make(chan identity_registry.RegistrationEvent)}
+	d.identityRegistry = mockRegistry
 
 	d.Start(providerID, proposal)
+	defer d.Stop()
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
-	d.Stop()
+	mockRegistry.Cancel()
 
 	actualStatus = observeStatus(d, IdentityRegisterFailed)
 	assert.Equal(t, IdentityRegisterFailed, actualStatus)
@@ -84,7 +87,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 
 func TestStartStopUnregisterProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true, Events: make(chan identity_registry.RegistrationEvent)}
 
 	d.Start(providerID, proposal)
 
