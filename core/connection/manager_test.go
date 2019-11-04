@@ -409,7 +409,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 		connectedState,
 	}
 
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	<-tc.ipCheckParams.Done
 
@@ -443,7 +443,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	// Simulate IP change.
 	tc.connManager.ipResolver = ip.NewResolverMock("10.0.0.4", "10.0.5")
 
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	<-tc.ipCheckParams.Done
 
