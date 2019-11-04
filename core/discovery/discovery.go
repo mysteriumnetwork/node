@@ -130,9 +130,12 @@ func (d *Discovery) Stop() {
 }
 
 func (d *Discovery) mainDiscoveryLoop() {
+	defer d.proposalAnnouncementStopped.Done()
 	for {
 		select {
 		case <-d.stop:
+			d.stopLoop()
+			d.unregisterProposal()
 			return
 		case event := <-d.statusChan:
 			switch event {
@@ -145,7 +148,6 @@ func (d *Discovery) mainDiscoveryLoop() {
 			case UnregisterProposal:
 				go d.unregisterProposal()
 			case IdentityRegisterFailed, ProposalUnregistered, UnregisterProposalFailed:
-				d.proposalAnnouncementStopped.Done()
 				return
 			}
 		}
@@ -243,7 +245,6 @@ func (d *Discovery) checkRegistration() {
 func (d *Discovery) changeStatus(status Status) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-
 	d.status = status
 
 	go func() {
