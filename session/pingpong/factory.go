@@ -26,10 +26,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
@@ -38,18 +38,12 @@ import (
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
 const DefaultAccountantFailureCount uint64 = 3
 
-// DefaultPaymentInfo represents the default payment info for the alpha release
-var DefaultPaymentInfo = dto.PaymentRate{
-	Price:    money.NewMoney(100000, money.CurrencyMyst),
-	Duration: 1 * time.Minute,
-}
-
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	dialog communication.Dialog,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
-	paymentInfo dto.PaymentRate,
+	paymentInfo paydef.PaymentRate,
 	accountantCaller accountantCaller,
 	accountantPromiseStorage accountantPromiseStorage,
 	registryAddress string,
@@ -106,7 +100,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 		dialog communication.Dialog,
 		consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 		var promiseState promise.PaymentInfo
-		payment := dto.PaymentRate{
+		payment := paydef.PaymentRate{
 			Price: money.Money{
 				Currency: money.CurrencyMyst,
 				Amount:   uint64(0),
@@ -142,7 +136,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Ks:                        keystore,
 				Identity:                  consumer,
 				Peer:                      dialog.PeerID(),
-				PaymentInfo:               DefaultPaymentInfo,
+				PaymentInfo:               paydef.DefaultPaymentInfo,
 				RegistryAddress:           registryAddress,
 				ChannelImplementation:     channelImplementation,
 				AccountantAddress:         accountant.Address,

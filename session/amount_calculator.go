@@ -21,12 +21,12 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 )
 
 // AmountCalc calculates the pay required given the amount
 type AmountCalc struct {
-	PaymentDef dto.PaymentRate
+	PaymentDef paydef.PaymentRate
 }
 
 // TotalAmount gets the total amount of money to pay given the duration

@@ -15,31 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package paydef
 
 import (
-	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
-	"github.com/stretchr/testify/assert"
 )
 
-func Test_CorrectMoneyValueIsReturnedForTotalAmount(t *testing.T) {
-	aCalc := AmountCalc{
-		PaymentDef: paydef.PaymentRate{
-			Duration: time.Minute,
-			Price: money.Money{
-				Amount:   100,
-				Currency: money.CurrencyMyst,
-			},
-		},
-	}
+// PaymentMethodPerTime defines payment method for used amount of time of service
+const PaymentMethodPerTime = "PER_TIME"
 
-	elapsed := 3*time.Minute + 25*time.Second
+// PaymentRate structure defines price and amount of time used of service
+type PaymentRate struct {
+	Price money.Money `json:"price"`
 
-	totalAmount := aCalc.TotalAmount(elapsed)
+	// Service duration provided for paid price
+	Duration time.Duration `json:"duration"`
+}
 
-	assert.Equal(t, uint64(300), totalAmount.Amount)
+// DefaultPaymentInfo represents the default payment rate
+var DefaultPaymentInfo = PaymentRate{
+	Price:    money.NewMoney(100000, money.CurrencyMyst),
+	Duration: time.Minute,
+}
+
+// GetPrice returns price of payment per time
+func (method PaymentRate) GetPrice() money.Money {
+	return method.Price
 }

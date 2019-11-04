@@ -22,6 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 )
 
 // NewServiceProposalWithLocation creates service proposal description for openvpn service
@@ -37,7 +38,7 @@ func NewServiceProposalWithLocation(
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
 			Protocol:          protocol,
 		},
-		PaymentMethodType: dto.PaymentMethodPerTime,
-		PaymentMethod:     dto.DefaultPaymentInfo,
+		PaymentMethodType: paydef.PaymentMethodPerTime,
+		PaymentMethod:     paydef.DefaultPaymentInfo,
 	}
 }

@@ -29,7 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -99,7 +99,7 @@ type InvoiceTracker struct {
 	invoiceStorage                  providerInvoiceStorage
 	accountantPromiseStorage        accountantPromiseStorage
 	timeTracker                     timeTracker
-	paymentInfo                     dto.PaymentRate
+	paymentInfo                     paydef.PaymentRate
 	providerID                      identity.Identity
 	accountantID                    identity.Identity
 	lastInvoice                     lastInvoice
@@ -121,7 +121,7 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
-	PaymentInfo                dto.PaymentRate
+	PaymentInfo                paydef.PaymentRate
 	ProviderID                 identity.Identity
 	AccountantID               identity.Identity
 	AccountantCaller           accountantCaller

@@ -27,8 +27,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +78,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:               paydef.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -126,7 +126,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		RegistryAddress:           acc.Address.Hex(),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:               paydef.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -191,7 +191,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		RegistryAddress:           acc.Address.Hex(),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:               paydef.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 	defer exchangeMessageTracker.Stop()
@@ -208,7 +208,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 	type fields struct {
 		peer        identity.Identity
 		timeTracker timeTracker
-		paymentInfo dto.PaymentRate
+		paymentInfo paydef.PaymentRate
 	}
 	tests := []struct {
 		name    string
@@ -241,7 +241,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentRate{
+				paymentInfo: paydef.PaymentRate{
 					Duration: time.Minute,
 					Price:    money.NewMoney(100000, money.CurrencyMyst),
 				},
@@ -261,7 +261,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentRate{
+				paymentInfo: paydef.PaymentRate{
 					Duration: time.Minute,
 					Price:    money.NewMoney(100000, money.CurrencyMyst),
 				},
@@ -336,11 +336,11 @@ func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
 			}
 			got, err := emt.getGrandTotalPromised()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.getGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExchangeMessageTracker.getGranpaydef.alPromised() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("ExchangeMessageTracker.getGrandTotalPromised() = %v, want %v", got, tt.want)
+				t.Errorf("ExchangeMessageTracker.getGranpaydef.alPromised() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -402,11 +402,11 @@ func TestExchangeMessageTracker_incrementGrandTotalPromised(t *testing.T) {
 				consumerTotalsStorage: tt.fields.consumerTotalsStorage,
 			}
 			if err := emt.incrementGrandTotalPromised(tt.args.amount); (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.incrementGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExchangeMessageTracker.incrementGranpaydef.alPromised() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			got := tt.fields.consumerTotalsStorage.calledWith
 			if got != tt.want {
-				t.Errorf("ExchangeMessageTracker.incrementGrandTotalPromised() = %v, want %v", got, tt.want)
+				t.Errorf("ExchangeMessageTracker.incrementGranpaydef.alPromised() = %v, want %v", got, tt.want)
 			}
 		})
 	}

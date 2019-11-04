@@ -24,11 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -78,7 +77,7 @@ type ExchangeMessageTracker struct {
 	consumerInvoiceStorage                                    consumerInvoiceStorage
 	consumerTotalsStorage                                     consumerTotalsStorage
 	timeTracker                                               timeTracker
-	paymentInfo                                               dto.PaymentRate
+	paymentInfo                                               paydef.PaymentRate
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
@@ -90,7 +89,7 @@ type ExchangeMessageTrackerDeps struct {
 	TimeTracker                                               timeTracker
 	Ks                                                        *keystore.KeyStore
 	Identity, Peer                                            identity.Identity
-	PaymentInfo                                               dto.PaymentRate
+	PaymentInfo                                               paydef.PaymentRate
 	RegistryAddress, ChannelImplementation, AccountantAddress string
 }
 

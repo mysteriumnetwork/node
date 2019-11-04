@@ -28,9 +28,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
@@ -125,7 +125,7 @@ func (tc *testContext) SetupTest() {
 			}
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				initialState:      *paymentInfo,
-				paymentDefinition: dto.PaymentRate{},
+				paymentDefinition: paydef.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
 			return tc.MockPaymentIssuer, nil
@@ -397,7 +397,7 @@ func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.L
 
 type MockPaymentIssuer struct {
 	initialState      promise.PaymentInfo
-	paymentDefinition dto.PaymentRate
+	paymentDefinition paydef.PaymentRate
 	startCalled       bool
 	stopCalled        bool
 	MockError         error

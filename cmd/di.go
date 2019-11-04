@@ -75,7 +75,6 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -83,6 +82,7 @@ import (
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -546,7 +546,7 @@ func newSessionManagerFactory(
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
-			payment := dto.PaymentRate{
+			payment := paydef.PaymentRate{
 				Price: money.Money{
 					Currency: money.CurrencyMyst,
 					Amount:   uint64(0),
@@ -571,7 +571,7 @@ func newSessionManagerFactory(
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			dialog, payment_factory.BalanceSendPeriod,
 			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
-			pingpong.DefaultPaymentInfo,
+			paydef.DefaultPaymentInfo,
 			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,

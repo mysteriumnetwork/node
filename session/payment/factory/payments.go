@@ -24,10 +24,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/payment"
+	"github.com/mysteriumnetwork/node/session/pingpong/paydef"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/issuers"
 	"github.com/pkg/errors"
@@ -42,7 +42,7 @@ const BalanceSendPeriod = time.Second * 20
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
 func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory) func(
 	initialState promise.PaymentInfo,
-	paymentDefinition dto.PaymentRate,
+	paymentDefinition paydef.PaymentRate,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
@@ -51,13 +51,13 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 
 func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 	initialState promise.PaymentInfo,
-	paymentDefinition dto.PaymentRate,
+	paymentDefinition paydef.PaymentRate,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return func(
 		initialState promise.PaymentInfo,
-		paymentDefinition dto.PaymentRate,
+		paymentDefinition paydef.PaymentRate,
 		messageChan chan balance.Message,
 		dialog communication.Dialog,
 		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
