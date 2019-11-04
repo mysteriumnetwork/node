@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
 	"gopkg.in/urfave/cli.v1"

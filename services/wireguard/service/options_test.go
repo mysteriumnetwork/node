@@ -22,29 +22,30 @@ import (
 	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
-	configureDefaults()
+	config.configureDefaults()
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
-	assert.Equal(t, DefaultOptions, options)
+	assert.Equal(t, config.WireguardDefaultOptions, options)
 }
 
 func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
-	configureDefaults()
+	config.configureDefaults()
 	request := json.RawMessage(`{}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
-	assert.Equal(t, DefaultOptions, options)
+	assert.Equal(t, config.WireguardDefaultOptions, options)
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
-	configureDefaults()
+	config.configureDefaults()
 	request := json.RawMessage(`{"connectDelay": 3000, "ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
 	options, err := ParseJSONOptions(&request)
 

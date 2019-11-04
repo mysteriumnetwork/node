@@ -15,28 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package services
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
-	"gopkg.in/urfave/cli.v1"
+	"strings"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
-var (
-	alwaysBlock = cli.BoolFlag{
-		Name:  "firewall.killSwitch.always",
-		Usage: "Always block non-tunneled outgoing consumer traffic",
+// SharedConfiguredOptions returns effective shared service options
+func SharedConfiguredOptions() config.Options {
+	policiesStr := config.Current.GetString(config.AccessPoliciesFlag.Name)
+	var policies []string
+	if len(policiesStr) > 0 {
+		policies = strings.Split(policiesStr, ",")
+	} else {
+		policies = []string{}
 	}
-)
-
-// RegisterFirewallFlags registers flags to control firewall killswitch
-func RegisterFirewallFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, alwaysBlock)
-}
-
-// ParseFirewallFlags parses registered flags and puts them into options structure
-func ParseFirewallFlags(ctx *cli.Context) node.OptionsFirewall {
-	return node.OptionsFirewall{
-		BlockAlways: ctx.GlobalBool(alwaysBlock.Name),
+	return config.Options{
+		AccessPolicies: policies,
+		ShaperEnabled:  config.Current.GetBool(config.ShaperEnabledFlag.Name),
 	}
 }

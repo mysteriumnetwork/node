@@ -15,14 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package shared
+package config
 
 import (
-	"strings"
-
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // Options describes options shared among multiple services
@@ -32,7 +29,21 @@ type Options struct {
 }
 
 var (
-	accessPoliciesFlag = cli.StringFlag{
+	IdentityFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "identity",
+		Usage: "Keystore's identity used to provide service. If not given identity will be created automatically",
+		Value: "",
+	})
+	IdentityPassphraseFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "identity.passphrase",
+		Usage: "Used to unlock keystore's identity",
+		Value: "",
+	})
+	AgreedTermsConditionsFlag = altsrc.NewBoolFlag(cli.BoolFlag{
+		Name:  "agreed-terms-and-conditions",
+		Usage: "Agree with terms & conditions",
+	})
+	AccessPoliciesFlag = cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
@@ -44,41 +55,21 @@ var (
 	}
 )
 
-// RegisterFlags registers shared service CLI flags
-func RegisterFlags(flags *[]cli.Flag) {
+// RegisterFlagsServiceShared registers shared service CLI flags
+func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		accessPoliciesFlag,
+		AgreedTermsConditionsFlag,
+		IdentityFlag,
+		IdentityPassphraseFlag,
+		AccessPoliciesFlag,
 		ShaperEnabledFlag,
 	)
 }
 
-// Configure parses shared service CLI flags and registers values to the configuration
-func Configure(ctx *cli.Context) {
-	configureDefaults()
-	configureCLI(ctx)
-}
-
-func configureDefaults() {
-	config.Current.SetDefault(accessPoliciesFlag.Name, "")
-	config.Current.SetDefault(ShaperEnabledFlag.Name, false)
-}
-
-func configureCLI(ctx *cli.Context) {
-	cliflags.SetString(config.Current, accessPoliciesFlag.Name, ctx)
-	cliflags.SetBool(config.Current, ShaperEnabledFlag.Name, ctx)
-}
-
-// ConfiguredOptions returns effective shared service options
-func ConfiguredOptions() Options {
-	policiesStr := config.Current.GetString(accessPoliciesFlag.Name)
-	var policies []string
-	if len(policiesStr) > 0 {
-		policies = strings.Split(policiesStr, ",")
-	} else {
-		policies = []string{}
-	}
-	return Options{
-		AccessPolicies: policies,
-		ShaperEnabled:  config.Current.GetBool(ShaperEnabledFlag.Name),
-	}
+// ParseFlagsServiceShared parses shared service CLI flags and registers values to the configuration
+func ParseFlagsServiceShared(ctx *cli.Context) {
+	Current.SetDefault(AccessPoliciesFlag.Name, "")
+	Current.SetDefault(ShaperEnabledFlag.Name, false)
+	SetStringFlag(Current, AccessPoliciesFlag.Name, ctx)
+	SetBoolFlag(Current, ShaperEnabledFlag.Name, ctx)
 }

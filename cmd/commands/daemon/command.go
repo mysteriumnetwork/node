@@ -19,10 +19,8 @@ package daemon
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	"github.com/mysteriumnetwork/node/services/shared"
-	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -38,10 +36,10 @@ func NewCommand() *cli.Command {
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
 			quit := make(chan error, 2)
-			shared.Configure(ctx)
-			openvpn_service.Configure(ctx)
-			wireguard_service.Configure(ctx)
-			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+			config.ParseFlagsServiceShared(ctx)
+			config.ParseFlagsServiceOpenvpn(ctx)
+			config.ParseFlagsServiceWireguard(ctx)
+			if err := di.Bootstrap(config.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
 			go func() { quit <- di.Node.Wait() }()

@@ -15,34 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
-import (
-	"github.com/mysteriumnetwork/node/core/node"
-	"gopkg.in/urfave/cli.v1"
-)
+import "gopkg.in/urfave/cli.v1"
 
 var (
-	uiPortFlag = cli.IntFlag{
-		Name:  "ui.port",
-		Usage: "the port to run ui on",
-		Value: 4449,
+	// LicenseWarrantyFlag flag allows to print license warranty
+	LicenseWarrantyFlag = cli.BoolFlag{
+		Name:  "warranty",
+		Usage: "Show details of license warranty",
 	}
-	uiEnableFlag = cli.BoolTFlag{
-		Name:  "ui.enable",
-		Usage: "enables the ui",
+	// LicenseConditionsFlag flag allows to print license conditions
+	LicenseConditionsFlag = cli.BoolFlag{
+		Name:  "conditions",
+		Usage: "Show details of license conditions",
 	}
 )
-
-// RegisterFlagsUI function register UI flags to flag list
-func RegisterFlagsUI(flags *[]cli.Flag) {
-	*flags = append(*flags, uiPortFlag, uiEnableFlag)
-}
-
-// ParseFlagsUI function fills in UI options from CLI context
-func ParseFlagsUI(ctx *cli.Context) node.OptionsUI {
-	return node.OptionsUI{
-		UIEnabled: ctx.GlobalBool(uiEnableFlag.Name),
-		UIPort:    ctx.GlobalInt(uiPortFlag.Name),
-	}
-}

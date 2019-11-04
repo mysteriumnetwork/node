@@ -18,14 +18,7 @@
 package logconfig
 
 import (
-	"fmt"
-	"path"
-	"strings"
-
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // LogOptions describes logging options.
@@ -39,45 +32,4 @@ type LogOptions struct {
 var CurrentLogOptions = LogOptions{
 	LogLevel: zerolog.DebugLevel,
 	LogHTTP:  false,
-}
-
-var (
-	logLevel = altsrc.NewStringFlag(cli.StringFlag{
-		Name: "log-level",
-		Usage: func() string {
-			allLevels := []string{
-				zerolog.DebugLevel.String(),
-				zerolog.InfoLevel.String(),
-				zerolog.WarnLevel.String(),
-				zerolog.FatalLevel.String(),
-				zerolog.PanicLevel.String(),
-				zerolog.Disabled.String(),
-			}
-			return fmt.Sprintf("Set the logging level (%s)", strings.Join(allLevels, "|"))
-		}(),
-		Value: zerolog.DebugLevel.String(),
-	})
-	logHttp = altsrc.NewBoolFlag(cli.BoolFlag{
-		Name:  "log.http",
-		Usage: "Enable HTTP payload logging",
-	})
-)
-
-// RegisterFlags registers logger CLI flags.
-func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, logLevel, logHttp)
-}
-
-// ParseFlags parses logger CLI flags from context.
-func ParseFlags(ctx *cli.Context, logDir string) LogOptions {
-	level, err := zerolog.ParseLevel(ctx.GlobalString(logLevel.Name))
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse logging level")
-		level = zerolog.DebugLevel
-	}
-	return LogOptions{
-		LogLevel: level,
-		Filepath: path.Join(logDir, "mysterium-node"),
-		LogHTTP:  ctx.GlobalBool(logHttp.Name),
-	}
 }

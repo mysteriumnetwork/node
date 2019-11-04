@@ -17,13 +17,26 @@
 
 package config
 
-import "gopkg.in/urfave/cli.v1"
+import (
+	"github.com/mysteriumnetwork/node/core/node"
+	"gopkg.in/urfave/cli.v1"
+)
 
 var (
-	// VendorIDFlag identifies 3rd party vendor (distributor) of Mysterium node
-	VendorIDFlag = cli.StringFlag{
-		Name: "vendor.id",
-		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
-			"3rd party vendors may use their own identifier here.",
+	alwaysBlock = cli.BoolFlag{
+		Name:  "firewall.killSwitch.always",
+		Usage: "Always block non-tunneled outgoing consumer traffic",
 	}
 )
+
+// RegisterFirewallFlags registers flags to control firewall killswitch
+func RegisterFirewallFlags(flags *[]cli.Flag) {
+	*flags = append(*flags, alwaysBlock)
+}
+
+// ParseFirewallFlags parses registered flags and puts them into options structure
+func ParseFirewallFlags(ctx *cli.Context) node.OptionsFirewall {
+	return node.OptionsFirewall{
+		BlockAlways: ctx.GlobalBool(alwaysBlock.Name),
+	}
+}

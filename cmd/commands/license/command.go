@@ -20,21 +20,9 @@ package license
 import (
 	"fmt"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
-)
-
-var (
-	// LicenseWarrantyFlag flag allows to print license warranty
-	LicenseWarrantyFlag = cli.BoolFlag{
-		Name:  "warranty",
-		Usage: "Show details of license warranty",
-	}
-	// LicenseConditionsFlag flag allows to print license conditions
-	LicenseConditionsFlag = cli.BoolFlag{
-		Name:  "conditions",
-		Usage: "Show details of license conditions",
-	}
 )
 
 // NewCommand function creates license command
@@ -43,14 +31,14 @@ func NewCommand(licenseCopyright string) *cli.Command {
 		Name:      "license",
 		Usage:     "Show license",
 		ArgsUsage: " ",
-		Flags:     []cli.Flag{LicenseWarrantyFlag, LicenseConditionsFlag},
+		Flags:     []cli.Flag{config.LicenseWarrantyFlag, config.LicenseConditionsFlag},
 		Action: func(ctx *cli.Context) error {
-			if ctx.IsSet(LicenseWarrantyFlag.Name) {
+			if ctx.IsSet(config.LicenseWarrantyFlag.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseWarranty)
 				return err
 			}
 
-			if ctx.IsSet(LicenseConditionsFlag.Name) {
+			if ctx.IsSet(config.LicenseConditionsFlag.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseConditions)
 				return err
 			}

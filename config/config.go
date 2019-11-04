@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // Topic returns event bus topic for the given config key to listen for its updates.
@@ -202,4 +203,34 @@ func (cfg *Config) GetString(key string) string {
 // GetBool returns config value as bool.
 func (cfg *Config) GetBool(key string) bool {
 	return cast.ToBool(cfg.Get(key))
+}
+
+// SetStringFlag helper to register string CLI flag value from urfave/cli.Context.
+// Removes configured value if CLI flag value is not present.
+func SetStringFlag(cfg *Config, name string, ctx *cli.Context) {
+	if ctx.IsSet(name) {
+		cfg.SetCLI(name, ctx.String(name))
+	} else {
+		cfg.RemoveCLI(name)
+	}
+}
+
+// SetIntFlag helper to register int CLI flag value from urfave/cli.Context.
+// Removes configured value if CLI flag value is not present.
+func SetIntFlag(cfg *Config, name string, ctx *cli.Context) {
+	if ctx.IsSet(name) {
+		cfg.SetCLI(name, ctx.Int(name))
+	} else {
+		cfg.RemoveCLI(name)
+	}
+}
+
+// SetBoolFlag helper to register bool CLI flag value from urfave/cli.Context.
+// Removes configured value if CLI flag value is not present.
+func SetBoolFlag(cfg *Config, name string, ctx *cli.Context) {
+	if ctx.IsSet(name) {
+		cfg.SetCLI(name, ctx.Bool(name))
+	} else {
+		cfg.RemoveCLI(name)
+	}
 }

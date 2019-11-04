@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,29 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package core
+package config
 
 import (
+	"github.com/mysteriumnetwork/node/core/node"
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	binaryFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "openvpn.binary",
-		Usage: "openvpn binary to use for Open VPN connections",
-		Value: "openvpn",
-	})
+	uiPortFlag = cli.IntFlag{
+		Name:  "ui.port",
+		Usage: "the port to run ui on",
+		Value: 4449,
+	}
+	uiEnableFlag = cli.BoolTFlag{
+		Name:  "ui.enable",
+		Usage: "enables the ui",
+	}
 )
 
-// RegisterFlags function register Openvpn flags to flag list
-func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, binaryFlag)
+// RegisterFlagsUI function register UI flags to flag list
+func RegisterFlagsUI(flags *[]cli.Flag) {
+	*flags = append(*flags, uiPortFlag, uiEnableFlag)
 }
 
-// ParseFlags function fills in Openvpn options from CLI context
-func ParseFlags(ctx *cli.Context) NodeOptions {
-	return NodeOptions{
-		ctx.GlobalString(binaryFlag.Name),
+// ParseFlagsUI function fills in UI options from CLI context
+func ParseFlagsUI(ctx *cli.Context) node.OptionsUI {
+	return node.OptionsUI{
+		UIEnabled: ctx.GlobalBool(uiEnableFlag.Name),
+		UIPort:    ctx.GlobalInt(uiPortFlag.Name),
 	}
 }

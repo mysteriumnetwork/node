@@ -26,7 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/services/shared"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/rs/zerolog/log"
@@ -304,7 +304,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
-			Ids: shared.ConfiguredOptions().AccessPolicies,
+			Ids: services.SharedConfiguredOptions().AccessPolicies,
 		},
 	}
 	decoder := json.NewDecoder(req.Body)

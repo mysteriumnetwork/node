@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/services/shared"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -99,7 +98,7 @@ func (s *wonderShaper) Start(interfaceName string) error {
 		return errors.New("interface name is empty")
 	}
 	s.targetInterface = interfaceName
-	err := s.eventBus.SubscribeAsync(config.Topic(shared.ShaperEnabledFlag.Name), s.apply)
+	err := s.eventBus.SubscribeAsync(config.Topic(config.ShaperEnabledFlag.Name), s.apply)
 	if err != nil {
 		return err
 	}
@@ -107,7 +106,7 @@ func (s *wonderShaper) Start(interfaceName string) error {
 }
 
 func (s *wonderShaper) apply() error {
-	enabled := config.Current.GetBool(shared.ShaperEnabledFlag.Name)
+	enabled := config.Current.GetBool(config.ShaperEnabledFlag.Name)
 	if enabled {
 		log.Info().Msg("Shaper enabled, limiting bandwidth")
 		return s.limitBandwidth()

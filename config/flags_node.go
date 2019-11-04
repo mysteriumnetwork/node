@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
 )
 
@@ -53,6 +50,18 @@ var (
 		Usage: "URL of Feedback API",
 		Value: "https://feedback.mysterium.network",
 	}
+	binaryFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "openvpn.binary",
+		Usage: "openvpn binary to use for Open VPN connections",
+		Value: "openvpn",
+	})
+	// VendorIDFlag identifies 3rd party vendor (distributor) of Mysterium node
+	VendorIDFlag = cli.StringFlag{
+		Name: "vendor.id",
+		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
+			"3rd party vendors may use their own identifier here.",
+		Value: "",
+	}
 )
 
 // ParseKeystoreFlags parses the keystore options for node
@@ -74,7 +83,8 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		keystoreLightweightFlag,
 		bindAddressFlag,
 		feedbackURLFlag,
-		config.VendorIDFlag,
+		binaryFlag,
+		VendorIDFlag,
 	)
 
 	RegisterFlagsNetwork(flags)
@@ -82,7 +92,6 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsMMN(flags)
 	RegisterFlagsQuality(flags)
 	RegisterFlagsTransactor(flags)
-	openvpn_core.RegisterFlags(flags)
 	RegisterFlagsLocation(flags)
 	RegisterFlagsUI(flags)
 	RegisterFirewallFlags(flags)
@@ -93,9 +102,8 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 // ParseFlagsNode function fills in node options from CLI context
 func ParseFlagsNode(ctx *cli.Context) node.Options {
 	dirs := ParseFlagsDirectory(ctx)
-	cliflags.SetString(config.Current, config.VendorIDFlag.Name, ctx)
 	return node.Options{
-		LogOptions:  logconfig.ParseFlags(ctx, dirs.Data),
+		LogOptions:  ParseFlagsLogger(ctx, dirs.Data),
 		Directories: dirs,
 
 		TequilapiAddress: ctx.GlobalString(tequilapiAddressFlag.Name),
@@ -113,7 +121,9 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		Location:       ParseFlagsLocation(ctx),
 		Transactor:     ParseFlagsTransactor(ctx),
 
-		Openvpn: wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
+		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
+			BinaryPath: ctx.GlobalString(binaryFlag.Name),
+		}},
 
 		Firewall: ParseFirewallFlags(ctx),
 	}
