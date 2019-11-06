@@ -24,9 +24,9 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/go-ci/shell"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
 )
@@ -61,9 +61,7 @@ func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 			return
 		}
 
-		sha256Bytes := sha256.Sum256([]byte(mac))
-
-		info.MACAddress = hex.EncodeToString(sha256Bytes[:])
+		info.MACAddress = hashMACAddress(mac)
 		info.LocalIP = outboundIp
 		info.Identity = identity
 		info.VendorID = config.Current.GetString(config.VendorIDFlag.Name)
@@ -86,6 +84,12 @@ func getNodeInformation() *NodeInformation {
 	return info
 }
 
+func hashMACAddress(mac string) string {
+	sha256Bytes := sha256.Sum256([]byte(mac))
+
+	return hex.EncodeToString(sha256Bytes[:])
+}
+
 func getOS() string {
 	switch runtime.GOOS {
 	case "darwin":
@@ -103,7 +107,24 @@ func getOS() string {
 			return ""
 		}
 		return strings.TrimSpace(strings.Replace(string(output), "Description:", "", 1))
+
+	case "windows":
+		output, err := shell.NewCmd("wmic os get Caption /value").Output()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return ""
+		}
+		return extractWindowsVersion(string(output))
 	}
 
 	return ""
+}
+
+func extractWindowsVersion(output string) string {
+	var version string
+
+	version = strings.TrimSpace(strings.Replace(output, "Caption=", "", 1))
+	version = strings.TrimSpace(strings.Replace(version, "Microsoft", "", 1))
+
+	return version
 }
