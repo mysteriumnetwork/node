@@ -1,0 +1,151 @@
+/*
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package pingpong
+
+import (
+	"testing"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/transactor"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+)
+
+func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
+	mt := mockTransactor{}
+	mb := mockBc{}
+	cfg := ProviderRegistrarConfig{}
+	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+
+	done := make(chan struct{})
+
+	go func() {
+		err := registrar.start()
+		assert.Nil(t, err)
+		done <- struct{}{}
+	}()
+	registrar.stop()
+	<-done
+}
+
+func Test_Provider_Registrar_needsHandling(t *testing.T) {
+	mt := mockTransactor{}
+	mb := mockBc{}
+	cfg := ProviderRegistrarConfig{}
+	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+
+	mockEvent := queuedEvent{
+		event:   service.EventPayload{},
+		retries: 0,
+	}
+
+	assert.False(t, registrar.needsHandling(mockEvent))
+
+	mockEvent.event.Status = "Running"
+	assert.True(t, registrar.needsHandling(mockEvent))
+
+	registrar.registeredIdentities["0x000"] = struct{}{}
+	mockEvent.event.ProviderID = "0x000"
+	assert.False(t, registrar.needsHandling(mockEvent))
+}
+
+func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
+	mt := mockTransactor{}
+	mb := mockBc{}
+	cfg := ProviderRegistrarConfig{}
+	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+
+	mockEvent := queuedEvent{
+		event: service.EventPayload{
+			Status:     "Running",
+			ProviderID: "0xsuchIDManyWow",
+		},
+		retries: 0,
+	}
+	done := make(chan struct{})
+
+	go func() {
+		err := registrar.start()
+		assert.Nil(t, err)
+		done <- struct{}{}
+	}()
+
+	registrar.consumeServiceEvent(mockEvent.event)
+
+	registrar.stop()
+	<-done
+
+	_, ok := registrar.registeredIdentities[mockEvent.event.ProviderID]
+	assert.True(t, ok)
+}
+
+func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
+	mt := mockTransactor{}
+	mb := mockBc{
+		err: errors.New("explosions everywhere"),
+	}
+	cfg := ProviderRegistrarConfig{
+		MaxRetries: 5,
+	}
+	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+
+	mockEvent := queuedEvent{
+		event: service.EventPayload{
+			Status:     "Running",
+			ProviderID: "0xsuchIDManyWow",
+		},
+		retries: 15,
+	}
+	done := make(chan struct{})
+
+	go func() {
+		err := registrar.start()
+		assert.NotNil(t, err)
+		done <- struct{}{}
+	}()
+
+	registrar.consumeServiceEvent(mockEvent.event)
+	time.Sleep(time.Millisecond * 2)
+	registrar.stop()
+	<-done
+}
+
+type mockBc struct {
+	isRegistered bool
+	err          error
+}
+
+func (mb *mockBc) IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck common.Address) (bool, error) {
+	return mb.isRegistered, mb.err
+}
+
+type mockTransactor struct {
+	registerError error
+	feesToReturn  transactor.Fees
+	feesError     error
+}
+
+func (mt *mockTransactor) FetchFees() (transactor.Fees, error) {
+	return mt.feesToReturn, mt.feesError
+}
+
+func (mt *mockTransactor) RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error {
+	return mt.registerError
+}

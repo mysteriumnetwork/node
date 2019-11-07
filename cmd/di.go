@@ -160,12 +160,13 @@ type Dependencies struct {
 
 	StateKeeper *state.Keeper
 
-	Authenticator    *auth.Authenticator
-	JWTAuthenticator *auth.JWTAuthenticator
-	UIServer         UIServer
-	SSEHandler       *sse.Handler
-	Transactor       *transactor.Transactor
-	BCHelper         *pingpong.Blockchain
+	Authenticator     *auth.Authenticator
+	JWTAuthenticator  *auth.JWTAuthenticator
+	UIServer          UIServer
+	SSEHandler        *sse.Handler
+	Transactor        *transactor.Transactor
+	BCHelper          *pingpong.Blockchain
+	ProviderRegistrar *pingpong.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -246,7 +247,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
-
+	di.bootstrapProviderRegistrar(nodeOptions)
 	di.registerConnections(nodeOptions)
 
 	if err = di.subscribeEventConsumers(); err != nil {
@@ -335,6 +336,7 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+
 	if di.NATService != nil {
 		if err := di.NATService.Disable(); err != nil {
 			errs = append(errs, err)
@@ -353,7 +355,6 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-
 	firewall.Reset()
 	return nil
 }

@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
@@ -39,6 +41,21 @@ var (
 		Usage: "channel implementation address",
 		Value: metadata.DefaultNetwork.ChannelImplAddress,
 	}
+	providerMaxRegistrationAttemptsFlag = cli.IntFlag{
+		Name:  "transactor.provider.max-registration-attempts",
+		Usage: "the max attempts the provider will make to register before giving up",
+		Value: 10,
+	}
+	providerRegistrationRetryDelay = cli.DurationFlag{
+		Name:  "transactor.provider.registration-retry-delay",
+		Usage: "the duration that the provider will wait between each retry",
+		Value: time.Minute * 3,
+	}
+	providerRegistrationStake = cli.Uint64Flag{
+		Name:  "transactor.provider.registration-stake",
+		Usage: "the stake we'll use when registering provider",
+		Value: 125000000000,
+	}
 )
 
 // RegisterFlagsTransactor function register network flags to flag list
@@ -48,14 +65,20 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		transactorAddressFlag,
 		registryAddressFlag,
 		channelImplementationFlag,
+		providerMaxRegistrationAttemptsFlag,
+		providerRegistrationRetryDelay,
+		providerRegistrationStake,
 	)
 }
 
 // ParseFlagsTransactor function fills in transactor options from CLI context
 func ParseFlagsTransactor(ctx *cli.Context) node.OptionsTransactor {
 	return node.OptionsTransactor{
-		TransactorEndpointAddress: ctx.GlobalString(transactorAddressFlag.Name),
-		RegistryAddress:           ctx.GlobalString(registryAddressFlag.Name),
-		ChannelImplementation:     ctx.GlobalString(channelImplementationFlag.Name),
+		TransactorEndpointAddress:       ctx.GlobalString(transactorAddressFlag.Name),
+		RegistryAddress:                 ctx.GlobalString(registryAddressFlag.Name),
+		ChannelImplementation:           ctx.GlobalString(channelImplementationFlag.Name),
+		ProviderMaxRegistrationAttempts: ctx.GlobalInt(providerMaxRegistrationAttemptsFlag.Name),
+		ProviderRegistrationRetryDelay:  ctx.GlobalDuration(providerRegistrationRetryDelay.Name),
+		ProviderRegistrationStake:       ctx.GlobalUint64(providerRegistrationStake.Name),
 	}
 }
