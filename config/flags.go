@@ -25,6 +25,5 @@ var (
 		Name: "vendor.id",
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
-		Value: "",
 	}
 )

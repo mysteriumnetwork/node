@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 
@@ -92,6 +93,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 // ParseFlagsNode function fills in node options from CLI context
 func ParseFlagsNode(ctx *cli.Context) node.Options {
 	dirs := ParseFlagsDirectory(ctx)
+	cliflags.SetString(config.Current, config.VendorIDFlag.Name, ctx)
 	return node.Options{
 		LogOptions:  logconfig.ParseFlags(ctx, dirs.Data),
 		Directories: dirs,
