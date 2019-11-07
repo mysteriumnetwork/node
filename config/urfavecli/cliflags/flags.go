@@ -29,6 +29,8 @@ import (
 func SetString(cfg *config.Config, name string, ctx *cli.Context) {
 	if ctx.IsSet(name) {
 		cfg.SetCLI(name, ctx.String(name))
+	} else if ctx.GlobalIsSet(name) {
+		cfg.SetCLI(name, ctx.GlobalString(name))
 	} else {
 		cfg.RemoveCLI(name)
 	}
@@ -39,6 +41,8 @@ func SetString(cfg *config.Config, name string, ctx *cli.Context) {
 func SetInt(cfg *config.Config, name string, ctx *cli.Context) {
 	if ctx.IsSet(name) {
 		cfg.SetCLI(name, ctx.Int(name))
+	} else if ctx.GlobalIsSet(name) {
+		cfg.SetCLI(name, ctx.GlobalInt(name))
 	} else {
 		cfg.RemoveCLI(name)
 	}
@@ -49,6 +53,8 @@ func SetInt(cfg *config.Config, name string, ctx *cli.Context) {
 func SetBool(cfg *config.Config, name string, ctx *cli.Context) {
 	if ctx.IsSet(name) {
 		cfg.SetCLI(name, ctx.Bool(name))
+	} else if ctx.GlobalIsSet(name) {
+		cfg.SetCLI(name, ctx.GlobalBool(name))
 	} else {
 		cfg.RemoveCLI(name)
 	}

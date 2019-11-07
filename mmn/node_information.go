@@ -70,7 +70,7 @@ func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 			log.Error().Err(err).Msg("failed to send NodeInformation to MMN")
 		}
 
-		log.Info().Msg("Registered node to my.mysterium.network")
+		log.Info().Interface("info", info).Msg("Registered node to my.mysterium.network")
 	}
 }
 
