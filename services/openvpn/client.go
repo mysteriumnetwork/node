@@ -62,7 +62,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 		return err
 	}
 	c.process = proc
-	log.Info().Msgf("client config: %v", clientConfig)
+	log.Info().Interface("data", clientConfig).Msgf("Openvpn client configuration")
 	removeAllowedIPRule, err := firewall.AllowIPAccess(clientConfig.VpnConfig.RemoteIP)
 	if err != nil {
 		return err

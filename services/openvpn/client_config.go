@@ -88,6 +88,10 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	clientFileConfig := newClientConfig(runtimeDir, configDir, enableDNS)
 	if enableDNS && len(vpnConfig.DNS) > 0 {
 		clientFileConfig.SetParam("dhcp-option", "DNS", vpnConfig.DNS)
+	} else {
+		// TODO remove these once most of the providers are capable of running DNS proxy?
+		clientFileConfig.SetParam("dhcp-option", "DNS", "208.67.222.222")
+		clientFileConfig.SetParam("dhcp-option", "DNS", "208.67.220.220")
 	}
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
