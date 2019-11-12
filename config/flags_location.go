@@ -20,69 +20,66 @@ package config
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/node"
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	ipDetectorURLFlag = altsrc.NewStringFlag(cli.StringFlag{
+	// FlagIPDetectorURL URL of IP detection service.
+	FlagIPDetectorURL = cli.StringFlag{
 		Name:  "ip-detector",
-		Usage: "Address (URL form) of ip detection service",
+		Usage: "Address (URL form) of IP detection service",
 		Value: "https://testnet-location.mysterium.network/api/v1/location",
-	})
-
-	locationTypeFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name: "location.type",
-		Usage: fmt.Sprintf(
-			"Location autodetect adapter. Options: { %s, %s, %s, %s }",
-			node.LocationTypeOracle,
-			node.LocationTypeBuiltin,
-			node.LocationTypeMMDB,
-			node.LocationTypeManual,
-		),
-		Value: string(node.LocationTypeOracle),
-	})
-	locationAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagLocationType location detector type.
+	FlagLocationType = cli.StringFlag{
+		Name:  "location.type",
+		Usage: "Location autodetect adapter. Options: { oracle, builtin, mmdb, manual }",
+		Value: "oracle",
+	}
+	// FlagLocationAddress URL of location detector.
+	FlagLocationAddress = cli.StringFlag{
 		Name: "location.address",
 		Usage: fmt.Sprintf(
 			"Address of specific location adapter given in '--%s'",
-			locationTypeFlag.Name,
+			FlagLocationType.Name,
 		),
 		Value: "https://testnet-location.mysterium.network/api/v1/location",
-	})
-	locationCountryFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagLocationCountry service location country.
+	FlagLocationCountry = cli.StringFlag{
 		Name:  "location.country",
 		Usage: "Service location country",
-		Value: "",
-	})
-	locationCityFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagLocationCity service location city.
+	FlagLocationCity = cli.StringFlag{
 		Name:  "location.city",
 		Usage: "Service location city",
-		Value: "",
-	})
-	locationNodeTypeFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagLocationNodeType service location node type.
+	FlagLocationNodeType = cli.StringFlag{
 		Name:  "location.node-type",
 		Usage: "Service location node type",
-		Value: "",
-	})
+	}
 )
 
-// RegisterFlagsLocation function register location flags to flag list
+// RegisterFlagsLocation function registers location flags to flag list.
 func RegisterFlagsLocation(flags *[]cli.Flag) {
-	*flags = append(*flags, ipDetectorURLFlag,
-		locationTypeFlag, locationAddressFlag, locationCountryFlag, locationCityFlag, locationNodeTypeFlag)
+	*flags = append(*flags,
+		FlagIPDetectorURL,
+		FlagLocationType,
+		FlagLocationAddress,
+		FlagLocationCountry,
+		FlagLocationCity,
+		FlagLocationNodeType,
+	)
 }
 
-// ParseFlagsLocation function fills in location options from CLI context
-func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
-	return node.OptionsLocation{
-		IPDetectorURL: ctx.GlobalString(ipDetectorURLFlag.Name),
-
-		Type:     node.LocationType(ctx.GlobalString(locationTypeFlag.Name)),
-		Address:  ctx.GlobalString(locationAddressFlag.Name),
-		Country:  ctx.GlobalString(locationCountryFlag.Name),
-		City:     ctx.GlobalString(locationCityFlag.Name),
-		NodeType: ctx.GlobalString(locationNodeTypeFlag.Name),
-	}
+// ParseFlagsLocation function fills in location options from CLI context.
+func ParseFlagsLocation(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagIPDetectorURL)
+	Current.ParseStringFlag(ctx, FlagLocationType)
+	Current.ParseStringFlag(ctx, FlagLocationAddress)
+	Current.ParseStringFlag(ctx, FlagLocationCountry)
+	Current.ParseStringFlag(ctx, FlagLocationCity)
+	Current.ParseStringFlag(ctx, FlagLocationNodeType)
 }

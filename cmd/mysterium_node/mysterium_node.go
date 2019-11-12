@@ -73,7 +73,6 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	config.RegisterFlagsLogger(&app.Flags)
 	if err := config.RegisterFlagsNode(&app.Flags); err != nil {
 		return nil, err
 	}

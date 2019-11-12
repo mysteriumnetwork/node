@@ -18,58 +18,138 @@
 package config
 
 import (
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"fmt"
+	"strings"
 
-	"github.com/mysteriumnetwork/node/core/node"
-	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
+	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/rs/zerolog"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	tequilapiAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "tequilapi.address",
-		Usage: "IP address of interface to listen for incoming connections",
-		Value: "127.0.0.1",
-	})
-	tequilapiPortFlag = altsrc.NewIntFlag(cli.IntFlag{
-		Name:  "tequilapi.port",
-		Usage: "Port for listening incoming api requests",
-		Value: 4050,
-	})
-	keystoreLightweightFlag = altsrc.NewBoolFlag(cli.BoolFlag{
-		Name:  "keystore.lightweight",
-		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
-	})
-	bindAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+	// Alphabetically sorted list of node flags
+	// Some of the flags are location in separate source files: flags_*.go
+
+	// FlagDiscoveryType proposal discovery adapter.
+	FlagDiscoveryType = cli.StringFlag{
+		Name:  "discovery.type",
+		Usage: "Proposal discovery adapter. Options: { api, broker }",
+		Value: "api",
+	}
+	// FlagBindAddress IP address to bind to.
+	FlagBindAddress = cli.StringFlag{
 		Name:  "bind.address",
 		Usage: "IP address to bind to",
 		Value: "0.0.0.0",
-	})
-	feedbackURLFlag = cli.StringFlag{
+	}
+	// FlagDiscoveryAddress proposal discovery URL.
+	FlagDiscoveryAddress = cli.StringFlag{
+		Name: "discovery.address",
+		Usage: fmt.Sprintf(
+			"Address of specific discovery adapter given in '--%s'",
+			FlagDiscoveryType.Name,
+		),
+		Value: FlagAPIAddress.Value,
+	}
+	// FlagFeedbackURL URL of Feedback API.
+	FlagFeedbackURL = cli.StringFlag{
 		Name:  "feedback.url",
 		Usage: "URL of Feedback API",
 		Value: "https://feedback.mysterium.network",
 	}
-	binaryFlag = altsrc.NewStringFlag(cli.StringFlag{
+	// FlagFirewallKillSwitch always blocks non-tunneled outgoing consumer traffic.
+	FlagFirewallKillSwitch = cli.BoolFlag{
+		Name:  "firewall.killSwitch.always",
+		Usage: "Always block non-tunneled outgoing consumer traffic",
+	}
+	// FlagKeystoreLightweight determines the scrypt memory complexity.
+	FlagKeystoreLightweight = cli.BoolFlag{
+		Name:  "keystore.lightweight",
+		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
+	}
+	// FlagLogHTTP enables HTTP payload logging.
+	FlagLogHTTP = cli.BoolFlag{
+		Name:  "log.http",
+		Usage: "Enable HTTP payload logging",
+	}
+	// FlagLogLevel logger level.
+	FlagLogLevel = cli.StringFlag{
+		Name: "log-level",
+		Usage: func() string {
+			allLevels := []string{
+				zerolog.DebugLevel.String(),
+				zerolog.InfoLevel.String(),
+				zerolog.WarnLevel.String(),
+				zerolog.FatalLevel.String(),
+				zerolog.PanicLevel.String(),
+				zerolog.Disabled.String(),
+			}
+			return fmt.Sprintf("Set the logging level (%s)", strings.Join(allLevels, "|"))
+		}(),
+		Value: zerolog.DebugLevel.String(),
+	}
+	// FlagMMNAddress URL Of my.mysterium.network API.
+	FlagMMNAddress = cli.StringFlag{
+		Name:  "mymysterium.url",
+		Usage: "URL of my.mysterium.network API",
+		Value: metadata.DefaultNetwork.MMNAddress,
+	}
+	// FlagMMNEnabled registers node to my.mysterium.network.
+	FlagMMNEnabled = cli.BoolTFlag{
+		Name:  "mymysterium.enabled",
+		Usage: "Enables my.mysterium.network integration",
+	}
+	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
+	FlagOpenvpnBinary = cli.StringFlag{
 		Name:  "openvpn.binary",
-		Usage: "openvpn binary to use for Open VPN connections",
+		Usage: "openvpn binary to use for OpenVPN connections",
 		Value: "openvpn",
-	})
-	// VendorIDFlag identifies 3rd party vendor (distributor) of Mysterium node
-	VendorIDFlag = cli.StringFlag{
+	}
+	// FlagQualityType quality oracle adapter.
+	FlagQualityType = cli.StringFlag{
+		Name:  "quality.type",
+		Usage: "Quality Oracle adapter. Options:  (elastic, morqa, none - opt-out from sending quality metrics)",
+		Value: "morqa",
+	}
+	// FlagQualityAddress quality oracle URL.
+	FlagQualityAddress = cli.StringFlag{
+		Name: "quality.address",
+		Usage: fmt.Sprintf(
+			"Address of specific Quality Oracle adapter given in '--%s'",
+			FlagQualityType.Name,
+		),
+		Value: "https://quality.mysterium.network/api/v1",
+	}
+	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
+	FlagTequilapiAddress = cli.StringFlag{
+		Name:  "tequilapi.address",
+		Usage: "IP address of interface to listen for incoming connections",
+		Value: "127.0.0.1",
+	}
+	// FlagTequilapiPort port for listening for incoming API requests.
+	FlagTequilapiPort = cli.IntFlag{
+		Name:  "tequilapi.port",
+		Usage: "Port for listening incoming api requests",
+		Value: 4050,
+	}
+	// FlagUIEnable enables built-in web UI for node.
+	FlagUIEnable = cli.BoolTFlag{
+		Name:  "ui.enable",
+		Usage: "enables the ui",
+	}
+	// FlagUIPort runs web UI on the specified port.
+	FlagUIPort = cli.IntFlag{
+		Name:  "ui.port",
+		Usage: "the port to run ui on",
+		Value: 4449,
+	}
+	// FlagVendorID identifies 3rd party vendor (distributor) of Mysterium node.
+	FlagVendorID = cli.StringFlag{
 		Name: "vendor.id",
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
-		Value: "",
 	}
 )
-
-// ParseKeystoreFlags parses the keystore options for node
-func ParseKeystoreFlags(ctx *cli.Context) node.OptionsKeystore {
-	return node.OptionsKeystore{
-		UseLightweight: ctx.GlobalBool(keystoreLightweightFlag.Name),
-	}
-}
 
 // RegisterFlagsNode function register node flags to flag list
 func RegisterFlagsNode(flags *[]cli.Flag) error {
@@ -77,69 +157,58 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(*flags,
-		tequilapiAddressFlag,
-		tequilapiPortFlag,
-		keystoreLightweightFlag,
-		bindAddressFlag,
-		feedbackURLFlag,
-		binaryFlag,
-		VendorIDFlag,
-	)
-
-	RegisterFlagsNetwork(flags)
-	RegisterFlagsDiscovery(flags)
-	RegisterFlagsMMN(flags)
-	RegisterFlagsQuality(flags)
-	RegisterFlagsTransactor(flags)
 	RegisterFlagsLocation(flags)
-	RegisterFlagsUI(flags)
-	RegisterFirewallFlags(flags)
+	RegisterFlagsNetwork(flags)
+	RegisterFlagsTransactor(flags)
+
+	*flags = append(*flags,
+		FlagBindAddress,
+		FlagDiscoveryAddress,
+		FlagDiscoveryType,
+		FlagFeedbackURL,
+		FlagFirewallKillSwitch,
+		FlagKeystoreLightweight,
+		FlagLogHTTP,
+		FlagLogLevel,
+		FlagMMNAddress,
+		FlagMMNEnabled,
+		FlagOpenvpnBinary,
+		FlagQualityType,
+		FlagQualityAddress,
+		FlagTequilapiAddress,
+		FlagTequilapiPort,
+		FlagUIEnable,
+		FlagUIPort,
+		FlagVendorID,
+	)
 
 	return nil
 }
 
 // ParseFlagsNode function fills in node options from CLI context
-func ParseFlagsNode(ctx *cli.Context) node.Options {
-	dirs := ParseFlagsDirectory(ctx)
-	return node.Options{
-		LogOptions:  ParseFlagsLogger(ctx, dirs.Data),
-		Directories: dirs,
+func ParseFlagsNode(ctx *cli.Context) {
+	ParseFlagsDirectory(ctx)
 
-		TequilapiAddress: ctx.GlobalString(tequilapiAddressFlag.Name),
-		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
-		UI:               ParseFlagsUI(ctx),
-		BindAddress:      ctx.GlobalString(bindAddressFlag.Name),
-		FeedbackURL:      ctx.GlobalString(feedbackURLFlag.Name),
+	ParseFlagsLocation(ctx)
+	ParseFlagsNetwork(ctx)
+	ParseFlagsTransactor(ctx)
 
-		Keystore: ParseKeystoreFlags(ctx),
-
-		OptionsNetwork: ParseFlagsNetwork(ctx),
-		Discovery:      ParseFlagsDiscovery(ctx),
-		MMN:            ParseFlagsMMN(ctx),
-		Quality:        ParseFlagsQuality(ctx),
-		Location:       ParseFlagsLocation(ctx),
-		Transactor:     ParseFlagsTransactor(ctx),
-
-		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
-			BinaryPath: ctx.GlobalString(binaryFlag.Name),
-		}},
-
-		Firewall: ParseFirewallFlags(ctx),
-	}
+	Current.ParseStringFlag(ctx, FlagBindAddress)
+	Current.ParseStringFlag(ctx, FlagDiscoveryAddress)
+	Current.ParseStringFlag(ctx, FlagDiscoveryType)
+	Current.ParseStringFlag(ctx, FlagFeedbackURL)
+	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
+	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
+	Current.ParseBoolFlag(ctx, FlagLogHTTP)
+	Current.ParseStringFlag(ctx, FlagLogLevel)
+	Current.ParseStringFlag(ctx, FlagMMNAddress)
+	Current.ParseBoolTFlag(ctx, FlagMMNEnabled)
+	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
+	Current.ParseStringFlag(ctx, FlagQualityAddress)
+	Current.ParseStringFlag(ctx, FlagQualityType)
+	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
+	Current.ParseIntFlag(ctx, FlagTequilapiPort)
+	Current.ParseBoolTFlag(ctx, FlagUIEnable)
+	Current.ParseIntFlag(ctx, FlagUIPort)
+	Current.ParseStringFlag(ctx, FlagVendorID)
 }
-
-// TODO this struct will disappear when we unify go-openvpn embedded lib and external process based session creation/handling
-type wrapper struct {
-	nodeOptions openvpn_core.NodeOptions
-}
-
-func (w wrapper) Check() error {
-	return w.nodeOptions.Check()
-}
-
-func (w wrapper) BinaryPath() string {
-	return w.nodeOptions.BinaryPath
-}
-
-var _ node.Openvpn = wrapper{}

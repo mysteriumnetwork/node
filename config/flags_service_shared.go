@@ -19,7 +19,6 @@ package config
 
 import (
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // Options describes options shared among multiple services
@@ -29,27 +28,31 @@ type Options struct {
 }
 
 var (
-	IdentityFlag = altsrc.NewStringFlag(cli.StringFlag{
+	// FlagIdentity keystore's identity.
+	FlagIdentity = cli.StringFlag{
 		Name:  "identity",
 		Usage: "Keystore's identity used to provide service. If not given identity will be created automatically",
 		Value: "",
-	})
-	IdentityPassphraseFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagIdentityPassphrase passphrase to unlock the identity.
+	FlagIdentityPassphrase = cli.StringFlag{
 		Name:  "identity.passphrase",
 		Usage: "Used to unlock keystore's identity",
 		Value: "",
-	})
-	AgreedTermsConditionsFlag = altsrc.NewBoolFlag(cli.BoolFlag{
+	}
+	// FlagAgreedTermsConditions agree with terms & conditions.
+	FlagAgreedTermsConditions = cli.BoolFlag{
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
-	})
-	AccessPoliciesFlag = cli.StringFlag{
+	}
+	// FlagAccessPolicies a comma-separated list of access policies that determines allowed identities to use the service.
+	FlagAccessPolicies = cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
 	}
-	// ShaperEnabledFlag reflects configuration setting of shaper being enabled
-	ShaperEnabledFlag = cli.BoolFlag{
+	// FlagShaperEnabled enables bandwidth limitation.
+	FlagShaperEnabled = cli.BoolFlag{
 		Name:  "shaper.enabled",
 		Usage: "Limit service bandwidth",
 	}
@@ -58,18 +61,19 @@ var (
 // RegisterFlagsServiceShared registers shared service CLI flags
 func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		AgreedTermsConditionsFlag,
-		IdentityFlag,
-		IdentityPassphraseFlag,
-		AccessPoliciesFlag,
-		ShaperEnabledFlag,
+		FlagIdentity,
+		FlagIdentityPassphrase,
+		FlagAgreedTermsConditions,
+		FlagAccessPolicies,
+		FlagShaperEnabled,
 	)
 }
 
 // ParseFlagsServiceShared parses shared service CLI flags and registers values to the configuration
 func ParseFlagsServiceShared(ctx *cli.Context) {
-	Current.SetDefault(AccessPoliciesFlag.Name, "")
-	Current.SetDefault(ShaperEnabledFlag.Name, false)
-	SetStringFlag(Current, AccessPoliciesFlag.Name, ctx)
-	SetBoolFlag(Current, ShaperEnabledFlag.Name, ctx)
+	Current.ParseStringFlag(ctx, FlagIdentity)
+	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
+	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
+	Current.ParseStringFlag(ctx, FlagAccessPolicies)
+	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 }

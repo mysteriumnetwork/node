@@ -25,7 +25,7 @@ import (
 
 // SharedConfiguredOptions returns effective shared service options
 func SharedConfiguredOptions() config.Options {
-	policiesStr := config.Current.GetString(config.AccessPoliciesFlag.Name)
+	policiesStr := config.GetString(config.FlagAccessPolicies)
 	var policies []string
 	if len(policiesStr) > 0 {
 		policies = strings.Split(policiesStr, ",")
@@ -34,6 +34,6 @@ func SharedConfiguredOptions() config.Options {
 	}
 	return config.Options{
 		AccessPolicies: policies,
-		ShaperEnabled:  config.Current.GetBool(config.ShaperEnabledFlag.Name),
+		ShaperEnabled:  config.GetBool(config.FlagShaperEnabled),
 	}
 }

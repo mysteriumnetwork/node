@@ -18,56 +18,50 @@
 package config
 
 import (
-	"github.com/mysteriumnetwork/node/services/openvpn/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
-var OpenvpnProtocolFlag = cli.StringFlag{
-	Name:  "openvpn.proto",
-	Usage: "OpenVPN protocol to use. Options: { udp, tcp }",
-	//TODO remove value
-	Value: "udp",
-}
-
-var OpenvpnPortFlag = cli.IntFlag{
-	Name:  "openvpn.port",
-	Usage: "OpenVPN port to use. If not specified, random port will be used",
-	//TODO remove value
-	Value: 0,
-}
-
-var OpenvpnSubnetFlag = cli.StringFlag{
-	Name:  "openvpn.subnet",
-	Usage: "OpenVPN subnet that will be used to connecting VPN clients",
-}
-
-var OpenvpnNetmaskFlag = cli.StringFlag{
-	Name:  "openvpn.netmask",
-	Usage: "OpenVPN subnet netmask ",
-}
+var (
+	// FlagOpenvpnProtocol protocol for OpenVPN to use.
+	FlagOpenvpnProtocol = cli.StringFlag{
+		Name:  "openvpn.proto",
+		Usage: "OpenVPN protocol to use. Options: { udp, tcp }",
+		Value: "udp",
+	}
+	// FlagOpenvpnPort port for OpenVPN to use.
+	FlagOpenvpnPort = cli.IntFlag{
+		Name:  "openvpn.port",
+		Usage: "OpenVPN port to use. If not specified, random port will be used",
+		Value: 0,
+	}
+	// FlagOpenvpnSubnet OpenVPN subnet that will be used for connecting clients.
+	FlagOpenvpnSubnet = cli.StringFlag{
+		Name:  "openvpn.subnet",
+		Usage: "OpenVPN subnet that will be used to connecting VPN clients",
+		Value: "10.8.0.0",
+	}
+	// FlagOpenvpnNetmask OpenVPN subnet netmask.
+	FlagOpenvpnNetmask = cli.StringFlag{
+		Name:  "openvpn.netmask",
+		Usage: "OpenVPN subnet netmask",
+		Value: "255.255.255.0",
+	}
+)
 
 // RegisterFlagsServiceOpenvpn registers OpenVPN CLI flags for parsing them later
 func RegisterFlagsServiceOpenvpn(flags *[]cli.Flag) {
-	*flags = append(*flags, OpenvpnProtocolFlag, OpenvpnPortFlag, OpenvpnSubnetFlag, OpenvpnNetmaskFlag)
+	*flags = append(*flags,
+		FlagOpenvpnProtocol,
+		FlagOpenvpnPort,
+		FlagOpenvpnSubnet,
+		FlagOpenvpnNetmask,
+	)
 }
 
 // ParseFlagsServiceOpenvpn parses CLI flags and registers value to configuration
 func ParseFlagsServiceOpenvpn(ctx *cli.Context) {
-	Current.SetDefault(OpenvpnProtocolFlag.Name, DefaultOptionsOpenvpn.Protocol)
-	Current.SetDefault(OpenvpnPortFlag.Name, DefaultOptionsOpenvpn.Port)
-	Current.SetDefault(OpenvpnSubnetFlag.Name, DefaultOptionsOpenvpn.Subnet)
-	Current.SetDefault(OpenvpnNetmaskFlag.Name, DefaultOptionsOpenvpn.Netmask)
-	SetStringFlag(Current, OpenvpnProtocolFlag.Name, ctx)
-	SetIntFlag(Current, OpenvpnPortFlag.Name, ctx)
-	SetStringFlag(Current, OpenvpnSubnetFlag.Name, ctx)
-	SetStringFlag(Current, OpenvpnNetmaskFlag.Name, ctx)
+	Current.ParseStringFlag(ctx, FlagOpenvpnProtocol)
+	Current.ParseIntFlag(ctx, FlagOpenvpnPort)
+	Current.ParseStringFlag(ctx, FlagOpenvpnSubnet)
+	Current.ParseStringFlag(ctx, FlagOpenvpnNetmask)
 }
-
-var (
-	DefaultOptionsOpenvpn = service.Options{
-		Protocol: "udp",
-		Port:     0,
-		Subnet:   "10.8.0.0",
-		Netmask:  "255.255.255.0",
-	}
-)

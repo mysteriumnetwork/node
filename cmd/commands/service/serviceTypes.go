@@ -35,11 +35,11 @@ var (
 		noop.ServiceType: noop.ParseFlags,
 		openvpn.ServiceType: func(ctx *cli.Context) service.Options {
 			config.ParseFlagsServiceOpenvpn(ctx)
-			return openvpn_service.ConfiguredOptions()
+			return openvpn_service.GetOptions()
 		},
 		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
 			config.ParseFlagsServiceWireguard(ctx)
-			return wireguard_service.WireguardConfiguredOptions()
+			return wireguard_service.GetOptions()
 		},
 	}
 )

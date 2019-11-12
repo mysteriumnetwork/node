@@ -18,50 +18,42 @@
 package config
 
 import (
-	"net"
-
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/services/wireguard/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	WireguardConnectDelayFlag = cli.IntFlag{
+	// FlagWireguardConnectDelay consumer is delayed by the specified time if provider is behind the NAT.
+	FlagWireguardConnectDelay = cli.IntFlag{
 		Name:  "wireguard.connect.delay",
 		Usage: "Consumer is delayed by specified time if provider is behind NAT",
-		Value: WireguardDefaultOptions.ConnectDelay,
+		Value: 2000,
 	}
-	WireguardListenPorts = cli.StringFlag{
+	// FlagWireguardListenPorts range of listen ports.
+	FlagWireguardListenPorts = cli.StringFlag{
 		Name:  "wireguard.listen.ports",
 		Usage: "Range of listen ports (e.g. 52820:53075)",
+		Value: "0:0",
 	}
-	WireguardListenSubnet = cli.StringFlag{
+	// FlagWireguardListenSubnet subnet to be used by the wireguard service.
+	FlagWireguardListenSubnet = cli.StringFlag{
 		Name:  "wireguard.allowed.subnet",
-		Usage: "Subnet allowed for using by the wireguard services",
-		Value: WireguardDefaultOptions.Subnet.String(),
-	}
-	// WireguardDefaultOptions is a wireguard service configuration that will be used if no options provided.
-	WireguardDefaultOptions = service.Options{
-		ConnectDelay: 2000,
-		Ports:        port.UnspecifiedRange(),
-		Subnet: net.IPNet{
-			IP:   net.ParseIP("10.182.0.0"),
-			Mask: net.IPv4Mask(255, 255, 0, 0),
-		},
+		Usage: "Subnet to be used by the wireguard service",
+		Value: "10.182.0.0/16",
 	}
 )
 
 // RegisterFlagsServiceWireguard function register Wireguard flags to flag list
 func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
-	*flags = append(*flags, WireguardConnectDelayFlag, WireguardListenPorts, WireguardListenSubnet)
+	*flags = append(*flags,
+		FlagWireguardConnectDelay,
+		FlagWireguardListenPorts,
+		FlagWireguardListenSubnet,
+	)
 }
 
 // ParseFlagsServiceWireguard parses CLI flags and registers value to configuration
 func ParseFlagsServiceWireguard(ctx *cli.Context) {
-	Current.SetDefault(WireguardConnectDelayFlag.Name, WireguardDefaultOptions.ConnectDelay)
-	Current.SetDefault(WireguardListenPorts.Name, WireguardDefaultOptions.Ports)
-	Current.SetDefault(WireguardListenSubnet.Name, WireguardDefaultOptions.Subnet)
-	SetIntFlag(Current, WireguardConnectDelayFlag.Name, ctx)
-	SetStringFlag(Current, WireguardListenPorts.Name, ctx)
-	SetStringFlag(Current, WireguardListenSubnet.Name, ctx)
+	Current.ParseIntFlag(ctx, FlagWireguardConnectDelay)
+	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
+	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
 }

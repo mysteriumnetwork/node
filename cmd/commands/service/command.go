@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -46,14 +47,15 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		ArgsUsage: "comma separated list of services to start",
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
-			if !ctx.Bool(config.AgreedTermsConditionsFlag.Name) {
+			if !ctx.Bool(config.FlagAgreedTermsConditions.Name) {
 				printTermWarning(licenseCommandName)
 				os.Exit(2)
 			}
 
 			quit := make(chan error)
-			nodeOptions := config.ParseFlagsNode(ctx)
-			if err := di.Bootstrap(nodeOptions); err != nil {
+			config.ParseFlagsNode(ctx)
+			nodeOptions := node.GetOptions()
+			if err := di.Bootstrap(*nodeOptions); err != nil {
 				return err
 			}
 			go func() { quit <- di.Node.Wait() }()
@@ -161,8 +163,8 @@ func registerFlags(flags *[]cli.Flag) {
 // parseIdentityFlags function fills in service command options from CLI context
 func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	return service.OptionsIdentity{
-		Identity:   ctx.String(config.IdentityFlag.Name),
-		Passphrase: ctx.String(config.IdentityPassphraseFlag.Name),
+		Identity:   ctx.String(config.FlagIdentity.Name),
+		Passphrase: ctx.String(config.FlagIdentityPassphrase.Name),
 	}
 }
 

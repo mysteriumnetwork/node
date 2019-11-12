@@ -33,20 +33,20 @@ type Options struct {
 	Netmask  string `json:"netmask"`
 }
 
-// ConfiguredOptions returns effective OpenVPN service options from configuration
-func ConfiguredOptions() Options {
+// GetOptions returns effective OpenVPN service options from application configuration.
+func GetOptions() Options {
 	return Options{
-		Protocol: config.Current.GetString(config.OpenvpnProtocolFlag.Name),
-		Port:     config.Current.GetInt(config.OpenvpnPortFlag.Name),
-		Subnet:   config.Current.GetString(config.OpenvpnSubnetFlag.Name),
-		Netmask:  config.Current.GetString(config.OpenvpnNetmaskFlag.Name),
+		Protocol: config.GetString(config.FlagOpenvpnProtocol),
+		Port:     config.GetInt(config.FlagOpenvpnPort),
+		Subnet:   config.GetString(config.FlagOpenvpnSubnet),
+		Netmask:  config.GetString(config.FlagOpenvpnNetmask),
 	}
 }
 
 // ParseJSONOptions function fills in OpenVPN options from JSON request, falling back to configured options for
 // missing values
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	var requestOptions = ConfiguredOptions()
+	var requestOptions = GetOptions()
 	if request == nil {
 		return requestOptions, nil
 	}

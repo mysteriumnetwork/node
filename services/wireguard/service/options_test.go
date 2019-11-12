@@ -19,33 +19,35 @@ package service
 
 import (
 	"encoding/json"
+	"flag"
 	"net"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
-	config.configureDefaults()
+	configureDefaults()
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
-	assert.Equal(t, config.WireguardDefaultOptions, options)
+	assert.Equal(t, DefaultOptions, options)
 }
 
 func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
-	config.configureDefaults()
+	configureDefaults()
 	request := json.RawMessage(`{}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
-	assert.Equal(t, config.WireguardDefaultOptions, options)
+	assert.Equal(t, DefaultOptions, options)
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
-	config.configureDefaults()
+	configureDefaults()
 	request := json.RawMessage(`{"connectDelay": 3000, "ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
 	options, err := ParseJSONOptions(&request)
 
@@ -58,4 +60,13 @@ func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
 			Mask: net.IPv4Mask(255, 255, 0, 0),
 		},
 	}, options)
+}
+
+func configureDefaults() {
+	ctx := emptyContext()
+	config.ParseFlagsServiceWireguard(ctx)
+}
+
+func emptyContext() *cli.Context {
+	return cli.NewContext(nil, flag.NewFlagSet("", flag.ContinueOnError), nil)
 }

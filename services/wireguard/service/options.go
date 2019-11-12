@@ -28,22 +28,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Options describes options which are required to start Wireguard service
+// Options describes options which are required to start Wireguard service.
 type Options struct {
 	ConnectDelay int
 	Ports        *port.Range
 	Subnet       net.IPNet
 }
 
-// WireguardConfiguredOptions returns effective Wireguard service options from configuration
-func WireguardConfiguredOptions() Options {
-	_, ipnet, err := net.ParseCIDR(config.Current.GetString(config.WireguardListenSubnet.Name))
+// DefaultOptions is a wireguard service configuration that will be used if no options provided.
+var DefaultOptions = Options{
+	ConnectDelay: 2000,
+	Ports:        port.UnspecifiedRange(),
+	Subnet: net.IPNet{
+		IP:   net.ParseIP("10.182.0.0").To4(),
+		Mask: net.IPv4Mask(255, 255, 0, 0),
+	},
+}
+
+// GetOptions returns effective Wireguard service options from application configuration.
+func GetOptions() Options {
+	_, ipnet, err := net.ParseCIDR(config.GetString(config.FlagWireguardListenSubnet))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse subnet option, using default value")
-		ipnet = &config.WireguardDefaultOptions.Subnet
+		ipnet = &DefaultOptions.Subnet
 	}
 
-	portRange, err := port.ParseRange(config.Current.GetString(config.WireguardListenPorts.Name))
+	portRange, err := port.ParseRange(config.GetString(config.FlagWireguardListenPorts))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to parse listen port range, using default value")
 		portRange = port.UnspecifiedRange()
@@ -54,7 +64,7 @@ func WireguardConfiguredOptions() Options {
 		portRange = port.UnspecifiedRange()
 	}
 	return Options{
-		ConnectDelay: config.Current.GetInt(config.WireguardConnectDelayFlag.Name),
+		ConnectDelay: config.GetInt(config.FlagWireguardConnectDelay),
 		Ports:        portRange,
 		Subnet:       *ipnet,
 	}
@@ -62,12 +72,12 @@ func WireguardConfiguredOptions() Options {
 
 // ParseJSONOptions function fills in Wireguard options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	var requestOptions = WireguardConfiguredOptions()
+	var requestOptions = GetOptions()
 	if request == nil {
 		return requestOptions, nil
 	}
 
-	opts := config.WireguardDefaultOptions
+	opts := DefaultOptions
 	err := json.Unmarshal(*request, &opts)
 	return opts, err
 }

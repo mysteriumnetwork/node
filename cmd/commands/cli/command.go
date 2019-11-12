@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
@@ -62,7 +63,8 @@ func NewCommand() *cli.Command {
 		Usage:  "Starts a CLI client with a Tequilapi",
 		Before: clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
-			nodeOptions := config.ParseFlagsNode(ctx)
+			config.ParseFlagsNode(ctx)
+			nodeOptions := node.GetOptions()
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
@@ -782,10 +784,10 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), nil
 	case wireguard.ServiceType:
 		config.ParseFlagsServiceWireguard(ctx)
-		return wireguard_service.WireguardConfiguredOptions(), services.SharedConfiguredOptions(), nil
+		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	case openvpn.ServiceType:
 		config.ParseFlagsServiceOpenvpn(ctx)
-		return openvpn_service.ConfiguredOptions(), services.SharedConfiguredOptions(), nil
+		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	}
 
 	return nil, config.Options{}, errors.New("service type not found")

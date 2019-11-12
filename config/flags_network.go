@@ -18,106 +18,96 @@
 package config
 
 import (
-	"fmt"
-
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
-
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	testFlag = altsrc.NewBoolFlag(cli.BoolFlag{
+	// FlagTestnet uses test network.
+	FlagTestnet = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Defines test network configuration",
-	})
-	localnetFlag = altsrc.NewBoolFlag(cli.BoolFlag{
+	}
+	// FlagLocalnet uses local network.
+	FlagLocalnet = cli.BoolFlag{
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
-	})
-
-	identityCheckFlag = altsrc.NewBoolFlag(cli.BoolFlag{
+	}
+	// FlagIdentityCheck enables experimental identity check.
+	FlagIdentityCheck = cli.BoolFlag{
 		Name:  "experiment-identity-check",
 		Usage: "Enables experimental identity check",
-	})
-
-	apiAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagAPIAddress Mysterium API URL
+	FlagAPIAddress = cli.StringFlag{
 		Name:  "api.address",
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
-	})
-	apiAddressFlagDeprecated = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "discovery-address",
-		Usage: fmt.Sprintf("URL of Mysterium API (DEPRECATED, start using '--%s')", apiAddressFlag.Name),
-		Value: apiAddressFlag.Value,
-	})
-
-	accessPolicyAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
+	FlagAccessPolicyAddress = cli.StringFlag{
 		Name:  "access-policy-address",
 		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
-	})
-
-	brokerAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagBrokerAddress message broker URI.
+	FlagBrokerAddress = cli.StringFlag{
 		Name:  "broker-address",
 		Usage: "URI of message broker",
 		Value: metadata.DefaultNetwork.BrokerAddress,
-	})
-
-	etherRPCFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagEtherRPC URL or IPC socket to connect to Ethereum node.
+	FlagEtherRPC = cli.StringFlag{
 		Name:  "ether.client.rpc",
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
-	})
-	etherContractPaymentsFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagEtherContractPayments address of payments contract.
+	FlagEtherContractPayments = cli.StringFlag{
 		Name:  "ether.contract.payments",
 		Usage: "Address of payments contract",
 		Value: metadata.DefaultNetwork.PaymentsContractAddress.String(),
-	})
-
-	qualityOracleFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	// FlagQualityOracleAddress Quality oracle URL.
+	FlagQualityOracleAddress = cli.StringFlag{
 		Name:  "quality-oracle.address",
 		Usage: "Address of the quality oracle service",
 		Value: metadata.DefaultNetwork.QualityOracle,
-	})
-
-	natPunchingFlag = altsrc.NewBoolTFlag(cli.BoolTFlag{
+	}
+	// FlagNATPunching enables NAT hole punching.
+	FlagNATPunching = cli.BoolTFlag{
 		Name:  "experiment-natpunching",
-		Usage: "Enables experimental NAT hole punching",
-	})
+		Usage: "Enables NAT hole punching",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
 func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		testFlag, localnetFlag,
-		identityCheckFlag,
-		natPunchingFlag,
-		apiAddressFlag, apiAddressFlagDeprecated,
-		brokerAddressFlag,
-		etherRPCFlag, etherContractPaymentsFlag,
-		qualityOracleFlag, accessPolicyAddressFlag,
+		FlagTestnet,
+		FlagLocalnet,
+		FlagIdentityCheck,
+		FlagNATPunching,
+		FlagAPIAddress,
+		FlagBrokerAddress,
+		FlagEtherRPC,
+		FlagEtherContractPayments,
+		FlagQualityOracleAddress,
+		FlagAccessPolicyAddress,
 	)
 }
 
 // ParseFlagsNetwork function fills in directory options from CLI context
-func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
-	return node.OptionsNetwork{
-		Testnet:  ctx.GlobalBool(testFlag.Name),
-		Localnet: ctx.GlobalBool(localnetFlag.Name),
-
-		ExperimentIdentityCheck: ctx.GlobalBool(identityCheckFlag.Name),
-		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
-
-		MysteriumAPIAddress:         ctx.GlobalString(apiAddressFlag.Name),
-		AccessPolicyEndpointAddress: ctx.GlobalString(accessPolicyAddressFlag.Name),
-		BrokerAddress:               ctx.GlobalString(brokerAddressFlag.Name),
-
-		EtherClientRPC:       ctx.GlobalString(etherRPCFlag.Name),
-		EtherPaymentsAddress: ctx.GlobalString(etherContractPaymentsFlag.Name),
-
-		QualityOracle: ctx.GlobalString(qualityOracleFlag.Name),
-	}
+func ParseFlagsNetwork(ctx *cli.Context) {
+	Current.ParseBoolFlag(ctx, FlagTestnet)
+	Current.ParseBoolFlag(ctx, FlagLocalnet)
+	Current.ParseBoolFlag(ctx, FlagIdentityCheck)
+	Current.ParseStringFlag(ctx, FlagAPIAddress)
+	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
+	Current.ParseStringFlag(ctx, FlagBrokerAddress)
+	Current.ParseStringFlag(ctx, FlagEtherRPC)
+	Current.ParseStringFlag(ctx, FlagEtherContractPayments)
+	Current.ParseStringFlag(ctx, FlagQualityOracleAddress)
+	Current.ParseBoolTFlag(ctx, FlagNATPunching)
 }

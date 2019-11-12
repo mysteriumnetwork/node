@@ -21,6 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -39,7 +40,10 @@ func NewCommand() *cli.Command {
 			config.ParseFlagsServiceShared(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
-			if err := di.Bootstrap(config.ParseFlagsNode(ctx)); err != nil {
+			config.ParseFlagsNode(ctx)
+
+			nodeOptions := node.GetOptions()
+			if err := di.Bootstrap(*nodeOptions); err != nil {
 				return err
 			}
 			go func() { quit <- di.Node.Wait() }()
