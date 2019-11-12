@@ -79,4 +79,5 @@ func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorRegistryAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
+	Current.ParseUInt64Flag(ctx, FlagTransactorProviderRegistrationStake)
 }

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package pingpong
+package registry
 
 import (
 	"testing"
@@ -23,7 +23,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -138,14 +137,14 @@ func (mb *mockBc) IsRegisteredAsProvider(accountantAddress, registryAddress, add
 
 type mockTransactor struct {
 	registerError error
-	feesToReturn  transactor.Fees
+	feesToReturn  Fees
 	feesError     error
 }
 
-func (mt *mockTransactor) FetchFees() (transactor.Fees, error) {
+func (mt *mockTransactor) FetchFees() (Fees, error) {
 	return mt.feesToReturn, mt.feesError
 }
 
-func (mt *mockTransactor) RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error {
+func (mt *mockTransactor) RegisterIdentity(identity string, regReqDTO *IdentityRegistrationRequestDTO) error {
 	return mt.registerError
 }

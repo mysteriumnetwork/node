@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
@@ -42,7 +43,6 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 	"github.com/rs/zerolog/log"
@@ -188,14 +188,14 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
-	cfg := pingpong.ProviderRegistrarConfig{
+	cfg := registry.ProviderRegistrarConfig{
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
 		AccountantAddress:   common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
-	di.ProviderRegistrar = pingpong.NewProviderRegistrar(di.Transactor, di.BCHelper, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.BCHelper, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 

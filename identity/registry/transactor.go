@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package transactor
+package registry
 
 import (
 	"fmt"
@@ -23,12 +23,16 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
 )
+
+// RegistrationTopic represents the registration topic to which events regarding registration attempts on transactor will occur
+const RegistrationTopic = "transactor_identity_registration"
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
@@ -38,10 +42,11 @@ type Transactor struct {
 	registryAddress       string
 	accountantID          string
 	channelImplementation string
+	publisher             eventbus.Publisher
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory) *Transactor {
+func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher) *Transactor {
 	return &Transactor{
 		http:                  requests.NewHTTPClient(bindAddress, 20*time.Second),
 		endpointAddress:       endpointAddress,
@@ -49,6 +54,7 @@ func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, 
 		registryAddress:       registryAddress,
 		accountantID:          accountantID,
 		channelImplementation: channelImplementation,
+		publisher:             publisher,
 	}
 }
 
@@ -142,7 +148,15 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
-	return t.http.DoRequest(req)
+	err = t.http.DoRequest(req)
+	if err != nil {
+		return err
+	}
+
+	// This is left as a synchronous call on purpose.
+	// We need to notify registry before returning.
+	t.publisher.Publish(RegistrationTopic, regReq)
+	return nil
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {

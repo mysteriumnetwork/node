@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package pingpong
+package registry
 
 import (
 	"sync"
@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -35,8 +34,8 @@ type bc interface {
 }
 
 type txer interface {
-	FetchFees() (transactor.Fees, error)
-	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
+	FetchFees() (Fees, error)
+	RegisterIdentity(identity string, regReqDTO *IdentityRegistrationRequestDTO) error
 }
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
@@ -169,7 +168,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 	}
 	log.Info().Msgf("fees fetched. Registration costs %v", fees.Registration)
 
-	regReq := &transactor.IdentityRegistrationRequestDTO{
+	regReq := &IdentityRegistrationRequestDTO{
 		Fee:   fees.Registration,
 		Stake: pr.cfg.Stake,
 	}

@@ -53,12 +53,12 @@ import (
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
-	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/firewall/vnd"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -164,9 +164,9 @@ type Dependencies struct {
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
 	SSEHandler        *sse.Handler
-	Transactor        *transactor.Transactor
+	Transactor        *registry.Transactor
 	BCHelper          *pingpong.Blockchain
-	ProviderRegistrar *pingpong.ProviderRegistrar
+	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -199,15 +199,16 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
-		return err
-	}
-
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
 
 	di.bootstrapEventBus()
+
+	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
+		return err
+	}
+
 	di.bootstrapIdentityComponents(nodeOptions)
 
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
@@ -470,13 +471,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 
 	channelImplementation := nodeOptions.Transactor.ChannelImplementation
 
-	di.Transactor = transactor.NewTransactor(
+	di.Transactor = registry.NewTransactor(
 		nodeOptions.BindAddress,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
 		nodeOptions.Accountant.AccountantID,
 		channelImplementation,
 		di.SignerFactory,
+		di.EventBus,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -490,7 +492,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.QualityClient)
@@ -605,11 +607,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.BrokerAddress = optionsNetwork.BrokerAddress
 	}
 
-	normalizedAddress := common.HexToAddress(optionsNetwork.EtherPaymentsAddress)
-	if normalizedAddress != metadata.DefaultNetwork.PaymentsContractAddress {
-		network.PaymentsContractAddress = normalizedAddress
-	}
-
 	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
@@ -632,17 +629,17 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	log.Info().Msg("Using Eth contract at address: " + network.PaymentsContractAddress.String())
 	log.Info().Msg("options.ExperimentIdentityCheck: " + strconv.FormatBool(optionsNetwork.ExperimentIdentityCheck))
 
 	di.BCHelper = pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
 
-	if optionsNetwork.ExperimentIdentityCheck {
-		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Accountant.AccountantID)); err != nil {
-			return err
-		}
-	} else {
-		di.IdentityRegistry = &identity_registry.FakeRegistry{Registered: true, RegistrationEventExists: true}
+	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {
+		return err
+	}
+	err = di.IdentityRegistry.Subscribe(di.EventBus)
+	if err != nil {
+		return err
 	}
 
 	return nil

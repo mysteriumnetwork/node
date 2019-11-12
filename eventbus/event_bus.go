@@ -21,9 +21,19 @@ import asaskevichEventBus "github.com/asaskevich/EventBus"
 
 // EventBus allows subscribing and publishing data by topic
 type EventBus interface {
+	Publisher
+	Subscriber
+}
+
+// Publisher publishes events
+type Publisher interface {
+	Publish(topic string, data interface{})
+}
+
+// Subscriber subscribes to events
+type Subscriber interface {
 	Subscribe(topic string, fn interface{}) error
 	SubscribeAsync(topic string, fn interface{}) error
-	Publish(topic string, data interface{})
 }
 
 type simplifiedEventBus struct {

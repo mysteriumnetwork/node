@@ -17,10 +17,6 @@
 
 package metadata
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-)
-
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {
 	MysteriumAPIAddress       string
@@ -28,7 +24,6 @@ type NetworkDefinition struct {
 	BrokerAddress             string
 	EtherClientRPC            string
 	QualityOracle             string
-	PaymentsContractAddress   common.Address
 	TransactorAddress         string
 	AccountantAddress         string
 	RegistryAddress           string
@@ -42,13 +37,12 @@ var TestnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddress:             "nats://testnet-broker.mysterium.network",
-	EtherClientRPC:            "https://ropsten.infura.io/v3/ea3bdc150d434899adb4e178522fb8e1",
+	EtherClientRPC:            "wss://kovan.infura.io/ws",
 	QualityOracle:             "https://testnet-morqa.mysterium.network/api/v1",
-	PaymentsContractAddress:   common.HexToAddress("0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7"),
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
-	RegistryAddress:           "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7",
-	ChannelImplAddress:        "0xa26b684d8dBa935DD34544FBd3Ab4d7FDe1C4D07",
-	AccountantID:              "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c",
+	RegistryAddress:           "0x1Da4C260e0ed55d8Bd564726Cc9133880dc8A099",
+	ChannelImplAddress:        "0x611ad702f6A55C16A1bA6733a20D457488B5EAaF",
+	AccountantID:              "0x45922e4459131141173F5a6ED09A5AdCd5bA17da",
 	AccountantAddress:         "https://testnet-accountant.mysterium.network/api/v1",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }
@@ -61,7 +55,6 @@ var LocalnetDefinition = NetworkDefinition{
 	BrokerAddress:             "localhost",
 	EtherClientRPC:            "http://localhost:8545",
 	QualityOracle:             "http://localhost:8085",
-	PaymentsContractAddress:   common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 	MMNAddress:                "http://localhost/api/v1",
 }
 

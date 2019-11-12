@@ -24,15 +24,15 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 
-	"github.com/mysteriumnetwork/node/core/transactor"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
-	FetchFees() (transactor.Fees, error)
+	FetchFees() (registry.Fees, error)
 	TopUp(identity string) error
-	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
+	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
 }
 
 type transactorEndpoint struct {
@@ -90,7 +90,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	topUpDTO := transactor.TopUpRequest{}
+	topUpDTO := registry.TopUpRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
 	if err != nil {
@@ -136,7 +136,7 @@ func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Requ
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	identity := params.ByName("id")
 
-	regReqDTO := &transactor.IdentityRegistrationRequestDTO{}
+	regReqDTO := &registry.IdentityRegistrationRequestDTO{}
 
 	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
 	if err != nil {
