@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
 	"os"
 	"path/filepath"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/mysteriumnetwork/node/core/node"
 	"gopkg.in/urfave/cli.v1"
 )
 
-const (
-	dataDirFlag    = "data-dir"
-	configDirFlag  = "config-dir"
-	runtimeDirFlag = "runtime-dir"
+var (
+	// FlagConfigDir directory containing all configuration, script and helper files.
+	FlagConfigDir = cli.StringFlag{
+		Name:  "config-dir",
+		Usage: "Configs directory containing all configuration, script and helper files",
+	}
+	// FlagDataDir data directory for keystore and other persistent files.
+	FlagDataDir = cli.StringFlag{
+		Name:  "data-dir",
+		Usage: "Data directory containing keystore & other persistent files",
+	}
+	// FlagRuntimeDir runtime writable directory for temporary files.
+	FlagRuntimeDir = cli.StringFlag{
+		Name:  "runtime-dir",
+		Usage: "Runtime writable directory for temp files",
+	}
 )
 
 // RegisterFlagsDirectory function register directory flags to flag list
@@ -44,37 +55,23 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(
-		*flags,
-		cli.StringFlag{
-			Name:  dataDirFlag,
-			Usage: "Data directory containing keystore & other persistent files",
-			Value: filepath.Join(userHomeDir, ".mysterium"),
-		},
-		cli.StringFlag{
-			Name:  configDirFlag,
-			Usage: "Configs directory containing all configuration, script and helper files",
-			Value: filepath.Join(currentDir, "config"),
-		},
-		cli.StringFlag{
-			Name:  runtimeDirFlag,
-			Usage: "Runtime writable directory for temp files",
-			Value: currentDir,
-		},
+	FlagConfigDir.Value = filepath.Join(currentDir, "config")
+	FlagDataDir.Value = filepath.Join(userHomeDir, ".mysterium")
+	FlagRuntimeDir.Value = currentDir
+
+	*flags = append(*flags,
+		FlagConfigDir,
+		FlagDataDir,
+		FlagRuntimeDir,
 	)
 	return nil
 }
 
 // ParseFlagsDirectory function fills in directory options from CLI context
-func ParseFlagsDirectory(ctx *cli.Context) node.OptionsDirectory {
-	dataDir := ctx.GlobalString(dataDirFlag)
-	return node.OptionsDirectory{
-		Data:     dataDir,
-		Storage:  filepath.Join(dataDir, "db"),
-		Keystore: filepath.Join(dataDir, "keystore"),
-		Config:   ctx.GlobalString(configDirFlag),
-		Runtime:  ctx.GlobalString(runtimeDirFlag),
-	}
+func ParseFlagsDirectory(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagDataDir)
+	Current.ParseStringFlag(ctx, FlagConfigDir)
+	Current.ParseStringFlag(ctx, FlagRuntimeDir)
 }
 
 func getExecutableDir() (string, error) {

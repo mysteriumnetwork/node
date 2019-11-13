@@ -15,41 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	accountantAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+	FlagAccountantAddress = cli.StringFlag{
 		Name:  "accountant.address",
 		Usage: "accountant URL address",
 		Value: metadata.DefaultNetwork.AccountantAddress,
-	})
-	accountantIDFlag = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	FlagAccountantID = cli.StringFlag{
 		Name:  "accountant.accountant-id",
 		Usage: "accountant contract address used to register identity",
 		Value: metadata.DefaultNetwork.AccountantID,
-	})
+	}
 )
 
 // RegisterFlagsAccountant function register network flags to flag list
 func RegisterFlagsAccountant(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		accountantAddressFlag,
-		accountantIDFlag,
+		FlagAccountantAddress,
+		FlagAccountantID,
 	)
 }
 
 // ParseFlagsAccountant function fills in accountant options from CLI context
-func ParseFlagsAccountant(ctx *cli.Context) node.OptionsAccountant {
-	return node.OptionsAccountant{
-		AccountantEndpointAddress: ctx.GlobalString(accountantAddressFlag.Name),
-		AccountantID:              ctx.GlobalString(accountantIDFlag.Name),
-	}
+func ParseFlagsAccountant(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagAccountantAddress)
+	Current.ParseStringFlag(ctx, FlagAccountantID)
 }

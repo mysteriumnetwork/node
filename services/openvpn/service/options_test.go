@@ -19,17 +19,27 @@ package service
 
 import (
 	"encoding/json"
+	"flag"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/urfave/cli.v1"
 )
+
+var DefaultOptionsOpenvpn = Options{
+	Protocol: config.FlagOpenvpnProtocol.Value,
+	Port:     config.FlagOpenvpnPort.Value,
+	Subnet:   config.FlagOpenvpnSubnet.Value,
+	Netmask:  config.FlagOpenvpnNetmask.Value,
+}
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
 	configureDefaults()
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
-	assert.Equal(t, defaultOptions, options)
+	assert.Equal(t, DefaultOptionsOpenvpn, options)
 }
 
 func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
@@ -38,7 +48,7 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
-	assert.Equal(t, defaultOptions, options)
+	assert.Equal(t, DefaultOptionsOpenvpn, options)
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
@@ -53,4 +63,13 @@ func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
 		Subnet:   "10.10.10.0",
 		Netmask:  "255.255.255.0",
 	}, options)
+}
+
+func configureDefaults() {
+	ctx := emptyContext()
+	config.ParseFlagsServiceOpenvpn(ctx)
+}
+
+func emptyContext() *cli.Context {
+	return cli.NewContext(nil, flag.NewFlagSet("", flag.ContinueOnError), nil)
 }

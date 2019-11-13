@@ -94,15 +94,4 @@ fi
 printf "\nInstallation successfully finished.\n" \
     && printf "Usage: service mysterium-node restart\n"
 
-# TODO remove this hack once all mysteries auto updated
-# 707088fd7acd09a710a9c2349fa18228 is a md5 hash from
-# https://raw.githubusercontent.com/mysteriumnetwork/node/0.12.1/bin/package/raspberry/files/unattended-upgrades
-if [ "$(md5sum /etc/apt/apt.conf.d/50unattended-upgrades | cut -d' ' -f1)" == "707088fd7acd09a710a9c2349fa18228" ]; then
-    sed -i "s/Debian/Raspbian/g" /etc/apt/apt.conf.d/50unattended-upgrades
-fi
-
-if [ ! -f "/sbin/wondershaper" ]; then
-    install --mode=755 /etc/mysterium-node/wondershaper /sbin/wondershaper
-fi
-
 #DEBHELPER#

@@ -25,5 +25,6 @@ Depends:
  iptables,
  iproute2,
  wireguard,
+ wondershaper,
 Description: Mysterium Node - VPN server and client for Mysterium Network
  Mysterium Node - decentralized VPN built on blockchain

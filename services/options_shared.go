@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,29 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package core
+package services
 
 import (
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"strings"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
-var (
-	binaryFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "openvpn.binary",
-		Usage: "openvpn binary to use for Open VPN connections",
-		Value: "openvpn",
-	})
-)
-
-// RegisterFlags function register Openvpn flags to flag list
-func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, binaryFlag)
-}
-
-// ParseFlags function fills in Openvpn options from CLI context
-func ParseFlags(ctx *cli.Context) NodeOptions {
-	return NodeOptions{
-		ctx.GlobalString(binaryFlag.Name),
+// SharedConfiguredOptions returns effective shared service options
+func SharedConfiguredOptions() config.Options {
+	policiesStr := config.GetString(config.FlagAccessPolicies)
+	var policies []string
+	if len(policiesStr) > 0 {
+		policies = strings.Split(policiesStr, ",")
+	} else {
+		policies = []string{}
+	}
+	return config.Options{
+		AccessPolicies: policies,
+		ShaperEnabled:  config.GetBool(config.FlagShaperEnabled),
 	}
 }

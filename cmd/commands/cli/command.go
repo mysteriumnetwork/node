@@ -28,13 +28,15 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	shared "github.com/mysteriumnetwork/node/services/shared"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
@@ -62,7 +64,8 @@ func NewCommand() *cli.Command {
 		Usage:  "Starts a CLI client with a Tequilapi",
 		Before: clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
-			nodeOptions := cmd.ParseFlagsNode(ctx)
+			config.ParseFlagsNode(ctx)
+			nodeOptions := node.GetOptions()
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
@@ -812,11 +815,11 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, shared.Options, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, config.Options, error) {
 	var flags []cli.Flag
-	shared.RegisterFlags(&flags)
-	openvpn_service.RegisterFlags(&flags)
-	wireguard_service.RegisterFlags(&flags)
+	config.RegisterFlagsServiceShared(&flags)
+	config.RegisterFlagsServiceOpenvpn(&flags)
+	config.RegisterFlagsServiceWireguard(&flags)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
@@ -824,22 +827,22 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, share
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, shared.Options{}, err
+		return nil, config.Options{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
 
-	shared.Configure(ctx)
+	config.ParseFlagsServiceShared(ctx)
 	switch serviceType {
 	case noop.ServiceType:
-		return noop.ParseFlags(ctx), shared.ConfiguredOptions(), nil
+		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), nil
 	case wireguard.ServiceType:
-		wireguard_service.Configure(ctx)
-		return wireguard_service.ConfiguredOptions(), shared.ConfiguredOptions(), nil
+		config.ParseFlagsServiceWireguard(ctx)
+		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	case openvpn.ServiceType:
-		openvpn_service.Configure(ctx)
-		return openvpn_service.ConfiguredOptions(), shared.ConfiguredOptions(), nil
+		config.ParseFlagsServiceOpenvpn(ctx)
+		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	}
 
-	return nil, shared.Options{}, errors.New("service type not found")
+	return nil, config.Options{}, errors.New("service type not found")
 }

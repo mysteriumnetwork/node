@@ -24,37 +24,18 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/cmd/commands/license"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	"github.com/mysteriumnetwork/node/services/shared"
-	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
-)
-
-var (
-	identityFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "identity",
-		Usage: "Keystore's identity used to provide service. If not given identity will be created automatically",
-		Value: "",
-	})
-	identityPassphraseFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "identity.passphrase",
-		Usage: "Used to unlock keystore's identity",
-		Value: "",
-	})
-	agreedTermsConditionsFlag = altsrc.NewBoolFlag(cli.BoolFlag{
-		Name:  "agreed-terms-and-conditions",
-		Usage: "Agree with terms & conditions",
-	})
 )
 
 // NewCommand function creates service command
@@ -66,26 +47,27 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		ArgsUsage: "comma separated list of services to start",
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
-			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
+			if !ctx.Bool(config.FlagAgreedTermsConditions.Name) {
 				printTermWarning(licenseCommandName)
 				os.Exit(2)
 			}
 
 			quit := make(chan error)
-			nodeOptions := cmd.ParseFlagsNode(ctx)
-			if err := di.Bootstrap(nodeOptions); err != nil {
+			config.ParseFlagsNode(ctx)
+			nodeOptions := node.GetOptions()
+			if err := di.Bootstrap(*nodeOptions); err != nil {
 				return err
 			}
 			go func() { quit <- di.Node.Wait() }()
 
 			cmd.RegisterSignalCallback(func() { quit <- nil })
 
-			shared.Configure(ctx)
+			config.ParseFlagsServiceShared(ctx)
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: quit,
 				ap: client.AccessPoliciesRequest{
-					IDs: shared.ConfiguredOptions().AccessPolicies,
+					IDs: services.SharedConfiguredOptions().AccessPolicies,
 				},
 			}
 
@@ -173,21 +155,16 @@ func (sc *serviceCommand) runService(providerID, serviceType string, options ser
 
 // registerFlags function register service flags to flag list
 func registerFlags(flags *[]cli.Flag) {
-	*flags = append(*flags,
-		agreedTermsConditionsFlag,
-		identityFlag,
-		identityPassphraseFlag,
-	)
-	shared.RegisterFlags(flags)
-	openvpn_service.RegisterFlags(flags)
-	wireguard_service.RegisterFlags(flags)
+	config.RegisterFlagsServiceShared(flags)
+	config.RegisterFlagsServiceOpenvpn(flags)
+	config.RegisterFlagsServiceWireguard(flags)
 }
 
 // parseIdentityFlags function fills in service command options from CLI context
 func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	return service.OptionsIdentity{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
+		Identity:   ctx.String(config.FlagIdentity.Name),
+		Passphrase: ctx.String(config.FlagIdentityPassphrase.Name),
 	}
 }
 
@@ -200,8 +177,8 @@ func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Opti
 
 func printTermWarning(licenseCommandName string) {
 	fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
-		"run program with 'myst "+licenseCommandName+" --"+license.LicenseWarrantyFlag.Name+"' option",
-		"run program with 'myst "+licenseCommandName+" --"+license.LicenseConditionsFlag.Name+"' option",
+		"run program with 'myst "+licenseCommandName+" --"+config.LicenseWarrantyFlag.Name+"' option",
+		"run program with 'myst "+licenseCommandName+" --"+config.LicenseConditionsFlag.Name+"' option",
 	)))
 	fmt.Println()
 

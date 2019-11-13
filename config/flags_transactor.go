@@ -15,43 +15,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	transactorAddressFlag = cli.StringFlag{
+	// FlagTransactorAddress transactor URL.
+	FlagTransactorAddress = cli.StringFlag{
 		Name:  "transactor.address",
-		Usage: "transactor URL address",
+		Usage: "Transactor URL address",
 		Value: metadata.DefaultNetwork.TransactorAddress,
 	}
-	registryAddressFlag = cli.StringFlag{
+	// FlagTransactorRegistryAddress registry contract address used for identity registration.
+	FlagTransactorRegistryAddress = cli.StringFlag{
 		Name:  "transactor.registry-address",
-		Usage: "registry contract address used to register identity",
+		Usage: "Registry contract address used to register identity",
 		Value: metadata.DefaultNetwork.RegistryAddress,
 	}
-	channelImplementationFlag = cli.StringFlag{
+	FlagTransactorChannelImplementation = cli.StringFlag{
 		Name:  "transactor.channel-implementation",
 		Usage: "channel implementation address",
 		Value: metadata.DefaultNetwork.ChannelImplAddress,
 	}
-	providerMaxRegistrationAttemptsFlag = cli.IntFlag{
+	FlagTransactorProviderMaxRegistrationAttempts = cli.IntFlag{
 		Name:  "transactor.provider.max-registration-attempts",
 		Usage: "the max attempts the provider will make to register before giving up",
 		Value: 10,
 	}
-	providerRegistrationRetryDelay = cli.DurationFlag{
+	FlagTransactorProviderRegistrationRetryDelay = cli.DurationFlag{
 		Name:  "transactor.provider.registration-retry-delay",
 		Usage: "the duration that the provider will wait between each retry",
 		Value: time.Minute * 3,
 	}
-	providerRegistrationStake = cli.Uint64Flag{
+	FlagTransactorProviderRegistrationStake = cli.Uint64Flag{
 		Name:  "transactor.provider.registration-stake",
 		Usage: "the stake we'll use when registering provider",
 		Value: 125000000000,
@@ -62,23 +63,20 @@ var (
 func RegisterFlagsTransactor(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		transactorAddressFlag,
-		registryAddressFlag,
-		channelImplementationFlag,
-		providerMaxRegistrationAttemptsFlag,
-		providerRegistrationRetryDelay,
-		providerRegistrationStake,
+		FlagTransactorAddress,
+		FlagTransactorRegistryAddress,
+		FlagTransactorChannelImplementation,
+		FlagTransactorProviderMaxRegistrationAttempts,
+		FlagTransactorProviderRegistrationRetryDelay,
+		FlagTransactorProviderRegistrationStake,
 	)
 }
 
 // ParseFlagsTransactor function fills in transactor options from CLI context
-func ParseFlagsTransactor(ctx *cli.Context) node.OptionsTransactor {
-	return node.OptionsTransactor{
-		TransactorEndpointAddress:       ctx.GlobalString(transactorAddressFlag.Name),
-		RegistryAddress:                 ctx.GlobalString(registryAddressFlag.Name),
-		ChannelImplementation:           ctx.GlobalString(channelImplementationFlag.Name),
-		ProviderMaxRegistrationAttempts: ctx.GlobalInt(providerMaxRegistrationAttemptsFlag.Name),
-		ProviderRegistrationRetryDelay:  ctx.GlobalDuration(providerRegistrationRetryDelay.Name),
-		ProviderRegistrationStake:       ctx.GlobalUint64(providerRegistrationStake.Name),
-	}
+func ParseFlagsTransactor(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagTransactorAddress)
+	Current.ParseStringFlag(ctx, FlagTransactorChannelImplementation)
+	Current.ParseStringFlag(ctx, FlagTransactorRegistryAddress)
+	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
+	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
 }

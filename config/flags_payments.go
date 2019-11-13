@@ -15,37 +15,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/node"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	maxAccountantFee = cli.IntFlag{
+	// FlagPaymentsMaxAccountantFee represents the max accountant fee
+	FlagPaymentsMaxAccountantFee = cli.IntFlag{
 		Name:  "payments.accountant.max.fee",
 		Value: 1500,
 		Usage: "The max fee that we'll accept from an accountant. In percentiles. 1500 means 15%",
 	}
-	bcTimeout = cli.DurationFlag{
+	// FlagPaymentsBCTimeout represents the BC call timeout
+	FlagPaymentsBCTimeout = cli.DurationFlag{
 		Name:  "payments.bc.timeout",
 		Value: time.Second * 30,
 		Usage: "The duration we'll wait before timing out BC calls.",
 	}
 )
 
-// RegisterFlagsPayments registers flags to control payments
+// RegisterFlagsPayments function register payments flags to flag list
 func RegisterFlagsPayments(flags *[]cli.Flag) {
-	*flags = append(*flags, maxAccountantFee, bcTimeout)
+	*flags = append(
+		*flags,
+		FlagPaymentsMaxAccountantFee,
+		FlagPaymentsBCTimeout,
+	)
 }
 
-// ParsePaymentFlags parses registered flags and puts them into options structure
-func ParsePaymentFlags(ctx *cli.Context) node.OptionsPayments {
-	return node.OptionsPayments{
-		MaxAllowedPaymentPercentile: ctx.GlobalInt(maxAccountantFee.Name),
-		BCTimeout:                   ctx.GlobalDuration(bcTimeout.Name),
-	}
+// ParseFlagsPayments function fills in payments options from CLI context
+func ParseFlagsPayments(ctx *cli.Context) {
+	Current.ParseIntFlag(ctx, FlagPaymentsMaxAccountantFee)
+	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
 }
