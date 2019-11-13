@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -33,12 +34,12 @@ var (
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
 		noop.ServiceType: noop.ParseFlags,
 		openvpn.ServiceType: func(ctx *cli.Context) service.Options {
-			openvpn_service.Configure(ctx)
-			return openvpn_service.ConfiguredOptions()
+			config.ParseFlagsServiceOpenvpn(ctx)
+			return openvpn_service.GetOptions()
 		},
 		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
-			wireguard_service.Configure(ctx)
-			return wireguard_service.ConfiguredOptions()
+			config.ParseFlagsServiceWireguard(ctx)
+			return wireguard_service.GetOptions()
 		},
 	}
 )

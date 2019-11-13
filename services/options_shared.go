@@ -15,15 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package config
+package services
 
-import "gopkg.in/urfave/cli.v1"
+import (
+	"strings"
 
-var (
-	// VendorIDFlag identifies 3rd party vendor (distributor) of Mysterium node
-	VendorIDFlag = cli.StringFlag{
-		Name: "vendor.id",
-		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
-			"3rd party vendors may use their own identifier here.",
-	}
+	"github.com/mysteriumnetwork/node/config"
 )
+
+// SharedConfiguredOptions returns effective shared service options
+func SharedConfiguredOptions() config.Options {
+	policiesStr := config.GetString(config.FlagAccessPolicies)
+	var policies []string
+	if len(policiesStr) > 0 {
+		policies = strings.Split(policiesStr, ",")
+	} else {
+		policies = []string{}
+	}
+	return config.Options{
+		AccessPolicies: policies,
+		ShaperEnabled:  config.GetBool(config.FlagShaperEnabled),
+	}
+}

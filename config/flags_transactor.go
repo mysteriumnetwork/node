@@ -15,28 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package config
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	transactorAddressFlag = cli.StringFlag{
+	// FlagTransactorAddress transactor URL.
+	FlagTransactorAddress = cli.StringFlag{
 		Name:  "transactor.address",
-		Usage: "transactor URL address",
+		Usage: "Transactor URL address",
 		Value: metadata.DefaultNetwork.TransactorAddress,
 	}
-	registryAddressFlag = cli.StringFlag{
+	// FlagTransactorRegistryAddress registry contract address used for identity registration.
+	FlagTransactorRegistryAddress = cli.StringFlag{
 		Name:  "transactor.registry-address",
-		Usage: "registry contract address used to register identity",
+		Usage: "Registry contract address used to register identity",
 		Value: metadata.DefaultNetwork.RegistryAddress,
 	}
-	accountantIDFlag = cli.StringFlag{
+	// FlagTransactorAccountantID accountant contract address used for identity registration.
+	FlagTransactorAccountantID = cli.StringFlag{
 		Name:  "transactor.accountant-id",
-		Usage: "accountant contract address used to register identity",
+		Usage: "Accountant contract address used to register identity",
 		Value: metadata.DefaultNetwork.AccountantID,
 	}
 )
@@ -45,17 +47,15 @@ var (
 func RegisterFlagsTransactor(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		transactorAddressFlag,
-		registryAddressFlag,
-		accountantIDFlag,
+		FlagTransactorAddress,
+		FlagTransactorRegistryAddress,
+		FlagTransactorAccountantID,
 	)
 }
 
 // ParseFlagsTransactor function fills in transactor options from CLI context
-func ParseFlagsTransactor(ctx *cli.Context) node.OptionsTransactor {
-	return node.OptionsTransactor{
-		TransactorEndpointAddress: ctx.GlobalString(transactorAddressFlag.Name),
-		RegistryAddress:           ctx.GlobalString(registryAddressFlag.Name),
-		AccountantID:              ctx.GlobalString(accountantIDFlag.Name),
-	}
+func ParseFlagsTransactor(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagTransactorAddress)
+	Current.ParseStringFlag(ctx, FlagTransactorRegistryAddress)
+	Current.ParseStringFlag(ctx, FlagTransactorAccountantID)
 }

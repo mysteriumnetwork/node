@@ -19,12 +19,14 @@ package node
 
 import (
 	"os"
+	"path/filepath"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
-// OptionsDirectory describes data structure holding directories as parameters
+// OptionsDirectory describes data structure holding directories as parameters.
 type OptionsDirectory struct {
 	// Data directory stores persistent data like keystore, cli history, etc.
 	Data string
@@ -36,6 +38,18 @@ type OptionsDirectory struct {
 	Config string
 	// Runtime directory for various temp file - usually current working dir
 	Runtime string
+}
+
+// GetOptionsDirectory retrieves directory configuration from app configuration.
+func GetOptionsDirectory() *OptionsDirectory {
+	dataDir := config.GetString(config.FlagDataDir)
+	return &OptionsDirectory{
+		Data:     dataDir,
+		Storage:  filepath.Join(dataDir, "db"),
+		Keystore: filepath.Join(dataDir, "keystore"),
+		Config:   config.GetString(config.FlagConfigDir),
+		Runtime:  config.GetString(config.FlagRuntimeDir),
+	}
 }
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)

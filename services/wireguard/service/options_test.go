@@ -19,11 +19,14 @@ package service
 
 import (
 	"encoding/json"
+	"flag"
 	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
@@ -57,4 +60,13 @@ func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
 			Mask: net.IPv4Mask(255, 255, 0, 0),
 		},
 	}, options)
+}
+
+func configureDefaults() {
+	ctx := emptyContext()
+	config.ParseFlagsServiceWireguard(ctx)
+}
+
+func emptyContext() *cli.Context {
+	return cli.NewContext(nil, flag.NewFlagSet("", flag.ContinueOnError), nil)
 }

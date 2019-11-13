@@ -64,7 +64,7 @@ func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 		info.MACAddress = hashMACAddress(mac)
 		info.LocalIP = outboundIp
 		info.Identity = identity
-		info.VendorID = config.Current.GetString(config.VendorIDFlag.Name)
+		info.VendorID = config.GetString(config.FlagVendorID)
 
 		if err = client.RegisterNode(info); err != nil {
 			log.Error().Err(err).Msg("failed to send NodeInformation to MMN")

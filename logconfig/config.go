@@ -78,7 +78,7 @@ func Configure(opts *LogOptions) {
 		}
 
 	}
-	log.Logger.Level(opts.LogLevel)
+	log.Logger = log.Logger.Level(opts.LogLevel)
 }
 
 func consoleWriter() io.Writer {

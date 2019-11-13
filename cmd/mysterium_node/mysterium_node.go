@@ -20,12 +20,12 @@ package main
 import (
 	"os"
 
-	"github.com/mysteriumnetwork/node/cmd"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog/log"
@@ -73,8 +73,7 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	logconfig.RegisterFlags(&app.Flags)
-	if err := cmd.RegisterFlagsNode(&app.Flags); err != nil {
+	if err := config.RegisterFlagsNode(&app.Flags); err != nil {
 		return nil, err
 	}
 	app.Commands = []cli.Command{

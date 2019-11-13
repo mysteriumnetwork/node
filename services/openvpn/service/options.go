@@ -21,10 +21,8 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
 )
 
 // Options describes options which are required to start Openvpn service
@@ -35,70 +33,20 @@ type Options struct {
 	Netmask  string `json:"netmask"`
 }
 
-var (
-	protocolFlag = cli.StringFlag{
-		Name:  "openvpn.proto",
-		Usage: "OpenVPN protocol to use. Options: { udp, tcp }",
-	}
-	portFlag = cli.IntFlag{
-		Name:  "openvpn.port",
-		Usage: "OpenVPN port to use. If not specified, random port will be used",
-	}
-	subnetFlag = cli.StringFlag{
-		Name:  "openvpn.subnet",
-		Usage: "OpenVPN subnet that will be used to connecting VPN clients",
-	}
-	netmaskFlag = cli.StringFlag{
-		Name:  "openvpn.netmask",
-		Usage: "OpenVPN subnet netmask ",
-	}
-	defaultOptions = Options{
-		Protocol: "udp",
-		Port:     0,
-		Subnet:   "10.8.0.0",
-		Netmask:  "255.255.255.0",
-	}
-)
-
-// RegisterFlags registers OpenVPN CLI flags for parsing them later
-func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, protocolFlag, portFlag, subnetFlag, netmaskFlag)
-}
-
-// Configure parses CLI flags and registers value to configuration
-func Configure(ctx *cli.Context) {
-	configureDefaults()
-	configureCLI(ctx)
-}
-
-func configureDefaults() {
-	config.Current.SetDefault(protocolFlag.Name, defaultOptions.Protocol)
-	config.Current.SetDefault(portFlag.Name, defaultOptions.Port)
-	config.Current.SetDefault(subnetFlag.Name, defaultOptions.Subnet)
-	config.Current.SetDefault(netmaskFlag.Name, defaultOptions.Netmask)
-}
-
-func configureCLI(ctx *cli.Context) {
-	cliflags.SetString(config.Current, protocolFlag.Name, ctx)
-	cliflags.SetInt(config.Current, portFlag.Name, ctx)
-	cliflags.SetString(config.Current, subnetFlag.Name, ctx)
-	cliflags.SetString(config.Current, netmaskFlag.Name, ctx)
-}
-
-// ConfiguredOptions returns effective OpenVPN service options from configuration
-func ConfiguredOptions() Options {
+// GetOptions returns effective OpenVPN service options from application configuration.
+func GetOptions() Options {
 	return Options{
-		Protocol: config.Current.GetString(protocolFlag.Name),
-		Port:     config.Current.GetInt(portFlag.Name),
-		Subnet:   config.Current.GetString(subnetFlag.Name),
-		Netmask:  config.Current.GetString(netmaskFlag.Name),
+		Protocol: config.GetString(config.FlagOpenvpnProtocol),
+		Port:     config.GetInt(config.FlagOpenvpnPort),
+		Subnet:   config.GetString(config.FlagOpenvpnSubnet),
+		Netmask:  config.GetString(config.FlagOpenvpnNetmask),
 	}
 }
 
 // ParseJSONOptions function fills in OpenVPN options from JSON request, falling back to configured options for
 // missing values
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	var requestOptions = ConfiguredOptions()
+	var requestOptions = GetOptions()
 	if request == nil {
 		return requestOptions, nil
 	}

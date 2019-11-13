@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,29 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package core
+package config
 
-import (
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
-)
+import "gopkg.in/urfave/cli.v1"
 
 var (
-	binaryFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "openvpn.binary",
-		Usage: "openvpn binary to use for Open VPN connections",
-		Value: "openvpn",
-	})
-)
-
-// RegisterFlags function register Openvpn flags to flag list
-func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, binaryFlag)
-}
-
-// ParseFlags function fills in Openvpn options from CLI context
-func ParseFlags(ctx *cli.Context) NodeOptions {
-	return NodeOptions{
-		ctx.GlobalString(binaryFlag.Name),
+	// LicenseWarrantyFlag flag allows to print license warranty
+	LicenseWarrantyFlag = cli.BoolFlag{
+		Name:  "warranty",
+		Usage: "Show details of license warranty",
 	}
-}
+	// LicenseConditionsFlag flag allows to print license conditions
+	LicenseConditionsFlag = cli.BoolFlag{
+		Name:  "conditions",
+		Usage: "Show details of license conditions",
+	}
+)

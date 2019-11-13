@@ -27,12 +27,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
+	"gopkg.in/urfave/cli.v1"
 )
-
-// Topic returns event bus topic for the given config key to listen for its updates.
-func Topic(configKey string) string {
-	return "config:" + configKey
-}
 
 // Config stores application configuration in 3 separate maps (listed from the lowest priority to the highest):
 //
@@ -189,6 +185,11 @@ func (cfg *Config) Get(key string) interface{} {
 	return defaultValue
 }
 
+// GetBool returns config value as bool.
+func (cfg *Config) GetBool(key string) bool {
+	return cast.ToBool(cfg.Get(key))
+}
+
 // GetInt returns config value as int.
 func (cfg *Config) GetInt(key string) int {
 	return cast.ToInt(cfg.Get(key))
@@ -199,7 +200,79 @@ func (cfg *Config) GetString(key string) string {
 	return cast.ToString(cfg.Get(key))
 }
 
-// GetBool returns config value as bool.
-func (cfg *Config) GetBool(key string) bool {
-	return cast.ToBool(cfg.Get(key))
+// ParseBoolFlag parses a cli.BoolFlag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseBoolFlag(ctx *cli.Context, flag cli.BoolFlag) {
+	cfg.SetDefault(flag.Name, false)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Bool(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalBool(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// ParseBoolTFlag parses a cli.BoolTFlag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseBoolTFlag(ctx *cli.Context, flag cli.BoolTFlag) {
+	cfg.SetDefault(flag.Name, true)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Bool(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalBool(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// ParseIntFlag parses a cli.IntFlag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseIntFlag(ctx *cli.Context, flag cli.IntFlag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Int(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalInt(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// ParseStringFlag parses a cli.StringFlag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.String(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalString(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// GetBool shorthand for getting current configuration value for cli.BoolFlag.
+func GetBool(flag cli.BoolFlag) bool {
+	return Current.GetBool(flag.Name)
+}
+
+// GetTBool shorthand for getting current configuration value for cli.BoolTFlag.
+func GetTBool(flag cli.BoolTFlag) bool {
+	return Current.GetBool(flag.Name)
+}
+
+// GetInt shorthand for getting current configuration value for cli.IntFlag.
+func GetInt(flag cli.IntFlag) int {
+	return Current.GetInt(flag.Name)
+}
+
+// GetString shorthand for getting current configuration value for cli.StringFlag.
+func GetString(flag cli.StringFlag) string {
+	return Current.GetString(flag.Name)
+}
+
+// Topic returns event bus topic for the given config key to listen for its updates.
+func Topic(configKey string) string {
+	return "config:" + configKey
 }
