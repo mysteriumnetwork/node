@@ -23,19 +23,19 @@ import (
 	"net"
 	"os"
 
-	"github.com/mysteriumnetwork/wireguard-go/device"
-	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
 	"github.com/songgao/water"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
 type nativeTun struct {
 	tun    *water.Interface
-	events chan tun.TUNEvent
+	events chan tun.Event
 }
 
 // CreateTUN creates native TUN device for wireguard.
-func CreateTUN(name string, subnet net.IPNet) (tun.TUNDevice, error) {
+func CreateTUN(name string, subnet net.IPNet) (tun.Device, error) {
 	tunDevice, err := water.New(water.Config{
 		DeviceType: water.TUN,
 		PlatformSpecificParams: water.PlatformSpecificParams{
@@ -59,7 +59,7 @@ func CreateTUN(name string, subnet net.IPNet) (tun.TUNDevice, error) {
 
 	return &nativeTun{
 		tun:    tunDevice,
-		events: make(chan tun.TUNEvent, 10),
+		events: make(chan tun.Event, 10),
 	}, nil
 }
 
@@ -71,7 +71,7 @@ func (tun *nativeTun) File() *os.File {
 	return nil
 }
 
-func (tun *nativeTun) Events() chan tun.TUNEvent {
+func (tun *nativeTun) Events() chan tun.Event {
 	return tun.events
 }
 
@@ -86,6 +86,10 @@ func (tun *nativeTun) Write(buff []byte, offset int) (int, error) {
 func (tun *nativeTun) Close() error {
 	close(tun.events)
 	return tun.tun.Close()
+}
+
+func (tun *nativeTun) Flush() error {
+	return tun.Flush()
 }
 
 func (tun *nativeTun) MTU() (int, error) {

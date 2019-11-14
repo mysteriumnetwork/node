@@ -28,10 +28,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
-	"github.com/mysteriumnetwork/wireguard-go/device"
-	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
 const (
@@ -174,7 +174,7 @@ func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
 	return
 }
 
-func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.TUNDevice, error) {
+func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.Device, error) {
 	consumerIP := config.Consumer.IPAddress
 	prefixLen, _ := consumerIP.Mask.Size()
 	wgTunnSetup.AddTunnelAddress(consumerIP.IP.String(), prefixLen)
