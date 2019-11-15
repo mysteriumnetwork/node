@@ -2,6 +2,8 @@ module github.com/mysteriumnetwork/node
 
 go 1.13
 
+replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DataDog/zstd v1.4.1 // indirect
@@ -47,7 +49,6 @@ require (
 	github.com/mysteriumnetwork/go-openvpn v0.0.18
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
 	github.com/mysteriumnetwork/payments v0.0.11-0.20190809092009-003973d4b083
-	github.com/mysteriumnetwork/wireguard-go v0.0.0-20191113140128-7b5fd6287beb
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect
@@ -72,7 +73,8 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343
-	golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea
+	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056
+	golang.zx2c4.com/wireguard v0.0.20191012
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect

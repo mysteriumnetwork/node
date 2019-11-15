@@ -22,13 +22,13 @@ package userspace
 import (
 	"net"
 
-	"github.com/mysteriumnetwork/wireguard-go/device"
-	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
 // CreateTUN creates native TUN device for wireguard.
-func CreateTUN(name string, subnet net.IPNet) (tunDevice tun.TUNDevice, err error) {
+func CreateTUN(name string, subnet net.IPNet) (tunDevice tun.Device, err error) {
 	if tunDevice, err = tun.CreateTUN(name, device.DefaultMTU); err != nil {
 		return nil, errors.Wrap(err, "failed to create TUN device")
 	}
