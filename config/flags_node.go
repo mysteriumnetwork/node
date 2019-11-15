@@ -36,12 +36,6 @@ var (
 		Usage: "Proposal discovery adapter. Options: { api, broker }",
 		Value: "api",
 	}
-	// FlagBindAddress IP address to bind to.
-	FlagBindAddress = cli.StringFlag{
-		Name:  "bind.address",
-		Usage: "IP address to bind to",
-		Value: "0.0.0.0",
-	}
 	// FlagDiscoveryAddress proposal discovery URL.
 	FlagDiscoveryAddress = cli.StringFlag{
 		Name: "discovery.address",
@@ -50,6 +44,12 @@ var (
 			FlagDiscoveryType.Name,
 		),
 		Value: FlagAPIAddress.Value,
+	}
+	// FlagBindAddress IP address to bind to.
+	FlagBindAddress = cli.StringFlag{
+		Name:  "bind.address",
+		Usage: "IP address to bind to",
+		Value: "0.0.0.0",
 	}
 	// FlagFeedbackURL URL of Feedback API.
 	FlagFeedbackURL = cli.StringFlag{
@@ -61,6 +61,12 @@ var (
 	FlagFirewallKillSwitch = cli.BoolFlag{
 		Name:  "firewall.killSwitch.always",
 		Usage: "Always block non-tunneled outgoing consumer traffic",
+	}
+	// FlagFirewallProtectedNetworks protects provider's networks from access via VPN
+	FlagFirewallProtectedNetworks = cli.StringFlag{
+		Name:  "firewall.protected.networks",
+		Usage: "List of comma separated (no spaces) subnets to be protected from access via VPN",
+		Value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
 	}
 	// FlagKeystoreLightweight determines the scrypt memory complexity.
 	FlagKeystoreLightweight = cli.BoolFlag{
@@ -167,6 +173,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		FlagDiscoveryType,
 		FlagFeedbackURL,
 		FlagFirewallKillSwitch,
+		FlagFirewallProtectedNetworks,
 		FlagKeystoreLightweight,
 		FlagLogHTTP,
 		FlagLogLevel,
@@ -198,6 +205,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagDiscoveryType)
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
+	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
