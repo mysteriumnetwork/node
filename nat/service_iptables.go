@@ -103,7 +103,10 @@ func iptables(action string, rule RuleForwarding) error {
 
 func dropToLocal(action, sourceSubnet string) error {
 	destinations := config.GetString(config.FlagFirewallProtectedNetworks)
-
+	if destinations == "" {
+		log.Info().Msgf("no protected networks set")
+		return nil
+	}
 	command := fmt.Sprintf("/sbin/iptables --%s FORWARD --source %s --destination %s -j DROP",
 		action, sourceSubnet, destinations)
 	cmd := utils.SplitCommand("sudo", command)

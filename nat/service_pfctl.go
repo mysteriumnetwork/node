@@ -99,8 +99,14 @@ func (service *servicePFCtl) enableRules() error {
 		if err != nil {
 			return err
 		}
-		natRule += fmt.Sprintf("no nat on %s inet from %s to { %s } \n",
-			iface, rule.SourceSubnet, config.GetString(config.FlagFirewallProtectedNetworks))
+
+		destinations := config.GetString(config.FlagFirewallProtectedNetworks)
+		if destinations == "" {
+			log.Info().Msgf("no protected networks set")
+		} else {
+			natRule += fmt.Sprintf("no nat on %s inet from %s to { %s } \n",
+				iface, rule.SourceSubnet, destinations)
+		}
 		natRule += fmt.Sprintf("nat on %v inet from %v to any -> %v\n", iface, rule.SourceSubnet, rule.TargetIP)
 	}
 
