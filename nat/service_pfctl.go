@@ -24,9 +24,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 type servicePFCtl struct {
@@ -91,10 +93,19 @@ func (service *servicePFCtl) enableRules() error {
 	defer service.mu.Unlock()
 
 	var natRule string
+
 	for rule := range service.rules {
 		iface, err := ifaceByAddress(rule.TargetIP)
 		if err != nil {
 			return err
+		}
+
+		destinations := config.GetString(config.FlagFirewallProtectedNetworks)
+		if destinations == "" {
+			log.Info().Msgf("no protected networks set")
+		} else {
+			natRule += fmt.Sprintf("no nat on %s inet from %s to { %s } \n",
+				iface, rule.SourceSubnet, destinations)
 		}
 		natRule += fmt.Sprintf("nat on %v inet from %v to any -> %v\n", iface, rule.SourceSubnet, rule.TargetIP)
 	}

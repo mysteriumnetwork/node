@@ -23,6 +23,7 @@ services:
       --location.country=e2e-land
       --experiment-identity-check
       --localnet
+      --firewall.protected.networks=""
       --broker-address=broker
       --api.address=http://mysterium-api:8001/v1
       --ether.client.rpc=ws://ganache:8545
