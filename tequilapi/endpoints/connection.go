@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
@@ -120,7 +121,7 @@ type ProposalGetter interface {
 }
 
 type identityRegistry interface {
-	IsRegistered(identity.Identity) (bool, error)
+	GetRegistrationStatus(identity.Identity) (registry.RegistrationStatus, error)
 }
 
 // ConnectionEndpoint struct represents /connection resource and it's subresources
@@ -204,14 +205,15 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	registered, err := ce.identityRegistry.IsRegistered(identity.FromAddress(cr.ConsumerID))
+	status, err := ce.identityRegistry.GetRegistrationStatus(identity.FromAddress(cr.ConsumerID))
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("could not check registration status")
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	if !registered {
+	switch status {
+	case registry.Unregistered, registry.InProgress, registry.RegistrationError:
 		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return

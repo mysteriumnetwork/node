@@ -195,7 +195,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 		AccountantAddress:   common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.BCHelper, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
@@ -212,16 +212,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	err := storage.Subscribe()
 	if err != nil {
 		return errors.Wrap(err, "could not bootstrap service components")
-	}
-
-	registeredIdentityValidator := func(peerID identity.Identity) error {
-		registered, err := di.IdentityRegistry.IsRegistered(peerID)
-		if err != nil {
-			return err
-		} else if !registered {
-			return errors.New("identity is not registered")
-		}
-		return nil
 	}
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
@@ -246,7 +236,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		return nats_dialog.NewDialogWaiter(
 			address,
 			di.SignerFactory(providerID),
-			registeredIdentityValidator,
 			allowedIdentityValidator,
 		), nil
 	}

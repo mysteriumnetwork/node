@@ -31,8 +31,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// RegistrationTopic represents the registration topic to which events regarding registration attempts on transactor will occur
-const RegistrationTopic = "transactor_identity_registration"
+// TransactorRegistrationTopic represents the registration topic to which events regarding registration attempts on transactor will occur
+const TransactorRegistrationTopic = "transactor_identity_registration"
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
@@ -148,14 +148,15 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
+	// This is left as a synchronous call on purpose.
+	// We need to notify registry before returning.
+	t.publisher.Publish(TransactorRegistrationTopic, regReq)
+
 	err = t.http.DoRequest(req)
 	if err != nil {
 		return err
 	}
 
-	// This is left as a synchronous call on purpose.
-	// We need to notify registry before returning.
-	t.publisher.Publish(RegistrationTopic, regReq)
 	return nil
 }
 

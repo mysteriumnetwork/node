@@ -200,7 +200,7 @@ func (it *InvoiceTracker) Start() error {
 	}
 
 	if fee > it.maxAllowedAccountantFee {
-		log.Error().Msgf("accountant fee too large, asking for %v where %v is the limit", fee, it.maxAllowedAccountantFee)
+		log.Error().Msgf("Accountant fee too large, asking for %v where %v is the limit", fee, it.maxAllowedAccountantFee)
 		return ErrAccountantFeeTooLarge
 	}
 
@@ -251,7 +251,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	// Over the long run, this becomes redundant as the difference should become miniscule.
 	if it.lastExchangeMessage.AgreementTotal == 0 {
 		shouldBe = uint64(math.Trunc(float64(shouldBe) * 0.8))
-		log.Debug().Msgf("being lenient for the first payment, asking for %v", shouldBe)
+		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
 	// TODO: fill in the fee
@@ -310,7 +310,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
-		log.Warn().Msgf("consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
+		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
@@ -320,7 +320,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if !bytes.Equal(hashlock, em.Promise.Hashlock) {
-		log.Warn().Msgf("consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
+		log.Warn().Msgf("Consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "missmatching hashlock")
 	}
 
@@ -335,7 +335,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
-		log.Warn().Msgf("consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
+		log.Warn().Msgf("Consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
 	}
 	return nil
@@ -353,12 +353,12 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 
 		promise, err := it.accountantCaller.RequestPromise(pm)
 		if err != nil {
-			log.Warn().AnErr("could not call accountant", err)
+			log.Warn().Err(err).Msg("Could not call accountant")
 			it.incrementAccountantFailureCount()
 			if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
 				return errors.Wrap(err, "could not call accountant")
 			}
-			log.Warn().Msg("ignoring accountant error, we haven't reached the error threshold yet")
+			log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
 			return nil
 		}
 		it.resetAccountantFailureCount()
@@ -366,12 +366,12 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		if err != nil {
 			return errors.Wrap(err, "could not store accountant promise")
 		}
-		log.Debug().Msg("accountant promise stored")
+		log.Debug().Msg("Accountant promise stored")
 		hexR := hex.EncodeToString(it.lastInvoice.r)
 		err = it.accountantCaller.RevealR(hexR, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
 		if err != nil {
 			// TODO: need to think about handling this a bit better
-			log.Error().AnErr("could not reveal R", err)
+			log.Error().Err(err).Msg("could not reveal R")
 		}
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout

@@ -57,7 +57,36 @@ func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) err
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
 
-	return rss.store(status)
+	s, err := rss.get(status.Identity)
+	if err == ErrNotFound {
+		return rss.store(status)
+	} else if err != nil {
+		return err
+	}
+
+	switch s.RegistrationStatus {
+	// can only be overriden by registeredProvider and promotion
+	case RegisteredConsumer:
+		if status.RegistrationStatus == RegisteredProvider || status.RegistrationStatus == Promoting {
+			s.RegistrationStatus = status.RegistrationStatus
+			return rss.store(s)
+		}
+		return nil
+	// can not be overriden
+	case RegisteredProvider:
+		return nil
+	// can only be overriden by registered Provider
+	case Promoting:
+		if status.RegistrationStatus == RegisteredProvider {
+			s.RegistrationStatus = status.RegistrationStatus
+			return rss.store(s)
+		}
+		return nil
+	default:
+		s.RegistrationStatus = status.RegistrationStatus
+	}
+
+	return rss.store(s)
 }
 
 func (rss *RegistrationStatusStorage) store(status StoredRegistrationStatus) error {
@@ -83,40 +112,6 @@ func (rss *RegistrationStatusStorage) Get(identity identity.Identity) (StoredReg
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
 	return rss.get(identity)
-}
-
-// UpdateStatus updates the status of a given identity
-func (rss *RegistrationStatusStorage) UpdateStatus(identity identity.Identity, status RegistrationStatus) error {
-	rss.lock.Lock()
-	defer rss.lock.Unlock()
-	s, err := rss.get(identity)
-	if err != nil {
-		return err
-	}
-
-	switch s.RegistrationStatus {
-	// can only be overriden by registeredProvider and promotion
-	case RegisteredConsumer:
-		if status == RegisteredProvider || status == Promoting {
-			s.RegistrationStatus = status
-			return rss.store(s)
-		}
-		return nil
-	// can not be overriden
-	case RegisteredProvider:
-		return nil
-	// can only be overriden by registered Provider
-	case Promoting:
-		if status == RegisteredProvider {
-			s.RegistrationStatus = status
-			return rss.store(s)
-		}
-		return nil
-	default:
-		s.RegistrationStatus = status
-	}
-
-	return rss.store(s)
 }
 
 // GetAll fetches all the registration statuses

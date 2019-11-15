@@ -309,7 +309,7 @@ func TestPutUnregisteredIdentityReturnsError(t *testing.T) {
 
 	proposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
 	mir := *mockIdentityRegistryInstance
-	mir.Registered = false
+	mir.RegistrationStatus = registry.Unregistered
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, proposalProvider, &mir)
 	req := httptest.NewRequest(
@@ -558,4 +558,4 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	)
 }
 
-var mockIdentityRegistryInstance = &registry.FakeRegistry{Registered: true}
+var mockIdentityRegistryInstance = &registry.FakeRegistry{RegistrationStatus: registry.RegisteredConsumer}

@@ -23,11 +23,13 @@ import (
 )
 
 var (
+	// FlagAccountantAddress points to the accountant service
 	FlagAccountantAddress = cli.StringFlag{
 		Name:  "accountant.address",
 		Usage: "accountant URL address",
 		Value: metadata.DefaultNetwork.AccountantAddress,
 	}
+	// FlagAccountantID determines the accountant ID
 	FlagAccountantID = cli.StringFlag{
 		Name:  "accountant.accountant-id",
 		Usage: "accountant contract address used to register identity",

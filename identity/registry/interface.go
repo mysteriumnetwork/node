@@ -24,6 +24,6 @@ import (
 
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
-	IsRegistered(identity.Identity) (bool, error)
 	Subscribe(eventbus.Subscriber) error
+	GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error)
 }

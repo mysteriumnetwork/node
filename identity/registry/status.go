@@ -58,7 +58,6 @@ type StoredRegistrationStatus struct {
 	Identity            identity.Identity `storm:"id"`
 	RegistrationRequest IdentityRegistrationRequest
 	UpdatedAt           time.Time
-	BeingPromoted       bool
 }
 
 // FromEvent constructs a stored registration status from transactor.IdentityRegistrationRequest

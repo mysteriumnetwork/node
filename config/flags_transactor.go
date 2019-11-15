@@ -37,21 +37,25 @@ var (
 		Usage: "Registry contract address used to register identity",
 		Value: metadata.DefaultNetwork.RegistryAddress,
 	}
+	// FlagTransactorChannelImplementation the channel implementation sc address used for channel address calculation.
 	FlagTransactorChannelImplementation = cli.StringFlag{
 		Name:  "transactor.channel-implementation",
 		Usage: "channel implementation address",
 		Value: metadata.DefaultNetwork.ChannelImplAddress,
 	}
+	// FlagTransactorProviderMaxRegistrationAttempts determines the number of registration attempts that the provider will attempt before giving up.
 	FlagTransactorProviderMaxRegistrationAttempts = cli.IntFlag{
 		Name:  "transactor.provider.max-registration-attempts",
 		Usage: "the max attempts the provider will make to register before giving up",
 		Value: 10,
 	}
+	// FlagTransactorProviderRegistrationRetryDelay determines the delay between each provider registration attempts.
 	FlagTransactorProviderRegistrationRetryDelay = cli.DurationFlag{
 		Name:  "transactor.provider.registration-retry-delay",
 		Usage: "the duration that the provider will wait between each retry",
 		Value: time.Minute * 3,
 	}
+	// FlagTransactorProviderRegistrationStake determines the stake size for registration of provider
 	FlagTransactorProviderRegistrationStake = cli.Uint64Flag{
 		Name:  "transactor.provider.registration-stake",
 		Usage: "the stake we'll use when registering provider",

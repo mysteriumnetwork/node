@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewRegistrationStatusStorage(t *testing.T) {
+func TestRegistrationStatusStorage(t *testing.T) {
 	dir, err := ioutil.TempDir("", "consumerTotalsStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
@@ -40,8 +40,7 @@ func TestNewRegistrationStatusStorage(t *testing.T) {
 	mockIdentity := identity.FromAddress("0x001")
 	mockStatus := StoredRegistrationStatus{
 		RegistrationStatus: RegisteredProvider,
-		// TOOD: fill in the registration request
-		Identity: mockIdentity,
+		Identity:           mockIdentity,
 	}
 	_, err = consumerTotalsStorage.Get(identity.FromAddress("0x001"))
 	assert.Equal(t, ErrNotFound, err)
@@ -52,7 +51,7 @@ func TestNewRegistrationStatusStorage(t *testing.T) {
 	res, err := consumerTotalsStorage.Get(mockIdentity)
 	assert.Nil(t, err)
 
-	assert.EqualValues(t, mockStatus, res)
+	statusesEqual(t, mockStatus, res)
 
 	mockStatus2 := mockStatus
 	mockStatus2.RegistrationStatus = RegistrationError
@@ -62,10 +61,11 @@ func TestNewRegistrationStatusStorage(t *testing.T) {
 
 	all, err := consumerTotalsStorage.GetAll()
 	assert.Nil(t, err)
-	assert.EqualValues(t, []StoredRegistrationStatus{mockStatus, mockStatus2}, all)
+	statusesEqual(t, mockStatus, all[0])
+	statusesEqual(t, mockStatus2, all[1])
 
 	// should not update the registered provider status
-	err = consumerTotalsStorage.UpdateStatus(mockIdentity, RegistrationError)
+	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockIdentity, RegistrationStatus: RegistrationError})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockIdentity)
@@ -73,7 +73,7 @@ func TestNewRegistrationStatusStorage(t *testing.T) {
 	assert.Equal(t, RegisteredProvider, res.RegistrationStatus)
 
 	// should update status
-	err = consumerTotalsStorage.UpdateStatus(mockStatus2.Identity, RegisteredConsumer)
+	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: RegisteredConsumer})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockStatus2.Identity)
@@ -81,7 +81,7 @@ func TestNewRegistrationStatusStorage(t *testing.T) {
 	assert.Equal(t, RegisteredConsumer, res.RegistrationStatus)
 
 	// should not override registeredConsumer status
-	err = consumerTotalsStorage.UpdateStatus(mockStatus2.Identity, RegistrationError)
+	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: RegistrationError})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockStatus2.Identity)
@@ -89,10 +89,16 @@ func TestNewRegistrationStatusStorage(t *testing.T) {
 	assert.Equal(t, RegisteredConsumer, res.RegistrationStatus)
 
 	// should override the status with RegisteredProvider
-	err = consumerTotalsStorage.UpdateStatus(mockStatus2.Identity, RegisteredProvider)
+	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: RegisteredProvider})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockStatus2.Identity)
 	assert.Nil(t, err)
 	assert.Equal(t, RegisteredProvider, res.RegistrationStatus)
+}
+
+func statusesEqual(t *testing.T, a, b StoredRegistrationStatus) {
+	assert.Equal(t, a.RegistrationStatus, b.RegistrationStatus)
+	assert.Equal(t, a.Identity.Address, b.Identity.Address)
+	assert.EqualValues(t, a.RegistrationRequest, b.RegistrationRequest)
 }

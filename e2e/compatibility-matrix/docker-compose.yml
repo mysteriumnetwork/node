@@ -85,7 +85,6 @@ services:
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
-      --ether.contract.payments=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       service openvpn,noop,wireguard
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -112,10 +111,8 @@ services:
       --localnet
       --ether.client.rpc=ws://ganache:8545
       --api.address=http://mysterium-api/v1
-      --ether.contract.payments=0x1955141ba8e77a5B56efBa8522034352c94f77Ea
       --keystore.lightweight
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
-      --ether.contract.payments=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       daemon

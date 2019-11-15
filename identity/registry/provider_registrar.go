@@ -25,12 +25,13 @@ import (
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
-type bc interface {
-	IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck common.Address) (bool, error)
+type registrationStatusChecker interface {
+	GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error)
 }
 
 type txer interface {
@@ -40,12 +41,12 @@ type txer interface {
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
 type ProviderRegistrar struct {
-	bc                   bc
-	txer                 txer
-	once                 sync.Once
-	stopChan             chan struct{}
-	queue                chan queuedEvent
-	registeredIdentities map[string]struct{}
+	registrationStatusChecker registrationStatusChecker
+	txer                      txer
+	once                      sync.Once
+	stopChan                  chan struct{}
+	queue                     chan queuedEvent
+	registeredIdentities      map[string]struct{}
 
 	cfg ProviderRegistrarConfig
 }
@@ -65,14 +66,14 @@ type ProviderRegistrarConfig struct {
 }
 
 // NewProviderRegistrar creates a new instance of provider registrar
-func NewProviderRegistrar(transactor txer, bcHelper bc, prc ProviderRegistrarConfig) *ProviderRegistrar {
+func NewProviderRegistrar(transactor txer, registrationStatusChecker registrationStatusChecker, prc ProviderRegistrarConfig) *ProviderRegistrar {
 	return &ProviderRegistrar{
-		stopChan:             make(chan struct{}),
-		bc:                   bcHelper,
-		queue:                make(chan queuedEvent),
-		registeredIdentities: make(map[string]struct{}),
-		cfg:                  prc,
-		txer:                 transactor,
+		stopChan:                  make(chan struct{}),
+		registrationStatusChecker: registrationStatusChecker,
+		queue:                     make(chan queuedEvent),
+		registeredIdentities:      make(map[string]struct{}),
+		cfg:                       prc,
+		txer:                      transactor,
 	}
 }
 
@@ -89,7 +90,7 @@ func (pr *ProviderRegistrar) handleNodeStartupEvents(e event.Payload) {
 	if e.Status == event.StatusStarted {
 		err := pr.start()
 		if err != nil {
-			log.Error().Err(err).Stack().Msgf("fatal error for provider identity registrar. Identity will not be registered. Please restart your node.")
+			log.Error().Err(err).Stack().Msgf("Fatal error for provider identity registrar. Identity will not be registered. Please restart your node.")
 		}
 		return
 	}
@@ -108,12 +109,12 @@ func (pr *ProviderRegistrar) consumeServiceEvent(event service.EventPayload) {
 
 func (pr *ProviderRegistrar) needsHandling(qe queuedEvent) bool {
 	if qe.event.Status != string(service.Running) {
-		log.Debug().Msgf("received %q service event, ignoring", qe.event.Status)
+		log.Debug().Msgf("Received %q service event, ignoring", qe.event.Status)
 		return false
 	}
 
 	if _, ok := pr.registeredIdentities[qe.event.ProviderID]; ok {
-		log.Info().Msgf("provider %q already marked as registered, skipping", qe.event.ProviderID)
+		log.Info().Msgf("Provider %q already marked as registered, skipping", qe.event.ProviderID)
 		return false
 	}
 
@@ -126,7 +127,7 @@ func (pr *ProviderRegistrar) handleEventWithRetries(qe queuedEvent) error {
 		return nil
 	}
 	if qe.retries < pr.cfg.MaxRetries {
-		log.Error().Err(err).Stack().Msgf("could not complete registration for provider %q. Will retry. Retry %v of %v", qe.event.ProviderID, qe.retries, pr.cfg.MaxRetries)
+		log.Error().Err(err).Stack().Msgf("Could not complete registration for provider %q. Will retry. Retry %v of %v", qe.event.ProviderID, qe.retries, pr.cfg.MaxRetries)
 		qe.retries++
 		go pr.delayedRequeue(qe)
 		return nil
@@ -145,20 +146,20 @@ func (pr *ProviderRegistrar) delayedRequeue(qe queuedEvent) {
 }
 
 func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
-	registered, err := pr.bc.IsRegisteredAsProvider(pr.cfg.AccountantAddress, pr.cfg.RegistryAddress, common.HexToAddress(qe.event.ProviderID))
+	registered, err := pr.registrationStatusChecker.GetRegistrationStatus(identity.FromAddress(qe.event.ProviderID))
 	if err != nil {
 		return errors.Wrap(err, "could not check registration status on BC")
 	}
 
-	if registered {
-		log.Info().Msgf("provider %q already registered on bc, skipping", qe.event.ProviderID)
+	switch registered {
+	case RegisteredProvider:
+		log.Info().Msgf("Provider %q already registered on bc, skipping", qe.event.ProviderID)
 		pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 		return nil
+	default:
+		log.Info().Msgf("Provider %q not registered on BC, will register", qe.event.ProviderID)
+		return pr.registerIdentity(qe)
 	}
-
-	log.Info().Msgf("provider %q not registered on BC, will register", qe.event.ProviderID)
-
-	return pr.registerIdentity(qe)
 }
 
 func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
@@ -166,7 +167,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch fees from transactor")
 	}
-	log.Info().Msgf("fees fetched. Registration costs %v", fees.Registration)
+	log.Info().Msgf("Fees fetched. Registration costs %v", fees.Registration)
 
 	regReq := &IdentityRegistrationRequestDTO{
 		Fee:   fees.Registration,
@@ -175,17 +176,17 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 
 	err = pr.txer.RegisterIdentity(qe.event.ProviderID, regReq)
 	if err != nil {
-		log.Error().Err(err).Msgf("registration failed for provider %q", qe.event.ProviderID)
+		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
 	}
 	pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
-	log.Info().Msgf("registration success for provider %q", qe.event.ProviderID)
+	log.Info().Msgf("Registration success for provider %q", qe.event.ProviderID)
 	return nil
 }
 
 // start starts the provider registrar
 func (pr *ProviderRegistrar) start() error {
-	log.Info().Msg("starting provider registrar")
+	log.Info().Msg("Starting provider registrar")
 	for {
 		select {
 		case <-pr.stopChan:
@@ -205,7 +206,7 @@ func (pr *ProviderRegistrar) start() error {
 
 func (pr *ProviderRegistrar) stop() {
 	pr.once.Do(func() {
-		log.Info().Msg("stopping provider registrar")
+		log.Info().Msg("Stopping provider registrar")
 		close(pr.stopChan)
 	})
 }

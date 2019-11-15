@@ -21,17 +21,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
 	mt := mockTransactor{}
-	mb := mockBc{}
+	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	done := make(chan struct{})
 
@@ -46,9 +46,9 @@ func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
 
 func Test_Provider_Registrar_needsHandling(t *testing.T) {
 	mt := mockTransactor{}
-	mb := mockBc{}
+	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
 		event:   service.EventPayload{},
@@ -67,9 +67,9 @@ func Test_Provider_Registrar_needsHandling(t *testing.T) {
 
 func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
 	mt := mockTransactor{}
-	mb := mockBc{}
+	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
 		event: service.EventPayload{
@@ -97,13 +97,13 @@ func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
 
 func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	mt := mockTransactor{}
-	mb := mockBc{
+	mrsp := mockRegistrationStatusProvider{
 		err: errors.New("explosions everywhere"),
 	}
 	cfg := ProviderRegistrarConfig{
 		MaxRetries: 5,
 	}
-	registrar := NewProviderRegistrar(&mt, &mb, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
 		event: service.EventPayload{
@@ -126,13 +126,13 @@ func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	<-done
 }
 
-type mockBc struct {
-	isRegistered bool
-	err          error
+type mockRegistrationStatusProvider struct {
+	status RegistrationStatus
+	err    error
 }
 
-func (mb *mockBc) IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck common.Address) (bool, error) {
-	return mb.isRegistered, mb.err
+func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
+	return mrsp.status, mrsp.err
 }
 
 type mockTransactor struct {

@@ -62,6 +62,7 @@ services:
       -rpcEndpoint ws://ganache:8545
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -balanceCheckInterval 1s
     volumes:
       - "./deployer/keystore:/keystore"

@@ -36,17 +36,10 @@ var (
 )
 
 func TestConsumerConnectsToProvider(t *testing.T) {
-	tequilapiProvider := newTequilapiProvider()
 	tequilapiConsumer := newTequilapiConsumer()
-	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
-		registrationData, err := tequilapiProvider.IdentityRegistrationStatus(providerID)
-		assert.NoError(t, err)
-		if !registrationData.Registered {
-			identityRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
-		}
-	})
 
 	var consumerID string
+	// no need to register provider, as he will auto-register
 	t.Run("ConsumerCreatesAndRegistersIdentityFlow", func(t *testing.T) {
 		consumerID = identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
 		identityRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
@@ -82,7 +75,10 @@ func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, id, 0, 0)
+	fees, err := tequilapi.GetTransactorFees()
+	assert.NoError(t, err)
+
+	err = tequilapi.RegisterIdentity(id, id, 0, fees.Registration)
 	assert.NoError(t, err)
 
 	// now we check identity again

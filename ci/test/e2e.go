@@ -43,6 +43,7 @@ func TestE2EBasic() error {
 	}
 	runner := newRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
 	defer runner.cleanup()
+
 	if err := runner.init(); err != nil {
 		return err
 	}
@@ -58,6 +59,7 @@ func TestE2ENAT() error {
 	}
 	runner := newRunner(composeFiles, "node_e2e_nat_test", "openvpn")
 	defer runner.cleanup()
+
 	if err := runner.init(); err != nil {
 		return err
 	}

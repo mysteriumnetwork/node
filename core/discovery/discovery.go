@@ -48,8 +48,6 @@ const (
 const (
 	// ProposalEventTopic represent proposal events topic.
 	ProposalEventTopic = "proposalEvent"
-	// IdentityRegistrationTopic represent topics for identity registration events.
-	IdentityRegistrationTopic = "identityRegistrationOccurred"
 )
 
 // Publisher is responsible for publishing given events.
@@ -173,7 +171,9 @@ func (d *Discovery) stopLoop() {
 }
 
 func (d *Discovery) handleRegistrationEvent(rep registry.RegistrationEventPayload) {
+	log.Debug().Msgf("Registration event received for %v", rep.ID.Address)
 	if rep.ID.Address != d.ownIdentity.Address {
+		log.Debug().Msgf("Identity missmatch for registration. Expected %v got %v", d.ownIdentity.Address, rep.ID.Address)
 		return
 	}
 
@@ -184,10 +184,13 @@ func (d *Discovery) handleRegistrationEvent(rep registry.RegistrationEventPayloa
 	case registry.RegistrationError:
 		log.Info().Msg("Cancelled identity registration")
 		d.changeStatus(IdentityRegisterFailed)
+	default:
+		log.Info().Msgf("Received status %v ignoring", rep.Status)
 	}
 }
 
 func (d *Discovery) registerIdentity() {
+	log.Info().Msg("Waiting for registration success event")
 	d.eventBus.Subscribe(registry.RegistrationEventTopic, d.handleRegistrationEvent)
 	d.changeStatus(WaitingForRegistration)
 }
@@ -226,20 +229,20 @@ func (d *Discovery) unregisterProposal() {
 
 func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
-	registered, err := d.identityRegistry.IsRegistered(d.ownIdentity)
+	status, err := d.identityRegistry.GetRegistrationStatus(d.ownIdentity)
 	if err != nil {
 		log.Error().Err(err).Msg("Checking identity registration failed")
 		d.changeStatus(IdentityRegisterFailed)
 		return
 	}
-
-	if !registered {
-		// TODO: Maybe register here?
-		log.Info().Msgf("identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
+	switch status {
+	case identity_registry.RegisteredProvider:
+		d.changeStatus(RegisterProposal)
+	default:
+		log.Info().Msgf("Identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
 		d.changeStatus(IdentityUnregistered)
 		return
 	}
-	d.changeStatus(RegisterProposal)
 }
 
 func (d *Discovery) changeStatus(status Status) {

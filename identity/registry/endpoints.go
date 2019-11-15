@@ -65,10 +65,16 @@ func newRegistrationEndpoint(statusProvider IdentityRegistry) *registrationEndpo
 func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 
-	isRegistered, err := endpoint.statusProvider.IsRegistered(id)
+	status, err := endpoint.statusProvider.GetRegistrationStatus(id)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
+	}
+
+	isRegistered := false
+	switch status {
+	case RegisteredConsumer, Promoting, RegisteredProvider:
+		isRegistered = true
 	}
 
 	registrationDataDTO := &RegistrationDataDTO{

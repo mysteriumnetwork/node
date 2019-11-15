@@ -24,14 +24,13 @@ import (
 
 // FakeRegistry fake register
 type FakeRegistry struct {
-	RegistrationEventExists bool
-	Registered              bool
-	RegistrationCheckError  error
+	RegistrationStatus     RegistrationStatus
+	RegistrationCheckError error
 }
 
-// IsRegistered returns fake identity registration status within payments contract
-func (registry *FakeRegistry) IsRegistered(id identity.Identity) (bool, error) {
-	return registry.Registered, registry.RegistrationCheckError
+// GetRegistrationStatus returns fake identity registration status within payments contract
+func (registry *FakeRegistry) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
+	return registry.RegistrationStatus, registry.RegistrationCheckError
 }
 
 // Subscribe does nothing

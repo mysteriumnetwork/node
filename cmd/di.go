@@ -637,12 +637,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {
 		return err
 	}
-	err = di.IdentityRegistry.Subscribe(di.EventBus)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return di.IdentityRegistry.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) bootstrapEventBus() {
