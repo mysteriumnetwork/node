@@ -20,10 +20,10 @@
 package mysterium
 
 import (
-	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
-func newDeviceFromFd(_ int) (tun.TUNDevice, error) {
+func newDeviceFromFd(_ int) (tun.Device, error) {
 	return nil, errors.New("not implemented")
 }

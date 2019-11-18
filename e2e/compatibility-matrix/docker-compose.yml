@@ -78,6 +78,7 @@ services:
       --experiment-identity-check
       --experiment-payments
       --localnet
+      --firewall.protected.networks=""
       --broker-address=broker
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545

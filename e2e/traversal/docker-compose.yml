@@ -257,6 +257,7 @@ services:
       --location.country=e2e-land
       --experiment-identity-check=true
       --broker-address=broker
+      --firewall.protected.networks=""
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10

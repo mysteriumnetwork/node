@@ -17,8 +17,9 @@ package mysterium
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import "github.com/mysteriumnetwork/wireguard-go/tun"
+import "golang.zx2c4.com/wireguard/tun"
 
-func newDeviceFromFd(fd int) (tun.TUNDevice, error) {
-	return tun.AndroidTunDevice(fd)
+func newDeviceFromFd(fd int) (tun.Device, error) {
+	device, _, err := tun.CreateUnmonitoredTUNFromFD(fd)
+	return device, err
 }
