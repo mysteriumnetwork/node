@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/services"
@@ -35,7 +34,6 @@ type NATProxy struct {
 	servicePorts  map[services.ServiceType]int
 	addrLast      *net.UDPAddr
 	socketProtect func(socket int) bool
-	once          sync.Once
 }
 
 func (np *NATProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {

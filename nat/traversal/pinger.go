@@ -34,7 +34,6 @@ import (
 
 // StageName represents hole-punching stage of NAT traversal
 const StageName = "hole_punching"
-const prefix = "[NATPinger] "
 const pingInterval = 200
 const pingTimeout = 10000
 
@@ -53,7 +52,6 @@ type Pinger struct {
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
 	natProxy       natProxy
-	portPool       PortSupplier
 	previousStage  string
 	eventPublisher Publisher
 }
@@ -178,15 +176,6 @@ func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan
 		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	}
 	return nil
-}
-
-func (p *Pinger) waitForPreviousStageResult() bool {
-	for {
-		event := p.natEventWaiter.WaitForEvent()
-		if event.Stage == p.previousStage {
-			return event.Successful
-		}
-	}
 }
 
 func (p *Pinger) ping(conn *net.UDPConn) error {

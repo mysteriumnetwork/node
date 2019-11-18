@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
@@ -98,10 +97,9 @@ func describeQuit(err error) error {
 
 // serviceCommand represent entrypoint for service command with top level components
 type serviceCommand struct {
-	identityHandler identity_selector.Handler
-	tequilapi       *client.Client
-	errorChannel    chan error
-	ap              client.AccessPoliciesRequest
+	tequilapi    *client.Client
+	errorChannel chan error
+	ap           client.AccessPoliciesRequest
 }
 
 // Run runs a command

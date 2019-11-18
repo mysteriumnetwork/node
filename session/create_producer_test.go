@@ -26,22 +26,9 @@ import (
 )
 
 var (
-	successfullSessionConfig  = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
-	successfullSessionID      = ID("session-id")
-	successfulSessionResponse = &CreateResponse{
-		Success: true,
-		Message: "Everything is great!",
-		Session: SessionDto{
-			ID:     successfullSessionID,
-			Config: successfullSessionConfig,
-		},
-	}
+	successfullSessionConfig = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
+	successfullSessionID     = ID("session-id")
 )
-
-type fakeSessionConfig struct {
-	Param1 string
-	Param2 int
-}
 
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
