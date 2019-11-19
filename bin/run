@@ -2,6 +2,7 @@
 
 sudo ./build/myst/myst \
    --data-dir=./build/myst/node \
+   --log-dir="" \
    --runtime-dir=./build/myst/node \
    --tequilapi.address=127.0.0.1 \
    --tequilapi.port=4051 \
