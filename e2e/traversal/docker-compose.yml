@@ -80,7 +80,7 @@ services:
         ipv4_address: 172.31.0.202
 
   transactor:
-    image: mysteriumnetwork/transactor:latest
+    image: mysteriumnetwork/transactor:0.0.1
     environment:
       PORT: 8888
     expose:
