@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -42,8 +41,9 @@ import (
 
 const statisticsReportingIntervalInSeconds = 30
 
-type eventPublisher interface {
+type eventBus interface {
 	Publish(topic string, data interface{})
+	SubscribeAsync(topic string, fn interface{}) error
 }
 
 // NewManager creates new instance of Openvpn service
@@ -56,8 +56,7 @@ func NewManager(nodeOptions node.Options,
 	mapPort func(int) (releasePortMapping func()),
 	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
-	publisher eventPublisher,
-	shaper shaper.Shaper,
+	bus eventBus,
 ) *Manager {
 	clientMap := openvpn_session.NewClientMap(sessionMap)
 
@@ -66,7 +65,7 @@ func NewManager(nodeOptions node.Options,
 	callback := func(sbc bytecount.SessionByteCount) {
 		sessions := clientMap.GetClientSessions(sbc.ClientID)
 		if len(sessions) == 1 {
-			publisher.Publish(event.DataTransfered, event.DataTransferEventPayload{
+			bus.Publish(event.DataTransfered, event.DataTransferEventPayload{
 				ID:   string(sessions[0]),
 				Up:   int64(sbc.BytesOut),
 				Down: int64(sbc.BytesIn),
@@ -92,7 +91,7 @@ func NewManager(nodeOptions node.Options,
 		mapPort:                        mapPort,
 		natEventGetter:                 natEventGetter,
 		ports:                          portPool,
-		shaper:                         shaper,
+		eventListener:                  bus,
 	}
 }
 

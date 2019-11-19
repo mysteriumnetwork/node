@@ -46,7 +46,6 @@ import (
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/core/state"
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -167,8 +166,6 @@ type Dependencies struct {
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
-
-	Shaper shaper.Shaper
 }
 
 // Bootstrap initiates all container dependencies
@@ -218,8 +215,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapBandwidthTracker(); err != nil {
 		return err
 	}
-
-	di.Shaper = shaper.Bootstrap(di.EventBus)
 
 	if err := di.bootstrapServices(nodeOptions); err != nil {
 		return err
