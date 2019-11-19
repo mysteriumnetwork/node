@@ -103,8 +103,10 @@ type sessionContext struct {
 
 // SendSessionData sends transferred information about session.
 func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
+	if !e.SessionInfo.IsValid() {
+		return
+	}
 	currentSession := e.SessionInfo
-
 	sender.sendEvent(sessionDataName, sessionDataContext{
 		Rx: e.Stats.BytesReceived,
 		Tx: e.Stats.BytesSent,
@@ -121,6 +123,9 @@ func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
 
 // SendConnStateEvent sends session update events.
 func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
+	if !e.SessionInfo.IsValid() {
+		return
+	}
 	sender.sendEvent(sessionEventName, sessionEventContext{
 		Event: string(e.State),
 		sessionContext: sessionContext{
@@ -136,6 +141,9 @@ func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
 
 // SendSessionEvent sends session update events.
 func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
+	if !e.SessionInfo.IsValid() {
+		return
+	}
 	sender.sendEvent(sessionEventName, sessionEventContext{
 		Event: e.Status,
 		sessionContext: sessionContext{

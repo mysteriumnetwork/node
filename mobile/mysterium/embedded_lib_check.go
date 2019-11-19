@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package mysterium
 
-// DiscoveryType identifies proposal discovery provider
-type DiscoveryType string
+import "github.com/mysteriumnetwork/node/core/node"
 
-const (
-	// DiscoveryTypeAPI defines type which discovers proposals through Mysterium API
-	DiscoveryTypeAPI = DiscoveryType("api")
-	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
-	DiscoveryTypeBroker = DiscoveryType("broker")
-)
-
-// OptionsDiscovery describes possible parameters of discovery configuration
-type OptionsDiscovery struct {
-	Type                    DiscoveryType
-	Address                 string
-	DisableProposalsFetcher bool
+type embeddedLibCheck struct {
 }
+
+// Check always returns nil as embedded lib does not have any external failing deps
+func (embeddedLibCheck) Check() error {
+	return nil
+}
+
+// BinaryPath returns noop binary path
+func (embeddedLibCheck) BinaryPath() string {
+	return "mobile uses embedded openvpn lib"
+}
+
+// check if our struct satisfies Openvpn interface expected by node options
+var _ node.Openvpn = embeddedLibCheck{}

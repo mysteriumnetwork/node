@@ -34,21 +34,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type natPinger interface {
+	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
+	StopNATProxy()
+}
+
 type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error)
 
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
-type sessionWrapper struct {
+type openvpnConnection struct {
 	session       *openvpn3.Session
 	createSession openvpn3SessionFactory
-	natPinger     cmd.NatPinger
+	natPinger     natPinger
 	ipResolver    ip.Resolver
 	pingerStop    chan struct{}
 	stopOnce      sync.Once
 }
 
-func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
-	session, clientConfig, err := wrapper.createSession(options)
+func (wrapper *openvpnConnection) Start(options connection.ConnectOptions) error {
+	newSession, clientConfig, err := wrapper.createSession(options)
 	if err != nil {
 		return err
 	}
@@ -66,30 +71,29 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 		}
 	}
 
-	wrapper.session = session
+	wrapper.session = newSession
 	wrapper.session.Start()
 	return nil
 }
 
-func (wrapper *sessionWrapper) Stop() {
+func (wrapper *openvpnConnection) Stop() {
 	wrapper.stopOnce.Do(func() {
 		if wrapper.session != nil {
-			log.Info().Msg("Stopping NATProxy")
-			wrapper.natPinger.StopNATProxy()
 			wrapper.session.Stop()
 		}
+		log.Info().Msg("Stopping NATProxy")
 		close(wrapper.pingerStop)
 	})
 }
 
-func (wrapper *sessionWrapper) Wait() error {
+func (wrapper *openvpnConnection) Wait() error {
 	if wrapper.session != nil {
 		return wrapper.session.Wait()
 	}
 	return errSessionWrapperNotStarted
 }
 
-func (wrapper *sessionWrapper) GetConfig() (connection.ConsumerConfig, error) {
+func (wrapper *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
 	ip, err := wrapper.ipResolver.GetPublicIP()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get consumer config")
@@ -248,31 +252,14 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 		}
 
 		ocf.natPinger.SetProtectSocketCallback(ocf.tunnelSetup.SocketProtect)
-		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), ocf.tunnelSetup)
-		ocf.sessionTracker.sessionCreated(session)
-		return session, vpnClientConfig, nil
+		newSession := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), ocf.tunnelSetup)
+		ocf.sessionTracker.sessionCreated(newSession)
+		return newSession, vpnClientConfig, nil
 	}
-	return &sessionWrapper{
+	return &openvpnConnection{
 		createSession: sessionFactory,
 		natPinger:     ocf.natPinger,
 		ipResolver:    ocf.ipResolver,
 		pingerStop:    make(chan struct{}),
 	}, nil
-}
-
-// OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one returning session that can be reconnected
-func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) ReconnectableSession {
-	openvpn.Bootstrap()
-
-	st := &sessionTracker{}
-	factory := &OpenvpnConnectionFactory{
-		sessionTracker: st,
-		signerFactory:  mobNode.di.SignerFactory,
-		tunnelSetup:    tunnelSetup,
-		natPinger:      mobNode.di.NATPinger,
-		ipResolver:     mobNode.di.IPResolver,
-	}
-	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
-	mobNode.di.ConnectionRegistry.Register("openvpn", factory)
-	return st
 }

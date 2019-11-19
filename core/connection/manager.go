@@ -75,6 +75,12 @@ type SessionInfo struct {
 	acknowledge func()
 }
 
+// IsValid checks if session is valid. Invalid session do not have
+// sessionID as it is not created yet.
+func (s *SessionInfo) IsValid() bool {
+	return s.SessionID != ""
+}
+
 // Publisher is responsible for publishing given events
 type Publisher interface {
 	Publish(topic string, data interface{})

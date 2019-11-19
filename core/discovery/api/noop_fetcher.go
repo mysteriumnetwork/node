@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package api
 
-// DiscoveryType identifies proposal discovery provider
-type DiscoveryType string
-
-const (
-	// DiscoveryTypeAPI defines type which discovers proposals through Mysterium API
-	DiscoveryTypeAPI = DiscoveryType("api")
-	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
-	DiscoveryTypeBroker = DiscoveryType("broker")
-)
-
-// OptionsDiscovery describes possible parameters of discovery configuration
-type OptionsDiscovery struct {
-	Type                    DiscoveryType
-	Address                 string
-	DisableProposalsFetcher bool
+// NewNoopFetcher returns noop fetcher which is used to
+// disable proposals auto fetching.
+func NewNoopFetcher() Fetcher {
+	return &noopFetcher{}
 }
+
+type noopFetcher struct{}
+
+func (n noopFetcher) Start() error {
+	return nil
+}
+
+func (n noopFetcher) Stop() {}

@@ -83,7 +83,7 @@ type serviceInfo struct {
 	// example: Running
 	Status string `json:"status"`
 
-	Proposal proposalRes `json:"proposal"`
+	Proposal proposal `json:"proposal"`
 
 	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
@@ -357,7 +357,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 		Type:       proposal.ServiceType,
 		Options:    instance.Options(),
 		Status:     string(instance.State()),
-		Proposal:   proposalToRes(instance.Proposal()),
+		Proposal:   *proposalToRes(instance.Proposal()),
 	}
 }
 

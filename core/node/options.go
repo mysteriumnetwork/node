@@ -53,6 +53,7 @@ type Options struct {
 
 	TequilapiAddress string
 	TequilapiPort    int
+	DisableTequilapi bool
 	BindAddress      string
 	UI               OptionsUI
 	FeedbackURL      string
