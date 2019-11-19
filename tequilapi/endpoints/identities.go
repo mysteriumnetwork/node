@@ -284,10 +284,16 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	isRegistered, err := endpoint.registry.IsRegistered(identity.FromAddress(identityAddress))
+	s, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
+	}
+
+	isRegistered := false
+	switch s {
+	case registry.RegisteredConsumer, registry.Promoting, registry.RegisteredProvider:
+		isRegistered = true
 	}
 
 	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered}

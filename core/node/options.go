@@ -99,7 +99,6 @@ func GetOptions() *Options {
 			AccessPolicyEndpointAddress: config.GetString(config.FlagAccessPolicyAddress),
 			BrokerAddress:               config.GetString(config.FlagBrokerAddress),
 			EtherClientRPC:              config.GetString(config.FlagEtherRPC),
-			EtherPaymentsAddress:        config.GetString(config.FlagEtherContractPayments),
 			QualityOracle:               config.GetString(config.FlagQualityOracleAddress),
 		},
 		Discovery: OptionsDiscovery{

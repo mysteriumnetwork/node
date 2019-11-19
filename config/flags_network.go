@@ -62,12 +62,6 @@ var (
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
-	// FlagEtherContractPayments address of payments contract.
-	FlagEtherContractPayments = cli.StringFlag{
-		Name:  "ether.contract.payments",
-		Usage: "Address of payments contract",
-		Value: metadata.DefaultNetwork.PaymentsContractAddress.String(),
-	}
 	// FlagQualityOracleAddress Quality oracle URL.
 	FlagQualityOracleAddress = cli.StringFlag{
 		Name:  "quality-oracle.address",
@@ -92,7 +86,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		FlagAPIAddress,
 		FlagBrokerAddress,
 		FlagEtherRPC,
-		FlagEtherContractPayments,
 		FlagQualityOracleAddress,
 		FlagAccessPolicyAddress,
 	)
@@ -107,7 +100,6 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
-	Current.ParseStringFlag(ctx, FlagEtherContractPayments)
 	Current.ParseStringFlag(ctx, FlagQualityOracleAddress)
 	Current.ParseBoolTFlag(ctx, FlagNATPunching)
 }

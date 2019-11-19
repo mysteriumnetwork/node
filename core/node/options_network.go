@@ -29,8 +29,7 @@ type OptionsNetwork struct {
 	AccessPolicyEndpointAddress string
 	BrokerAddress               string
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
+	EtherClientRPC string
 
 	QualityOracle string
 }

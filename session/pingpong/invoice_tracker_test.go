@@ -357,7 +357,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
-
 	mockSender := &MockPeerInvoiceSender{
 		chanToWriteTo: make(chan crypto.Invoice, 10),
 	}
@@ -378,7 +377,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(100000, money.CurrencyMyst), Duration: time.Minute},
+		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(1000000000000, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
@@ -396,6 +395,9 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.True(t, invoice.AgreementTotal > 0)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
+
+	invoiceTracker.Stop()
+	assert.NoError(t, <-errChan)
 }
 
 func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {

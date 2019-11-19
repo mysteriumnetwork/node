@@ -23,13 +23,13 @@ import (
 	"time"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/wireguard-go/device"
-	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
 type client struct {
-	tun    tun.TUNDevice
+	tun    tun.Device
 	devAPI *device.DeviceApi
 }
 

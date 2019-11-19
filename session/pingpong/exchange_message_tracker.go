@@ -123,7 +123,6 @@ func (emt *ExchangeMessageTracker) Start() error {
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
-	log.Info().Msgf("addr %v", addr)
 	emt.channelAddress = identity.FromAddress(addr)
 
 	emt.timeTracker.StartTracking()
@@ -158,7 +157,7 @@ func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
 	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
 	if err != nil {
 		if err == ErrNotFound {
-			log.Debug().Msgf("no previous invoice grand total, assuming zero")
+			log.Debug().Msgf("No previous invoice grand total, assuming zero")
 			return 0, nil
 		}
 		return 0, errors.Wrap(err, "could not get previous grand total")
@@ -170,7 +169,7 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
 	if err != nil {
 		if err == ErrNotFound {
-			log.Debug().Msg("no previous invoice grand total, assuming zero")
+			log.Debug().Msg("No previous invoice grand total, assuming zero")
 		} else {
 			return errors.Wrap(err, "could not get previous grand total")
 		}
@@ -191,10 +190,10 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
 	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
-	log.Debug().Msgf("upper bound %v", upperBound)
+	log.Debug().Msgf("Upper bound %v", upperBound)
 
 	if invoice.AgreementTotal > upperBound {
-		log.Warn().Msg("provider trying to overcharge")
+		log.Warn().Msg("Provider trying to overcharge")
 		return ErrProviderOvercharge
 	}
 
@@ -206,7 +205,7 @@ func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoi
 	if err != nil {
 		if err == ErrNotFound {
 			// do nothing, really
-			log.Debug().Msg("no previous invoice found, assuming zero")
+			log.Debug().Msg("No previous invoice found, assuming zero")
 		} else {
 			return 0, 0, errors.Wrap(err, fmt.Sprintf("could not get previous total for peer %q", invoice.Provider))
 		}
@@ -223,8 +222,8 @@ func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoi
 		diff = invoice.AgreementTotal
 	}
 
-	log.Debug().Msgf("loaded previous state: already promised: %v", totalPromised)
-	log.Debug().Msgf("incrementing promised amount by %v", diff)
+	log.Debug().Msgf("Loaded previous state: already promised: %v", totalPromised)
+	log.Debug().Msgf("Incrementing promised amount by %v", diff)
 	amountToPromise := totalPromised + diff
 	return amountToPromise, diff, nil
 }

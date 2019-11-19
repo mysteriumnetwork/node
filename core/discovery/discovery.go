@@ -21,7 +21,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/rs/zerolog/log"
@@ -46,8 +48,6 @@ const (
 const (
 	// ProposalEventTopic represent proposal events topic.
 	ProposalEventTopic = "proposalEvent"
-	// IdentityRegistrationTopic represent topics for identity registration events.
-	IdentityRegistrationTopic = "identityRegistrationOccurred"
 )
 
 // Publisher is responsible for publishing given events.
@@ -70,7 +70,7 @@ type Discovery struct {
 	signerCreate     identity.SignerFactory
 	signer           identity.Signer
 	proposal         market.ServiceProposal
-	eventPublisher   Publisher
+	eventBus         eventbus.EventBus
 
 	statusChan                  chan Status
 	status                      Status
@@ -86,12 +86,12 @@ func NewService(
 	identityRegistry identity_registry.IdentityRegistry,
 	proposalRegistry ProposalRegistry,
 	signerCreate identity.SignerFactory,
-	eventPublisher Publisher,
+	eventBus eventbus.EventBus,
 ) *Discovery {
 	return &Discovery{
 		identityRegistry:            identityRegistry,
 		proposalRegistry:            proposalRegistry,
-		eventPublisher:              eventPublisher,
+		eventBus:                    eventBus,
 		signerCreate:                signerCreate,
 		statusChan:                  make(chan Status),
 		status:                      StatusUndefined,
@@ -170,26 +170,29 @@ func (d *Discovery) stopLoop() {
 	d.mu.RUnlock()
 }
 
+func (d *Discovery) handleRegistrationEvent(rep registry.RegistrationEventPayload) {
+	log.Debug().Msgf("Registration event received for %v", rep.ID.Address)
+	if rep.ID.Address != d.ownIdentity.Address {
+		log.Debug().Msgf("Identity missmatch for registration. Expected %v got %v", d.ownIdentity.Address, rep.ID.Address)
+		return
+	}
+
+	switch rep.Status {
+	case registry.RegisteredProvider:
+		log.Info().Msg("Identity registered, proceeding with proposal registration")
+		d.changeStatus(RegisterProposal)
+	case registry.RegistrationError:
+		log.Info().Msg("Cancelled identity registration")
+		d.changeStatus(IdentityRegisterFailed)
+	default:
+		log.Info().Msgf("Received status %v ignoring", rep.Status)
+	}
+}
+
 func (d *Discovery) registerIdentity() {
-	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(d.ownIdentity)
+	log.Info().Msg("Waiting for registration success event")
+	d.eventBus.Subscribe(registry.RegistrationEventTopic, d.handleRegistrationEvent)
 	d.changeStatus(WaitingForRegistration)
-	go func() {
-		defer unsubscribe()
-		select {
-		case registerEvent := <-registerEventChan:
-			switch registerEvent {
-			case identity_registry.Registered:
-				log.Info().Msg("Identity registered, proceeding with proposal registration")
-				go d.eventPublisher.Publish(IdentityRegistrationTopic, d.ownIdentity)
-				d.changeStatus(RegisterProposal)
-			case identity_registry.Cancelled:
-				log.Info().Msg("Cancelled identity registration")
-				d.changeStatus(IdentityRegisterFailed)
-			}
-		case <-d.stop:
-			return
-		}
-	}()
 }
 
 func (d *Discovery) registerProposal() {
@@ -200,7 +203,7 @@ func (d *Discovery) registerProposal() {
 		d.changeStatus(RegisterProposal)
 		return
 	}
-	d.eventPublisher.Publish(ProposalEventTopic, d.proposal)
+	d.eventBus.Publish(ProposalEventTopic, d.proposal)
 	d.changeStatus(PingProposal)
 }
 
@@ -210,7 +213,7 @@ func (d *Discovery) pingProposal() {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping proposal")
 	}
-	d.eventPublisher.Publish(ProposalEventTopic, d.proposal)
+	d.eventBus.Publish(ProposalEventTopic, d.proposal)
 	d.changeStatus(PingProposal)
 }
 
@@ -226,20 +229,20 @@ func (d *Discovery) unregisterProposal() {
 
 func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
-	registered, err := d.identityRegistry.IsRegistered(d.ownIdentity)
+	status, err := d.identityRegistry.GetRegistrationStatus(d.ownIdentity)
 	if err != nil {
 		log.Error().Err(err).Msg("Checking identity registration failed")
 		d.changeStatus(IdentityRegisterFailed)
 		return
 	}
-
-	if !registered {
-		// TODO: Maybe register here?
-		log.Info().Msgf("identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
+	switch status {
+	case identity_registry.RegisteredProvider:
+		d.changeStatus(RegisterProposal)
+	default:
+		log.Info().Msgf("Identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
 		d.changeStatus(IdentityUnregistered)
 		return
 	}
-	d.changeStatus(RegisterProposal)
 }
 
 func (d *Discovery) changeStatus(status Status) {

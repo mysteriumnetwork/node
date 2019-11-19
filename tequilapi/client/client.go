@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/mysteriumnetwork/node/core/transactor"
+	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
 // NewClient returns a new instance of Client
@@ -96,8 +96,8 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 }
 
 // GetTransactorFees returns the transactor fees
-func (client *Client) GetTransactorFees() (transactor.Fees, error) {
-	fees := transactor.Fees{}
+func (client *Client) GetTransactorFees() (registry.Fees, error) {
+	fees := registry.Fees{}
 
 	res, err := client.http.Get("transactor/fees", nil)
 	if err != nil {
@@ -111,7 +111,7 @@ func (client *Client) GetTransactorFees() (transactor.Fees, error) {
 
 // RegisterIdentity registers identity
 func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
-	payload := transactor.IdentityRegistrationRequestDTO{
+	payload := registry.IdentityRegistrationRequestDTO{
 		Stake:       stake,
 		Fee:         fee,
 		Beneficiary: beneficiary,
@@ -132,7 +132,7 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee u
 
 // TopUp tops up identity
 func (client *Client) TopUp(identity string) error {
-	payload := transactor.TopUpRequest{
+	payload := registry.TopUpRequest{
 		Identity: identity,
 	}
 

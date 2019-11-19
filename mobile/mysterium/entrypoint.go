@@ -115,7 +115,6 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 		MysteriumAPIAddress:     metadata.TestnetDefinition.MysteriumAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
-		EtherPaymentsAddress:    metadata.DefaultNetwork.PaymentsContractAddress.String(),
 	}
 }
 

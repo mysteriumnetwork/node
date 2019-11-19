@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
@@ -118,20 +120,26 @@ type ProposalGetter interface {
 	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
 }
 
+type identityRegistry interface {
+	GetRegistrationStatus(identity.Identity) (registry.RegistrationStatus, error)
+}
+
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
 	manager           connection.Manager
 	statisticsTracker SessionStatisticsTracker
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
 	proposalProvider ProposalGetter
+	identityRegistry identityRegistry
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter, identityRegistry identityRegistry) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:           manager,
 		statisticsTracker: statsKeeper,
 		proposalProvider:  proposalProvider,
+		identityRegistry:  identityRegistry,
 	}
 }
 
@@ -196,6 +204,22 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
+
+	status, err := ce.identityRegistry.GetRegistrationStatus(identity.FromAddress(cr.ConsumerID))
+	if err != nil {
+		log.Error().Err(err).Stack().Msg("could not check registration status")
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	switch status {
+	case registry.Unregistered, registry.InProgress, registry.RegistrationError:
+		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
+		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
+		return
+	}
+
+	log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 
 	errorMap := validateConnectionRequest(cr)
 	if errorMap.HasErrors() {
@@ -296,8 +320,8 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter) {
-	connectionEndpoint := NewConnectionEndpoint(manager, statsKeeper, proposalProvider)
+	statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter, identityRegistry identityRegistry) {
+	connectionEndpoint := NewConnectionEndpoint(manager, statsKeeper, proposalProvider, identityRegistry)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)

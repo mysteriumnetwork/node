@@ -121,7 +121,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	checkError("myst transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Mint(transactor, transactor.From, big.NewInt(10000000000))
+	tx, err = ts.Mint(transactor, transactor.From, big.NewInt(125000000000000000))
 	checkError("mint myst", err)
 	checkTxStatus(client, tx)
 
@@ -139,7 +139,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		transactor.From,
 		big.NewInt(1000000),
 		400,
-		big.NewInt(150000),
+		big.NewInt(125000000000),
 	)
 	checkError("register accountant", err)
 	checkTxStatus(client, tx)
