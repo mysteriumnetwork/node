@@ -58,10 +58,8 @@ func (s *statusStorage) GetAllStatusEntries() []StatusEntry {
 	s.entriesMux.RLock()
 	defer s.entriesMux.RUnlock()
 
-	var res []StatusEntry
-	for _, entry := range s.entries {
-		res = append(res, entry)
-	}
+	res := make([]StatusEntry, len(s.entries))
+	copy(res, s.entries)
 
 	// Sort by CreatedAtUTC descending to show newest entries first.
 	sort.Slice(res, func(i, j int) bool {

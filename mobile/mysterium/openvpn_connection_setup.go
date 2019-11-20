@@ -114,8 +114,6 @@ func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel 
 	}
 }
 
-const openvpn3Log = "[Openvpn3]"
-
 type channelToCallbacksAdapter struct {
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel

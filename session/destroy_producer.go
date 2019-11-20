@@ -23,8 +23,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const sessionDestroyPrefix = "[session.DestroyProducer] "
-
 type destroyProducer struct {
 	SessionID string
 }

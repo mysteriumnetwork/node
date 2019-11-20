@@ -33,9 +33,7 @@ var (
 	mockConsumer = func(json.RawMessage, *traversal.Params) (*ConfigParams, error) {
 		return &ConfigParams{SessionServiceConfig: config, TraversalParams: &traversal.Params{}}, nil
 	}
-	mockID = identity.FromAddress("0x0")
-	errMpl = errors.New("test")
-	mpl    = &mockPromiseLoader{}
+	mpl = &mockPromiseLoader{}
 )
 
 func TestConsumer_Success(t *testing.T) {

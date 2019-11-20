@@ -58,8 +58,8 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	establisher := mockEstablisher(myID, connection, signer)
 
 	dialogInstance, err := establisher.EstablishDialog(peerID, market.Contact{})
-	defer dialogInstance.Close()
 	assert.NoError(t, err)
+	defer dialogInstance.Close()
 	assert.NotNil(t, dialogInstance)
 
 	dialog, ok := dialogInstance.(*dialog)

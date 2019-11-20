@@ -49,12 +49,6 @@ func (f *fakeAuthenticatorStub) fakeAuthenticator(clientID int, username, passwo
 	return f.authenticated, nil
 }
 
-func (f *fakeAuthenticatorStub) fakeSessionCleanup(username string) error {
-	f.called = true
-	f.username = username
-	return nil
-}
-
 func (f *fakeAuthenticatorStub) reset() {
 	f.called = false
 	f.username = ""

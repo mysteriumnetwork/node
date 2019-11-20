@@ -18,11 +18,8 @@
 package broker
 
 import (
-	"reflect"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/pkg/errors"
 )
 
 // unregisterMessage structure represents message that the Provider sends about de-announced Proposal
@@ -33,32 +30,6 @@ type unregisterMessage struct {
 const unregisterEndpoint = communication.MessageEndpoint("proposal-unregister")
 
 // Dialog boilerplate below, please ignore
-
-// unregisterConsumer
-type unregisterConsumer struct {
-	queue chan unregisterMessage
-}
-
-// GetMessageEndpoint returns endpoint where to receive messages
-func (pmc *unregisterConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return unregisterEndpoint
-}
-
-// NewMessage creates struct where message from endpoint will be serialized
-func (pmc *unregisterConsumer) NewMessage() (messagePtr interface{}) {
-	return &unregisterMessage{}
-}
-
-// Consume handles messages from endpoint
-func (pmc *unregisterConsumer) Consume(messagePtr interface{}) error {
-	msg, ok := messagePtr.(unregisterMessage)
-	if !ok {
-		return errors.Errorf("consume received message of type %q, expected unregisterMessage instead", reflect.TypeOf(messagePtr))
-	}
-
-	pmc.queue <- msg
-	return nil
-}
 
 // unregisterProducer
 type unregisterProducer struct {

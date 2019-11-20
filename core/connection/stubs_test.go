@@ -73,31 +73,6 @@ func (sp *StubPublisher) GetEventHistory() []StubPublisherEvent {
 	return sp.publishHistory
 }
 
-// StubSessionStorer allows us to get all sessions, save and update them
-type StubSessionStorer struct {
-	SaveError    error
-	SaveCalled   bool
-	UpdateError  error
-	UpdateCalled bool
-	GetAllCalled bool
-	GetAllError  error
-}
-
-func (sss *StubSessionStorer) Save(object interface{}) error {
-	sss.SaveCalled = true
-	return sss.SaveError
-}
-
-func (sss *StubSessionStorer) Update(object interface{}) error {
-	sss.UpdateCalled = true
-	return sss.UpdateError
-}
-
-func (sss *StubSessionStorer) GetAll(array interface{}) error {
-	sss.GetAllCalled = true
-	return sss.GetAllError
-}
-
 type fakeState string
 
 const (
@@ -214,8 +189,6 @@ func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
 
 	foc.stateCallback = callback
 }
-
-const mockDialogLog = "[fake dialog] "
 
 type mockDialog struct {
 	peerID      identity.Identity

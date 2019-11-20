@@ -85,7 +85,7 @@ func (fetcher *Fetcher) fetchLoop() {
 		case <-fetcher.fetchShutdown:
 			break
 		case <-time.After(fetcher.fetchInterval):
-			fetcher.fetchDo()
+			_ = fetcher.fetchDo()
 		}
 	}
 }

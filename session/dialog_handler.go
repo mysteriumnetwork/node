@@ -42,7 +42,6 @@ type handler struct {
 	configProvider        ConfigProvider
 	promiseLoader         PromiseLoader
 	receiverID            identity.Identity
-	publisher             publisher
 	statusReceiver        connectivity.StatusSubscriber
 }
 
