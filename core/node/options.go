@@ -135,7 +135,7 @@ func GetOptions() *Options {
 
 // GetLogOptions retrieves logger options from the app configuration.
 func GetLogOptions() *logconfig.LogOptions {
-	logDir := config.GetString(config.FlagDataDir)
+	logDir := config.GetString(config.FlagLogDir)
 	level, err := zerolog.ParseLevel(config.GetString(config.FlagLogLevel))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse logging level")

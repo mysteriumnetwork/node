@@ -36,6 +36,11 @@ var (
 		Name:  "data-dir",
 		Usage: "Data directory containing keystore & other persistent files",
 	}
+	// FlagLogDir is a directory for storing log files.
+	FlagLogDir = cli.StringFlag{
+		Name:  "log-dir",
+		Usage: "Log directory for storing log files",
+	}
 	// FlagRuntimeDir runtime writable directory for temporary files.
 	FlagRuntimeDir = cli.StringFlag{
 		Name:  "runtime-dir",
@@ -57,11 +62,13 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 
 	FlagConfigDir.Value = filepath.Join(currentDir, "config")
 	FlagDataDir.Value = filepath.Join(userHomeDir, ".mysterium")
+	FlagLogDir.Value = FlagDataDir.Value
 	FlagRuntimeDir.Value = currentDir
 
 	*flags = append(*flags,
 		FlagConfigDir,
 		FlagDataDir,
+		FlagLogDir,
 		FlagRuntimeDir,
 	)
 	return nil
@@ -69,6 +76,7 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 
 // ParseFlagsDirectory function fills in directory options from CLI context
 func ParseFlagsDirectory(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagLogDir)
 	Current.ParseStringFlag(ctx, FlagDataDir)
 	Current.ParseStringFlag(ctx, FlagConfigDir)
 	Current.ParseStringFlag(ctx, FlagRuntimeDir)
