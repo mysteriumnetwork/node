@@ -234,7 +234,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
+	if err := di.bootstrapNodeComponents(nodeOptions, tequilaListener); err != nil {
+		return err
+	}
 
 	di.registerConnections(nodeOptions)
 

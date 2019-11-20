@@ -47,7 +47,7 @@ func (t *StatusTracker) Status() Status {
 
 // ConsumeNATEvent processes NAT event to determine NAT traversal status
 func (t *StatusTracker) ConsumeNATEvent(event event.Event) {
-	if event.Stage == t.lastStageName && event.Successful == false {
+	if event.Stage == t.lastStageName && !event.Successful {
 		t.status = Status{Status: statusFailure, Error: event.Error}
 		return
 	}
