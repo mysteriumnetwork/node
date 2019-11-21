@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -57,6 +58,7 @@ func InvoiceFactoryCreator(
 	maxAccountantFailureCount uint64,
 	maxAllowedAccountantFee uint16,
 	blockchainHelper bcHelper,
+	publisher eventbus.Publisher,
 ) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
 	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
@@ -85,6 +87,7 @@ func InvoiceFactoryCreator(
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
 			BlockchainHelper:           blockchainHelper,
+			Publisher:                  publisher,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

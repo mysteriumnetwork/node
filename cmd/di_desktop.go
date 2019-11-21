@@ -43,6 +43,7 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 	"github.com/rs/zerolog/log"
@@ -197,6 +198,16 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
+}
+
+func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
+	cfg := pingpong.AccountantPromiseSettlerConfig{
+		AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
+		MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+	}
+	settler := pingpong.NewAccountantPromiseSettler(di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
+	return settler.Subscribe(di.EventBus)
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency

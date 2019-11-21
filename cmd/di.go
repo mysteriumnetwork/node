@@ -248,7 +248,14 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
-	di.bootstrapProviderRegistrar(nodeOptions)
+	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapAccountantPromiseSettler(nodeOptions); err != nil {
+		return err
+	}
+
 	di.registerConnections(nodeOptions)
 
 	if err = di.subscribeEventConsumers(); err != nil {
@@ -567,6 +574,7 @@ func newSessionManagerFactory(
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			bcHelper,
+			eventbus,
 		)
 		return session.NewManager(
 			proposal,

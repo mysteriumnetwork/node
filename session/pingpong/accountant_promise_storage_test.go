@@ -47,6 +47,7 @@ func TestAccountantPromiseStorage(t *testing.T) {
 
 	accountantStorage := NewAccountantPromiseStorage(bolt)
 
+	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
 	firstAccountant := identity.FromAddress(acc.Address.Hex())
 	firstPromise, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
 	assert.NoError(t, err)
@@ -55,22 +56,22 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check if errors are wrapped correctly
-	_, err = accountantStorage.Get(firstAccountant)
+	_, err = accountantStorage.Get(id, firstAccountant)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that promise is stored correctly
-	err = accountantStorage.Store(firstAccountant, *firstPromise)
+	err = accountantStorage.Store(id, firstAccountant, *firstPromise)
 	assert.NoError(t, err)
 
-	promise, err := accountantStorage.Get(firstAccountant)
+	promise, err := accountantStorage.Get(id, firstAccountant)
 	assert.NoError(t, err)
 	assert.EqualValues(t, *firstPromise, promise)
 
 	// overwrite the promise, check if it is overwritten
-	err = accountantStorage.Store(firstAccountant, *secondPromise)
+	err = accountantStorage.Store(id, firstAccountant, *secondPromise)
 	assert.NoError(t, err)
 
-	promise, err = accountantStorage.Get(firstAccountant)
+	promise, err = accountantStorage.Get(id, firstAccountant)
 	assert.NoError(t, err)
 	assert.EqualValues(t, *secondPromise, promise)
 
@@ -83,14 +84,14 @@ func TestAccountantPromiseStorage(t *testing.T) {
 
 	secondAccountant := identity.FromAddress(account2.Address.Hex())
 
-	err = accountantStorage.Store(secondAccountant, *firstPromise)
+	err = accountantStorage.Store(id, secondAccountant, *firstPromise)
 	assert.NoError(t, err)
 
-	promise, err = accountantStorage.Get(firstAccountant)
+	promise, err = accountantStorage.Get(id, firstAccountant)
 	assert.NoError(t, err)
 	assert.EqualValues(t, *secondPromise, promise)
 
-	promise, err = accountantStorage.Get(secondAccountant)
+	promise, err = accountantStorage.Get(id, secondAccountant)
 	assert.NoError(t, err)
 	assert.EqualValues(t, *firstPromise, promise)
 }

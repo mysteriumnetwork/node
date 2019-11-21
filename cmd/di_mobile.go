@@ -44,3 +44,7 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
 	return nil
 }
+
+func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
+	return nil
+}

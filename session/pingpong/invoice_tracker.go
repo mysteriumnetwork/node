@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -59,8 +60,8 @@ type providerInvoiceStorage interface {
 }
 
 type accountantPromiseStorage interface {
-	Store(accountantID identity.Identity, promise crypto.Promise) error
-	Get(accountantID identity.Identity) (crypto.Promise, error)
+	Store(providerID, accountantID identity.Identity, promise crypto.Promise) error
+	Get(providerID, accountantID identity.Identity) (crypto.Promise, error)
 }
 
 type accountantCaller interface {
@@ -110,6 +111,7 @@ type InvoiceTracker struct {
 	maxAccountantFailureCount       uint64
 	maxAllowedAccountantFee         uint16
 	bcHelper                        bcHelper
+	publisher                       eventbus.Publisher
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -131,6 +133,7 @@ type InvoiceTrackerDeps struct {
 	MaxAccountantFailureCount  uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
+	Publisher                  eventbus.Publisher
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -156,6 +159,7 @@ func NewInvoiceTracker(
 		maxAccountantFailureCount:      itd.MaxAccountantFailureCount,
 		maxAllowedAccountantFee:        itd.MaxAllowedAccountantFee,
 		bcHelper:                       itd.BlockchainHelper,
+		publisher:                      itd.Publisher,
 	}
 }
 
@@ -362,11 +366,18 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 			return nil
 		}
 		it.resetAccountantFailureCount()
-		err = it.accountantPromiseStorage.Store(it.accountantID, promise)
+		err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, promise)
 		if err != nil {
 			return errors.Wrap(err, "could not store accountant promise")
 		}
 		log.Debug().Msg("Accountant promise stored")
+
+		it.publisher.Publish(AccountantPromiseTopic, AccountantPromiseEventPayload{
+			Promise:      promise,
+			AccountantID: it.accountantID,
+			ProviderID:   it.providerID,
+		})
+
 		hexR := hex.EncodeToString(it.lastInvoice.r)
 		err = it.accountantCaller.RevealR(hexR, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
 		if err != nil {
