@@ -73,6 +73,7 @@ func NewServerConfig(
 	serverConfig.SetParam("cipher", "AES-256-GCM")
 	serverConfig.SetParam("verb", "3")
 	serverConfig.SetParam("tls-version-min", "1.2")
+	serverConfig.SetFlag("management-client-pf")
 	serverConfig.SetFlag("management-client-auth")
 	serverConfig.SetParam("verify-client-cert", "none")
 	serverConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
