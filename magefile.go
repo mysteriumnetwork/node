@@ -24,6 +24,8 @@ import (
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/check"
 	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/dev"
+	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/test"
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/packages"
