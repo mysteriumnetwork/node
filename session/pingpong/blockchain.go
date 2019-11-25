@@ -20,6 +20,7 @@ package pingpong
 import (
 	"context"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,7 +29,18 @@ import (
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
+
+// ProviderChannel represents the provider channel
+type ProviderChannel struct {
+	Beneficiary   common.Address
+	Balance       *big.Int
+	Settled       *big.Int
+	Loan          *big.Int
+	LastUsedNonce *big.Int
+	Timelock      *big.Int
+}
 
 // Blockchain contains all the useful blockchain utilities for the payment off chain messaging
 type Blockchain struct {
@@ -75,12 +87,7 @@ func (bc *Blockchain) IsRegisteredAsProvider(accountantAddress, registryAddress,
 		return false, nil
 	}
 
-	addressBytes, err := bc.getProviderChannelAddressBytes(accountantAddress, addressToCheck)
-	if err != nil {
-		return false, errors.Wrap(err, "could not calculate provider channel address")
-	}
-
-	res, err := bc.getProviderChannelLoan(accountantAddress, addressBytes)
+	res, err := bc.getProviderChannelLoan(accountantAddress, addressToCheck)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get provider channel loan amount")
 	}
@@ -88,10 +95,16 @@ func (bc *Blockchain) IsRegisteredAsProvider(accountantAddress, registryAddress,
 	return res.Cmp(big.NewInt(0)) == 1, nil
 }
 
-func (bc *Blockchain) getProviderChannelLoan(accountantAddress common.Address, addressBytes [32]byte) (*big.Int, error) {
+// GetProviderChannel returns the provider channel
+func (bc *Blockchain) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error) {
+	addressBytes, err := bc.getProviderChannelAddressBytes(accountantAddress, addressToCheck)
+	if err != nil {
+		return ProviderChannel{}, errors.Wrap(err, "could not calculate provider channel address")
+	}
+	log.Info().Msgf("checkign address %v", common.Bytes2Hex(addressBytes[:]))
 	caller, err := bindings.NewAccountantImplementationCaller(accountantAddress, bc.client)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create accountant caller")
+		return ProviderChannel{}, errors.Wrap(err, "could not create accountant caller")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), bc.bcTimeout)
@@ -100,7 +113,11 @@ func (bc *Blockchain) getProviderChannelLoan(accountantAddress common.Address, a
 	ch, err := caller.Channels(&bind.CallOpts{
 		Context: ctx,
 	}, addressBytes)
+	return ch, errors.Wrap(err, "could not get provider channel from bc")
+}
 
+func (bc *Blockchain) getProviderChannelLoan(accountantAddress common.Address, addressToCheck common.Address) (*big.Int, error) {
+	ch, err := bc.GetProviderChannel(accountantAddress, addressToCheck)
 	return ch.Loan, errors.Wrap(err, "could not get provider channel from bc")
 }
 
@@ -112,9 +129,36 @@ func (bc *Blockchain) getProviderChannelAddressBytes(accountantAddress, addressT
 		return addressBytes, errors.Wrap(err, "could not generate channel address")
 	}
 
-	copy(addressBytes[:], crypto.Pad(common.Hex2Bytes(addr), 32))
+	copy(addressBytes[:], crypto.Pad(common.Hex2Bytes(strings.TrimPrefix(addr, "0x")), 32))
 
 	return addressBytes, nil
+}
+
+// SubscribeToPromiseSettledEvent subscribes to promise settled events
+func (bc *Blockchain) SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error) {
+	caller, err := bindings.NewAccountantImplementationFilterer(accountantID, bc.client)
+	if err != nil {
+		return sink, cancel, errors.Wrap(err, "could not create accountant caller")
+	}
+	sink = make(chan *bindings.AccountantImplementationPromiseSettled)
+	addr, err := bc.getProviderChannelAddressBytes(accountantID, providerID)
+	if err != nil {
+		return sink, cancel, errors.Wrap(err, "could not get provider channel address")
+	}
+	sub, err := caller.WatchPromiseSettled(&bind.WatchOpts{}, sink, [][32]byte{addr})
+	if err != nil {
+		return sink, cancel, errors.Wrap(err, "could not subscribe to promise settlement events")
+	}
+
+	go func() {
+		subErr := <-sub.Err()
+		if subErr != nil {
+			log.Error().Err(err).Msg("subscription error")
+		}
+		close(sink)
+	}()
+
+	return sink, sub.Unsubscribe, nil
 }
 
 // IsRegistered checks wether the given identity is registered or not

@@ -201,6 +201,11 @@ func (cfg *Config) GetUInt64(key string) uint64 {
 	return cast.ToUint64(cfg.Get(key))
 }
 
+// GetFloat64 returns config value as float64.
+func (cfg *Config) GetFloat64(key string) float64 {
+	return cast.ToFloat64(cfg.Get(key))
+}
+
 // GetDuration returns config value as duration.
 func (cfg *Config) GetDuration(key string) time.Duration {
 	return cast.ToDuration(cfg.Get(key))
@@ -263,6 +268,19 @@ func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
 	}
 }
 
+// ParseFloat64Flag parses a cli.Float64Flag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Float64(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalFloat64(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
 // ParseDurationFlag parses a cli.DurationFlag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseDurationFlag(ctx *cli.Context, flag cli.DurationFlag) {
@@ -317,6 +335,11 @@ func GetDuration(flag cli.DurationFlag) time.Duration {
 // GetUInt64 shorthand for getting current configuration value for cli.Uint64Flag.
 func GetUInt64(flag cli.Uint64Flag) uint64 {
 	return Current.GetUInt64(flag.Name)
+}
+
+// GetFloat64 shorthand for getting current configuration value for cli.Uint64Flag.
+func GetFloat64(flag cli.Float64Flag) float64 {
+	return Current.GetFloat64(flag.Name)
 }
 
 // Topic returns event bus topic for the given config key to listen for its updates.

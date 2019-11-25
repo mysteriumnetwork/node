@@ -130,8 +130,10 @@ func GetOptions() *Options {
 			ProviderRegistrationStake:       config.GetUInt64(config.FlagTransactorProviderRegistrationStake),
 		},
 		Payments: OptionsPayments{
-			MaxAllowedPaymentPercentile: config.GetInt(config.FlagPaymentsMaxAccountantFee),
-			BCTimeout:                   config.GetDuration(config.FlagPaymentsBCTimeout),
+			MaxAllowedPaymentPercentile:        config.GetInt(config.FlagPaymentsMaxAccountantFee),
+			BCTimeout:                          config.GetDuration(config.FlagPaymentsBCTimeout),
+			AccountantPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsAccountantPromiseSettleThreshold),
+			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
 		},
 		Accountant: OptionsAccountant{
 			AccountantID:              config.GetString(config.FlagAccountantID),

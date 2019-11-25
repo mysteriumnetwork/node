@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package pingpong
 
-import "time"
+import (
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/payments/crypto"
+)
 
-// OptionsPayments controls the behaviour of payments
-type OptionsPayments struct {
-	MaxAllowedPaymentPercentile        int
-	BCTimeout                          time.Duration
-	AccountantPromiseSettlingThreshold float64
-	SettlementTimeout                  time.Duration
+// AccountantPromiseTopic represents a topic to which we send accountant promise events.
+const AccountantPromiseTopic = "accountant_promise_received"
+
+// AccountantPromiseEventPayload represents the payload that is sent on the AccountantPromiseTopic.
+type AccountantPromiseEventPayload struct {
+	Promise      crypto.Promise
+	AccountantID identity.Identity
+	ProviderID   identity.Identity
 }

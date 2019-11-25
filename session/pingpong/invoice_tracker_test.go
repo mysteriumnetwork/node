@@ -86,6 +86,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
+		Publisher:                  &mockPublisher{},
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
@@ -137,6 +138,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
+		Publisher:                  &mockPublisher{},
 		ExchangeMessageWaitTimeout: time.Second,
 		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -183,6 +185,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
+		Publisher:                  &mockPublisher{},
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
@@ -237,6 +240,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
+		Publisher:                  &mockPublisher{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		MaxAllowedAccountantFee:    1500,
 		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
@@ -285,6 +289,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		Publisher:                  &mockPublisher{},
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
@@ -334,6 +339,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
+		Publisher:                  &mockPublisher{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -383,6 +389,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		Publisher:                  &mockPublisher{},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -528,6 +535,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				lastInvoice:                tt.fields.lastInvoice,
 				registryAddress:            tt.fields.registryAddress,
 				channelImplementation:      tt.fields.channelImplementation,
+				publisher:                  &mockPublisher{},
 			}
 			if tt.em != nil {
 				go func() {
@@ -545,11 +553,11 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 type mockAccountantPromiseStorage struct {
 }
 
-func (maps *mockAccountantPromiseStorage) Store(accountantID identity.Identity, promise crypto.Promise) error {
+func (maps *mockAccountantPromiseStorage) Store(providerID, accountantID identity.Identity, promise crypto.Promise) error {
 	return nil
 }
 
-func (maps *mockAccountantPromiseStorage) Get(accountantID identity.Identity) (crypto.Promise, error) {
+func (maps *mockAccountantPromiseStorage) Get(providerID, accountantID identity.Identity) (crypto.Promise, error) {
 	return crypto.Promise{}, nil
 }
 
@@ -568,3 +576,7 @@ func (mbh *mockBlockchainHelper) GetAccountantFee(accountantAddress common.Addre
 func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
 	return mbh.isRegistered, mbh.isRegisteredError
 }
+
+type mockPublisher struct{}
+
+func (mp *mockPublisher) Publish(_ string, _ interface{}) {}
