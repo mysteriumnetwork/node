@@ -658,12 +658,12 @@ type mockConsumerInvoiceStorage struct {
 	calledWith crypto.Invoice
 }
 
-func (mcis *mockConsumerInvoiceStorage) Store(providerIdentity identity.Identity, invoice crypto.Invoice) error {
+func (mcis *mockConsumerInvoiceStorage) Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error {
 	mcis.calledWith = invoice
 	return nil
 }
 
-func (mcis *mockConsumerInvoiceStorage) Get(providerAddress identity.Identity) (crypto.Invoice, error) {
+func (mcis *mockConsumerInvoiceStorage) Get(consumerIdentity, providerAddress identity.Identity) (crypto.Invoice, error) {
 	return mcis.res, mcis.err
 }
 

@@ -53,10 +53,10 @@ type bcHelper interface {
 }
 
 type providerInvoiceStorage interface {
-	Get(consumerIdentity identity.Identity) (crypto.Invoice, error)
-	Store(consumerIdentity identity.Identity, invoice crypto.Invoice) error
-	GetNewAgreementID() (uint64, error)
-	StoreR(agreementID uint64, r string) error
+	Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error)
+	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
+	GetNewAgreementID(providerIdentity identity.Identity) (uint64, error)
+	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
 }
 
 type accountantPromiseStorage interface {
@@ -168,7 +168,7 @@ func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time
 }
 
 func (it *InvoiceTracker) generateInitialInvoice() error {
-	agreementID, err := it.invoiceStorage.GetNewAgreementID()
+	agreementID, err := it.invoiceStorage.GetNewAgreementID(it.providerID)
 	if err != nil {
 		return errors.Wrap(err, "could not get new agreement id")
 	}
@@ -181,7 +181,7 @@ func (it *InvoiceTracker) generateInitialInvoice() error {
 		invoice: invoice,
 		r:       r,
 	}
-	return errors.Wrap(it.invoiceStorage.StoreR(agreementID, common.Bytes2Hex(r)), "could not store r")
+	return errors.Wrap(it.invoiceStorage.StoreR(it.providerID, agreementID, common.Bytes2Hex(r)), "could not store r")
 }
 
 // Start stars the invoice tracker
@@ -266,7 +266,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 		return err
 	}
 
-	err = it.invoiceStorage.Store(it.peer, invoice)
+	err = it.invoiceStorage.Store(it.providerID, it.peer, invoice)
 	if err != nil {
 		return errors.Wrap(err, "could not store invoice")
 	}

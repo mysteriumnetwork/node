@@ -49,8 +49,8 @@ type PeerExchangeMessageSender interface {
 }
 
 type consumerInvoiceStorage interface {
-	Get(providerIdentity identity.Identity) (crypto.Invoice, error)
-	Store(providerIdentity identity.Identity, invoice crypto.Invoice) error
+	Get(consumerIdentity, providerIdentity identity.Identity) (crypto.Invoice, error)
+	Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error
 }
 
 type consumerTotalsStorage interface {
@@ -142,7 +142,7 @@ func (emt *ExchangeMessageTracker) Start() error {
 				return err
 			}
 
-			err = emt.consumerInvoiceStorage.Store(emt.peer, invoice)
+			err = emt.consumerInvoiceStorage.Store(emt.identity, emt.peer, invoice)
 			if err != nil {
 				return errors.Wrap(err, "could not store invoice")
 			}
@@ -154,7 +154,7 @@ func (emt *ExchangeMessageTracker) Start() error {
 const grandTotalKey = "consumer_grand_total"
 
 func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
-	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
+	res, err := emt.consumerTotalsStorage.Get(fmt.Sprintf("%v_%v", grandTotalKey, emt.identity.Address))
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msgf("No previous invoice grand total, assuming zero")
@@ -166,7 +166,8 @@ func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
 }
 
 func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) error {
-	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
+	k := fmt.Sprintf("%v_%v", grandTotalKey, emt.identity.Address)
+	res, err := emt.consumerTotalsStorage.Get(k)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -174,7 +175,7 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return emt.consumerTotalsStorage.Store(grandTotalKey, res+amount)
+	return emt.consumerTotalsStorage.Store(k, res+amount)
 }
 
 func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
@@ -201,7 +202,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 }
 
 func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
-	previous, err := emt.consumerInvoiceStorage.Get(emt.peer)
+	previous, err := emt.consumerInvoiceStorage.Get(emt.identity, emt.peer)
 	if err != nil {
 		if err == ErrNotFound {
 			// do nothing, really
