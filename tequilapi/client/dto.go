@@ -20,6 +20,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 // StatusDTO holds connection status and session id
@@ -123,8 +125,8 @@ type SignatureDTO struct {
 
 // ConnectOptions copied from tequilapi endpoint
 type ConnectOptions struct {
-	DisableKillSwitch bool `json:"killSwitch"`
-	EnableDNS         bool `json:"enableDNS"`
+	DisableKillSwitch bool                 `json:"killSwitch"`
+	DNS               connection.DNSOption `json:"dns"`
 }
 
 // ConnectionSessionListDTO copied from tequilapi endpoint

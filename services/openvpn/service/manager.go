@@ -125,6 +125,12 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return
 	}
 
+	dnsServers, err := dns.ConfiguredServers()
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to read provider's DNS servers, provider DNS will not be available")
+		dnsServers = []string{""}
+	}
+
 	dnsIP := netutil.FirstIP(m.vpnNetwork).String()
 	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.outboundIP, m.publicIP, m.vpnServerPort)
 

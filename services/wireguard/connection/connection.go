@@ -107,7 +107,8 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	go c.runPeriodically(time.Second)
 
-	if options.EnableDNS {
+	enableDNS := options.DNS == connection.DNSOptionProvider || options.DNS == connection.DNSOptionAuto
+	if enableDNS {
 		if err := setDNS(c.configDir, c.connectionEndpoint.InterfaceName(), config.Consumer.DNS); err != nil {
 			c.stateChannel <- connection.NotConnected
 			c.connection.Done()

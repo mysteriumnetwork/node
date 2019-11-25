@@ -253,7 +253,6 @@ type ConnectRequest struct {
 	ProviderID        string
 	ServiceType       string
 	DisableKillSwitch bool
-	EnableDNS         bool
 }
 
 // Connect connects to given provider.
@@ -271,7 +270,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 
 	connectOptions := connection.ConnectParams{
 		DisableKillSwitch: req.DisableKillSwitch,
-		EnableDNS:         req.EnableDNS,
+		DNS:               connection.DNSOptionAuto,
 	}
 	if err := mb.connectionManager.Connect(identity.FromAddress(mb.unlockedIdentity.Address), *proposal, connectOptions); err != nil {
 		return errors.Wrap(err, "could not connect")

@@ -21,6 +21,10 @@ import (
 	"strconv"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/dns"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
@@ -78,20 +82,20 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, enableDNS bool) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, dnsOption connection.DNSOption) (*ClientConfig, error) {
 	// TODO Rename `vpnConfig` to `sessionConfig`
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clientFileConfig := newClientConfig(runtimeDir, configDir, enableDNS)
-	if enableDNS && len(vpnConfig.DNS) > 0 {
-		clientFileConfig.SetParam("dhcp-option", "DNS", vpnConfig.DNS)
-	} else {
-		// TODO remove these once most of the providers are capable of running DNS proxy?
-		clientFileConfig.SetParam("dhcp-option", "DNS", "208.67.222.222")
-		clientFileConfig.SetParam("dhcp-option", "DNS", "208.67.220.220")
+	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	dnsServers, err := selectDNSServers(vpnConfig, dnsOption)
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range dnsServers {
+		clientFileConfig.SetParam("dhcp-option", "DNS", d)
 	}
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
@@ -101,4 +105,30 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 
 	return clientFileConfig, nil
+}
+
+func selectDNSServers(vpnConfig *VPNConfig, dnsOption connection.DNSOption) ([]string, error) {
+	log.Debug().Msg("Selecting DNS servers using strategy: " + string(dnsOption))
+	if exact, ok := dnsOption.Exact(); ok {
+		return exact, nil
+	}
+	if dnsOption == connection.DNSOptionProvider {
+		if len(vpnConfig.DNS) == 0 {
+			return nil, errors.New("provider DNS is not available")
+		}
+		return []string{vpnConfig.DNS}, nil
+	}
+	if dnsOption == connection.DNSOptionSystem {
+		systemDNS, err := dns.ConfiguredServers()
+		return systemDNS, errors.Wrap(err, "system DNS is not available")
+	}
+	if dnsOption == connection.DNSOptionAuto {
+		if len(vpnConfig.DNS) > 0 {
+			return []string{vpnConfig.DNS}, nil
+		}
+		if systemDNS, err := dns.ConfiguredServers(); err == nil {
+			return systemDNS, nil
+		}
+	}
+	return []string{"1.1.1.1", "8.8.8.8"}, nil
 }
