@@ -21,14 +21,14 @@ import (
 	"net"
 
 	"github.com/jackpal/gateway"
-	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
 func assignIP(iface string, subnet net.IPNet) error {
-	if err := utils.SudoExec("ip", "address", "replace", "dev", iface, subnet.String()); err != nil {
+	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, subnet.String()); err != nil {
 		return err
 	}
-	return utils.SudoExec("ip", "link", "set", "dev", iface, "up")
+	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
 func excludeRoute(ip net.IP) error {
@@ -37,17 +37,17 @@ func excludeRoute(ip net.IP) error {
 		return err
 	}
 
-	return utils.SudoExec("route", "add", "-host", ip.String(), gw.String())
+	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
 }
 
 func addDefaultRoute(iface string) error {
-	if err := utils.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
+	if err := cmdutil.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
 		return err
 	}
 
-	return utils.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
+	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
 }
 
 func destroyDevice(name string) error {
-	return utils.SudoExec("ip", "link", "del", "dev", name)
+	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }

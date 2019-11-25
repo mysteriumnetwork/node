@@ -20,15 +20,14 @@ package nat
 import (
 	"fmt"
 	"net"
-	"os/exec"
 	"strings"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/utils"
 )
 
 type servicePFCtl struct {
@@ -111,15 +110,10 @@ func (service *servicePFCtl) enableRules() error {
 	}
 
 	arguments := fmt.Sprintf(`echo "%v" | /sbin/pfctl -vEf -`, natRule)
-	cmd := exec.Command(
-		"sh",
-		"-c",
-		arguments,
-	)
 
-	if output, err := cmd.CombinedOutput(); err != nil {
-		if !strings.Contains(string(output), natRule) {
-			log.Warn().Err(err).Msgf("Failed to create pfctl rule: %v returned exit error. Cmd output: %s", cmd.Args, string(output))
+	if output, err := cmdutil.ExecOutput("sh", "-c", arguments); err != nil {
+		if !strings.Contains(output, natRule) {
+			log.Warn().Err(err).Msgf("Failed to create pfctl rule")
 			return err
 		}
 	}
@@ -129,11 +123,10 @@ func (service *servicePFCtl) enableRules() error {
 }
 
 func (service *servicePFCtl) disableRules() {
-	cmd := utils.SplitCommand("/sbin/pfctl", "-F nat")
-
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn().Err(err).Msgf("Failed cleanup pfctl rules: %v returned exit error. Cmd output: %s", cmd.Args, string(output))
+	_, err := cmdutil.ExecOutput("/sbin/pfctl", "-F", "nat")
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed cleanup NAT rules (pfctl)")
+	} else {
+		log.Info().Msg("NAT rules cleared")
 	}
-
-	log.Info().Msg("NAT rules cleared")
 }
