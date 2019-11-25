@@ -385,6 +385,10 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	// since each address is checked on BC in background, we'll need to wait here until that is complete
 	time.Sleep(time.Millisecond * 10)
 
+	// since we're accessing the current state from outside the setller, lock the settler to prevent race conditions
+	settler.lock.Lock()
+	defer settler.lock.Unlock()
+	
 	assert.True(t, settler.currentState[identity.FromAddress(acc2.Address.Hex())].registered)
 	assert.False(t, settler.currentState[identity.FromAddress(acc1.Address.Hex())].registered)
 }
