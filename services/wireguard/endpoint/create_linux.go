@@ -25,7 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -61,11 +61,11 @@ func getWGClient() (wgClient wgClient, err error) {
 }
 
 func isKernelSpaceSupported() bool {
-	err := utils.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
+	err := cmdutil.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to create wireguard network interface")
 	}
 
-	_ = utils.SudoExec("ip", "link", "del", "iswgsupported")
+	_ = cmdutil.SudoExec("ip", "link", "del", "iswgsupported")
 	return err == nil
 }

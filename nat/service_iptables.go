@@ -19,13 +19,14 @@ package nat
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/utils"
 )
 
 type serviceIPTables struct {
@@ -87,14 +88,14 @@ func iptables(action string, rule RuleForwarding) error {
 		return err
 	}
 
-	arguments := "/sbin/iptables --table nat --" + action + " POSTROUTING --source " +
+	cmd := "/sbin/iptables --table nat --" + action + " POSTROUTING --source " +
 		rule.SourceSubnet + " ! --destination " +
 		rule.SourceSubnet + " --jump SNAT --to " +
 		rule.TargetIP
-	cmd := utils.SplitCommand("sudo", arguments)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn().Err(err).Msgf("Failed to %s IP forwarding rule: %v Cmd output: %s", action, cmd.Args, string(output))
-		return errors.Wrap(err, string(output))
+
+	if err := cmdutil.SudoExec(splitAndTrim(cmd)...); err != nil {
+		log.Warn().Err(err).Msgf("Failed to %s IP forwarding rule", action)
+		return err
 	}
 
 	log.Info().Msgf("Action %q applied for forwarding packets from %s to IP: %s", action, rule.SourceSubnet, rule.TargetIP)
@@ -107,14 +108,21 @@ func dropToLocal(action, sourceSubnet string) error {
 		log.Info().Msgf("no protected networks set")
 		return nil
 	}
-	command := fmt.Sprintf("/sbin/iptables --%s FORWARD --source %s --destination %s -j DROP",
+	cmd := fmt.Sprintf("/sbin/iptables --%s FORWARD --source %s --destination %s -j DROP",
 		action, sourceSubnet, destinations)
-	cmd := utils.SplitCommand("sudo", command)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn().Err(err).Msgf("Failed to %s DROP rule: %v Cmd output: %s", action, cmd.Args, string(output))
-		return errors.Wrap(err, string(output))
+	if err := cmdutil.SudoExec(splitAndTrim(cmd)...); err != nil {
+		log.Warn().Err(err).Msgf("Failed to %s DROP rule", action)
+		return err
 	}
 
 	log.Info().Msgf("Action %q applied for DROP packets from %s to IPs: %s", action, sourceSubnet, destinations)
 	return nil
+}
+
+func splitAndTrim(cmd string) []string {
+	var args []string
+	for _, arg := range strings.Split(cmd, " ") {
+		args = append(args, strings.TrimSpace(arg))
+	}
+	return args
 }

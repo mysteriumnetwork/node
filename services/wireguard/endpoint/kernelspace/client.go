@@ -23,7 +23,7 @@ import (
 
 	"github.com/jackpal/gateway"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -114,21 +114,21 @@ func (c *client) PeerStats() (wg.Stats, error) {
 }
 
 func (c *client) DestroyDevice(name string) error {
-	return utils.SudoExec("ip", "link", "del", "dev", name)
+	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
-		if err := utils.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
+		if err := cmdutil.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
 
-	if err := utils.SudoExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
+	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
 		return err
 	}
 
-	return utils.SudoExec("ip", "link", "set", "dev", iface, "up")
+	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
 func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
@@ -144,14 +144,14 @@ func excludeRoute(ip net.IP) error {
 		return err
 	}
 
-	return utils.SudoExec("ip", "route", "replace", ip.String(), "via", gw.String())
+	return cmdutil.SudoExec("ip", "route", "replace", ip.String(), "via", gw.String())
 }
 
 func addDefaultRoute(iface string) error {
-	if err := utils.SudoExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
+	if err := cmdutil.SudoExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
-	return utils.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
+	return cmdutil.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
 func (c *client) Close() (err error) {
