@@ -37,7 +37,7 @@ import (
 )
 
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
-const DefaultAccountantFailureCount uint64 = 3
+const DefaultAccountantFailureCount uint64 = 10
 
 // DefaultPaymentInfo represents the default payment info for the alpha release
 var DefaultPaymentInfo = dto.PaymentRate{

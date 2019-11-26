@@ -366,6 +366,7 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 			return nil
 		}
 		it.resetAccountantFailureCount()
+
 		err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, promise)
 		if err != nil {
 			return errors.Wrap(err, "could not store accountant promise")
@@ -381,9 +382,15 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		hexR := hex.EncodeToString(it.lastInvoice.r)
 		err = it.accountantCaller.RevealR(hexR, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
 		if err != nil {
-			// TODO: need to think about handling this a bit better
-			log.Error().Err(err).Msg("could not reveal R")
+			log.Error().Err(err).Msg("Could not reveal R")
+			it.incrementAccountantFailureCount()
+			if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
+				return errors.Wrap(err, "could not call accountant")
+			}
+			log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
+			return nil
 		}
+		it.resetAccountantFailureCount()
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout
 	case <-it.stop:
