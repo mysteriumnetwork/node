@@ -258,7 +258,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
-	if nodeOptions.DisableTequilapi {
+	if !nodeOptions.TequilapiEnabled {
 		return tequilapi.NewNoopListener()
 	}
 
@@ -499,7 +499,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 }
 
 func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener, channelImplementation string) tequilapi.APIServer {
-	if nodeOptions.DisableTequilapi {
+	if !nodeOptions.TequilapiEnabled {
 		return tequilapi.NewNoopAPIServer()
 	}
 
@@ -679,7 +679,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	di.ProposalStorage = discovery.NewStorage()
 	di.DiscoveryFinder = discovery.NewFinder(di.ProposalStorage)
 
-	if options.DisableProposalsFetcher {
+	if !options.ProposalFetcherEnabled {
 		di.DiscoveryFetcherAPI = discovery_api.NewNoopFetcher()
 	} else {
 		di.DiscoveryFetcherAPI = discovery_api.NewFetcher(di.ProposalStorage, di.MysteriumAPI.Proposals, 30*time.Second)
