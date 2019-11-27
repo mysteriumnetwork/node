@@ -28,7 +28,7 @@ import (
 // FetchCallback does real fetch of proposals through Mysterium API
 type FetchCallback func() ([]market.ServiceProposal, error)
 
-// Fetcher represents service proposals fetcher.
+// Fetcher continuously fetches service proposals from discovery service
 type Fetcher interface {
 	Start() error
 	Stop()

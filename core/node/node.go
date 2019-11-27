@@ -70,10 +70,6 @@ type Node struct {
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
 	node.httpAPIServer.StartServing()
-	address, err := node.httpAPIServer.Address()
-	if err != nil {
-		return err
-	}
 
 	go func() {
 		err := node.uiServer.Serve()
@@ -84,7 +80,6 @@ func (node *Node) Start() error {
 
 	node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStarted})
 
-	log.Info().Msg("API started on: " + address)
 	go node.natPinger.Start()
 
 	return nil
