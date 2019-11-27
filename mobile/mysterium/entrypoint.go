@@ -109,12 +109,11 @@ func DefaultLogOptions() *MobileLogOptions {
 // DefaultNetworkOptions returns default network options to connect with
 func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
-		Testnet:                 true,
-		ExperimentIdentityCheck: false,
-		ExperimentNATPunching:   true,
-		MysteriumAPIAddress:     metadata.TestnetDefinition.MysteriumAPIAddress,
-		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
-		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
+		Testnet:               true,
+		ExperimentNATPunching: true,
+		MysteriumAPIAddress:   metadata.TestnetDefinition.MysteriumAPIAddress,
+		BrokerAddress:         metadata.TestnetDefinition.BrokerAddress,
+		EtherClientRPC:        metadata.TestnetDefinition.EtherClientRPC,
 	}
 }
 

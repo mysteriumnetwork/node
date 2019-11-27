@@ -22,8 +22,7 @@ type OptionsNetwork struct {
 	Testnet  bool
 	Localnet bool
 
-	ExperimentIdentityCheck bool
-	ExperimentNATPunching   bool
+	ExperimentNATPunching bool
 
 	MysteriumAPIAddress         string
 	AccessPolicyEndpointAddress string

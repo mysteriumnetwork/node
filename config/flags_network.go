@@ -33,11 +33,6 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
-	// FlagIdentityCheck enables experimental identity check.
-	FlagIdentityCheck = cli.BoolFlag{
-		Name:  "experiment-identity-check",
-		Usage: "Enables experimental identity check",
-	}
 	// FlagAPIAddress Mysterium API URL
 	FlagAPIAddress = cli.StringFlag{
 		Name:  "api.address",
@@ -81,7 +76,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		FlagTestnet,
 		FlagLocalnet,
-		FlagIdentityCheck,
 		FlagNATPunching,
 		FlagAPIAddress,
 		FlagBrokerAddress,
@@ -95,7 +89,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagTestnet)
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
-	Current.ParseBoolFlag(ctx, FlagIdentityCheck)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
