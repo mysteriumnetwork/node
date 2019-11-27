@@ -75,9 +75,8 @@ type SessionInfo struct {
 	acknowledge func()
 }
 
-// IsValid checks if session is valid. Invalid session do not have
-// sessionID as it is not created yet.
-func (s *SessionInfo) IsValid() bool {
+// IsActive checks if session is active
+func (s *SessionInfo) IsActive() bool {
 	return s.SessionID != ""
 }
 

@@ -103,7 +103,7 @@ type sessionContext struct {
 
 // SendSessionData sends transferred information about session.
 func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
-	if !e.SessionInfo.IsValid() {
+	if !e.SessionInfo.IsActive() {
 		return
 	}
 	currentSession := e.SessionInfo
@@ -123,7 +123,7 @@ func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
 
 // SendConnStateEvent sends session update events.
 func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
-	if !e.SessionInfo.IsValid() {
+	if !e.SessionInfo.IsActive() {
 		return
 	}
 	sender.sendEvent(sessionEventName, sessionEventContext{
@@ -141,7 +141,7 @@ func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
 
 // SendSessionEvent sends session update events.
 func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
-	if !e.SessionInfo.IsValid() {
+	if !e.SessionInfo.IsActive() {
 		return
 	}
 	sender.sendEvent(sessionEventName, sessionEventContext{
