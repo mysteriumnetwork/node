@@ -15,27 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package utils
+package stringutil
 
-import "net"
+import "testing"
 
-// FirstIP returns a first IP from the subnet.
-func FirstIP(subnet net.IPNet) net.IP {
-	ip := make(net.IP, len(subnet.IP))
-	copy(ip, subnet.IP)
-	dup := ip.Mask(subnet.Mask)
-	inc(dup)
-	if subnet.Contains(dup) {
-		return dup
+func TestRemoveErrorsAndBOMUTF8(t *testing.T) {
+	tests := []struct {
+		name string
+		args string
+		want string
+	}{
+		{
+			name: "removes BOM",
+			args: string([]rune{'\uFEFF', '1', '2'}),
+			want: "12",
+		},
+		{
+			name: "removes error runes",
+			args: string([]rune{'1', '2', '\uFFFD'}),
+			want: "12",
+		},
+		{
+			name: "doesn't change legitimate strings",
+			args: string([]rune{'1', '2'}),
+			want: "12",
+		},
 	}
-	return ip
-}
-
-func inc(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := RemoveErrorsAndBOMUTF8(tt.args); got != tt.want {
+				t.Errorf("RemoveErrorsAndBOMUTF8() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

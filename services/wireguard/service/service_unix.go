@@ -34,7 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -93,7 +93,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
-	config.Consumer.DNS = utils.FirstIP(config.Consumer.IPAddress).String()
+	config.Consumer.DNS = netutil.FirstIP(config.Consumer.IPAddress).String()
 	dnsServer := dns.NewServer(
 		net.JoinHostPort(config.Consumer.DNS, "53"),
 		dns.ResolveViaConfigured(),
