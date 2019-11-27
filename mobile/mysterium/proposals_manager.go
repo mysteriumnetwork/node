@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,11 +71,28 @@ type getProposalResponse struct {
 	Proposal *proposal `json:"proposal"`
 }
 
+type discoveryFinder interface {
+	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
+	MatchProposals(match discovery.ProposalReducer) ([]market.ServiceProposal, error)
+}
+
+type proposalStorage interface {
+	Set(proposals ...market.ServiceProposal)
+}
+
+type mysteriumAPI interface {
+	QueryProposals(query mysterium.ProposalsQuery) ([]market.ServiceProposal, error)
+}
+
+type qualityFinder interface {
+	ProposalsMetrics() []quality.ConnectMetric
+}
+
 func newProposalsManager(
-	discoveryFinder *discovery.Finder,
-	proposalsStore *discovery.ProposalStorage,
-	mysteriumAPI *mysterium.MysteriumAPI,
-	qualityFinder *quality.MysteriumMORQA,
+	discoveryFinder discoveryFinder,
+	proposalsStore proposalStorage,
+	mysteriumAPI mysteriumAPI,
+	qualityFinder qualityFinder,
 ) *proposalsManager {
 	return &proposalsManager{
 		discoveryFinder: discoveryFinder,
@@ -86,10 +103,10 @@ func newProposalsManager(
 }
 
 type proposalsManager struct {
-	discoveryFinder *discovery.Finder
-	proposalsStore  *discovery.ProposalStorage
-	mysteriumAPI    *mysterium.MysteriumAPI
-	qualityFinder   *quality.MysteriumMORQA
+	discoveryFinder discoveryFinder
+	proposalsStore  proposalStorage
+	mysteriumAPI    mysteriumAPI
+	qualityFinder   qualityFinder
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error) {
@@ -171,12 +188,11 @@ func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
 func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) ([]byte, error) {
 	var proposals []*proposal
 	for _, p := range serviceProposals {
-		loc := p.ServiceDefinition.GetLocation()
 		proposals = append(proposals, &proposal{
 			ID:          p.ID,
 			ProviderID:  p.ProviderID,
 			ServiceType: p.ServiceType,
-			CountryCode: loc.Country,
+			CountryCode: m.getServiceCountryCode(&p),
 		})
 	}
 
@@ -191,12 +207,11 @@ func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.Serv
 }
 
 func (m *proposalsManager) mapToProposalResponse(p *market.ServiceProposal) ([]byte, error) {
-	loc := p.ServiceDefinition.GetLocation()
 	proposal := &proposal{
 		ID:          p.ID,
 		ProviderID:  p.ProviderID,
 		ServiceType: p.ServiceType,
-		CountryCode: loc.Country,
+		CountryCode: m.getServiceCountryCode(p),
 	}
 	res := &getProposalResponse{Proposal: proposal}
 	bytes, err := json.Marshal(res)
@@ -204,6 +219,13 @@ func (m *proposalsManager) mapToProposalResponse(p *market.ServiceProposal) ([]b
 		return nil, err
 	}
 	return bytes, nil
+}
+
+func (m *proposalsManager) getServiceCountryCode(p *market.ServiceProposal) string {
+	if p.ServiceDefinition == nil {
+		return ""
+	}
+	return p.ServiceDefinition.GetLocation().Country
 }
 
 func (m *proposalsManager) addQualityData(proposals []*proposal) {

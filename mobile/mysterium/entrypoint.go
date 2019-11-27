@@ -23,9 +23,15 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -36,7 +42,18 @@ import (
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
-	di                             cmd.Dependencies
+	node               *node.Node
+	connectionManager  connection.Manager
+	locationResolver   *location.Cache
+	discoveryFinder    *discovery.Finder
+	identitySelector   selector.Handler
+	signerFactory      identity.SignerFactory
+	natPinger          natPinger
+	ipResolver         ip.Resolver
+	eventBus           eventbus.EventBus
+	connectionRegistry *connection.Registry
+	statisticsTracker  *statistics.SessionStatisticsTracker
+
 	statisticsChangeCallback       StatisticsChangeCallback
 	connectionStatusChangeCallback ConnectionStatusChangeCallback
 	proposalsManager               *proposalsManager
@@ -97,7 +114,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 			Runtime:  currentDir,
 		},
 
-		DisableTequilapi: true,
+		TequilapiEnabled: false,
 
 		Openvpn: embeddedLibCheck{},
 
@@ -111,9 +128,9 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 			Address: "https://quality.mysterium.network/api/v1",
 		},
 		Discovery: node.OptionsDiscovery{
-			Type:                    node.DiscoveryTypeAPI,
-			Address:                 network.MysteriumAPIAddress,
-			DisableProposalsFetcher: true,
+			Type:                   node.DiscoveryTypeAPI,
+			Address:                network.MysteriumAPIAddress,
+			ProposalFetcherEnabled: false,
 		},
 		Location: node.OptionsLocation{
 			IPDetectorURL: "https://api.ipify.org/?format=json",
@@ -125,18 +142,30 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		return nil, err
 	}
 
-	mobileNode := &MobileNode{di: di}
-	mobileNode.proposalsManager = newProposalsManager(
-		mobileNode.di.DiscoveryFinder,
-		mobileNode.di.ProposalStorage,
-		mobileNode.di.MysteriumAPI,
-		mobileNode.di.QualityClient,
-	)
+	mobileNode := &MobileNode{
+		node:               di.Node,
+		connectionManager:  di.ConnectionManager,
+		locationResolver:   di.LocationResolver,
+		discoveryFinder:    di.DiscoveryFinder,
+		identitySelector:   di.IdentitySelector,
+		signerFactory:      di.SignerFactory,
+		natPinger:          di.NATPinger,
+		ipResolver:         di.IPResolver,
+		eventBus:           di.EventBus,
+		connectionRegistry: di.ConnectionRegistry,
+		statisticsTracker:  di.StatisticsTracker,
+		proposalsManager: newProposalsManager(
+			di.DiscoveryFinder,
+			di.ProposalStorage,
+			di.MysteriumAPI,
+			di.QualityClient,
+		),
+	}
 	mobileNode.handleEvents()
 	return mobileNode, nil
 }
 
-// GetProposals returns service proposals from api or cache. Proposals returned as json byte array since
+// GetProposals returns service proposals from API or cache. Proposals returned as JSON byte array since
 // go mobile does not support complex slices.
 func (mb *MobileNode) GetProposals(req *GetProposalsRequest) ([]byte, error) {
 	return mb.proposalsManager.getProposals(req)
@@ -144,7 +173,7 @@ func (mb *MobileNode) GetProposals(req *GetProposalsRequest) ([]byte, error) {
 
 // GetProposal returns service proposal from cache.
 func (mb *MobileNode) GetProposal(req *GetProposalRequest) ([]byte, error) {
-	status := mb.di.ConnectionManager.Status()
+	status := mb.connectionManager.Status()
 	proposal, err := mb.proposalsManager.getProposal(req)
 	if err != nil {
 		return nil, err
@@ -163,7 +192,7 @@ type GetLocationResponse struct {
 
 // GetLocation return current location including country and IP.
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
-	loc, err := mb.di.LocationResolver.DetectLocation()
+	loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +212,7 @@ type GetStatusResponse struct {
 
 // GetStatus returns current connection state and provider info if connected to VPN.
 func (mb *MobileNode) GetStatus() *GetStatusResponse {
-	status := mb.di.ConnectionManager.Status()
+	status := mb.connectionManager.Status()
 	return &GetStatusResponse{
 		State:       string(status.State),
 		ProviderID:  status.Proposal.ProviderID,
@@ -223,7 +252,7 @@ type ConnectRequest struct {
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) error {
-	proposal, err := mb.di.DiscoveryFinder.GetProposal(market.ProposalID{
+	proposal, err := mb.discoveryFinder.GetProposal(market.ProposalID{
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})
@@ -238,7 +267,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 		DisableKillSwitch: req.DisableKillSwitch,
 		EnableDNS:         req.EnableDNS,
 	}
-	if err := mb.di.ConnectionManager.Connect(identity.FromAddress(mb.unlockedIdentity.Address), *proposal, connectOptions); err != nil {
+	if err := mb.connectionManager.Connect(identity.FromAddress(mb.unlockedIdentity.Address), *proposal, connectOptions); err != nil {
 		return err
 	}
 	return nil
@@ -246,7 +275,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 
 // Disconnect disconnects or cancels current connection.
 func (mb *MobileNode) Disconnect() error {
-	if err := mb.di.ConnectionManager.Disconnect(); err != nil {
+	if err := mb.connectionManager.Disconnect(); err != nil {
 		return err
 	}
 	return nil
@@ -256,7 +285,7 @@ func (mb *MobileNode) Disconnect() error {
 // If there is no identity default one will be created.
 func (mb *MobileNode) UnlockIdentity() (string, error) {
 	var err error
-	mb.unlockedIdentity, err = mb.di.IdentitySelector.UseOrCreate("", "")
+	mb.unlockedIdentity, err = mb.identitySelector.UseOrCreate("", "")
 	if err != nil {
 		return "", err
 	}
@@ -265,12 +294,12 @@ func (mb *MobileNode) UnlockIdentity() (string, error) {
 
 // Shutdown function stops running mobile node
 func (mb *MobileNode) Shutdown() error {
-	return mb.di.Node.Kill()
+	return mb.node.Kill()
 }
 
 // WaitUntilDies function returns when node stops
 func (mb *MobileNode) WaitUntilDies() error {
-	return mb.di.Node.Wait()
+	return mb.node.Wait()
 }
 
 // OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one returning session that can be reconnected
@@ -280,13 +309,13 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 	st := &sessionTracker{}
 	factory := &OpenvpnConnectionFactory{
 		sessionTracker: st,
-		signerFactory:  mb.di.SignerFactory,
+		signerFactory:  mb.signerFactory,
 		tunnelSetup:    tunnelSetup,
-		natPinger:      mb.di.NATPinger,
-		ipResolver:     mb.di.IPResolver,
+		natPinger:      mb.natPinger,
+		ipResolver:     mb.ipResolver,
 	}
-	mb.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
-	mb.di.ConnectionRegistry.Register("openvpn", factory)
+	_ = mb.eventBus.Subscribe(connection.StateEventTopic, st.handleState)
+	mb.connectionRegistry.Register("openvpn", factory)
 	return st
 }
 
@@ -296,23 +325,23 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 	factory := &WireguardConnectionFactory{
 		tunnelSetup: wgTunnelSetup,
 	}
-	mb.di.ConnectionRegistry.Register(wireguard.ServiceType, factory)
+	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
 }
 
 func (mb *MobileNode) handleEvents() {
-	_ = mb.di.EventBus.Subscribe(connection.StateEventTopic, func(e connection.StateEvent) {
+	_ = mb.eventBus.Subscribe(connection.StateEventTopic, func(e connection.StateEvent) {
 		if mb.connectionStatusChangeCallback == nil {
 			return
 		}
 		mb.connectionStatusChangeCallback.OnChange(string(e.State))
 	})
 
-	_ = mb.di.EventBus.Subscribe(connection.StatisticsEventTopic, func(e connection.SessionStatsEvent) {
+	_ = mb.eventBus.Subscribe(connection.StatisticsEventTopic, func(e connection.SessionStatsEvent) {
 		if mb.statisticsChangeCallback == nil {
 			return
 		}
 
-		duration := mb.di.StatisticsTracker.GetSessionDuration()
+		duration := mb.statisticsTracker.GetSessionDuration()
 		mb.statisticsChangeCallback.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
 	})
 }

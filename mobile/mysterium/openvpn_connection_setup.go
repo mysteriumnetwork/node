@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -37,6 +36,7 @@ import (
 type natPinger interface {
 	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
 	StopNATProxy()
+	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
 type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error)
@@ -199,7 +199,7 @@ type OpenvpnConnectionFactory struct {
 	sessionTracker *sessionTracker
 	signerFactory  identity.SignerFactory
 	tunnelSetup    Openvpn3TunnelSetup
-	natPinger      cmd.NatPinger
+	natPinger      natPinger
 	ipResolver     ip.Resolver
 }
 
