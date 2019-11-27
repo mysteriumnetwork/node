@@ -50,6 +50,19 @@ func Openvpn() error {
 	return sh.RunV(cmdParts[0], cmdParts[1:]...)
 }
 
+// Wireguard builds and starts wireguard service with terms accepted
+func Wireguard() error {
+	if err := sh.RunV("bin/build"); err != nil {
+		return err
+	}
+	cmd := "build/myst/myst service --agreed-terms-and-conditions wireguard"
+	if runtime.GOOS == "darwin" {
+		cmd = "sudo " + cmd
+	}
+	cmdParts := strings.Split(cmd, " ")
+	return sh.RunV(cmdParts[0], cmdParts[1:]...)
+}
+
 // CLI builds and runs myst CLI
 func CLI() error {
 	if err := sh.RunV("bin/build"); err != nil {
