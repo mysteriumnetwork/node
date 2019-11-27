@@ -161,7 +161,7 @@ func (m *proposalsManager) getFromAPI(showOpenvpnProposals, showWireguardProposa
 			res = append(res, p)
 		}
 	}
-	return allProposals, nil
+	return res, nil
 }
 
 func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
