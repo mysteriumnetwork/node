@@ -1,12 +1,12 @@
 package pingpong
 
 import (
-	"errors"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,109 +40,97 @@ func NewBlockchainWithRetries(bc blockchain, delay time.Duration, maxRetries int
 	}
 }
 
-// GetAccountantFee fetches the accountant fee from blockchain
-func (bwr *BlockchainWithRetries) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
+func (bwr *BlockchainWithRetries) callWithRetry(f func() error) error {
 	for i := 0; i < bwr.maxRetries; i++ {
-		res, err := bwr.bc.GetAccountantFee(accountantAddress)
+		err := f()
 		if err == nil {
-			return res, nil
+			return nil
 		}
 		if i+1 == bwr.maxRetries {
-			return 0, err
+			return err
 		}
 
 		log.Warn().Err(err).Msgf("retry %v of %v", i+1, bwr.maxRetries)
 		select {
 		case <-bwr.stop:
-			return 0, ErrStopped
+			return ErrStopped
 		case <-time.After(bwr.delay):
 		}
 	}
-	return bwr.bc.GetAccountantFee(accountantAddress)
+	return nil
+}
+
+// GetAccountantFee fetches the accountant fee from blockchain
+func (bwr *BlockchainWithRetries) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
+	var res uint16
+	err := bwr.callWithRetry(func() error {
+		r, err := bwr.bc.GetAccountantFee(accountantAddress)
+		if err != nil {
+			return errors.Wrap(err, "could not get accountant fee")
+		}
+		res = r
+		return nil
+	})
+	return res, err
 }
 
 // IsRegisteredAsProvider checks if the provider is registered with the accountant properly
 func (bwr *BlockchainWithRetries) IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck common.Address) (bool, error) {
-	for i := 0; i < bwr.maxRetries; i++ {
-		res, err := bwr.bc.IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck)
-		if err == nil {
-			return res, nil
+	var res bool
+	err := bwr.callWithRetry(func() error {
+		r, err := bwr.bc.IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck)
+		if err != nil {
+			return errors.Wrap(err, "could not check if registered as provider")
 		}
-		if i+1 == bwr.maxRetries {
-			return res, err
-		}
-
-		log.Warn().Err(err).Msgf("retry %v of %v", i+1, bwr.maxRetries)
-		select {
-		case <-bwr.stop:
-			return false, ErrStopped
-		case <-time.After(bwr.delay):
-		}
-	}
-	return bwr.bc.IsRegisteredAsProvider(accountantAddress, registryAddress, addressToCheck)
+		res = r
+		return nil
+	})
+	return res, err
 }
 
 // GetProviderChannel returns the provider channel
 func (bwr *BlockchainWithRetries) GetProviderChannel(accountantAddress, addressToCheck common.Address) (ProviderChannel, error) {
-	for i := 0; i < bwr.maxRetries; i++ {
-		res, err := bwr.bc.GetProviderChannel(accountantAddress, addressToCheck)
-		if err == nil {
-			return res, nil
+	var res ProviderChannel
+	err := bwr.callWithRetry(func() error {
+		r, err := bwr.bc.GetProviderChannel(accountantAddress, addressToCheck)
+		if err != nil {
+			return errors.Wrap(err, "could not get provider channel")
 		}
-		if i+1 == bwr.maxRetries {
-			return res, err
-		}
+		res = r
+		return nil
+	})
 
-		log.Warn().Err(err).Msgf("retry %v of %v", i+1, bwr.maxRetries)
-		select {
-		case <-bwr.stop:
-			return ProviderChannel{}, ErrStopped
-		case <-time.After(bwr.delay):
-		}
-	}
-	return bwr.bc.GetProviderChannel(accountantAddress, addressToCheck)
+	return res, err
 }
 
 // SubscribeToPromiseSettledEvent subscribes to promise settled events
-func (bwr *BlockchainWithRetries) SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error) {
-	for i := 0; i < bwr.maxRetries; i++ {
-		sink, cancel, err := bwr.bc.SubscribeToPromiseSettledEvent(providerID, accountantID)
-		if err == nil {
-			return sink, cancel, nil
+func (bwr *BlockchainWithRetries) SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (chan *bindings.AccountantImplementationPromiseSettled, func(), error) {
+	var sink chan *bindings.AccountantImplementationPromiseSettled
+	var cancel func()
+	err := bwr.callWithRetry(func() error {
+		s, c, err := bwr.bc.SubscribeToPromiseSettledEvent(providerID, accountantID)
+		if err != nil {
+			return errors.Wrap(err, "could not subscribe to settlement events")
 		}
-		if i+1 == bwr.maxRetries {
-			return nil, nil, err
-		}
-
-		log.Warn().Err(err).Msgf("retry %v of %v", i+1, bwr.maxRetries)
-		select {
-		case <-bwr.stop:
-			return sink, cancel, ErrStopped
-		case <-time.After(bwr.delay):
-		}
-	}
-	return bwr.bc.SubscribeToPromiseSettledEvent(providerID, accountantID)
+		sink = s
+		cancel = c
+		return nil
+	})
+	return sink, cancel, err
 }
 
 // IsRegistered checks wether the given identity is registered or not
 func (bwr *BlockchainWithRetries) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
-	for i := 0; i < bwr.maxRetries; i++ {
-		res, err := bwr.bc.IsRegistered(registryAddress, addressToCheck)
-		if err == nil {
-			return res, nil
+	var res bool
+	err := bwr.callWithRetry(func() error {
+		r, err := bwr.bc.IsRegistered(registryAddress, addressToCheck)
+		if err != nil {
+			return errors.Wrap(err, "check registration status")
 		}
-		if i+1 == bwr.maxRetries {
-			return res, err
-		}
-
-		log.Warn().Err(err).Msgf("retry %v of %v", i+1, bwr.maxRetries)
-		select {
-		case <-bwr.stop:
-			return res, ErrStopped
-		case <-time.After(bwr.delay):
-		}
-	}
-	return bwr.bc.IsRegistered(registryAddress, addressToCheck)
+		res = r
+		return nil
+	})
+	return res, err
 }
 
 // Stop stops the blockhain with retries aborting any waits for retries
