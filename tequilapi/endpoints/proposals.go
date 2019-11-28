@@ -18,7 +18,6 @@
 package endpoints
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -30,7 +29,7 @@ import (
 
 // swagger:model ProposalsList
 type proposalsRes struct {
-	Proposals []proposalRes `json:"proposals"`
+	Proposals []*proposal `json:"proposals"`
 }
 
 // swagger:model ServiceLocationDTO
@@ -56,8 +55,12 @@ type serviceDefinitionRes struct {
 	LocationOriginate locationRes `json:"locationOriginate"`
 }
 
+type metricsRes struct {
+	ConnectCount quality.ConnectCount `json:"connectCount"`
+}
+
 // swagger:model ProposalDTO
-type proposalRes struct {
+type proposal struct {
 	// per provider unique serial number of service description provided
 	// example: 5
 	ID int `json:"id"`
@@ -74,14 +77,14 @@ type proposalRes struct {
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
 
 	// Metrics of the service
-	Metrics json.RawMessage `json:"metrics,omitempty"`
+	Metrics *metricsRes `json:"metrics,omitempty"`
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
 
-func proposalToRes(p market.ServiceProposal) proposalRes {
-	return proposalRes{
+func proposalToRes(p market.ServiceProposal) *proposal {
+	return &proposal{
 		ID:          p.ID,
 		ProviderID:  p.ProviderID,
 		ServiceType: p.ServiceType,
@@ -100,18 +103,6 @@ func proposalToRes(p market.ServiceProposal) proposalRes {
 	}
 }
 
-func mapProposalsToRes(
-	proposalArry []market.ServiceProposal,
-	f func(market.ServiceProposal) proposalRes,
-	metrics func(proposalRes) proposalRes,
-) []proposalRes {
-	proposalsResArry := make([]proposalRes, len(proposalArry))
-	for i, proposal := range proposalArry {
-		proposalsResArry[i] = metrics(f(proposal))
-	}
-	return proposalsResArry
-}
-
 // ProposalFinder defines interface to fetch currently active service proposals from discovery by given filter
 type ProposalFinder interface {
 	FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error)
@@ -119,7 +110,7 @@ type ProposalFinder interface {
 
 // QualityFinder allows to fetch proposal quality data
 type QualityFinder interface {
-	ProposalsMetrics() []json.RawMessage
+	ProposalsMetrics() []quality.ConnectMetric
 }
 
 type proposalsEndpoint struct {
@@ -183,12 +174,16 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		return
 	}
 
-	addMetricsToRes := noMetrics
-	if fetchConnectCounts == "true" {
-		addMetricsToRes = addMetrics(pe.qualityProvider)
+	proposalsRes := proposalsRes{Proposals: []*proposal{}}
+	for _, p := range proposals {
+		proposalsRes.Proposals = append(proposalsRes.Proposals, proposalToRes(p))
 	}
 
-	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes, addMetricsToRes)}
+	if fetchConnectCounts == "true" {
+		metrics := pe.qualityProvider.ProposalsMetrics()
+		addProposalMetrics(proposalsRes.Proposals, metrics)
+	}
+
 	utils.WriteAsJSON(proposalsRes, resp)
 }
 
@@ -198,28 +193,17 @@ func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalF
 	router.GET("/proposals", pe.List)
 }
 
-func noMetrics(p proposalRes) proposalRes { return p }
-
-func addMetrics(mc QualityFinder) func(p proposalRes) proposalRes {
-	receivedMetrics := mc.ProposalsMetrics()
-	proposalsMetrics := make(map[string]json.RawMessage, len(receivedMetrics))
-	var proposal struct{ ProposalID proposalRes }
-
-	for _, m := range receivedMetrics {
-		proposalMetric, err := quality.Parse(m, &proposal)
-		if err != nil {
-			return noMetrics
-		}
-		p := proposal.ProposalID
-		proposalsMetrics[p.ProviderID+"-"+p.ServiceType] = proposalMetric
+// addProposalMetrics adds quality metrics to proposals.
+func addProposalMetrics(proposals []*proposal, metrics []quality.ConnectMetric) {
+	// Convert metrics slice to map for fast lookup.
+	metricsMap := map[string]quality.ConnectMetric{}
+	for _, m := range metrics {
+		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
 	}
 
-	return func(p proposalRes) proposalRes {
-		if metrics, ok := proposalsMetrics[p.ProviderID+"-"+p.ServiceType]; ok {
-			p.Metrics = metrics
-			return p
+	for _, p := range proposals {
+		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
+			p.Metrics = &metricsRes{ConnectCount: mc.ConnectCount}
 		}
-		p.Metrics = []byte("{}")
-		return p
 	}
 }

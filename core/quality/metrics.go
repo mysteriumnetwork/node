@@ -17,37 +17,26 @@
 
 package quality
 
-import (
-	"encoding/json"
-
-	"github.com/rs/zerolog/log"
-)
-
 // ServiceMetricsResponse represents response from the quality oracle service
 type ServiceMetricsResponse struct {
-	Connects []json.RawMessage `json:"connects"`
+	Connects []ConnectMetric `json:"connects"`
 }
 
-// Parse parses JSON metrics message to the proposal, and return JSON with metrics only
-func Parse(msg json.RawMessage, proposal interface{}) ([]byte, error) {
-	var metrics struct {
-		ConnectCount json.RawMessage `json:"connectCount"`
-	}
+// ConnectMetric represents a proposal with quality info
+type ConnectMetric struct {
+	ProposalID   ProposalID   `json:"proposalId"`
+	ConnectCount ConnectCount `json:"connectCount"`
+}
 
-	if err := json.Unmarshal(msg, &proposal); err != nil {
-		log.Warn().Msg("Failed to parse proposal info")
-		return nil, err
-	}
+// ProposalID represents the struct used to uniquely identify proposals
+type ProposalID struct {
+	ProviderID  string `json:"providerId" example:"0x286f0e9eb943eca95646bf4933698856579b096e"`
+	ServiceType string `json:"serviceType" example:"openvpn"`
+}
 
-	if err := json.Unmarshal(msg, &metrics); err != nil {
-		log.Warn().Msg("Failed to parse metrics")
-		return nil, err
-	}
-
-	out, err := json.Marshal(metrics)
-	if err != nil {
-		log.Warn().Msg("Failed to marshal metrics JSON")
-		return nil, err
-	}
-	return out, err
+// ConnectCount represents the connection count statistics
+type ConnectCount struct {
+	Success int `json:"success" example:"100" format:"int64"`
+	Fail    int `json:"fail" example:"50" format:"int64"`
+	Timeout int `json:"timeout" example:"10" format:"int64"`
 }

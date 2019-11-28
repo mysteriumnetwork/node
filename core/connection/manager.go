@@ -75,6 +75,11 @@ type SessionInfo struct {
 	acknowledge func()
 }
 
+// IsActive checks if session is active
+func (s *SessionInfo) IsActive() bool {
+	return s.SessionID != ""
+}
+
 // Publisher is responsible for publishing given events
 type Publisher interface {
 	Publish(topic string, data interface{})

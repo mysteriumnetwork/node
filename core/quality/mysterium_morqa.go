@@ -69,7 +69,7 @@ func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
 }
 
 // ProposalsMetrics returns a list of proposals connection metrics
-func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
+func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
 	request, err := m.newRequestJSON(http.MethodGet, "providers/sessions", nil)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to create proposals metrics request")

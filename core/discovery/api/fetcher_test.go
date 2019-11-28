@@ -88,44 +88,6 @@ func Test_Fetcher_StartFetchesNewProposals(t *testing.T) {
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, storage.Proposals())
 }
 
-func Test_Fetcher_StartNotifiesWithInitialProposals(t *testing.T) {
-	storage := discovery.NewStorage()
-	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Hour)
-
-	proposalChan := make(chan market.ServiceProposal)
-	fetcher.SubscribeProposals(proposalChan)
-
-	proposalsCurrent.Mock(proposalFirst, proposalSecond)
-	go func() {
-		err := fetcher.Start()
-		defer fetcher.Stop()
-		assert.NoError(t, err)
-	}()
-
-	waitForInitialFetch()
-
-	assert.Exactly(t, proposalFirst, waitForProposal(t, proposalChan))
-	assert.Exactly(t, proposalSecond, waitForProposal(t, proposalChan))
-}
-
-func Test_Fetcher_StartNotifiesWithNewProposals(t *testing.T) {
-	storage := discovery.NewStorage()
-	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Millisecond)
-
-	proposalChan := make(chan market.ServiceProposal)
-	fetcher.SubscribeProposals(proposalChan)
-
-	proposalsCurrent.Mock(proposalFirst)
-	go func() {
-		err := fetcher.Start()
-		defer fetcher.Stop()
-		assert.NoError(t, err)
-	}()
-
-	proposalsCurrent.Mock(proposalSecond)
-	assert.Exactly(t, proposalSecond, waitForProposal(t, proposalChan))
-}
-
 func waitForProposal(t *testing.T, proposalsChan chan market.ServiceProposal) market.ServiceProposal {
 	select {
 	case proposal := <-proposalsChan:

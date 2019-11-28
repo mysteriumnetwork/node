@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // APIServer interface represents control methods for underlying http api server
@@ -67,6 +68,13 @@ func (server *apiServer) Address() (string, error) {
 // StartServing starts http request serving
 func (server *apiServer) StartServing() {
 	go server.serve(server.handler)
+
+	address, err := server.Address()
+	if err != nil {
+		log.Error().Err(err).Msg("Could not get tequila server address")
+		return
+	}
+	log.Info().Msgf("API started on: %s", address)
 }
 
 func (server *apiServer) serve(handler http.Handler) {

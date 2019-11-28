@@ -53,6 +53,7 @@ type Options struct {
 
 	TequilapiAddress string
 	TequilapiPort    int
+	TequilapiEnabled bool
 	BindAddress      string
 	UI               OptionsUI
 	FeedbackURL      string
@@ -77,6 +78,7 @@ func GetOptions() *Options {
 		Directories:      *GetOptionsDirectory(),
 		TequilapiAddress: config.GetString(config.FlagTequilapiAddress),
 		TequilapiPort:    config.GetInt(config.FlagTequilapiPort),
+		TequilapiEnabled: true,
 		BindAddress:      config.GetString(config.FlagBindAddress),
 		UI: OptionsUI{
 			UIEnabled: config.GetTBool(config.FlagUIEnable),
@@ -100,8 +102,9 @@ func GetOptions() *Options {
 			QualityOracle:               config.GetString(config.FlagQualityOracleAddress),
 		},
 		Discovery: OptionsDiscovery{
-			Type:    DiscoveryType(config.GetString(config.FlagDiscoveryType)),
-			Address: config.GetString(config.FlagDiscoveryAddress),
+			Type:                   DiscoveryType(config.GetString(config.FlagDiscoveryType)),
+			Address:                config.GetString(config.FlagDiscoveryAddress),
+			ProposalFetcherEnabled: true,
 		},
 		MMN: OptionsMMN{
 			Address: config.GetString(config.FlagMMNAddress),
