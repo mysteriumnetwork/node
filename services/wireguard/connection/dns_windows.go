@@ -1,5 +1,3 @@
-// +build !windows
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -19,22 +17,12 @@
 
 package connection
 
-import (
-	"os"
-	"os/exec"
-	"path"
-)
-
-func setDNS(configDir, dev, dns string) error {
-	cmd := exec.Command(path.Join(configDir, "update-resolv-conf"))
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "script_type=up", "dev="+dev, "foreign_option_1=dhcp-option DNS "+dns)
-	return cmd.Run()
+func setDNS(_, _, _ string) error {
+	// TODO implement DNS support
+	return nil
 }
 
-func cleanDNS(configDir, dev string) error {
-	cmd := exec.Command(path.Join(configDir, "update-resolv-conf"))
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "script_type=down", "dev="+dev)
-	return cmd.Run()
+func cleanDNS(_, _ string) error {
+	// TODO implement DNS support
+	return nil
 }

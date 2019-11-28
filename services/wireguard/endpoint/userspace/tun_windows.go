@@ -89,7 +89,7 @@ func (tun *nativeTun) Close() error {
 }
 
 func (tun *nativeTun) Flush() error {
-	return tun.Flush()
+	return nil
 }
 
 func (tun *nativeTun) MTU() (int, error) {
