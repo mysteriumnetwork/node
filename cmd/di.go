@@ -457,6 +457,18 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	di.PromiseStorage = promise.NewStorage(di.Storage)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
+	channelImplementation := nodeOptions.Transactor.ChannelImplementation
+
+	di.Transactor = registry.NewTransactor(
+		nodeOptions.BindAddress,
+		nodeOptions.Transactor.TransactorEndpointAddress,
+		nodeOptions.Transactor.RegistryAddress,
+		nodeOptions.Accountant.AccountantID,
+		channelImplementation,
+		di.SignerFactory,
+		di.EventBus,
+	)
+
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
@@ -474,18 +486,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		connectivity.NewStatusSender(),
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
-	)
-
-	channelImplementation := nodeOptions.Transactor.ChannelImplementation
-
-	di.Transactor = registry.NewTransactor(
-		nodeOptions.BindAddress,
-		nodeOptions.Transactor.TransactorEndpointAddress,
-		nodeOptions.Transactor.RegistryAddress,
-		nodeOptions.Accountant.AccountantID,
-		channelImplementation,
-		di.SignerFactory,
-		di.EventBus,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
