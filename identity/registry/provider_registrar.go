@@ -35,7 +35,7 @@ type registrationStatusChecker interface {
 }
 
 type txer interface {
-	FetchFees() (Fees, error)
+	FetchRegistrationFees() (FeesResponse, error)
 	RegisterIdentity(identity string, regReqDTO *IdentityRegistrationRequestDTO) error
 }
 
@@ -163,14 +163,14 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 }
 
 func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
-	fees, err := pr.txer.FetchFees()
+	fees, err := pr.txer.FetchRegistrationFees()
 	if err != nil {
 		return errors.Wrap(err, "could not fetch fees from transactor")
 	}
-	log.Info().Msgf("Fees fetched. Registration costs %v", fees.Registration)
+	log.Info().Msgf("Fees fetched. Registration costs %v", fees.Fee)
 
 	regReq := &IdentityRegistrationRequestDTO{
-		Fee:   fees.Registration,
+		Fee:   fees.Fee,
 		Stake: pr.cfg.Stake,
 	}
 

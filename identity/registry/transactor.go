@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -58,11 +59,9 @@ func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, 
 	}
 }
 
-// Fees represents fees applied by Transactor
-// swagger:model Fees
-type Fees struct {
-	Transaction  uint64 `json:"transaction"`
-	Registration uint64 `json:"registration"`
+// FeesResponse represents fees applied by Transactor
+type FeesResponse struct {
+	Fee uint64 `json:"fee"`
 }
 
 // IdentityRegistrationRequestDTO represents the identity registration user input parameters
@@ -100,11 +99,34 @@ type IdentityRegistrationRequest struct {
 	Identity  string `json:"identity"`
 }
 
-// FetchFees fetches current transactor fees
-func (t *Transactor) FetchFees() (Fees, error) {
-	f := Fees{}
+// PromiseSettlementRequest represents the settlement request body
+type PromiseSettlementRequest struct {
+	AccountantID  string `json:"accountantID"`
+	ChannelID     string `json:"channelID"`
+	Amount        uint64 `json:"amount"`
+	TransactorFee uint64 `json:"fee"`
+	Preimage      string `json:"preimage"`
+	Signature     string `json:"signature"`
+}
+
+// FetchRegistrationFees fetches current transactor registration fees
+func (t *Transactor) FetchRegistrationFees() (FeesResponse, error) {
+	f := FeesResponse{}
 
 	req, err := requests.NewGetRequest(t.endpointAddress, "fee/register", nil)
+	if err != nil {
+		return f, errors.Wrap(err, "failed to fetch transactor fees")
+	}
+
+	err = t.http.DoRequestAndParseResponse(req, &f)
+	return f, err
+}
+
+// FetchSettleFees fetches current transactor settlement fees
+func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
+	f := FeesResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, "fee/settle", nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
@@ -125,6 +147,29 @@ func (t *Transactor) TopUp(id string) error {
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create TopUp request")
+	}
+	return t.http.DoRequest(req)
+}
+
+// SettleAndRebalance requests the transactor to settle and rebalance the given channel
+func (t *Transactor) SettleAndRebalance(id string, promise pc.Promise) error {
+	channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate channel address")
+	}
+
+	payload := PromiseSettlementRequest{
+		AccountantID:  t.accountantID,
+		ChannelID:     channelAddress,
+		Amount:        promise.Amount,
+		TransactorFee: promise.Fee,
+		Preimage:      hex.EncodeToString(promise.Hashlock),
+		Signature:     hex.EncodeToString(promise.Signature),
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_and_rebalance", payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}

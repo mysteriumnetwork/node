@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -45,6 +46,10 @@ var ErrAccountantFeeTooLarge = errors.New("accountants fee exceeds")
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
+}
+
+type feeProvider interface {
+	FetchSettleFees() (registry.FeesResponse, error)
 }
 
 type bcHelper interface {
@@ -112,6 +117,8 @@ type InvoiceTracker struct {
 	maxAllowedAccountantFee         uint16
 	bcHelper                        bcHelper
 	publisher                       eventbus.Publisher
+	feeProvider                     feeProvider
+	transactorFee                   uint64
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -134,6 +141,7 @@ type InvoiceTrackerDeps struct {
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
 	Publisher                  eventbus.Publisher
+	FeeProvider                feeProvider
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -160,6 +168,7 @@ func NewInvoiceTracker(
 		maxAllowedAccountantFee:        itd.MaxAllowedAccountantFee,
 		bcHelper:                       itd.BlockchainHelper,
 		publisher:                      itd.Publisher,
+		feeProvider:                    itd.FeeProvider,
 	}
 }
 
@@ -197,6 +206,12 @@ func (it *InvoiceTracker) Start() error {
 	if !isConsumerRegistered {
 		return ErrConsumerNotRegistered
 	}
+
+	fees, err := it.feeProvider.FetchSettleFees()
+	if err != nil {
+		return errors.Wrap(err, "could not fetch fees")
+	}
+	it.transactorFee = fees.Fee
 
 	fee, err := it.bcHelper.GetAccountantFee(common.HexToAddress(it.accountantID.Address))
 	if err != nil {
@@ -261,7 +276,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	// TODO: fill in the fee
 	r := make([]byte, 64)
 	rand.Read(r)
-	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, 0, r)
+	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, it.transactorFee, r)
 	invoice.Provider = it.providerID.Address
 	err := it.peerInvoiceSender.Send(invoice)
 	if err != nil {
@@ -328,6 +343,10 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
 		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
+	}
+
+	if em.Promise.Fee != it.transactorFee {
+		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid fee")
 	}
 
 	hashlock, err := hex.DecodeString(strings.TrimPrefix(it.lastInvoice.invoice.Hashlock, "0x"))

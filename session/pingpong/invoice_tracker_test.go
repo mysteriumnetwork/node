@@ -96,6 +96,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
+		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -146,6 +147,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: false},
+		FeeProvider:                &mockTransactor{},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -195,6 +197,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegisteredError: mockError},
+		FeeProvider:                &mockTransactor{},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -242,6 +245,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		Publisher:                  &mockPublisher{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
+		FeeProvider:                &mockTransactor{},
 		MaxAllowedAccountantFee:    1500,
 		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
 	}
@@ -289,6 +293,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		FeeProvider:                &mockTransactor{},
 		Publisher:                  &mockPublisher{},
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
@@ -339,6 +344,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
+		FeeProvider:                &mockTransactor{},
 		Publisher:                  &mockPublisher{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -387,6 +393,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
+		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		Publisher:                  &mockPublisher{},

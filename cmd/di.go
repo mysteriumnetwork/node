@@ -466,6 +466,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 			di.SignerFactory,
 			di.ConsumerInvoiceStorage,
 			di.ConsumerTotalsStorage,
+			di.Transactor,
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress),
 		di.ConnectionRegistry.CreateConnection,
@@ -535,6 +536,7 @@ func newSessionManagerFactory(
 	serviceID string,
 	eventbus eventbus.EventBus,
 	bcHelper *pingpong.BlockchainWithRetries,
+	transactor *registry.Transactor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
@@ -574,6 +576,7 @@ func newSessionManagerFactory(
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			bcHelper,
 			eventbus,
+			transactor,
 		)
 		return session.NewManager(
 			proposal,

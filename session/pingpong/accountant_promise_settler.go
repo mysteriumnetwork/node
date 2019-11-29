@@ -35,6 +35,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type transactor interface {
+	FetchSettleFees() (registry.FeesResponse, error)
+	SettleAndRebalance(id string, promise crypto.Promise) error
+}
+
+type receivedPromise struct {
+	provider identity.Identity
+	promise  crypto.Promise
+}
+
 // AccountantPromiseSettler is responsible for settling the accountant promises.
 type AccountantPromiseSettler struct {
 	bc                         providerChannelStatusProvider
@@ -43,9 +53,10 @@ type AccountantPromiseSettler struct {
 	accountantPromiseGetter    accountantPromiseGetter
 	registrationStatusProvider registrationStatusProvider
 	ks                         ks
+	transactor                 transactor
 
 	currentState map[identity.Identity]state
-	settleQueue  chan identity.Identity
+	settleQueue  chan receivedPromise
 	stop         chan struct{}
 	once         sync.Once
 }
@@ -58,7 +69,7 @@ type AccountantPromiseSettlerConfig struct {
 }
 
 // NewAccountantPromiseSettler creates a new instance of accountant promise settler.
-func NewAccountantPromiseSettler(providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, accountantPromiseGetter accountantPromiseGetter, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
+func NewAccountantPromiseSettler(transactor transactor, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, accountantPromiseGetter accountantPromiseGetter, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
 	return &AccountantPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		accountantPromiseGetter:    accountantPromiseGetter,
@@ -67,7 +78,7 @@ func NewAccountantPromiseSettler(providerChannelStatusProvider providerChannelSt
 		config:                     config,
 		currentState:               make(map[identity.Identity]state),
 		// defaulting to a queue of 5, in case we have a few active identities.
-		settleQueue: make(chan identity.Identity, 5),
+		settleQueue: make(chan receivedPromise, 5),
 		stop:        make(chan struct{}),
 	}
 }
@@ -217,7 +228,10 @@ func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep Accoun
 	log.Info().Msgf("Accountant promise state updated for provider %q", apep.ProviderID)
 
 	if newState.needsSettling(aps.config.Threshold) {
-		aps.settleQueue <- apep.ProviderID
+		aps.settleQueue <- receivedPromise{
+			provider: apep.ProviderID,
+			promise:  apep.Promise,
+		}
 	}
 }
 
@@ -231,45 +245,52 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 		select {
 		case <-aps.stop:
 			return
-		case ID := <-aps.settleQueue:
-			aps.settle(ID)
+		case p := <-aps.settleQueue:
+			aps.settle(p)
 		}
 	}
 }
 
-func (aps *AccountantPromiseSettler) settle(ID identity.Identity) {
-	aps.setSettling(ID, true)
-	log.Info().Msgf("Marked provider %v as requesting setlement", ID)
-	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(ID.ToCommonAddress(), aps.config.AccountantAddress)
+func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
+	aps.setSettling(p.provider, true)
+	log.Info().Msgf("Marked provider %v as requesting setlement", p.provider)
+	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
 	if err != nil {
-		aps.setSettling(ID, false)
+		aps.setSettling(p.provider, false)
 		log.Error().Err(err).Msg("Could not subscribe to promise settlement")
 	}
 	go func() {
 		defer cancel()
-		defer aps.setSettling(ID, false)
+		defer aps.setSettling(p.provider, false)
 		select {
 		case <-aps.stop:
 			return
-		case <-sink:
-			log.Info().Msgf("Settling complete for provider %v", ID)
-			err := aps.resyncState(ID)
+		case _, more := <-sink:
+			if !more {
+				break
+			}
+
+			log.Info().Msgf("Settling complete for provider %v", p.provider)
+			err := aps.resyncState(p.provider)
 			if err != nil {
 				// This will get retried so we do not need to explicitly retry
 				// TODO: maybe add a sane limit of retries
-				log.Error().Err(err).Msgf("Resync failed for provider %v", ID)
+				log.Error().Err(err).Msgf("Resync failed for provider %v", p.provider)
 			} else {
-				log.Info().Msgf("Resync success for provider %v", ID)
+				log.Info().Msgf("Resync success for provider %v", p.provider)
 			}
 			return
 		case <-time.After(aps.config.MaxWaitForSettlement):
-			log.Info().Msgf("Settle timeout for %v", ID)
+			log.Info().Msgf("Settle timeout for %v", p.provider)
 			return
 		}
 	}()
-
-	// TODO: call transactor rebalance
-	// TODO: If transactor call fails, call cancel
+	err = aps.transactor.SettleAndRebalance(p.provider.Address, p.promise)
+	if err != nil {
+		cancel()
+		log.Error().Err(err).Msgf("Could not settle promise for %v", p.provider.Address)
+		return
+	}
 }
 
 func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling bool) {
