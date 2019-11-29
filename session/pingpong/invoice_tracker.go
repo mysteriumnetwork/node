@@ -259,16 +259,28 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	}
 
 	// TODO: fill in the fee
-	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, 0, it.lastInvoice.r)
+	r := make([]byte, 64)
+	rand.Read(r)
+	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, 0, r)
 	invoice.Provider = it.providerID.Address
 	err := it.peerInvoiceSender.Send(invoice)
 	if err != nil {
 		return err
 	}
 
+	it.lastInvoice = lastInvoice{
+		invoice: invoice,
+		r:       r,
+	}
+
 	err = it.invoiceStorage.Store(it.providerID, it.peer, invoice)
 	if err != nil {
 		return errors.Wrap(err, "could not store invoice")
+	}
+
+	err = it.invoiceStorage.StoreR(it.providerID, it.lastInvoice.invoice.AgreementID, common.Bytes2Hex(r))
+	if err != nil {
+		return errors.Wrap(err, "could not store r")
 	}
 
 	err = it.receiveExchangeMessageOrTimeout()

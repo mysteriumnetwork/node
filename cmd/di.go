@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/mysteriumnetwork/node/requests"
@@ -165,7 +164,7 @@ type Dependencies struct {
 	UIServer          UIServer
 	SSEHandler        *sse.Handler
 	Transactor        *registry.Transactor
-	BCHelper          *pingpong.Blockchain
+	BCHelper          *pingpong.BlockchainWithRetries
 	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
@@ -535,7 +534,7 @@ func newSessionManagerFactory(
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
-	bcHelper *pingpong.Blockchain,
+	bcHelper *pingpong.BlockchainWithRetries,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
@@ -637,9 +636,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	log.Info().Msg("options.ExperimentIdentityCheck: " + strconv.FormatBool(optionsNetwork.ExperimentIdentityCheck))
-
-	di.BCHelper = pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
+	bc := pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
+	di.BCHelper = pingpong.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {
