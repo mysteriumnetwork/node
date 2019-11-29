@@ -434,6 +434,8 @@ github.com/mysteriumnetwork/payments v0.0.11-0.20190809092009-003973d4b083 h1:St
 github.com/mysteriumnetwork/payments v0.0.11-0.20190809092009-003973d4b083/go.mod h1:GmdFIgW3DqaKZr4e0T3GEWRiwL/5Xwm5mila6ENG8pM=
 github.com/mysteriumnetwork/payments v0.0.11-0.20191030121656-d2ccfc4f3b84 h1:osdCYGRmIvgCBbFu/PtHpzgfAg9EytjDpYPkrQiADKQ=
 github.com/mysteriumnetwork/payments v0.0.11-0.20191030121656-d2ccfc4f3b84/go.mod h1:khz9e+0ipI8uVAEBhTdSrvo5ByYcdkWtioqkj14Pf7Q=
+github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db h1:OfCcf9GtFBAhTmet4yTnuF0ktdFBmPMq+kbgSUEEQHo=
+github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db/go.mod h1:khz9e+0ipI8uVAEBhTdSrvo5ByYcdkWtioqkj14Pf7Q=
 github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23 h1:fJGV0dFrt4+7d3y4e50xoRVOuZygnxkUhBeMXAfBlkI=
 github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23/go.mod h1:P2HsVp8SKwZEufsnezXZA4GRX/T49/HlU7DGuelXsU4=
 github.com/nats-io/gnatsd v1.4.1 h1:RconcfDeWpKCD6QIIwiVFcvForlXpWeJP7i5/lDLy44=
