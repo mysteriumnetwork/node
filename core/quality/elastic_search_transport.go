@@ -27,15 +27,15 @@ import (
 )
 
 // NewElasticSearchTransport creates transport allowing to send events to ElasticSearch through HTTP
-func NewElasticSearchTransport(srcIP, url string, timeout time.Duration) Transport {
+func NewElasticSearchTransport(httpClient *requests.HTTPClient, url string, timeout time.Duration) Transport {
 	return &elasticSearchTransport{
-		http: requests.NewHTTPClient(srcIP, timeout),
+		http: httpClient,
 		url:  url,
 	}
 }
 
 type elasticSearchTransport struct {
-	http requests.HTTPTransport
+	http *requests.HTTPClient
 	url  string
 }
 

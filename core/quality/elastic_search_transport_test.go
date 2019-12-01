@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +58,7 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 	app := appInfo{Name: "test app", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}
 	event := Event{Application: app}
 
-	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)
+	transport := NewElasticSearchTransport(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL, time.Second)
 	transport.SendEvent(event)
 
 	assert.True(t, invoked)
@@ -71,7 +72,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)
+	transport := NewElasticSearchTransport(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL, time.Second)
 	transport.SendEvent(Event{})
 
 	assert.True(t, invoked)
@@ -84,7 +85,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)
+	transport := NewElasticSearchTransport(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL, time.Second)
 	transport.SendEvent(Event{})
 
 	assert.True(t, invoked)

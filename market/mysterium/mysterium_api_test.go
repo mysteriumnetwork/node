@@ -66,7 +66,7 @@ func TestProposalsReturnsPreviousProposalsWhenEtagMatches(t *testing.T) {
 	}))
 	defer s.Close()
 
-	client := NewClient("0.0.0.0", s.URL)
+	client := NewClient(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), s.URL)
 	client.latestProposals = []market.ServiceProposal{
 		{ID: 1},
 		{ID: 2},
@@ -88,7 +88,7 @@ func TestProposalsOverrideLatestProposalsWhenEtagDoNotMatch(t *testing.T) {
 	}))
 	defer s.Close()
 
-	client := NewClient("0.0.0.0", s.URL)
+	client := NewClient(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), s.URL)
 	client.latestProposals = []market.ServiceProposal{
 		{ID: 1},
 		{ID: 2},

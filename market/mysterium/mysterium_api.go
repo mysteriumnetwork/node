@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -35,7 +34,7 @@ import (
 
 // MysteriumAPI provides access to mysterium owned central discovery service
 type MysteriumAPI struct {
-	http                requests.HTTPTransport
+	http                *requests.HTTPClient
 	discoveryAPIAddress string
 
 	latestProposalsEtagMux sync.RWMutex
@@ -45,9 +44,9 @@ type MysteriumAPI struct {
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
-func NewClient(srcIP, discoveryAPIAddress string) *MysteriumAPI {
+func NewClient(httpClient *requests.HTTPClient, discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		http:                requests.NewHTTPClient(srcIP, 20*time.Second),
+		http:                httpClient,
 		discoveryAPIAddress: discoveryAPIAddress,
 		latestProposals:     []market.ServiceProposal{},
 	}

@@ -49,10 +49,10 @@ type MysteriumMORQA struct {
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
+func NewMorqaClient(baseHTTPClient *http.Client, baseURL string, timeout time.Duration) *MysteriumMORQA {
 	traceLog := &httptrace.HTTPTraceLog{}
 	httpClient := &retryablehttp.Client{
-		HTTPClient:      &http.Client{Timeout: timeout},
+		HTTPClient:      baseHTTPClient,
 		Logger:          traceLog,
 		RequestLogHook:  traceLog.LogRequest,
 		ResponseLogHook: traceLog.LogResponse,
@@ -98,6 +98,8 @@ func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
 	if err != nil {
 		return err
 	}
+
+	request.Close = true
 
 	response, err := m.http.Do(request)
 	if err != nil {

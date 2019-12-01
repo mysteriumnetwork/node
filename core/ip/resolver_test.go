@@ -20,12 +20,13 @@ package ip
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLocalhostOutboundIPIsReturned(t *testing.T) {
 	checkAddress = "localhost:5555"
-	resolver := NewResolver("127.0.0.1", "")
+	resolver := NewResolver(requests.NewHTTPClient("127.0.0.1", requests.DefaultTimeout), "127.0.0.1", "")
 	ip, err := resolver.GetOutboundIPAsString()
 	assert.NoError(t, err)
 	assert.Equal(t, "127.0.0.1", ip)

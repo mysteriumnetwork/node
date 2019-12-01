@@ -253,13 +253,14 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			connectivity.NewStatusSubscriber(di.SessionConnectivityStatusStorage),
 		), nil
 	}
+
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,
 		newDialogWaiter,
 		newDialogHandler,
 		di.DiscoveryFactory,
 		di.EventBus,
-		nodeOptions.BindAddress,
+		di.HTTPClient,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
@@ -283,7 +284,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapUIServer(options node.Options) {
 	if options.UI.UIEnabled {
-		di.UIServer = ui.NewServer(options.BindAddress, options.UI.UIPort, options.TequilapiPort, di.JWTAuthenticator)
+		di.UIServer = ui.NewServer(options.BindAddress, options.UI.UIPort, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
 		return
 	}
 
@@ -295,7 +296,7 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 		return
 	}
 
-	client := mmn.NewClient(options.BindAddress, options.MMN.Address, di.SignerFactory)
+	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
 
 	err := di.EventBus.SubscribeAsync(
 		identity.IdentityUnlockTopic,

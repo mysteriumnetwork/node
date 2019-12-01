@@ -28,37 +28,31 @@ import (
 	"github.com/pkg/errors"
 )
 
-// HTTPTransport describes a client for performing HTTP requests.
-type HTTPTransport interface {
-	Do(req *http.Request) (*http.Response, error)
-	DoRequest(req *http.Request) error
-	DoRequestAndParseResponse(req *http.Request, resp interface{}) error
-}
+const (
+	// DefaultTimeout is a default http client timeout.
+	DefaultTimeout = 20 * time.Second
+)
 
 // NewHTTPClient creates a new HTTP client.
-func NewHTTPClient(srcIP string, timeout time.Duration) *client {
+func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
 	ipAddress := net.ParseIP(srcIP)
 	localIPAddress := net.TCPAddr{IP: ipAddress}
 
-	return &client{
-		&http.Client{Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				LocalAddr: &localIPAddress,
-			}).DialContext,
-			//dont cache tcp connections - first requests after state change (direct -> tunneled and vice versa) will always fail
-			//as stale tcp states are not closed after switch. Probably some kind of CloseIdleConnections will help in the future
-			DisableKeepAlives: true,
-		},
-			Timeout: timeout,
+	return &HTTPClient{
+		Client: &http.Client{
+			Transport: newTransport(&localIPAddress),
+			Timeout:   timeout,
 		},
 	}
 }
 
-type client struct {
+// HTTPClient describes a client for performing HTTP requests.
+type HTTPClient struct {
 	*http.Client
 }
 
-func (c *client) DoRequest(req *http.Request) error {
+// DoRequest performs HTTP requests and parses error without returning response.
+func (c *HTTPClient) DoRequest(req *http.Request) error {
 	response, err := c.Do(req)
 	if err != nil {
 		return err
@@ -68,7 +62,8 @@ func (c *client) DoRequest(req *http.Request) error {
 	return ParseResponseError(response)
 }
 
-func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) error {
+// DoRequestAndParseResponse performs HTTP requests and response from JSON.
+func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface{}) error {
 	response, err := c.Do(req)
 	if err != nil {
 		return err

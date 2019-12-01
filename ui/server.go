@@ -26,6 +26,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/ui/discovery"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -70,7 +71,7 @@ var corsConfig = cors.Config{
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jwtAuthenticator) *Server {
+func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -86,7 +87,7 @@ func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jw
 
 	return &Server{
 		srv:       srv,
-		discovery: discovery.NewLANDiscoveryService(port),
+		discovery: discovery.NewLANDiscoveryService(port, httpClient),
 	}
 }
 

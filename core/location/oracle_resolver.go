@@ -18,23 +18,21 @@
 package location
 
 import (
-	"time"
-
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 type oracleResolver struct {
-	http                  requests.HTTPTransport
+	http                  *requests.HTTPClient
 	oracleResolverAddress string
 }
 
 // NewOracleResolver returns new db resolver initialized from Location Oracle service
-func NewOracleResolver(srcIP, address string) *oracleResolver {
+func NewOracleResolver(httpClient *requests.HTTPClient, address string) *oracleResolver {
 	return &oracleResolver{
-		requests.NewHTTPClient(srcIP, 20*time.Second),
-		address,
+		http:                  httpClient,
+		oracleResolverAddress: address,
 	}
 }
 

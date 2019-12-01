@@ -19,7 +19,6 @@ package ip
 
 import (
 	"net"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -40,20 +39,15 @@ type Resolver interface {
 type ResolverImpl struct {
 	bindAddress string
 	url         string
-	http        requests.HTTPTransport
+	http        *requests.HTTPClient
 }
 
 // NewResolver creates new ip-detector resolver with default timeout of one minute
-func NewResolver(bindAddress, url string) *ResolverImpl {
-	return NewResolverWithTimeout(bindAddress, url, 20*time.Second)
-}
-
-// NewResolverWithTimeout creates new ip-detector resolver with specified timeout
-func NewResolverWithTimeout(bindAddress, url string, timeout time.Duration) *ResolverImpl {
+func NewResolver(httpClient *requests.HTTPClient, bindAddress, url string) *ResolverImpl {
 	return &ResolverImpl{
 		bindAddress: bindAddress,
 		url:         url,
-		http:        requests.NewHTTPClient(bindAddress, timeout),
+		http:        httpClient,
 	}
 }
 
