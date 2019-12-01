@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// DefaultTimeout is a default http client timeout.
+	// DefaultTimeout is a default HTTP client timeout.
 	DefaultTimeout = 20 * time.Second
 )
 
