@@ -53,7 +53,7 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 		netError, ok := err.(net.Error)
 		assert.True(t, ok)
 		assert.True(t, netError.Timeout())
-	case <-time.After(1000 * time.Millisecond):
+	case <-time.After(1200 * time.Millisecond):
 		assert.Fail(t, "failed request expected")
 	}
 }
