@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -31,57 +32,58 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
-// NodeInformation contains node information to be sent to MMN
-type NodeInformation struct {
-	MACAddress  string `json:"mac_address"` // SHA256 hash
-	LocalIP     string `json:"local_ip"`
-	OS          string `json:"os"`
-	Arch        string `json:"arch"`
-	NodeVersion string `json:"node_version"`
-	Identity    string `json:"identity"`
-	VendorID    string `json:"vendor_id"`
+type Collector struct {
+	ipResolver      ip.Resolver
+	node            *NodeInformationDto
+	nodeTypeUpdated bool
+}
+
+func NewCollector(resolver ip.Resolver) *Collector {
+	return &Collector{ipResolver: resolver}
 }
 
 // CollectNodeData sends node information to MMN on identity unlock
-func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
-	return func(identity string) {
-		outboundIp, err := resolver.GetOutboundIPAsString()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get Outbound IP")
-		}
-
-		mac, err := ip.GetMACAddressForIP(outboundIp)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to MAC address")
-		}
-
-		info := getNodeInformation()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get NodeInformation for MMN")
-			return
-		}
-
-		info.MACAddress = hashMACAddress(mac)
-		info.LocalIP = outboundIp
-		info.Identity = identity
-		info.VendorID = config.GetString(config.FlagVendorID)
-
-		if err = client.RegisterNode(info); err != nil {
-			log.Error().Err(err).Msg("failed to send NodeInformation to MMN")
-		}
-
-		log.Info().Interface("info", info).Msg("Registered node to my.mysterium.network")
+func (c *Collector) CollectEnvironmentInformation() error {
+	outboundIp, err := c.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get Outbound IP")
 	}
-}
 
-func getNodeInformation() *NodeInformation {
-	info := &NodeInformation{
+	mac, err := ip.GetMACAddressForIP(outboundIp)
+	if err != nil {
+		return errors.Wrap(err, "Failed to MAC address")
+	}
+
+	node := &NodeInformationDto{
 		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
 	}
+	node.MACAddress = hashMACAddress(mac)
+	node.LocalIP = outboundIp
+	node.VendorID = config.GetString(config.FlagVendorID)
+	// lets keep this the default
+	node.IsProvider = false
 
-	return info
+	c.node = node
+
+	return nil
+}
+
+func (c *Collector) SetIdentity(identity string) {
+	c.node.Identity = identity
+}
+
+func (c *Collector) SetNodeType(isProvider bool) {
+	c.node.IsProvider = isProvider
+}
+
+func (c *Collector) GetNodeType() bool {
+	return c.node.IsProvider
+}
+
+func (c *Collector) GetCollectedInformation() *NodeInformationDto {
+	return c.node
 }
 
 func hashMACAddress(mac string) string {
@@ -103,8 +105,11 @@ func getOS() string {
 	case "linux":
 		output, err := shell.NewCmd("lsb_release -d").Output()
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get OS information")
-			return ""
+			output, err = shell.NewCmd("source /etc/os-release && echo $PRETTY_NAME").Output()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to get OS information")
+				return ""
+			}
 		}
 		return strings.TrimSpace(strings.Replace(string(output), "Description:", "", 1))
 

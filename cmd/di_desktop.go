@@ -296,14 +296,13 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 		return
 	}
 
-	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
-
-	err := di.EventBus.SubscribeAsync(
-		identity.IdentityUnlockTopic,
-		mmn.CollectNodeData(client, di.IPResolver),
-	)
-
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get register to mmn event")
+	collector := mmn.NewCollector(di.IPResolver)
+	if err := collector.CollectEnvironmentInformation(); err != nil {
+		log.Error().Msg("Failed to collect environment information for MMN: " + err.Error())
+		return
 	}
+
+	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
+	m := mmn.NewMMN(collector, client, di.EventBus)
+	m.SubscribeToEvents()
 }
