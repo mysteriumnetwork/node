@@ -39,13 +39,9 @@ var (
 )
 
 type selectorFake struct {
-	id *identity.Identity
 }
 
-func (hf *selectorFake) setIdentity(id *identity.Identity) {
-	hf.id = id
-}
-func (hf *selectorFake) UseOrCreate(address, passphrase string) (identity.Identity, error) {
+func (hf *selectorFake) UseOrCreate(address, _ string) (identity.Identity, error) {
 	if len(address) > 0 {
 		return identity.Identity{Address: address}, nil
 	}

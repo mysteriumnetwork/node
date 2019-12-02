@@ -35,10 +35,10 @@ if [ -z "$DISTR" ]; then
 fi
 
 if ! [ -x "$(command -v vend)" ]; then
-    go get github.com/nomad-software/vend
+    go get github.com/mysteriumnetwork/vend
 fi
 
-vend
+vend -replace golang.zx2c4.com/wireguard=github.com/mysteriumnetwork/wireguard-go
 
 DATE=`date -R`
 

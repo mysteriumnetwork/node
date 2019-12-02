@@ -17,10 +17,6 @@
 
 package discovery
 
-import (
-	"sync"
-)
-
 // LANDiscovery provides local network discovery service for Mysterium Node UI.
 type LANDiscovery interface {
 	Start() error
@@ -30,7 +26,6 @@ type LANDiscovery interface {
 type multiDiscovery struct {
 	ssdp    LANDiscovery
 	bonjour LANDiscovery
-	lock    sync.Mutex
 }
 
 // NewLANDiscoveryService creates SSDP and Bonjour services for LAN discovery.

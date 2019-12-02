@@ -18,12 +18,12 @@
 package endpoints
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -241,8 +241,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"country": "Lithuania",
 							"city": "Vilnius"
 						}
-					},
-					"metrics": {}
+					}
 				}
 			]
 		}`,
@@ -252,22 +251,21 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 
 type mockQualityProvider struct{}
 
-// ProposalsMetrics returns a list of proposals connection metrics
-func (m *mockQualityProvider) ProposalsMetrics() []json.RawMessage {
-	for _, proposal := range serviceProposals {
-		return []json.RawMessage{json.RawMessage(`{
-			"proposalID": {
-				"providerID": "` + proposal.ProviderID + `",
-				"serviceType": "` + proposal.ServiceType + `"
+func (m *mockQualityProvider) ProposalsMetrics() []quality.ConnectMetric {
+	p1 := serviceProposals[0]
+	return []quality.ConnectMetric{
+		{
+			ProposalID: quality.ProposalID{
+				ProviderID:  p1.ProviderID,
+				ServiceType: p1.ServiceType,
 			},
-			"connectCount": {
-				"success": 5,
-				"fail": 3,
-				"timeout": 2
-			}
-		}`)}
+			ConnectCount: quality.ConnectCount{
+				Success: 5,
+				Fail:    3,
+				Timeout: 2,
+			},
+		},
 	}
-	return nil
 }
 
 type mockProposalProvider struct {

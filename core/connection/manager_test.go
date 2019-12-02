@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -49,12 +48,6 @@ type testContext struct {
 	ipCheckParams         IPCheckParams
 	statusSender          *mockStatusSender
 	sync.RWMutex
-}
-
-func mockPaymentEngineFactory(invoice chan crypto.Invoice, dialog communication.Dialog, consumer identity.Identity) (PaymentIssuer, error) {
-	return &MockPaymentIssuer{
-		stopChan: make(chan struct{}),
-	}, nil
 }
 
 var (

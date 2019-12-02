@@ -1,5 +1,3 @@
-// +build !linux
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,29 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package shaper
+package connection
 
-import (
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/rs/zerolog/log"
-)
-
-// noopShaper does not shaping
-type noopShaper struct {
-}
-
-func create(_ eventListener) *noopShaper {
-	return &noopShaper{}
-}
-
-// Start noop
-func (noopShaper) Start(_ string) error {
-	if config.GetBool(config.FlagShaperEnabled) {
-		log.Warn().Msgf("Flag %q is only supported under linux", config.FlagShaperEnabled.Name)
-	}
+func setDNS(_, _, _ string) error {
+	// TODO implement DNS support
 	return nil
 }
 
-// Clear noop
-func (noopShaper) Clear(_ string) {
+func cleanDNS(_, _ string) error {
+	// TODO implement DNS support
+	return nil
 }

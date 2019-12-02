@@ -1,5 +1,3 @@
-// +build !linux
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,29 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package shaper
+package tequilapi
 
-import (
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/rs/zerolog/log"
-)
+import "net"
 
-// noopShaper does not shaping
-type noopShaper struct {
+// NewListener returns tequilapi listener.
+func NewListener(network, address string) (net.Listener, error) {
+	return net.Listen(network, address)
 }
 
-func create(_ eventListener) *noopShaper {
-	return &noopShaper{}
+// NewNoopListener returns noop tequilapi listener.
+func NewNoopListener() (net.Listener, error) {
+	return &noopListener{}, nil
 }
 
-// Start noop
-func (noopShaper) Start(_ string) error {
-	if config.GetBool(config.FlagShaperEnabled) {
-		log.Warn().Msgf("Flag %q is only supported under linux", config.FlagShaperEnabled.Name)
-	}
+type noopListener struct {
+}
+
+func (n noopListener) Accept() (net.Conn, error) {
+	return nil, nil
+}
+
+func (n noopListener) Close() error {
 	return nil
 }
 
-// Clear noop
-func (noopShaper) Clear(_ string) {
+func (n noopListener) Addr() net.Addr {
+	return nil
 }

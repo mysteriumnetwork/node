@@ -28,36 +28,34 @@ import (
 // FetchCallback does real fetch of proposals through Mysterium API
 type FetchCallback func() ([]market.ServiceProposal, error)
 
+// Fetcher continuously fetches service proposals from discovery service
+type Fetcher interface {
+	Start() error
+	Stop()
+}
+
 // Fetcher represents async proposal fetcher from Mysterium API
-type Fetcher struct {
+type fetcher struct {
 	fetch         FetchCallback
 	fetchInterval time.Duration
 	fetchShutdown chan bool
 
-	proposalStorage       *discovery.ProposalStorage
-	proposalSubscriptions []chan market.ServiceProposal
+	proposalStorage *discovery.ProposalStorage
 }
 
 // NewFetcher create instance of Fetcher
-func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) *Fetcher {
-	return &Fetcher{
+func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) Fetcher {
+	return &fetcher{
 		fetch:         callback,
 		fetchInterval: interval,
 
-		proposalStorage:       proposalsStorage,
-		proposalSubscriptions: make([]chan market.ServiceProposal, 0),
+		proposalStorage: proposalsStorage,
 	}
 }
 
 // Start begins fetching proposals to storage
-func (fetcher *Fetcher) Start() error {
+func (fetcher *fetcher) Start() error {
 	go func() {
-		// FIXME: fix via mobile DI (remove override* methods and configure tunnels via node.Boostrap()?)
-		// Add 2 sec delay to complete service startup due to mobile DI flow being a bit different:
-		// service definitions are registered via `OverrideOpenvpnConnection`.
-		// Definitions must be available at the time of the fetch, otherwise valid proposals will be discarded
-		// and user will have to wait for another 30 seconds for them to be populated.
-		time.Sleep(2 * time.Second)
 		if err := fetcher.fetchDo(); err != nil {
 			log.Warn().Err(err).Msg("Initial proposal fetch failed, continuing")
 		}
@@ -70,27 +68,22 @@ func (fetcher *Fetcher) Start() error {
 }
 
 // Stop ends fetching proposals to storage
-func (fetcher *Fetcher) Stop() {
+func (fetcher *fetcher) Stop() {
 	fetcher.fetchShutdown <- true
 }
 
-// SubscribeProposals allows to subscribe all fetched proposals
-func (fetcher *Fetcher) SubscribeProposals(proposalsChan chan market.ServiceProposal) {
-	fetcher.proposalSubscriptions = append(fetcher.proposalSubscriptions, proposalsChan)
-}
-
-func (fetcher *Fetcher) fetchLoop() {
+func (fetcher *fetcher) fetchLoop() {
 	for {
 		select {
 		case <-fetcher.fetchShutdown:
 			break
 		case <-time.After(fetcher.fetchInterval):
-			fetcher.fetchDo()
+			_ = fetcher.fetchDo()
 		}
 	}
 }
 
-func (fetcher *Fetcher) fetchDo() error {
+func (fetcher *fetcher) fetchDo() error {
 	proposals, err := fetcher.fetch()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to fetch proposals")
@@ -99,11 +92,5 @@ func (fetcher *Fetcher) fetchDo() error {
 
 	log.Debug().Msgf("Proposals fetched: %d", len(proposals))
 	fetcher.proposalStorage.Set(proposals...)
-
-	for _, proposal := range proposals {
-		for _, subscription := range fetcher.proposalSubscriptions {
-			subscription <- proposal
-		}
-	}
 	return nil
 }

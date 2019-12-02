@@ -86,7 +86,7 @@ type connectionResponse struct {
 	SessionID string `json:"sessionId,omitempty"`
 
 	// example: {"id":1,"providerId":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","serviceType":"openvpn","serviceDefinition":{"locationOriginate":{"asn":"","country":"CA"}}}
-	Proposal *proposalRes `json:"proposal,omitempty"`
+	Proposal *proposal `json:"proposal,omitempty"`
 }
 
 // swagger:model IPDTO
@@ -370,7 +370,7 @@ func toConnectionResponse(status connection.Status) connectionResponse {
 
 	if status.Proposal.ProviderID != "" {
 		proposalRes := proposalToRes(status.Proposal)
-		response.Proposal = &proposalRes
+		response.Proposal = proposalRes
 	}
 	return response
 }

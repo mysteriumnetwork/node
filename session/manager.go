@@ -124,7 +124,6 @@ type Manager struct {
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
 	paymentEngineFactory  PaymentEngineFactory
-	provideConfig         ConfigProvider
 	natPingerChan         func(*traversal.Params)
 	natEventGetter        NATEventGetter
 	serviceId             string

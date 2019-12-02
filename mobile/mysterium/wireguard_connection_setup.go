@@ -114,15 +114,6 @@ func (wcf *WireguardConnectionFactory) Create(stateChannel connection.StateChann
 	}, nil
 }
 
-// OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
-func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
-	wireguard.Bootstrap()
-	factory := &WireguardConnectionFactory{
-		tunnelSetup: wgTunnelSetup,
-	}
-	mobNode.di.ConnectionRegistry.Register(wireguard.ServiceType, factory)
-}
-
 type deviceFactory func(options connection.ConnectOptions) (*device.DeviceApi, error)
 
 func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceConfig) error {

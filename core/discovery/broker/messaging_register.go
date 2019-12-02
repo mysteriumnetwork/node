@@ -18,11 +18,8 @@
 package broker
 
 import (
-	"reflect"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/pkg/errors"
 )
 
 // registerMessage structure represents message that the Provider sends about newly announced Proposal
@@ -33,32 +30,6 @@ type registerMessage struct {
 const registerEndpoint = communication.MessageEndpoint("proposal-register")
 
 // Dialog boilerplate below, please ignore
-
-// registerConsumer
-type registerConsumer struct {
-	queue chan registerMessage
-}
-
-// GetMessageEndpoint returns endpoint where to receive messages
-func (pmc *registerConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return registerEndpoint
-}
-
-// NewMessage creates struct where message from endpoint will be serialized
-func (pmc *registerConsumer) NewMessage() (messagePtr interface{}) {
-	return &registerMessage{}
-}
-
-// Consume handles messages from endpoint
-func (pmc *registerConsumer) Consume(messagePtr interface{}) error {
-	msg, ok := messagePtr.(registerMessage)
-	if !ok {
-		return errors.Errorf("consume received message of type %q, expected registerMessage instead", reflect.TypeOf(messagePtr))
-	}
-
-	pmc.queue <- msg
-	return nil
-}
 
 // registerProducer
 type registerProducer struct {

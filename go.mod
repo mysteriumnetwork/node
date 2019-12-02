@@ -41,8 +41,9 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20190917134659-78a29f230467
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191007132044-c746550858a5
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191125133122-c2bab4ca5537
 	github.com/mysteriumnetwork/go-openvpn v0.0.18
+	github.com/mysteriumnetwork/go-wondershaper v1.0.0
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
 	github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db
 	github.com/nats-io/gnatsd v1.4.1 // indirect
@@ -66,9 +67,9 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343
-	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056
+	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
+	golang.org/x/net v0.0.0-20191125084936-ffdde1057850
+	golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
 	golang.zx2c4.com/wireguard v0.0.20191012
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
 	google.golang.org/appengine v1.6.5 // indirect

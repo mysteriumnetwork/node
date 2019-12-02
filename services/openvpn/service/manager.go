@@ -65,6 +65,10 @@ type NATEventGetter interface {
 	LastEvent() *event.Event
 }
 
+type eventListener interface {
+	SubscribeAsync(topic string, fn interface{}) error
+}
+
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService     nat.NATService
@@ -74,7 +78,7 @@ type Manager struct {
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
 	dnsServer      *dns.Server
-	shaper         shaper.Shaper
+	eventListener  eventListener
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
@@ -152,10 +156,12 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		}
 	}()
 
-	err = m.shaper.Start(m.vpnServer.DeviceName())
+	s := shaper.New(m.eventListener)
+	err = s.Start(m.vpnServer.DeviceName())
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start traffic shaper")
 	}
+	defer s.Clear(m.vpnServer.DeviceName())
 
 	log.Info().Msg("OpenVPN server waiting")
 	return m.vpnServer.Wait()

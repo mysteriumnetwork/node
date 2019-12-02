@@ -29,6 +29,7 @@ const (
 
 // OptionsDiscovery describes possible parameters of discovery configuration
 type OptionsDiscovery struct {
-	Type    DiscoveryType
-	Address string
+	Type                   DiscoveryType
+	Address                string
+	ProposalFetcherEnabled bool
 }

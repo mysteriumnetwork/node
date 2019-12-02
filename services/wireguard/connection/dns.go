@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *

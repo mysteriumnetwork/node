@@ -47,7 +47,6 @@ import (
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/core/state"
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -129,7 +128,8 @@ type Dependencies struct {
 
 	DiscoveryFactory    service.DiscoveryFactory
 	DiscoveryFinder     *discovery.Finder
-	DiscoveryFetcherAPI *discovery_api.Fetcher
+	ProposalStorage     *discovery.ProposalStorage
+	DiscoveryFetcherAPI discovery_api.Fetcher
 
 	QualityMetricsSender *quality.Sender
 	QualityClient        *quality.MysteriumMORQA
@@ -170,7 +170,6 @@ type Dependencies struct {
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
 
-	Shaper                   shaper.Shaper
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerInvoiceStorage   *pingpong.ConsumerInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
@@ -184,10 +183,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
-	// check early for presence of an already running node
-	tequilaListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort))
+	// Check early for presence of an already running node
+	tequilaListener, err := di.createTequilaListener(nodeOptions)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("The port %v seems to be taken. Either you're already running a node or it is already used by another application", nodeOptions.TequilapiPort))
+		return err
 	}
 
 	if err := nodeOptions.Directories.Check(); err != nil {
@@ -225,8 +224,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapBandwidthTracker(); err != nil {
 		return err
 	}
-
-	di.Shaper = shaper.Bootstrap(di.EventBus)
 
 	if err := di.bootstrapServices(nodeOptions); err != nil {
 		return err
@@ -271,6 +268,18 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	log.Info().Msg("Mysterium node started!")
 	return nil
+}
+
+func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
+	if !nodeOptions.TequilapiEnabled {
+		return tequilapi.NewNoopListener()
+	}
+
+	tequilaListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort))
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("The port %v seems to be taken. Either you're already running a node or it is already used by another application", nodeOptions.TequilapiPort))
+	}
+	return tequilaListener, nil
 }
 
 func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
@@ -439,7 +448,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
 }
 
-func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) error {
+func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
@@ -495,6 +504,17 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	}
 	di.Reporter = reporter
 
+	tequilapiHTTPServer := di.bootstrapTequilapi(nodeOptions, tequilaListener, channelImplementation)
+
+	di.Node = node.NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
+	return nil
+}
+
+func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener, channelImplementation string) tequilapi.APIServer {
+	if !nodeOptions.TequilapiEnabled {
+		return tequilapi.NewNoopAPIServer()
+	}
+
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
@@ -513,14 +533,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
-
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
-
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
-	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
-
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.NATPinger, di.UIServer)
-	return nil
+	return tequilapi.NewServer(listener, router, corsPolicy)
 }
 
 func newSessionManagerFactory(
@@ -685,9 +700,14 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory, di.EventBus)
 	}
 
-	storage := discovery.NewStorage()
-	di.DiscoveryFinder = discovery.NewFinder(storage)
-	di.DiscoveryFetcherAPI = discovery_api.NewFetcher(storage, di.MysteriumAPI.Proposals, 30*time.Second)
+	di.ProposalStorage = discovery.NewStorage()
+	di.DiscoveryFinder = discovery.NewFinder(di.ProposalStorage)
+
+	if !options.ProposalFetcherEnabled {
+		di.DiscoveryFetcherAPI = discovery_api.NewNoopFetcher()
+	} else {
+		di.DiscoveryFetcherAPI = discovery_api.NewFetcher(di.ProposalStorage, di.MysteriumAPI.Proposals, 30*time.Second)
+	}
 
 	return nil
 }

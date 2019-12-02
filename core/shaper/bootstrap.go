@@ -17,24 +17,19 @@
 
 package shaper
 
-import (
-	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/rs/zerolog/log"
-)
-
-// Shaper shapes traffic on a network interface
+// Shaper shapes traffic on a network interface.
 type Shaper interface {
-	// Start applies current shaping configuration for the specified interface
-	// and then continuously ensures it
+	// Start applies shaping configuration on the specified interface and then continuously ensures it.
 	Start(interfaceName string) error
+	// Clear clears shaping rules.
+	Clear(interfaceName string)
 }
 
-// Bootstrap creates a shaper: either a wondershaper (linux-only, if binary exists), or a noop
-func Bootstrap(eventBus eventbus.EventBus) (shaper Shaper) {
-	shaper, err := newWonderShaper(eventBus)
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not create wonder shaper, using noop")
-		shaper = newNoopShaper()
-	}
-	return shaper
+type eventListener interface {
+	SubscribeAsync(topic string, fn interface{}) error
+}
+
+// New creates a traffic shaper (linux) or no-op.
+func New(listener eventListener) (shaper Shaper) {
+	return create(listener)
 }

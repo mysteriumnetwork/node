@@ -1,5 +1,3 @@
-// +build !linux
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,29 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package shaper
+package mysterium
 
-import (
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/rs/zerolog/log"
-)
+import "github.com/mysteriumnetwork/node/core/node"
 
-// noopShaper does not shaping
-type noopShaper struct {
+type embeddedLibCheck struct {
 }
 
-func create(_ eventListener) *noopShaper {
-	return &noopShaper{}
-}
-
-// Start noop
-func (noopShaper) Start(_ string) error {
-	if config.GetBool(config.FlagShaperEnabled) {
-		log.Warn().Msgf("Flag %q is only supported under linux", config.FlagShaperEnabled.Name)
-	}
+// Check always returns nil as embedded lib does not have any external failing deps
+func (embeddedLibCheck) Check() error {
 	return nil
 }
 
-// Clear noop
-func (noopShaper) Clear(_ string) {
+// BinaryPath returns noop binary path
+func (embeddedLibCheck) BinaryPath() string {
+	return "mobile uses embedded openvpn lib"
 }
+
+// check if our struct satisfies Openvpn interface expected by node options
+var _ node.Openvpn = embeddedLibCheck{}

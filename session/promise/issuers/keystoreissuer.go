@@ -46,22 +46,3 @@ func (li LocalIssuer) Issue(promise model.Promise) (model.IssuedPromise, error) 
 }
 
 var _ promise.Issuer = LocalIssuer{}
-
-// this is ugly adapter to make identity.Signer from node usable in payments package
-// it's a bit confusing as both interfaces has the same name and method, but only params and return values differ
-type paymentsSignerAdapter struct {
-	identitySigner identity.Signer
-}
-
-func (psa paymentsSignerAdapter) Sign(data []byte) ([]byte, error) {
-	var message []byte
-	for _, dataSlice := range data {
-		message = append(message, dataSlice)
-	}
-
-	sig, err := psa.identitySigner.Sign(message)
-	if err != nil {
-		return nil, err
-	}
-	return sig.Bytes(), nil
-}
