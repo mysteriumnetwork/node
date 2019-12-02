@@ -27,7 +27,7 @@ import (
 
 const (
 	maxHTTPRetries  = 3
-	delayAfterRetry = 50 * time.Millisecond
+	delayAfterRetry = 350 * time.Millisecond
 )
 
 func newTransport(localIPAddress *net.TCPAddr) *transport {
