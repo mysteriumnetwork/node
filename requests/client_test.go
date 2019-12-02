@@ -65,7 +65,7 @@ func TestClientDoRequestAndParseResponse(t *testing.T) {
 	assert.Equal(t, "OK", res.Test)
 }
 
-func TestClientStopTransportRetries(t *testing.T) {
+func TestHTTPClientRecreateUnderlyingHTTPClientInstance(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		w.Write([]byte("Timeout"))
@@ -73,7 +73,6 @@ func TestClientStopTransportRetries(t *testing.T) {
 	defer server.Close()
 
 	httpClient := NewHTTPClient("0.0.0.0", 50*time.Millisecond)
-	httpClient.StopTransportRetries()
 
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -85,6 +84,10 @@ func TestClientStopTransportRetries(t *testing.T) {
 			res, err := httpClient.Do(req)
 			assert.Error(t, err)
 			assert.Nil(t, res)
+		}()
+
+		go func() {
+			httpClient.Reconnect()
 		}()
 	}
 

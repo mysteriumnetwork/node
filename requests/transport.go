@@ -20,68 +20,27 @@ package requests
 import (
 	"net"
 	"net/http"
-	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
-const (
-	maxHTTPRetries  = 3
-	delayAfterRetry = 350 * time.Millisecond
-)
-
-func newTransport(srcIP string) *transport {
+// GetDefaultTransport returns default HTTP transport which
+// should be reused as it caches underlying TCP connections.
+// If connections pooling is not needed consider to set
+// DisableKeepAlives=false and MaxIdleConnsPerHost=-1.
+func GetDefaultTransport(srcIP string) *http.Transport {
 	ipAddress := net.ParseIP(srcIP)
 	localIPAddress := &net.TCPAddr{IP: ipAddress}
 
-	return &transport{
-		stop: make(chan struct{}),
-		rt: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   60 * time.Second,
-				KeepAlive: 30 * time.Second,
-				LocalAddr: localIPAddress,
-			}).DialContext,
-			ForceAttemptHTTP2:   true,
-			MaxIdleConns:        300,
-			IdleConnTimeout:     90 * time.Second,
-			TLSHandshakeTimeout: 30 * time.Second,
-		},
+	return &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   60 * time.Second,
+			KeepAlive: 30 * time.Second,
+			LocalAddr: localIPAddress,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   30 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
 	}
-}
-
-type transport struct {
-	rt http.RoundTripper
-
-	once sync.Once
-	stop chan struct{}
-}
-
-// RoundTrip does HTTP requests with retries. Retries are needed since
-// error can happen when HTTP client closes idle connections.
-func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	for i := 1; i <= maxHTTPRetries; i++ {
-		res, err := t.rt.RoundTrip(req)
-		if err == nil {
-			return res, nil
-		}
-
-		log.Warn().Err(err).Msgf("Failed to call %q. Retrying.", req.URL.String())
-		select {
-		case <-time.After(delayAfterRetry):
-			if i == maxHTTPRetries {
-				return res, err
-			}
-		case <-t.stop:
-			return res, err
-		}
-	}
-	return nil, nil
-}
-
-func (t *transport) stopRetries() {
-	t.once.Do(func() {
-		close(t.stop)
-	})
 }

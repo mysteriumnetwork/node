@@ -39,7 +39,6 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	assert.NoError(t, err)
 
 	httpClient := requests.NewHTTPClient(bindAllAddress, 50*time.Millisecond)
-	httpClient.StopTransportRetries()
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
 	assert.NoError(t, err)
 
@@ -54,7 +53,7 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 		netError, ok := err.(net.Error)
 		assert.True(t, ok)
 		assert.True(t, netError.Timeout())
-	case <-time.After(1200 * time.Millisecond):
+	case <-time.After(1000 * time.Millisecond):
 		assert.Fail(t, "failed request expected")
 	}
 }

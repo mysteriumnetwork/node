@@ -339,10 +339,6 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
-	if di.HTTPClient != nil {
-		di.HTTPClient.StopTransportRetries()
-	}
-
 	if di.ServicesManager != nil {
 		if err := di.ServicesManager.Kill(); err != nil {
 			errs = append(errs, err)
@@ -707,7 +703,7 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(di.HTTPClient.Client, options.Address, 20*time.Second)
+	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, 20*time.Second)
 
 	var transport quality.Transport
 	switch options.Type {
@@ -840,8 +836,9 @@ func (di *Dependencies) handleHTTPClientConnections() error {
 		isDisconnected := latestState == connection.Connected && e.State == connection.NotConnected
 		isConnected := latestState == connection.NotConnected && e.State == connection.Connected
 		if isDisconnected || isConnected {
-			log.Info().Msg("Closing idle HTTP connections due to state change")
-			di.HTTPClient.CloseIdleConnections()
+			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
+			di.HTTPClient.Reconnect()
+			di.QualityClient.Reconnect()
 		}
 		latestState = e.State
 	})

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
@@ -34,17 +35,29 @@ const (
 
 // NewHTTPClient creates a new HTTP client.
 func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
-	return &HTTPClient{
-		Client: &http.Client{
-			Transport: newTransport(srcIP),
-			Timeout:   timeout,
+	c := &HTTPClient{
+		clientFactory: func() *http.Client {
+			return &http.Client{
+				Timeout:   timeout,
+				Transport: GetDefaultTransport(srcIP),
+			}
 		},
 	}
+	// Create initial clean before any HTTP request is made.
+	c.client = c.clientFactory()
+	return c
 }
 
 // HTTPClient describes a client for performing HTTP requests.
 type HTTPClient struct {
-	*http.Client
+	client        *http.Client
+	clientMu      sync.Mutex
+	clientFactory func() *http.Client
+}
+
+// Do sends an HTTP request and returns an HTTP response.
+func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
+	return c.resolveClient().Do(req)
 }
 
 // DoRequest performs HTTP requests and parses error without returning response.
@@ -76,12 +89,22 @@ func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface
 	return ParseResponseJSON(response, &resp)
 }
 
-// StopTransportRetries stops HTTP transport retries. This is mostly useful
-// to prevent possible HTTP retries during node shutdown.
-func (c *HTTPClient) StopTransportRetries() {
-	if tr, ok := c.Transport.(*transport); ok {
-		tr.stopRetries()
+// Reconnect creates new instance of underlying HTTP client.
+func (c *HTTPClient) Reconnect() {
+	c.clientMu.Lock()
+	defer c.clientMu.Unlock()
+	c.client.CloseIdleConnections()
+	c.client = c.clientFactory()
+}
+
+func (c *HTTPClient) resolveClient() *http.Client {
+	c.clientMu.Lock()
+	defer c.clientMu.Unlock()
+	if c.client != nil {
+		return c.client
 	}
+	c.client = c.clientFactory()
+	return c.client
 }
 
 // ParseResponseJSON parses http.Response into given struct.

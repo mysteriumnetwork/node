@@ -27,7 +27,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/mysteriumnetwork/metrics"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +45,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 		response.WriteHeader(http.StatusAccepted)
 	}))
 
-	transport := &morqaTransport{morqaClient: NewMorqaClient(requests.NewHTTPClient(server.URL, requests.DefaultTimeout).Client, server.URL, 10*time.Millisecond)}
+	transport := &morqaTransport{morqaClient: NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)}
 	err := transport.SendEvent(eventStartup)
 
 	assert.NoError(t, err)
@@ -73,7 +72,7 @@ func TestMORQATransport_SendEvent_HandlesErrorsWithMessages(t *testing.T) {
 		}`))
 	}))
 
-	transport := &morqaTransport{morqaClient: NewMorqaClient(requests.NewHTTPClient(server.URL, requests.DefaultTimeout).Client, server.URL, 10*time.Millisecond)}
+	transport := &morqaTransport{morqaClient: NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)}
 	err := transport.SendEvent(eventStartup)
 
 	assert.EqualError(t, err, fmt.Sprintf(
@@ -93,7 +92,7 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 		}`))
 	}))
 
-	transport := &morqaTransport{morqaClient: NewMorqaClient(requests.NewHTTPClient(server.URL, requests.DefaultTimeout).Client, server.URL, 10*time.Millisecond)}
+	transport := &morqaTransport{morqaClient: NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)}
 	err := transport.SendEvent(eventStartup)
 
 	assert.EqualError(t, err, fmt.Sprintf(
@@ -108,7 +107,7 @@ func TestMORQATransport_SendEvent_HandlesFatalErrors(t *testing.T) {
 		w.Write([]byte(`{}`))
 	}))
 
-	transport := &morqaTransport{morqaClient: NewMorqaClient(requests.NewHTTPClient(server.URL, requests.DefaultTimeout).Client, server.URL, 10*time.Millisecond)}
+	transport := &morqaTransport{morqaClient: NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)}
 	err := transport.SendEvent(eventStartup)
 
 	assert.EqualError(t, err, fmt.Sprintf(

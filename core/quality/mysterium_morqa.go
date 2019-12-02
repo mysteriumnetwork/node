@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
@@ -37,35 +39,40 @@ const (
 	mysteriumMorqaAgentName = "goclient-v0.1"
 )
 
-// HTTPClient sends actual HTTP requests
-type HTTPClient interface {
-	Do(*retryablehttp.Request) (*http.Response, error)
-}
-
 // MysteriumMORQA HTTP client for Mysterium QualityOracle - MORQA
 type MysteriumMORQA struct {
-	http    HTTPClient
+	// http    HTTPClient
 	baseURL string
+
+	client        *retryablehttp.Client
+	clientMu      sync.Mutex
+	clientFactory func() *retryablehttp.Client
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(baseHTTPClient *http.Client, baseURL string, timeout time.Duration) *MysteriumMORQA {
+func NewMorqaClient(srcIP, baseURL string, timeout time.Duration) *MysteriumMORQA {
 	traceLog := &httptrace.HTTPTraceLog{}
-	httpClient := &retryablehttp.Client{
-		HTTPClient:      baseHTTPClient,
-		Logger:          traceLog,
-		RequestLogHook:  traceLog.LogRequest,
-		ResponseLogHook: traceLog.LogResponse,
-		RetryWaitMin:    timeout,
-		RetryWaitMax:    10 * timeout,
-		RetryMax:        10,
-		CheckRetry:      retryablehttp.DefaultRetryPolicy,
-		Backoff:         retryablehttp.DefaultBackoff,
-	}
-	return &MysteriumMORQA{
-		http:    httpClient,
+	morqa := &MysteriumMORQA{
 		baseURL: baseURL,
+		clientFactory: func() *retryablehttp.Client {
+			return &retryablehttp.Client{
+				HTTPClient: &http.Client{
+					Timeout:   timeout,
+					Transport: requests.GetDefaultTransport(srcIP),
+				},
+				Logger:          traceLog,
+				RequestLogHook:  traceLog.LogRequest,
+				ResponseLogHook: traceLog.LogResponse,
+				RetryWaitMin:    timeout,
+				RetryWaitMax:    10 * timeout,
+				RetryMax:        10,
+				CheckRetry:      retryablehttp.DefaultRetryPolicy,
+				Backoff:         retryablehttp.DefaultBackoff,
+			}
+		},
 	}
+	morqa.client = morqa.clientFactory()
+	return morqa
 }
 
 // ProposalsMetrics returns a list of proposals connection metrics
@@ -76,7 +83,7 @@ func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
 		return nil
 	}
 
-	response, err := m.http.Do(request)
+	response, err := m.client.Do(request)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
 		return nil
@@ -101,13 +108,31 @@ func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
 
 	request.Close = true
 
-	response, err := m.http.Do(request)
+	response, err := m.client.Do(request)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
 
 	return parseResponseError(response)
+}
+
+// Reconnect creates new instance of underlying retryable HTTP client.
+func (m *MysteriumMORQA) Reconnect() {
+	m.clientMu.Lock()
+	defer m.clientMu.Unlock()
+	m.client.HTTPClient.CloseIdleConnections()
+	m.client = m.clientFactory()
+}
+
+func (m *MysteriumMORQA) resolveClient() *retryablehttp.Client {
+	m.clientMu.Lock()
+	defer m.clientMu.Unlock()
+	if m.client != nil {
+		return m.client
+	}
+	m.client = m.clientFactory()
+	return m.client
 }
 
 func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*retryablehttp.Request, error) {
