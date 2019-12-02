@@ -31,14 +31,19 @@ const (
 )
 
 func newTransport(localIPAddress *net.TCPAddr) *transport {
-	t := &transport{
+	return &transport{
 		rt: &http.Transport{
 			DialContext: (&net.Dialer{
+				Timeout:   60 * time.Second,
+				KeepAlive: 30 * time.Second,
 				LocalAddr: localIPAddress,
 			}).DialContext,
+			ForceAttemptHTTP2:   true,
+			MaxIdleConns:        300,
+			IdleConnTimeout:     90 * time.Second,
+			TLSHandshakeTimeout: 30 * time.Second,
 		},
 	}
-	return t
 }
 
 type transport struct {
@@ -54,7 +59,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			return res, nil
 		}
 
-		log.Error().Err(err).Msgf("Failed to call %q. Retrying.", req.URL.String())
+		log.Warn().Err(err).Msgf("Failed to call %q. Retrying.", req.URL.String())
 		time.Sleep(delayAfterRetry)
 		if i == maxHTTPRetries {
 			return res, err
