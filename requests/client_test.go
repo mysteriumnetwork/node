@@ -20,7 +20,9 @@ package requests
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -61,4 +63,30 @@ func TestClientDoRequestAndParseResponse(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "OK", res.Test)
+}
+
+func TestClientStopTransportRetries(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.Write([]byte("Timeout"))
+	}))
+	defer server.Close()
+
+	httpClient := NewHTTPClient("0.0.0.0", 50*time.Millisecond)
+	httpClient.StopTransportRetries()
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+	for i := 0; i < 3; i++ {
+		go func() {
+			defer wg.Done()
+			req, err := NewGetRequest(server.URL, "/", nil)
+			assert.NoError(t, err)
+			res, err := httpClient.Do(req)
+			assert.Error(t, err)
+			assert.Nil(t, res)
+		}()
+	}
+
+	wg.Wait()
 }

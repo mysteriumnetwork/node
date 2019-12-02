@@ -339,6 +339,10 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
+	if di.HTTPClient != nil {
+		di.HTTPClient.StopTransportRetries()
+	}
+
 	if di.ServicesManager != nil {
 		if err := di.ServicesManager.Kill(); err != nil {
 			errs = append(errs, err)

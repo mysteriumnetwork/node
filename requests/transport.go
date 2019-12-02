@@ -20,6 +20,7 @@ package requests
 import (
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -30,8 +31,12 @@ const (
 	delayAfterRetry = 350 * time.Millisecond
 )
 
-func newTransport(localIPAddress *net.TCPAddr) *transport {
+func newTransport(srcIP string) *transport {
+	ipAddress := net.ParseIP(srcIP)
+	localIPAddress := &net.TCPAddr{IP: ipAddress}
+
 	return &transport{
+		stop: make(chan struct{}),
 		rt: &http.Transport{
 			DialContext: (&net.Dialer{
 				Timeout:   60 * time.Second,
@@ -48,6 +53,9 @@ func newTransport(localIPAddress *net.TCPAddr) *transport {
 
 type transport struct {
 	rt http.RoundTripper
+
+	once sync.Once
+	stop chan struct{}
 }
 
 // RoundTrip does HTTP requests with retries. Retries are needed since
@@ -60,10 +68,20 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 
 		log.Warn().Err(err).Msgf("Failed to call %q. Retrying.", req.URL.String())
-		time.Sleep(delayAfterRetry)
-		if i == maxHTTPRetries {
+		select {
+		case <-time.After(delayAfterRetry):
+			if i == maxHTTPRetries {
+				return res, err
+			}
+		case <-t.stop:
 			return res, err
 		}
 	}
 	return nil, nil
+}
+
+func (t *transport) stopRetries() {
+	t.once.Do(func() {
+		close(t.stop)
+	})
 }

@@ -20,7 +20,6 @@ package requests
 import (
 	"encoding/json"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"time"
 
@@ -35,12 +34,9 @@ const (
 
 // NewHTTPClient creates a new HTTP client.
 func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
-	ipAddress := net.ParseIP(srcIP)
-	localIPAddress := net.TCPAddr{IP: ipAddress}
-
 	return &HTTPClient{
 		Client: &http.Client{
-			Transport: newTransport(&localIPAddress),
+			Transport: newTransport(srcIP),
 			Timeout:   timeout,
 		},
 	}
@@ -78,6 +74,14 @@ func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface
 	}
 
 	return ParseResponseJSON(response, &resp)
+}
+
+// StopTransportRetries stops HTTP transport retries. This is mostly useful
+// to prevent possible HTTP retries during node shutdown.
+func (c *HTTPClient) StopTransportRetries() {
+	if tr, ok := c.Transport.(*transport); ok {
+		tr.stopRetries()
+	}
 }
 
 // ParseResponseJSON parses http.Response into given struct.

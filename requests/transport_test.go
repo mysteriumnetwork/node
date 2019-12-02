@@ -19,7 +19,6 @@ package requests
 
 import (
 	"errors"
-	"net"
 	"net/http"
 	"testing"
 
@@ -60,7 +59,7 @@ func TestTransport_RoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.test, func(t *testing.T) {
-			transport := newTransport(&net.TCPAddr{IP: net.ParseIP("0.0.0.0")})
+			transport := newTransport("0.0.0.0")
 			transport.rt = &mockRoundTripper{calls: tt.calls}
 
 			res, err := transport.RoundTrip(tt.calls[0].req)

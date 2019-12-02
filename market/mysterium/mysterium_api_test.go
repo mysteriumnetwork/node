@@ -38,13 +38,14 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	})
 	assert.NoError(t, err)
 
-	transport := requests.NewHTTPClient(bindAllAddress, 50*time.Millisecond)
+	httpClient := requests.NewHTTPClient(bindAllAddress, 50*time.Millisecond)
+	httpClient.StopTransportRetries()
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
 	assert.NoError(t, err)
 
 	completed := make(chan error)
 	go func() {
-		_, err := transport.Do(req)
+		_, err := httpClient.Do(req)
 		completed <- err
 	}()
 
