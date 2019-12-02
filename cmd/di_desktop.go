@@ -298,11 +298,14 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 
 	collector := mmn.NewCollector(di.IPResolver)
 	if err := collector.CollectEnvironmentInformation(); err != nil {
-		log.Error().Msg("Failed to collect environment information for MMN: " + err.Error())
+		log.Error().Msgf("Failed to collect environment information for MMN: %v", err)
 		return
 	}
 
 	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
-	m := mmn.NewMMN(collector, client, di.EventBus)
-	m.SubscribeToEvents()
+	m := mmn.NewMMN(collector, client)
+
+	if err := m.Subscribe(di.EventBus); err != nil {
+		log.Error().Msgf("Failed to subscribe to events for MMN: %v", err)
+	}
 }

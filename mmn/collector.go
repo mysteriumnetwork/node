@@ -32,17 +32,19 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
+// Collector collects environment data
 type Collector struct {
 	ipResolver      ip.Resolver
 	node            *NodeInformationDto
 	nodeTypeUpdated bool
 }
 
+// NewCollector creates new environment data collector struct
 func NewCollector(resolver ip.Resolver) *Collector {
 	return &Collector{ipResolver: resolver}
 }
 
-// CollectNodeData sends node information to MMN on identity unlock
+// CollectEnvironmentInformation sends node information to MMN on identity unlock
 func (c *Collector) CollectEnvironmentInformation() error {
 	outboundIp, err := c.ipResolver.GetOutboundIPAsString()
 	if err != nil {
@@ -51,37 +53,51 @@ func (c *Collector) CollectEnvironmentInformation() error {
 
 	mac, err := ip.GetMACAddressForIP(outboundIp)
 	if err != nil {
-		return errors.Wrap(err, "Failed to MAC address")
+		return errors.Wrap(err, "Failed to get MAC address")
 	}
 
 	node := &NodeInformationDto{
 		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
+		MACAddress:  hashMACAddress(mac),
+		LocalIP:     outboundIp,
+		VendorID:    config.GetString(config.FlagVendorID),
+		IsProvider:  false,
+		IsClient:    false,
 	}
-	node.MACAddress = hashMACAddress(mac)
-	node.LocalIP = outboundIp
-	node.VendorID = config.GetString(config.FlagVendorID)
-	// lets keep this the default
-	node.IsProvider = false
 
 	c.node = node
 
 	return nil
 }
 
+// SetIdentity sets node's identity
 func (c *Collector) SetIdentity(identity string) {
 	c.node.Identity = identity
 }
 
-func (c *Collector) SetNodeType(isProvider bool) {
+// SetIsProvider marks node as a provider node
+func (c *Collector) SetIsProvider(isProvider bool) {
 	c.node.IsProvider = isProvider
 }
 
-func (c *Collector) GetNodeType() bool {
+// SetIsClient marks node as a client node
+func (c *Collector) SetIsClient(isClient bool) {
+	c.node.IsClient = isClient
+}
+
+// IsClient returns if the node is a client node
+func (c *Collector) IsClient() bool {
+	return c.node.IsClient
+}
+
+// IsProvider returns if the node is a provider node
+func (c *Collector) IsProvider() bool {
 	return c.node.IsProvider
 }
 
+// GetCollectedInformation returns collected information
 func (c *Collector) GetCollectedInformation() *NodeInformationDto {
 	return c.node
 }

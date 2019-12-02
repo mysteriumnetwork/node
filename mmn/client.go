@@ -32,10 +32,13 @@ type NodeInformationDto struct {
 	Identity    string `json:"identity"`
 	VendorID    string `json:"vendor_id"`
 	IsProvider  bool   `json:"is_provider"`
+	IsClient    bool   `json:"is_client"`
 }
 
+// NodeTypeDto contains node type information to be sent to MMN
 type NodeTypeDto struct {
 	IsProvider bool   `json:"is_provider"`
+	IsClient   bool   `json:"is_client"`
 	Identity   string `json:"identity"`
 }
 
@@ -66,7 +69,11 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 
 func (m *client) UpdateNodeType(info *NodeInformationDto) error {
 	id := identity.FromAddress(info.Identity)
-	nodeType := NodeTypeDto{info.IsProvider, info.Identity}
+	nodeType := NodeTypeDto{
+		IsProvider: info.IsProvider,
+		IsClient:   info.IsClient,
+		Identity:   info.Identity,
+	}
 
 	req, err := requests.NewSignedPostRequest(
 		m.mmnAddress,
