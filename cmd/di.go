@@ -476,9 +476,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	// TODO: switch this to channel implementation from params after #1325 is merged
 	channelImplementation := metadata.TestnetDefinition.ChannelImplAddress
 
-	client := requests.NewHTTPClient(nodeOptions.BindAddress, requests.DefaultTimeout)
 	di.Transactor = transactor.NewTransactor(
-		client,
+		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
 		nodeOptions.Transactor.AccountantID,
@@ -828,11 +827,12 @@ func (di *Dependencies) handleHTTPClientConnections() error {
 	}
 
 	latestState := connection.NotConnected
-	return di.EventBus.SubscribeAsync(connection.StateEventTopic, func(e connection.StateEvent) {
+	return di.EventBus.Subscribe(connection.StateEventTopic, func(e connection.StateEvent) {
 		// Here we care only about connected and disconnected events.
 		if e.State != connection.Connected && e.State != connection.NotConnected {
 			return
 		}
+
 		isDisconnected := latestState == connection.Connected && e.State == connection.NotConnected
 		isConnected := latestState == connection.NotConnected && e.State == connection.Connected
 		if isDisconnected || isConnected {
