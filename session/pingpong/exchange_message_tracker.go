@@ -79,6 +79,8 @@ type ExchangeMessageTracker struct {
 	consumerTotalsStorage                                     consumerTotalsStorage
 	timeTracker                                               timeTracker
 	paymentInfo                                               dto.PaymentRate
+	feeProvider                                               feeProvider
+	transactorFee                                             uint64
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
@@ -92,6 +94,7 @@ type ExchangeMessageTrackerDeps struct {
 	Identity, Peer                                            identity.Identity
 	PaymentInfo                                               dto.PaymentRate
 	RegistryAddress, ChannelImplementation, AccountantAddress string
+	FeeProvider                                               feeProvider
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker.
@@ -110,6 +113,7 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 		registryAddress:           emtd.RegistryAddress,
 		channelImplementation:     emtd.ChannelImplementation,
 		accountantAddress:         emtd.AccountantAddress,
+		feeProvider:               emtd.FeeProvider,
 	}
 }
 
@@ -126,6 +130,12 @@ func (emt *ExchangeMessageTracker) Start() error {
 	emt.channelAddress = identity.FromAddress(addr)
 
 	emt.timeTracker.StartTracking()
+	fees, err := emt.feeProvider.FetchSettleFees()
+	if err != nil {
+		return errors.Wrap(err, "could not get transactor fee")
+	}
+	emt.transactorFee = fees.Fee
+
 	for {
 		select {
 		case <-emt.stop:
@@ -183,8 +193,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	// TODO: this should be changed once we add in the fee support
-	if invoice.TransactorFee != 0 {
+	if invoice.TransactorFee != emt.transactorFee {
 		return ErrFeeChanged
 	}
 

@@ -206,7 +206,7 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 		Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
 		MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 	}
-	settler := pingpong.NewAccountantPromiseSettler(di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
+	settler := pingpong.NewAccountantPromiseSettler(di.Transactor, di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
 	return settler.Subscribe(di.EventBus)
 }
 
@@ -263,7 +263,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
-			di.BCHelper)
+			di.BCHelper,
+			di.Transactor)
 
 		return session.NewDialogHandler(
 			sessionManagerFactory,

@@ -137,11 +137,11 @@ func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Id
 
 type mockTransactor struct {
 	registerError error
-	feesToReturn  Fees
+	feesToReturn  FeesResponse
 	feesError     error
 }
 
-func (mt *mockTransactor) FetchFees() (Fees, error) {
+func (mt *mockTransactor) FetchRegistrationFees() (FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 

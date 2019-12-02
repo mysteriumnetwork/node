@@ -22,6 +22,12 @@ import (
 	"fmt"
 )
 
+// Fees represents the transactor fee
+type Fees struct {
+	Registration uint64 `json:"registration"`
+	Settlement   uint64 `json:"settlement"`
+}
+
 // StatusDTO holds connection status and session id
 type StatusDTO struct {
 	Status    string      `json:"status"`

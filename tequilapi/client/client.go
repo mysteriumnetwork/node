@@ -96,8 +96,8 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 }
 
 // GetTransactorFees returns the transactor fees
-func (client *Client) GetTransactorFees() (registry.Fees, error) {
-	fees := registry.Fees{}
+func (client *Client) GetTransactorFees() (Fees, error) {
+	fees := Fees{}
 
 	res, err := client.http.Get("transactor/fees", nil)
 	if err != nil {

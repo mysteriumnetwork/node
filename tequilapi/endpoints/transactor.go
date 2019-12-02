@@ -30,7 +30,8 @@ import (
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
-	FetchFees() (registry.Fees, error)
+	FetchRegistrationFees() (registry.FeesResponse, error)
+	FetchSettleFees() (registry.FeesResponse, error)
 	TopUp(identity string) error
 	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
 }
@@ -44,6 +45,13 @@ func NewTransactorEndpoint(transactor Transactor) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor: transactor,
 	}
+}
+
+// Fees represents the transactor fees
+// swagger:model Fees
+type Fees struct {
+	Registration uint64 `json:"registration"`
+	Settlement   uint64 `json:"settlement"`
 }
 
 // swagger:operation GET /transactor/fees Fees
@@ -60,12 +68,23 @@ func NewTransactorEndpoint(transactor Transactor) *transactorEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	fees, err := te.transactor.FetchFees()
+	registrationFees, err := te.transactor.FetchRegistrationFees()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	utils.WriteAsJSON(fees, resp)
+	settlementFees, err := te.transactor.FetchSettleFees()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	f := Fees{
+		Registration: registrationFees.Fee,
+		Settlement:   settlementFees.Fee,
+	}
+
+	utils.WriteAsJSON(f, resp)
 }
 
 // swagger:operation POST /transactor/topup ErrorMessageDTO

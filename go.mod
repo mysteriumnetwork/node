@@ -44,7 +44,7 @@ require (
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191007132044-c746550858a5
 	github.com/mysteriumnetwork/go-openvpn v0.0.18
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
-	github.com/mysteriumnetwork/payments v0.0.11-0.20191030121656-d2ccfc4f3b84
+	github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect

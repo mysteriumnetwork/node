@@ -65,7 +65,7 @@ func Test_RegisterIdentity(t *testing.T) {
 }
 
 func Test_Get_TransactorFees(t *testing.T) {
-	mockResponse := `{ "transaction": 1, "registration": 100 }`
+	mockResponse := `{ "fee": 1 }`
 	server := newTestTransactorServer(http.StatusOK, mockResponse)
 
 	router := httprouter.New()
@@ -84,7 +84,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, mockResponse, resp.Body.String())
+	assert.JSONEq(t, `{"registration":1, "settlement":1}`, resp.Body.String())
 }
 
 func Test_TopUp_OK(t *testing.T) {

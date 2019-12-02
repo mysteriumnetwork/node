@@ -47,7 +47,7 @@ func TestPromiseSettler_resyncState_returns_errors(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 	err = settler.resyncState(mockID)
 	assert.Equal(t, fmt.Sprintf("could not get provider channel for %v: %v", mockID, errMock.Error()), err.Error())
 
@@ -72,7 +72,7 @@ func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
 	id := identity.FromAddress("test")
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 	err = settler.resyncState(id)
 	assert.NoError(t, err)
 
@@ -99,7 +99,7 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 	err = settler.resyncState(mockID)
 	assert.NoError(t, err)
 
@@ -128,7 +128,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 
 	settler.currentState[mockID] = state{}
 
@@ -198,7 +198,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 
 	statusesWithNoChangeExpected := []string{string(service.Starting), string(service.NotRunning)}
 
@@ -240,7 +240,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
@@ -282,7 +282,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
 	// no receive on unknown provider
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
@@ -315,7 +315,8 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, mockID, <-settler.settleQueue)
+	p := <-settler.settleQueue
+	assert.Equal(t, mockID, p.provider)
 
 	v := settler.currentState[mockID]
 	assert.Equal(t, uint64(13000000-10000), v.balance)
@@ -340,7 +341,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	assertNoReceive(t, settler.settleQueue)
 }
 
-func assertNoReceive(t *testing.T, ch chan identity.Identity) {
+func assertNoReceive(t *testing.T, ch chan receivedPromise) {
 	// at this point, we should not receive an event on settled queue as we have no info on provider, let's check for that
 	select {
 	case <-ch:
@@ -378,7 +379,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		},
 	}
 
-	settler := NewAccountantPromiseSettler(channelStatusProvider, mrsp, ks, mapg, cfg)
+	settler := NewAccountantPromiseSettler(&mockTransactor{}, channelStatusProvider, mrsp, ks, mapg, cfg)
 
 	settler.handleNodeStart()
 
@@ -388,7 +389,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	// since we're accessing the current state from outside the setller, lock the settler to prevent race conditions
 	settler.lock.Lock()
 	defer settler.lock.Unlock()
-	
+
 	assert.True(t, settler.currentState[identity.FromAddress(acc2.Address.Hex())].registered)
 	assert.False(t, settler.currentState[identity.FromAddress(acc1.Address.Hex())].registered)
 }
@@ -519,4 +520,18 @@ var mockProviderChannel = ProviderChannel{
 	Balance: big.NewInt(1000000000000),
 	Settled: big.NewInt(9000000),
 	Loan:    big.NewInt(12312323),
+}
+
+type mockTransactor struct {
+	registerError error
+	feesToReturn  registry.FeesResponse
+	feesError     error
+}
+
+func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
+	return mt.feesToReturn, mt.feesError
+}
+
+func (mt *mockTransactor) SettleAndRebalance(id string, promise crypto.Promise) error {
+	return nil
 }

@@ -59,6 +59,7 @@ func InvoiceFactoryCreator(
 	maxAllowedAccountantFee uint16,
 	blockchainHelper bcHelper,
 	publisher eventbus.Publisher,
+	feeProvider feeProvider,
 ) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
 	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
@@ -88,6 +89,7 @@ func InvoiceFactoryCreator(
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
 			BlockchainHelper:           blockchainHelper,
 			Publisher:                  publisher,
+			FeeProvider:                feeProvider,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -101,6 +103,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	signer identity.SignerFactory,
 	invoiceStorage consumerInvoiceStorage,
 	totalStorage consumerTotalsStorage,
+	feeProvider feeProvider,
 	channelImplementation string,
 	registryAddress string) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
@@ -149,6 +152,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				RegistryAddress:           registryAddress,
 				ChannelImplementation:     channelImplementation,
 				AccountantAddress:         accountant.Address,
+				FeeProvider:               feeProvider,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {

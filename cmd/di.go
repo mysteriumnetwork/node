@@ -457,24 +457,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	di.PromiseStorage = promise.NewStorage(di.Storage)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
-	di.ConnectionRegistry = connection.NewRegistry()
-	di.ConnectionManager = connection.NewManager(
-		dialogFactory,
-		pingpong.BackwardsCompatibleExchangeFactoryFunc(
-			di.Keystore,
-			nodeOptions,
-			di.SignerFactory,
-			di.ConsumerInvoiceStorage,
-			di.ConsumerTotalsStorage,
-			nodeOptions.Transactor.ChannelImplementation,
-			nodeOptions.Transactor.RegistryAddress),
-		di.ConnectionRegistry.CreateConnection,
-		di.EventBus,
-		connectivity.NewStatusSender(),
-		di.IPResolver,
-		connection.DefaultIPCheckParams(),
-	)
-
 	channelImplementation := nodeOptions.Transactor.ChannelImplementation
 
 	di.Transactor = registry.NewTransactor(
@@ -485,6 +467,25 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		channelImplementation,
 		di.SignerFactory,
 		di.EventBus,
+	)
+
+	di.ConnectionRegistry = connection.NewRegistry()
+	di.ConnectionManager = connection.NewManager(
+		dialogFactory,
+		pingpong.BackwardsCompatibleExchangeFactoryFunc(
+			di.Keystore,
+			nodeOptions,
+			di.SignerFactory,
+			di.ConsumerInvoiceStorage,
+			di.ConsumerTotalsStorage,
+			di.Transactor,
+			nodeOptions.Transactor.ChannelImplementation,
+			nodeOptions.Transactor.RegistryAddress),
+		di.ConnectionRegistry.CreateConnection,
+		di.EventBus,
+		connectivity.NewStatusSender(),
+		di.IPResolver,
+		connection.DefaultIPCheckParams(),
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -535,6 +536,7 @@ func newSessionManagerFactory(
 	serviceID string,
 	eventbus eventbus.EventBus,
 	bcHelper *pingpong.BlockchainWithRetries,
+	transactor *registry.Transactor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
@@ -574,6 +576,7 @@ func newSessionManagerFactory(
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			bcHelper,
 			eventbus,
+			transactor,
 		)
 		return session.NewManager(
 			proposal,

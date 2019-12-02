@@ -78,6 +78,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
+		FeeProvider:               &mockTransactor{},
 		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
@@ -121,6 +122,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
+		FeeProvider:               &mockTransactor{},
 		Ks:                        ks,
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
@@ -186,6 +188,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
+		FeeProvider:               &mockTransactor{},
 		Ks:                        ks,
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
