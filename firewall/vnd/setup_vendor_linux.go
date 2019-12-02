@@ -22,11 +22,14 @@ package vnd
 import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall/iptables"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 // SetupVendor initializes linux specific firewall vendor
 func SetupVendor() (*iptables.Iptables, error) {
-	resolver := ip.NewResolver("0.0.0.0", "")
+	bindAddress := "0.0.0.0"
+	httpClient := requests.NewHTTPClient(bindAddress, requests.DefaultTimeout)
+	resolver := ip.NewResolver(httpClient, bindAddress, "")
 	ip, err := resolver.GetOutboundIPAsString()
 	if err != nil {
 		return nil, err
