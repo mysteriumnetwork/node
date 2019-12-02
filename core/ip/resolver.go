@@ -39,7 +39,7 @@ type Resolver interface {
 type ResolverImpl struct {
 	bindAddress string
 	url         string
-	http        *requests.HTTPClient
+	httpClient  *requests.HTTPClient
 }
 
 // NewResolver creates new ip-detector resolver with default timeout of one minute
@@ -47,7 +47,7 @@ func NewResolver(httpClient *requests.HTTPClient, bindAddress, url string) *Reso
 	return &ResolverImpl{
 		bindAddress: bindAddress,
 		url:         url,
-		http:        httpClient,
+		httpClient:  httpClient,
 	}
 }
 
@@ -95,7 +95,7 @@ func (r *ResolverImpl) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	err = r.http.DoRequestAndParseResponse(request, &ipResponse)
+	err = r.httpClient.DoRequestAndParseResponse(request, &ipResponse)
 	if err != nil {
 		return "", err
 	}

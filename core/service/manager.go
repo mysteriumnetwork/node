@@ -71,7 +71,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
-	client *requests.HTTPClient,
+	httpClient *requests.HTTPClient,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -80,7 +80,7 @@ func NewManager(
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
-		http:                 client,
+		httpClient:           httpClient,
 	}
 }
 
@@ -94,7 +94,7 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
-	http             *requests.HTTPClient
+	httpClient       *requests.HTTPClient
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -107,7 +107,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 	proposal.SetAccessPolicies(ap)
 
-	allowedIDs, err := fetchAllowedIDs(manager.http, ap)
+	allowedIDs, err := fetchAllowedIDs(manager.httpClient, ap)
 	if err != nil {
 		return id, err
 	}

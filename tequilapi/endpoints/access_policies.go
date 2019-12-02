@@ -43,14 +43,14 @@ type accessRule struct {
 }
 
 type accessPoliciesEndpoint struct {
-	http                    *requests.HTTPClient
+	httpClient              *requests.HTTPClient
 	accessPolicyEndpointURL string
 }
 
 // NewAccessPoliciesEndpoint creates and returns access policies endpoint
 func NewAccessPoliciesEndpoint(httpClient *requests.HTTPClient, accessPolicyEndpointURL string) *accessPoliciesEndpoint {
 	return &accessPoliciesEndpoint{
-		http:                    httpClient,
+		httpClient:              httpClient,
 		accessPolicyEndpointURL: accessPolicyEndpointURL,
 	}
 }
@@ -75,7 +75,7 @@ func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 	r := accessPolicyCollection{}
-	err = ape.http.DoRequestAndParseResponse(req, &r)
+	err = ape.httpClient.DoRequestAndParseResponse(req, &r)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

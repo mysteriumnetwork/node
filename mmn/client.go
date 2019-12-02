@@ -25,14 +25,14 @@ import (
 // NewClient returns MMN API client
 func NewClient(httpClient *requests.HTTPClient, mmnAddress string, signer identity.SignerFactory) *client {
 	return &client{
-		http:       httpClient,
+		httpClient: httpClient,
 		mmnAddress: mmnAddress,
 		signer:     signer,
 	}
 }
 
 type client struct {
-	http       *requests.HTTPClient
+	httpClient *requests.HTTPClient
 	mmnAddress string
 	signer     identity.SignerFactory
 }
@@ -44,5 +44,5 @@ func (m *client) RegisterNode(information *NodeInformation) error {
 		return err
 	}
 
-	return m.http.DoRequest(req)
+	return m.httpClient.DoRequest(req)
 }
