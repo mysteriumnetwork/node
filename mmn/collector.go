@@ -34,9 +34,8 @@ import (
 
 // Collector collects environment data
 type Collector struct {
-	ipResolver      ip.Resolver
-	node            *NodeInformationDto
-	nodeTypeUpdated bool
+	ipResolver ip.Resolver
+	node       *NodeInformationDto
 }
 
 // NewCollector creates new environment data collector struct
