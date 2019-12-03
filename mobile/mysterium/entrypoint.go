@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
@@ -30,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -42,23 +45,23 @@ import (
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
-	shutdown           func() error
-	node               *node.Node
-	connectionManager  connection.Manager
-	locationResolver   *location.Cache
-	discoveryFinder    *discovery.Finder
-	identitySelector   selector.Handler
-	signerFactory      identity.SignerFactory
-	natPinger          natPinger
-	ipResolver         ip.Resolver
-	eventBus           eventbus.EventBus
-	connectionRegistry *connection.Registry
-	statisticsTracker  *statistics.SessionStatisticsTracker
-
+	shutdown                       func() error
+	node                           *node.Node
+	connectionManager              connection.Manager
+	locationResolver               *location.Cache
+	discoveryFinder                *discovery.Finder
+	identitySelector               selector.Handler
+	signerFactory                  identity.SignerFactory
+	natPinger                      natPinger
+	ipResolver                     ip.Resolver
+	eventBus                       eventbus.EventBus
+	connectionRegistry             *connection.Registry
+	statisticsTracker              *statistics.SessionStatisticsTracker
 	statisticsChangeCallback       StatisticsChangeCallback
 	connectionStatusChangeCallback ConnectionStatusChangeCallback
 	proposalsManager               *proposalsManager
 	unlockedIdentity               identity.Identity
+	feedbackReporter               *feedback.Reporter
 }
 
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
@@ -122,7 +125,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},
-
+		FeedbackURL:    "https://feedback.mysterium.network",
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
@@ -140,7 +143,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not bootstrap dependencies")
 	}
 
 	mobileNode := &MobileNode{
@@ -156,6 +159,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		eventBus:           di.EventBus,
 		connectionRegistry: di.ConnectionRegistry,
 		statisticsTracker:  di.StatisticsTracker,
+		feedbackReporter:   di.Reporter,
 		proposalsManager: newProposalsManager(
 			di.DiscoveryFinder,
 			di.ProposalStorage,
@@ -178,7 +182,7 @@ func (mb *MobileNode) GetProposal(req *GetProposalRequest) ([]byte, error) {
 	status := mb.connectionManager.Status()
 	proposal, err := mb.proposalsManager.getProposal(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get proposal")
 	}
 	if proposal == nil {
 		return nil, fmt.Errorf("proposal %s-%s not found", status.Proposal.ProviderID, status.Proposal.ServiceType)
@@ -196,7 +200,7 @@ type GetLocationResponse struct {
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
 	loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get location")
 	}
 
 	return &GetLocationResponse{
@@ -259,7 +263,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 		ServiceType: req.ServiceType,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get proposal")
 	}
 	if proposal == nil {
 		return fmt.Errorf("proposal %s-%s not found", req.ProviderID, req.ServiceType)
@@ -270,7 +274,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 		EnableDNS:         req.EnableDNS,
 	}
 	if err := mb.connectionManager.Connect(identity.FromAddress(mb.unlockedIdentity.Address), *proposal, connectOptions); err != nil {
-		return err
+		return errors.Wrap(err, "could not connect")
 	}
 	return nil
 }
@@ -278,7 +282,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 // Disconnect disconnects or cancels current connection.
 func (mb *MobileNode) Disconnect() error {
 	if err := mb.connectionManager.Disconnect(); err != nil {
-		return err
+		return errors.Wrap(err, "could not disconnect")
 	}
 	return nil
 }
@@ -289,9 +293,30 @@ func (mb *MobileNode) UnlockIdentity() (string, error) {
 	var err error
 	mb.unlockedIdentity, err = mb.identitySelector.UseOrCreate("", "")
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "could not unlock identity")
 	}
 	return mb.unlockedIdentity.Address, nil
+}
+
+// SendFeedbackRequest represents user feedback request.
+type SendFeedbackRequest struct {
+	Description string
+}
+
+// SendFeedback sends user feedback via feedback reported.
+func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
+	report := feedback.UserReport{
+		Description: req.Description,
+	}
+	result, err := mb.feedbackReporter.NewIssue(report)
+	if err != nil {
+		return errors.Wrap(err, "could not create user report")
+	}
+
+	if !result.Success {
+		return errors.New("user report sent but got error response")
+	}
+	return nil
 }
 
 // Shutdown function stops running mobile node
