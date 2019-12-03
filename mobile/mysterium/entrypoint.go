@@ -18,9 +18,10 @@
 package mysterium
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
@@ -142,7 +143,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not bootstrap dependencies")
 	}
 
 	mobileNode := &MobileNode{
@@ -181,7 +182,7 @@ func (mb *MobileNode) GetProposal(req *GetProposalRequest) ([]byte, error) {
 	status := mb.connectionManager.Status()
 	proposal, err := mb.proposalsManager.getProposal(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get proposal")
 	}
 	if proposal == nil {
 		return nil, fmt.Errorf("proposal %s-%s not found", status.Proposal.ProviderID, status.Proposal.ServiceType)
@@ -199,7 +200,7 @@ type GetLocationResponse struct {
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
 	loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get location")
 	}
 
 	return &GetLocationResponse{
@@ -262,7 +263,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 		ServiceType: req.ServiceType,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get proposal")
 	}
 	if proposal == nil {
 		return fmt.Errorf("proposal %s-%s not found", req.ProviderID, req.ServiceType)
@@ -273,7 +274,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 		EnableDNS:         req.EnableDNS,
 	}
 	if err := mb.connectionManager.Connect(identity.FromAddress(mb.unlockedIdentity.Address), *proposal, connectOptions); err != nil {
-		return err
+		return errors.Wrap(err, "could not connect")
 	}
 	return nil
 }
@@ -281,7 +282,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 // Disconnect disconnects or cancels current connection.
 func (mb *MobileNode) Disconnect() error {
 	if err := mb.connectionManager.Disconnect(); err != nil {
-		return err
+		return errors.Wrap(err, "could not disconnect")
 	}
 	return nil
 }
@@ -292,7 +293,7 @@ func (mb *MobileNode) UnlockIdentity() (string, error) {
 	var err error
 	mb.unlockedIdentity, err = mb.identitySelector.UseOrCreate("", "")
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "could not unlock identity")
 	}
 	return mb.unlockedIdentity.Address, nil
 }
@@ -309,11 +310,11 @@ func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
 	}
 	result, err := mb.feedbackReporter.NewIssue(report)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not create user report")
 	}
 
 	if !result.Success {
-		return errors.New("failed to send feedback")
+		return errors.New("user report sent but got error response")
 	}
 	return nil
 }
