@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -42,23 +44,23 @@ import (
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
-	shutdown           func() error
-	node               *node.Node
-	connectionManager  connection.Manager
-	locationResolver   *location.Cache
-	discoveryFinder    *discovery.Finder
-	identitySelector   selector.Handler
-	signerFactory      identity.SignerFactory
-	natPinger          natPinger
-	ipResolver         ip.Resolver
-	eventBus           eventbus.EventBus
-	connectionRegistry *connection.Registry
-	statisticsTracker  *statistics.SessionStatisticsTracker
-
+	shutdown                       func() error
+	node                           *node.Node
+	connectionManager              connection.Manager
+	locationResolver               *location.Cache
+	discoveryFinder                *discovery.Finder
+	identitySelector               selector.Handler
+	signerFactory                  identity.SignerFactory
+	natPinger                      natPinger
+	ipResolver                     ip.Resolver
+	eventBus                       eventbus.EventBus
+	connectionRegistry             *connection.Registry
+	statisticsTracker              *statistics.SessionStatisticsTracker
 	statisticsChangeCallback       StatisticsChangeCallback
 	connectionStatusChangeCallback ConnectionStatusChangeCallback
 	proposalsManager               *proposalsManager
 	unlockedIdentity               identity.Identity
+	feedbackReporter               *feedback.Reporter
 }
 
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
@@ -122,7 +124,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},
-
+		FeedbackURL:    "https://feedback.mysterium.network",
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
@@ -156,6 +158,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 		eventBus:           di.EventBus,
 		connectionRegistry: di.ConnectionRegistry,
 		statisticsTracker:  di.StatisticsTracker,
+		feedbackReporter:   di.Reporter,
 		proposalsManager: newProposalsManager(
 			di.DiscoveryFinder,
 			di.ProposalStorage,
@@ -292,6 +295,27 @@ func (mb *MobileNode) UnlockIdentity() (string, error) {
 		return "", err
 	}
 	return mb.unlockedIdentity.Address, nil
+}
+
+// SendFeedbackRequest represents user feedback request.
+type SendFeedbackRequest struct {
+	Description string
+}
+
+// SendFeedback sends user feedback via feedback reported.
+func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
+	report := feedback.UserReport{
+		Description: req.Description,
+	}
+	result, err := mb.feedbackReporter.NewIssue(report)
+	if err != nil {
+		return err
+	}
+
+	if !result.Success {
+		return errors.New("failed to send feedback")
+	}
+	return nil
 }
 
 // Shutdown function stops running mobile node
