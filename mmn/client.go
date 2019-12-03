@@ -64,7 +64,7 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 		return err
 	}
 
-	return m.http.DoRequest(req)
+	return m.httpClient.DoRequest(req)
 }
 
 func (m *client) UpdateNodeType(info *NodeInformationDto) error {
