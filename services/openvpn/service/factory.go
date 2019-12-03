@@ -20,12 +20,15 @@ package service
 import (
 	"crypto/x509/pkix"
 	"encoding/json"
+	"strings"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/filter"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+	node_config "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -121,9 +124,11 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 			}
 		}
 
+		protectedNetworks := strings.Split(node_config.GetString(node_config.FlagFirewallProtectedNetworks), ",")
 		return openvpn.CreateNewProcess(
 			nodeOptions.Openvpn.BinaryPath(),
 			config.GenericConfig,
+			filter.NewMiddleware(nil, protectedNetworks),
 			auth.NewMiddleware(sessionValidator.Validate),
 			state.NewMiddleware(stateCallback),
 			bytecount.NewMiddleware(statsCallback, statisticsReportingIntervalInSeconds),
