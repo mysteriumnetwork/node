@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/core/transactor"
@@ -43,7 +44,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -66,7 +67,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "registryAddress", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "accountantID", fakeSignerFactory)
+	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "accountantID", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -89,7 +90,7 @@ func Test_TopUp_OK(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`
@@ -114,7 +115,7 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`

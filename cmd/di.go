@@ -69,6 +69,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
 	"github.com/mysteriumnetwork/node/nat/upnp"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -111,6 +112,8 @@ type UIServer interface {
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
+
+	HTTPClient *requests.HTTPClient
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
@@ -175,6 +178,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	nats_discovery.Bootstrap()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
+
+	di.HTTPClient = requests.NewHTTPClient(nodeOptions.BindAddress, requests.DefaultTimeout)
 
 	// Check early for presence of an already running node
 	tequilaListener, err := di.createTequilaListener(nodeOptions)
@@ -347,22 +352,22 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.DiscoveryFetcherAPI != nil {
 		di.DiscoveryFetcherAPI.Stop()
 	}
-	if di.Node != nil {
-		if err := di.Node.Kill(); err != nil {
-			errs = append(errs, err)
-		}
-	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}
-
 	if di.TopUpper != nil {
 		di.TopUpper.Stop()
 	}
 
 	firewall.Reset()
+
+	if di.Node != nil {
+		if err := di.Node.Kill(); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	return nil
 }
 
@@ -430,6 +435,12 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
+
+	err = di.handleHTTPClientConnections()
+	if err != nil {
+		return err
+	}
+
 	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
 }
 
@@ -466,7 +477,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	channelImplementation := metadata.TestnetDefinition.ChannelImplAddress
 
 	di.Transactor = transactor.NewTransactor(
-		nodeOptions.BindAddress,
+		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
 		nodeOptions.Transactor.AccountantID,
@@ -514,7 +525,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
-	tequilapi_endpoints.AddRoutesForAccessPolicies(nodeOptions.BindAddress, router, nodeOptions.AccessPolicyEndpointAddress)
+	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
@@ -620,7 +631,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	di.MysteriumAPI = mysterium.NewClient(options.BindAddress, network.MysteriumAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
 	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
 
@@ -692,13 +703,13 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(options.Address, 20*time.Second)
+	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, 20*time.Second)
 
 	var transport quality.Transport
 	switch options.Type {
 	case node.QualityTypeElastic:
 		_, err = firewall.AllowURLAccess(options.Address)
-		transport = quality.NewElasticSearchTransport(bindAddress, options.Address, 10*time.Second)
+		transport = quality.NewElasticSearchTransport(di.HTTPClient, options.Address, 10*time.Second)
 	case node.QualityTypeMORQA:
 		_, err = firewall.AllowURLAccess(options.Address)
 		transport = quality.NewMORQATransport(di.QualityClient)
@@ -723,7 +734,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	if _, err = firewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	di.IPResolver = ip.NewResolver(options.BindAddress, options.Location.IPDetectorURL)
+	di.IPResolver = ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
 
 	var resolver location.Resolver
 	switch options.Location.Type {
@@ -737,7 +748,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
 			return err
 		}
-		resolver, err = location.NewOracleResolver(options.BindAddress, options.Location.Address), nil
+		resolver, err = location.NewOracleResolver(di.HTTPClient, options.Location.Address), nil
 	default:
 		err = errors.Errorf("unknown location provider: %s", options.Location.Type)
 	}
@@ -808,4 +819,27 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 		return err
 	}
 	return nil
+}
+
+func (di *Dependencies) handleHTTPClientConnections() error {
+	if di.HTTPClient == nil {
+		return errors.New("HTTPClient is not initialized")
+	}
+
+	latestState := connection.NotConnected
+	return di.EventBus.Subscribe(connection.StateEventTopic, func(e connection.StateEvent) {
+		// Here we care only about connected and disconnected events.
+		if e.State != connection.Connected && e.State != connection.NotConnected {
+			return
+		}
+
+		isDisconnected := latestState == connection.Connected && e.State == connection.NotConnected
+		isConnected := latestState == connection.NotConnected && e.State == connection.Connected
+		if isDisconnected || isConnected {
+			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
+			di.HTTPClient.Reconnect()
+			di.QualityClient.Reconnect()
+		}
+		latestState = e.State
+	})
 }

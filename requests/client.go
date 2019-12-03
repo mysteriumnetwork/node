@@ -20,45 +20,48 @@ package requests
 import (
 	"encoding/json"
 	"io/ioutil"
-	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 	"github.com/pkg/errors"
 )
 
-// HTTPTransport describes a client for performing HTTP requests.
-type HTTPTransport interface {
-	Do(req *http.Request) (*http.Response, error)
-	DoRequest(req *http.Request) error
-	DoRequestAndParseResponse(req *http.Request, resp interface{}) error
-}
+const (
+	// DefaultTimeout is a default HTTP client timeout.
+	DefaultTimeout = 20 * time.Second
+)
 
 // NewHTTPClient creates a new HTTP client.
-func NewHTTPClient(srcIP string, timeout time.Duration) *client {
-	ipAddress := net.ParseIP(srcIP)
-	localIPAddress := net.TCPAddr{IP: ipAddress}
-
-	return &client{
-		&http.Client{Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				LocalAddr: &localIPAddress,
-			}).DialContext,
-			//dont cache tcp connections - first requests after state change (direct -> tunneled and vice versa) will always fail
-			//as stale tcp states are not closed after switch. Probably some kind of CloseIdleConnections will help in the future
-			DisableKeepAlives: true,
-		},
-			Timeout: timeout,
+func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
+	c := &HTTPClient{
+		clientFactory: func() *http.Client {
+			return &http.Client{
+				Timeout:   timeout,
+				Transport: GetDefaultTransport(srcIP),
+			}
 		},
 	}
+	// Create initial clean before any HTTP request is made.
+	c.client = c.clientFactory()
+	return c
 }
 
-type client struct {
-	*http.Client
+// HTTPClient describes a client for performing HTTP requests.
+type HTTPClient struct {
+	client        *http.Client
+	clientMu      sync.Mutex
+	clientFactory func() *http.Client
 }
 
-func (c *client) DoRequest(req *http.Request) error {
+// Do sends an HTTP request and returns an HTTP response.
+func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
+	return c.resolveClient().Do(req)
+}
+
+// DoRequest performs HTTP requests and parses error without returning response.
+func (c *HTTPClient) DoRequest(req *http.Request) error {
 	response, err := c.Do(req)
 	if err != nil {
 		return err
@@ -68,7 +71,8 @@ func (c *client) DoRequest(req *http.Request) error {
 	return ParseResponseError(response)
 }
 
-func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) error {
+// DoRequestAndParseResponse performs HTTP requests and response from JSON.
+func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface{}) error {
 	response, err := c.Do(req)
 	if err != nil {
 		return err
@@ -83,6 +87,24 @@ func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) 
 	}
 
 	return ParseResponseJSON(response, &resp)
+}
+
+// Reconnect creates new instance of underlying HTTP client.
+func (c *HTTPClient) Reconnect() {
+	c.clientMu.Lock()
+	defer c.clientMu.Unlock()
+	c.client.CloseIdleConnections()
+	c.client = c.clientFactory()
+}
+
+func (c *HTTPClient) resolveClient() *http.Client {
+	c.clientMu.Lock()
+	defer c.clientMu.Unlock()
+	if c.client != nil {
+		return c.client
+	}
+	c.client = c.clientFactory()
+	return c.client
 }
 
 // ParseResponseJSON parses http.Response into given struct.

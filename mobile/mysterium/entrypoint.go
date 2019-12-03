@@ -42,6 +42,7 @@ import (
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
+	shutdown           func() error
 	node               *node.Node
 	connectionManager  connection.Manager
 	locationResolver   *location.Cache
@@ -143,6 +144,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 	}
 
 	mobileNode := &MobileNode{
+		shutdown:           func() error { return di.Shutdown() },
 		node:               di.Node,
 		connectionManager:  di.ConnectionManager,
 		locationResolver:   di.LocationResolver,
@@ -294,7 +296,7 @@ func (mb *MobileNode) UnlockIdentity() (string, error) {
 
 // Shutdown function stops running mobile node
 func (mb *MobileNode) Shutdown() error {
-	return mb.node.Kill()
+	return mb.shutdown()
 }
 
 // WaitUntilDies function returns when node stops

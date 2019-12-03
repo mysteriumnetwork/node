@@ -32,6 +32,7 @@ import (
 	"github.com/koron/go-ssdp"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -59,17 +60,19 @@ const deviceDescriptionTemplate = `<?xml version="1.0"?>
 </root>`
 
 type ssdpServer struct {
-	uiPort int
-	uuid   string
-	ssdp   *ssdp.Advertiser
-	quit   chan struct{}
-	once   sync.Once
+	uiPort     int
+	uuid       string
+	ssdp       *ssdp.Advertiser
+	quit       chan struct{}
+	once       sync.Once
+	httpClient *requests.HTTPClient
 }
 
-func newSSDPServer(uiPort int) *ssdpServer {
+func newSSDPServer(uiPort int, httpClient *requests.HTTPClient) *ssdpServer {
 	return &ssdpServer{
-		uiPort: uiPort,
-		quit:   make(chan struct{}),
+		uiPort:     uiPort,
+		quit:       make(chan struct{}),
+		httpClient: httpClient,
 	}
 }
 
@@ -122,7 +125,7 @@ func (ss *ssdpServer) Stop() error {
 }
 
 func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
-	resolver := ip.NewResolver("0.0.0.0", "")
+	resolver := ip.NewResolver(ss.httpClient, "0.0.0.0", "")
 
 	outIP, err := resolver.GetOutboundIP()
 	if err != nil {

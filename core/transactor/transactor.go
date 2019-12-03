@@ -20,7 +20,6 @@ package transactor
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
@@ -33,7 +32,7 @@ import (
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
-	http                  requests.HTTPTransport
+	httpClient            *requests.HTTPClient
 	endpointAddress       string
 	signerFactory         identity.SignerFactory
 	registryAddress       string
@@ -42,9 +41,9 @@ type Transactor struct {
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory) *Transactor {
 	return &Transactor{
-		http:                  requests.NewHTTPClient(bindAddress, 20*time.Second),
+		httpClient:            httpClient,
 		endpointAddress:       endpointAddress,
 		signerFactory:         signerFactory,
 		registryAddress:       registryAddress,
@@ -104,7 +103,7 @@ func (t *Transactor) FetchFees() (Fees, error) {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
 
-	err = t.http.DoRequestAndParseResponse(req, &f)
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
 	return f, err
 }
 
@@ -123,7 +122,7 @@ func (t *Transactor) TopUp(id string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}
-	return t.http.DoRequest(req)
+	return t.httpClient.DoRequest(req)
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
@@ -143,7 +142,7 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
-	return t.http.DoRequest(req)
+	return t.httpClient.DoRequest(req)
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {

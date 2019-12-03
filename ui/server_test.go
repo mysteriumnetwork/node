@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/html"
 )
@@ -34,7 +35,7 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 }
 
 func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer("localhost", 55555, 55554, &jwtAuth{})
+	s := NewServer("localhost", 55555, 55554, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
 	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {

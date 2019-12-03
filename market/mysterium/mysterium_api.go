@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -35,7 +34,7 @@ import (
 
 // MysteriumAPI provides access to mysterium owned central discovery service
 type MysteriumAPI struct {
-	http                requests.HTTPTransport
+	httpClient          *requests.HTTPClient
 	discoveryAPIAddress string
 
 	latestProposalsEtagMux sync.RWMutex
@@ -45,9 +44,9 @@ type MysteriumAPI struct {
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
-func NewClient(srcIP, discoveryAPIAddress string) *MysteriumAPI {
+func NewClient(httpClient *requests.HTTPClient, discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		http:                requests.NewHTTPClient(srcIP, 20*time.Second),
+		httpClient:          httpClient,
 		discoveryAPIAddress: discoveryAPIAddress,
 		latestProposals:     []market.ServiceProposal{},
 	}
@@ -59,7 +58,7 @@ func (mApi *MysteriumAPI) IdentityExists(id identity.Identity, signer identity.S
 	if err != nil {
 		return false, err
 	}
-	res, err := mApi.http.Do(req)
+	res, err := mApi.httpClient.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -75,7 +74,7 @@ func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msg("Identity registered: " + id.Address)
 	}
@@ -91,7 +90,7 @@ func (mApi *MysteriumAPI) GetPayoutInfo(id identity.Identity, signer identity.Si
 	}
 
 	var payoutInfoResponse PayoutInfoResponse
-	err = mApi.http.DoRequestAndParseResponse(req, &payoutInfoResponse)
+	err = mApi.httpClient.DoRequestAndParseResponse(req, &payoutInfoResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +109,7 @@ func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress stri
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msg("Payout address registered: " + ethAddress)
 	}
@@ -128,7 +127,7 @@ func (mApi *MysteriumAPI) UpdateReferralInfo(id identity.Identity, referralCode 
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msg("Referral code submitted for: " + id.Address)
 	}
@@ -146,7 +145,7 @@ func (mApi *MysteriumAPI) UpdateEmail(id identity.Identity, email string, signer
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msg("Email submitted for: " + id.Address)
 	}
@@ -162,7 +161,7 @@ func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, sign
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msgf("Proposal registered for node: %s service type: %s", proposal.ProviderID, proposal.ServiceType)
 	}
@@ -180,7 +179,7 @@ func (mApi *MysteriumAPI) UnregisterProposal(proposal market.ServiceProposal, si
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 
 	if err == nil {
 		log.Info().Msg("Proposal unregistered for node: " + proposal.ProviderID)
@@ -199,7 +198,7 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msgf("Proposal pinged for node: %s service type: %s", proposal.ProviderID, proposal.ServiceType)
 	}
@@ -242,7 +241,7 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	}
 	req.Header.Add("If-None-Match", mApi.getLatestProposalsEtag())
 
-	res, err := mApi.http.Do(req)
+	res, err := mApi.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot fetch proposals")
 	}
@@ -302,7 +301,7 @@ func (mApi *MysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats Se
 		return err
 	}
 
-	err = mApi.http.DoRequest(req)
+	err = mApi.httpClient.DoRequest(req)
 	if err == nil {
 		log.Info().Msg("Session stats sent: " + string(sessionID))
 	}

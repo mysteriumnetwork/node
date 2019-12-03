@@ -18,20 +18,16 @@
 package service
 
 import (
-	"time"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 )
 
-func fetchAllowedIDs(srcIP string, ap *[]market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
+func fetchAllowedIDs(client *requests.HTTPClient, ap *[]market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
 	if ap == nil {
 		return nil, nil
 	}
-
-	client := requests.NewHTTPClient(srcIP, 20*time.Second)
 
 	var ruleSet market.AccessPolicyRuleSet
 	for _, p := range *ap {

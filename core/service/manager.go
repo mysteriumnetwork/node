@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -70,7 +71,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
-	bindAddress string,
+	httpClient *requests.HTTPClient,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -79,7 +80,7 @@ func NewManager(
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
-		bindAddress:          bindAddress,
+		httpClient:           httpClient,
 	}
 }
 
@@ -93,7 +94,7 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
-	bindAddress      string
+	httpClient       *requests.HTTPClient
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -106,7 +107,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 	proposal.SetAccessPolicies(ap)
 
-	allowedIDs, err := fetchAllowedIDs(manager.bindAddress, ap)
+	allowedIDs, err := fetchAllowedIDs(manager.httpClient, ap)
 	if err != nil {
 		return id, err
 	}
