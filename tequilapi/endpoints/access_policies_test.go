@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +49,7 @@ func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 	server := newTestServer(http.StatusOK, mockResponse)
 
 	router := httprouter.New()
-	AddRoutesForAccessPolicies(bindAllAddress, router, server.URL)
+	AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), router, server.URL)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -68,7 +69,7 @@ func Test_Get_AccessPolicies_WhenRequestFails_ReturnsError(t *testing.T) {
 	server := newTestServer(http.StatusInternalServerError, `{"error": "something bad"}`)
 
 	router := httprouter.New()
-	AddRoutesForAccessPolicies(bindAllAddress, router, server.URL)
+	AddRoutesForAccessPolicies(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), router, server.URL)
 
 	req, err := http.NewRequest(
 		http.MethodGet,

@@ -25,12 +25,12 @@ import (
 
 // AccountantCaller represents the http caller for accountant.
 type AccountantCaller struct {
-	transport         requests.HTTPTransport
+	transport         *requests.HTTPClient
 	accountantBaseURI string
 }
 
 // NewAccountantCaller returns a new instance of accountant caller.
-func NewAccountantCaller(transport requests.HTTPTransport, accountantBaseURI string) *AccountantCaller {
+func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI string) *AccountantCaller {
 	return &AccountantCaller{
 		transport:         transport,
 		accountantBaseURI: accountantBaseURI,

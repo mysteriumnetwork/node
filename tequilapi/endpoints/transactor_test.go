@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -47,7 +48,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := registry.NewTransactor(server.URL, server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -70,7 +71,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := registry.NewTransactor(server.URL, server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory, &mockPublisher{})
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -93,7 +94,7 @@ func Test_TopUp_OK(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := registry.NewTransactor(server.URL, server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
 	topUpData := `{"identity": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
@@ -118,7 +119,7 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := registry.NewTransactor(server.URL, server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory, &mockPublisher{})
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
 	topUpData := `{"identity": "0x599d43715DF3070f83355D9D90AE62c159E62A75"}`

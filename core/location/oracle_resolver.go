@@ -18,35 +18,33 @@
 package location
 
 import (
-	"time"
-
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 type oracleResolver struct {
-	http                  requests.HTTPTransport
-	oracleResolverAddress string
+	httpClient *requests.HTTPClient
+	address    string
 }
 
 // NewOracleResolver returns new db resolver initialized from Location Oracle service
-func NewOracleResolver(srcIP, address string) *oracleResolver {
+func NewOracleResolver(httpClient *requests.HTTPClient, address string) *oracleResolver {
 	return &oracleResolver{
-		requests.NewHTTPClient(srcIP, 20*time.Second),
-		address,
+		httpClient: httpClient,
+		address:    address,
 	}
 }
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (o *oracleResolver) DetectLocation() (location Location, err error) {
 	log.Debug().Msg("Detecting with oracle resolver")
-	request, err := requests.NewGetRequest(o.oracleResolverAddress, "", nil)
+	request, err := requests.NewGetRequest(o.address, "", nil)
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return Location{}, errors.Wrap(err, "failed to create request")
 	}
 
-	err = o.http.DoRequestAndParseResponse(request, &location)
+	err = o.httpClient.DoRequestAndParseResponse(request, &location)
 	return location, errors.Wrap(err, "failed to execute request")
 }

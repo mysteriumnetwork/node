@@ -38,13 +38,13 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	})
 	assert.NoError(t, err)
 
-	transport := requests.NewHTTPClient(bindAllAddress, 50*time.Millisecond)
+	httpClient := requests.NewHTTPClient(bindAllAddress, 50*time.Millisecond)
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
 	assert.NoError(t, err)
 
 	completed := make(chan error)
 	go func() {
-		_, err := transport.Do(req)
+		_, err := httpClient.Do(req)
 		completed <- err
 	}()
 
@@ -66,7 +66,7 @@ func TestProposalsReturnsPreviousProposalsWhenEtagMatches(t *testing.T) {
 	}))
 	defer s.Close()
 
-	client := NewClient("0.0.0.0", s.URL)
+	client := NewClient(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), s.URL)
 	client.latestProposals = []market.ServiceProposal{
 		{ID: 1},
 		{ID: 2},
@@ -88,7 +88,7 @@ func TestProposalsOverrideLatestProposalsWhenEtagDoNotMatch(t *testing.T) {
 	}))
 	defer s.Close()
 
-	client := NewClient("0.0.0.0", s.URL)
+	client := NewClient(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), s.URL)
 	client.latestProposals = []market.ServiceProposal{
 		{ID: 1},
 		{ID: 2},

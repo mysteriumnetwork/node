@@ -17,6 +17,8 @@
 
 package discovery
 
+import "github.com/mysteriumnetwork/node/requests"
+
 // LANDiscovery provides local network discovery service for Mysterium Node UI.
 type LANDiscovery interface {
 	Start() error
@@ -24,14 +26,15 @@ type LANDiscovery interface {
 }
 
 type multiDiscovery struct {
-	ssdp    LANDiscovery
-	bonjour LANDiscovery
+	ssdp       LANDiscovery
+	bonjour    LANDiscovery
+	httpClient *requests.HTTPClient
 }
 
 // NewLANDiscoveryService creates SSDP and Bonjour services for LAN discovery.
-func NewLANDiscoveryService(uiPort int) *multiDiscovery {
+func NewLANDiscoveryService(uiPort int, httpClient *requests.HTTPClient) *multiDiscovery {
 	return &multiDiscovery{
-		ssdp:    newSSDPServer(uiPort),
+		ssdp:    newSSDPServer(uiPort, httpClient),
 		bonjour: newBonjourServer(uiPort),
 	}
 }

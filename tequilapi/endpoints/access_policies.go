@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/requests"
@@ -44,14 +43,14 @@ type accessRule struct {
 }
 
 type accessPoliciesEndpoint struct {
-	http                    requests.HTTPTransport
+	httpClient              *requests.HTTPClient
 	accessPolicyEndpointURL string
 }
 
 // NewAccessPoliciesEndpoint creates and returns access policies endpoint
-func NewAccessPoliciesEndpoint(srcIP, accessPolicyEndpointURL string) *accessPoliciesEndpoint {
+func NewAccessPoliciesEndpoint(httpClient *requests.HTTPClient, accessPolicyEndpointURL string) *accessPoliciesEndpoint {
 	return &accessPoliciesEndpoint{
-		http:                    requests.NewHTTPClient(srcIP, 20*time.Second),
+		httpClient:              httpClient,
 		accessPolicyEndpointURL: accessPolicyEndpointURL,
 	}
 }
@@ -76,7 +75,7 @@ func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 	r := accessPolicyCollection{}
-	err = ape.http.DoRequestAndParseResponse(req, &r)
+	err = ape.httpClient.DoRequestAndParseResponse(req, &r)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -86,7 +85,7 @@ func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Requ
 }
 
 // AddRoutesForAccessPolicies attaches access policies endpoints to router
-func AddRoutesForAccessPolicies(bindAddress string, router *httprouter.Router, accessPolicyEndpointURL string) {
-	ape := NewAccessPoliciesEndpoint(bindAddress, accessPolicyEndpointURL)
+func AddRoutesForAccessPolicies(httpClient *requests.HTTPClient, router *httprouter.Router, accessPolicyEndpointURL string) {
+	ape := NewAccessPoliciesEndpoint(httpClient, accessPolicyEndpointURL)
 	router.GET("/access-policies", ape.List)
 }

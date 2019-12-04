@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -37,7 +36,7 @@ const TransactorRegistrationTopic = "transactor_identity_registration"
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
-	http                  requests.HTTPTransport
+	httpClient            *requests.HTTPClient
 	endpointAddress       string
 	signerFactory         identity.SignerFactory
 	registryAddress       string
@@ -47,9 +46,9 @@ type Transactor struct {
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher) *Transactor {
 	return &Transactor{
-		http:                  requests.NewHTTPClient(bindAddress, 20*time.Second),
+		httpClient:            httpClient,
 		endpointAddress:       endpointAddress,
 		signerFactory:         signerFactory,
 		registryAddress:       registryAddress,
@@ -118,7 +117,7 @@ func (t *Transactor) FetchRegistrationFees() (FeesResponse, error) {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
 
-	err = t.http.DoRequestAndParseResponse(req, &f)
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
 	return f, err
 }
 
@@ -131,7 +130,7 @@ func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
 
-	err = t.http.DoRequestAndParseResponse(req, &f)
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
 	return f, err
 }
 
@@ -150,7 +149,7 @@ func (t *Transactor) TopUp(id string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}
-	return t.http.DoRequest(req)
+	return t.httpClient.DoRequest(req)
 }
 
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel
@@ -173,7 +172,7 @@ func (t *Transactor) SettleAndRebalance(id string, promise pc.Promise) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}
-	return t.http.DoRequest(req)
+	return t.httpClient.DoRequest(req)
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
@@ -197,12 +196,7 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 	// We need to notify registry before returning.
 	t.publisher.Publish(TransactorRegistrationTopic, regReq)
 
-	err = t.http.DoRequest(req)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return t.httpClient.DoRequest(req)
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {

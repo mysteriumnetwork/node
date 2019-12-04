@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +50,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
-		bindAllAddress,
+		requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout),
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -74,7 +75,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
-		bindAllAddress,
+		requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout),
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -101,7 +102,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		eventBus,
-		bindAllAddress,
+		requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout),
 	)
 
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
