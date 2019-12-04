@@ -49,31 +49,42 @@ func TestAccountantPromiseStorage(t *testing.T) {
 
 	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
 	firstAccountant := identity.FromAddress(acc.Address.Hex())
-	firstPromise, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
+	fp, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
 	assert.NoError(t, err)
 
-	secondPromise, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", 2, 2, "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
+	firstPromise := AccountantPromise{
+		Promise:     *fp,
+		R:           "some r",
+		AgreementID: 123,
+	}
+
+	sp, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", 2, 2, "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
 	assert.NoError(t, err)
+	secondPromise := AccountantPromise{
+		Promise:     *sp,
+		R:           "some other r",
+		AgreementID: 1234,
+	}
 
 	// check if errors are wrapped correctly
 	_, err = accountantStorage.Get(id, firstAccountant)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that promise is stored correctly
-	err = accountantStorage.Store(id, firstAccountant, *firstPromise)
+	err = accountantStorage.Store(id, firstAccountant, firstPromise)
 	assert.NoError(t, err)
 
 	promise, err := accountantStorage.Get(id, firstAccountant)
 	assert.NoError(t, err)
-	assert.EqualValues(t, *firstPromise, promise)
+	assert.EqualValues(t, firstPromise, promise)
 
 	// overwrite the promise, check if it is overwritten
-	err = accountantStorage.Store(id, firstAccountant, *secondPromise)
+	err = accountantStorage.Store(id, firstAccountant, secondPromise)
 	assert.NoError(t, err)
 
 	promise, err = accountantStorage.Get(id, firstAccountant)
 	assert.NoError(t, err)
-	assert.EqualValues(t, *secondPromise, promise)
+	assert.EqualValues(t, secondPromise, promise)
 
 	// store two promises, check if both are gotten correctly
 	account2, err := ks.NewAccount("")
@@ -84,14 +95,14 @@ func TestAccountantPromiseStorage(t *testing.T) {
 
 	secondAccountant := identity.FromAddress(account2.Address.Hex())
 
-	err = accountantStorage.Store(id, secondAccountant, *firstPromise)
+	err = accountantStorage.Store(id, secondAccountant, firstPromise)
 	assert.NoError(t, err)
 
 	promise, err = accountantStorage.Get(id, firstAccountant)
 	assert.NoError(t, err)
-	assert.EqualValues(t, *secondPromise, promise)
+	assert.EqualValues(t, secondPromise, promise)
 
 	promise, err = accountantStorage.Get(id, secondAccountant)
 	assert.NoError(t, err)
-	assert.EqualValues(t, *firstPromise, promise)
+	assert.EqualValues(t, firstPromise, promise)
 }

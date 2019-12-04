@@ -89,8 +89,10 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 	}
 	mrsp := &mockRegistrationStatusProvider{}
 	mapg := &mockAccountantPromiseGetter{
-		promise: crypto.Promise{
-			Amount: 7000000,
+		promise: AccountantPromise{
+			Promise: crypto.Promise{
+				Amount: 7000000,
+			},
 		},
 	}
 	dir, err := ioutil.TempDir("", "TestPromiseSettler_resyncState_takes_promise_into_account")
@@ -104,7 +106,7 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 	assert.NoError(t, err)
 
 	v := settler.currentState[mockID]
-	expectedBalance := channelStatusProvider.channelToReturn.Balance.Uint64() + channelStatusProvider.channelToReturn.Settled.Uint64() - mapg.promise.Amount
+	expectedBalance := channelStatusProvider.channelToReturn.Balance.Uint64() + channelStatusProvider.channelToReturn.Settled.Uint64() - mapg.promise.Promise.Amount
 	assert.Equal(t, expectedBalance, v.balance)
 	assert.Equal(t, channelStatusProvider.channelToReturn.Balance.Uint64()+channelStatusProvider.channelToReturn.Settled.Uint64(), v.availableBalance)
 	assert.True(t, v.registered)
@@ -163,7 +165,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	assert.NoError(t, err)
 
 	v = settler.currentState[mockID]
-	expectedBalance := channelStatusProvider.channelToReturn.Balance.Uint64() + channelStatusProvider.channelToReturn.Settled.Uint64() - mapg.promise.Amount
+	expectedBalance := channelStatusProvider.channelToReturn.Balance.Uint64() + channelStatusProvider.channelToReturn.Settled.Uint64() - mapg.promise.Promise.Amount
 	assert.Equal(t, expectedBalance, v.balance)
 	assert.Equal(t, channelStatusProvider.channelToReturn.Balance.Uint64()+channelStatusProvider.channelToReturn.Settled.Uint64(), v.availableBalance)
 	assert.True(t, v.registered)
@@ -488,11 +490,11 @@ var cfg = AccountantPromiseSettlerConfig{
 }
 
 type mockAccountantPromiseGetter struct {
-	promise crypto.Promise
+	promise AccountantPromise
 	err     error
 }
 
-func (mapg *mockAccountantPromiseGetter) Get(providerID, accountantID identity.Identity) (crypto.Promise, error) {
+func (mapg *mockAccountantPromiseGetter) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
 	return mapg.promise, mapg.err
 }
 

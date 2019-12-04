@@ -560,12 +560,12 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 type mockAccountantPromiseStorage struct {
 }
 
-func (maps *mockAccountantPromiseStorage) Store(providerID, accountantID identity.Identity, promise crypto.Promise) error {
+func (maps *mockAccountantPromiseStorage) Store(providerID, accountantID identity.Identity, promise AccountantPromise) error {
 	return nil
 }
 
-func (maps *mockAccountantPromiseStorage) Get(providerID, accountantID identity.Identity) (crypto.Promise, error) {
-	return crypto.Promise{}, nil
+func (maps *mockAccountantPromiseStorage) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
+	return AccountantPromise{}, nil
 }
 
 type mockBlockchainHelper struct {

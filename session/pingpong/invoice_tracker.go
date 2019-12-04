@@ -65,8 +65,8 @@ type providerInvoiceStorage interface {
 }
 
 type accountantPromiseStorage interface {
-	Store(providerID, accountantID identity.Identity, promise crypto.Promise) error
-	Get(providerID, accountantID identity.Identity) (crypto.Promise, error)
+	Store(providerID, accountantID identity.Identity, promise AccountantPromise) error
+	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
 }
 
 type accountantCaller interface {
@@ -336,8 +336,18 @@ func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
-	if res := em.IsMessageValid(common.HexToAddress(it.peer.Address)); !res {
+	peerAddr := common.HexToAddress(it.peer.Address)
+	if res := em.IsMessageValid(peerAddr); !res {
 		return ErrExchangeValidationFailed
+	}
+
+	signer, err := em.Promise.RecoverSigner()
+	if err != nil {
+		return errors.Wrap(err, "could not recover promise signature")
+	}
+
+	if signer.Hex() != peerAddr.Hex() {
+		return errors.New("identity missmatch")
 	}
 
 	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
@@ -386,6 +396,39 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 
 		it.lastExchangeMessage = pm
 
+		needsRevealing := false
+		accountantPromise, err := it.accountantPromiseStorage.Get(it.providerID, it.accountantID)
+		switch err {
+		case nil:
+			needsRevealing = !accountantPromise.Revealed
+			break
+		case ErrNotFound:
+			needsRevealing = false
+			break
+		default:
+			return errors.Wrap(err, "could not get accountant promise")
+		}
+
+		if needsRevealing {
+			err = it.accountantCaller.RevealR(accountantPromise.R, it.providerID.Address, accountantPromise.AgreementID)
+			if err != nil {
+				log.Error().Err(err).Msg("Could not reveal R")
+				it.incrementAccountantFailureCount()
+				if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
+					return errors.Wrap(err, "could not call accountant")
+				}
+				log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
+				return nil
+			}
+			it.resetAccountantFailureCount()
+			accountantPromise.Revealed = true
+			err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, accountantPromise)
+			if err != nil {
+				return errors.Wrap(err, "could not store accountant promise")
+			}
+			log.Debug().Msg("Accountant promise stored")
+		}
+
 		promise, err := it.accountantCaller.RequestPromise(pm)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not call accountant")
@@ -398,7 +441,14 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		}
 		it.resetAccountantFailureCount()
 
-		err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, promise)
+		ap := AccountantPromise{
+			Promise:     promise,
+			R:           hex.EncodeToString(it.lastInvoice.r),
+			Revealed:    false,
+			AgreementID: it.lastInvoice.invoice.AgreementID,
+		}
+
+		err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, ap)
 		if err != nil {
 			return errors.Wrap(err, "could not store accountant promise")
 		}
@@ -409,18 +459,6 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 			AccountantID: it.accountantID,
 			ProviderID:   it.providerID,
 		})
-
-		hexR := hex.EncodeToString(it.lastInvoice.r)
-		err = it.accountantCaller.RevealR(hexR, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
-		if err != nil {
-			log.Error().Err(err).Msg("Could not reveal R")
-			it.incrementAccountantFailureCount()
-			if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
-				return errors.Wrap(err, "could not call accountant")
-			}
-			log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
-			return nil
-		}
 		it.resetAccountantFailureCount()
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout

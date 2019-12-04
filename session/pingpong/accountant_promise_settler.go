@@ -112,17 +112,17 @@ func (aps *AccountantPromiseSettler) resyncState(addr identity.Identity) error {
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", addr))
 	}
 
-	promise, err := aps.accountantPromiseGetter.Get(addr, identity.FromAddress(aps.config.AccountantAddress.Hex()))
+	accountantPromise, err := aps.accountantPromiseGetter.Get(addr, identity.FromAddress(aps.config.AccountantAddress.Hex()))
 	if err != nil && err != ErrNotFound {
 		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", addr))
 	}
 
 	availableBalance := res.Balance.Uint64() + res.Settled.Uint64()
-	currentBalance := availableBalance - promise.Amount
+	currentBalance := availableBalance - accountantPromise.Promise.Amount
 	s := state{
 		balance:          currentBalance,
 		availableBalance: availableBalance,
-		lastPromise:      promise,
+		lastPromise:      accountantPromise.Promise,
 		registered:       true,
 	}
 
@@ -332,7 +332,7 @@ type providerChannelStatusProvider interface {
 }
 
 type accountantPromiseGetter interface {
-	Get(providerID, accountantID identity.Identity) (crypto.Promise, error)
+	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
 }
 
 type state struct {
