@@ -124,7 +124,7 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 			}
 		}
 
-		protectedNetworks := strings.Split(node_config.GetString(node_config.FlagFirewallProtectedNetworks), ",")
+		protectedNetworks := strings.FieldsFunc(node_config.GetString(node_config.FlagFirewallProtectedNetworks), func(c rune) bool { return c == ',' })
 		return openvpn.CreateNewProcess(
 			nodeOptions.Openvpn.BinaryPath(),
 			config.GenericConfig,
