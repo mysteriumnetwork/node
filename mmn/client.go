@@ -22,6 +22,26 @@ import (
 	"github.com/mysteriumnetwork/node/requests"
 )
 
+// NodeInformationDto contains node information to be sent to MMN
+type NodeInformationDto struct {
+	MACAddress  string `json:"mac_address"` // SHA256 hash
+	LocalIP     string `json:"local_ip"`
+	OS          string `json:"os"`
+	Arch        string `json:"arch"`
+	NodeVersion string `json:"node_version"`
+	Identity    string `json:"identity"`
+	VendorID    string `json:"vendor_id"`
+	IsProvider  bool   `json:"is_provider"`
+	IsClient    bool   `json:"is_client"`
+}
+
+// NodeTypeDto contains node type information to be sent to MMN
+type NodeTypeDto struct {
+	IsProvider bool   `json:"is_provider"`
+	IsClient   bool   `json:"is_client"`
+	Identity   string `json:"identity"`
+}
+
 // NewClient returns MMN API client
 func NewClient(httpClient *requests.HTTPClient, mmnAddress string, signer identity.SignerFactory) *client {
 	return &client{
@@ -37,9 +57,30 @@ type client struct {
 	signer     identity.SignerFactory
 }
 
-func (m *client) RegisterNode(information *NodeInformation) error {
-	id := identity.FromAddress(information.Identity)
-	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", information, m.signer(id))
+func (m *client) RegisterNode(info *NodeInformationDto) error {
+	id := identity.FromAddress(info.Identity)
+	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))
+	if err != nil {
+		return err
+	}
+
+	return m.httpClient.DoRequest(req)
+}
+
+func (m *client) UpdateNodeType(info *NodeInformationDto) error {
+	id := identity.FromAddress(info.Identity)
+	nodeType := NodeTypeDto{
+		IsProvider: info.IsProvider,
+		IsClient:   info.IsClient,
+		Identity:   info.Identity,
+	}
+
+	req, err := requests.NewSignedPostRequest(
+		m.mmnAddress,
+		"node/type",
+		nodeType,
+		m.signer(id),
+	)
 	if err != nil {
 		return err
 	}
