@@ -111,7 +111,6 @@ type InvoiceTracker struct {
 	lastInvoice                     lastInvoice
 	lastExchangeMessage             crypto.ExchangeMessage
 	accountantCaller                accountantCaller
-	channelImplementation           string
 	registryAddress                 string
 	maxAccountantFailureCount       uint64
 	maxAllowedAccountantFee         uint16
@@ -119,6 +118,7 @@ type InvoiceTracker struct {
 	publisher                       eventbus.Publisher
 	feeProvider                     feeProvider
 	transactorFee                   uint64
+	channelAddressCalculator        channelAddressCalculator
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -135,13 +135,13 @@ type InvoiceTrackerDeps struct {
 	AccountantID               identity.Identity
 	AccountantCaller           accountantCaller
 	AccountantPromiseStorage   accountantPromiseStorage
-	ChannelImplementation      string
 	Registry                   string
 	MaxAccountantFailureCount  uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
 	Publisher                  eventbus.Publisher
 	FeeProvider                feeProvider
+	ChannelAddressCalculator   channelAddressCalculator
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -162,13 +162,13 @@ func NewInvoiceTracker(
 		accountantPromiseStorage:       itd.AccountantPromiseStorage,
 		accountantID:                   itd.AccountantID,
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, itd.ChargePeriod),
-		channelImplementation:          itd.ChannelImplementation,
-		registryAddress:                itd.Registry,
 		maxAccountantFailureCount:      itd.MaxAccountantFailureCount,
 		maxAllowedAccountantFee:        itd.MaxAllowedAccountantFee,
 		bcHelper:                       itd.BlockchainHelper,
 		publisher:                      itd.Publisher,
+		registryAddress:                itd.Registry,
 		feeProvider:                    itd.FeeProvider,
+		channelAddressCalculator:       itd.ChannelAddressCalculator,
 	}
 }
 
@@ -273,7 +273,6 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
-	// TODO: fill in the fee
 	r := make([]byte, 64)
 	rand.Read(r)
 	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, it.transactorFee, r)
@@ -369,12 +368,12 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "missmatching hashlock")
 	}
 
-	addr, err := crypto.GenerateChannelAddress(it.peer.Address, it.accountantID.Address, it.registryAddress, it.channelImplementation)
+	addr, err := it.channelAddressCalculator.GetChannelAddress(it.peer)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
 
-	expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr, "0x"))
+	expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr.Hex(), "0x"))
 	if err != nil {
 		return errors.Wrap(err, "could not decode expected chanel")
 	}

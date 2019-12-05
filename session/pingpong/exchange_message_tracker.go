@@ -63,6 +63,10 @@ type timeTracker interface {
 	Elapsed() time.Duration
 }
 
+type channelAddressCalculator interface {
+	GetChannelAddress(ID identity.Identity) (common.Address, error)
+}
+
 // ExchangeMessageTracker keeps track of exchange messages and sends them to the provider.
 type ExchangeMessageTracker struct {
 	stop                      chan struct{}
@@ -74,27 +78,27 @@ type ExchangeMessageTracker struct {
 	peer                      identity.Identity
 	channelAddress            identity.Identity
 
-	registryAddress, channelImplementation, accountantAddress string
-	consumerInvoiceStorage                                    consumerInvoiceStorage
-	consumerTotalsStorage                                     consumerTotalsStorage
-	timeTracker                                               timeTracker
-	paymentInfo                                               dto.PaymentRate
-	feeProvider                                               feeProvider
-	transactorFee                                             uint64
+	consumerInvoiceStorage   consumerInvoiceStorage
+	consumerTotalsStorage    consumerTotalsStorage
+	timeTracker              timeTracker
+	paymentInfo              dto.PaymentRate
+	feeProvider              feeProvider
+	transactorFee            uint64
+	channelAddressCalculator channelAddressCalculator
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
 type ExchangeMessageTrackerDeps struct {
-	InvoiceChan                                               chan crypto.Invoice
-	PeerExchangeMessageSender                                 PeerExchangeMessageSender
-	ConsumerInvoiceStorage                                    consumerInvoiceStorage
-	ConsumerTotalsStorage                                     consumerTotalsStorage
-	TimeTracker                                               timeTracker
-	Ks                                                        *keystore.KeyStore
-	Identity, Peer                                            identity.Identity
-	PaymentInfo                                               dto.PaymentRate
-	RegistryAddress, ChannelImplementation, AccountantAddress string
-	FeeProvider                                               feeProvider
+	InvoiceChan               chan crypto.Invoice
+	PeerExchangeMessageSender PeerExchangeMessageSender
+	ConsumerInvoiceStorage    consumerInvoiceStorage
+	ConsumerTotalsStorage     consumerTotalsStorage
+	TimeTracker               timeTracker
+	Ks                        *keystore.KeyStore
+	Identity, Peer            identity.Identity
+	PaymentInfo               dto.PaymentRate
+	FeeProvider               feeProvider
+	ChannelAddressCalculator  channelAddressCalculator
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker.
@@ -110,10 +114,8 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 		timeTracker:               emtd.TimeTracker,
 		peer:                      emtd.Peer,
 		paymentInfo:               emtd.PaymentInfo,
-		registryAddress:           emtd.RegistryAddress,
-		channelImplementation:     emtd.ChannelImplementation,
-		accountantAddress:         emtd.AccountantAddress,
 		feeProvider:               emtd.FeeProvider,
+		channelAddressCalculator:  emtd.ChannelAddressCalculator,
 	}
 }
 
@@ -123,11 +125,11 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 // Start starts the message exchange tracker. Blocks.
 func (emt *ExchangeMessageTracker) Start() error {
 	log.Debug().Msg("Starting...")
-	addr, err := crypto.GenerateChannelAddress(emt.identity.Address, emt.accountantAddress, emt.registryAddress, emt.channelImplementation)
+	addr, err := emt.channelAddressCalculator.GetChannelAddress(emt.identity)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
-	emt.channelAddress = identity.FromAddress(addr)
+	emt.channelAddress = identity.FromAddress(addr.Hex())
 
 	emt.timeTracker.StartTracking()
 	fees, err := emt.feeProvider.FetchSettleFees()

@@ -80,6 +80,7 @@ func NewAccountantPromiseSettler(transactor transactor, providerChannelStatusPro
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
 		stop:        make(chan struct{}),
+		transactor:  transactor,
 	}
 }
 
