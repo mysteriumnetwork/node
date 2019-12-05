@@ -40,3 +40,13 @@ type ExchangeMessageEventPayload struct {
 	Identity       identity.Identity
 	AmountPromised uint64
 }
+
+// BalanceChangedTopic represents the balance change topic
+const BalanceChangedTopic = "balance_change"
+
+// BalanceChangedEvent represents a balance change event
+type BalanceChangedEvent struct {
+	Identity identity.Identity
+	Previous uint64
+	Current  uint64
+}

@@ -35,15 +35,17 @@ type ConsumerBalanceTracker struct {
 	mystSCAddress            common.Address
 	consumerBalanceChecker   consumerBalanceChecker
 	channelAddressCalculator channelAddressCalculator
+	publisher                eventbus.Publisher
 	lock                     sync.Mutex
 }
 
 // NewConsumerBalanceTracker creates a new instance
-func NewConsumerBalanceTracker(mystSCAddress common.Address, consumerBalanceChecker consumerBalanceChecker, channelAddressCalculator channelAddressCalculator) *ConsumerBalanceTracker {
+func NewConsumerBalanceTracker(publisher eventbus.Publisher, mystSCAddress common.Address, consumerBalanceChecker consumerBalanceChecker, channelAddressCalculator channelAddressCalculator) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
 		balances:                 make(map[identity.Identity]Balance),
 		consumerBalanceChecker:   consumerBalanceChecker,
 		mystSCAddress:            mystSCAddress,
+		publisher:                publisher,
 		channelAddressCalculator: channelAddressCalculator,
 	}
 }
@@ -85,6 +87,14 @@ func (cbt *ConsumerBalanceTracker) handleExchangeMessageEvent(event ExchangeMess
 	cbt.decreaseBalance(event.Identity, event.AmountPromised)
 }
 
+func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after uint64) {
+	cbt.publisher.Publish(BalanceChangedTopic, BalanceChangedEvent{
+		Identity: id,
+		Previous: before,
+		Current:  after,
+	})
+}
+
 func (cbt *ConsumerBalanceTracker) handleUnlockEvent(ID identity.Identity) {
 	res, err := cbt.getBCBalance(ID)
 	if err != nil {
@@ -111,7 +121,9 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 	defer cbt.lock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
 		if v.BCBalance != 0 {
-			v.CurrentEstimate = v.BCBalance - b
+			after := v.BCBalance - b
+			go cbt.publishChangeEvent(id, v.CurrentEstimate, after)
+			v.CurrentEstimate = after
 			cbt.balances[id] = v
 		}
 	} else {
@@ -119,6 +131,7 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 			BCBalance:       0,
 			CurrentEstimate: 0,
 		}
+		go cbt.publishChangeEvent(id, 0, 0)
 	}
 }
 
