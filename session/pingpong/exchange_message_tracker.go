@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -85,6 +86,7 @@ type ExchangeMessageTracker struct {
 	feeProvider              feeProvider
 	transactorFee            uint64
 	channelAddressCalculator channelAddressCalculator
+	publisher                eventbus.Publisher
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
@@ -99,6 +101,7 @@ type ExchangeMessageTrackerDeps struct {
 	PaymentInfo               dto.PaymentRate
 	FeeProvider               feeProvider
 	ChannelAddressCalculator  channelAddressCalculator
+	Publisher                 eventbus.Publisher
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker.
@@ -116,6 +119,7 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 		paymentInfo:               emtd.PaymentInfo,
 		feeProvider:               emtd.FeeProvider,
 		channelAddressCalculator:  emtd.ChannelAddressCalculator,
+		publisher:                 emtd.Publisher,
 	}
 }
 
@@ -255,6 +259,11 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
+
+	defer emt.publisher.Publish(ExchangeMessageTopic, ExchangeMessageEventPayload{
+		Identity:       emt.identity,
+		AmountPromised: msg.Promise.Amount,
+	})
 
 	// TODO: we'd probably want to check if we have enough balance here
 	err = emt.incrementGrandTotalPromised(diff)

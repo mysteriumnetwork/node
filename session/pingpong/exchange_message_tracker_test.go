@@ -78,6 +78,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		FeeProvider:               &mockTransactor{},
+		Publisher:                 &mockPublisher{},
 		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
@@ -122,6 +123,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		FeeProvider:               &mockTransactor{},
+		Publisher:                 &mockPublisher{},
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -182,6 +184,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
+		Publisher:                 &mockPublisher{},
 		PeerExchangeMessageSender: mockSender,
 		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
@@ -619,6 +622,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 				peer:                      tt.fields.peer,
 				consumerInvoiceStorage:    tt.fields.consumerInvoiceStorage,
 				consumerTotalsStorage:     tt.fields.consumerTotalsStorage,
+				publisher:                 &mockPublisher{},
 			}
 			if err := emt.issueExchangeMessage(tt.args.invoice); (err != nil) != tt.wantErr {
 				t.Errorf("ExchangeMessageTracker.issueExchangeMessage() error = %v, wantErr %v", err, tt.wantErr)
