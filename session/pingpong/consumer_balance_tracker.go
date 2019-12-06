@@ -95,13 +95,14 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) handleUnlockEvent(ID identity.Identity) {
-	res, err := cbt.getBCBalance(ID)
+func (cbt *ConsumerBalanceTracker) handleUnlockEvent(ID string) {
+	identity := identity.FromAddress(ID)
+	res, err := cbt.getBCBalance(identity)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get BC balance")
 		return
 	}
-	cbt.updateBCBalance(ID, res)
+	cbt.updateBCBalance(identity, res)
 }
 
 func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.RegistrationEventPayload) {

@@ -175,6 +175,7 @@ type Dependencies struct {
 	ConsumerInvoiceStorage   *pingpong.ConsumerInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
+	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
 }
 
 // Bootstrap initiates all container dependencies
@@ -488,6 +489,22 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.SignerFactory,
 		di.EventBus,
 	)
+
+	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
+		di.EventBus,
+		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
+		di.BCHelper,
+		pingpong.NewChannelAddressCalculator(
+			common.HexToAddress(nodeOptions.Accountant.AccountantID),
+			common.HexToAddress(nodeOptions.Transactor.ChannelImplementation),
+			common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+		),
+	)
+
+	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
+	if err != nil {
+		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
+	}
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
