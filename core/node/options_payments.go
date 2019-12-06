@@ -25,4 +25,5 @@ type OptionsPayments struct {
 	BCTimeout                          time.Duration
 	AccountantPromiseSettlingThreshold float64
 	SettlementTimeout                  time.Duration
+	MystSCAddress                      string
 }

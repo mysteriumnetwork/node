@@ -199,6 +199,7 @@ services:
     expose:
       - 4050
     command: >
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --ip-detector=http://ipify:3000/?format=json
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
@@ -250,6 +251,7 @@ services:
     volumes:
       - ../../e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --location.country=e2e-land
