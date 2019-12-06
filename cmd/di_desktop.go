@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -227,12 +226,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
-		natsURL, err := nats.SanitiseServer(di.NetworkDefinition.BrokerAddress)
-		if err != nil {
-			return nil, err
-		}
-		natsConnection := nats.NewConnection(natsURL.String())
-
 		allowedIdentityValidator := func(peerID identity.Identity) error {
 			if len(allowedIDs) == 0 {
 				return nil
@@ -247,7 +240,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		}
 
 		return nats_dialog.NewDialogWaiter(
-			natsConnection,
+			di.BrokerConnection,
 			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
 			allowedIdentityValidator,

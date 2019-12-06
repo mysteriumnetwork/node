@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -33,13 +34,14 @@ var (
 )
 
 func Test_NewRegistry(t *testing.T) {
-	sender := NewSender(nats.NewConnectionMock())
+	connection := nats.NewConnectionMock()
+
 	assert.Equal(
 		t,
 		&registry{
-			sender: sender,
+			sender: nats.NewSender(connection, communication.NewCodecJSON(), "*"),
 		},
-		NewRegistry(sender),
+		NewRegistry(connection),
 	)
 }
 
@@ -47,9 +49,7 @@ func Test_Registry_RegisterProposal(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	registry := &registry{
-		sender: NewSender(connection),
-	}
+	registry := NewRegistry(connection)
 	err := registry.RegisterProposal(newProposal, &identity.SignerFake{})
 	assert.NoError(t, err)
 
@@ -67,9 +67,7 @@ func Test_Registry_UnregisterProposal(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	registry := &registry{
-		sender: NewSender(connection),
-	}
+	registry := NewRegistry(connection)
 	err := registry.UnregisterProposal(newProposal, &identity.SignerFake{})
 	assert.NoError(t, err)
 
@@ -87,9 +85,7 @@ func Test_Registry_PingProposal(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	registry := &registry{
-		sender: NewSender(connection),
-	}
+	registry := NewRegistry(connection)
 	err := registry.PingProposal(newProposal, &identity.SignerFake{})
 	assert.NoError(t, err)
 

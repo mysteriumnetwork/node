@@ -24,23 +24,14 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// NewSender creates sender communication sender thru NATS
-func NewSender(connection nats.Connection) communication.Sender {
-	return nats.NewSender(
-		connection,
-		communication.NewCodecJSON(),
-		"*",
-	)
-}
-
 type registry struct {
 	sender communication.Sender
 }
 
 // NewRegistry create an instance of Broker registry
-func NewRegistry(sender communication.Sender) *registry {
+func NewRegistry(connection nats.Connection) *registry {
 	return &registry{
-		sender: sender,
+		sender: nats.NewSender(connection, communication.NewCodecJSON(), "*"),
 	}
 }
 

@@ -67,11 +67,7 @@ func (waiter *dialogWaiter) Start() (market.Contact, error) {
 			BrokerAddresses: waiter.connection.Servers(),
 		},
 	}
-	log.Info().Msgf("Connecting to: %v", contact)
-
-	if err := waiter.connection.Open(); err != nil {
-		return contact, errors.Errorf("failed to start my connection with: %v", contact)
-	}
+	log.Info().Msgf("Waiting for dialogs on: %v", contact)
 
 	return contact, nil
 }
@@ -84,7 +80,6 @@ func (waiter *dialogWaiter) Stop() error {
 	for _, dialog := range waiter.dialogs {
 		dialog.Close()
 	}
-	waiter.connection.Close()
 	return nil
 }
 

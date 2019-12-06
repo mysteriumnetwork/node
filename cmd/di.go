@@ -116,6 +116,7 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
+	BrokerConnection  nats.Connection
 	EtherClient       *ethclient.Client
 
 	NATService       nat.NATService
@@ -369,6 +370,9 @@ func (di *Dependencies) Shutdown() (err error) {
 		if err := di.Storage.Close(); err != nil {
 			errs = append(errs, err)
 		}
+	}
+	if di.BrokerConnection != nil {
+		di.BrokerConnection.Close()
 	}
 
 	firewall.Reset()
@@ -681,8 +685,16 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
+	natsURL, err := nats.SanitiseServer(di.NetworkDefinition.BrokerAddress)
+	if err != nil {
+		return err
+	}
+	di.BrokerConnection = nats.NewConnection(natsURL.String())
+	if err := di.BrokerConnection.Open(); err != nil {
+		return err
+	}
 
+	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
 	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
 		return err
 	}
@@ -723,8 +735,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	case node.DiscoveryTypeAPI:
 		registry = discovery_api.NewRegistry(di.MysteriumAPI)
 	case node.DiscoveryTypeBroker:
-		sender := discovery_broker.NewSender(nats.NewConnectionMock())
-		registry = discovery_broker.NewRegistry(sender)
+		registry = discovery_broker.NewRegistry(di.BrokerConnection)
 	default:
 		return errors.Errorf("unknown discovery provider: %s", options.Type)
 	}
