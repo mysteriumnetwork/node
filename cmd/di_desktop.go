@@ -20,6 +20,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -225,7 +227,10 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
-		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
+		address, err := nats_discovery.NewAddressForURI(
+			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
+			di.NetworkDefinition.BrokerAddress,
+		)
 		if err != nil {
 			return nil, err
 		}

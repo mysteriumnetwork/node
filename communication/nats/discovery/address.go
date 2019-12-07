@@ -28,7 +28,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	nats_lib "github.com/nats-io/go-nats"
 )
@@ -42,25 +41,20 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 }
 
 // NewAddressFromHostAndID generates NATS address for current node
-func NewAddressFromHostAndID(uri string, myID identity.Identity, serviceType string) (*AddressNATS, error) {
+func NewAddressForURI(topic, uri string) (*AddressNATS, error) {
 	// Add scheme first otherwise url.Parse() fails.
-	var rawurl string
-	if strings.HasPrefix(uri, "nats:") {
-		rawurl = uri
-	} else {
-		rawurl = fmt.Sprintf("nats://%s", uri)
+	if !strings.HasPrefix(uri, "nats:") {
+		uri = fmt.Sprintf("nats://%s", uri)
 	}
 
-	url, err := url.Parse(rawurl)
+	url, err := url.Parse(uri)
 	if err != nil {
 		return nil, err
 	}
-
 	if url.Port() == "" {
 		url.Host = fmt.Sprintf("%s:%d", url.Host, BrokerPort)
 	}
 
-	topic := fmt.Sprintf("%v.%v", myID.Address, serviceType)
 	return NewAddress(topic, url.String()), nil
 }
 
