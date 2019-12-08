@@ -41,6 +41,7 @@ require (
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/magefile/mage v1.9.0
 	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/microsoft/go-winio v0.4.12 // indirect
 	github.com/miekg/dns v1.0.12
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mysteriumnetwork/feedback v1.1.1
@@ -72,11 +73,11 @@ require (
 	github.com/syndtr/goleveldb v0.0.0-20180708030551-c4c61651e9e3 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
-	golang.org/x/net v0.0.0-20191125084936-ffdde1057850
-	golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
+	golang.org/x/net v0.0.0-20191207000613-e7e4b65ae663
+	golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab
 	golang.zx2c4.com/wireguard v0.0.20191012
-	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20191205174707-786493d6718c
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
