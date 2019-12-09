@@ -141,6 +141,9 @@ func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, b uint6
 	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
 		v.BCBalance = b
+		if v.CurrentEstimate == 0 {
+			v.CurrentEstimate = b
+		}
 		cbt.balances[id] = v
 	} else {
 		cbt.balances[id] = Balance{
