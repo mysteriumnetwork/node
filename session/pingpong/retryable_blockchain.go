@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ type blockchain interface {
 	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error)
 	IsRegistered(registryAddress, addressToCheck common.Address) (bool, error)
 	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
+	GetConsumerBalance(channel, mystSCAddress common.Address) (*big.Int, error)
 }
 
 // BlockchainWithRetries takes in the plain blockchain implementation and exposes methods that will retry the underlying bc methods before giving up.
@@ -145,6 +147,20 @@ func (bwr *BlockchainWithRetries) IsRegistered(registryAddress, addressToCheck c
 			return errors.Wrap(err, "check registration status")
 		}
 		res = r
+		return nil
+	})
+	return res, err
+}
+
+// GetConsumerBalance returns the consumer balance in myst
+func (bwr *BlockchainWithRetries) GetConsumerBalance(channel, mystSCAddress common.Address) (*big.Int, error) {
+	var res *big.Int
+	err := bwr.callWithRetry(func() error {
+		result, bcErr := bwr.bc.GetConsumerBalance(channel, mystSCAddress)
+		if bcErr != nil {
+			return errors.Wrap(bcErr, "could not get consumer balance")
+		}
+		res = result
 		return nil
 	})
 	return res, err

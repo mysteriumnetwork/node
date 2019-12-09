@@ -95,6 +95,20 @@ func (bc *Blockchain) IsRegisteredAsProvider(accountantAddress, registryAddress,
 	return res.Cmp(big.NewInt(0)) == 1, nil
 }
 
+// GetConsumerBalance returns the consumer balance in myst
+func (bc *Blockchain) GetConsumerBalance(channel, mystSCAddress common.Address) (*big.Int, error) {
+	mtc, err := bindings.NewMystTokenCaller(mystSCAddress, bc.client)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	return mtc.BalanceOf(&bind.CallOpts{
+		Pending: false,
+		Context: ctx,
+	}, channel)
+}
+
 // GetProviderChannel returns the provider channel
 func (bc *Blockchain) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error) {
 	addressBytes, err := bc.getProviderChannelAddressBytes(accountantAddress, addressToCheck)

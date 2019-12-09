@@ -31,3 +31,22 @@ type AccountantPromiseEventPayload struct {
 	AccountantID identity.Identity
 	ProviderID   identity.Identity
 }
+
+// ExchangeMessageTopic represents a topic where exchange messages are sent.
+const ExchangeMessageTopic = "exchange_message_topic"
+
+// ExchangeMessageEventPayload represents the messages that are sent on the ExchangeMessageTopic.
+type ExchangeMessageEventPayload struct {
+	Identity       identity.Identity
+	AmountPromised uint64
+}
+
+// BalanceChangedTopic represents the balance change topic
+const BalanceChangedTopic = "balance_change"
+
+// BalanceChangedEvent represents a balance change event
+type BalanceChangedEvent struct {
+	Identity identity.Identity
+	Previous uint64
+	Current  uint64
+}

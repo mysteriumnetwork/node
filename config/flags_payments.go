@@ -48,6 +48,12 @@ var (
 		Value: time.Hour * 2,
 		Usage: "The duration we'll wait before timing out our wait for promise settle.",
 	}
+	// FlagPaymentsMystSCAddress represents the myst smart contract address
+	FlagPaymentsMystSCAddress = cli.StringFlag{
+		Name:  "payments.mystscaddress",
+		Value: "0xe67e41367c1e17ede951a528b2a8be35c288c787",
+		Usage: "The address of myst token smart contract",
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -58,6 +64,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		FlagPaymentsBCTimeout,
 		FlagPaymentsAccountantPromiseSettleThreshold,
 		FlagPaymentsAccountantPromiseSettleTimeout,
+		FlagPaymentsMystSCAddress,
 	)
 }
 
@@ -67,4 +74,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsAccountantPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsAccountantPromiseSettleTimeout)
+	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
 }

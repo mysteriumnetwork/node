@@ -34,6 +34,7 @@ services:
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
       --openvpn.port=3000
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
 
   myst-consumer-0.5:
     image: mysteriumnetwork/myst:0.5
@@ -49,6 +50,7 @@ services:
       --ip-detector=http://ipify:3000
       --experiment-promise-check
       --localnet
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --discovery-address=http://mysterium-api/v1
       --ether.client.rpc=http://ganache:8545
       daemon
@@ -86,6 +88,8 @@ services:
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
       --openvpn.port=3000
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+
 
   myst-consumer-local:
     build:
@@ -106,6 +110,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --api.address=http://mysterium-api/v1
       --keystore.lightweight
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1

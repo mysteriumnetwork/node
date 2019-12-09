@@ -83,13 +83,13 @@ func InvoiceFactoryCreator(
 			AccountantCaller:           accountantCaller,
 			AccountantPromiseStorage:   accountantPromiseStorage,
 			AccountantID:               accountantID,
-			ChannelImplementation:      channelImplementationAddress,
 			Registry:                   registryAddress,
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
 			BlockchainHelper:           blockchainHelper,
 			Publisher:                  publisher,
 			FeeProvider:                feeProvider,
+			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -105,7 +105,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	feeProvider feeProvider,
 	channelImplementation string,
-	registryAddress string) func(paymentInfo *promise.PaymentInfo,
+	registryAddress string, publisher eventbus.Publisher) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
@@ -149,10 +149,9 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Identity:                  consumer,
 				Peer:                      dialog.PeerID(),
 				PaymentInfo:               DefaultPaymentInfo,
-				RegistryAddress:           registryAddress,
-				ChannelImplementation:     channelImplementation,
-				AccountantAddress:         accountant.Address,
+				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
 				FeeProvider:               feeProvider,
+				Publisher:                 publisher,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {

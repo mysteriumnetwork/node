@@ -136,6 +136,7 @@ func GetOptions() *Options {
 			BCTimeout:                          config.GetDuration(config.FlagPaymentsBCTimeout),
 			AccountantPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsAccountantPromiseSettleThreshold),
 			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
+			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
 		},
 		Accountant: OptionsAccountant{
 			AccountantID:              config.GetString(config.FlagAccountantID),

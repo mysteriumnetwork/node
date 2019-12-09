@@ -65,13 +65,17 @@ type identityUnlockingDto struct {
 type statusDTO struct {
 	ChannelAddress string `json:"channel_address"`
 	IsRegistered   bool   `json:"is_registered"`
+	Balance        uint64 `json:"balance"`
 }
+
+type balanceGetter func(ID identity.Identity) uint64
 
 type identitiesAPI struct {
 	idm                                           identity.Manager
 	selector                                      identity_selector.Handler
 	registry                                      registry.IdentityRegistry
 	registryAddress, channelImplementationAddress string
+	balanceGetter                                 balanceGetter
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -87,8 +91,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry, registryAddress, channelImplementationAddress string) *identitiesAPI {
-	return &identitiesAPI{idm, selector, registry, registryAddress, channelImplementationAddress}
+func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry, registryAddress, channelImplementationAddress string, balanceGetter balanceGetter) *identitiesAPI {
+	return &identitiesAPI{idm, selector, registry, registryAddress, channelImplementationAddress, balanceGetter}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -295,8 +299,8 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 	case registry.RegisteredConsumer, registry.Promoting, registry.RegisteredProvider:
 		isRegistered = true
 	}
-
-	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered}
+	balance := endpoint.balanceGetter(identity.FromAddress(identityAddress))
+	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered, Balance: balance}
 	utils.WriteAsJSON(status, resp)
 }
 
@@ -355,8 +359,9 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	identityRegistry registry.IdentityRegistry,
 	registryAddress, channelImplementationAddress string,
+	balanceGetter balanceGetter,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress)
+	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress, balanceGetter)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id", idmEnd.Current)
