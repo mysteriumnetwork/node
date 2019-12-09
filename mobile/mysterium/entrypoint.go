@@ -158,6 +158,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 			BCTimeout:                          time.Second * 30,
 			AccountantPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:                  time.Hour * 2,
+			MystSCAddress:                      "0xe67e41367c1e17ede951a528b2a8be35c288c787",
 		},
 	})
 	if err != nil {
