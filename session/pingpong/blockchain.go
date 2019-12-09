@@ -141,7 +141,7 @@ func (bc *Blockchain) GetProviderChannel(accountantAddress common.Address, addre
 	if err != nil {
 		return ProviderChannel{}, errors.Wrap(err, "could not calculate provider channel address")
 	}
-	log.Info().Msgf("checkign address %v", common.Bytes2Hex(addressBytes[:]))
+	log.Info().Msgf("checking address %v", common.Bytes2Hex(addressBytes[:]))
 	caller, err := bindings.NewAccountantImplementationCaller(accountantAddress, bc.client)
 	if err != nil {
 		return ProviderChannel{}, errors.Wrap(err, "could not create accountant caller")

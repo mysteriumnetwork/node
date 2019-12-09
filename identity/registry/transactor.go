@@ -160,18 +160,13 @@ func (t *Transactor) TopUp(id string) error {
 }
 
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel
-func (t *Transactor) SettleAndRebalance(id string, promise pc.Promise) error {
-	channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate channel address")
-	}
-
+func (t *Transactor) SettleAndRebalance(accountantID string, promise pc.Promise) error {
 	payload := PromiseSettlementRequest{
-		AccountantID:  t.accountantID,
-		ChannelID:     channelAddress,
+		AccountantID:  accountantID,
+		ChannelID:     hex.EncodeToString(promise.ChannelID),
 		Amount:        promise.Amount,
 		TransactorFee: promise.Fee,
-		Preimage:      hex.EncodeToString(promise.Hashlock),
+		Preimage:      hex.EncodeToString(promise.R),
 		Signature:     hex.EncodeToString(promise.Signature),
 	}
 
