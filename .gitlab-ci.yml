@@ -84,6 +84,11 @@ package:linux-debian-arm:
   tags: [go]
   script: go run mage.go -v PackageLinuxDebianArm
 
+package:linux-debian-arm64:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageLinuxDebianArm64
+
 package:linux-raspberry-image:
   stage: build
   tags: [go,high_performance]
