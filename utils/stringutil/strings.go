@@ -15,21 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package utils
+package stringutil
 
 import (
-	"os/exec"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
+	"strings"
+	"unicode/utf8"
 )
 
-func PowerShell(cmd string) ([]byte, error) {
-	log.Debug().Msgf("[powershell] executing: '%s'", cmd)
-	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
-	if err != nil {
-		return nil, errors.Errorf("'powershell -Command %v': %v output: %s", cmd, RemoveErrorsAndBOMUTF8(err.Error()), RemoveErrorsAndBOMUTF8Byte(out))
-	}
-	log.Debug().Msgf("[powershell] done: '%s', raw output: '%s'", cmd, out)
-	return RemoveErrorsAndBOMUTF8Byte(out), nil
+// RemoveErrorsAndBOMUTF8 removes the bom and rune errors from UTF8 strings
+func RemoveErrorsAndBOMUTF8(in string) string {
+	return strings.Map(func(r rune) rune {
+		if r == utf8.RuneError || r == '\uFEFF' {
+			return -1
+		}
+		return r
+	}, in)
+}
+
+// RemoveErrorsAndBOMUTF8Byte removes the bom and rune errors from UTF8 byte arrays
+func RemoveErrorsAndBOMUTF8Byte(in []byte) []byte {
+	return []byte(RemoveErrorsAndBOMUTF8(string(in)))
 }

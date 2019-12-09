@@ -37,6 +37,7 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -124,7 +125,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return
 	}
 
-	dnsIP := utils.FirstIP(m.vpnNetwork).String()
+	dnsIP := netutil.FirstIP(m.vpnNetwork).String()
 	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.outboundIP, m.publicIP, m.vpnServerPort)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)

@@ -15,24 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package utils
+package netutil
 
-import (
-	"strings"
-	"unicode/utf8"
-)
+import "net"
 
-// RemoveErrorsAndBOMUTF8 removes the bom and rune errors from UTF8 strings
-func RemoveErrorsAndBOMUTF8(in string) string {
-	return strings.Map(func(r rune) rune {
-		if r == utf8.RuneError || r == '\uFEFF' {
-			return -1
-		}
-		return r
-	}, in)
+// FirstIP returns a first IP from the subnet.
+func FirstIP(subnet net.IPNet) net.IP {
+	ip := make(net.IP, len(subnet.IP))
+	copy(ip, subnet.IP)
+	dup := ip.Mask(subnet.Mask)
+	inc(dup)
+	if subnet.Contains(dup) {
+		return dup
+	}
+	return ip
 }
 
-// RemoveErrorsAndBOMUTF8Byte removes the bom and rune errors from UTF8 byte arrays
-func RemoveErrorsAndBOMUTF8Byte(in []byte) []byte {
-	return []byte(RemoveErrorsAndBOMUTF8(string(in)))
+func inc(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
 }
