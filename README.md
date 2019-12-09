@@ -21,7 +21,7 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 ## Installation options
 
-### Debian/raspbian
+### Debian / Ubuntu / Raspbian
 
 Install latest stable release:
 ```bash

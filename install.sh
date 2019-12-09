@@ -71,6 +71,8 @@ download_latest_package() {
         package_file="myst_linux_amd64.deb"
     elif [[ "$distro" == "debian" ]] && [[ "$arch" == "armhf" ]]; then
         package_file="myst_linux_armhf.deb"
+    elif [[ "$distro" == "debian" ]] && [[ "$arch" == "arm64" ]]; then
+        package_file="myst_linux_arm64.deb"
     fi
 
     if [[ -z "$package_file" ]]; then
