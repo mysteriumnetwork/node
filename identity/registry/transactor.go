@@ -145,7 +145,7 @@ func (t *Transactor) TopUp(id string) error {
 		Identity: channelAddress,
 	}
 
-	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
+	req, err := requests.NewPostRequest(t.endpointAddress, "topup", payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}

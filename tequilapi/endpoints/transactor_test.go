@@ -136,7 +136,7 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 	assert.JSONEq(
 		t,
-		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/fee/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
+		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
 		resp.Body.String(),
 	)
 }
