@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -90,7 +89,7 @@ func InvoiceFactoryCreator(
 			BlockchainHelper:           blockchainHelper,
 			Publisher:                  publisher,
 			FeeProvider:                feeProvider,
-			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.ToCommonAddress(), common.HexToAddress(channelImplementationAddress), common.HexToAddress(registryAddress)),
+			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -150,7 +149,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Identity:                  consumer,
 				Peer:                      dialog.PeerID(),
 				PaymentInfo:               DefaultPaymentInfo,
-				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.ToCommonAddress(), common.HexToAddress(channelImplementation), common.HexToAddress(registryAddress)),
+				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
 				FeeProvider:               feeProvider,
 				Publisher:                 publisher,
 			}

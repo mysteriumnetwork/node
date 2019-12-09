@@ -30,13 +30,13 @@ import (
 
 // ConsumerBalanceTracker keeps track of consumer balances
 type ConsumerBalanceTracker struct {
-	balances map[identity.Identity]Balance
+	balancesLock sync.Mutex
+	balances     map[identity.Identity]Balance
 
 	mystSCAddress            common.Address
 	consumerBalanceChecker   consumerBalanceChecker
 	channelAddressCalculator channelAddressCalculator
 	publisher                eventbus.Publisher
-	lock                     sync.Mutex
 }
 
 // NewConsumerBalanceTracker creates a new instance
@@ -75,8 +75,8 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 
 // GetBalance gets the current balance for given identity
 func (cbt *ConsumerBalanceTracker) GetBalance(ID identity.Identity) uint64 {
-	cbt.lock.Lock()
-	defer cbt.lock.Unlock()
+	cbt.balancesLock.Lock()
+	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[ID]; ok {
 		return v.CurrentEstimate
 	}
@@ -118,8 +118,8 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.Regist
 }
 
 func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint64) {
-	cbt.lock.Lock()
-	defer cbt.lock.Unlock()
+	cbt.balancesLock.Lock()
+	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
 		if v.BCBalance != 0 {
 			after := v.BCBalance - b
@@ -137,8 +137,8 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 }
 
 func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, b uint64) {
-	cbt.lock.Lock()
-	defer cbt.lock.Unlock()
+	cbt.balancesLock.Lock()
+	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
 		v.BCBalance = b
 		cbt.balances[id] = v

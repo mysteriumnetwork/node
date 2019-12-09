@@ -98,7 +98,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -148,7 +148,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: false},
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -197,7 +197,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegisteredError: mockError},
 		FeeProvider:                &mockTransactor{},
@@ -246,7 +246,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Publisher:                  &mockPublisher{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		FeeProvider:                &mockTransactor{},
@@ -298,7 +298,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Publisher:                  &mockPublisher{},
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
@@ -349,7 +349,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
 		Publisher:                  &mockPublisher{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
@@ -398,7 +398,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(1000000000000, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address, acc.Address, acc.Address),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
@@ -549,7 +549,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				lastInvoice:                tt.fields.lastInvoice,
 				registryAddress:            tt.fields.registryAddress,
 				publisher:                  &mockPublisher{},
-				channelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.ToCommonAddress(), common.HexToAddress(tt.fields.channelImplementation), common.HexToAddress(tt.fields.registryAddress)),
+				channelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
 			}
 			if tt.em != nil {
 				go func() {

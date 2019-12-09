@@ -495,9 +495,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
 		di.BCHelper,
 		pingpong.NewChannelAddressCalculator(
-			common.HexToAddress(nodeOptions.Accountant.AccountantID),
-			common.HexToAddress(nodeOptions.Transactor.ChannelImplementation),
-			common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+			nodeOptions.Accountant.AccountantID,
+			nodeOptions.Transactor.ChannelImplementation,
+			nodeOptions.Transactor.RegistryAddress,
 		),
 	)
 

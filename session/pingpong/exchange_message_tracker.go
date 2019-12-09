@@ -65,7 +65,7 @@ type timeTracker interface {
 }
 
 type channelAddressCalculator interface {
-	GetChannelAddress(ID identity.Identity) (common.Address, error)
+	GetChannelAddress(id identity.Identity) (common.Address, error)
 }
 
 // ExchangeMessageTracker keeps track of exchange messages and sends them to the provider.

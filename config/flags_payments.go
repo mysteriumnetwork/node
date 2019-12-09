@@ -48,7 +48,7 @@ var (
 		Value: time.Hour * 2,
 		Usage: "The duration we'll wait before timing out our wait for promise settle.",
 	}
-	// FlagPaymentsMystSCAddress representd the myst smart contract address
+	// FlagPaymentsMystSCAddress represents the myst smart contract address
 	FlagPaymentsMystSCAddress = cli.StringFlag{
 		Name:  "payments.mystscaddress",
 		Value: "0xe67e41367c1e17ede951a528b2a8be35c288c787",

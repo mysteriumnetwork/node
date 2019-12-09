@@ -23,15 +23,15 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// ChannelAddressCalculator calculates the
+// ChannelAddressCalculator calculates the channel addresses for consumer
 type ChannelAddressCalculator struct {
-	accountantSCAddress   common.Address
-	channelImplementation common.Address
-	registryAddress       common.Address
+	accountantSCAddress   string
+	channelImplementation string
+	registryAddress       string
 }
 
-// NewChannelAddressCalculator returns a new instaance of channel address calculator
-func NewChannelAddressCalculator(accountantSCAddress, channelImplementation, registryAddress common.Address) *ChannelAddressCalculator {
+// NewChannelAddressCalculator returns a new instance of channel address calculator
+func NewChannelAddressCalculator(accountantSCAddress, channelImplementation, registryAddress string) *ChannelAddressCalculator {
 	return &ChannelAddressCalculator{
 		accountantSCAddress:   accountantSCAddress,
 		channelImplementation: channelImplementation,
@@ -40,7 +40,7 @@ func NewChannelAddressCalculator(accountantSCAddress, channelImplementation, reg
 }
 
 // GetChannelAddress returns channel id
-func (cac *ChannelAddressCalculator) GetChannelAddress(ID identity.Identity) (common.Address, error) {
-	addr, err := crypto.GenerateChannelAddress(ID.Address, cac.accountantSCAddress.Hex(), cac.registryAddress.Hex(), cac.channelImplementation.Hex())
+func (cac *ChannelAddressCalculator) GetChannelAddress(id identity.Identity) (common.Address, error) {
+	addr, err := crypto.GenerateChannelAddress(id.Address, cac.accountantSCAddress, cac.registryAddress, cac.channelImplementation)
 	return common.HexToAddress(addr), err
 }
