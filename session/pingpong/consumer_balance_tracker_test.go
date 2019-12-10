@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -101,6 +102,10 @@ type mockConsumerBalanceChecker struct {
 
 func (mcbc *mockConsumerBalanceChecker) GetConsumerBalance(channel, mystSCAddress common.Address) (*big.Int, error) {
 	return mcbc.amountToReturn, mcbc.errToReturn
+}
+
+func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error) {
+	return nil, nil, nil
 }
 
 type mockChannelAddressCalculator struct {

@@ -34,6 +34,9 @@ import (
 // TransactorRegistrationTopic represents the registration topic to which events regarding registration attempts on transactor will occur
 const TransactorRegistrationTopic = "transactor_identity_registration"
 
+// TransactorTopUpTopic represents the top up topic to which events regarding top up attempts are sent.
+const TransactorTopUpTopic = "transactor_top_up"
+
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
 	httpClient            *requests.HTTPClient
@@ -149,6 +152,10 @@ func (t *Transactor) TopUp(id string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}
+
+	// This is left as a synchronous call on purpose.
+	t.publisher.Publish(TransactorTopUpTopic, id)
+
 	return t.httpClient.DoRequest(req)
 }
 
