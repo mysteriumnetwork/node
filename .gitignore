@@ -8,3 +8,4 @@ tequilapi_spec.json
 /e2e/myst-provider/db
 tequilapi.json
 mage_output_file.go
+coverage.txt

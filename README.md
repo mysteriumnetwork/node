@@ -3,6 +3,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
 [![pipeline status](https://gitlab.com/mysteriumnetwork/node/badges/master/pipeline.svg)](https://gitlab.com/mysteriumnetwork/node/pipelines)
 [![pullreminders](https://pullreminders.com/badge.svg)](https://pullreminders.com?ref=badge)
+[![codecov](https://codecov.io/gh/mysteriumnetwork/node/branch/master/graph/badge.svg)](https://codecov.io/gh/mysteriumnetwork/node) 
+[![GoDoc](https://godoc.org/github.com/mysteriumnetwork/node?status.svg)](http://godoc.org/github.com/mysteriumnetwork/node)
 
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node),
 client API (tequila API) and client-cli (console client) for Mysterium Network.
