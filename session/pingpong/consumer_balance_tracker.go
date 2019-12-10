@@ -172,7 +172,7 @@ func (cbt *ConsumerBalanceTracker) increaseBalance(id identity.Identity, b uint6
 			BCBalance:       b,
 			CurrentEstimate: b,
 		}
-		go cbt.publishChangeEvent(id, b, b)
+		go cbt.publishChangeEvent(id, 0, b)
 	}
 }
 
@@ -199,6 +199,7 @@ func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, b uint6
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
+		before := v.CurrentEstimate
 		diff := b - v.BCBalance
 		if diff < 0 {
 			v.BCBalance = 0
@@ -208,11 +209,13 @@ func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, b uint6
 			v.CurrentEstimate += diff
 		}
 		cbt.balances[id] = v
+		go cbt.publishChangeEvent(id, before, v.CurrentEstimate)
 	} else {
 		cbt.balances[id] = Balance{
 			BCBalance:       b,
 			CurrentEstimate: b,
 		}
+		go cbt.publishChangeEvent(id, 0, b)
 	}
 }
 
