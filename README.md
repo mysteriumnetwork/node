@@ -25,12 +25,12 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 Install latest stable release:
 ```bash
-sudo bash <(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh) 
+sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)" 
 ```
 
 Or install latest snapshot (development build):
 ```bash
-SNAPSHOT=true sudo -E bash <(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh) 
+SNAPSHOT=true sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)" 
 ```
 
 Service logs:
@@ -42,6 +42,8 @@ Service status:
 ```bash
 sudo systemctl status mysterium-node.service
 ```
+
+Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Debian 10_, _Ubuntu 18.04_ and _Ubuntu 16.04_ .
 
 ### Docker
 
