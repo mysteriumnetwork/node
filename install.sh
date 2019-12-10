@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 
 shopt -s extglob
+set -e
 set -o errtrace
 set -o errexit
 set -o pipefail
 
-# Install latest release of myst for debian/raspbian
+# Install latest release of myst for debian/ubuntu/raspbian
 #
 # Variables:
 # - SNAPSHOT (default: false) - set to "true" to install development snapshot
 #
-
-# set -e
 
 if [[ "$SNAPSHOT" == "true" ]]; then
     releases_url="http://api.github.com/repos/mysteriumnetwork/node-builds/releases"
