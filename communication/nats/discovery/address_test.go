@@ -20,53 +20,23 @@ package discovery
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewAddress(t *testing.T) {
-	address := NewAddress("topic1234", "nats://far-server:1234")
+	connection := nats.NewConnection("nats://far-server:1234")
+	address := NewAddress("topic1234", connection)
 
 	assert.Equal(
 		t,
 		&AddressNATS{
-			servers: []string{"nats://far-server:1234"},
-			topic:   "topic1234",
+			topic:      "topic1234",
+			connection: connection,
 		},
 		address,
 	)
-}
-
-func TestNewAddressFromHostAndID(t *testing.T) {
-	var tests = []struct {
-		uri  string
-		want string
-	}{
-		{"127.0.0.1", "nats://127.0.0.1:4222"},
-		{"nats://127.0.0.1", "nats://127.0.0.1:4222"},
-		{"127.0.0.1:4222", "nats://127.0.0.1:4222"},
-		{"nats://127.0.0.1:4222", "nats://127.0.0.1:4222"},
-
-		{"nats://127.0.0.1:4333", "nats://127.0.0.1:4333"},
-		{"nats://example.com:4333", "nats://example.com:4333"},
-	}
-
-	myID := identity.FromAddress("provider1")
-	for _, tc := range tests {
-		address, err := NewAddressForURI(myID.Address, tc.uri)
-		assert.NoError(t, err)
-		assert.Equal(
-			t,
-			&AddressNATS{
-				servers: []string{tc.want},
-				topic:   "provider1",
-			},
-			address,
-		)
-
-	}
 }
 
 func TestNewAddressForContact(t *testing.T) {
@@ -79,14 +49,8 @@ func TestNewAddressForContact(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(
-		t,
-		&AddressNATS{
-			servers: []string{"nats://far-server:4222"},
-			topic:   "123456",
-		},
-		address,
-	)
+	assert.Equal(t, "123456", address.topic)
+	assert.Equal(t, []string{"nats://far-server:4222"}, address.connection.Servers())
 }
 
 func TestNewAddressForContact_UnknownType(t *testing.T) {
@@ -110,25 +74,8 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 	assert.Nil(t, address)
 }
 
-func TestAddress_Disconnect_EmptyAddress(t *testing.T) {
-	// TODO what is the point of this test?
-	address := &AddressNATS{
-		removeRules: func() {},
-	}
-	address.Disconnect()
-}
-
-func TestAddress_Disconnect_AfterFailedConnect(t *testing.T) {
-	address := &AddressNATS{
-		servers: []string{"nats://far-server:4222"},
-	}
-
-	assert.EqualError(t, address.Connect(), "nats: no servers available for connection")
-	address.Disconnect()
-}
-
 func TestAddress_GetConnection(t *testing.T) {
-	expectedConnection := connection{&nats.Conn{}}
+	expectedConnection := &nats.ConnectionWrap{}
 	address := &AddressNATS{connection: expectedConnection}
 
 	assert.Exactly(t, expectedConnection, address.GetConnection())
@@ -142,8 +89,8 @@ func TestAddress_GetTopic(t *testing.T) {
 
 func TestAddress_GetContact(t *testing.T) {
 	address := &AddressNATS{
-		servers: []string{"nats://far-server:4222"},
-		topic:   "123456",
+		topic:      "123456",
+		connection: nats.NewConnection("nats://far-server:4222"),
 	}
 
 	assert.Equal(

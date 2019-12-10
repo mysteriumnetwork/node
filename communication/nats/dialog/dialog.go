@@ -32,7 +32,7 @@ type dialog struct {
 
 func (dialog *dialog) Close() error {
 	if dialog.peerAddress != nil {
-		dialog.peerAddress.Disconnect()
+		dialog.peerAddress.GetConnection().Close()
 	}
 	return nil
 }

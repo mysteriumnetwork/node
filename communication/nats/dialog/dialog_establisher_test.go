@@ -100,14 +100,14 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 	assert.Nil(t, dialogInstance)
 }
 
-func mockEstablisher(ID identity.Identity, connection nats.Connection, signer identity.Signer) *dialogEstablisher {
+func mockEstablisher(ID identity.Identity, connection *nats.ConnectionMock, signer identity.Signer) *dialogEstablisher {
 	peerTopic := "peer-topic"
 
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
 		peerAddressFactory: func(contact market.Contact) (*discovery.AddressNATS, error) {
-			return discovery.NewAddressWithConnection(connection, peerTopic), nil
+			return discovery.NewAddress(peerTopic, connection), nil
 		},
 	}
 }

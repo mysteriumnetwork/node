@@ -55,7 +55,7 @@ type dialogWaiter struct {
 func (waiter *dialogWaiter) Start() (market.Contact, error) {
 	log.Info().Msgf("Connecting to: %v", waiter.address.GetContact())
 
-	err := waiter.address.Connect()
+	err := waiter.address.GetConnection().Open()
 	if err != nil {
 		return market.Contact{}, errors.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
 	}
@@ -71,7 +71,7 @@ func (waiter *dialogWaiter) Stop() error {
 	for _, dialog := range waiter.dialogs {
 		dialog.Close()
 	}
-	waiter.address.Disconnect()
+	waiter.address.GetConnection().Close()
 	return nil
 }
 

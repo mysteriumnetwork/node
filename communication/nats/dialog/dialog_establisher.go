@@ -35,7 +35,7 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 		peerAddressFactory: func(contact market.Contact) (*discovery.AddressNATS, error) {
 			address, err := discovery.NewAddressForContact(contact)
 			if err == nil {
-				err = address.Connect()
+				err = address.GetConnection().Open()
 			}
 
 			return address, err
@@ -65,7 +65,7 @@ func (e *dialogEstablisher) EstablishDialog(
 	peerSender := e.newSenderToPeer(peerAddress, peerCodec)
 	topic, err := e.negotiateTopic(peerSender)
 	if err != nil {
-		peerAddress.Disconnect()
+		peerAddress.GetConnection().Close()
 		return nil, err
 	}
 

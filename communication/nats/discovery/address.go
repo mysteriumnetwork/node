@@ -18,44 +18,17 @@
 package discovery
 
 import (
-	"fmt"
-	"net/url"
-	"strings"
-	"time"
-
-	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/market"
-	nats_lib "github.com/nats-io/go-nats"
+	"github.com/pkg/errors"
 )
 
 // NewAddress creates NATS address to known host or cluster of hosts
-func NewAddress(topic string, addresses ...string) *AddressNATS {
+func NewAddress(topic string, connection nats.Connection) *AddressNATS {
 	return &AddressNATS{
-		servers: addresses,
-		topic:   topic,
+		topic:      topic,
+		connection: connection,
 	}
-}
-
-// NewAddressFromHostAndID generates NATS address for current node
-func NewAddressForURI(topic, uri string) (*AddressNATS, error) {
-	// Add scheme first otherwise url.Parse() fails.
-	if !strings.HasPrefix(uri, "nats:") {
-		uri = fmt.Sprintf("nats://%s", uri)
-	}
-
-	url, err := url.Parse(uri)
-	if err != nil {
-		return nil, err
-	}
-	if url.Port() == "" {
-		url.Host = fmt.Sprintf("%s:%d", url.Host, BrokerPort)
-	}
-
-	return NewAddress(topic, url.String()), nil
 }
 
 // NewAddressForContact extracts NATS address from given contact structure
@@ -69,71 +42,22 @@ func NewAddressForContact(contact market.Contact) (*AddressNATS, error) {
 		return nil, errors.Errorf("invalid contact definition: %#v", contact.Definition)
 	}
 
-	return &AddressNATS{
-		servers: contactNats.BrokerAddresses,
-		topic:   contactNats.Topic,
-	}, nil
+	return NewAddress(contactNats.Topic, nats.NewConnection(contactNats.BrokerAddresses...)), nil
 }
 
-// NewAddressWithConnection constructs NATS address to already active NATS connection
-func NewAddressWithConnection(connection nats.Connection, topic string) *AddressNATS {
-	return &AddressNATS{
-		topic:       topic,
-		connection:  connection,
-		removeRules: func() {},
-	}
-}
-
-// AddressNATS structure defines details how NATS connection can be established
+// AddressNATS structure defines details how NATS ConnectionWrap can be established
 type AddressNATS struct {
-	servers     []string
-	topic       string
-	removeRules func()
-	connection  nats.Connection
+	topic      string
+	connection nats.Connection
 }
 
-// Connect establishes connection to broker
-func (address *AddressNATS) Connect() (err error) {
-	options := nats_lib.GetDefaultOptions()
-	options.Servers = address.servers
-	options.MaxReconnect = BrokerMaxReconnect
-	options.ReconnectWait = BrokerReconnectWait
-	options.Timeout = BrokerTimeout
-	options.PingInterval = 10 * time.Second
-	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("Disconnected") }
-	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("Reconnected") }
-
-	removeRules, err := firewall.AllowURLAccess(address.servers...)
-	if err != nil {
-		return err
-	}
-	address.removeRules = removeRules
-
-	conn, err := options.Connect()
-	address.connection = connection{conn}
-	if err != nil {
-		address.connection = nil
-	}
-
-	return
-}
-
-// Disconnect stops currently established connection
-func (address *AddressNATS) Disconnect() {
-	if address.connection != nil {
-		address.connection.Close()
-	}
-	address.removeRules()
-	address.removeRules = func() {}
-}
-
-// GetConnection returns currently established connection
+// GetConnection returns currently established ConnectionWrap
 func (address *AddressNATS) GetConnection() nats.Connection {
 	return address.connection
 }
 
 // GetTopic returns topic.
-// Address points to this topic in established connection.
+// Address points to this topic in established ConnectionWrap.
 func (address *AddressNATS) GetTopic() string {
 	return address.topic
 }
@@ -144,18 +68,7 @@ func (address *AddressNATS) GetContact() market.Contact {
 		Type: TypeContactNATSV1,
 		Definition: ContactNATSV1{
 			Topic:           address.topic,
-			BrokerAddresses: address.servers,
+			BrokerAddresses: address.connection.Servers(),
 		},
 	}
-}
-
-type connection struct {
-	*nats_lib.Conn
-}
-
-func (c connection) Check() error {
-	// Flush sends ping request and tries to send all cached data.
-	// It return an error if something wrong happened. All other requests
-	// will be added to queue to be sent after reconnecting.
-	return c.Flush()
 }
