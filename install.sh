@@ -45,6 +45,20 @@ get_linux_distribution() {
     eval $__resultvar="'$result'"
 }
 
+get_version_codename() {
+    local __resultvar=$1
+    local result
+
+    if [[ -f "/etc/os-release" ]]; then
+        local id=$(awk -F= '$1=="VERSION_CODENAME" { print $2 ;}' /etc/os-release)
+        result="$id"
+    else
+        result="unknown"
+    fi
+
+    eval $__resultvar="'$result'"
+}
+
 get_architecture() {
     local __resultvar=$1
     local result
@@ -116,6 +130,13 @@ install_script_dependencies() {
 }
 
 install_dependencies() {
+    readonly local version_codename=$1
+
+    if [[ "$version_codename" == "xenial" ]]; then
+        curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add -
+        echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list
+    fi
+
     # Wireguard
     echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
     printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
@@ -140,7 +161,9 @@ echo "### Detecting platform"
 get_os OS
 get_architecture ARCH
 get_linux_distribution DISTRO
-echo "OS: $OS | architecture: $ARCH | distribution: $DISTRO"
+get_version_codename VERSION_CODENAME
+
+echo "OS: $OS | architecture: $ARCH | distribution: $DISTRO | version: $VERSION_CODENAME"
 echo "### Detecting platform - done"
 
 echo "### Downloading latest package"
@@ -148,7 +171,7 @@ download_latest_package PACKAGE_FILE $OS $ARCH $DISTRO
 echo "### Downloading latest package - done: $PACKAGE_FILE"
 
 echo "### Installing myst dependencies"
-install_dependencies
+install_dependencies $VERSION_CODENAME
 echo "### Installing myst dependencies - done"
 
 echo "### Installing myst & restarting service"
