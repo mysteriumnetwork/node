@@ -72,8 +72,8 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 }
 
 // GetConsumerData gets consumer data from accountant
-func (ac *AccountantCaller) GetConsumerData(channel string) (ConsumerData, error) {
-	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/consumer/%v", channel), nil)
+func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
+	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
 		return ConsumerData{}, errors.Wrap(err, "could not form consumer data request")
 	}
@@ -87,10 +87,10 @@ type ConsumerData struct {
 	Identity         string        `json:"Identity"`
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
-	Balance          int64         `json:"Balance"`
-	Promised         int           `json:"Promised"`
-	Settled          int           `json:"Settled"`
-	Stake            int           `json:"Stake"`
+	Balance          uint64        `json:"Balance"`
+	Promised         uint64        `json:"Promised"`
+	Settled          uint64        `json:"Settled"`
+	Stake            uint64        `json:"Stake"`
 	LatestPromise    LatestPromise `json:"LatestPromise"`
 	LatestSettlement time.Time     `json:"LatestSettlement"`
 }
@@ -98,8 +98,8 @@ type ConsumerData struct {
 // LatestPromise represents the latest promise
 type LatestPromise struct {
 	ChannelID string      `json:"ChannelID"`
-	Amount    int         `json:"Amount"`
-	Fee       int         `json:"Fee"`
+	Amount    uint64      `json:"Amount"`
+	Fee       uint64      `json:"Fee"`
 	Hashlock  string      `json:"Hashlock"`
 	R         interface{} `json:"R"`
 	Signature string      `json:"Signature"`
