@@ -18,6 +18,9 @@
 package pingpong
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -66,4 +69,38 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 		return errors.Wrap(err, "could not form reveal_r request")
 	}
 	return errors.Wrap(ac.transport.DoRequest(req), "could not reveal R for accountant")
+}
+
+// GetConsumerData gets consumer data from accountant
+func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
+	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
+	if err != nil {
+		return ConsumerData{}, errors.Wrap(err, "could not form consumer data request")
+	}
+	var resp ConsumerData
+	err = ac.transport.DoRequestAndParseResponse(req, &resp)
+	return resp, errors.Wrap(err, "could not request consumer data accountant")
+}
+
+// ConsumerData represents the consumer data
+type ConsumerData struct {
+	Identity         string        `json:"Identity"`
+	Beneficiary      string        `json:"Beneficiary"`
+	ChannelID        string        `json:"ChannelID"`
+	Balance          uint64        `json:"Balance"`
+	Promised         uint64        `json:"Promised"`
+	Settled          uint64        `json:"Settled"`
+	Stake            uint64        `json:"Stake"`
+	LatestPromise    LatestPromise `json:"LatestPromise"`
+	LatestSettlement time.Time     `json:"LatestSettlement"`
+}
+
+// LatestPromise represents the latest promise
+type LatestPromise struct {
+	ChannelID string      `json:"ChannelID"`
+	Amount    uint64      `json:"Amount"`
+	Fee       uint64      `json:"Fee"`
+	Hashlock  string      `json:"Hashlock"`
+	R         interface{} `json:"R"`
+	Signature string      `json:"Signature"`
 }

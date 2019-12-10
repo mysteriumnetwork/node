@@ -30,6 +30,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type accountantBalanceFetcher func(id string) (ConsumerData, error)
+
 // ConsumerBalanceTracker keeps track of consumer balances.
 // TODO: this needs to take into account the saved state.
 type ConsumerBalanceTracker struct {
@@ -39,6 +41,7 @@ type ConsumerBalanceTracker struct {
 	mystSCAddress            common.Address
 	consumerBalanceChecker   consumerBalanceChecker
 	channelAddressCalculator channelAddressCalculator
+	accountantBalanceFetcher accountantBalanceFetcher
 	publisher                eventbus.Publisher
 
 	stop chan struct{}
@@ -46,13 +49,14 @@ type ConsumerBalanceTracker struct {
 }
 
 // NewConsumerBalanceTracker creates a new instance
-func NewConsumerBalanceTracker(publisher eventbus.Publisher, mystSCAddress common.Address, consumerBalanceChecker consumerBalanceChecker, channelAddressCalculator channelAddressCalculator) *ConsumerBalanceTracker {
+func NewConsumerBalanceTracker(publisher eventbus.Publisher, mystSCAddress common.Address, consumerBalanceChecker consumerBalanceChecker, channelAddressCalculator channelAddressCalculator, accountantBalanceFetcher accountantBalanceFetcher) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
 		balances:                 make(map[identity.Identity]Balance),
 		consumerBalanceChecker:   consumerBalanceChecker,
 		mystSCAddress:            mystSCAddress,
 		publisher:                publisher,
 		channelAddressCalculator: channelAddressCalculator,
+		accountantBalanceFetcher: accountantBalanceFetcher,
 		stop:                     make(chan struct{}),
 	}
 }
@@ -118,7 +122,11 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 		log.Error().Err(err).Msg("Could not get BC balance")
 		return
 	}
-	cbt.updateBCBalance(identity, res)
+	cd, err := cbt.accountantBalanceFetcher(id)
+	if err != nil {
+		return
+	}
+	cbt.updateBCBalance(identity, res, cd.Promised)
 }
 
 func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
@@ -150,7 +158,8 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.Regist
 			log.Error().Err(err).Msg("Could not get BC balance")
 			return
 		}
-		cbt.updateBCBalance(event.ID, res)
+		// no need to check accountant here - we've just registered, we shouldnt have any promises
+		cbt.updateBCBalance(event.ID, res, 0)
 	}
 }
 
@@ -166,13 +175,14 @@ func (cbt *ConsumerBalanceTracker) increaseBalance(id identity.Identity, b uint6
 	if v, ok := cbt.balances[id]; ok {
 		v.CurrentEstimate += b
 		v.BCBalance += b
+		cbt.balances[id] = v
 		go cbt.publishChangeEvent(id, v.CurrentEstimate, v.BCBalance)
 	} else {
 		cbt.balances[id] = Balance{
 			BCBalance:       b,
 			CurrentEstimate: b,
 		}
-		go cbt.publishChangeEvent(id, b, b)
+		go cbt.publishChangeEvent(id, 0, b)
 	}
 }
 
@@ -195,24 +205,32 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 	}
 }
 
-func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, b uint64) {
+func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, bcBalance, accountantPromised uint64) {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
-		diff := b - v.BCBalance
-		if diff < 0 {
-			v.BCBalance = 0
-			v.CurrentEstimate = 0
-		} else {
+		before := v.CurrentEstimate
+		var diff uint64
+		if bcBalance >= v.BCBalance {
+			if bcBalance-v.BCBalance >= accountantPromised {
+				diff = bcBalance - v.BCBalance - accountantPromised
+			} else {
+				log.Error().Msgf("uint64 underflow for balance calculations. BCBalance %v, currentBalance %v, accountantPromised %v", bcBalance, v.BCBalance, accountantPromised)
+			}
 			v.BCBalance += diff
 			v.CurrentEstimate += diff
+		} else {
+			v.BCBalance = 0
+			v.CurrentEstimate = 0
 		}
 		cbt.balances[id] = v
+		go cbt.publishChangeEvent(id, before, v.CurrentEstimate)
 	} else {
 		cbt.balances[id] = Balance{
-			BCBalance:       b,
-			CurrentEstimate: b,
+			BCBalance:       bcBalance - accountantPromised,
+			CurrentEstimate: bcBalance - accountantPromised,
 		}
+		go cbt.publishChangeEvent(id, 0, bcBalance)
 	}
 }
 
