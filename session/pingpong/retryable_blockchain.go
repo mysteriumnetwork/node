@@ -35,6 +35,7 @@ type blockchain interface {
 	IsRegistered(registryAddress, addressToCheck common.Address) (bool, error)
 	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
 	GetConsumerBalance(channel, mystSCAddress common.Address) (*big.Int, error)
+	SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error)
 }
 
 // BlockchainWithRetries takes in the plain blockchain implementation and exposes methods that will retry the underlying bc methods before giving up.
@@ -128,6 +129,22 @@ func (bwr *BlockchainWithRetries) SubscribeToPromiseSettledEvent(providerID, acc
 	var cancel func()
 	err := bwr.callWithRetry(func() error {
 		s, c, err := bwr.bc.SubscribeToPromiseSettledEvent(providerID, accountantID)
+		if err != nil {
+			return errors.Wrap(err, "could not subscribe to settlement events")
+		}
+		sink = s
+		cancel = c
+		return nil
+	})
+	return sink, cancel, err
+}
+
+// SubscribeToConsumerBalanceEvent subscribes to the consumer balance change events
+func (bwr *BlockchainWithRetries) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error) {
+	var sink chan *bindings.MystTokenTransfer
+	var cancel func()
+	err := bwr.callWithRetry(func() error {
+		s, c, err := bwr.bc.SubscribeToConsumerBalanceEvent(channel, mystSCAddress)
 		if err != nil {
 			return errors.Wrap(err, "could not subscribe to settlement events")
 		}
