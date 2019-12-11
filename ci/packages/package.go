@@ -58,7 +58,10 @@ func PackageLinuxDebianAmd64() error {
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
-	if err := sh.RunV("bin/build"); err != nil {
+	envi := map[string]string{
+		"GOOS": "linux",
+	}
+	if err := sh.RunWith(envi, "bin/build"); err != nil {
 		return err
 	}
 	if err := packageDebian("build/myst/myst", "amd64"); err != nil {
@@ -73,10 +76,14 @@ func PackageLinuxDebianArm() error {
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
-	if err := sh.RunV("bin/build_xgo", "linux/arm"); err != nil {
+	envi := map[string]string{
+		"GOOS":   "linux",
+		"GOARCH": "arm",
+	}
+	if err := sh.RunWith(envi, "bin/build"); err != nil {
 		return err
 	}
-	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
+	if err := packageDebian("build/myst/myst", "armhf"); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
