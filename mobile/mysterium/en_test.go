@@ -15,7 +15,8 @@ func (c cb) OnChange(identityAddress string, balance int64) {
 	fmt.Println("Balance change", balance)
 }
 
-func TestMobileNode_GetIdentity(t *testing.T) {
+// TODO: Remove this test when done with payments
+func XTestMobileNode_GetIdentity(t *testing.T) {
 	node, err := NewNode("/Users/anjmao/go/src/github.com/mysteriumnetwork/node/build", DefaultLogOptions(), DefaultNetworkOptions())
 	assert.NoError(t, err)
 
@@ -26,7 +27,7 @@ func TestMobileNode_GetIdentity(t *testing.T) {
 
 	fmt.Println("IdentityAddress", ide.IdentityAddress)
 	fmt.Println("ChannelAddress", ide.ChannelAddress)
-	fmt.Println("Registered", ide.Registered)
+	fmt.Println("RegistrationStatus", ide.RegistrationStatus)
 	//time.Sleep(3 * time.Second)
 	//bal, err := node.GetBalance(&GetBalanceRequest{IdentityAddress: ide.IdentityAddress})
 	//assert.NoError(t, err)
