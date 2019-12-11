@@ -18,9 +18,10 @@
 package pingpong
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 type accountantAddressProvider func(accountant common.Address) (common.Address, error)

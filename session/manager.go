@@ -154,7 +154,7 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 
 	// TODO: this whole block needs to go when we deprecate the old payment pingpong
 	var paymentEngine PaymentEngine
-	if consumerInfo.PaymentVersion == PaymentVersionV2 {
+	if consumerInfo.PaymentVersion == PaymentVersionV3 {
 		log.Info().Msg("Using new payments")
 		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID)
 		if err != nil {

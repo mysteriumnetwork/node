@@ -124,7 +124,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 			promiseState.LastPromise = paymentInfo.LastPromise
 
 			// if the server indicates that it will launch the new payments, so should we
-			if paymentInfo.Supports == string(session.PaymentVersionV2) {
+			if paymentInfo.Supports == string(session.PaymentVersionV3) {
 				useNewPayments = true
 			}
 		}
