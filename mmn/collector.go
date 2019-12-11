@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -31,57 +32,73 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
-// NodeInformation contains node information to be sent to MMN
-type NodeInformation struct {
-	MACAddress  string `json:"mac_address"` // SHA256 hash
-	LocalIP     string `json:"local_ip"`
-	OS          string `json:"os"`
-	Arch        string `json:"arch"`
-	NodeVersion string `json:"node_version"`
-	Identity    string `json:"identity"`
-	VendorID    string `json:"vendor_id"`
+// Collector collects environment data
+type Collector struct {
+	ipResolver ip.Resolver
+	node       *NodeInformationDto
 }
 
-// CollectNodeData sends node information to MMN on identity unlock
-func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
-	return func(identity string) {
-		outboundIp, err := resolver.GetOutboundIPAsString()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get Outbound IP")
-		}
+// NewCollector creates new environment data collector struct
+func NewCollector(resolver ip.Resolver) *Collector {
+	return &Collector{ipResolver: resolver}
+}
 
-		mac, err := ip.GetMACAddressForIP(outboundIp)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to MAC address")
-		}
-
-		info := getNodeInformation()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get NodeInformation for MMN")
-			return
-		}
-
-		info.MACAddress = hashMACAddress(mac)
-		info.LocalIP = outboundIp
-		info.Identity = identity
-		info.VendorID = config.GetString(config.FlagVendorID)
-
-		if err = client.RegisterNode(info); err != nil {
-			log.Error().Err(err).Msg("failed to send NodeInformation to MMN")
-		}
-
-		log.Info().Interface("info", info).Msg("Registered node to my.mysterium.network")
+// CollectEnvironmentInformation sends node information to MMN on identity unlock
+func (c *Collector) CollectEnvironmentInformation() error {
+	outboundIp, err := c.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get Outbound IP")
 	}
-}
 
-func getNodeInformation() *NodeInformation {
-	info := &NodeInformation{
+	mac, err := ip.GetMACAddressForIP(outboundIp)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get MAC address")
+	}
+
+	node := &NodeInformationDto{
 		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
+		MACAddress:  hashMACAddress(mac),
+		LocalIP:     outboundIp,
+		VendorID:    config.GetString(config.FlagVendorID),
+		IsProvider:  false,
+		IsClient:    false,
 	}
 
-	return info
+	c.node = node
+
+	return nil
+}
+
+// SetIdentity sets node's identity
+func (c *Collector) SetIdentity(identity string) {
+	c.node.Identity = identity
+}
+
+// SetIsProvider marks node as a provider node
+func (c *Collector) SetIsProvider(isProvider bool) {
+	c.node.IsProvider = isProvider
+}
+
+// SetIsClient marks node as a client node
+func (c *Collector) SetIsClient(isClient bool) {
+	c.node.IsClient = isClient
+}
+
+// IsClient returns if the node is a client node
+func (c *Collector) IsClient() bool {
+	return c.node.IsClient
+}
+
+// IsProvider returns if the node is a provider node
+func (c *Collector) IsProvider() bool {
+	return c.node.IsProvider
+}
+
+// GetCollectedInformation returns collected information
+func (c *Collector) GetCollectedInformation() *NodeInformationDto {
+	return c.node
 }
 
 func hashMACAddress(mac string) string {
@@ -103,8 +120,11 @@ func getOS() string {
 	case "linux":
 		output, err := shell.NewCmd("lsb_release -d").Output()
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get OS information")
-			return ""
+			output, err = shell.NewCmd("source /etc/os-release && echo $PRETTY_NAME").Output()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to get OS information")
+				return ""
+			}
 		}
 		return strings.TrimSpace(strings.Replace(string(output), "Description:", "", 1))
 

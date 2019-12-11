@@ -83,6 +83,7 @@ var (
 		Name: "log-level",
 		Usage: func() string {
 			allLevels := []string{
+				zerolog.TraceLevel.String(),
 				zerolog.DebugLevel.String(),
 				zerolog.InfoLevel.String(),
 				zerolog.WarnLevel.String(),

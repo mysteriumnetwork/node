@@ -15,37 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package utils
+package cmdutil
 
-import "testing"
+import (
+	"os/exec"
 
-func TestRemoveErrorsAndBOMUTF8(t *testing.T) {
-	tests := []struct {
-		name string
-		args string
-		want string
-	}{
-		{
-			name: "removes BOM",
-			args: string([]rune{'\uFEFF', '1', '2'}),
-			want: "12",
-		},
-		{
-			name: "removes error runes",
-			args: string([]rune{'1', '2', '\uFFFD'}),
-			want: "12",
-		},
-		{
-			name: "doesn't change legitimate strings",
-			args: string([]rune{'1', '2'}),
-			want: "12",
-		},
+	"github.com/mysteriumnetwork/node/utils/stringutil"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+)
+
+func PowerShell(cmd string) ([]byte, error) {
+	log.Debug().Msgf("[powershell] executing: '%s'", cmd)
+	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
+	if err != nil {
+		return nil, errors.Errorf("'powershell -Command %v': %v output: %s", cmd, stringutil.RemoveErrorsAndBOMUTF8(err.Error()), stringutil.RemoveErrorsAndBOMUTF8Byte(out))
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := RemoveErrorsAndBOMUTF8(tt.args); got != tt.want {
-				t.Errorf("RemoveErrorsAndBOMUTF8() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	log.Debug().Msgf("[powershell] done: '%s', raw output: '%s'", cmd, out)
+	return stringutil.RemoveErrorsAndBOMUTF8Byte(out), nil
 }

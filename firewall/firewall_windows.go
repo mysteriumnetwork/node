@@ -20,7 +20,7 @@ package firewall
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +34,7 @@ func AddInboundRule(proto string, port int) error {
 		return nil
 	}
 
-	_, err := utils.PowerShell(cmd)
+	_, err := cmdutil.PowerShell(cmd)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to add firewall rule")
 		return err
@@ -52,7 +52,7 @@ func RemoveInboundRule(proto string, port int) error {
 		return errors.New("firewall rule not found")
 	}
 
-	_, err := utils.PowerShell(cmd)
+	_, err := cmdutil.PowerShell(cmd)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to remove firewall rule")
 		return err
@@ -64,7 +64,7 @@ func RemoveInboundRule(proto string, port int) error {
 func inboundRuleExists(name string) bool {
 	cmd := fmt.Sprintf(`netsh advfirewall firewall show rule name="%s" dir=in`, name)
 
-	if _, err := utils.PowerShell(cmd); err != nil {
+	if _, err := cmdutil.PowerShell(cmd); err != nil {
 		log.Warn().Err(err).Msg("Failed to get firewall rule")
 		return false
 	}

@@ -37,7 +37,7 @@ require (
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/magefile/mage v1.9.0
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/miekg/dns v1.0.12
+	github.com/miekg/dns v1.1.22
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20190917134659-78a29f230467
@@ -58,7 +58,7 @@ require (
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/robfig/cron v1.2.0 // indirect
-	github.com/rs/zerolog v1.16.0
+	github.com/rs/zerolog v1.17.2
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
 	github.com/spf13/cast v1.3.0
 	github.com/status-im/keycard-go v0.0.0-20191114114615-9d48af884d5b // indirect
@@ -68,12 +68,12 @@ require (
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
-	golang.org/x/net v0.0.0-20191125084936-ffdde1057850
-	golang.org/x/sys v0.0.0-20191120155948-bd437916bb0e
+	golang.org/x/net v0.0.0-20191126235420-ef20fe5d7933
+	golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9
 	golang.zx2c4.com/wireguard v0.0.20191012
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0
-	gopkg.in/yaml.v2 v2.2.4 // indirect
+	gopkg.in/yaml.v2 v2.2.7 // indirect
 )

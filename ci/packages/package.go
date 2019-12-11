@@ -82,6 +82,21 @@ func PackageLinuxDebianArm() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
+// PackageLinuxDebianArm64 builds and stores debian arm64 package
+func PackageLinuxDebianArm64() error {
+	logconfig.Bootstrap()
+	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
+		return err
+	}
+	if err := sh.RunV("bin/build_xgo", "linux/arm64"); err != nil {
+		return err
+	}
+	if err := packageDebian("build/myst/myst_linux_arm64", "arm64"); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
+}
+
 // PackageOsxAmd64 builds and stores OSX amd64 package
 func PackageOsxAmd64() error {
 	logconfig.Bootstrap()

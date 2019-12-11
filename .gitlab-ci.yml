@@ -47,7 +47,14 @@ checks:
 test:
   stage: test
   tags: [go]
-  script: go run mage.go -v Test
+  script:
+    - go run mage.go -v Test
+    - touch $CI_PROJECT_DIR/success
+  after_script:
+    - |
+      if [ -e success ]; then
+        bash <(curl -s https://codecov.io/bash)
+      fi
 
 test-e2e-basic:
   stage: test
@@ -83,6 +90,11 @@ package:linux-debian-arm:
   stage: build
   tags: [go]
   script: go run mage.go -v PackageLinuxDebianArm
+
+package:linux-debian-arm64:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageLinuxDebianArm64
 
 package:linux-raspberry-image:
   stage: build

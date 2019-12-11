@@ -24,7 +24,7 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -84,7 +84,7 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 			return err
 		}
 		ce.ipAddr = ipAddr
-		ce.ipAddr.IP = utils.FirstIP(ce.ipAddr)
+		ce.ipAddr.IP = netutil.FirstIP(ce.ipAddr)
 		ce.endpoint.IP = net.ParseIP(pubIP)
 		ce.endpoint.Port = port
 		ce.releasePortMapping = ce.mapPort(port)

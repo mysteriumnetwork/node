@@ -3,6 +3,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
 [![pipeline status](https://gitlab.com/mysteriumnetwork/node/badges/master/pipeline.svg)](https://gitlab.com/mysteriumnetwork/node/pipelines)
 [![pullreminders](https://pullreminders.com/badge.svg)](https://pullreminders.com?ref=badge)
+[![codecov](https://codecov.io/gh/mysteriumnetwork/node/branch/master/graph/badge.svg)](https://codecov.io/gh/mysteriumnetwork/node) 
+[![GoDoc](https://godoc.org/github.com/mysteriumnetwork/node?status.svg)](http://godoc.org/github.com/mysteriumnetwork/node)
 
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node),
 client API (tequila API) and client-cli (console client) for Mysterium Network.
@@ -21,16 +23,16 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 ## Installation options
 
-### Debian/raspbian
+### Debian / Ubuntu / Raspbian
 
 Install latest stable release:
 ```bash
-curl https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh | sudo bash
+sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)" 
 ```
 
 Or install latest snapshot (development build):
 ```bash
-curl https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh | SNAPSHOT=true sudo -E bash
+SNAPSHOT=true sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)" 
 ```
 
 Service logs:
@@ -42,6 +44,8 @@ Service status:
 ```bash
 sudo systemctl status mysterium-node.service
 ```
+
+Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Debian 10_, _Ubuntu 18.04_ and _Ubuntu 16.04_ .
 
 ### Docker
 
