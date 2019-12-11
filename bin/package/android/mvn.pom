@@ -11,7 +11,7 @@
   <packaging>aar</packaging>
 
   <name>Mysterium Network Android SDK</name>
-  <description>Android port of the Mysterium Node for decentralised VPN built on blockchain</description>
+  <description>Android port of the Mysterium Node for decentralised VPN Network</description>
   <url>https://github.com/mysteriumnetwork/node</url>
 
   <licenses>
