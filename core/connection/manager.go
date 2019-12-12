@@ -296,7 +296,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		// TODO: once we're supporting payments from another identity make the changes accordingly
 		IssuerID:       consumerID,
 		AccountantID:   accountantID,
-		PaymentVersion: session.PaymentVersionV2,
+		PaymentVersion: session.PaymentVersionV3,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)

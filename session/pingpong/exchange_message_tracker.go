@@ -38,9 +38,6 @@ import (
 // ErrWrongProvider represents an issue where the wrong provider is supplied.
 var ErrWrongProvider = errors.New("wrong provider supplied")
 
-// ErrFeeChanged represents an issue where the provider switches the fee mid session.
-var ErrFeeChanged = errors.New("wrong fee provided")
-
 // ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
 
@@ -83,8 +80,6 @@ type ExchangeMessageTracker struct {
 	consumerTotalsStorage    consumerTotalsStorage
 	timeTracker              timeTracker
 	paymentInfo              dto.PaymentRate
-	feeProvider              feeProvider
-	transactorFee            uint64
 	channelAddressCalculator channelAddressCalculator
 	publisher                eventbus.Publisher
 }
@@ -99,7 +94,6 @@ type ExchangeMessageTrackerDeps struct {
 	Ks                        *keystore.KeyStore
 	Identity, Peer            identity.Identity
 	PaymentInfo               dto.PaymentRate
-	FeeProvider               feeProvider
 	ChannelAddressCalculator  channelAddressCalculator
 	Publisher                 eventbus.Publisher
 }
@@ -117,7 +111,6 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 		timeTracker:               emtd.TimeTracker,
 		peer:                      emtd.Peer,
 		paymentInfo:               emtd.PaymentInfo,
-		feeProvider:               emtd.FeeProvider,
 		channelAddressCalculator:  emtd.ChannelAddressCalculator,
 		publisher:                 emtd.Publisher,
 	}
@@ -136,11 +129,6 @@ func (emt *ExchangeMessageTracker) Start() error {
 	emt.channelAddress = identity.FromAddress(addr.Hex())
 
 	emt.timeTracker.StartTracking()
-	fees, err := emt.feeProvider.FetchSettleFees()
-	if err != nil {
-		return errors.Wrap(err, "could not get transactor fee")
-	}
-	emt.transactorFee = fees.Fee
 
 	for {
 		select {
@@ -197,10 +185,6 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.peer.Address) {
 		return ErrWrongProvider
-	}
-
-	if invoice.TransactorFee != emt.transactorFee {
-		return ErrFeeChanged
 	}
 
 	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute

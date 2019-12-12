@@ -77,6 +77,7 @@ func NewAccountantPromiseSettler(transactor transactor, providerChannelStatusPro
 		registrationStatusProvider: registrationStatusProvider,
 		config:                     config,
 		currentState:               make(map[identity.Identity]state),
+
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
 		stop:        make(chan struct{}),
@@ -259,6 +260,7 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
 	if err != nil {
 		aps.setSettling(p.provider, false)
 		log.Error().Err(err).Msg("Could not subscribe to promise settlement")
+		return
 	}
 	go func() {
 		defer cancel()
@@ -286,7 +288,8 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
 			return
 		}
 	}()
-	err = aps.transactor.SettleAndRebalance(p.provider.Address, p.promise)
+
+	err = aps.transactor.SettleAndRebalance(aps.config.AccountantAddress.Hex(), p.promise)
 	if err != nil {
 		cancel()
 		log.Error().Err(err).Msgf("Could not settle promise for %v", p.provider.Address)

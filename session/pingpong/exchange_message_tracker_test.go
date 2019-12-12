@@ -77,7 +77,6 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		FeeProvider:               &mockTransactor{},
 		Publisher:                 &mockPublisher{},
 		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
@@ -122,7 +121,6 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		FeeProvider:               &mockTransactor{},
 		Publisher:                 &mockPublisher{},
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
@@ -189,7 +187,6 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		FeeProvider:               &mockTransactor{},
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -226,14 +223,6 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 			},
 			invoice: crypto.Invoice{
 				Provider: "0x02",
-			},
-			wantErr: true,
-		},
-		{
-			name:   "errors on non zero fee",
-			fields: fields{},
-			invoice: crypto.Invoice{
-				TransactorFee: 1,
 			},
 			wantErr: true,
 		},

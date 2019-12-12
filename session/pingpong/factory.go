@@ -103,7 +103,6 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	signer identity.SignerFactory,
 	invoiceStorage consumerInvoiceStorage,
 	totalStorage consumerTotalsStorage,
-	feeProvider feeProvider,
 	channelImplementation string,
 	registryAddress string, publisher eventbus.Publisher) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
@@ -125,7 +124,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 			promiseState.LastPromise = paymentInfo.LastPromise
 
 			// if the server indicates that it will launch the new payments, so should we
-			if paymentInfo.Supports == string(session.PaymentVersionV2) {
+			if paymentInfo.Supports == string(session.PaymentVersionV3) {
 				useNewPayments = true
 			}
 		}
@@ -150,7 +149,6 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Peer:                      dialog.PeerID(),
 				PaymentInfo:               DefaultPaymentInfo,
 				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
-				FeeProvider:               feeProvider,
 				Publisher:                 publisher,
 			}
 			payments = NewExchangeMessageTracker(deps)

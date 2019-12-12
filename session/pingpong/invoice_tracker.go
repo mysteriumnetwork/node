@@ -181,9 +181,8 @@ func (it *InvoiceTracker) generateInitialInvoice() error {
 	if err != nil {
 		return errors.Wrap(err, "could not get new agreement id")
 	}
-	// TODO: set fee
-	r := make([]byte, 64)
-	rand.Read(r)
+
+	r := it.generateR()
 	invoice := crypto.CreateInvoice(agreementID, it.paymentInfo.GetPrice().Amount, 0, r)
 	invoice.Provider = it.providerID.Address
 	it.lastInvoice = lastInvoice{
@@ -260,6 +259,12 @@ func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
 	return atomic.LoadUint64(&it.notReceivedExchangeMessageCount)
 }
 
+func (it *InvoiceTracker) generateR() []byte {
+	r := make([]byte, 32)
+	rand.Read(r)
+	return r
+}
+
 func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	// TODO: this should be calculated according to the passed in payment period
 	shouldBe := uint64(math.Trunc(it.timeTracker.Elapsed().Minutes() * float64(it.paymentInfo.GetPrice().Amount)))
@@ -273,8 +278,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
-	r := make([]byte, 64)
-	rand.Read(r)
+	r := it.generateR()
 	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, it.transactorFee, r)
 	invoice.Provider = it.providerID.Address
 	err := it.peerInvoiceSender.Send(invoice)
@@ -352,10 +356,6 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
 		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
-	}
-
-	if em.Promise.Fee != it.transactorFee {
-		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid fee")
 	}
 
 	hashlock, err := hex.DecodeString(strings.TrimPrefix(it.lastInvoice.invoice.Hashlock, "0x"))
@@ -453,6 +453,7 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		}
 		log.Debug().Msg("Accountant promise stored")
 
+		promise.R = it.lastInvoice.r
 		it.publisher.Publish(AccountantPromiseTopic, AccountantPromiseEventPayload{
 			Promise:      promise,
 			AccountantID: it.accountantID,

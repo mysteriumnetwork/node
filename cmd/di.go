@@ -516,7 +516,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.SignerFactory,
 			di.ConsumerInvoiceStorage,
 			di.ConsumerTotalsStorage,
-			di.Transactor,
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 			di.EventBus),

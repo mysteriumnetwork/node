@@ -42,9 +42,9 @@ func NewAccountantPromiseStorage(bolt persistentStorage) *AccountantPromiseStora
 
 // AccountantPromise represents a promise we store from the accountant
 type AccountantPromise struct {
-	Promise  crypto.Promise
-	R        string
-	Revealed bool
+	Promise     crypto.Promise
+	R           string
+	Revealed    bool
 	AgreementID uint64
 }
 
