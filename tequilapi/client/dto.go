@@ -74,6 +74,13 @@ type IdentityDTO struct {
 	Address string `json:"id"`
 }
 
+// IdentityStatusDTO holds identity status with balance
+type IdentityStatusDTO struct {
+	ChannelAddress string `json:"channel_address"`
+	IsRegistered   bool   `json:"is_registered"`
+	Balance        uint64 `json:"balance"`
+}
+
 // IdentityList holds returned list of identities
 type IdentityList struct {
 	Identities []IdentityDTO `json:"identities"`

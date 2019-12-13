@@ -289,7 +289,7 @@ type BalanceChangeCallback interface {
 	OnChange(identityAddress string, balance int64)
 }
 
-// BalanceChangeCallback registers callback which is called on identity balance change.
+// RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
 	mb.balanceChangeCallback = cb
 }
@@ -344,6 +344,7 @@ func (mb *MobileNode) Disconnect() error {
 	return nil
 }
 
+// GetIdentityResponse represents identity response.
 type GetIdentityResponse struct {
 	IdentityAddress    string
 	ChannelAddress     string
@@ -375,10 +376,12 @@ func (mb *MobileNode) GetIdentity() (*GetIdentityResponse, error) {
 	}, nil
 }
 
+// GetIdentityRegistrationFeesResponse represents identity registration fees result.
 type GetIdentityRegistrationFeesResponse struct {
 	Fee int64
 }
 
+// GetIdentityRegistrationFees returns identity registration fees.
 func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFeesResponse, error) {
 	fees, err := mb.transactor.FetchRegistrationFees()
 	if err != nil {
@@ -387,11 +390,13 @@ func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFee
 	return &GetIdentityRegistrationFeesResponse{Fee: int64(fees.Fee)}, nil
 }
 
+// RegisterIdentityRequest represents identity registration request.
 type RegisterIdentityRequest struct {
 	IdentityAddress string
 	Fee             int64
 }
 
+// RegisterIdentity starts identity registration in background.
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	err := mb.transactor.RegisterIdentity(req.IdentityAddress, &registry.IdentityRegistrationRequestDTO{
 		Stake:       0,
@@ -404,10 +409,13 @@ func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	return nil
 }
 
+// TopUpRequest represents top-up request.
 type TopUpRequest struct {
 	IdentityAddress string
 }
 
+// TopUp adds resets to default balance. This is temporary flow while
+// payments are not production ready.
 func (mb *MobileNode) TopUp(req *TopUpRequest) error {
 	if err := mb.transactor.TopUp(req.IdentityAddress); err != nil {
 		return errors.Wrap(err, "could not top-up balance")
@@ -415,14 +423,17 @@ func (mb *MobileNode) TopUp(req *TopUpRequest) error {
 	return nil
 }
 
+// GetBalanceRequest represents balance request.
 type GetBalanceRequest struct {
 	IdentityAddress string
 }
 
+// GetBalanceResponse represents balance response.
 type GetBalanceResponse struct {
 	Balance int64
 }
 
+// GetBalance returns current balance.
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	balance := mb.consumerBalanceTracker.GetBalance(identity.FromAddress(req.IdentityAddress))
 	return &GetBalanceResponse{Balance: int64(balance)}, nil

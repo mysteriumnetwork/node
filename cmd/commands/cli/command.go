@@ -93,6 +93,8 @@ type cliApp struct {
 	fetchedProposals []tequilapi_client.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
+
+	currentConsumerID string
 }
 
 const redColor = "\033[31m%s\033[0m"
@@ -356,6 +358,8 @@ func (c *cliApp) connect(argsString string) {
 		return
 	}
 
+	c.currentConsumerID = consumerID
+
 	success("Connected.")
 }
 
@@ -434,7 +438,7 @@ func (c *cliApp) disconnect() {
 		warn(err)
 		return
 	}
-
+	c.currentConsumerID = ""
 	success("Disconnected.")
 }
 
@@ -468,6 +472,11 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
+			identityStatus, err := c.tequilapi.GetIdentityStatus(c.currentConsumerID)
+			if err != nil {
+				warn(err)
+			}
+			info("Balance:", identityStatus.Balance)
 			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)

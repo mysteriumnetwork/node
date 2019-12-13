@@ -95,6 +95,21 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 	return id, err
 }
 
+// GetIdentityStatus returns identity status with current balance
+func (client *Client) GetIdentityStatus(identityAddress string) (IdentityStatusDTO, error) {
+	path := fmt.Sprintf("identities/%s/status", identityAddress)
+
+	response, err := client.http.Get(path, nil)
+	if err != nil {
+		return IdentityStatusDTO{}, err
+	}
+	defer response.Body.Close()
+
+	res := IdentityStatusDTO{}
+	err = parseResponseJSON(response, &res)
+	return res, err
+}
+
 // GetTransactorFees returns the transactor fees
 func (client *Client) GetTransactorFees() (Fees, error) {
 	fees := Fees{}
