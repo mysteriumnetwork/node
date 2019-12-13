@@ -61,14 +61,3 @@ func (address *AddressNATS) GetConnection() nats.Connection {
 func (address *AddressNATS) GetTopic() string {
 	return address.topic
 }
-
-// GetContact serializes current address to Contact structure.
-func (address *AddressNATS) GetContact() market.Contact {
-	return market.Contact{
-		Type: TypeContactNATSV1,
-		Definition: ContactNATSV1{
-			Topic:           address.topic,
-			BrokerAddresses: address.connection.Servers(),
-		},
-	}
-}

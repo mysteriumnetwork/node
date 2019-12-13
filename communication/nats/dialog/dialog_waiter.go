@@ -23,7 +23,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
@@ -33,9 +33,15 @@ import (
 type validator func(peerID identity.Identity) error
 
 // NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
-func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, validators ...validator) *dialogWaiter {
+func NewDialogWaiter(
+	connection nats.Connection,
+	topic string,
+	signer identity.Signer,
+	validators ...validator,
+) *dialogWaiter {
 	return &dialogWaiter{
-		address:    address,
+		connection: connection,
+		topic:      topic,
 		signer:     signer,
 		dialogs:    make([]communication.Dialog, 0),
 		validators: validators,
@@ -43,7 +49,8 @@ func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, val
 }
 
 type dialogWaiter struct {
-	address    *discovery.AddressNATS
+	connection nats.Connection
+	topic      string
 	signer     identity.Signer
 	dialogs    []communication.Dialog
 	validators []validator
@@ -53,14 +60,20 @@ type dialogWaiter struct {
 
 // Start registers dialogWaiter with broker (NATS) service
 func (waiter *dialogWaiter) Start() (market.Contact, error) {
-	log.Info().Msgf("Connecting to: %v", waiter.address.GetContact())
+	contact := market.Contact{
+		Type: nats_discovery.TypeContactNATSV1,
+		Definition: nats_discovery.ContactNATSV1{
+			Topic:           waiter.topic,
+			BrokerAddresses: waiter.connection.Servers(),
+		},
+	}
+	log.Info().Msgf("Connecting to: %v", contact)
 
-	err := waiter.address.GetConnection().Open()
-	if err != nil {
-		return market.Contact{}, errors.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
+	if err := waiter.connection.Open(); err != nil {
+		return contact, errors.Errorf("failed to start my connection with: %v", contact)
 	}
 
-	return waiter.address.GetContact(), nil
+	return contact, nil
 }
 
 // Stop disconnects dialogWaiter from broker (NATS) service
@@ -71,7 +84,7 @@ func (waiter *dialogWaiter) Stop() error {
 	for _, dialog := range waiter.dialogs {
 		dialog.Close()
 	}
-	waiter.address.GetConnection().Close()
+	waiter.connection.Close()
 	return nil
 }
 
@@ -91,12 +104,12 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		}
 
 		peerID := identity.FromAddress(request.PeerID)
-		topic := uid.String()
+		peerTopic := uid.String()
 		if len(request.Version) == 0 {
 			// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
-			topic = waiter.address.GetTopic() + "." + peerID.Address
+			peerTopic = waiter.topic + "." + peerID.Address
 		}
-		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID), topic)
+		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID), peerTopic)
 		err = dialogHandler.Handle(dialog)
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed dialog from: %q", request.PeerID)
@@ -111,11 +124,11 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		return &dialogCreateResponse{
 			Reason:        responseOK.Reason,
 			ReasonMessage: responseOK.ReasonMessage,
-			Topic:         topic,
+			Topic:         peerTopic,
 		}, nil
 	}
 	codec := NewCodecSecured(communication.NewCodecJSON(), waiter.signer, identity.NewVerifierSigned())
-	receiver := nats.NewReceiver(waiter.address.GetConnection(), codec, waiter.address.GetTopic())
+	receiver := nats.NewReceiver(waiter.connection, codec, waiter.topic)
 	return receiver.Respond(&dialogCreateConsumer{Callback: createDialog})
 }
 
@@ -130,8 +143,8 @@ func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecu
 func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec *codecSecured, topic string) *dialog {
 	return &dialog{
 		peerID:   peerID,
-		Sender:   nats.NewSender(waiter.address.GetConnection(), peerCodec, topic),
-		Receiver: nats.NewReceiver(waiter.address.GetConnection(), peerCodec, topic),
+		Sender:   nats.NewSender(waiter.connection, peerCodec, topic),
+		Receiver: nats.NewReceiver(waiter.connection, peerCodec, topic),
 	}
 }
 

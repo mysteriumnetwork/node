@@ -86,22 +86,3 @@ func TestAddress_GetTopic(t *testing.T) {
 
 	assert.Equal(t, "123456", address.GetTopic())
 }
-
-func TestAddress_GetContact(t *testing.T) {
-	address := &AddressNATS{
-		topic:      "123456",
-		connection: nats.NewConnection("nats://far-server:4222"),
-	}
-
-	assert.Equal(
-		t,
-		market.Contact{
-			Type: "nats/v1",
-			Definition: ContactNATSV1{
-				Topic:           "123456",
-				BrokerAddresses: []string{"nats://far-server:4222"},
-			},
-		},
-		address.GetContact(),
-	)
-}

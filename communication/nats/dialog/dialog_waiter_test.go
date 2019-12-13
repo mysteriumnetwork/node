@@ -26,21 +26,43 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var _ communication.DialogWaiter = &dialogWaiter{}
 
 func TestDialogWaiter_Factory(t *testing.T) {
-	address := discovery.NewAddress("custom", nats.NewConnection("nats://far-server:4222"))
+	connection := nats.NewConnection("nats://far-server:4222")
 	signer := &identity.SignerFake{}
 
-	waiter := NewDialogWaiter(address, signer)
+	waiter := NewDialogWaiter(connection, "custom", signer)
 	assert.NotNil(t, waiter)
-	assert.Equal(t, address, waiter.address)
+	assert.Equal(t, "custom", waiter.topic)
 	assert.Equal(t, signer, waiter.signer)
+}
+
+func TestDialogWaiter_Start(t *testing.T) {
+	connection := nats.StartConnectionMock()
+	defer connection.Close()
+
+	waiter := NewDialogWaiter(connection, "123456", &identity.SignerFake{})
+	contact, err := waiter.Start()
+
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		market.Contact{
+			Type: "nats/v1",
+			Definition: nats_discovery.ContactNATSV1{
+				Topic:           "123456",
+				BrokerAddresses: []string{"mockhost"},
+			},
+		},
+		contact,
+	)
 }
 
 func TestDialogWaiter_ServeDialogs(t *testing.T) {
@@ -88,10 +110,7 @@ func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
 		dialogReceived: make(chan communication.Dialog),
 	}
 
-	waiter := NewDialogWaiter(
-		discovery.NewAddress("my-topic", connection),
-		signer,
-	)
+	waiter := NewDialogWaiter(connection, "my-topic", signer)
 
 	err := waiter.ServeDialogs(handler)
 	assert.NoError(t, err)
@@ -148,7 +167,8 @@ func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
 	}
 
 	waiter := NewDialogWaiter(
-		discovery.NewAddress("test-topic", connection),
+		connection,
+		"test-topic",
 		signer,
 		func(_ identity.Identity) error {
 			return errors.New("expected error")
@@ -178,10 +198,10 @@ func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
 }
 
 func dialogServe(connection *nats.ConnectionMock, signer identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
-	topic := "my-topic"
 	waiter = &dialogWaiter{
-		address: discovery.NewAddress(topic, connection),
-		signer:  signer,
+		connection: connection,
+		topic:      "my-topic",
+		signer:     signer,
 	}
 	handler = &dialogHandler{
 		dialogReceived: make(chan communication.Dialog),

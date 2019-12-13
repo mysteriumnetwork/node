@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -248,10 +247,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		}
 
 		return nats_dialog.NewDialogWaiter(
-			nats_discovery.NewAddress(
-				fmt.Sprintf("%v.%v", providerID.Address, serviceType),
-				natsConnection,
-			),
+			natsConnection,
+			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
 			allowedIdentityValidator,
 		), nil
