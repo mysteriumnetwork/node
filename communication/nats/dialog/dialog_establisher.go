@@ -20,7 +20,7 @@ package dialog
 import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
@@ -32,50 +32,65 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
-		peerAddressFactory: func(contact market.Contact) (*discovery.AddressNATS, error) {
-			address, err := discovery.NewAddressForContact(contact)
-			if err == nil {
-				err = address.GetConnection().Open()
-			}
-
-			return address, err
+		peerConnectionFactory: func(peerContact nats_discovery.ContactNATSV1) nats.Connection {
+			return nats.NewConnection(peerContact.BrokerAddresses...)
 		},
 	}
 }
 
 type dialogEstablisher struct {
-	ID                 identity.Identity
-	Signer             identity.Signer
-	peerAddressFactory func(contact market.Contact) (*discovery.AddressNATS, error)
+	ID                    identity.Identity
+	Signer                identity.Signer
+	peerConnectionFactory func(nats_discovery.ContactNATSV1) nats.Connection
 }
 
 func (e *dialogEstablisher) EstablishDialog(
 	peerID identity.Identity,
 	peerContact market.Contact,
 ) (communication.Dialog, error) {
-
-	log.Info().Msgf("Connecting to: %#v", peerContact)
-	peerAddress, err := e.peerAddressFactory(peerContact)
+	log.Info().Msgf("Establishing dialog to: %#v", peerContact)
+	peerContactNats, err := validateContact(peerContact)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
+		return nil, errors.Wrapf(err, "invalid contact: %#v", peerContact)
 	}
 
+	peerConnection := e.peerConnectionFactory(peerContactNats)
+	if err := peerConnection.Open(); err != nil {
+		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
+	}
 	peerCodec := e.newCodecForPeer(peerID)
 
-	peerSender := e.newSenderToPeer(peerAddress, peerCodec)
-	topic, err := e.negotiateTopic(peerSender)
+	topic, err := e.negotiateMyTopic(peerConnection, peerCodec, peerContactNats.Topic)
 	if err != nil {
-		peerAddress.GetConnection().Close()
+		peerConnection.Close()
 		return nil, err
 	}
 
-	dialog := e.newDialogToPeer(peerID, peerAddress, peerCodec, topic)
+	dialog := e.newDialogToPeer(peerID, peerConnection, peerCodec, topic)
 	log.Info().Msgf("Dialog established with: %#v", peerContact)
 
 	return dialog, nil
 }
 
-func (e *dialogEstablisher) negotiateTopic(sender communication.Sender) (string, error) {
+func validateContact(contact market.Contact) (nats_discovery.ContactNATSV1, error) {
+	if contact.Type != nats_discovery.TypeContactNATSV1 {
+		return nats_discovery.ContactNATSV1{}, errors.Errorf("invalid contact type: %s", contact.Type)
+	}
+
+	contactNats, ok := contact.Definition.(nats_discovery.ContactNATSV1)
+	if !ok {
+		return nats_discovery.ContactNATSV1{}, errors.Errorf("invalid contact definition: %#v", contact.Definition)
+	}
+
+	return contactNats, nil
+}
+
+func (e *dialogEstablisher) negotiateMyTopic(
+	peerConnection nats.Connection,
+	peerCodec *codecSecured,
+	peerTopic string,
+) (string, error) {
+	sender := nats.NewSender(peerConnection, peerCodec, peerTopic)
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			PeerID:  e.ID.Address,
@@ -89,11 +104,15 @@ func (e *dialogEstablisher) negotiateTopic(sender communication.Sender) (string,
 		return "", errors.Errorf("dialog creation rejected. %#v", response)
 	}
 
-	return response.(*dialogCreateResponse).Topic, nil
+	myTopic := response.(*dialogCreateResponse).Topic
+	if len(myTopic) == 0 {
+		// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
+		myTopic = peerTopic + "." + e.ID.Address
+	}
+	return myTopic, nil
 }
 
 func (e *dialogEstablisher) newCodecForPeer(peerID identity.Identity) *codecSecured {
-
 	return NewCodecSecured(
 		communication.NewCodecJSON(),
 		e.Signer,
@@ -101,33 +120,16 @@ func (e *dialogEstablisher) newCodecForPeer(peerID identity.Identity) *codecSecu
 	)
 }
 
-func (e *dialogEstablisher) newSenderToPeer(
-	peerAddress *discovery.AddressNATS,
-	peerCodec *codecSecured,
-) communication.Sender {
-
-	return nats.NewSender(
-		peerAddress.GetConnection(),
-		peerCodec,
-		peerAddress.GetTopic(),
-	)
-}
-
 func (e *dialogEstablisher) newDialogToPeer(
 	peerID identity.Identity,
-	peerAddress *discovery.AddressNATS,
+	peerConnection nats.Connection,
 	peerCodec *codecSecured,
 	topic string,
 ) *dialog {
-	if len(topic) == 0 {
-		// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
-		topic = peerAddress.GetTopic() + "." + e.ID.Address
-	}
-
 	return &dialog{
-		peerID:      peerID,
-		peerAddress: peerAddress,
-		Sender:      nats.NewSender(peerAddress.GetConnection(), peerCodec, topic),
-		Receiver:    nats.NewReceiver(peerAddress.GetConnection(), peerCodec, topic),
+		peerID:         peerID,
+		peerConnection: peerConnection,
+		Sender:         nats.NewSender(peerConnection, peerCodec, topic),
+		Receiver:       nats.NewReceiver(peerConnection, peerCodec, topic),
 	}
 }
