@@ -230,7 +230,7 @@ func (cbt *ConsumerBalanceTracker) updateBCBalance(id identity.Identity, bcBalan
 			BCBalance:       bcBalance - accountantPromised,
 			CurrentEstimate: bcBalance - accountantPromised,
 		}
-		go cbt.publishChangeEvent(id, 0, bcBalance)
+		go cbt.publishChangeEvent(id, 0, bcBalance-accountantPromised)
 	}
 }
 
