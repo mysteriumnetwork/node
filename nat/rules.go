@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +17,26 @@
 
 package nat
 
-import "os/exec"
+import (
+	"net"
+	"strings"
 
-// NewService returns linux os specific nat service based on ip tables
-func NewService() NATService {
-	return &serviceIPTables{
-		ipForward: serviceIPForward{
-			CommandFactory: func(name string, arg ...string) Command {
-				return exec.Command(name, arg...)
-			},
-			CommandEnable:  []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"},
-			CommandDisable: []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"},
-			CommandRead:    []string{"/sbin/sysctl", "-n", "net.ipv4.ip_forward"},
-		},
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/rs/zerolog/log"
+)
+
+func protectedNetworks() (nets []*net.IPNet) {
+	cfg := config.GetString(config.FlagFirewallProtectedNetworks)
+	if cfg == "" {
+		return nil
 	}
+	for _, s := range strings.Split(cfg, ",") {
+		_, ipNet, err := net.ParseCIDR(s)
+		if err != nil {
+			log.Error().Err(err).Msg("Could not parse protected network string")
+			continue
+		}
+		nets = append(nets, ipNet)
+	}
+	return nets
 }

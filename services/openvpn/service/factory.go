@@ -20,15 +20,10 @@ package service
 import (
 	"crypto/x509/pkix"
 	"encoding/json"
-	"strings"
+	"net"
 
-	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/filter"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	node_config "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -114,19 +109,22 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
 func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter, portPool port.ServicePortSupplier) SessionConfigNegotiatorFactory {
-	return func(secPrimitives *tls.Primitives, dnsIP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
+	return func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
+		vpnConfig := &openvpn_service.VPNConfig{
+			RemoteIP:        serverIP,
+			RemotePort:      port,
+			RemoteProtocol:  serviceOptions.Protocol,
+			TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
+			CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
+		}
+		if dnsIP != nil {
+			vpnConfig.DNS = dnsIP.String()
+		}
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
-			vpnConfig: &openvpn_service.VPNConfig{
-				DNS:             dnsIP,
-				RemoteIP:        serverIP,
-				RemotePort:      port,
-				RemoteProtocol:  serviceOptions.Protocol,
-				TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
-				CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
-			},
-			portPool: portPool,
+			vpnConfig:      vpnConfig,
+			portPool:       portPool,
 		}
 	}
 }

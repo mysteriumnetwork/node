@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -93,35 +94,40 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
-	config.Consumer.DNS = netutil.FirstIP(config.Consumer.IPAddress).String()
-	dnsServer := dns.NewServer(
-		net.JoinHostPort(config.Consumer.DNS, "53"),
-		dns.ResolveViaConfigured(),
-	)
+	var dnsOK bool
+	var dnsIP net.IP
+	var dnsPort = 11253
+	dnsProxy := dns.NewProxy("", dnsPort)
+	if err := dnsProxy.Run(); err != nil {
+		log.Warn().Err(err).Msg("Provider DNS will not be available")
+	} else {
+		dnsOK = true
+		dnsIP = netutil.FirstIP(config.Consumer.IPAddress)
+		config.Consumer.DNS = dnsIP.String()
+	}
 
-	log.Info().Msg("Starting DNS on: " + dnsServer.Addr)
-	go func() {
-		if err := dnsServer.Run(); err != nil {
-			log.Error().Err(err).Msg("Failed to start DNS server")
-		}
-	}()
-
-	outIP, err := manager.ipResolver.GetOutboundIPAsString()
+	outIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
 		return nil, err
 	}
 
-	natRule := nat.RuleForwarding{SourceSubnet: config.Consumer.IPAddress.String(), TargetIP: outIP}
-	if err := manager.natService.Add(natRule); err != nil {
-		return nil, err
+	natRules, err := manager.natService.Setup(nat.Options{
+		VPNNetwork:        config.Consumer.IPAddress,
+		ProviderExtIP:     outIP,
+		EnableDNSRedirect: dnsOK,
+		DNSIP:             dnsIP,
+		DNSPort:           dnsPort,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to setup NAT/firewall rules")
 	}
 
 	destroy := func() {
-		if err := dnsServer.Stop(); err != nil {
+		if err := dnsProxy.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop DNS server")
 		}
-		if err := manager.natService.Del(natRule); err != nil {
-			log.Error().Err(err).Msg("Failed to delete NAT forwarding rule")
+		if err := manager.natService.Del(natRules); err != nil {
+			log.Error().Err(err).Msg("Failed to delete NAT rules")
 		}
 		if err := connectionEndpoint.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")

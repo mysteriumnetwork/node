@@ -20,9 +20,11 @@ package service
 import (
 	"encoding/json"
 	"net"
+	"strings"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/dns"
@@ -49,7 +51,7 @@ type ServerConfigFactory func(secPrimitives *tls.Primitives, port int) *openvpn_
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
-type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, dnsIP, outboundIP, publicIP string, port int) session.ConfigNegotiator
+type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) session.ConfigNegotiator
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
@@ -75,7 +77,7 @@ type Manager struct {
 	natPingerPorts port.ServicePortSupplier
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
-	dnsServer      *dns.Server
+	dnsProxy       *dns.Proxy
 	eventListener  eventListener
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
@@ -100,12 +102,16 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		IP:   net.ParseIP(m.serviceOptions.Subnet),
 		Mask: net.IPMask(net.ParseIP(m.serviceOptions.Netmask).To4()),
 	}
-	err = m.natService.Add(nat.RuleForwarding{
-		SourceSubnet: m.vpnNetwork.String(),
-		TargetIP:     m.outboundIP,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to add NAT forwarding rule")
+
+	var dnsOK bool
+	var dnsIP net.IP
+	var dnsPort = 11153
+	m.dnsProxy = dns.NewProxy("", dnsPort)
+	if err := m.dnsProxy.Run(); err != nil {
+		log.Warn().Err(err).Msg("Provider DNS will not be available")
+	} else {
+		dnsOK = true
+		dnsIP = netutil.FirstIP(m.vpnNetwork)
 	}
 
 	servicePort, err := m.ports.Acquire()
@@ -122,21 +128,19 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return
 	}
 
-	dnsServers, err := dns.ConfiguredServers()
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to read provider's DNS servers, provider DNS will not be available")
-		dnsServers = []string{""}
-	}
-
-	dnsIP := netutil.FirstIP(m.vpnNetwork).String()
 	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.outboundIP, m.publicIP, m.vpnServerPort)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	stateChannel := make(chan openvpn.State, 10)
 
 	protectedNetworks := strings.FieldsFunc(config.GetString(config.FlagFirewallProtectedNetworks), func(c rune) bool { return c == ',' })
+	var openvpnFilterAllow []string
+	if dnsOK {
+		openvpnFilterAllow = []string{dnsIP.String()}
+	}
 	m.openvpnProcess = m.processLauncher.launch(launchOpts{
 		config:       vpnServerConfig,
+		filterAllow:  openvpnFilterAllow,
 		filterBlock:  protectedNetworks,
 		stateChannel: stateChannel,
 	})
@@ -158,13 +162,15 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to start Openvpn server")
 	}
 
-	m.dnsServer = dns.NewServer(net.JoinHostPort(dnsIP, "53"), dns.ResolveViaConfigured())
-	log.Info().Msg("Starting DNS on: " + m.dnsServer.Addr)
-	go func() {
-		if err := m.dnsServer.Run(); err != nil {
-			log.Error().Err(err).Msg("Failed to start DNS server")
-		}
-	}()
+	if _, err := m.natService.Setup(nat.Options{
+		VPNNetwork:        m.vpnNetwork,
+		ProviderExtIP:     net.ParseIP(m.outboundIP),
+		EnableDNSRedirect: dnsOK,
+		DNSIP:             dnsIP,
+		DNSPort:           dnsPort,
+	}); err != nil {
+		return errors.Wrap(err, "failed to setup NAT/firewall rules")
+	}
 
 	s := shaper.New(m.eventListener)
 	err = s.Start(m.openvpnProcess.DeviceName())
@@ -184,16 +190,8 @@ func (m *Manager) Stop() error {
 	}
 
 	errStop := utils.ErrorCollection{}
-	if m.dnsServer != nil {
-		errStop.Add(m.dnsServer.Stop())
-	}
-
-	if m.natService != nil {
-		err := m.natService.Del(nat.RuleForwarding{
-			SourceSubnet: m.vpnNetwork.String(),
-			TargetIP:     m.outboundIP,
-		})
-		errStop.Add(err)
+	if m.dnsProxy != nil {
+		errStop.Add(m.dnsProxy.Stop())
 	}
 
 	return errStop.Errorf("ErrorCollection(%s)", ", ")

@@ -90,12 +90,12 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
-	dnsServers, err := selectDNSServers(vpnConfig, dnsOption)
+	dnsIPs, err := selectDNSServers(vpnConfig, dnsOption)
 	if err != nil {
 		return nil, err
 	}
-	for _, d := range dnsServers {
-		clientFileConfig.SetParam("dhcp-option", "DNS", d)
+	for _, ip := range dnsIPs {
+		clientFileConfig.SetParam("dhcp-option", "DNS", ip)
 	}
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
