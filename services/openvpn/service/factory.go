@@ -78,8 +78,6 @@ func NewManager(nodeOptions node.Options,
 		}
 	}
 
-	serverFactory := newServerFactory(nodeOptions, sessionValidator, callback)
-
 	return &Manager{
 		publicIP:                       location.PubIP,
 		outboundIP:                     location.OutIP,
@@ -87,7 +85,7 @@ func NewManager(nodeOptions node.Options,
 		natService:                     natService,
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions, natEventGetter, portPool),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
-		vpnServerFactory:               serverFactory,
+		processLauncher:                newProcessLauncher(nodeOptions, sessionValidator, callback),
 		natPingerPorts:                 port.NewPool(),
 		natPinger:                      natPinger,
 		serviceOptions:                 serviceOptions,
@@ -110,28 +108,6 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 			nodeOptions.BindAddress,
 			port,
 			serviceOptions.Protocol,
-		)
-	}
-}
-
-func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, statsCallback func(bytecount.SessionByteCount)) ServerFactory {
-	return func(config *openvpn_service.ServerConfig, stateChannel chan openvpn.State) openvpn.Process {
-		stateCallback := func(state openvpn.State) {
-			stateChannel <- state
-			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
-			if state == openvpn.ProcessExited {
-				close(stateChannel)
-			}
-		}
-
-		protectedNetworks := strings.FieldsFunc(node_config.GetString(node_config.FlagFirewallProtectedNetworks), func(c rune) bool { return c == ',' })
-		return openvpn.CreateNewProcess(
-			nodeOptions.Openvpn.BinaryPath(),
-			config.GenericConfig,
-			filter.NewMiddleware(nil, protectedNetworks),
-			auth.NewMiddleware(sessionValidator.Validate),
-			state.NewMiddleware(stateCallback),
-			bytecount.NewMiddleware(statsCallback, statisticsReportingIntervalInSeconds),
 		)
 	}
 }

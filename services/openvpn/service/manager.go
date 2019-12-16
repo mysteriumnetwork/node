@@ -45,9 +45,6 @@ import (
 // ServerConfigFactory callback generates session config for remote client
 type ServerConfigFactory func(secPrimitives *tls.Primitives, port int) *openvpn_service.ServerConfig
 
-// ServerFactory initiates Openvpn server instance during runtime
-type ServerFactory func(*openvpn_service.ServerConfig, chan openvpn.State) openvpn.Process
-
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
@@ -88,8 +85,8 @@ type Manager struct {
 	vpnServerPort            int
 	vpnServerConfigFactory   ServerConfigFactory
 	vpnServiceConfigProvider session.ConfigNegotiator
-	vpnServerFactory         ServerFactory
-	vpnServer                openvpn.Process
+	processLauncher          *processLauncher
+	openvpnProcess           openvpn.Process
 
 	publicIP        string
 	outboundIP      string
@@ -136,7 +133,13 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	stateChannel := make(chan openvpn.State, 10)
-	m.vpnServer = m.vpnServerFactory(vpnServerConfig, stateChannel)
+
+	protectedNetworks := strings.FieldsFunc(config.GetString(config.FlagFirewallProtectedNetworks), func(c rune) bool { return c == ',' })
+	m.openvpnProcess = m.processLauncher.launch(launchOpts{
+		config:       vpnServerConfig,
+		filterBlock:  protectedNetworks,
+		stateChannel: stateChannel,
+	})
 
 	// register service port to which NATProxy will forward connects attempts to
 	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
@@ -151,7 +154,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		}
 	}()
 
-	if err := m.startServer(m.vpnServer, stateChannel); err != nil {
+	if err := m.startServer(m.openvpnProcess, stateChannel); err != nil {
 		return errors.Wrap(err, "failed to start Openvpn server")
 	}
 
@@ -164,20 +167,20 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	}()
 
 	s := shaper.New(m.eventListener)
-	err = s.Start(m.vpnServer.DeviceName())
+	err = s.Start(m.openvpnProcess.DeviceName())
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start traffic shaper")
 	}
-	defer s.Clear(m.vpnServer.DeviceName())
+	defer s.Clear(m.openvpnProcess.DeviceName())
 
 	log.Info().Msg("OpenVPN server waiting")
-	return m.vpnServer.Wait()
+	return m.openvpnProcess.Wait()
 }
 
 // Stop stops service
 func (m *Manager) Stop() error {
-	if m.vpnServer != nil {
-		m.vpnServer.Stop()
+	if m.openvpnProcess != nil {
+		m.openvpnProcess.Stop()
 	}
 
 	errStop := utils.ErrorCollection{}
@@ -236,7 +239,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 }
 
 func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.State) error {
-	if err := m.vpnServer.Start(); err != nil {
+	if err := m.openvpnProcess.Start(); err != nil {
 		return err
 	}
 
