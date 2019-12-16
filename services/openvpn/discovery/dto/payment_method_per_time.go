@@ -36,7 +36,7 @@ type PaymentRate struct {
 
 // DefaultPaymentInfo represents the default payment rate
 var DefaultPaymentInfo = PaymentRate{
-	Price:    money.NewMoney(100000, money.CurrencyMyst),
+	Price:    money.NewMoney(1000000, money.CurrencyMyst),
 	Duration: time.Minute,
 }
 
