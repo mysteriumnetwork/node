@@ -20,7 +20,6 @@ package service
 import (
 	"encoding/json"
 	"net"
-	"strings"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
@@ -40,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	"github.com/mysteriumnetwork/node/utils/stringutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -133,7 +133,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	stateChannel := make(chan openvpn.State, 10)
 
-	protectedNetworks := strings.FieldsFunc(config.GetString(config.FlagFirewallProtectedNetworks), func(c rune) bool { return c == ',' })
+	protectedNetworks := stringutil.Split(config.GetString(config.FlagFirewallProtectedNetworks), ',')
 	var openvpnFilterAllow []string
 	if dnsOK {
 		openvpnFilterAllow = []string{dnsIP.String()}

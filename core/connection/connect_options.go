@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils/stringutil"
 	"github.com/pkg/errors"
 )
 
@@ -77,7 +78,7 @@ func (o DNSOption) Exact() (servers []string, ok bool) {
 	case DNSOptionAuto, DNSOptionProvider, DNSOptionSystem:
 		return nil, false
 	}
-	return strings.Split(string(o), ","), true
+	return stringutil.Split(string(o), ','), true
 }
 
 // ConnectParams holds plugin specific params
