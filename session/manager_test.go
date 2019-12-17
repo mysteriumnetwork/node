@@ -97,7 +97,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{})
+		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
 
 	pingerParams := &traversal.Params{}
 	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
@@ -117,7 +117,7 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{})
+		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
 
 	pingerParams := &traversal.Params{}
 	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
@@ -137,7 +137,7 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{})
+		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
 }
@@ -147,7 +147,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{})
+		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
 
 	pingerParams := &traversal.Params{}
 	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
@@ -163,7 +163,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 
 	mp := &mockPublisher{}
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", mp)
+		&MockNatEventTracker{}, "test service id", mp, false)
 
 	pingerParams := &traversal.Params{}
 	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)

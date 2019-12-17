@@ -263,7 +263,9 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			serviceID,
 			di.EventBus,
 			di.BCHelper,
-			di.Transactor)
+			di.Transactor,
+			nodeOptions.Payments.PaymentsDisabled,
+		)
 
 		return session.NewDialogHandler(
 			sessionManagerFactory,

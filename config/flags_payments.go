@@ -60,6 +60,11 @@ var (
 		Value: 150,
 		Usage: "The max number of invoices we'll go through and reveal R's in case of a dispute with the accountant",
 	}
+	// FlagPaymentsDisable disables the payment system
+	FlagPaymentsDisable = cli.BoolFlag{
+		Name:  "payments.disable",
+		Usage: "Disables payments and moves to a backwards compatible legacy mode",
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -71,6 +76,8 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		FlagPaymentsAccountantPromiseSettleThreshold,
 		FlagPaymentsAccountantPromiseSettleTimeout,
 		FlagPaymentsMystSCAddress,
+		FlagPaymentsMaxRRecovery,
+		FlagPaymentsDisable,
 	)
 }
 
@@ -81,4 +88,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsAccountantPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsAccountantPromiseSettleTimeout)
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
+	Current.ParseUInt64Flag(ctx, FlagPaymentsMaxRRecovery)
+	Current.ParseBoolFlag(ctx, FlagPaymentsDisable)
 }
