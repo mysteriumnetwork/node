@@ -37,7 +37,7 @@ import (
 const PromiseWaitTimeout = time.Second * 10
 
 // BalanceSendPeriod is how often the provider will send balance messages to the consumer
-const BalanceSendPeriod = time.Second * 20
+const BalanceSendPeriod = time.Second * 60
 
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
 func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory) func(
