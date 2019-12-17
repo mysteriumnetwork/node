@@ -113,22 +113,34 @@ func selectDNSServers(vpnConfig *VPNConfig, dnsOption connection.DNSOption) ([]s
 		return exact, nil
 	}
 	if dnsOption == connection.DNSOptionProvider {
-		if len(vpnConfig.DNS) == 0 {
-			return nil, errors.New("provider DNS is not available")
-		}
-		return []string{vpnConfig.DNS}, nil
+		return selectDNSFromProvider(vpnConfig)
 	}
 	if dnsOption == connection.DNSOptionSystem {
 		systemDNS, err := dns.ConfiguredServers()
 		return systemDNS, errors.Wrap(err, "system DNS is not available")
 	}
 	if dnsOption == connection.DNSOptionAuto {
-		if len(vpnConfig.DNS) > 0 {
-			return []string{vpnConfig.DNS}, nil
+		log.Debug().Msg("Attempting to use provider DNS")
+		if providerDNS, err := selectDNSFromProvider(vpnConfig); err == nil {
+			return providerDNS, nil
 		}
+		log.Debug().Msg("Attempting to use system DNS")
 		if systemDNS, err := dns.ConfiguredServers(); err == nil {
 			return systemDNS, nil
 		}
 	}
+	log.Debug().Msg("Falling back to public DNS")
 	return []string{"1.1.1.1", "8.8.8.8"}, nil
+}
+
+func selectDNSFromProvider(vpnConfig *VPNConfig) ([]string, error) {
+	receivedOption, err := connection.NewDNSOption(vpnConfig.DNSIPs)
+	if err != nil {
+		return nil, err
+	}
+	servers, ok := receivedOption.Exact()
+	if !ok || len(servers) == 0 {
+		return nil, errors.New("provider DNS is not available")
+	}
+	return servers, nil
 }

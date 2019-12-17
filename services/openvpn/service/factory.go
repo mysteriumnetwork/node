@@ -119,7 +119,7 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 			CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
 		}
 		if dnsIP != nil {
-			vpnConfig.DNS = dnsIP.String()
+			vpnConfig.DNSIPs = dnsIP.String()
 		}
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
