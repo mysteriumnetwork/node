@@ -22,9 +22,6 @@ import (
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/dns"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
@@ -90,7 +87,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
-	dnsIPs, err := selectDNSServers(vpnConfig, dnsOption)
+	dnsIPs, err := dnsOption.ResolveIPs(vpnConfig.DNSIPs)
 	if err != nil {
 		return nil, err
 	}
@@ -105,42 +102,4 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 
 	return clientFileConfig, nil
-}
-
-func selectDNSServers(vpnConfig *VPNConfig, dnsOption connection.DNSOption) ([]string, error) {
-	log.Debug().Msg("Selecting DNS servers using strategy: " + string(dnsOption))
-	if exact, ok := dnsOption.Exact(); ok {
-		return exact, nil
-	}
-	if dnsOption == connection.DNSOptionProvider {
-		return selectDNSFromProvider(vpnConfig)
-	}
-	if dnsOption == connection.DNSOptionSystem {
-		systemDNS, err := dns.ConfiguredServers()
-		return systemDNS, errors.Wrap(err, "system DNS is not available")
-	}
-	if dnsOption == connection.DNSOptionAuto {
-		log.Debug().Msg("Attempting to use provider DNS")
-		if providerDNS, err := selectDNSFromProvider(vpnConfig); err == nil {
-			return providerDNS, nil
-		}
-		log.Debug().Msg("Attempting to use system DNS")
-		if systemDNS, err := dns.ConfiguredServers(); err == nil {
-			return systemDNS, nil
-		}
-	}
-	log.Debug().Msg("Falling back to public DNS")
-	return []string{"1.1.1.1", "8.8.8.8"}, nil
-}
-
-func selectDNSFromProvider(vpnConfig *VPNConfig) ([]string, error) {
-	receivedOption, err := connection.NewDNSOption(vpnConfig.DNSIPs)
-	if err != nil {
-		return nil, err
-	}
-	servers, ok := receivedOption.Exact()
-	if !ok || len(servers) == 0 {
-		return nil, errors.New("provider DNS is not available")
-	}
-	return servers, nil
 }

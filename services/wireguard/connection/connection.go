@@ -105,17 +105,19 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return errors.Wrap(err, "failed while waiting for a peer handshake")
 	}
 
-	go c.runPeriodically(time.Second)
-
-	enableDNS := options.DNS == connection.DNSOptionProvider || options.DNS == connection.DNSOptionAuto
-	if enableDNS {
-		if err := setDNS(c.configDir, c.connectionEndpoint.InterfaceName(), config.Consumer.DNS); err != nil {
-			c.stateChannel <- connection.NotConnected
-			c.connection.Done()
-			removeAllowedIPRule()
-			return errors.Wrap(err, "failed to configure DNS")
-		}
+	dnsIPs, err := options.DNS.ResolveIPs(config.Consumer.DNSIPs)
+	if err != nil {
+		return err
 	}
+	config.Consumer.DNSIPs = dnsIPs[0]
+	if err := setDNS(c.configDir, c.connectionEndpoint.InterfaceName(), config.Consumer.DNSIPs); err != nil {
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
+		removeAllowedIPRule()
+		return errors.Wrap(err, "failed to configure DNS")
+	}
+
+	go c.runPeriodically(time.Second)
 
 	c.stateChannel <- connection.Connected
 	return nil

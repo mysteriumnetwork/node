@@ -103,7 +103,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 	} else {
 		dnsOK = true
 		dnsIP = netutil.FirstIP(config.Consumer.IPAddress)
-		config.Consumer.DNS = dnsIP.String()
+		config.Consumer.DNSIPs = dnsIP.String()
 	}
 
 	outIP, err := manager.ipResolver.GetOutboundIP()
