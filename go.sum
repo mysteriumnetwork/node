@@ -454,6 +454,7 @@ github.com/mysteriumnetwork/go-wondershaper v1.0.0 h1:TpIkC+Hog+PuL11kDFsYcFtSxf
 github.com/mysteriumnetwork/go-wondershaper v1.0.0/go.mod h1:pWWNkO73g3vPSVb+6O+GzjG8lqv4ByNHR6thSG7WmtY=
 github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2 h1:+MzoNo1V8raIWae/+6ivIOubglAqvAc9gTwICDf+ONk=
 github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2/go.mod h1:QI+154TA1KKdrSYAWpr50FP6AzHsbT3wJvFD5kSEQVE=
+github.com/mysteriumnetwork/payments v0.0.10 h1:evtBn90QLPTIK049T3hEtshTBtq2KaICTNSj9RrwvP8=
 github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db h1:OfCcf9GtFBAhTmet4yTnuF0ktdFBmPMq+kbgSUEEQHo=
 github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db/go.mod h1:khz9e+0ipI8uVAEBhTdSrvo5ByYcdkWtioqkj14Pf7Q=
 github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23 h1:fJGV0dFrt4+7d3y4e50xoRVOuZygnxkUhBeMXAfBlkI=

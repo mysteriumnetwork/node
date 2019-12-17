@@ -457,6 +457,14 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 }
 
 func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
+	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
 	msg1, addr1 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
 	msg2, addr2 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
 	msg3, addr3 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "")
@@ -549,6 +557,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				lastInvoice:                tt.fields.lastInvoice,
 				registryAddress:            tt.fields.registryAddress,
 				publisher:                  &mockPublisher{},
+				invoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
 				channelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
 			}
 			if tt.em != nil {

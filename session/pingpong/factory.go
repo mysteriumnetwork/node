@@ -57,6 +57,7 @@ func InvoiceFactoryCreator(
 	channelImplementationAddress string,
 	maxAccountantFailureCount uint64,
 	maxAllowedAccountantFee uint16,
+	maxRRecovery uint64,
 	blockchainHelper bcHelper,
 	publisher eventbus.Publisher,
 	feeProvider feeProvider,
@@ -89,6 +90,7 @@ func InvoiceFactoryCreator(
 			BlockchainHelper:           blockchainHelper,
 			Publisher:                  publisher,
 			FeeProvider:                feeProvider,
+			MaxRRecoveryLength:         maxRRecovery,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)

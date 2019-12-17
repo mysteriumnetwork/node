@@ -54,6 +54,12 @@ var (
 		Value: "0xe67e41367c1e17ede951a528b2a8be35c288c787",
 		Usage: "The address of myst token smart contract",
 	}
+	// FlagPaymentsMaxRRecovery represents the max r recovery.
+	FlagPaymentsMaxRRecovery = cli.Uint64Flag{
+		Name:  "payments.max.R.Recovery",
+		Value: 150,
+		Usage: "The max number of R we'll try and reveal in case of a dispute with the accountant",
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.

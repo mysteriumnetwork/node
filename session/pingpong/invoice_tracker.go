@@ -62,6 +62,7 @@ type providerInvoiceStorage interface {
 	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
 	GetNewAgreementID(providerIdentity identity.Identity) (uint64, error)
 	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
+	GetR(providerID identity.Identity, agreementID uint64) (string, error)
 }
 
 type accountantPromiseStorage interface {
@@ -118,6 +119,7 @@ type InvoiceTracker struct {
 	publisher                       eventbus.Publisher
 	feeProvider                     feeProvider
 	transactorFee                   uint64
+	maxRRecoveryLength              uint64
 	channelAddressCalculator        channelAddressCalculator
 }
 
@@ -137,6 +139,7 @@ type InvoiceTrackerDeps struct {
 	AccountantPromiseStorage   accountantPromiseStorage
 	Registry                   string
 	MaxAccountantFailureCount  uint64
+	MaxRRecoveryLength         uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
 	Publisher                  eventbus.Publisher
@@ -169,6 +172,7 @@ func NewInvoiceTracker(
 		registryAddress:                itd.Registry,
 		feeProvider:                    itd.FeeProvider,
 		channelAddressCalculator:       itd.ChannelAddressCalculator,
+		maxRRecoveryLength:             itd.MaxRRecoveryLength,
 	}
 }
 
@@ -189,7 +193,7 @@ func (it *InvoiceTracker) generateInitialInvoice() error {
 		invoice: invoice,
 		r:       r,
 	}
-	return errors.Wrap(it.invoiceStorage.StoreR(it.providerID, agreementID, common.Bytes2Hex(r)), "could not store r")
+	return nil
 }
 
 // Start stars the invoice tracker
@@ -294,11 +298,6 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 	err = it.invoiceStorage.Store(it.providerID, it.peer, invoice)
 	if err != nil {
 		return errors.Wrap(err, "could not store invoice")
-	}
-
-	err = it.invoiceStorage.StoreR(it.providerID, it.lastInvoice.invoice.AgreementID, common.Bytes2Hex(r))
-	if err != nil {
-		return errors.Wrap(err, "could not store r")
 	}
 
 	err = it.receiveExchangeMessageOrTimeout()
@@ -428,9 +427,23 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 			log.Debug().Msg("Accountant promise stored")
 		}
 
+		err = it.invoiceStorage.StoreR(it.providerID, it.lastInvoice.invoice.AgreementID, hex.EncodeToString(it.lastInvoice.r))
+		if err != nil {
+			return errors.Wrap(err, "could not store r")
+		}
+
 		promise, err := it.accountantCaller.RequestPromise(pm)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not call accountant")
+
+			// TODO: handle this better
+			if strings.Contains(err.Error(), "400 Bad Request") {
+				recoveryError := it.initiateRRecovery()
+				if recoveryError != nil {
+					return errors.Wrap(err, "could not recover R")
+				}
+			}
+
 			it.incrementAccountantFailureCount()
 			if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
 				return errors.Wrap(err, "could not call accountant")
@@ -446,7 +459,6 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 			Revealed:    false,
 			AgreementID: it.lastInvoice.invoice.AgreementID,
 		}
-
 		err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, ap)
 		if err != nil {
 			return errors.Wrap(err, "could not store accountant promise")
@@ -466,6 +478,31 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		return nil
 	}
 	return nil
+}
+
+func (it *InvoiceTracker) initiateRRecovery() error {
+	currentAgreement := it.lastInvoice.invoice.AgreementID
+
+	var minBound uint64 = 1
+	if currentAgreement > it.maxRRecoveryLength {
+		minBound = currentAgreement - it.maxRRecoveryLength
+	}
+
+	for i := currentAgreement; i >= minBound; i-- {
+		r, err := it.invoiceStorage.GetR(it.providerID, i)
+		if err != nil {
+			return errors.Wrap(err, "could not get R")
+		}
+		err = it.accountantCaller.RevealR(r, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
+		if err != nil {
+			log.Warn().Err(err).Msgf("revealing %v", it.lastInvoice.invoice.AgreementID)
+		} else {
+			log.Info().Msg("r recovered")
+			return nil
+		}
+	}
+
+	return errors.New("R recovery failed")
 }
 
 // Stop stops the invoice tracker.
