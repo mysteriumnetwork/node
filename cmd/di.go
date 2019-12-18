@@ -39,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery"
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
 	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
+	discovery_failover "github.com/mysteriumnetwork/node/core/discovery/failover"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -736,6 +737,11 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		registry = discovery_api.NewRegistry(di.MysteriumAPI)
 	case node.DiscoveryTypeBroker:
 		registry = discovery_broker.NewRegistry(di.BrokerConnection)
+	case node.DiscoveryTypeFailover:
+		registry = discovery_failover.NewRegistry(
+			discovery_api.NewRegistry(di.MysteriumAPI),
+			discovery_broker.NewRegistry(di.BrokerConnection),
+		)
 	default:
 		return errors.Errorf("unknown discovery provider: %s", options.Type)
 	}

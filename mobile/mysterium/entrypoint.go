@@ -141,7 +141,7 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 			Address: "https://quality.mysterium.network/api/v1",
 		},
 		Discovery: node.OptionsDiscovery{
-			Type:                   node.DiscoveryTypeBroker,
+			Type:                   node.DiscoveryTypeFailover,
 			Address:                network.MysteriumAPIAddress,
 			ProposalFetcherEnabled: false,
 		},

@@ -33,8 +33,8 @@ var (
 	// FlagDiscoveryType proposal discovery adapter.
 	FlagDiscoveryType = cli.StringFlag{
 		Name:  "discovery.type",
-		Usage: "Proposal discovery adapter. Options: { api, broker }",
-		Value: "api",
+		Usage: "Proposal discovery adapter. Options: { api, broker, failover }",
+		Value: "failover",
 	}
 	// FlagDiscoveryAddress proposal discovery URL.
 	FlagDiscoveryAddress = cli.StringFlag{
