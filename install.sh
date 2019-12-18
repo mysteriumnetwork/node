@@ -144,6 +144,8 @@ install_dependencies() {
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ECCB6A56B22C536D
     apt-get update
     apt-get install -y wireguard
+    apt-get install -y libmnl-dev libelf-dev linux-headers-$(uname -r) build-essential pkg-config
+    dpkg-reconfigure wireguard-dkms
 }
 
 install_myst() {
