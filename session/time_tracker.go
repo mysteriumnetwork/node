@@ -17,7 +17,11 @@
 
 package session
 
-import "time"
+import (
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
 
 // TimeTracker tracks elapsed time from the beginning of the session
 // it's passive (no internal go routines) and simply encapsulates time operation: now - startOfSession expressed as duration
@@ -45,5 +49,7 @@ func (tt TimeTracker) Elapsed() time.Duration {
 	if !tt.started {
 		return 0 * time.Second
 	}
-	return tt.getTime().Sub(tt.startTime)
+	t := tt.getTime()
+	log.Debug().Msgf("time %v", t)
+	return t.Sub(tt.startTime)
 }
