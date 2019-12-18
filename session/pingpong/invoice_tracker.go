@@ -78,6 +78,9 @@ type accountantCaller interface {
 // ErrExchangeWaitTimeout indicates that we did not get an exchange message in time.
 var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 
+// ErrMissmatchingHashlock represents an error where a consumer sends a hashlock we're not waiting for
+var ErrMissmatchingHashlock = errors.New("hashlock missmatch")
+
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
@@ -314,7 +317,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 
 func (it *InvoiceTracker) handleExchangeMessageReceiveError(err error) error {
 	// if it's a timeout, we'll want to ignore it if we're not exceeding maxNotReceivedexchangeMessages
-	if err == ErrExchangeWaitTimeout {
+	if err == ErrExchangeWaitTimeout || err == ErrMissmatchingHashlock {
 		it.markExchangeMessageNotReceived()
 		if it.getNotReceivedExchangeMessageCount() >= it.maxNotReceivedExchangeMessages {
 			return err
@@ -357,16 +360,6 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
-	hashlock, err := hex.DecodeString(strings.TrimPrefix(it.lastInvoice.invoice.Hashlock, "0x"))
-	if err != nil {
-		return errors.Wrap(err, "could not decode hashlock")
-	}
-
-	if !bytes.Equal(hashlock, em.Promise.Hashlock) {
-		log.Warn().Msgf("Consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
-		return errors.Wrap(ErrConsumerPromiseValidationFailed, "missmatching hashlock")
-	}
-
 	addr, err := it.channelAddressCalculator.GetChannelAddress(it.peer)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
@@ -384,10 +377,28 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	return nil
 }
 
+func (it *InvoiceTracker) checkForCorrectHashlock(em crypto.ExchangeMessage) error {
+	hashlock, err := hex.DecodeString(strings.TrimPrefix(it.lastInvoice.invoice.Hashlock, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode hashlock")
+	}
+
+	if !bytes.Equal(hashlock, em.Promise.Hashlock) {
+		log.Warn().Msgf("Consumer sent an invalid hashlock. Expected %q, got %q. Skipping", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
+		return ErrMissmatchingHashlock
+	}
+	return nil
+}
+
 func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 	select {
 	case pm := <-it.exchangeMessageChan:
-		err := it.validateExchangeMessage(pm)
+		err := it.checkForCorrectHashlock(pm)
+		if err != nil {
+			return err
+		}
+
+		err = it.validateExchangeMessage(pm)
 		if err != nil {
 			return err
 		}
