@@ -34,7 +34,7 @@ import (
 )
 
 // PromiseWaitTimeout is the time that the provider waits for the promise to arrive
-const PromiseWaitTimeout = time.Second * 10
+const PromiseWaitTimeout = time.Second * 30
 
 // BalanceSendPeriod is how often the provider will send balance messages to the consumer
 const BalanceSendPeriod = time.Second * 60

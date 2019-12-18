@@ -189,12 +189,6 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 
 	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
 	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
-	log.Debug().Msgf("elapsed %v", emt.timeTracker.Elapsed().Minutes())
-	log.Debug().Msgf("amount floated %v", float64(emt.paymentInfo.GetPrice().Amount))
-	log.Debug().Msgf("amounts multiplied  %v", emt.timeTracker.Elapsed().Minutes()*float64(emt.paymentInfo.GetPrice().Amount))
-	log.Debug().Msgf("amounts truncated  %v", math.Trunc(emt.timeTracker.Elapsed().Minutes()*float64(emt.paymentInfo.GetPrice().Amount)))
-	log.Debug().Msgf("should be %v", shouldBe)
-
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
 	log.Debug().Msgf("Upper bound %v", upperBound)
 
