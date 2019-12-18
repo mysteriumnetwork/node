@@ -152,7 +152,7 @@ func New(outboundIP string) *Iptables {
 
 // BlockOutgoingTraffic starts blocking outgoing traffic and returns function to remove the block
 func (b Iptables) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
-	return addRuleWithRemoval(appendTo(outputChain).ruleSpec(sourceIP, b.outboundIP, jumpTo, killswitchChain))
+	return addRuleWithRemoval(AppendTo(outputChain).RuleSpec(sourceIP, b.outboundIP, jumpTo, killswitchChain))
 }
 
 // Setup prepares Iptables default rules and chains
@@ -175,21 +175,21 @@ func (Iptables) Reset() {
 	}
 }
 
-func addRuleWithRemoval(chain chainInfo) (firewall.RemoveRule, error) {
-	if _, err := iptablesExec(chain.applyArgs()...); err != nil {
+func addRuleWithRemoval(rule Rule) (firewall.RemoveRule, error) {
+	if _, err := iptablesExec(rule.ApplyArgs()...); err != nil {
 		return nil, err
 	}
 	return func() {
-		_, err := iptablesExec(chain.removeArgs()...)
+		_, err := iptablesExec(rule.RemoveArgs()...)
 		if err != nil {
-			log.Warn().Err(err).Msgf("Error executing rule: %v you might wanna do it yourself", chain.removeArgs())
+			log.Warn().Err(err).Msgf("Error executing rule: %v you might wanna do it yourself", rule.RemoveArgs())
 		}
 	}, nil
 }
 
 // AllowIPAccess add ip to exceptions of blocked traffic and return function to remove exception
 func (Iptables) AllowIPAccess(ip string) (firewall.RemoveRule, error) {
-	return addRuleWithRemoval(insertAt(killswitchChain, 1).ruleSpec(destinationIP, ip, jumpTo, accept))
+	return addRuleWithRemoval(InsertAt(killswitchChain, 1).RuleSpec(destinationIP, ip, jumpTo, accept))
 }
 
 var _ firewall.Vendor = (*Iptables)(nil)

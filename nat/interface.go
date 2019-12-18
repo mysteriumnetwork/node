@@ -17,16 +17,22 @@
 
 package nat
 
-// NATService describes fake nat service for darwin
+import "net"
+
+// NATService routes internet traffic through provider and
+// sets up firewall rules for security
 type NATService interface {
 	Enable() error
-	Add(rule RuleForwarding) error
-	Del(rule RuleForwarding) error
+	Setup(opts Options) (rules []interface{}, err error)
+	Del(rules []interface{}) error
 	Disable() error
 }
 
-// RuleForwarding describes fake nat rule
-type RuleForwarding struct {
-	SourceSubnet string
-	TargetIP     string
+// Options params to setup firewall/NAT rules.
+type Options struct {
+	VPNNetwork        net.IPNet
+	ProviderExtIP     net.IP
+	EnableDNSRedirect bool
+	DNSIP             net.IP
+	DNSPort           int
 }

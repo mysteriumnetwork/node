@@ -33,37 +33,8 @@ var _ NATService = &serviceICS{}
 func mockedICS(powerShell func(cmd string) ([]byte, error)) *serviceICS {
 	return &serviceICS{
 		powerShell:      powerShell,
-		ifaces:          make(map[string]RuleForwarding),
 		setICSAddresses: mockICSConfig,
 	}
-}
-
-func Test_emptyActionForSharing(t *testing.T) {
-	sh := mockPowerShell{}
-	ics := mockedICS(sh.exec)
-	err := ics.applySharingConfig("", "eth0")
-	assert.EqualError(t, err, "empty action provided")
-}
-
-func Test_emptyInterfaceNameForSharing(t *testing.T) {
-	sh := mockPowerShell{}
-	ics := mockedICS(sh.exec)
-	err := ics.applySharingConfig(disableSharing, "")
-	assert.EqualError(t, err, "empty interface name provided")
-}
-
-func Test_errorOnApplySharing(t *testing.T) {
-	sh := mockPowerShell{err: errors.New("expected error")}
-	ics := mockedICS(sh.exec)
-	err := ics.applySharingConfig(disableSharing, "eth0")
-	assert.EqualError(t, err, "expected error")
-}
-
-func Test_validApplySharing(t *testing.T) {
-	sh := mockPowerShell{}
-	ics := mockedICS(sh.exec)
-	err := ics.applySharingConfig(disableSharing, "eth0")
-	assert.NoError(t, err)
 }
 
 func Test_errorOnGetPublicInterfaceName(t *testing.T) {
@@ -166,35 +137,26 @@ func Test_AddDel(t *testing.T) {
 	}}
 
 	ics := mockedICS(sh.exec)
-	err := ics.Add(RuleForwarding{"127.0.0.1/24", "8.8.8.8"})
+	_, vpnNetwork, _ := net.ParseCIDR("127.0.0.1/24")
+	_, err := ics.Setup(Options{
+		VPNNetwork:    *vpnNetwork,
+		ProviderExtIP: net.ParseIP("8.8.8.8"),
+	})
 	assert.NoError(t, err)
 
-	ifaceName, err := ics.getInternalInterfaceName()
+	err = ics.Del(nil)
 	assert.NoError(t, err)
-
-	_, ok := ics.ifaces[ifaceName]
-	assert.Equal(t, true, ok)
-
-	err = ics.Del(RuleForwarding{"127.0.0.1/24", "8.8.8.8"})
-	assert.NoError(t, err)
-
-	_, ok = ics.ifaces[ifaceName]
-	assert.Equal(t, false, ok)
 }
 
 func Test_errorInterfaceOnAdd(t *testing.T) {
 	sh := mockPowerShell{commands: map[string]mockShellResult{}}
 
 	ics := mockedICS(sh.exec)
-	err := ics.Add(RuleForwarding{"8.8.8.8/24", "8.8.8.8"})
-	assert.EqualError(t, err, "failed to find suitable interface: interface not found")
-}
-
-func Test_errorInterfaceOnDel(t *testing.T) {
-	sh := mockPowerShell{commands: map[string]mockShellResult{}}
-
-	ics := mockedICS(sh.exec)
-	err := ics.Del(RuleForwarding{"8.8.8.8/24", "8.8.8.8"})
+	_, vpnNetwork, _ := net.ParseCIDR("8.8.8.8/24")
+	_, err := ics.Setup(Options{
+		VPNNetwork:    *vpnNetwork,
+		ProviderExtIP: net.ParseIP("8.8.8.8"),
+	})
 	assert.EqualError(t, err, "failed to find suitable interface: interface not found")
 }
 
@@ -257,5 +219,5 @@ func (sh *mockPowerShell) exec(cmd string) ([]byte, error) {
 }
 
 func mockICSConfig(_map map[string]string) (map[string]string, error) {
-	return nil
+	return nil, nil
 }

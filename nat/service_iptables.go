@@ -18,111 +18,172 @@
 package nat
 
 import (
-	"fmt"
-	"strings"
+	"strconv"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/firewall/iptables"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-
-	"github.com/mysteriumnetwork/node/config"
 )
 
 type serviceIPTables struct {
 	mu        sync.Mutex
-	rules     map[RuleForwarding]struct{}
+	rules     []iptables.Rule
 	ipForward serviceIPForward
 }
 
-func (service *serviceIPTables) Add(rule RuleForwarding) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+const (
+	chainForward     = "FORWARD"
+	chainPreRouting  = "PREROUTING"
+	chainPostRouting = "POSTROUTING"
+)
 
-	if _, ok := service.rules[rule]; ok {
-		return errors.New("rule already exists")
+// Setup sets NAT/Firewall rules for the given NATOptions.
+func (svc *serviceIPTables) Setup(opts Options) (appliedRules []interface{}, err error) {
+	log.Info().Msg("Setting up NAT/Firewall rules")
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+
+	// Store applied rules so we can remove if setup exits prematurely (one of the latter rules fails to apply)
+	var applied []iptables.Rule
+	defer func() {
+		if err == nil {
+			return
+		}
+		log.Warn().Msg("Error detected, clearing up rules that were already setup")
+		for _, rule := range applied {
+			if err := svc.removeRule(rule); err != nil {
+				log.Error().Err(err).Msg("Could not remove rule")
+			}
+		}
+	}()
+
+	for _, rule := range makeIPTablesRules(opts) {
+		if err := svc.applyRule(rule); err != nil {
+			return nil, err
+		}
+		applied = append(applied, rule)
 	}
-	service.rules[rule] = struct{}{}
-
-	err := iptables("append", rule)
-	return errors.Wrap(err, "failed to add NAT forwarding rule")
+	log.Info().Msg("Setting up NAT/Firewall rules... done")
+	return untypedIptRules(applied), nil
 }
 
-func (service *serviceIPTables) Del(rule RuleForwarding) error {
-	if err := iptables("delete", rule); err != nil {
-		return err
+// Del removes given NAT/Firewall rules that were previously set up.
+func (svc *serviceIPTables) Del(rules []interface{}) (err error) {
+	log.Info().Msg("Deleting NAT/Firewall rules")
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+
+	errs := utils.ErrorCollection{}
+	for _, rule := range typedIptRules(rules) {
+		log.Trace().Msgf("Deleting rule: %v", rule)
+		if err := svc.removeRule(rule); err != nil {
+			errs.Add(err)
+		}
 	}
-
-	service.mu.Lock()
-	defer service.mu.Unlock()
-
-	delete(service.rules, rule)
-	return nil
+	err = errs.Error()
+	log.Info().Err(err).Msg("Deleting NAT/Firewall rules... done")
+	return err
 }
 
-func (service *serviceIPTables) Enable() error {
-	err := service.ipForward.Enable()
+// Enable enables NAT service.
+func (svc *serviceIPTables) Enable() error {
+	err := svc.ipForward.Enable()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to enable IP forwarding")
 	}
 	return err
 }
 
-func (service *serviceIPTables) Disable() (err error) {
-	service.ipForward.Disable()
+// Disable disables NAT service and deletes all rules.
+func (svc *serviceIPTables) Disable() error {
+	svc.ipForward.Disable()
+	return svc.Del(untypedIptRules(svc.rules))
+}
 
-	service.mu.Lock()
-	defer service.mu.Unlock()
+func (svc *serviceIPTables) applyRule(rule iptables.Rule) error {
+	if err := iptablesExec(rule.ApplyArgs()...); err != nil {
+		return err
+	}
+	svc.rules = append(svc.rules, rule)
+	return nil
+}
 
-	for rule := range service.rules {
-		if delErr := iptables("delete", rule); delErr != nil && err == nil {
-			err = delErr
+func (svc *serviceIPTables) removeRule(rule iptables.Rule) error {
+	if err := iptablesExec(rule.RemoveArgs()...); err != nil {
+		return err
+	}
+	for i := range svc.rules {
+		if svc.rules[i].Equals(rule) {
+			svc.rules = append(svc.rules[:i], svc.rules[i+1:]...)
+			break
 		}
 	}
-	return err
-}
-
-func iptables(action string, rule RuleForwarding) error {
-	err := dropToLocal(action, rule.SourceSubnet)
-	if err != nil {
-		return err
-	}
-
-	cmd := "/sbin/iptables --table nat --" + action + " POSTROUTING --source " +
-		rule.SourceSubnet + " ! --destination " +
-		rule.SourceSubnet + " --jump SNAT --to " +
-		rule.TargetIP
-
-	if err := cmdutil.SudoExec(splitAndTrim(cmd)...); err != nil {
-		log.Warn().Err(err).Msgf("Failed to %s IP forwarding rule", action)
-		return err
-	}
-
-	log.Info().Msgf("Action %q applied for forwarding packets from %s to IP: %s", action, rule.SourceSubnet, rule.TargetIP)
 	return nil
 }
 
-func dropToLocal(action, sourceSubnet string) error {
-	destinations := config.GetString(config.FlagFirewallProtectedNetworks)
-	if destinations == "" {
-		log.Info().Msgf("no protected networks set")
-		return nil
-	}
-	cmd := fmt.Sprintf("/sbin/iptables --%s FORWARD --source %s --destination %s -j DROP",
-		action, sourceSubnet, destinations)
-	if err := cmdutil.SudoExec(splitAndTrim(cmd)...); err != nil {
-		log.Warn().Err(err).Msgf("Failed to %s DROP rule", action)
-		return err
+func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
+	vpnNetwork := opts.VPNNetwork.String()
+
+	if opts.EnableDNSRedirect {
+		// DNS port redirect rule (udp)
+		rule := iptables.AppendTo(chainPreRouting).RuleSpec(
+			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(53),
+			"--jump", "REDIRECT",
+			"--to-ports", strconv.Itoa(opts.DNSPort),
+			"--table", "nat",
+		)
+		rules = append(rules, rule)
+
+		// DNS port redirect rule (tcp)
+		rule = iptables.AppendTo(chainPreRouting).RuleSpec(
+			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(53),
+			"--jump", "REDIRECT",
+			"--to-ports", strconv.Itoa(opts.DNSPort),
+			"--table", "nat",
+		)
+		rules = append(rules, rule)
 	}
 
-	log.Info().Msgf("Action %q applied for DROP packets from %s to IPs: %s", action, sourceSubnet, destinations)
+	// Protect private networks rule
+	for _, ipNet := range protectedNetworks() {
+		rule := iptables.AppendTo(chainForward).RuleSpec(
+			"--source", vpnNetwork, "--destination", ipNet.String(),
+			"--jump", "DROP")
+		rules = append(rules, rule)
+	}
+
+	// NAT forwarding rule
+	rule := iptables.AppendTo(chainPostRouting).RuleSpec("--source", vpnNetwork, "!", "--destination", vpnNetwork,
+		"--jump", "SNAT", "--to", opts.ProviderExtIP.String(),
+		"--table", "nat")
+	rules = append(rules, rule)
+
+	return rules
+}
+
+func iptablesExec(args ...string) error {
+	args = append([]string{"/sbin/iptables"}, args...)
+	if err := cmdutil.SudoExec(args...); err != nil {
+		return errors.Wrap(err, "error calling IPTables")
+	}
 	return nil
 }
 
-func splitAndTrim(cmd string) []string {
-	var args []string
-	for _, arg := range strings.Split(cmd, " ") {
-		args = append(args, strings.TrimSpace(arg))
+func untypedIptRules(rules []iptables.Rule) []interface{} {
+	res := make([]interface{}, len(rules))
+	for i := range rules {
+		res[i] = rules[i]
 	}
-	return args
+	return res
+}
+
+func typedIptRules(rules []interface{}) []iptables.Rule {
+	res := make([]iptables.Rule, len(rules))
+	for i := range rules {
+		res[i] = rules[i].(iptables.Rule)
+	}
+	return res
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package stringutil
 
-import "os/exec"
+import (
+	"testing"
 
-// NewService returns linux os specific nat service based on ip tables
-func NewService() NATService {
-	return &serviceIPTables{
-		ipForward: serviceIPForward{
-			CommandFactory: func(name string, arg ...string) Command {
-				return exec.Command(name, arg...)
-			},
-			CommandEnable:  []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"},
-			CommandDisable: []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"},
-			CommandRead:    []string{"/sbin/sysctl", "-n", "net.ipv4.ip_forward"},
-		},
+	"github.com/stretchr/testify/assert"
+)
+
+func TestSplit(t *testing.T) {
+	assert := assert.New(t)
+	tests := []struct {
+		s      string
+		sep    rune
+		expect []string
+	}{
+
+		{s: "11,22,", sep: ',', expect: []string{"11", "22"}},
+		{s: "11,", sep: ',', expect: []string{"11"}},
+		{s: "", sep: ',', expect: nil},
+		{s: "aaaa", sep: ' ', expect: []string{"aaaa"}},
+		{s: "a a a a", sep: ' ', expect: []string{"a", "a", "a", "a"}},
+	}
+
+	for _, tt := range tests {
+		result := Split(tt.s, tt.sep)
+		assert.Equal(tt.expect, result)
 	}
 }

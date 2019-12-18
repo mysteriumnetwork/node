@@ -131,7 +131,7 @@ type VPNConfig struct {
 	OriginalRemoteIP   string
 	OriginalRemotePort int
 
-	DNS             string `json:"dns"`
+	DNSIPs          string `json:"dns_ips"`
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
 	LocalPort       int    `json:"lport"`

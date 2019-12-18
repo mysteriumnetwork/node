@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -308,7 +309,7 @@ func (c *cliApp) serviceGet(id string) {
 func (c *cliApp) connect(argsString string) {
 	args := strings.Fields(argsString)
 
-	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch] [enable-dns]"
+	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
 	if len(args) < 3 {
 		info(helpMsg)
 		return
@@ -317,12 +318,20 @@ func (c *cliApp) connect(argsString string) {
 	consumerID, providerID, serviceType := args[0], args[1], args[2]
 
 	var disableKillSwitch bool
-	var enableDNS bool
+	var dns connection.DNSOption
 	var err error
 	for _, arg := range args[3:] {
+		if strings.HasPrefix(arg, "dns=") {
+			kv := strings.Split(arg, "=")
+			dns, err = connection.NewDNSOption(kv[1])
+			if err != nil {
+				warn("Invalid value: ", err)
+				info(helpMsg)
+				return
+			}
+			continue
+		}
 		switch arg {
-		case "enable-dns":
-			enableDNS = true
 		case "disable-kill-switch":
 			disableKillSwitch = true
 		default:
@@ -333,7 +342,7 @@ func (c *cliApp) connect(argsString string) {
 	}
 
 	connectOptions := tequilapi_client.ConnectOptions{
-		EnableDNS:         enableDNS,
+		DNS:               dns,
 		DisableKillSwitch: disableKillSwitch,
 	}
 
@@ -696,6 +705,12 @@ func getProposalOptionList(proposals []tequilapi_client.ProposalDTO) func(string
 }
 
 func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_client.ProposalDTO) *readline.PrefixCompleter {
+	connectOpts := []readline.PrefixCompleterInterface{
+		readline.PcItem("dns=auto"),
+		readline.PcItem("dns=provider"),
+		readline.PcItem("dns=system"),
+		readline.PcItem("dns=1.1.1.1"),
+	}
 	return readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",
@@ -703,6 +718,9 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 				getIdentityOptionList(tequilapi),
 				readline.PcItemDynamic(
 					getProposalOptionList(proposals),
+					readline.PcItem("noop", connectOpts...),
+					readline.PcItem("openvpn", connectOpts...),
+					readline.PcItem("wireguard", connectOpts...),
 				),
 			),
 		),
