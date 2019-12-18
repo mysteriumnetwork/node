@@ -26,48 +26,131 @@ import (
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-
-	"github.com/mysteriumnetwork/node/config"
 )
 
 type servicePFCtl struct {
 	mu        sync.Mutex
-	rules     map[RuleForwarding]struct{}
+	rules     []string
 	ipForward serviceIPForward
 }
 
-func (service *servicePFCtl) Add(rule RuleForwarding) error {
+// Setup sets NAT/Firewall rules for the given NATOptions.
+func (service *servicePFCtl) Setup(opts Options) (appliedRules []interface{}, err error) {
+	log.Info().Msg("Setting up NAT/Firewall rules")
 	service.mu.Lock()
-	service.rules[rule] = struct{}{}
-	service.mu.Unlock()
+	defer service.mu.Unlock()
 
-	return service.enableRules()
+	rules, err := makePfctlRules(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := service.pfctlExec(rules); err != nil {
+		return nil, err
+	}
+	service.rules = append(service.rules, rules...)
+
+	return untypedPfctlRules(rules), nil
 }
 
-func (service *servicePFCtl) Del(rule RuleForwarding) error {
+func (service *servicePFCtl) Del(rules []interface{}) error {
+	log.Info().Msg("Deleting NAT/Firewall rules")
 	service.mu.Lock()
-	delete(service.rules, rule)
-	service.mu.Unlock()
+	defer service.mu.Unlock()
 
-	return service.enableRules()
+	rulesToDel := typedPfctlRules(rules)
+	var newRules []string
+	for _, rule := range service.rules {
+		shouldDelete := false
+		for _, ruleToDel := range rulesToDel {
+			if rule == ruleToDel {
+				shouldDelete = true
+				break
+			}
+		}
+
+		if !shouldDelete {
+			newRules = append(newRules, rule)
+		}
+	}
+
+	if err := service.pfctlExec(newRules); err != nil {
+		return err
+	}
+
+	service.rules = newRules
+	log.Info().Msg("Deleting NAT/Firewall rules... done")
+	return nil
 }
 
+func makePfctlRules(opts Options) (rules []string, err error) {
+	externalIface, err := ifaceByAddress(opts.ProviderExtIP)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.EnableDNSRedirect {
+		// DNS port redirect rule
+		tunnelIface, err := ifaceByAddress(opts.DNSIP)
+		if err != nil {
+			return nil, err
+		}
+		rule := fmt.Sprintf("rdr pass on %s inet proto { udp, tcp } from any to %s port 53 -> %s port %d",
+			tunnelIface,
+			opts.VPNNetwork.String(),
+			opts.DNSIP,
+			opts.DNSPort,
+		)
+		rules = append(rules, rule)
+	}
+
+	// Protect private networks rule
+	networks := protectedNetworks()
+	if len(networks) > 0 {
+		var targets []string
+		for _, network := range networks {
+			targets = append(targets, network.String())
+		}
+		rule := fmt.Sprintf("no nat on %s inet from %s to { %s }",
+			externalIface,
+			opts.VPNNetwork.String(),
+			strings.Join(targets, ", "),
+		)
+		rules = append(rules, rule)
+	}
+
+	// NAT forwarding rule
+	rule := fmt.Sprintf("nat on %s inet from %s to any -> %s",
+		externalIface,
+		opts.VPNNetwork.String(),
+		opts.ProviderExtIP,
+	)
+	rules = append(rules, rule)
+
+	return rules, nil
+}
+
+// Enable enables NAT service.
 func (service *servicePFCtl) Enable() error {
 	err := service.ipForward.Enable()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to enable IP forwarding")
 	}
-
 	return err
 }
 
+// Disable disables NAT service and deletes all rules.
 func (service *servicePFCtl) Disable() error {
-	service.disableRules()
+	service.mu.Lock()
+	defer service.mu.Unlock()
+
 	service.ipForward.Disable()
+	service.rules = nil
+	service.disableRules()
 	return nil
 }
 
-func ifaceByAddress(ipAddress string) (string, error) {
+func ifaceByAddress(ip net.IP) (string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return "", err
@@ -79,36 +162,16 @@ func ifaceByAddress(ipAddress string) (string, error) {
 			return "", err
 		}
 		for _, address := range addresses {
-			if address.(*net.IPNet).IP.String() == ipAddress {
+			if address.(*net.IPNet).Contains(ip) {
 				return ifi.Name, nil
 			}
 		}
 	}
-	return "", errors.New("not able to determine outbound ethernet interface")
+	return "", errors.New("not able to determine outbound ethernet interface for IP: " + ip.String())
 }
 
-func (service *servicePFCtl) enableRules() error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
-
-	var natRule string
-
-	for rule := range service.rules {
-		iface, err := ifaceByAddress(rule.TargetIP)
-		if err != nil {
-			return err
-		}
-
-		destinations := config.GetString(config.FlagFirewallProtectedNetworks)
-		if destinations == "" {
-			log.Info().Msgf("no protected networks set")
-		} else {
-			natRule += fmt.Sprintf("no nat on %s inet from %s to { %s } \n",
-				iface, rule.SourceSubnet, destinations)
-		}
-		natRule += fmt.Sprintf("nat on %v inet from %v to any -> %v\n", iface, rule.SourceSubnet, rule.TargetIP)
-	}
-
+func (service *servicePFCtl) pfctlExec(rules []string) error {
+	natRule := strings.Join(rules, "\n")
 	arguments := fmt.Sprintf(`echo "%v" | /sbin/pfctl -vEf -`, natRule)
 
 	if output, err := cmdutil.ExecOutput("sh", "-c", arguments); err != nil {
@@ -118,7 +181,6 @@ func (service *servicePFCtl) enableRules() error {
 		}
 	}
 	log.Info().Msg("NAT rules applied")
-
 	return nil
 }
 
@@ -129,4 +191,20 @@ func (service *servicePFCtl) disableRules() {
 	} else {
 		log.Info().Msg("NAT rules cleared")
 	}
+}
+
+func untypedPfctlRules(rules []string) []interface{} {
+	res := make([]interface{}, len(rules))
+	for i := range rules {
+		res[i] = rules[i]
+	}
+	return res
+}
+
+func typedPfctlRules(rules []interface{}) []string {
+	res := make([]string, len(rules))
+	for i := range rules {
+		res[i] = rules[i].(string)
+	}
+	return res
 }

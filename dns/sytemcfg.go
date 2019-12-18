@@ -19,32 +19,20 @@ package dns
 
 import (
 	"github.com/miekg/dns"
+	"github.com/pkg/errors"
 )
 
-// NewServer returns new instance of API server
-func NewServer(addr string, handler dns.Handler) *Server {
-	server := new(Server)
-	server.Addr = addr
-	server.dnsServer = &dns.Server{
-		Addr:    addr,
-		Net:     "udp",
-		Handler: handler,
+// configuration returns the system DNS configuration.
+func configuration() (*dns.ClientConfig, error) {
+	config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
+	return config, errors.Wrap(err, "error loading DNS config")
+}
+
+// ConfiguredServers returns DNS server IPs from the system DNS configuration.
+func ConfiguredServers() ([]string, error) {
+	config, err := configuration()
+	if err != nil {
+		return nil, err
 	}
-	return server
-}
-
-// Server defines DNS server with all handler attached to it
-type Server struct {
-	Addr      string
-	dnsServer *dns.Server
-}
-
-// Run starts DNS server
-func (server *Server) Run() error {
-	return server.dnsServer.ListenAndServe()
-}
-
-// Stop shutdowns Proxy server
-func (server *Server) Stop() error {
-	return server.dnsServer.Shutdown()
+	return config.Servers, nil
 }

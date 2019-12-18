@@ -19,33 +19,80 @@ package dns
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/miekg/dns"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
-// ResolveViaConfigured create new dns.Server handler which handles incoming DNS requests
-func ResolveViaConfigured() dns.Handler {
-	client := &dns.Client{}
+// Proxy defines DNS server with all handler attached to it.
+type Proxy struct {
+	proxyAddrs []string
+	server     *dns.Server
+}
 
+// NewProxy returns new instance of API server.
+func NewProxy(lhost string, lport int) *Proxy {
+	return &Proxy{
+		server: &dns.Server{
+			Addr:      net.JoinHostPort(lhost, strconv.Itoa(lport)),
+			Net:       "udp",
+			ReusePort: true,
+		},
+	}
+}
+
+// Run starts DNS proxy server and waits for the startup to complete.
+func (p *Proxy) Run() (err error) {
+	err = p.configure()
+	if err != nil {
+		return err
+	}
+	p.server.Handler = p.proxyHandler()
+
+	dnsProxyCh := make(chan error)
+	p.server.NotifyStartedFunc = func() { dnsProxyCh <- nil }
+	go func() {
+		log.Info().Msg("Starting DNS proxy on: " + p.server.Addr)
+		if err := p.server.ListenAndServe(); err != nil {
+			dnsProxyCh <- errors.Wrap(err, "failed to start DNS proxy")
+		}
+	}()
+
+	return <-dnsProxyCh
+}
+
+// Stop shutdowns DNS proxy server.
+func (p *Proxy) Stop() error {
+	return p.server.Shutdown()
+}
+
+// configure configures proxy to use system DNS servers.
+func (p *Proxy) configure() (err error) {
+	cfg, err := configuration()
+	if err != nil {
+		return err
+	}
+	for _, server := range cfg.Servers {
+		p.proxyAddrs = append(p.proxyAddrs, net.JoinHostPort(server, cfg.Port))
+	}
+	return nil
+}
+
+// proxyHandler creates proxying DNS handler.
+func (p *Proxy) proxyHandler() dns.Handler {
+	client := &dns.Client{}
 	return dns.HandlerFunc(func(writer dns.ResponseWriter, req *dns.Msg) {
 		resp := &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeServerFailure)
-
-		config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-		if err != nil {
-			log.Error().Err(err).Msg("Error loading DNS config")
-			writer.WriteMsg(resp)
-			return
-		}
-
-		for _, server := range config.Servers {
-			forwardAddress := net.JoinHostPort(server, config.Port)
-			resp, _, err = client.Exchange(req, forwardAddress)
-			if err != nil {
-				log.Error().Err(err).Msg("Error proxying DNS query to " + forwardAddress)
-				continue
+		for _, addr := range p.proxyAddrs {
+			var err error
+			resp, _, err = client.Exchange(req, addr)
+			if err == nil {
+				break
 			}
+			log.Error().Err(err).Msg("Error proxying DNS query to " + addr)
 		}
 		writer.WriteMsg(resp)
 	})

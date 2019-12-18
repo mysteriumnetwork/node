@@ -17,10 +17,8 @@
 
 package openvpn
 
-func newClientConfig(runtimeDir string, scriptSearchPath string, enableDNS bool) *ClientConfig {
+func newClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
 	clientConfig := defaultClientConfig(runtimeDir, scriptSearchPath)
-	if enableDNS {
-		clientConfig.SetFlag("register-dns")
-	}
+	clientConfig.SetFlag("register-dns")
 	return clientConfig
 }

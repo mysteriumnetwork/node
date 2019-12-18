@@ -15,9 +15,12 @@
 #     foreign_option_3='dhcp-option DOMAIN be.bnc.ch'
 #
 
-RESOLVCONFBIN=$(which resolvconf)
+RESOLVCONFBIN=$(command -v resolvconf)
 
-[ -x $RESOLVCONFBIN ] || exit 0
+if ! [ -x "$RESOLVCONFBIN" ]; then
+  echo "ERROR: resolvconf not found, DNS will not be updated"
+  exit 0
+fi
 [ "$script_type" ] || exit 0
 [ "$dev" ] || exit 0
 

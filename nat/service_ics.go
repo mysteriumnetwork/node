@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -63,12 +63,12 @@ func getDisableSharingScript(ifaceName string) string {
 }
 
 type serviceICS struct {
-	mu                 sync.Mutex
-	ifaces             map[string]RuleForwarding // list in internal interfaces with enabled internet connection sharing
-	remoteAccessStatus string
-	powerShell         func(cmd string) ([]byte, error)
-	setICSAddresses    func(config map[string]string) (map[string]string, error)
-	oldICSConfig       map[string]string
+	mu                  sync.Mutex
+	activeInternalIface string
+	remoteAccessStatus  string
+	powerShell          func(cmd string) ([]byte, error)
+	setICSAddresses     func(config map[string]string) (map[string]string, error)
+	oldICSConfig        map[string]string
 }
 
 func (ics *serviceICS) disableICSAllInterfaces() error {
@@ -128,41 +128,39 @@ func (ics *serviceICS) enableRemoteAccessService() error {
 	return errors.Wrap(err, "failed to start RemoteAccess service")
 }
 
-// Add enables internet connection sharing for the local interface.
-func (ics *serviceICS) Add(rule RuleForwarding) error {
-	_, ipnet, err := net.ParseCIDR(rule.SourceSubnet)
-	if err != nil {
-		log.Warn().Msg("Failed to parse IP-address: " + rule.SourceSubnet)
-	}
+// Setup enables internet connection sharing for the local interface.
+func (ics *serviceICS) Setup(opts Options) (rules []interface{}, err error) {
+	ics.mu.Lock()
+	defer ics.mu.Unlock()
 
-	ip := incrementIP(ipnet.IP)
+	ip := incrementIP(opts.VPNNetwork.IP)
 	ics.oldICSConfig, err = ics.setICSAddresses(map[string]string{
 		"ScopeAddress":          ip.String(),
 		"ScopeAddressBackup":    ip.String(),
 		"StandaloneDhcpAddress": ip.String()})
 	if err != nil {
-		return errors.Wrap(err, "failed to set ICS IP-address range")
+		return nil, errors.Wrap(err, "failed to set ICS IP-address range")
 	}
 
-	ifaceName, err := ics.getInternalInterfaceName()
+	internalInterface, err := ics.getInternalInterfaceName()
 	if err != nil {
-		return errors.Wrap(err, "failed to find suitable interface")
+		return nil, errors.Wrap(err, "failed to find suitable interface")
 	}
 
-	_, err = ics.powerShell(getPrivateSharingScript(ifaceName))
+	_, err = ics.powerShell(getPrivateSharingScript(internalInterface))
 	if err != nil {
-		return errors.Wrap(err, "failed to enable internet connection sharing for internal interface")
+		return nil, errors.Wrap(err, "failed to enable internet connection sharing for internal interface")
 	}
 
-	ics.mu.Lock()
-	defer ics.mu.Unlock()
-	ics.ifaces[ifaceName] = rule
-
-	return nil
+	ics.activeInternalIface = internalInterface
+	return nil, nil
 }
 
 // Del disables internet connection sharing for the local interface.
-func (ics *serviceICS) Del(rule RuleForwarding) error {
+func (ics *serviceICS) Del([]interface{}) error {
+	ics.mu.Lock()
+	defer ics.mu.Unlock()
+
 	ifaceName, err := ics.getInternalInterfaceName()
 	if err != nil {
 		return errors.Wrap(err, "failed to find suitable interface")
@@ -173,58 +171,45 @@ func (ics *serviceICS) Del(rule RuleForwarding) error {
 		return errors.Wrap(err, "failed to disable internet connection sharing for internal interface")
 	}
 
-	ics.mu.Lock()
-	defer ics.mu.Unlock()
-	delete(ics.ifaces, ifaceName)
-
+	ics.activeInternalIface = ""
 	return nil
 }
 
 // Disable disables internet connection sharing for the public interface.
-func (ics *serviceICS) Disable() (resErr error) {
+func (ics *serviceICS) Disable() error {
+	result := utils.ErrorCollection{}
+
 	if _, err := ics.setICSAddresses(ics.oldICSConfig); err != nil {
 		return errors.Wrap(err, "failed to revert ICS IP-address range")
 	}
-	for iface, rule := range ics.ifaces {
-		if err := ics.Del(rule); err != nil {
-			log.Error().Err(err).Msg("Failed to cleanup internet connection sharing for interface: " + iface)
-			if resErr == nil {
-				resErr = err
-			}
+
+	if ics.activeInternalIface != "" {
+		if err := ics.Del(nil); err != nil {
+			result.Add(errors.Wrap(err, "Failed to cleanup internet connection sharing for internal interface"))
 		}
 	}
 
 	_, err := ics.powerShell("Set-Service -Name RemoteAccess -StartupType " + ics.remoteAccessStatus)
 	if err != nil {
-		err = errors.Wrap(err, "failed to revert RemoteAccess service startup type")
-		log.Error().Err(err).Msg("")
-		if resErr == nil {
-			resErr = err
-		}
+		result.Add(errors.Wrap(err, "failed to revert RemoteAccess service startup type"))
 	}
 
 	ifaceName, err := ics.getPublicInterfaceName()
 	if err != nil {
-		err = errors.Wrap(err, "failed to get public interface name")
-		log.Error().Err(err).Msg("")
-		if resErr == nil {
-			resErr = err
-		}
+		result.Add(errors.Wrap(err, "failed to get public interface name"))
 	}
 
 	_, err = ics.powerShell(getDisableSharingScript(ifaceName))
 	if err != nil {
-		err = errors.Wrap(err, "failed to disable internet connection sharing")
-		log.Error().Err(err).Msg("")
-		if resErr == nil {
-			resErr = err
-		}
+		result.Add(errors.Wrap(err, "failed to disable internet connection sharing"))
 	}
 
-	if err := ics.disableICSAllInterfaces(); err != nil {
-		return errors.Wrap(err, "failed to cleanup ICS before Enabling")
+	err = ics.disableICSAllInterfaces()
+	if err != nil {
+		result.Add(errors.Wrap(err, "failed to cleanup ICS before Enabling"))
 	}
-	return resErr
+
+	return result.Error()
 }
 
 func (ics *serviceICS) getPublicInterfaceName() (string, error) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package stringutil
 
-import "os/exec"
+import (
+	"strings"
+)
 
-// NewService returns linux os specific nat service based on ip tables
-func NewService() NATService {
-	return &serviceIPTables{
-		ipForward: serviceIPForward{
-			CommandFactory: func(name string, arg ...string) Command {
-				return exec.Command(name, arg...)
-			},
-			CommandEnable:  []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"},
-			CommandDisable: []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"},
-			CommandRead:    []string{"/sbin/sysctl", "-n", "net.ipv4.ip_forward"},
-		},
+// Split slices s into all substrings separated by sep and returns a slice of
+// the substrings between those separators.
+//
+// Difference from the stdlib strings.Split():
+// If s does not contain sep, it returns a nil slice.
+func Split(s string, sep rune) []string {
+	res := strings.FieldsFunc(s, func(c rune) bool { return c == sep })
+	if len(res) == 0 {
+		return nil
 	}
+	return res
 }

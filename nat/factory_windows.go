@@ -24,7 +24,6 @@ import (
 // NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
 func NewService() NATService {
 	return &serviceICS{
-		ifaces:          make(map[string]RuleForwarding),
 		setICSAddresses: setICSAddresses,
 		powerShell:      cmdutil.PowerShell,
 	}
