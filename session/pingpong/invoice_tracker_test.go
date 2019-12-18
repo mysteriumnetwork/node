@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"encoding/hex"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -341,7 +342,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
-		ChargePeriod:               time.Nanosecond,
+		ChargePeriod:               time.Millisecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
@@ -361,7 +362,14 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	errChan := make(chan error)
 	go func() { errChan <- invoiceTracker.Start() }()
 
-	exchangeMessageChan <- crypto.ExchangeMessage{}
+	invoice := <-mockSender.chanToWriteTo
+	b, err := hex.DecodeString(invoice.Hashlock)
+	assert.NoError(t, err)
+	exchangeMessageChan <- crypto.ExchangeMessage{
+		Promise: crypto.Promise{
+			Hashlock: b,
+		},
+	}
 
 	err = <-errChan
 	assert.Error(t, err)
