@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
+	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
@@ -78,20 +79,20 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, enableDNS bool) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, dnsOption connection.DNSOption) (*ClientConfig, error) {
 	// TODO Rename `vpnConfig` to `sessionConfig`
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clientFileConfig := newClientConfig(runtimeDir, configDir, enableDNS)
-	if enableDNS && len(vpnConfig.DNS) > 0 {
-		clientFileConfig.SetParam("dhcp-option", "DNS", vpnConfig.DNS)
-	} else {
-		// TODO remove these once most of the providers are capable of running DNS proxy?
-		clientFileConfig.SetParam("dhcp-option", "DNS", "208.67.222.222")
-		clientFileConfig.SetParam("dhcp-option", "DNS", "208.67.220.220")
+	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	dnsIPs, err := dnsOption.ResolveIPs(vpnConfig.DNSIPs)
+	if err != nil {
+		return nil, err
+	}
+	for _, ip := range dnsIPs {
+		clientFileConfig.SetParam("dhcp-option", "DNS", ip)
 	}
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)

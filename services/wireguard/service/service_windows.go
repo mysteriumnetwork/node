@@ -110,7 +110,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 		return err
 	}
 
-	outIP, err := manager.ipResolver.GetOutboundIPAsString()
+	outIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}
@@ -129,8 +129,10 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 		}
 	}()
 
-	natRule := nat.RuleForwarding{SourceSubnet: config.Consumer.IPAddress.String(), TargetIP: outIP}
-	if err := manager.natService.Add(natRule); err != nil {
+	if _, err = manager.natService.Setup(nat.Options{
+		VPNNetwork:    config.Consumer.IPAddress,
+		ProviderExtIP: outIP,
+	}); err != nil {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 

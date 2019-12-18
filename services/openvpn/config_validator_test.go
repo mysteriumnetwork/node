@@ -64,7 +64,7 @@ func TestValidatorReturnsNilErrorOnValidVPNConfig(t *testing.T) {
 	vpnConfig := &VPNConfig{
 		OriginalRemoteIP:   "",
 		OriginalRemotePort: 0,
-		DNS:                "",
+		DNSIPs:             "",
 		RemoteIP:           "1.2.3.4",
 		RemotePort:         10999,
 		LocalPort:          1194,

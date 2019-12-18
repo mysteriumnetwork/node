@@ -362,7 +362,7 @@ func (manager *connectionManager) startConnection(
 	connectOptions := ConnectOptions{
 		SessionID:     sessionDTO.ID,
 		SessionConfig: sessionDTO.Config,
-		EnableDNS:     params.EnableDNS,
+		DNS:           params.DNS,
 		ConsumerID:    consumerID,
 		ProviderID:    identity.FromAddress(proposal.ProviderID),
 		Proposal:      proposal,

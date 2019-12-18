@@ -46,7 +46,11 @@ type ConnectOptions struct {
 	// required: false
 	// example: true
 	DisableKillSwitch bool `json:"killSwitch"`
-	EnableDNS         bool `json:"enableDNS"`
+	// DNS to use
+	// required: false
+	// default: auto
+	// example: auto, provider, system, "1.1.1.1,8.8.8.8"
+	DNS connection.DNSOption `json:"dns"`
 }
 
 // swagger:model ConnectionRequestDTO
@@ -342,9 +346,13 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 }
 
 func getConnectOptions(cr *connectionRequest) connection.ConnectParams {
+	dns := connection.DNSOptionAuto
+	if cr.ConnectOptions.DNS != "" {
+		dns = cr.ConnectOptions.DNS
+	}
 	return connection.ConnectParams{
 		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
-		EnableDNS:         cr.ConnectOptions.EnableDNS,
+		DNS:               dns,
 	}
 }
 

@@ -19,35 +19,59 @@ package iptables
 
 import "strconv"
 
-type chainInfo struct {
+// Rule is a packet filter rule for IPTables.
+type Rule struct {
 	chainName string
 	action    []string
-	ruleArgs  []string
+	ruleSpec  []string
 }
 
-func appendTo(chainName string) chainInfo {
-	return chainInfo{
+// AppendTo creates a new rule to be appended to the specified chain.
+func AppendTo(chainName string) Rule {
+	return Rule{
 		chainName: chainName,
 		action:    []string{appendRule, chainName},
 	}
 }
 
-func insertAt(chainName string, line int) chainInfo {
-	return chainInfo{
+// InsertAt creates a new rule to be inserted into the specified chain.
+func InsertAt(chainName string, line int) Rule {
+	return Rule{
 		chainName: chainName,
 		action:    []string{insertRule, chainName, strconv.Itoa(line)},
 	}
 }
 
-func (chain chainInfo) ruleSpec(args ...string) chainInfo {
-	chain.ruleArgs = args
-	return chain
+// RuleSpec sets the rule specification (see `man iptables`).
+func (r Rule) RuleSpec(spec ...string) Rule {
+	r.ruleSpec = spec
+	return r
 }
 
-func (chain chainInfo) applyArgs() []string {
-	return append(chain.action, chain.ruleArgs...)
+// ApplyArgs returns an argument list to be passed to the iptables executable to APPLY the rule.
+func (r Rule) ApplyArgs() []string {
+	return append(r.action, r.ruleSpec...)
 }
 
-func (chain chainInfo) removeArgs() []string {
-	return append([]string{removeRule, chain.chainName}, chain.ruleArgs...)
+// RemoveArgs returns an argument list to be passed to the iptables executable to REMOVE the rule.
+func (r Rule) RemoveArgs() []string {
+	return append([]string{removeRule, r.chainName}, r.ruleSpec...)
+}
+
+// Equals checks if two Rules are equal.
+func (r Rule) Equals(another Rule) bool {
+	return r.chainName == another.chainName &&
+		equalStringSlice(r.ruleSpec, another.ruleSpec)
+}
+
+func equalStringSlice(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

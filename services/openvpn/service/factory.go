@@ -20,15 +20,10 @@ package service
 import (
 	"crypto/x509/pkix"
 	"encoding/json"
-	"strings"
+	"net"
 
-	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/filter"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	node_config "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -78,8 +73,6 @@ func NewManager(nodeOptions node.Options,
 		}
 	}
 
-	serverFactory := newServerFactory(nodeOptions, sessionValidator, callback)
-
 	return &Manager{
 		publicIP:                       location.PubIP,
 		outboundIP:                     location.OutIP,
@@ -87,7 +80,7 @@ func NewManager(nodeOptions node.Options,
 		natService:                     natService,
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions, natEventGetter, portPool),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
-		vpnServerFactory:               serverFactory,
+		processLauncher:                newProcessLauncher(nodeOptions, sessionValidator, callback),
 		natPingerPorts:                 port.NewPool(),
 		natPinger:                      natPinger,
 		serviceOptions:                 serviceOptions,
@@ -114,43 +107,24 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 	}
 }
 
-func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, statsCallback func(bytecount.SessionByteCount)) ServerFactory {
-	return func(config *openvpn_service.ServerConfig, stateChannel chan openvpn.State) openvpn.Process {
-		stateCallback := func(state openvpn.State) {
-			stateChannel <- state
-			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
-			if state == openvpn.ProcessExited {
-				close(stateChannel)
-			}
-		}
-
-		protectedNetworks := strings.FieldsFunc(node_config.GetString(node_config.FlagFirewallProtectedNetworks), func(c rune) bool { return c == ',' })
-		return openvpn.CreateNewProcess(
-			nodeOptions.Openvpn.BinaryPath(),
-			config.GenericConfig,
-			filter.NewMiddleware(nil, protectedNetworks),
-			auth.NewMiddleware(sessionValidator.Validate),
-			state.NewMiddleware(stateCallback),
-			bytecount.NewMiddleware(statsCallback, statisticsReportingIntervalInSeconds),
-		)
-	}
-}
-
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
 func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter, portPool port.ServicePortSupplier) SessionConfigNegotiatorFactory {
-	return func(secPrimitives *tls.Primitives, dnsIP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
+	return func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
+		vpnConfig := &openvpn_service.VPNConfig{
+			RemoteIP:        serverIP,
+			RemotePort:      port,
+			RemoteProtocol:  serviceOptions.Protocol,
+			TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
+			CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
+		}
+		if dnsIP != nil {
+			vpnConfig.DNSIPs = dnsIP.String()
+		}
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
-			vpnConfig: &openvpn_service.VPNConfig{
-				DNS:             dnsIP,
-				RemoteIP:        serverIP,
-				RemotePort:      port,
-				RemoteProtocol:  serviceOptions.Protocol,
-				TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
-				CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
-			},
-			portPool: portPool,
+			vpnConfig:      vpnConfig,
+			portPool:       portPool,
 		}
 	}
 }
