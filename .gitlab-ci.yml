@@ -106,10 +106,11 @@ package:osx-amd64:
   tags: [go]
   script: go run mage.go -v PackageOsxAmd64
 
-package:windows-amd64:
-  stage: build
-  tags: [go]
-  script: go run mage.go -v PackageWindowsAmd64
+# disabling this until https://github.com/ethereum/go-ethereum/issues/20093 gets resolved
+# package:windows-amd64:
+#   stage: build
+#   tags: [go]
+#   script: go run mage.go -v PackageWindowsAmd64
 
 package:android:
   stage: build
