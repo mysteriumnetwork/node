@@ -686,8 +686,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	di.BrokerConnection, err = nats.NewConnection(di.NetworkDefinition.BrokerAddress)
-	if err = di.BrokerConnection.Open(); err != nil {
+	if di.BrokerConnection, err = nats.OpenConnection(di.NetworkDefinition.BrokerAddress); err != nil {
 		return err
 	}
 

@@ -33,12 +33,7 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 		ID:     ID,
 		Signer: signer,
 		peerConnectionFactory: func(peerContact nats_discovery.ContactNATSV1) (nats.Connection, error) {
-			connection, err := nats.NewConnection(peerContact.BrokerAddresses...)
-			if err != nil {
-				return nil, err
-			}
-
-			return connection, connection.Open()
+			return nats.OpenConnection(peerContact.BrokerAddresses...)
 		},
 	}
 }
@@ -60,7 +55,7 @@ func (e *dialogEstablisher) EstablishDialog(
 	}
 
 	peerConnection, err := e.peerConnectionFactory(peerContactNats)
-	if err := peerConnection.Open(); err != nil {
+	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
 	}
 	peerCodec := e.newCodecForPeer(peerID)

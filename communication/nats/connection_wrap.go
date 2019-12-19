@@ -56,19 +56,29 @@ func ParseServerURI(uri string) (*url.URL, error) {
 
 // NewConnection create new ConnectionWrap to given servers
 func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
-	serverURLs := make([]string, len(serverURIs))
+	connection := &ConnectionWrap{
+		servers: make([]string, len(serverURIs)),
+	}
+
 	for i, server := range serverURIs {
 		natsURL, err := ParseServerURI(server)
 		if err != nil {
 			return nil, err
 		}
-		serverURLs[i] = natsURL.String()
+		connection.servers[i] = natsURL.String()
 	}
 
-	return &ConnectionWrap{
-		servers:     serverURIs,
-		removeRules: func() {},
-	}, nil
+	return connection, nil
+}
+
+// NewConnection creates connection instances and connects instantly
+func OpenConnection(serverURIs ...string) (*ConnectionWrap, error) {
+	connection, err := NewConnection(serverURIs...)
+	if err != nil {
+		return connection, err
+	}
+
+	return connection, connection.Open()
 }
 
 // ConnectionWrap defines wrapped connection to NATS server(s)
@@ -104,7 +114,9 @@ func (c *ConnectionWrap) Close() {
 		c.Conn.Close()
 	}
 
-	c.removeRules()
+	if c.removeRules != nil {
+		c.removeRules()
+	}
 	c.removeRules = func() {}
 }
 
