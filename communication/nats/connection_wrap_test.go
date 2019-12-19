@@ -18,45 +18,55 @@
 package nats
 
 import (
+	"net/url"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSanitiseServer(t *testing.T) {
+func TestParseServerURI(t *testing.T) {
 	var tests = []struct {
-		uri  string
-		want string
+		uri         string
+		wantAddress *url.URL
+		wantError   error
 	}{
-		{"127.0.0.1", "nats://127.0.0.1:4222"},
-		{"nats://127.0.0.1", "nats://127.0.0.1:4222"},
-		{"127.0.0.1:4222", "nats://127.0.0.1:4222"},
-		{"nats://127.0.0.1:4222", "nats://127.0.0.1:4222"},
+		{"127.0.0.1", &url.URL{Scheme: "nats", Host: "127.0.0.1:4222"}, nil},
+		{"nats://127.0.0.1", &url.URL{Scheme: "nats", Host: "127.0.0.1:4222"}, nil},
+		{"127.0.0.1:4222", &url.URL{Scheme: "nats", Host: "127.0.0.1:4222"}, nil},
+		{"nats://127.0.0.1:4222", &url.URL{Scheme: "nats", Host: "127.0.0.1:4222"}, nil},
 
-		{"nats://127.0.0.1:4333", "nats://127.0.0.1:4333"},
-		{"nats://example.com:4333", "nats://example.com:4333"},
+		{"nats://127.0.0.1:4333", &url.URL{Scheme: "nats", Host: "127.0.0.1:4333"}, nil},
+		{"nats://example.com:4333", &url.URL{Scheme: "nats", Host: "example.com:4333"}, nil},
+
+		{"nats:// example.com", nil, errors.New("parse nats:// example.com: invalid character \" \" in host name")},
+		{"nats://example.com:a", nil, errors.New("parse nats://example.com:a: invalid port \":a\" after host")},
 	}
 
 	for _, tc := range tests {
-		address, err := SanitiseServer(tc.uri)
-		assert.NoError(t, err)
-		assert.Equal(t, tc.want, address.String())
+		address, err := ParseServerURI(tc.uri)
+		if tc.wantError != nil {
+			assert.EqualError(t, err, tc.wantError.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, tc.wantAddress, address)
 	}
 }
 
 func TestConnection_Close_NotOpened(t *testing.T) {
-	connection := NewConnection("nats://far-server:1234")
+	connection, _ := NewConnection("nats://far-server:1234")
 	connection.Close()
 }
 
 func TestConnection_Close_AfterFailedOpen(t *testing.T) {
-	connection := NewConnection("nats://far-server:1234")
+	connection, _ := NewConnection("nats://far-server:1234")
 
 	assert.EqualError(t, connection.Open(), "nats: no servers available for connection")
 	connection.Close()
 }
 
 func TestConnection_Servers(t *testing.T) {
-	connection := NewConnection("nats://far-server:1234")
+	connection, _ := NewConnection("nats://far-server:1234")
 	assert.Equal(t, []string{"nats://far-server:1234"}, connection.Servers())
 }

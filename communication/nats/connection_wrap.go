@@ -36,8 +36,8 @@ const (
 	BrokerTimeout       = 5 * time.Second
 )
 
-// SanitiseServer validates given NATS server address
-func SanitiseServer(uri string) (*url.URL, error) {
+// ParseServerURI validates given NATS server address
+func ParseServerURI(uri string) (*url.URL, error) {
 	// Add scheme first otherwise url.Parse() fails.
 	if !strings.HasPrefix(uri, "nats:") {
 		uri = fmt.Sprintf("nats://%s", uri)
@@ -54,12 +54,21 @@ func SanitiseServer(uri string) (*url.URL, error) {
 	return url, nil
 }
 
-// NewConnection create new ConnectionWrap to given Servers
-func NewConnection(servers ...string) *ConnectionWrap {
-	return &ConnectionWrap{
-		servers:     servers,
-		removeRules: func() {},
+// NewConnection create new ConnectionWrap to given servers
+func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
+	serverURLs := make([]string, len(serverURIs))
+	for i, server := range serverURIs {
+		natsURL, err := ParseServerURI(server)
+		if err != nil {
+			return nil, err
+		}
+		serverURLs[i] = natsURL.String()
 	}
+
+	return &ConnectionWrap{
+		servers:     serverURIs,
+		removeRules: func() {},
+	}, nil
 }
 
 // ConnectionWrap defines wrapped connection to NATS server(s)

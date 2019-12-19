@@ -50,7 +50,7 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 		},
 	}
 
-	connection := nats.StartConnectionMock()
+	connection := nats.NewConnectionMock()
 	connection.MockResponse(
 		"peer-topic.dialog-create",
 		[]byte(`{
@@ -94,7 +94,7 @@ func TestDialogEstablisher_EstablishDialogWhenResponseHijacked(t *testing.T) {
 		},
 	}
 
-	connection := nats.StartConnectionMock()
+	connection := nats.NewConnectionMock()
 	connection.MockResponse(
 		"peer-topic.dialog-create",
 		[]byte(`{
@@ -138,8 +138,8 @@ func mockEstablisher(ID identity.Identity, connection *nats.ConnectionMock, sign
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
-		peerConnectionFactory: func(_ nats_discovery.ContactNATSV1) nats.Connection {
-			return connection
+		peerConnectionFactory: func(_ nats_discovery.ContactNATSV1) (nats.Connection, error) {
+			return connection, connection.Open()
 		},
 	}
 }

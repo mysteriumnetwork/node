@@ -32,8 +32,13 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
-		peerConnectionFactory: func(peerContact nats_discovery.ContactNATSV1) nats.Connection {
-			return nats.NewConnection(peerContact.BrokerAddresses...)
+		peerConnectionFactory: func(peerContact nats_discovery.ContactNATSV1) (nats.Connection, error) {
+			connection, err := nats.NewConnection(peerContact.BrokerAddresses...)
+			if err != nil {
+				return nil, err
+			}
+
+			return connection, connection.Open()
 		},
 	}
 }
@@ -41,7 +46,7 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 type dialogEstablisher struct {
 	ID                    identity.Identity
 	Signer                identity.Signer
-	peerConnectionFactory func(nats_discovery.ContactNATSV1) nats.Connection
+	peerConnectionFactory func(nats_discovery.ContactNATSV1) (nats.Connection, error)
 }
 
 func (e *dialogEstablisher) EstablishDialog(
@@ -54,7 +59,7 @@ func (e *dialogEstablisher) EstablishDialog(
 		return nil, errors.Wrapf(err, "invalid contact: %#v", peerContact)
 	}
 
-	peerConnection := e.peerConnectionFactory(peerContactNats)
+	peerConnection, err := e.peerConnectionFactory(peerContactNats)
 	if err := peerConnection.Open(); err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
 	}

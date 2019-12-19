@@ -35,7 +35,7 @@ import (
 var _ communication.DialogWaiter = &dialogWaiter{}
 
 func TestDialogWaiter_Factory(t *testing.T) {
-	connection := nats.NewConnection("nats://far-server:4222")
+	connection := nats.StartConnectionMock()
 	signer := &identity.SignerFake{}
 
 	waiter := NewDialogWaiter(connection, "custom", signer)
