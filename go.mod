@@ -2,7 +2,7 @@ module github.com/mysteriumnetwork/node
 
 go 1.13
 
-replace golang.zx2c4.com/wireguard => github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23
+replace golang.zx2c4.com/wireguard => /Users/anjmao/s/wireguard-go
 
 require (
 	github.com/BurntSushi/toml v0.3.1
