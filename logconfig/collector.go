@@ -38,6 +38,9 @@ func NewCollector(options *LogOptions) *Collector {
 
 // Archive creates ZIP archive containing all node log files.
 func (c *Collector) Archive() (outputFilepath string, err error) {
+	if c.options.Filepath == "" {
+		return "", errors.New("file logging is disabled, can't retrieve logs")
+	}
 	filepaths, err := c.logFilepaths()
 	if err != nil {
 		return "", err
