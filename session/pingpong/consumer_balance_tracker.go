@@ -142,7 +142,10 @@ func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 	}
 	defer cancel()
 	select {
-	case ev := <-sub:
+	case ev, more := <-sub:
+		if !more {
+			return
+		}
 		cbt.increaseBalance(identity.FromAddress(id), ev.Value.Uint64())
 		log.Debug().Msgf("balance increased for %v by %v", id, ev.Value.Uint64())
 	case <-cbt.stop:
