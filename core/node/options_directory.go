@@ -54,16 +54,12 @@ func GetOptionsDirectory() *OptionsDirectory {
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
 func (options *OptionsDirectory) Check() error {
-	err := ensureOrCreateDir(options.Runtime)
-	if err != nil {
+	if err := ensureOrCreateDir(options.Runtime); err != nil {
 		return err
 	}
-
-	err = ensureOrCreateDir(options.Storage)
-	if err != nil {
+	if err := ensureOrCreateDir(options.Storage); err != nil {
 		return err
 	}
-
 	return ensureOrCreateDir(options.Data)
 }
 
