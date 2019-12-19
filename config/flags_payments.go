@@ -51,7 +51,7 @@ var (
 	// FlagPaymentsMystSCAddress represents the myst smart contract address
 	FlagPaymentsMystSCAddress = cli.StringFlag{
 		Name:  "payments.mystscaddress",
-		Value: "0xe67e41367c1e17ede951a528b2a8be35c288c787",
+		Value: "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
 		Usage: "The address of myst token smart contract",
 	}
 	// FlagPaymentsMaxRRecovery represents the max r recovery.
