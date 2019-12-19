@@ -73,6 +73,7 @@ func Configure(opts *LogOptions) {
 			logger := makeLogger(multiWriter)
 			setGlobalLogger(&logger)
 		}
+		rollingWriter.cleanObsoleteLogs()
 	}
 	log.Logger = log.Logger.Level(opts.LogLevel)
 }
