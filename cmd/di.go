@@ -39,7 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery"
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
 	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
-	discovery_failover "github.com/mysteriumnetwork/node/core/discovery/failover"
+	discovery_composite "github.com/mysteriumnetwork/node/core/discovery/composite"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -727,19 +727,20 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
-	var registry discovery.ProposalRegistry
-	switch options.Type {
-	case node.DiscoveryTypeAPI:
-		registry = discovery_api.NewRegistry(di.MysteriumAPI)
-	case node.DiscoveryTypeBroker:
-		registry = discovery_broker.NewRegistry(di.BrokerConnection)
-	case node.DiscoveryTypeFailover:
-		registry = discovery_failover.NewRegistry(
-			discovery_api.NewRegistry(di.MysteriumAPI),
-			discovery_broker.NewRegistry(di.BrokerConnection),
-		)
-	default:
-		return errors.Errorf("unknown discovery provider: %s", options.Type)
+	registry := discovery_composite.NewRegistry()
+	for _, discoveryType := range options.Types {
+		switch discoveryType {
+		case node.DiscoveryTypeAPI:
+			registry.AddRegistry(
+				discovery_api.NewRegistry(di.MysteriumAPI),
+			)
+		case node.DiscoveryTypeBroker:
+			registry.AddRegistry(
+				discovery_broker.NewRegistry(di.BrokerConnection),
+			)
+		default:
+			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
+		}
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {

@@ -31,19 +31,10 @@ var (
 	// Some of the flags are location in separate source files: flags_*.go
 
 	// FlagDiscoveryType proposal discovery adapter.
-	FlagDiscoveryType = cli.StringFlag{
+	FlagDiscoveryType = cli.StringSliceFlag{
 		Name:  "discovery.type",
-		Usage: "Proposal discovery adapter. Options: { api, broker, failover }",
-		Value: "failover",
-	}
-	// FlagDiscoveryAddress proposal discovery URL.
-	FlagDiscoveryAddress = cli.StringFlag{
-		Name: "discovery.address",
-		Usage: fmt.Sprintf(
-			"Address of specific discovery adapter given in '--%s'",
-			FlagDiscoveryType.Name,
-		),
-		Value: FlagAPIAddress.Value,
+		Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
+		Value: &cli.StringSlice{"api", "broker"},
 	}
 	// FlagBindAddress IP address to bind to.
 	FlagBindAddress = cli.StringFlag{
@@ -172,7 +163,6 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 
 	*flags = append(*flags,
 		FlagBindAddress,
-		FlagDiscoveryAddress,
 		FlagDiscoveryType,
 		FlagFeedbackURL,
 		FlagFirewallKillSwitch,
@@ -206,8 +196,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsPayments(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
-	Current.ParseStringFlag(ctx, FlagDiscoveryAddress)
-	Current.ParseStringFlag(ctx, FlagDiscoveryType)
+	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)

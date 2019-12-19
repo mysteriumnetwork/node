@@ -25,13 +25,11 @@ const (
 	DiscoveryTypeAPI = DiscoveryType("api")
 	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
 	DiscoveryTypeBroker = DiscoveryType("broker")
-	// DiscoveryTypeFailover defines type which discovers proposals through all possible discoveries
-	DiscoveryTypeFailover = DiscoveryType("failover")
 )
 
 // OptionsDiscovery describes possible parameters of discovery configuration
 type OptionsDiscovery struct {
-	Type                   DiscoveryType
+	Types                  []DiscoveryType
 	Address                string
 	ProposalFetcherEnabled bool
 }
