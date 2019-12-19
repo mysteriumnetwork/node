@@ -18,8 +18,12 @@
 package wireguard
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/mysteriumnetwork/node/market"
@@ -61,32 +65,12 @@ func (method Payment) GetPrice() money.Money {
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
 	Start(config *ServiceConfig) error
-	AddPeer(publicKey string, endpoint *net.UDPAddr, allowedIPs ...string) error
-	RemovePeer(publicKey string) error
-	PeerStats() (Stats, error)
+	AddPeer(iface string, peer AddPeerOptions) error
+	PeerStats() (*Stats, error)
 	ConfigureRoutes(ip net.IP) error
 	Config() (ServiceConfig, error)
 	InterfaceName() string
 	Stop() error
-}
-
-// DeviceConfig describes wireguard device configuration.
-type DeviceConfig interface {
-	PrivateKey() string
-	ListenPort() int
-}
-
-// PeerInfo represents wireguard peer information.
-type PeerInfo interface {
-	Endpoint() *net.UDPAddr
-	PublicKey() string
-}
-
-// Stats represents wireguard peer statistics information.
-type Stats struct {
-	BytesSent     uint64
-	BytesReceived uint64
-	LastHandshake time.Time
 }
 
 // ConsumerConfig is used for sending the public key from consumer to provider
@@ -180,4 +164,83 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	s.Consumer.ConnectDelay = config.Consumer.ConnectDelay
 
 	return nil
+}
+
+// DeviceConfig describes wireguard device configuration.
+type DeviceConfig struct {
+	PrivateKey string
+	ListenPort int
+}
+
+// Encode encodes device config into string representation which is used for
+// userspace and kernel space wireguard configuration.
+func (dc *DeviceConfig) Encode() string {
+	var res strings.Builder
+	keyBytes, err := base64.StdEncoding.DecodeString(dc.PrivateKey)
+	if err != nil {
+		return ""
+	}
+	hexKey := hex.EncodeToString(keyBytes)
+
+	res.WriteString(fmt.Sprintf("private_key=%s\n", hexKey))
+	res.WriteString(fmt.Sprintf("listen_port=%d\n", dc.ListenPort))
+	return res.String()
+}
+
+// AddPeerOptions represents wireguard new peer options.
+type AddPeerOptions struct {
+	Endpoint  *net.UDPAddr
+	PublicKey string
+}
+
+// Peer represents wireguard peer.
+type Peer struct {
+	PublicKey       string
+	Endpoint        *net.UDPAddr
+	AllowedIPs      []string
+	KeepAlivePeriod int
+}
+
+// Encode encodes device peer config into string representation which is used for
+// userspace and kernel space wireguard configuration.
+func (p *Peer) Encode() string {
+	var res strings.Builder
+
+	keyBytes, err := base64.StdEncoding.DecodeString(p.PublicKey)
+	if err != nil {
+		return ""
+	}
+	hexKey := hex.EncodeToString(keyBytes)
+	res.WriteString(fmt.Sprintf("public_key=%s\n", hexKey))
+	res.WriteString(fmt.Sprintf("persistent_keepalive_interval=%d\n", p.KeepAlivePeriod))
+	if p.Endpoint != nil {
+		res.WriteString(fmt.Sprintf("endpoint=%s\n", p.Endpoint.String()))
+	}
+	if len(p.AllowedIPs) > 0 {
+		for _, ip := range p.AllowedIPs {
+			res.WriteString(fmt.Sprintf("allowed_ip=%s\n", ip))
+		}
+	}
+	return res.String()
+}
+
+// Stats represents wireguard peer statistics information.
+type Stats struct {
+	BytesSent     uint64
+	BytesReceived uint64
+	LastHandshake time.Time
+}
+
+// ParseDevicePeerStats parses current active consumer stats.
+func ParseDevicePeerStats(d *UserspaceDevice) (*Stats, error) {
+	if len(d.Peers) != 1 {
+		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
+	}
+
+	p := d.Peers[0]
+	return &Stats{
+		BytesSent:     uint64(p.TransmitBytes),
+		BytesReceived: uint64(p.ReceiveBytes),
+		LastHandshake: p.LastHandshakeTime,
+	}, nil
 }

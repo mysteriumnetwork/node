@@ -438,8 +438,6 @@ github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2 h1:+MzoNo
 github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2/go.mod h1:QI+154TA1KKdrSYAWpr50FP6AzHsbT3wJvFD5kSEQVE=
 github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db h1:OfCcf9GtFBAhTmet4yTnuF0ktdFBmPMq+kbgSUEEQHo=
 github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db/go.mod h1:khz9e+0ipI8uVAEBhTdSrvo5ByYcdkWtioqkj14Pf7Q=
-github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23 h1:fJGV0dFrt4+7d3y4e50xoRVOuZygnxkUhBeMXAfBlkI=
-github.com/mysteriumnetwork/wireguard-go v0.0.0-20191114114228-1a3c4386eb23/go.mod h1:P2HsVp8SKwZEufsnezXZA4GRX/T49/HlU7DGuelXsU4=
 github.com/nats-io/gnatsd v1.4.1 h1:RconcfDeWpKCD6QIIwiVFcvForlXpWeJP7i5/lDLy44=
 github.com/nats-io/gnatsd v1.4.1/go.mod h1:nqco77VO78hLCJpIcVfygDP2rPGfsEHkGTUk94uh5DQ=
 github.com/nats-io/go-nats v1.4.0 h1:HorYtzWLSxkmcEzAFmY6vJ20lFfeAPbrnkoAYgk8GSg=
@@ -751,6 +749,8 @@ golang.org/x/tools v0.0.0-20190911022129-16c5e0f7d110/go.mod h1:b+2E5dAYhXwXZwtn
 golang.org/x/tools v0.0.0-20190916130336-e45ffcd953cc h1:+GB9/q0gCzmtaIl6WdoJFMS3lPwrR6rpcMyY6jfQHAw=
 golang.org/x/tools v0.0.0-20190916130336-e45ffcd953cc/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+golang.zx2c4.com/wireguard v0.0.20191012 h1:sdX+y3hrHkW8KJkjY7ZgzpT5Tqo8XnBkH55U1klphko=
+golang.zx2c4.com/wireguard v0.0.20191012/go.mod h1:P2HsVp8SKwZEufsnezXZA4GRX/T49/HlU7DGuelXsU4=
 golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814 h1:uNqb91RyXmeqAhh0vWc9583TQ0OaT3dvPxGxd3z/8iU=
 golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814/go.mod h1:eJQAcrbllkYZEGZuBNQx0NsUz9y7j01OG3bgxUev834=
 google.golang.org/api v0.4.0/go.mod h1:8k5glujaEP+g9n7WNsDg8QP6cUVNI86fCNMcbazEtwE=

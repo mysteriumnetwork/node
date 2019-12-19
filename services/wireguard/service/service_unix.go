@@ -85,7 +85,8 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
-	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
+	// TODO(anjmao): Check if peer info is correct here
+	if err := connectionEndpoint.AddPeer(connectionEndpoint.InterfaceName(), wg.AddPeerOptions{PublicKey: key.PublicKey}); err != nil {
 		return nil, err
 	}
 

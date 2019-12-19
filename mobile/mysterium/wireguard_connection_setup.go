@@ -18,9 +18,10 @@
 package mysterium
 
 import (
-	"encoding/base64"
+	"bufio"
 	"encoding/json"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,7 +65,7 @@ func (wcf *WireguardConnectionFactory) Create(stateChannel connection.StateChann
 		return nil, err
 	}
 
-	deviceFactory := func(options connection.ConnectOptions) (*device.DeviceApi, error) {
+	deviceFactory := func(options connection.ConnectOptions) (*device.Device, error) {
 		var config wireguard.ServiceConfig
 		err := json.Unmarshal(options.SessionConfig, &config)
 		if err != nil {
@@ -79,19 +80,19 @@ func (wcf *WireguardConnectionFactory) Create(stateChannel connection.StateChann
 		wcf.tunnelSetup.AddDNS("8.8.8.8")
 
 		//TODO this heavy linfting might go to doInit
-		tun, err := newTunnDevice(wcf.tunnelSetup, &config)
+		tunDevice, err := newTunnDevice(wcf.tunnelSetup, &config)
 		if err != nil {
 			return nil, err
 		}
 
-		devApi := device.UserspaceDeviceApi(tun)
+		devApi := device.NewDevice(tunDevice, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
 		err = setupWireguardDevice(devApi, &config)
 		if err != nil {
 			devApi.Close()
 			return nil, err
 		}
-		devApi.Boot()
-		socket, err := devApi.GetNetworkSocket()
+		devApi.Up()
+		socket, err := peekLookAtSocketFd4(devApi)
 		if err != nil {
 			devApi.Close()
 			return nil, err
@@ -114,55 +115,29 @@ func (wcf *WireguardConnectionFactory) Create(stateChannel connection.StateChann
 	}, nil
 }
 
-type deviceFactory func(options connection.ConnectOptions) (*device.DeviceApi, error)
+type deviceFactory func(options connection.ConnectOptions) (*device.Device, error)
 
-func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceConfig) error {
-	err := devApi.SetListeningPort(0) //random port
-	if err != nil {
+func setupWireguardDevice(devApi *device.Device, config *wireguard.ServiceConfig) error {
+	deviceConfig := wireguard.DeviceConfig{
+		PrivateKey: config.Consumer.PrivateKey,
+		ListenPort: 0,
+	}
+
+	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(deviceConfig.Encode()))); err != nil {
 		return err
 	}
 
-	privKeyArr, err := base64stringTo32ByteArray(config.Consumer.PrivateKey)
-	if err != nil {
-		return err
-	}
-	err = devApi.SetPrivateKey(device.NoisePrivateKey(privKeyArr))
-	if err != nil {
-		return err
-	}
-
-	peerPubKeyArr, err := base64stringTo32ByteArray(config.Provider.PublicKey)
-	if err != nil {
-		return err
-	}
-
-	ep := config.Provider.Endpoint.String()
-	endpoint, err := device.CreateEndpoint(ep)
-	if err != nil {
-		return err
-	}
-
-	err = devApi.AddPeer(device.ExternalPeer{
-		PublicKey:       device.NoisePublicKey(peerPubKeyArr),
-		RemoteEndpoint:  endpoint,
+	peer := wireguard.Peer{
+		PublicKey:       config.Provider.PublicKey,
+		Endpoint:        &config.Provider.Endpoint,
 		KeepAlivePeriod: 20,
 		//all traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
 		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
-	})
-	return err
-}
-
-func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
-	decoded, err := base64.StdEncoding.DecodeString(s)
-	if len(decoded) != 32 {
-		err = errors.New("unexpected key size")
 	}
-	if err != nil {
-		return
+	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(peer.Encode()))); err != nil {
+		return err
 	}
-
-	copy(res[:], decoded)
-	return
+	return nil
 }
 
 func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.Device, error) {
@@ -200,7 +175,7 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 type wireguardConnection struct {
 	privKey           string
 	deviceFactory     deviceFactory
-	device            *device.DeviceApi
+	device            *device.Device
 	stopChannel       chan struct{}
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
@@ -258,27 +233,28 @@ func (wg *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 var _ connection.Connection = &wireguardConnection{}
 
 func (wg *wireguardConnection) updateStatistics() {
-	var err error
-	defer func() {
-		if err != nil {
-			log.Error().Err(err).Msg("Error updating statistics")
-		}
-	}()
-
-	peers, err := wg.device.Peers()
+	stats, err := wg.getDeviceStats()
 	if err != nil {
+		log.Error().Err(err).Msg("Error updating statistics")
 		return
 	}
-	if len(peers) != 1 {
-		err = errors.New("exactly 1 peer expected")
-		return
-	}
-	peerStatistics := peers[0].Stats
 
 	wg.statisticsChannel <- consumer.SessionStatistics{
-		BytesSent:     peerStatistics.Sent,
-		BytesReceived: peerStatistics.Received,
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
 	}
+}
+
+func (wg *wireguardConnection) getDeviceStats() (*wireguard.Stats, error) {
+	deviceState, err := wireguard.ParseUserspaceDevice(wg.device.IpcGetOperation)
+	if err != nil {
+		return nil, err
+	}
+	stats, err := wireguard.ParseDevicePeerStats(deviceState)
+	if err != nil {
+		return nil, err
+	}
+	return stats, nil
 }
 
 func (wg *wireguardConnection) doCleanup() {
@@ -308,17 +284,13 @@ func (wg *wireguardConnection) waitHandshake() error {
 	for {
 		select {
 		case <-time.After(20 * time.Millisecond):
-			peers, err := wg.device.Peers()
+			stats, err := wg.getDeviceStats()
 			if err != nil {
-				return errors.Wrap(err, "failed while waiting for a peer handshake")
+				return err
 			}
-			if len(peers) != 1 {
-				return errors.Wrap(errors.New("exactly 1 peer expected"), "failed while waiting for a peer handshake")
-			}
-			if peers[0].LastHanshake != 0 {
+			if !stats.LastHandshake.IsZero() {
 				return nil
 			}
-
 		case <-wg.stopChannel:
 			wg.doCleanup()
 			return errors.New("stop received")
