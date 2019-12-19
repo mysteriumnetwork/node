@@ -504,9 +504,9 @@ func (it *InvoiceTracker) initiateRRecovery() error {
 		if err != nil {
 			return errors.Wrap(err, "could not get R")
 		}
-		err = it.accountantCaller.RevealR(r, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
+		err = it.accountantCaller.RevealR(r, it.providerID.Address, i)
 		if err != nil {
-			log.Warn().Err(err).Msgf("revealing %v", it.lastInvoice.invoice.AgreementID)
+			log.Warn().Err(err).Msgf("revealing %v", i)
 		} else {
 			log.Info().Msg("r recovered")
 			return nil
