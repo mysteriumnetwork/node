@@ -22,14 +22,11 @@ import (
 	"io"
 	stdlog "log"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/arthurkiller/rollingwriter"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -68,15 +65,14 @@ func Configure(opts *LogOptions) {
 	log.Info().Msgf("Log level: %s", opts.LogLevel)
 	if opts.Filepath != "" {
 		log.Info().Msgf("Log file path: %s", opts.Filepath)
-		fileWriter, err := fileWriter(opts)
+		rollingWriter, err := newRollingWriter(opts)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to configure file logger")
 		} else {
-			multiWriter := io.MultiWriter(consoleWriter(), fileWriter)
+			multiWriter := io.MultiWriter(consoleWriter(), rollingWriter.zeroLogger())
 			logger := makeLogger(multiWriter)
 			setGlobalLogger(&logger)
 		}
-
 	}
 	log.Logger = log.Logger.Level(opts.LogLevel)
 }
@@ -86,26 +82,6 @@ func consoleWriter() io.Writer {
 		Out:        os.Stderr,
 		TimeFormat: timestampFmt,
 	}
-}
-
-func fileWriter(opts *LogOptions) (io.Writer, error) {
-	cfg := &rollingwriter.Config{
-		TimeTagFormat:      "2006.01.02",
-		LogPath:            path.Dir(opts.Filepath),
-		FileName:           path.Base(opts.Filepath),
-		RollingPolicy:      rollingwriter.TimeRolling,
-		RollingTimePattern: "0 0 0 * * *",
-		WriterMode:         "lock",
-	}
-	fileWriter, err := rollingwriter.NewWriterFromConfig(cfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to configure file logger")
-	}
-	return zerolog.ConsoleWriter{
-		Out:        fileWriter,
-		NoColor:    true,
-		TimeFormat: timestampFmt,
-	}, nil
 }
 
 func makeLogger(w io.Writer) zerolog.Logger {
