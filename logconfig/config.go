@@ -67,13 +67,15 @@ func Configure(opts *LogOptions) {
 		log.Info().Msgf("Log file path: %s", opts.Filepath)
 		rollingWriter, err := newRollingWriter(opts)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to configure file logger")
+			log.Err(err).Msg("Failed to configure file logger")
 		} else {
 			multiWriter := io.MultiWriter(consoleWriter(), rollingWriter.zeroLogger())
 			logger := makeLogger(multiWriter)
 			setGlobalLogger(&logger)
 		}
-		rollingWriter.cleanObsoleteLogs()
+		if err := rollingWriter.cleanObsoleteLogs(); err != nil {
+			log.Err(err).Msg("Failed to cleanup obsolete logs")
+		}
 	}
 	log.Logger = log.Logger.Level(opts.LogLevel)
 }
