@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -50,7 +49,7 @@ var (
 
 // RegisterFlagsDirectory function register directory flags to flag list
 func RegisterFlagsDirectory(flags *[]cli.Flag) error {
-	userHomeDir, err := homedir.Dir()
+	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}

@@ -20,6 +20,7 @@ package storage
 import (
 	"context"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,7 +29,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
 	"github.com/magefile/mage/sh"
-	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
@@ -47,14 +47,15 @@ const cacheDirPermissions = 0700
 
 func init() {
 	var err error
-	cacheDir, err = homedir.Expand("~/.myst-build-cache")
+	home, err := os.UserHomeDir()
 	if err != nil {
-		_, _ = os.Stderr.WriteString("failed to determine cache directory")
+		log.Err(err).Msg("Failed to determine home directory")
 		os.Exit(1)
 	}
+	cacheDir := path.Join(home, ".myst-build-cache")
 	err = os.Mkdir(cacheDir, cacheDirPermissions)
 	if err != nil && !os.IsExist(err) {
-		_, _ = os.Stderr.WriteString("failed to create storage cache directory")
+		log.Err(err).Msg("Failed to create storage cache directory")
 		os.Exit(1)
 	}
 }
