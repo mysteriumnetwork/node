@@ -62,18 +62,17 @@ type mockDialogWaiter struct {
 	contact  market.Contact
 	stopErr  error
 	serveErr error
-	startErr error
 }
 
-func (mdw *mockDialogWaiter) Start() (market.Contact, error) {
-	return mdw.contact, mdw.startErr
+func (mdw *mockDialogWaiter) GetContact() market.Contact {
+	return mdw.contact
 }
 
 func (mdw *mockDialogWaiter) Stop() error {
 	return mdw.stopErr
 }
 
-func (mdw *mockDialogWaiter) ServeDialogs(_ communication.DialogHandler) error {
+func (mdw *mockDialogWaiter) Start(_ communication.DialogHandler) error {
 	return mdw.serveErr
 }
 

@@ -44,14 +44,11 @@ func TestDialogWaiter_Factory(t *testing.T) {
 	assert.Equal(t, signer, waiter.signer)
 }
 
-func TestDialogWaiter_Start(t *testing.T) {
+func TestDialogWaiter_GetContact(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	waiter := NewDialogWaiter(connection, "123456", &identity.SignerFake{})
-	contact, err := waiter.Start()
-
-	assert.NoError(t, err)
 	assert.Equal(
 		t,
 		market.Contact{
@@ -61,11 +58,11 @@ func TestDialogWaiter_Start(t *testing.T) {
 				BrokerAddresses: []string{"mockhost"},
 			},
 		},
-		contact,
+		waiter.GetContact(),
 	)
 }
 
-func TestDialogWaiter_ServeDialogs(t *testing.T) {
+func TestDialogWaiter_Start(t *testing.T) {
 	peerID := identity.FromAddress("0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea")
 
 	connection := nats.StartConnectionMock()
@@ -100,7 +97,7 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 	)
 }
 
-func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
+func TestDialogWaiter_StartTopicUUID(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
@@ -112,7 +109,7 @@ func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
 
 	waiter := NewDialogWaiter(connection, "my-topic", signer)
 
-	err := waiter.ServeDialogs(handler)
+	err := waiter.Start(handler)
 	assert.NoError(t, err)
 
 	go func() {
@@ -139,7 +136,7 @@ func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
+func TestDialogWaiter_StartRejectInvalidSignature(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
@@ -156,7 +153,7 @@ func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
 	assert.Nil(t, dialogInstance)
 }
 
-func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
+func TestDialogWaiter_StartRejectConsumersUsingValidator(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
@@ -175,7 +172,7 @@ func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
 		},
 	)
 
-	err := waiter.ServeDialogs(mockeDialogHandler)
+	err := waiter.Start(mockeDialogHandler)
 	assert.NoError(t, err)
 
 	msg, err := connection.Request("test-topic.dialog-create", []byte(`{
@@ -207,7 +204,7 @@ func dialogServe(connection *nats.ConnectionMock, signer identity.Signer) (waite
 		dialogReceived: make(chan communication.Dialog),
 	}
 
-	err := waiter.ServeDialogs(handler)
+	err := waiter.Start(handler)
 	if err != nil {
 		panic(err)
 	}

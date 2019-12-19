@@ -116,23 +116,17 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	if err != nil {
 		return id, err
 	}
-	providerContact, err := dialogWaiter.Start()
-	if err != nil {
-		return id, err
-	}
-	proposal.SetProviderContact(providerID, providerContact)
+	proposal.SetProviderContact(providerID, dialogWaiter.GetContact())
 
 	id, err = generateID()
 	if err != nil {
 		return id, err
 	}
-
 	dialogHandler, err := manager.dialogHandlerFactory(proposal, service, string(id))
 	if err != nil {
 		return id, err
 	}
-
-	if err = dialogWaiter.ServeDialogs(dialogHandler); err != nil {
+	if err = dialogWaiter.Start(dialogHandler); err != nil {
 		return id, err
 	}
 

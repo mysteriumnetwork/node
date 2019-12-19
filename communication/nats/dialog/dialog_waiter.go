@@ -58,8 +58,8 @@ type dialogWaiter struct {
 	sync.RWMutex
 }
 
-// Start registers dialogWaiter with broker (NATS) service
-func (waiter *dialogWaiter) Start() (market.Contact, error) {
+// GetContact registers dialogWaiter with broker (NATS) service
+func (waiter *dialogWaiter) GetContact() market.Contact {
 	contact := market.Contact{
 		Type: nats_discovery.TypeContactNATSV1,
 		Definition: nats_discovery.ContactNATSV1{
@@ -69,7 +69,7 @@ func (waiter *dialogWaiter) Start() (market.Contact, error) {
 	}
 	log.Info().Msgf("Waiting for dialogs on: %v", contact)
 
-	return contact, nil
+	return contact
 }
 
 // Stop disconnects dialogWaiter from broker (NATS) service
@@ -83,8 +83,8 @@ func (waiter *dialogWaiter) Stop() error {
 	return nil
 }
 
-// ServeDialogs starts accepting dialogs initiated by peers
-func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
+// Start starts accepting dialogs initiated by peers
+func (waiter *dialogWaiter) Start(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		err := waiter.validateDialogRequest(request)
 		if err != nil {
