@@ -19,11 +19,11 @@ package mysterium
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -96,11 +96,11 @@ func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *Mobil
 
 	var dataDir, currentDir string
 	if appPath == "" {
-		currentDir, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			panic(err)
 		}
-		dataDir = filepath.Join(currentDir, ".mysterium")
+		dataDir = filepath.Join(home, ".mysterium")
 	} else {
 		dataDir = filepath.Join(appPath, ".mysterium")
 		currentDir = appPath
