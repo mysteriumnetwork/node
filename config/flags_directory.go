@@ -38,7 +38,7 @@ var (
 	// FlagLogDir is a directory for storing log files.
 	FlagLogDir = cli.StringFlag{
 		Name:  "log-dir",
-		Usage: "Log directory for storing log files",
+		Usage: "Log directory for storing log files. data-dir/logs is used if not specified.",
 	}
 	// FlagRuntimeDir runtime writable directory for temporary files.
 	FlagRuntimeDir = cli.StringFlag{
@@ -61,7 +61,7 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 
 	FlagConfigDir.Value = filepath.Join(currentDir, "config")
 	FlagDataDir.Value = filepath.Join(userHomeDir, ".mysterium")
-	FlagLogDir.Value = FlagDataDir.Value
+	FlagLogDir.Value = filepath.Join(FlagDataDir.Value, "logs")
 	FlagRuntimeDir.Value = currentDir
 
 	*flags = append(*flags,
