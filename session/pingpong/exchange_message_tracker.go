@@ -75,6 +75,7 @@ type ExchangeMessageTracker struct {
 	identity                  identity.Identity
 	peer                      identity.Identity
 	channelAddress            identity.Identity
+	receivedFirst             bool
 
 	consumerInvoiceStorage   consumerInvoiceStorage
 	consumerTotalsStorage    consumerTotalsStorage
@@ -189,7 +190,12 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 
 	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
 	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
+
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
+	if !emt.receivedFirst {
+		upperBound = uint64(math.Trunc(float64(shouldBe) * 1.35))
+	}
+
 	log.Debug().Msgf("Upper bound %v", upperBound)
 
 	if invoice.AgreementTotal > upperBound {
@@ -197,6 +203,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrProviderOvercharge
 	}
 
+	emt.receivedFirst = true
 	return nil
 }
 
