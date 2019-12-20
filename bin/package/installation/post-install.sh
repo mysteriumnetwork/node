@@ -91,5 +91,9 @@ if [[ ! -f $DAEMON_DEFAULT ]]; then
     cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
 fi
 
+# Cleanup old log files (before log file rolling has been fixed)
+printf "Cleaning legacy log files...\n" \
+    && rm -rf /var/lib/mysterium-node/.mysterium.log*
+
 printf "\nInstallation successfully finished.\n" \
     && printf "Usage: service mysterium-node restart\n"
