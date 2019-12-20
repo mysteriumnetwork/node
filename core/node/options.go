@@ -18,6 +18,8 @@
 package node
 
 import (
+	"path"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
@@ -155,7 +157,10 @@ func GetOptions() *Options {
 
 // GetLogOptions retrieves logger options from the app configuration.
 func GetLogOptions() *logconfig.LogOptions {
-	logDir := config.GetString(config.FlagLogDir)
+	filepath := ""
+	if logDir := config.GetString(config.FlagLogDir); logDir != "" {
+		filepath = path.Join(logDir, "mysterium-node")
+	}
 	level, err := zerolog.ParseLevel(config.GetString(config.FlagLogLevel))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse logging level")
@@ -164,7 +169,7 @@ func GetLogOptions() *logconfig.LogOptions {
 	return &logconfig.LogOptions{
 		LogLevel: level,
 		LogHTTP:  config.GetBool(config.FlagLogHTTP),
-		Filepath: logDir,
+		Filepath: filepath,
 	}
 }
 

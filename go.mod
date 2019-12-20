@@ -8,9 +8,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/Sereal/Sereal v0.0.0-20190618215532-0b8ac451a863 // indirect
-	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/aristanetworks/goarista v0.0.0-20191106175434-873d404c7f40 // indirect
-	github.com/arthurkiller/rollingwriter v1.1.1
+	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm v2.1.2+incompatible
 	github.com/aws/aws-sdk-go-v2 v0.15.0
@@ -38,7 +36,6 @@ require (
 	github.com/magefile/mage v1.9.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.22
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20190917134659-78a29f230467
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191125133122-c2bab4ca5537
