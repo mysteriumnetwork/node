@@ -85,5 +85,5 @@ func Test_ServiceProposal_UnserializePerTimePaymentMethod(t *testing.T) {
 	err := json.Unmarshal(jsonData, &actual)
 
 	assert.Nil(t, err)
-	assert.Exactly(t, dto_openvpn.PaymentPerTime{}, actual.PaymentMethod)
+	assert.Exactly(t, dto_openvpn.PaymentRate{}, actual.PaymentMethod)
 }

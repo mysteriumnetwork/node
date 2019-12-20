@@ -24,15 +24,16 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 
-	"github.com/mysteriumnetwork/node/core/transactor"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
-	FetchFees() (transactor.Fees, error)
+	FetchRegistrationFees() (registry.FeesResponse, error)
+	FetchSettleFees() (registry.FeesResponse, error)
 	TopUp(identity string) error
-	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
+	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
 }
 
 type transactorEndpoint struct {
@@ -44,6 +45,13 @@ func NewTransactorEndpoint(transactor Transactor) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor: transactor,
 	}
+}
+
+// Fees represents the transactor fees
+// swagger:model Fees
+type Fees struct {
+	Registration uint64 `json:"registration"`
+	Settlement   uint64 `json:"settlement"`
 }
 
 // swagger:operation GET /transactor/fees Fees
@@ -60,12 +68,23 @@ func NewTransactorEndpoint(transactor Transactor) *transactorEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	fees, err := te.transactor.FetchFees()
+	registrationFees, err := te.transactor.FetchRegistrationFees()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	utils.WriteAsJSON(fees, resp)
+	settlementFees, err := te.transactor.FetchSettleFees()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	f := Fees{
+		Registration: registrationFees.Fee,
+		Settlement:   settlementFees.Fee,
+	}
+
+	utils.WriteAsJSON(f, resp)
 }
 
 // swagger:operation POST /transactor/topup ErrorMessageDTO
@@ -90,7 +109,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	topUpDTO := &transactor.TopUpRequest{}
+	topUpDTO := registry.TopUpRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
 	if err != nil {
@@ -136,7 +155,7 @@ func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Requ
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	identity := params.ByName("id")
 
-	regReqDTO := &transactor.IdentityRegistrationRequestDTO{}
+	regReqDTO := &registry.IdentityRegistrationRequestDTO{}
 
 	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
 	if err != nil {

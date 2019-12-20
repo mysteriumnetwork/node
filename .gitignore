@@ -7,5 +7,6 @@ e2e_tests.log
 tequilapi_spec.json
 /e2e/myst-provider/db
 tequilapi.json
+e2e/myst-provider/*.log.*
 mage_output_file.go
 coverage.txt

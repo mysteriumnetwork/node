@@ -27,32 +27,52 @@ import (
 
 const accountantPromiseBucketName = "accountant_promises"
 
-// AccountantPromiseStorage allows for storing of accountant promises
+// AccountantPromiseStorage allows for storing of accountant promises.
 type AccountantPromiseStorage struct {
 	lock sync.Mutex
 	bolt persistentStorage
 }
 
-// NewAccountantPromiseStorage returns a new instance of the accountant promise storage
+// NewAccountantPromiseStorage returns a new instance of the accountant promise storage.
 func NewAccountantPromiseStorage(bolt persistentStorage) *AccountantPromiseStorage {
 	return &AccountantPromiseStorage{
 		bolt: bolt,
 	}
 }
 
-// Store stores the given promise for the given accountant
-func (aps *AccountantPromiseStorage) Store(accountantID identity.Identity, promise crypto.Promise) error {
-	aps.lock.Lock()
-	defer aps.lock.Unlock()
-	return errors.Wrap(aps.bolt.SetValue(accountantPromiseBucketName, accountantID.Address, promise), "could not store accountant promise")
+// AccountantPromise represents a promise we store from the accountant
+type AccountantPromise struct {
+	Promise     crypto.Promise
+	R           string
+	Revealed    bool
+	AgreementID uint64
 }
 
-// Get fetches the promise for the given accountant
-func (aps *AccountantPromiseStorage) Get(accountantID identity.Identity) (crypto.Promise, error) {
+// Store stores the given promise for the given accountant.
+func (aps *AccountantPromiseStorage) Store(providerID, accountantID identity.Identity, promise AccountantPromise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
-	result := &crypto.Promise{}
-	err := aps.bolt.GetValue(accountantPromiseBucketName, accountantID.Address, result)
+
+	channel, err := crypto.GenerateProviderChannelID(providerID.Address, accountantID.Address)
+	if err != nil {
+		return errors.Wrap(err, "could not generate provider channel address")
+	}
+
+	return errors.Wrap(aps.bolt.SetValue(accountantPromiseBucketName, channel, promise), "could not store accountant promise")
+}
+
+// Get fetches the promise for the given accountant.
+func (aps *AccountantPromiseStorage) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
+	aps.lock.Lock()
+	defer aps.lock.Unlock()
+
+	channel, err := crypto.GenerateProviderChannelID(providerID.Address, accountantID.Address)
+	if err != nil {
+		return AccountantPromise{}, errors.Wrap(err, "could not generate provider channel address")
+	}
+
+	result := &AccountantPromise{}
+	err = aps.bolt.GetValue(accountantPromiseBucketName, channel, result)
 	if err != nil {
 		if err.Error() == errBoltNotFound {
 			err = ErrNotFound

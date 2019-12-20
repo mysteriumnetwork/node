@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -25,25 +26,34 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrNotFound represents an error that indicates that there's no such invoice
+// ErrNotFound represents an error that indicates that there's no such invoice.
 var ErrNotFound = errors.New("entry does not exist")
 
 type bucketName string
 
 const receivedInvoices bucketName = "received_invoices"
 const sentInvoices bucketName = "sent_invoices"
+const agreementIDCounter bucketName = "agreement_id_counter"
+const agreementRBucket bucketName = "agreement_r"
 
 type genericInvoiceStorage interface {
-	StoreInvoice(bucket string, identity identity.Identity, invoice crypto.Invoice) error
-	GetInvoice(bucket string, identity identity.Identity) (crypto.Invoice, error)
+	StoreInvoice(bucket string, key string, invoice crypto.Invoice) error
+	GetInvoice(bucket string, key string) (crypto.Invoice, error)
 }
 
-// ConsumerInvoiceStorage allows the consumer to store received invoices
+type providerSpecificInvoiceStorage interface {
+	genericInvoiceStorage
+	GetNewAgreementID(identity.Identity) (uint64, error)
+	StoreR(providerID identity.Identity, agreementID uint64, r string) error
+	GetR(providerID identity.Identity, agreementID uint64) (string, error)
+}
+
+// ConsumerInvoiceStorage allows the consumer to store received invoices.
 type ConsumerInvoiceStorage struct {
 	gis genericInvoiceStorage
 }
 
-// NewConsumerInvoiceStorage allows the consumer to store invoices
+// NewConsumerInvoiceStorage allows the consumer to store invoices.
 func NewConsumerInvoiceStorage(gis genericInvoiceStorage) *ConsumerInvoiceStorage {
 	return &ConsumerInvoiceStorage{
 		gis: gis,
@@ -51,35 +61,50 @@ func NewConsumerInvoiceStorage(gis genericInvoiceStorage) *ConsumerInvoiceStorag
 }
 
 // Store stores the given invoice
-func (cis *ConsumerInvoiceStorage) Store(providerIdentity identity.Identity, invoice crypto.Invoice) error {
-	return cis.gis.StoreInvoice(string(receivedInvoices), providerIdentity, invoice)
+func (cis *ConsumerInvoiceStorage) Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error {
+	return cis.gis.StoreInvoice(string(receivedInvoices), consumerIdentity.Address+providerIdentity.Address, invoice)
 }
 
 // Get returns the stored invoice
-func (cis *ConsumerInvoiceStorage) Get(providerIdentity identity.Identity) (crypto.Invoice, error) {
-	return cis.gis.GetInvoice(string(receivedInvoices), providerIdentity)
+func (cis *ConsumerInvoiceStorage) Get(consumerIdentity, providerIdentity identity.Identity) (crypto.Invoice, error) {
+	return cis.gis.GetInvoice(string(receivedInvoices), consumerIdentity.Address+providerIdentity.Address)
 }
 
-// ProviderInvoiceStorage allows the provider to store sent invoices
+// ProviderInvoiceStorage allows the provider to store sent invoices.
 type ProviderInvoiceStorage struct {
-	gis genericInvoiceStorage
+	gis providerSpecificInvoiceStorage
 }
 
-// NewProviderInvoiceStorage returns a new instance of provider invoice storage
-func NewProviderInvoiceStorage(gis genericInvoiceStorage) *ProviderInvoiceStorage {
+// NewProviderInvoiceStorage returns a new instance of provider invoice storage.
+func NewProviderInvoiceStorage(gis providerSpecificInvoiceStorage) *ProviderInvoiceStorage {
 	return &ProviderInvoiceStorage{
 		gis: gis,
 	}
 }
 
-// Store stores the given invoice
-func (pis *ProviderInvoiceStorage) Store(consumerIdentity identity.Identity, invoice crypto.Invoice) error {
-	return pis.gis.StoreInvoice(string(sentInvoices), consumerIdentity, invoice)
+// Store stores the given invoice.
+func (pis *ProviderInvoiceStorage) Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error {
+	return pis.gis.StoreInvoice(string(sentInvoices), providerIdentity.Address+consumerIdentity.Address, invoice)
 }
 
-// Get returns the stored invoice
-func (pis *ProviderInvoiceStorage) Get(consumerIdentity identity.Identity) (crypto.Invoice, error) {
-	return pis.gis.GetInvoice(string(sentInvoices), consumerIdentity)
+// Get returns the stored invoice.
+func (pis *ProviderInvoiceStorage) Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error) {
+	return pis.gis.GetInvoice(string(sentInvoices), providerIdentity.Address+consumerIdentity.Address)
+}
+
+// GetNewAgreementID returns a new agreement id for the provider.
+func (pis *ProviderInvoiceStorage) GetNewAgreementID(providerID identity.Identity) (uint64, error) {
+	return pis.gis.GetNewAgreementID(providerID)
+}
+
+// StoreR stores the given R.
+func (pis *ProviderInvoiceStorage) StoreR(providerID identity.Identity, agreementID uint64, r string) error {
+	return pis.gis.StoreR(providerID, agreementID, r)
+}
+
+// GetR gets the R for agreement.
+func (pis *ProviderInvoiceStorage) GetR(providerID identity.Identity, agreementID uint64) (string, error) {
+	return pis.gis.GetR(providerID, agreementID)
 }
 
 type persistentStorage interface {
@@ -87,7 +112,7 @@ type persistentStorage interface {
 	SetValue(bucket string, key interface{}, to interface{}) error
 }
 
-// InvoiceStorage allows to store promises
+// InvoiceStorage allows to store promises.
 type InvoiceStorage struct {
 	bolt persistentStorage
 	lock sync.Mutex
@@ -95,26 +120,73 @@ type InvoiceStorage struct {
 
 var errBoltNotFound = "not found"
 
-// NewInvoiceStorage creates a new instance of invoice storage
+// NewInvoiceStorage creates a new instance of invoice storage.
 func NewInvoiceStorage(bolt persistentStorage) *InvoiceStorage {
 	return &InvoiceStorage{
 		bolt: bolt,
 	}
 }
 
-// StoreInvoice stores the given invoice in the given bucket with the identity as key
-func (is *InvoiceStorage) StoreInvoice(bucket string, identity identity.Identity, invoice crypto.Invoice) error {
+// StoreInvoice stores the given invoice in the given bucket with the identity as key.
+func (is *InvoiceStorage) StoreInvoice(bucket string, key string, invoice crypto.Invoice) error {
 	is.lock.Lock()
 	defer is.lock.Unlock()
-	return errors.Wrap(is.bolt.SetValue(bucket, identity.Address, invoice), "could not save invoice")
+	return errors.Wrap(is.bolt.SetValue(bucket, key, invoice), "could not save invoice")
 }
 
-// GetInvoice gets the corresponding invoice from storage
-func (is *InvoiceStorage) GetInvoice(bucket string, identity identity.Identity) (crypto.Invoice, error) {
+// GetNewAgreementID generates a new agreement id.
+func (is *InvoiceStorage) GetNewAgreementID(providerID identity.Identity) (uint64, error) {
+	is.lock.Lock()
+	defer is.lock.Unlock()
+
+	var res uint64 = 1
+	err := is.bolt.GetValue(string(agreementIDCounter), providerID.Address, &res)
+	if err != nil {
+		if err.Error() != errBoltNotFound {
+			return res, errors.Wrap(err, "could not get agreement id")
+		}
+	}
+	err = is.bolt.SetValue(string(agreementIDCounter), providerID.Address, res+1)
+	if err != nil {
+		err = errors.Wrap(err, "could not set agreement id")
+	}
+	return res, err
+}
+
+func (is *InvoiceStorage) getRKey(providerID identity.Identity, agreementID uint64) string {
+	return fmt.Sprintf("%v_%v", providerID.Address, agreementID)
+}
+
+// StoreR stores the given R.
+func (is *InvoiceStorage) StoreR(providerID identity.Identity, agreementID uint64, r string) error {
+	is.lock.Lock()
+	defer is.lock.Unlock()
+	err := is.bolt.SetValue(string(agreementRBucket), is.getRKey(providerID, agreementID), r)
+	return errors.Wrap(err, "could not save R")
+}
+
+// GetR returns the saved R.
+func (is *InvoiceStorage) GetR(providerID identity.Identity, agreementID uint64) (string, error) {
+	is.lock.Lock()
+	defer is.lock.Unlock()
+	var r string
+	err := is.bolt.GetValue(string(agreementRBucket), is.getRKey(providerID, agreementID), &r)
+	if err != nil {
+		// wrap the error to an error we can check for
+		if err.Error() == errBoltNotFound {
+			return "", ErrNotFound
+		}
+		return r, errors.Wrap(err, "could not get r")
+	}
+	return r, nil
+}
+
+// GetInvoice gets the corresponding invoice from storage.
+func (is *InvoiceStorage) GetInvoice(bucket string, key string) (crypto.Invoice, error) {
 	is.lock.Lock()
 	defer is.lock.Unlock()
 	invoice := &crypto.Invoice{}
-	err := is.bolt.GetValue(bucket, identity.Address, invoice)
+	err := is.bolt.GetValue(bucket, key, invoice)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {

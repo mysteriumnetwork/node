@@ -69,7 +69,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	issuerID := consumer.peerID
 	if request.ConsumerInfo != nil {
 		issuerID = request.ConsumerInfo.IssuerID
-		if request.ConsumerInfo.PaymentVersion == PaymentVersionV2 {
+		if request.ConsumerInfo.PaymentVersion == PaymentVersionV3 {
 			indicateNewVersion = true
 		}
 	} else {
@@ -108,7 +108,7 @@ func responseWithSession(sessionInstance Session, config ServiceConfiguration, p
 
 	// let the consumer know we'll support the new payments
 	if indicateNewVersion {
-		pi.Supports = string(PaymentVersionV2)
+		pi.Supports = string(PaymentVersionV3)
 	}
 
 	return CreateResponse{

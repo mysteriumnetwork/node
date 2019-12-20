@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -50,12 +49,12 @@ import (
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
-	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/firewall/vnd"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -161,15 +160,22 @@ type Dependencies struct {
 
 	StateKeeper *state.Keeper
 
-	Authenticator    *auth.Authenticator
-	JWTAuthenticator *auth.JWTAuthenticator
-	UIServer         UIServer
-	SSEHandler       *sse.Handler
-	Transactor       *transactor.Transactor
-	TopUpper         *transactor.TopUpper
+	Authenticator     *auth.Authenticator
+	JWTAuthenticator  *auth.JWTAuthenticator
+	UIServer          UIServer
+	SSEHandler        *sse.Handler
+	Transactor        *registry.Transactor
+	BCHelper          *pingpong.BlockchainWithRetries
+	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
+
+	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
+	ConsumerInvoiceStorage   *pingpong.ConsumerInvoiceStorage
+	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
+	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
+	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
 }
 
 // Bootstrap initiates all container dependencies
@@ -195,15 +201,16 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
-		return err
-	}
-
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
 
 	di.bootstrapEventBus()
+
+	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
+		return err
+	}
+
 	di.bootstrapIdentityComponents(nodeOptions)
 
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
@@ -240,7 +247,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNodeComponents(nodeOptions, tequilaListener); err != nil {
+	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
+	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapAccountantPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
 
@@ -344,6 +356,7 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+
 	if di.NATService != nil {
 		if err := di.NATService.Disable(); err != nil {
 			errs = append(errs, err)
@@ -356,9 +369,6 @@ func (di *Dependencies) Shutdown() (err error) {
 		if err := di.Storage.Close(); err != nil {
 			errs = append(errs, err)
 		}
-	}
-	if di.TopUpper != nil {
-		di.TopUpper.Stop()
 	}
 
 	firewall.Reset()
@@ -384,6 +394,12 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	}
 
 	di.Storage = localStorage
+
+	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
+	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
+	di.ConsumerInvoiceStorage = pingpong.NewConsumerInvoiceStorage(invoiceStorage)
+	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage)
+	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	return nil
 }
 
@@ -462,39 +478,54 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.PromiseStorage = promise.NewStorage(di.Storage)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
+	channelImplementation := nodeOptions.Transactor.ChannelImplementation
+
+	di.Transactor = registry.NewTransactor(
+		di.HTTPClient,
+		nodeOptions.Transactor.TransactorEndpointAddress,
+		nodeOptions.Transactor.RegistryAddress,
+		nodeOptions.Accountant.AccountantID,
+		channelImplementation,
+		di.SignerFactory,
+		di.EventBus,
+	)
+
+	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
+		di.EventBus,
+		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
+		di.BCHelper,
+		pingpong.NewChannelAddressCalculator(
+			nodeOptions.Accountant.AccountantID,
+			nodeOptions.Transactor.ChannelImplementation,
+			nodeOptions.Transactor.RegistryAddress,
+		),
+		pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData,
+	)
+
+	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
+	if err != nil {
+		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
+	}
+
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory),
+		pingpong.BackwardsCompatibleExchangeFactoryFunc(
+			di.Keystore,
+			nodeOptions,
+			di.SignerFactory,
+			di.ConsumerInvoiceStorage,
+			di.ConsumerTotalsStorage,
+			nodeOptions.Transactor.ChannelImplementation,
+			nodeOptions.Transactor.RegistryAddress,
+			di.EventBus),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		connectivity.NewStatusSender(),
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
+		nodeOptions.Payments.PaymentsDisabled,
 	)
-
-	// TODO: switch this to channel implementation from params after #1325 is merged
-	channelImplementation := metadata.TestnetDefinition.ChannelImplAddress
-
-	di.Transactor = transactor.NewTransactor(
-		di.HTTPClient,
-		nodeOptions.Transactor.TransactorEndpointAddress,
-		nodeOptions.Transactor.RegistryAddress,
-		nodeOptions.Transactor.AccountantID,
-		channelImplementation,
-		di.SignerFactory,
-	)
-
-	di.TopUpper = transactor.NewTopUpper(
-		di.Transactor,
-		transactor.DefaultRetryCount,
-		transactor.DefaultDelayBetweenRetries,
-	)
-
-	err := di.TopUpper.Subscribe(di.EventBus)
-	if err != nil {
-		return errors.Wrap(err, "could not subscribe topper upper")
-	}
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
@@ -517,8 +548,8 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.QualityClient)
@@ -538,19 +569,26 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 }
 
 func newSessionManagerFactory(
+	nodeOptions node.Options,
 	proposal market.ServiceProposal,
 	sessionStorage *session.EventBasedStorage,
+	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
+	consumerInvoiceStorage *pingpong.ConsumerInvoiceStorage,
+	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
 	promiseStorage session_payment.PromiseStorage,
 	natPingerChan func(*traversal.Params),
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
+	bcHelper *pingpong.BlockchainWithRetries,
+	transactor *registry.Transactor,
+	paymentsDisabled bool,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
-			payment := dto.PaymentPerTime{
+			payment := dto.PaymentRate{
 				Price: money.Money{
 					Currency: money.CurrencyMyst,
 					Amount:   uint64(0),
@@ -572,7 +610,21 @@ func newSessionManagerFactory(
 			return session_payment.NewSessionBalance(sender, tracker, promiseChan, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout, validator, promiseStorage, consumerID, receiverID, issuerID), nil
 		}
 
-		paymentEngineFactory := pingpong.InvoiceFactoryCreator(dialog, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout)
+		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
+			dialog, payment_factory.BalanceSendPeriod,
+			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
+			pingpong.DefaultPaymentInfo,
+			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
+			accountantPromiseStorage,
+			nodeOptions.Transactor.RegistryAddress,
+			nodeOptions.Transactor.ChannelImplementation,
+			pingpong.DefaultAccountantFailureCount,
+			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
+			nodeOptions.Payments.MaxRRecoveryLength,
+			bcHelper,
+			eventbus,
+			transactor,
+		)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
@@ -583,6 +635,7 @@ func newSessionManagerFactory(
 			natTracker,
 			serviceID,
 			eventbus,
+			paymentsDisabled,
 		)
 	}
 }
@@ -612,11 +665,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.BrokerAddress = optionsNetwork.BrokerAddress
 	}
 
-	normalizedAddress := common.HexToAddress(optionsNetwork.EtherPaymentsAddress)
-	if normalizedAddress != metadata.DefaultNetwork.PaymentsContractAddress {
-		network.PaymentsContractAddress = normalizedAddress
-	}
-
 	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
@@ -639,17 +687,15 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	log.Info().Msg("Using Eth contract at address: " + network.PaymentsContractAddress.String())
-	log.Info().Msg("options.ExperimentIdentityCheck: " + strconv.FormatBool(optionsNetwork.ExperimentIdentityCheck))
-	if optionsNetwork.ExperimentIdentityCheck {
-		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Transactor.AccountantID)); err != nil {
-			return err
-		}
-	} else {
-		di.IdentityRegistry = &identity_registry.FakeRegistry{Registered: true, RegistrationEventExists: true}
+	bc := pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
+	di.BCHelper = pingpong.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
+
+	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {
+		return err
 	}
 
-	return nil
+	return di.IdentityRegistry.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) bootstrapEventBus() {

@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -35,9 +36,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// InvoiceFactoryCreator returns a payment engine factory
-func InvoiceFactoryCreator(dialog communication.Dialog, balanceSendPeriod, promiseTimeout time.Duration) func() (session.PaymentEngine, error) {
-	return func() (session.PaymentEngine, error) {
+// DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
+const DefaultAccountantFailureCount uint64 = 10
+
+// DefaultPaymentInfo represents the default payment info for the alpha release
+var DefaultPaymentInfo = dto.PaymentRate{
+	Price:    money.NewMoney(1000000, money.CurrencyMyst),
+	Duration: 1 * time.Minute,
+}
+
+// InvoiceFactoryCreator returns a payment engine factory.
+func InvoiceFactoryCreator(
+	dialog communication.Dialog,
+	balanceSendPeriod, promiseTimeout time.Duration,
+	invoiceStorage providerInvoiceStorage,
+	paymentInfo dto.PaymentRate,
+	accountantCaller accountantCaller,
+	accountantPromiseStorage accountantPromiseStorage,
+	registryAddress string,
+	channelImplementationAddress string,
+	maxAccountantFailureCount uint64,
+	maxAllowedAccountantFee uint16,
+	maxRRecovery uint64,
+	blockchainHelper bcHelper,
+	publisher eventbus.Publisher,
+	feeProvider feeProvider,
+) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
+	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
 		listener := NewExchangeListener(exchangeChan)
 		invoiceSender := NewInvoiceSender(dialog)
@@ -45,20 +70,50 @@ func InvoiceFactoryCreator(dialog communication.Dialog, balanceSendPeriod, promi
 		if err != nil {
 			return nil, err
 		}
-		paymentEngine := NewInvoiceTracker(dialog.PeerID(), invoiceSender, balanceSendPeriod, exchangeChan, promiseTimeout)
+		timeTracker := session.NewTracker(time.Now)
+		deps := InvoiceTrackerDeps{
+			Peer:                       dialog.PeerID(),
+			PeerInvoiceSender:          invoiceSender,
+			InvoiceStorage:             invoiceStorage,
+			TimeTracker:                &timeTracker,
+			ChargePeriod:               balanceSendPeriod,
+			ExchangeMessageChan:        exchangeChan,
+			ExchangeMessageWaitTimeout: promiseTimeout,
+			PaymentInfo:                paymentInfo,
+			ProviderID:                 providerID,
+			AccountantCaller:           accountantCaller,
+			AccountantPromiseStorage:   accountantPromiseStorage,
+			AccountantID:               accountantID,
+			Registry:                   registryAddress,
+			MaxAccountantFailureCount:  maxAccountantFailureCount,
+			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
+			BlockchainHelper:           blockchainHelper,
+			Publisher:                  publisher,
+			FeeProvider:                feeProvider,
+			MaxRRecoveryLength:         maxRRecovery,
+			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
+		}
+		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
 	}
 }
 
-// BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory
-func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options node.Options, signer identity.SignerFactory) func(paymentInfo *promise.PaymentInfo,
+// BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
+func BackwardsCompatibleExchangeFactoryFunc(
+	keystore *keystore.KeyStore,
+	options node.Options,
+	signer identity.SignerFactory,
+	invoiceStorage consumerInvoiceStorage,
+	totalStorage consumerTotalsStorage,
+	channelImplementation string,
+	registryAddress string, publisher eventbus.Publisher) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
+	consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
 		dialog communication.Dialog,
-		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
+		consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 		var promiseState promise.PaymentInfo
-		payment := dto.PaymentPerTime{
+		payment := dto.PaymentRate{
 			Price: money.Money{
 				Currency: money.CurrencyMyst,
 				Amount:   uint64(0),
@@ -71,7 +126,7 @@ func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options
 			promiseState.LastPromise = paymentInfo.LastPromise
 
 			// if the server indicates that it will launch the new payments, so should we
-			if paymentInfo.Supports == string(session.PaymentVersionV2) {
+			if paymentInfo.Supports == string(session.PaymentVersionV3) {
 				useNewPayments = true
 			}
 		}
@@ -79,13 +134,26 @@ func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options
 		if useNewPayments {
 			log.Info().Msg("Using new payments")
 			invoices := make(chan crypto.Invoice)
-			sender := NewExchangeSender(dialog)
 			listener := NewInvoiceListener(invoices)
 			err := dialog.Receive(listener.GetConsumer())
 			if err != nil {
 				return nil, err
 			}
-			payments = NewExchangeMessageTracker(invoices, sender, keystore, consumer)
+			timeTracker := session.NewTracker(time.Now)
+			deps := ExchangeMessageTrackerDeps{
+				InvoiceChan:               invoices,
+				PeerExchangeMessageSender: NewExchangeSender(dialog),
+				ConsumerInvoiceStorage:    invoiceStorage,
+				ConsumerTotalsStorage:     totalStorage,
+				TimeTracker:               &timeTracker,
+				Ks:                        keystore,
+				Identity:                  consumer,
+				Peer:                      dialog.PeerID(),
+				PaymentInfo:               DefaultPaymentInfo,
+				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
+				Publisher:                 publisher,
+			}
+			payments = NewExchangeMessageTracker(deps)
 		} else {
 			log.Info().Msg("Using old payments")
 			messageChan := make(chan balance.Message, 1)

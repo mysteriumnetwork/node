@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -28,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
@@ -41,6 +43,7 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 	"github.com/rs/zerolog/log"
@@ -184,6 +187,28 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	)
 }
 
+func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
+	cfg := registry.ProviderRegistrarConfig{
+		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
+		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
+		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
+		AccountantAddress:   common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+	}
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
+	return di.ProviderRegistrar.Subscribe(di.EventBus)
+}
+
+func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
+	cfg := pingpong.AccountantPromiseSettlerConfig{
+		AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
+		MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+	}
+	settler := pingpong.NewAccountantPromiseSettler(di.Transactor, di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
+	return settler.Subscribe(di.EventBus)
+}
+
 // bootstrapServiceComponents initiates ServicesManager dependency
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) error {
 	di.NATService = nat.NewService()
@@ -197,16 +222,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	err := storage.Subscribe()
 	if err != nil {
 		return errors.Wrap(err, "could not bootstrap service components")
-	}
-
-	registeredIdentityValidator := func(peerID identity.Identity) error {
-		registered, err := di.IdentityRegistry.IsRegistered(peerID)
-		if err != nil {
-			return err
-		} else if !registered {
-			return errors.New("identity is not registered")
-		}
-		return nil
 	}
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
@@ -231,19 +246,26 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		return nats_dialog.NewDialogWaiter(
 			address,
 			di.SignerFactory(providerID),
-			registeredIdentityValidator,
 			allowedIdentityValidator,
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) (communication.DialogHandler, error) {
 		sessionManagerFactory := newSessionManagerFactory(
+			nodeOptions,
 			proposal,
 			di.ServiceSessionStorage,
+			di.ProviderInvoiceStorage,
+			di.ConsumerInvoiceStorage,
+			di.AccountantPromiseStorage,
 			di.PromiseStorage,
 			di.NATPinger.PingTarget,
 			di.NATTracker,
 			serviceID,
-			di.EventBus)
+			di.EventBus,
+			di.BCHelper,
+			di.Transactor,
+			nodeOptions.Payments.PaymentsDisabled,
+		)
 
 		return session.NewDialogHandler(
 			sessionManagerFactory,

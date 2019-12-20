@@ -36,9 +36,9 @@ func TestResolverResolveCountry(t *testing.T) {
 		{"8.8.4.4", "US", ""},
 		{"95.85.39.36", "NL", ""},
 		{"127.0.0.1", "", "failed to resolve country"},
-		{"8.8.8.8.8", "", "failed to get a country: ipAddress passed to Lookup cannot be nil"},
+		{"8.8.8.8.8", "", "failed to get a country: IP passed to Lookup cannot be nil"},
 		{"185.243.112.225", "", "failed to resolve country"},
-		{"asd", "", "failed to get a country: ipAddress passed to Lookup cannot be nil"},
+		{"asd", "", "failed to get a country: IP passed to Lookup cannot be nil"},
 	}
 
 	for _, tt := range tests {

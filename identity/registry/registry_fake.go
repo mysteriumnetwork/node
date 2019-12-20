@@ -18,35 +18,22 @@
 package registry
 
 import (
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/rs/zerolog/log"
 )
 
 // FakeRegistry fake register
 type FakeRegistry struct {
-	RegistrationEventExists bool
-	Registered              bool
+	RegistrationStatus     RegistrationStatus
+	RegistrationCheckError error
 }
 
-// IsRegistered returns fake identity registration status within payments contract
-func (registry *FakeRegistry) IsRegistered(id identity.Identity) (bool, error) {
-	return registry.Registered, nil
+// GetRegistrationStatus returns fake identity registration status within payments contract
+func (registry *FakeRegistry) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
+	return registry.RegistrationStatus, registry.RegistrationCheckError
 }
 
-// SubscribeToRegistrationEvent returns fake registration event if given providerAddress was registered within payments contract
-func (registry *FakeRegistry) SubscribeToRegistrationEvent(id identity.Identity) (
-	registrationEvent chan RegistrationEvent,
-	unsubscribe func(),
-) {
-	log.Info().Msg("Fake SubscribeToRegistrationEvent called")
-	registrationEvent = make(chan RegistrationEvent)
-	unsubscribe = func() {
-		registrationEvent <- Cancelled
-	}
-	go func() {
-		if registry.RegistrationEventExists {
-			registrationEvent <- Registered
-		}
-	}()
-	return registrationEvent, unsubscribe
+// Subscribe does nothing
+func (registry *FakeRegistry) Subscribe(eventbus.Subscriber) error {
+	return nil
 }

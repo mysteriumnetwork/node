@@ -18,6 +18,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -35,11 +37,29 @@ var (
 		Usage: "Registry contract address used to register identity",
 		Value: metadata.DefaultNetwork.RegistryAddress,
 	}
-	// FlagTransactorAccountantID accountant contract address used for identity registration.
-	FlagTransactorAccountantID = cli.StringFlag{
-		Name:  "transactor.accountant-id",
-		Usage: "Accountant contract address used to register identity",
-		Value: metadata.DefaultNetwork.AccountantID,
+	// FlagTransactorChannelImplementation the channel implementation sc address used for channel address calculation.
+	FlagTransactorChannelImplementation = cli.StringFlag{
+		Name:  "transactor.channel-implementation",
+		Usage: "channel implementation address",
+		Value: metadata.DefaultNetwork.ChannelImplAddress,
+	}
+	// FlagTransactorProviderMaxRegistrationAttempts determines the number of registration attempts that the provider will attempt before giving up.
+	FlagTransactorProviderMaxRegistrationAttempts = cli.IntFlag{
+		Name:  "transactor.provider.max-registration-attempts",
+		Usage: "the max attempts the provider will make to register before giving up",
+		Value: 10,
+	}
+	// FlagTransactorProviderRegistrationRetryDelay determines the delay between each provider registration attempts.
+	FlagTransactorProviderRegistrationRetryDelay = cli.DurationFlag{
+		Name:  "transactor.provider.registration-retry-delay",
+		Usage: "the duration that the provider will wait between each retry",
+		Value: time.Minute * 3,
+	}
+	// FlagTransactorProviderRegistrationStake determines the stake size for registration of provider
+	FlagTransactorProviderRegistrationStake = cli.Uint64Flag{
+		Name:  "transactor.provider.registration-stake",
+		Usage: "the stake we'll use when registering provider",
+		Value: 125000000000,
 	}
 )
 
@@ -49,13 +69,19 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		*flags,
 		FlagTransactorAddress,
 		FlagTransactorRegistryAddress,
-		FlagTransactorAccountantID,
+		FlagTransactorChannelImplementation,
+		FlagTransactorProviderMaxRegistrationAttempts,
+		FlagTransactorProviderRegistrationRetryDelay,
+		FlagTransactorProviderRegistrationStake,
 	)
 }
 
 // ParseFlagsTransactor function fills in transactor options from CLI context
 func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
+	Current.ParseStringFlag(ctx, FlagTransactorChannelImplementation)
 	Current.ParseStringFlag(ctx, FlagTransactorRegistryAddress)
-	Current.ParseStringFlag(ctx, FlagTransactorAccountantID)
+	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
+	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
+	Current.ParseUInt64Flag(ctx, FlagTransactorProviderRegistrationStake)
 }

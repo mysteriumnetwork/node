@@ -17,9 +17,14 @@
 
 package node
 
+import "time"
+
 // OptionsTransactor describes possible parameters for interaction with transactor
 type OptionsTransactor struct {
-	TransactorEndpointAddress string
-	RegistryAddress           string
-	AccountantID              string
+	TransactorEndpointAddress       string
+	RegistryAddress                 string
+	ChannelImplementation           string
+	ProviderMaxRegistrationAttempts int
+	ProviderRegistrationRetryDelay  time.Duration
+	ProviderRegistrationStake       uint64
 }

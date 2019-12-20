@@ -59,7 +59,7 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 
 func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	dialog := &fakeDialog{
-		returnReceiveMessage: promise.BalanceMessage{RequestID: 1, Accepted: true, Balance: testToken(10)},
+		returnReceiveMessage: promise.BalanceMessage{RequestID: 1, Accepted: true, Balance: testToken(1000000000)},
 	}
 
 	capturer := logconfig.NewLogCapturer()
@@ -75,7 +75,7 @@ func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	assert.Contains(t, logs[0], "Promise balance notified: 1000000000TEST")
 }
 
-func testToken(amount float64) money.Money {
+func testToken(amount uint64) money.Money {
 	return money.NewMoney(amount, money.Currency("TEST"))
 }
 

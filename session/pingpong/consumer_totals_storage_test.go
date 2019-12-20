@@ -22,9 +22,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
-	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,34 +73,4 @@ func TestConsumerTotalStorage(t *testing.T) {
 	a, err = consumerTotalsStorage.Get(someOtherChannel)
 	assert.NoError(t, err)
 	assert.EqualValues(t, amount, a)
-
-	// test the convenience store method
-	pkID, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	identity := crypto.PubkeyToAddress(pkID.PublicKey).Hex()
-
-	registryPK, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	registry := crypto.PubkeyToAddress(registryPK.PublicKey).Hex()
-
-	channelPK, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	channel := crypto.PubkeyToAddress(channelPK.PublicKey).Hex()
-
-	var convenienceAmount uint64 = 11
-	cap := ChannelAddressParams{
-		Identity:              identity,
-		Registry:              registry,
-		ChannelImplementation: channel,
-	}
-	err = consumerTotalsStorage.GenerateAndStore(cap, convenienceAmount)
-	assert.Nil(t, err)
-
-	addr, err := pc.GenerateChannelAddress(identity, registry, channel)
-	assert.Nil(t, err)
-
-	res, err := consumerTotalsStorage.Get(addr)
-	assert.Nil(t, err)
-
-	assert.Equal(t, convenienceAmount, res)
 }

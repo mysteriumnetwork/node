@@ -33,11 +33,6 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
-	// FlagIdentityCheck enables experimental identity check.
-	FlagIdentityCheck = cli.BoolFlag{
-		Name:  "experiment-identity-check",
-		Usage: "Enables experimental identity check",
-	}
 	// FlagAPIAddress Mysterium API URL
 	FlagAPIAddress = cli.StringFlag{
 		Name:  "api.address",
@@ -62,12 +57,6 @@ var (
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
-	// FlagEtherContractPayments address of payments contract.
-	FlagEtherContractPayments = cli.StringFlag{
-		Name:  "ether.contract.payments",
-		Usage: "Address of payments contract",
-		Value: metadata.DefaultNetwork.PaymentsContractAddress.String(),
-	}
 	// FlagQualityOracleAddress Quality oracle URL.
 	FlagQualityOracleAddress = cli.StringFlag{
 		Name:  "quality-oracle.address",
@@ -87,12 +76,10 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		FlagTestnet,
 		FlagLocalnet,
-		FlagIdentityCheck,
 		FlagNATPunching,
 		FlagAPIAddress,
 		FlagBrokerAddress,
 		FlagEtherRPC,
-		FlagEtherContractPayments,
 		FlagQualityOracleAddress,
 		FlagAccessPolicyAddress,
 	)
@@ -102,12 +89,10 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagTestnet)
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
-	Current.ParseBoolFlag(ctx, FlagIdentityCheck)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
-	Current.ParseStringFlag(ctx, FlagEtherContractPayments)
 	Current.ParseStringFlag(ctx, FlagQualityOracleAddress)
 	Current.ParseBoolTFlag(ctx, FlagNATPunching)
 }

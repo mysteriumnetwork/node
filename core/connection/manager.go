@@ -94,7 +94,7 @@ type PaymentIssuer interface {
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider identity.Identity) (PaymentIssuer, error)
+	consumer, provider, accountant identity.Identity) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -107,13 +107,14 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 
 	// These are populated by Connect at runtime.
-	ctx           context.Context
-	status        Status
-	statusLock    sync.RWMutex
-	sessionInfo   SessionInfo
-	sessionInfoMu sync.Mutex
-	cleanup       []func() error
-	cancel        func()
+	ctx             context.Context
+	status          Status
+	statusLock      sync.RWMutex
+	sessionInfo     SessionInfo
+	disablePayments bool
+	sessionInfoMu   sync.Mutex
+	cleanup         []func() error
+	cancel          func()
 
 	discoLock sync.Mutex
 }
@@ -127,6 +128,7 @@ func NewManager(
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
 	ipCheckParams IPCheckParams,
+	disablePayments bool,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -138,10 +140,11 @@ func NewManager(
 		cleanup:                  make([]func() error, 0),
 		ipResolver:               ipResolver,
 		ipCheckParams:            ipCheckParams,
+		disablePayments:          disablePayments,
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if manager.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -169,13 +172,13 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		return err
 	}
 
-	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, proposal)
+	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, accountantID, proposal)
 	if err != nil {
 		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
-	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID)
+	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID, accountantID)
 	if err != nil {
 		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
@@ -251,8 +254,8 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
-	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID)
+func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity) error {
+	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID)
 	if err != nil {
 		return err
 	}
@@ -286,16 +289,21 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *promise.PaymentInfo, error) {
+func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *promise.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, nil, err
 	}
 
+	paymentVersion := session.PaymentVersionV3
+	if manager.disablePayments {
+		paymentVersion = "legacy"
+	}
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
 		IssuerID:       consumerID,
-		PaymentVersion: session.PaymentVersionV2,
+		AccountantID:   accountantID,
+		PaymentVersion: paymentVersion,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)

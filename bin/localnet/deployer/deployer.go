@@ -42,9 +42,7 @@ func main() {
 	flag.Parse()
 
 	addr := common.HexToAddress(*etherAddress)
-
 	ks := keystore.NewKeyStore(*keyStoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
-
 	acc, err := ks.Find(accounts.Account{Address: addr})
 	checkError("find account", err)
 
@@ -63,7 +61,7 @@ func main() {
 			return ks.SignTx(acc, tx, chainID)
 		},
 		Context:  context.Background(),
-		GasLimit: 5000000,
+		GasLimit: 6721975,
 	}
 
 	deployPaymentsv2Contracts(transactor, client)
@@ -71,8 +69,15 @@ func main() {
 
 func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.Client) {
 	time.Sleep(time.Second * 3)
+
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mystTokenAddress, tx, _, err := bindings.DeployMystToken(transactor, client)
+	mathSafeLibAddress, tx, _, err := bindings.DeploySafeMathLib(transactor, client)
+	checkError("Deploy migrations", err)
+	checkTxStatus(client, tx)
+	fmt.Println("v2 mathSafeLib address:", mathSafeLibAddress.Hex())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	mystTokenAddress, tx, _, err := bindings.DeployLinkedMystToken(transactor, client, map[string]common.Address{"SafeMathLib": mathSafeLibAddress})
 	checkError("Deploy token v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 token address: ", mystTokenAddress.String())
@@ -116,12 +121,12 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	checkError("myst transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Mint(transactor, transactor.From, big.NewInt(10000000000))
+	tx, err = ts.Mint(transactor, transactor.From, big.NewInt(125000000000000000))
 	checkError("mint myst", err)
 	checkTxStatus(client, tx)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.IncreaseAllowance(transactor, registryAddress, big.NewInt(10000000000))
+	tx, err = ts.Approve(transactor, registryAddress, big.NewInt(10000000000))
 	checkError("allow myst", err)
 	checkTxStatus(client, tx)
 
@@ -133,8 +138,9 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		transactor,
 		transactor.From,
 		big.NewInt(1000000),
+		400,
+		big.NewInt(125000000000),
 	)
-
 	checkError("register accountant", err)
 	checkTxStatus(client, tx)
 

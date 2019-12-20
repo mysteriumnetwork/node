@@ -23,6 +23,7 @@ import (
 	"io"
 	stdlog "log"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -93,6 +94,8 @@ type cliApp struct {
 	fetchedProposals []tequilapi_client.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
+
+	currentConsumerID string
 }
 
 const redColor = "\033[31m%s\033[0m"
@@ -309,18 +312,18 @@ func (c *cliApp) serviceGet(id string) {
 func (c *cliApp) connect(argsString string) {
 	args := strings.Fields(argsString)
 
-	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
-	if len(args) < 3 {
+	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <accountant-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
+	if len(args) < 4 {
 		info(helpMsg)
 		return
 	}
 
-	consumerID, providerID, serviceType := args[0], args[1], args[2]
+	consumerID, providerID, accountantID, serviceType := args[0], args[1], args[2], args[3]
 
 	var disableKillSwitch bool
 	var dns connection.DNSOption
 	var err error
-	for _, arg := range args[3:] {
+	for _, arg := range args[4:] {
 		if strings.HasPrefix(arg, "dns=") {
 			kv := strings.Split(arg, "=")
 			dns, err = connection.NewDNSOption(kv[1])
@@ -358,11 +361,13 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, serviceType, connectOptions)
+	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, accountantID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return
 	}
+
+	c.currentConsumerID = consumerID
 
 	success("Connected.")
 }
@@ -442,7 +447,7 @@ func (c *cliApp) disconnect() {
 		warn(err)
 		return
 	}
-
+	c.currentConsumerID = ""
 	success("Disconnected.")
 }
 
@@ -476,6 +481,11 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
+			identityStatus, err := c.tequilapi.GetIdentityStatus(c.currentConsumerID)
+			if err != nil {
+				warn(err)
+			}
+			info("Balance:", identityStatus.Balance)
 			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)
@@ -569,21 +579,21 @@ func (c *cliApp) quit() {
 }
 
 func (c *cliApp) identities(argsString string) {
-	const usage = "identities command:\n    list\n    new [passphrase]"
+	const usage = "identities command:\n    list\n    new [passphrase]\n    register <identity> <stake> [beneficiary]\n    topup <identity>"
 	if len(argsString) == 0 {
 		info(usage)
 		return
 	}
 
-	switch argsString {
-	case "new", "list": // Known sub-commands.
+	args := strings.Fields(argsString)
+	switch args[0] {
+	case "new", "list", "register", "topup": // Known sub-commands.
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
 		return
 	}
 
-	args := strings.Fields(argsString)
 	if len(args) < 1 {
 		info(usage)
 		return
@@ -624,6 +634,57 @@ func (c *cliApp) identities(argsString string) {
 			return
 		}
 		success("New identity created:", id.Address)
+	}
+
+	if action == "register" {
+		var address string
+		var beneficiary string
+		var stake uint64
+		if len(args) >= 3 {
+			address = args[1]
+			s, err := strconv.ParseUint(args[2], 10, 64)
+			if err != nil {
+				warn(errors.Wrap(err, "could not parse stake"))
+			}
+			stake = s
+		} else {
+			info(usage)
+			return
+		}
+
+		if len(args) == 4 {
+			beneficiary = args[3]
+		}
+
+		fees, err := c.tequilapi.GetTransactorFees()
+		if err != nil {
+			warn(err)
+			return
+		}
+
+		err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration)
+		if err != nil {
+			warn(errors.Wrap(err, "could not register identity"))
+			return
+		}
+		success("identity registered")
+	}
+
+	if action == "topup" {
+		var address string
+		if len(args) != 2 {
+			info(usage)
+			return
+
+		}
+		address = args[1]
+
+		err := c.tequilapi.TopUp(address)
+		if err != nil {
+			warn(err)
+			return
+		}
+		success("identity topped up")
 	}
 }
 
@@ -741,6 +802,8 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"identities",
 			readline.PcItem("new"),
 			readline.PcItem("list"),
+			readline.PcItem("register"),
+			readline.PcItem("topup"),
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),

@@ -69,9 +69,12 @@ type Options struct {
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
+	Accountant OptionsAccountant
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall
+
+	Payments OptionsPayments
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -94,13 +97,11 @@ func GetOptions() *Options {
 		OptionsNetwork: OptionsNetwork{
 			Testnet:                     config.GetBool(config.FlagTestnet),
 			Localnet:                    config.GetBool(config.FlagLocalnet),
-			ExperimentIdentityCheck:     config.GetBool(config.FlagIdentityCheck),
 			ExperimentNATPunching:       config.GetTBool(config.FlagNATPunching),
 			MysteriumAPIAddress:         config.GetString(config.FlagAPIAddress),
 			AccessPolicyEndpointAddress: config.GetString(config.FlagAccessPolicyAddress),
 			BrokerAddress:               config.GetString(config.FlagBrokerAddress),
 			EtherClientRPC:              config.GetString(config.FlagEtherRPC),
-			EtherPaymentsAddress:        config.GetString(config.FlagEtherContractPayments),
 			QualityOracle:               config.GetString(config.FlagQualityOracleAddress),
 		},
 		Discovery: OptionsDiscovery{
@@ -125,9 +126,25 @@ func GetOptions() *Options {
 			NodeType:      config.GetString(config.FlagLocationNodeType),
 		},
 		Transactor: OptionsTransactor{
-			TransactorEndpointAddress: config.GetString(config.FlagTransactorAddress),
-			RegistryAddress:           config.GetString(config.FlagTransactorRegistryAddress),
-			AccountantID:              config.GetString(config.FlagTransactorAccountantID),
+			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
+			RegistryAddress:                 config.GetString(config.FlagTransactorRegistryAddress),
+			ChannelImplementation:           config.GetString(config.FlagTransactorChannelImplementation),
+			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
+			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
+			ProviderRegistrationStake:       config.GetUInt64(config.FlagTransactorProviderRegistrationStake),
+		},
+		Payments: OptionsPayments{
+			MaxAllowedPaymentPercentile:        config.GetInt(config.FlagPaymentsMaxAccountantFee),
+			BCTimeout:                          config.GetDuration(config.FlagPaymentsBCTimeout),
+			AccountantPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsAccountantPromiseSettleThreshold),
+			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
+			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
+			MaxRRecoveryLength:                 config.GetUInt64(config.FlagPaymentsMaxRRecovery),
+			PaymentsDisabled:                   config.GetBool(config.FlagPaymentsDisable),
+		},
+		Accountant: OptionsAccountant{
+			AccountantID:              config.GetString(config.FlagAccountantID),
+			AccountantEndpointAddress: config.GetString(config.FlagAccountantAddress),
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
 			BinaryPath: config.GetString(config.FlagOpenvpnBinary),

@@ -22,15 +22,13 @@ type OptionsNetwork struct {
 	Testnet  bool
 	Localnet bool
 
-	ExperimentIdentityCheck bool
-	ExperimentNATPunching   bool
+	ExperimentNATPunching bool
 
 	MysteriumAPIAddress         string
 	AccessPolicyEndpointAddress string
 	BrokerAddress               string
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
+	EtherClientRPC string
 
 	QualityOracle string
 }

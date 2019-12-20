@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/mysteriumnetwork/node/core/transactor"
+	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
 // NewClient returns a new instance of Client
@@ -95,15 +95,63 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 	return id, err
 }
 
+// GetIdentityStatus returns identity status with current balance
+func (client *Client) GetIdentityStatus(identityAddress string) (IdentityStatusDTO, error) {
+	path := fmt.Sprintf("identities/%s/status", identityAddress)
+
+	response, err := client.http.Get(path, nil)
+	if err != nil {
+		return IdentityStatusDTO{}, err
+	}
+	defer response.Body.Close()
+
+	res := IdentityStatusDTO{}
+	err = parseResponseJSON(response, &res)
+	return res, err
+}
+
+// GetTransactorFees returns the transactor fees
+func (client *Client) GetTransactorFees() (Fees, error) {
+	fees := Fees{}
+
+	res, err := client.http.Get("transactor/fees", nil)
+	if err != nil {
+		return fees, err
+	}
+	defer res.Body.Close()
+
+	err = parseResponseJSON(res, &fees)
+	return fees, err
+}
+
 // RegisterIdentity registers identity
 func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
-	payload := transactor.IdentityRegistrationRequestDTO{
+	payload := registry.IdentityRegistrationRequestDTO{
 		Stake:       stake,
 		Fee:         fee,
 		Beneficiary: beneficiary,
 	}
 
 	response, err := client.http.Post("identities/"+address+"/register", payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("expected 202 got %v", response.StatusCode)
+	}
+
+	return nil
+}
+
+// TopUp tops up identity
+func (client *Client) TopUp(identity string) error {
+	payload := registry.TopUpRequest{
+		Identity: identity,
+	}
+
+	response, err := client.http.Post("transactor/topup", payload)
 	if err != nil {
 		return err
 	}
@@ -130,17 +178,19 @@ func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDa
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
 	payload := struct {
-		Identity    string         `json:"consumerId"`
-		ProviderID  string         `json:"providerId"`
-		ServiceType string         `json:"serviceType"`
-		Options     ConnectOptions `json:"connectOptions"`
+		Identity     string         `json:"consumerId"`
+		ProviderID   string         `json:"providerId"`
+		AccountantID string         `json:"accountantId"`
+		ServiceType  string         `json:"serviceType"`
+		Options      ConnectOptions `json:"connectOptions"`
 	}{
-		Identity:    consumerID,
-		ProviderID:  providerID,
-		ServiceType: serviceType,
-		Options:     options,
+		Identity:     consumerID,
+		ProviderID:   providerID,
+		AccountantID: accountantID,
+		ServiceType:  serviceType,
+		Options:      options,
 	}
 	response, err := client.http.Put("connection", payload)
 	if err != nil {

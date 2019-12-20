@@ -20,6 +20,7 @@ package config
 import (
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -195,6 +196,21 @@ func (cfg *Config) GetInt(key string) int {
 	return cast.ToInt(cfg.Get(key))
 }
 
+// GetUInt64 returns config value as uint64.
+func (cfg *Config) GetUInt64(key string) uint64 {
+	return cast.ToUint64(cfg.Get(key))
+}
+
+// GetFloat64 returns config value as float64.
+func (cfg *Config) GetFloat64(key string) float64 {
+	return cast.ToFloat64(cfg.Get(key))
+}
+
+// GetDuration returns config value as duration.
+func (cfg *Config) GetDuration(key string) time.Duration {
+	return cast.ToDuration(cfg.Get(key))
+}
+
 // GetString returns config value as string.
 func (cfg *Config) GetString(key string) string {
 	return cast.ToString(cfg.Get(key))
@@ -239,6 +255,45 @@ func (cfg *Config) ParseIntFlag(ctx *cli.Context, flag cli.IntFlag) {
 	}
 }
 
+// ParseUInt64Flag parses a cli.Uint64Flag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Uint64(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalUint64(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// ParseFloat64Flag parses a cli.Float64Flag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Float64(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalFloat64(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
+// ParseDurationFlag parses a cli.DurationFlag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseDurationFlag(ctx *cli.Context, flag cli.DurationFlag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Duration(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalDuration(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
 // ParseStringFlag parses a cli.StringFlag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
@@ -270,6 +325,21 @@ func GetInt(flag cli.IntFlag) int {
 // GetString shorthand for getting current configuration value for cli.StringFlag.
 func GetString(flag cli.StringFlag) string {
 	return Current.GetString(flag.Name)
+}
+
+// GetDuration shorthand for getting current configuration value for cli.DurationFlag.
+func GetDuration(flag cli.DurationFlag) time.Duration {
+	return Current.GetDuration(flag.Name)
+}
+
+// GetUInt64 shorthand for getting current configuration value for cli.Uint64Flag.
+func GetUInt64(flag cli.Uint64Flag) uint64 {
+	return Current.GetUInt64(flag.Name)
+}
+
+// GetFloat64 shorthand for getting current configuration value for cli.Uint64Flag.
+func GetFloat64(flag cli.Float64Flag) float64 {
+	return Current.GetFloat64(flag.Name)
 }
 
 // Topic returns event bus topic for the given config key to listen for its updates.

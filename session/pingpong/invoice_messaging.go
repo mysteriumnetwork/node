@@ -22,7 +22,7 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// InvoiceRequest structure represents the invoice message that the provider sends to the consumer
+// InvoiceRequest structure represents the invoice message that the provider sends to the consumer.
 type InvoiceRequest struct {
 	Invoice crypto.Invoice `json:"invoice"`
 }
@@ -30,29 +30,29 @@ type InvoiceRequest struct {
 const invoiceEndpoint = "session-invoice"
 const invoiceMessageEndpoint = communication.MessageEndpoint(invoiceEndpoint)
 
-// InvoiceSender is responsible for sending the invoice messages
+// InvoiceSender is responsible for sending the invoice messages.
 type InvoiceSender struct {
 	sender communication.Sender
 }
 
-// NewInvoiceSender returns a new instance of the invoice sender
+// NewInvoiceSender returns a new instance of the invoice sender.
 func NewInvoiceSender(sender communication.Sender) *InvoiceSender {
 	return &InvoiceSender{
 		sender: sender,
 	}
 }
 
-// Send sends the given invoice
+// Send sends the given invoice.
 func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 	return is.sender.Send(&invoiceMessageProducer{Invoice: invoice})
 }
 
-// InvoiceListener listens for invoices
+// InvoiceListener listens for invoices.
 type InvoiceListener struct {
 	invoiceMessageConsumer *invoiceMessageConsumer
 }
 
-// NewInvoiceListener returns a new instance of the invoice listener
+// NewInvoiceListener returns a new instance of the invoice listener.
 func NewInvoiceListener(messageChan chan crypto.Invoice) *InvoiceListener {
 	return &InvoiceListener{
 		invoiceMessageConsumer: &invoiceMessageConsumer{
@@ -66,47 +66,46 @@ func (il *InvoiceListener) GetConsumer() *invoiceMessageConsumer {
 	return il.invoiceMessageConsumer
 }
 
-// Consume handles requests from endpoint and replies with response
+// Consume handles requests from endpoint and replies with response.
 func (imc *invoiceMessageConsumer) Consume(requestPtr interface{}) (err error) {
 	request := requestPtr.(*InvoiceRequest)
 	imc.queue <- request.Invoice
 	return nil
 }
 
-// Dialog boilerplate below, please ignore
-
+// Dialog boilerplate below, please ignore.
 type invoiceMessageConsumer struct {
 	queue chan crypto.Invoice
 }
 
-// GetMessageEndpoint returns endpoint where to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages.
 func (imc *invoiceMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return invoiceMessageEndpoint
 }
 
-// NewRequest creates struct where request from endpoint will be serialized
+// NewRequest creates struct where request from endpoint will be serialized.
 func (imc *invoiceMessageConsumer) NewMessage() (requestPtr interface{}) {
 	return &InvoiceRequest{}
 }
 
-// invoiceMessageProducer
+// invoiceMessageProducer.
 type invoiceMessageProducer struct {
 	Invoice crypto.Invoice
 }
 
-// GetMessageEndpoint returns endpoint where to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages.
 func (imp *invoiceMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
 	return invoiceMessageEndpoint
 }
 
-// Produce produces a request message
+// Produce produces a request message.
 func (imp *invoiceMessageProducer) Produce() (requestPtr interface{}) {
 	return &InvoiceRequest{
 		Invoice: imp.Invoice,
 	}
 }
 
-// NewResponse returns a new response object
+// NewResponse returns a new response object.
 func (imp *invoiceMessageProducer) NewResponse() (responsePtr interface{}) {
 	return nil
 }

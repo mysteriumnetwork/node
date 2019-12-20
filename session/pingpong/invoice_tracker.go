@@ -18,32 +18,83 @@
 package pingpong
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"math"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
-// PeerInvoiceSender allows to send invoices
+// ErrConsumerPromiseValidationFailed represents an error where consumer tries to cheat us with incorrect promises.
+var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue promise for the correct amount")
+
+// ErrAccountantFeeTooLarge indicates that we do not allow accountants with such high fees
+var ErrAccountantFeeTooLarge = errors.New("accountants fee exceeds")
+
+// PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
 }
 
-// ErrExchangeWaitTimeout indicates that we did not get an exchange message in time
+type feeProvider interface {
+	FetchSettleFees() (registry.FeesResponse, error)
+}
+
+type bcHelper interface {
+	GetAccountantFee(accountantAddress common.Address) (uint16, error)
+	IsRegistered(registryAddress, addressToCheck common.Address) (bool, error)
+}
+
+type providerInvoiceStorage interface {
+	Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error)
+	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
+	GetNewAgreementID(providerIdentity identity.Identity) (uint64, error)
+	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
+	GetR(providerID identity.Identity, agreementID uint64) (string, error)
+}
+
+type accountantPromiseStorage interface {
+	Store(providerID, accountantID identity.Identity, promise AccountantPromise) error
+	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
+}
+
+type accountantCaller interface {
+	RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error)
+	RevealR(r string, provider string, agreementID uint64) error
+}
+
+// ErrExchangeWaitTimeout indicates that we did not get an exchange message in time.
 var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 
-// ErrExchangeValidationFailed indicates that there was an error with the exchange signature
+// ErrMissmatchingHashlock represents an error where a consumer sends a hashlock we're not waiting for
+var ErrMissmatchingHashlock = errors.New("hashlock missmatch")
+
+// ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
+
+// ErrConsumerNotRegistered represents the error that the consumer is not registered
+var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
 const chargePeriodLeeway = time.Hour * 2
 
-// InvoiceTracker keeps tab of invoices and sends them to the consumer
+type lastInvoice struct {
+	invoice crypto.Invoice
+	r       []byte
+}
+
+// InvoiceTracker keeps tab of invoices and sends them to the consumer.
 type InvoiceTracker struct {
 	peer                            identity.Identity
 	stop                            chan struct{}
@@ -51,26 +102,80 @@ type InvoiceTracker struct {
 	exchangeMessageChan             chan crypto.ExchangeMessage
 	chargePeriod                    time.Duration
 	exchangeMessageWaitTimeout      time.Duration
+	accountantFailureCount          uint64
 	notReceivedExchangeMessageCount uint64
 	maxNotReceivedExchangeMessages  uint64
 	once                            sync.Once
+	invoiceStorage                  providerInvoiceStorage
+	accountantPromiseStorage        accountantPromiseStorage
+	timeTracker                     timeTracker
+	paymentInfo                     dto.PaymentRate
+	providerID                      identity.Identity
+	accountantID                    identity.Identity
+	lastInvoice                     lastInvoice
+	lastExchangeMessage             crypto.ExchangeMessage
+	accountantCaller                accountantCaller
+	registryAddress                 string
+	maxAccountantFailureCount       uint64
+	maxAllowedAccountantFee         uint16
+	bcHelper                        bcHelper
+	publisher                       eventbus.Publisher
+	feeProvider                     feeProvider
+	transactorFee                   uint64
+	maxRRecoveryLength              uint64
+	channelAddressCalculator        channelAddressCalculator
 }
 
-// NewInvoiceTracker creates a new instance of invoice tracker
+// InvoiceTrackerDeps contains all the deps needed for invoice tracker.
+type InvoiceTrackerDeps struct {
+	Peer                       identity.Identity
+	PeerInvoiceSender          PeerInvoiceSender
+	InvoiceStorage             providerInvoiceStorage
+	TimeTracker                timeTracker
+	ChargePeriod               time.Duration
+	ExchangeMessageChan        chan crypto.ExchangeMessage
+	ExchangeMessageWaitTimeout time.Duration
+	PaymentInfo                dto.PaymentRate
+	ProviderID                 identity.Identity
+	AccountantID               identity.Identity
+	AccountantCaller           accountantCaller
+	AccountantPromiseStorage   accountantPromiseStorage
+	Registry                   string
+	MaxAccountantFailureCount  uint64
+	MaxRRecoveryLength         uint64
+	MaxAllowedAccountantFee    uint16
+	BlockchainHelper           bcHelper
+	Publisher                  eventbus.Publisher
+	FeeProvider                feeProvider
+	ChannelAddressCalculator   channelAddressCalculator
+}
+
+// NewInvoiceTracker creates a new instance of invoice tracker.
 func NewInvoiceTracker(
-	peer identity.Identity,
-	peerInvoiceSender PeerInvoiceSender,
-	chargePeriod time.Duration,
-	exchangeMessageChan chan crypto.ExchangeMessage,
-	exchangeMessageWaitTimeout time.Duration) *InvoiceTracker {
+	itd InvoiceTrackerDeps) *InvoiceTracker {
 	return &InvoiceTracker{
-		peer:                           peer,
+		peer:                           itd.Peer,
 		stop:                           make(chan struct{}),
-		peerInvoiceSender:              peerInvoiceSender,
-		exchangeMessageChan:            exchangeMessageChan,
-		exchangeMessageWaitTimeout:     exchangeMessageWaitTimeout,
-		chargePeriod:                   chargePeriod,
-		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, chargePeriod),
+		peerInvoiceSender:              itd.PeerInvoiceSender,
+		exchangeMessageChan:            itd.ExchangeMessageChan,
+		exchangeMessageWaitTimeout:     itd.ExchangeMessageWaitTimeout,
+		chargePeriod:                   itd.ChargePeriod,
+		invoiceStorage:                 itd.InvoiceStorage,
+		timeTracker:                    itd.TimeTracker,
+		paymentInfo:                    itd.PaymentInfo,
+		providerID:                     itd.ProviderID,
+		accountantCaller:               itd.AccountantCaller,
+		accountantPromiseStorage:       itd.AccountantPromiseStorage,
+		accountantID:                   itd.AccountantID,
+		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, itd.ChargePeriod),
+		maxAccountantFailureCount:      itd.MaxAccountantFailureCount,
+		maxAllowedAccountantFee:        itd.MaxAllowedAccountantFee,
+		bcHelper:                       itd.BlockchainHelper,
+		publisher:                      itd.Publisher,
+		registryAddress:                itd.Registry,
+		feeProvider:                    itd.FeeProvider,
+		channelAddressCalculator:       itd.ChannelAddressCalculator,
+		maxRRecoveryLength:             itd.MaxRRecoveryLength,
 	}
 }
 
@@ -78,9 +183,57 @@ func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time
 	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
 }
 
+func (it *InvoiceTracker) generateInitialInvoice() error {
+	agreementID, err := it.invoiceStorage.GetNewAgreementID(it.providerID)
+	if err != nil {
+		return errors.Wrap(err, "could not get new agreement id")
+	}
+
+	r := it.generateR()
+	invoice := crypto.CreateInvoice(agreementID, it.paymentInfo.GetPrice().Amount, 0, r)
+	invoice.Provider = it.providerID.Address
+	it.lastInvoice = lastInvoice{
+		invoice: invoice,
+		r:       r,
+	}
+	return nil
+}
+
 // Start stars the invoice tracker
 func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
+	it.timeTracker.StartTracking()
+
+	isConsumerRegistered, err := it.bcHelper.IsRegistered(common.HexToAddress(it.registryAddress), it.peer.ToCommonAddress())
+	if err != nil {
+		return errors.Wrap(err, "could not check customer identity registration status")
+	}
+
+	if !isConsumerRegistered {
+		return ErrConsumerNotRegistered
+	}
+
+	fees, err := it.feeProvider.FetchSettleFees()
+	if err != nil {
+		return errors.Wrap(err, "could not fetch fees")
+	}
+	it.transactorFee = fees.Fee
+
+	fee, err := it.bcHelper.GetAccountantFee(common.HexToAddress(it.accountantID.Address))
+	if err != nil {
+		return errors.Wrap(err, "could not get accountants fee")
+	}
+
+	if fee > it.maxAllowedAccountantFee {
+		log.Error().Msgf("Accountant fee too large, asking for %v where %v is the limit", fee, it.maxAllowedAccountantFee)
+		return ErrAccountantFeeTooLarge
+	}
+
+	err = it.generateInitialInvoice()
+	if err != nil {
+		return errors.Wrap(err, "could not generate initial invoice")
+	}
+
 	// give the consumer a second to start up his payments before sending the first request
 	firstSend := time.After(time.Second)
 	for {
@@ -113,10 +266,41 @@ func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
 	return atomic.LoadUint64(&it.notReceivedExchangeMessageCount)
 }
 
+func (it *InvoiceTracker) generateR() []byte {
+	r := make([]byte, 32)
+	rand.Read(r)
+	return r
+}
+
 func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
-	err := it.sendInvoice()
+	// TODO: this should be calculated according to the passed in payment period
+	shouldBe := uint64(math.Trunc(it.timeTracker.Elapsed().Minutes() * float64(it.paymentInfo.GetPrice().Amount)))
+
+	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
+	// This is due to the fact that both payment providers start at different times.
+	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
+	// Over the long run, this becomes redundant as the difference should become miniscule.
+	if it.lastExchangeMessage.AgreementTotal == 0 {
+		shouldBe = uint64(math.Trunc(float64(shouldBe) * 0.8))
+		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
+	}
+
+	r := it.generateR()
+	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, it.transactorFee, r)
+	invoice.Provider = it.providerID.Address
+	err := it.peerInvoiceSender.Send(invoice)
 	if err != nil {
 		return err
+	}
+
+	it.lastInvoice = lastInvoice{
+		invoice: invoice,
+		r:       r,
+	}
+
+	err = it.invoiceStorage.Store(it.providerID, it.peer, invoice)
+	if err != nil {
+		return errors.Wrap(err, "could not store invoice")
 	}
 
 	err = it.receiveExchangeMessageOrTimeout()
@@ -133,7 +317,7 @@ func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
 
 func (it *InvoiceTracker) handleExchangeMessageReceiveError(err error) error {
 	// if it's a timeout, we'll want to ignore it if we're not exceeding maxNotReceivedexchangeMessages
-	if err == ErrExchangeWaitTimeout {
+	if err == ErrExchangeWaitTimeout || err == ErrMissmatchingHashlock {
 		it.markExchangeMessageNotReceived()
 		if it.getNotReceivedExchangeMessageCount() >= it.maxNotReceivedExchangeMessages {
 			return err
@@ -144,19 +328,161 @@ func (it *InvoiceTracker) handleExchangeMessageReceiveError(err error) error {
 	return err
 }
 
-func (it *InvoiceTracker) sendInvoice() error {
-	// TODO: a ton of actions should go here
+func (it *InvoiceTracker) incrementAccountantFailureCount() {
+	atomic.AddUint64(&it.accountantFailureCount, 1)
+}
 
-	// TODO: fill the fields
-	return it.peerInvoiceSender.Send(crypto.Invoice{AgreementID: 1234})
+func (it *InvoiceTracker) resetAccountantFailureCount() {
+	atomic.SwapUint64(&it.accountantFailureCount, 0)
+}
+
+func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
+	return atomic.LoadUint64(&it.accountantFailureCount)
+}
+
+func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
+	peerAddr := common.HexToAddress(it.peer.Address)
+	if res := em.IsMessageValid(peerAddr); !res {
+		return ErrExchangeValidationFailed
+	}
+
+	signer, err := em.Promise.RecoverSigner()
+	if err != nil {
+		return errors.Wrap(err, "could not recover promise signature")
+	}
+
+	if signer.Hex() != peerAddr.Hex() {
+		return errors.New("identity missmatch")
+	}
+
+	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
+		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
+		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
+	}
+
+	addr, err := it.channelAddressCalculator.GetChannelAddress(it.peer)
+	if err != nil {
+		return errors.Wrap(err, "could not generate channel address")
+	}
+
+	expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr.Hex(), "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode expected chanel")
+	}
+
+	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
+		log.Warn().Msgf("Consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
+		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
+	}
+	return nil
+}
+
+func (it *InvoiceTracker) checkForCorrectHashlock(em crypto.ExchangeMessage) error {
+	hashlock, err := hex.DecodeString(strings.TrimPrefix(it.lastInvoice.invoice.Hashlock, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode hashlock")
+	}
+
+	if !bytes.Equal(hashlock, em.Promise.Hashlock) {
+		log.Warn().Msgf("Consumer sent an invalid hashlock. Expected %q, got %q. Skipping", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
+		return ErrMissmatchingHashlock
+	}
+	return nil
 }
 
 func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 	select {
 	case pm := <-it.exchangeMessageChan:
-		if res := pm.ValidateExchangeMessage(common.HexToAddress(it.peer.Address)); !res {
-			return ErrExchangeValidationFailed
+		err := it.checkForCorrectHashlock(pm)
+		if err != nil {
+			return err
 		}
+
+		err = it.validateExchangeMessage(pm)
+		if err != nil {
+			return err
+		}
+
+		it.lastExchangeMessage = pm
+
+		needsRevealing := false
+		accountantPromise, err := it.accountantPromiseStorage.Get(it.providerID, it.accountantID)
+		switch err {
+		case nil:
+			needsRevealing = !accountantPromise.Revealed
+			break
+		case ErrNotFound:
+			needsRevealing = false
+			break
+		default:
+			return errors.Wrap(err, "could not get accountant promise")
+		}
+
+		if needsRevealing {
+			err = it.accountantCaller.RevealR(accountantPromise.R, it.providerID.Address, accountantPromise.AgreementID)
+			if err != nil {
+				log.Error().Err(err).Msg("Could not reveal R")
+				it.incrementAccountantFailureCount()
+				if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
+					return errors.Wrap(err, "could not call accountant")
+				}
+				log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
+				return nil
+			}
+			it.resetAccountantFailureCount()
+			accountantPromise.Revealed = true
+			err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, accountantPromise)
+			if err != nil {
+				return errors.Wrap(err, "could not store accountant promise")
+			}
+			log.Debug().Msg("Accountant promise stored")
+		}
+
+		err = it.invoiceStorage.StoreR(it.providerID, it.lastInvoice.invoice.AgreementID, hex.EncodeToString(it.lastInvoice.r))
+		if err != nil {
+			return errors.Wrap(err, "could not store r")
+		}
+
+		promise, err := it.accountantCaller.RequestPromise(pm)
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not call accountant")
+
+			// TODO: handle this better
+			if strings.Contains(err.Error(), "400 Bad Request") {
+				recoveryError := it.initiateRRecovery()
+				if recoveryError != nil {
+					return errors.Wrap(err, "could not recover R")
+				}
+			}
+
+			it.incrementAccountantFailureCount()
+			if it.getAccountantFailureCount() > it.maxAccountantFailureCount {
+				return errors.Wrap(err, "could not call accountant")
+			}
+			log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
+			return nil
+		}
+		it.resetAccountantFailureCount()
+
+		ap := AccountantPromise{
+			Promise:     promise,
+			R:           hex.EncodeToString(it.lastInvoice.r),
+			Revealed:    false,
+			AgreementID: it.lastInvoice.invoice.AgreementID,
+		}
+		err = it.accountantPromiseStorage.Store(it.providerID, it.accountantID, ap)
+		if err != nil {
+			return errors.Wrap(err, "could not store accountant promise")
+		}
+		log.Debug().Msg("Accountant promise stored")
+
+		promise.R = it.lastInvoice.r
+		it.publisher.Publish(AccountantPromiseTopic, AccountantPromiseEventPayload{
+			Promise:      promise,
+			AccountantID: it.accountantID,
+			ProviderID:   it.providerID,
+		})
+		it.resetAccountantFailureCount()
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout
 	case <-it.stop:
@@ -165,7 +491,32 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 	return nil
 }
 
-// Stop stops the invoice tracker
+func (it *InvoiceTracker) initiateRRecovery() error {
+	currentAgreement := it.lastInvoice.invoice.AgreementID
+
+	var minBound uint64 = 1
+	if currentAgreement > it.maxRRecoveryLength {
+		minBound = currentAgreement - it.maxRRecoveryLength
+	}
+
+	for i := currentAgreement; i >= minBound; i-- {
+		r, err := it.invoiceStorage.GetR(it.providerID, i)
+		if err != nil {
+			return errors.Wrap(err, "could not get R")
+		}
+		err = it.accountantCaller.RevealR(r, it.providerID.Address, i)
+		if err != nil {
+			log.Warn().Err(err).Msgf("revealing %v", i)
+		} else {
+			log.Info().Msg("r recovered")
+			return nil
+		}
+	}
+
+	return errors.New("R recovery failed")
+}
+
+// Stop stops the invoice tracker.
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msg("Stopping...")

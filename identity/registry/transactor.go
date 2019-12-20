@@ -15,20 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package transactor
+package registry
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
+
+// TransactorRegistrationTopic represents the registration topic to which events regarding registration attempts on transactor will occur
+const TransactorRegistrationTopic = "transactor_identity_registration"
+
+// TransactorTopUpTopic represents the top up topic to which events regarding top up attempts are sent.
+const TransactorTopUpTopic = "transactor_top_up"
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
@@ -38,10 +45,11 @@ type Transactor struct {
 	registryAddress       string
 	accountantID          string
 	channelImplementation string
+	publisher             eventbus.Publisher
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher) *Transactor {
 	return &Transactor{
 		httpClient:            httpClient,
 		endpointAddress:       endpointAddress,
@@ -49,14 +57,13 @@ func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAdd
 		registryAddress:       registryAddress,
 		accountantID:          accountantID,
 		channelImplementation: channelImplementation,
+		publisher:             publisher,
 	}
 }
 
-// Fees represents fees applied by Transactor
-// swagger:model Fees
-type Fees struct {
-	Transaction  uint64 `json:"transaction"`
-	Registration uint64 `json:"registration"`
+// FeesResponse represents fees applied by Transactor
+type FeesResponse struct {
+	Fee uint64 `json:"fee"`
 }
 
 // IdentityRegistrationRequestDTO represents the identity registration user input parameters
@@ -94,9 +101,19 @@ type IdentityRegistrationRequest struct {
 	Identity  string `json:"identity"`
 }
 
-// FetchFees fetches current transactor fees
-func (t *Transactor) FetchFees() (Fees, error) {
-	f := Fees{}
+// PromiseSettlementRequest represents the settlement request body
+type PromiseSettlementRequest struct {
+	AccountantID  string `json:"accountantID"`
+	ChannelID     string `json:"channelID"`
+	Amount        uint64 `json:"amount"`
+	TransactorFee uint64 `json:"fee"`
+	Preimage      string `json:"preimage"`
+	Signature     string `json:"signature"`
+}
+
+// FetchRegistrationFees fetches current transactor registration fees
+func (t *Transactor) FetchRegistrationFees() (FeesResponse, error) {
+	f := FeesResponse{}
 
 	req, err := requests.NewGetRequest(t.endpointAddress, "fee/register", nil)
 	if err != nil {
@@ -107,9 +124,22 @@ func (t *Transactor) FetchFees() (Fees, error) {
 	return f, err
 }
 
+// FetchSettleFees fetches current transactor settlement fees
+func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
+	f := FeesResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, "fee/settle", nil)
+	if err != nil {
+		return f, errors.Wrap(err, "failed to fetch transactor fees")
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	return f, err
+}
+
 // TopUp requests a myst topup for testing purposes.
 func (t *Transactor) TopUp(id string) error {
-	channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
+	channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate channel address")
 	}
@@ -118,7 +148,29 @@ func (t *Transactor) TopUp(id string) error {
 		Identity: channelAddress,
 	}
 
-	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
+	req, err := requests.NewPostRequest(t.endpointAddress, "topup", payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create TopUp request")
+	}
+
+	// This is left as a synchronous call on purpose.
+	t.publisher.Publish(TransactorTopUpTopic, id)
+
+	return t.httpClient.DoRequest(req)
+}
+
+// SettleAndRebalance requests the transactor to settle and rebalance the given channel
+func (t *Transactor) SettleAndRebalance(accountantID string, promise pc.Promise) error {
+	payload := PromiseSettlementRequest{
+		AccountantID:  accountantID,
+		ChannelID:     hex.EncodeToString(promise.ChannelID),
+		Amount:        promise.Amount,
+		TransactorFee: promise.Fee,
+		Preimage:      hex.EncodeToString(promise.R),
+		Signature:     hex.EncodeToString(promise.Signature),
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_and_rebalance", payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to create TopUp request")
 	}
@@ -142,6 +194,10 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
+	// This is left as a synchronous call on purpose.
+	// We need to notify registry before returning.
+	t.publisher.Publish(TransactorRegistrationTopic, regReq)
+
 	return t.httpClient.DoRequest(req)
 }
 
@@ -152,7 +208,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 	regReq.Fee = regReqDTO.Fee
 
 	if regReqDTO.Beneficiary == "" {
-		channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
+		channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
@@ -171,7 +227,6 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 
 	signatureHex := common.Bytes2Hex(sig)
 	regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
-	log.Info().Msgf("regReq: %v", regReq)
 	regReq.Identity = id
 
 	return regReq, nil

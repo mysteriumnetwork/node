@@ -17,10 +17,13 @@
 
 package registry
 
-import "github.com/mysteriumnetwork/node/identity"
+import (
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
+)
 
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
-	IsRegistered(identity.Identity) (bool, error)
-	SubscribeToRegistrationEvent(identity.Identity) (registeredEvent chan RegistrationEvent, unsubscribe func())
+	Subscribe(eventbus.Subscriber) error
+	GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error)
 }

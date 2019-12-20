@@ -57,11 +57,12 @@ type SessionDto struct {
 // PaymentVersion represents the different payment versions we have
 type PaymentVersion string
 
-// PaymentVersionV2 represents the new pingpong version
-const PaymentVersionV2 PaymentVersion = "v2"
+// PaymentVersionV3 represents the new pingpong version
+const PaymentVersionV3 PaymentVersion = "v3"
 
 // ConsumerInfo represents the consumer related information
 type ConsumerInfo struct {
 	IssuerID       identity.Identity `json:"issuerID"`
+	AccountantID   identity.Identity `json:"accountantID"`
 	PaymentVersion PaymentVersion    `json:"paymentVersion"`
 }

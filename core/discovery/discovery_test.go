@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -43,13 +44,14 @@ func discoveryWithMockedDependencies() *Discovery {
 			return &identity.SignerFake{}
 		},
 		proposalRegistry: &mockedProposalRegistry{},
-		eventPublisher:   &mockedEventPublisher{},
+		eventBus:         eventbus.New(),
+		stop:             make(chan struct{}),
 	}
 }
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.RegisteredProvider}
 
 	d.Start(providerID, proposal)
 
@@ -59,24 +61,37 @@ func TestStartRegistersProposal(t *testing.T) {
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
-
-	d.Start(providerID, proposal)
-
-	actualStatus := observeStatus(d, PingProposal)
-	assert.Equal(t, PingProposal, actualStatus)
-}
-
-func TestStartRegisterIdentityCancelled(t *testing.T) {
-	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.Unregistered}
 
 	d.Start(providerID, proposal)
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
-	d.Stop()
+	d.eventBus.Publish(identity_registry.RegistrationEventTopic, identity_registry.RegistrationEventPayload{
+		ID:     providerID,
+		Status: identity_registry.RegisteredProvider,
+	})
+
+	actualStatus = observeStatus(d, PingProposal)
+	assert.Equal(t, PingProposal, actualStatus)
+}
+
+func TestStartRegisterIdentityCancelled(t *testing.T) {
+	d := discoveryWithMockedDependencies()
+	mockRegistry := &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.Unregistered}
+	d.identityRegistry = mockRegistry
+
+	d.Start(providerID, proposal)
+	defer d.Stop()
+
+	actualStatus := observeStatus(d, WaitingForRegistration)
+	assert.Equal(t, WaitingForRegistration, actualStatus)
+
+	d.eventBus.Publish(identity_registry.RegistrationEventTopic, identity_registry.RegistrationEventPayload{
+		ID:     providerID,
+		Status: identity_registry.RegistrationError,
+	})
 
 	actualStatus = observeStatus(d, IdentityRegisterFailed)
 	assert.Equal(t, IdentityRegisterFailed, actualStatus)
@@ -84,7 +99,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 
 func TestStartStopUnregisterProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.RegisteredProvider}
 
 	d.Start(providerID, proposal)
 
@@ -125,7 +140,3 @@ func (mockedProposalRegistry) UnregisterProposal(proposal market.ServiceProposal
 }
 
 var _ ProposalRegistry = &mockedProposalRegistry{}
-
-type mockedEventPublisher struct{}
-
-func (mep *mockedEventPublisher) Publish(_ string, _ interface{}) {}

@@ -28,15 +28,19 @@ import (
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
 var identityRegData = `{
-  "beneficiary": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c",
+  "beneficiary": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
   "fee": 1,
   "stake": 0
 }`
+
+type mockPublisher struct{}
+
+func (mp *mockPublisher) Publish(topic string, data interface{}) {}
 
 func Test_RegisterIdentity(t *testing.T) {
 	mockResponse := ""
@@ -44,7 +48,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -62,12 +66,12 @@ func Test_RegisterIdentity(t *testing.T) {
 }
 
 func Test_Get_TransactorFees(t *testing.T) {
-	mockResponse := `{ "transaction": 1, "registration": 100 }`
+	mockResponse := `{ "fee": 1 }`
 	server := newTestTransactorServer(http.StatusOK, mockResponse)
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "accountantID", fakeSignerFactory)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -81,7 +85,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, mockResponse, resp.Body.String())
+	assert.JSONEq(t, `{"registration":1, "settlement":1}`, resp.Body.String())
 }
 
 func Test_TopUp_OK(t *testing.T) {
@@ -90,10 +94,10 @@ func Test_TopUp_OK(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
-	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`
+	topUpData := `{"identity": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/topup",
@@ -115,10 +119,10 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr)
 
-	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`
+	topUpData := `{"identity": "0x599d43715DF3070f83355D9D90AE62c159E62A75"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/topup",
@@ -132,7 +136,7 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 	assert.JSONEq(
 		t,
-		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/fee/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
+		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
 		resp.Body.String(),
 	)
 }

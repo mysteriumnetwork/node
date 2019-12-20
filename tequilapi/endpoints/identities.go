@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -64,13 +65,17 @@ type identityUnlockingDto struct {
 type statusDTO struct {
 	ChannelAddress string `json:"channel_address"`
 	IsRegistered   bool   `json:"is_registered"`
+	Balance        uint64 `json:"balance"`
 }
+
+type balanceGetter func(ID identity.Identity) uint64
 
 type identitiesAPI struct {
 	idm                                           identity.Manager
 	selector                                      identity_selector.Handler
 	registry                                      registry.IdentityRegistry
 	registryAddress, channelImplementationAddress string
+	balanceGetter                                 balanceGetter
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -86,8 +91,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry, registryAddress, channelImplementationAddress string) *identitiesAPI {
-	return &identitiesAPI{idm, selector, registry, registryAddress, channelImplementationAddress}
+func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry, registryAddress, channelImplementationAddress string, balanceGetter balanceGetter) *identitiesAPI {
+	return &identitiesAPI{idm, selector, registry, registryAddress, channelImplementationAddress, balanceGetter}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -276,20 +281,26 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		identityAddress = ""
 	}
 
-	channelAddress, err := pc.GenerateChannelAddress(identityAddress, endpoint.registryAddress, endpoint.channelImplementationAddress)
-
+	// TODO: pass in accountant id
+	channelAddress, err := pc.GenerateChannelAddress(identityAddress, metadata.TestnetDefinition.AccountantID, endpoint.registryAddress, endpoint.channelImplementationAddress)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to calculate channel address"), http.StatusInternalServerError)
 		return
 	}
 
-	isRegistered, err := endpoint.registry.IsRegistered(identity.FromAddress(identityAddress))
+	s, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
 
-	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered}
+	isRegistered := false
+	switch s {
+	case registry.RegisteredConsumer, registry.Promoting, registry.RegisteredProvider:
+		isRegistered = true
+	}
+	balance := endpoint.balanceGetter(identity.FromAddress(identityAddress))
+	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered, Balance: balance}
 	utils.WriteAsJSON(status, resp)
 }
 
@@ -348,8 +359,9 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	identityRegistry registry.IdentityRegistry,
 	registryAddress, channelImplementationAddress string,
+	balanceGetter balanceGetter,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress)
+	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress, balanceGetter)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id", idmEnd.Current)

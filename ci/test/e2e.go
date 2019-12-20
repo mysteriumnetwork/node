@@ -43,6 +43,7 @@ func TestE2EBasic() error {
 	}
 	runner := newRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
 	defer runner.cleanup()
+
 	if err := runner.init(); err != nil {
 		return err
 	}
@@ -58,6 +59,7 @@ func TestE2ENAT() error {
 	}
 	runner := newRunner(composeFiles, "node_e2e_nat_test", "openvpn")
 	defer runner.cleanup()
+
 	if err := runner.init(); err != nil {
 		return err
 	}
@@ -126,6 +128,11 @@ func (r *runner) startAppContainers() error {
 		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
+	}
+
+	log.Info().Msg("starting accountant")
+	if err := r.compose("up", "-d", "accountant"); err != nil {
+		return errors.Wrap(err, "starting accountant failed!")
 	}
 
 	return nil

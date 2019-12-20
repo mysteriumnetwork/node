@@ -34,7 +34,7 @@ var identityTwo = identity.FromAddress("0x3D32e7D08BE7E5c3870679b3A7Ef60e9422196
 var invoiceOne = crypto.Invoice{
 	AgreementID:    1,
 	AgreementTotal: 1,
-	Fee:            1,
+	TransactorFee:  1,
 	Hashlock:       "hashlock1",
 	Provider:       identityOne.Address,
 }
@@ -42,12 +42,13 @@ var invoiceOne = crypto.Invoice{
 var invoiceTwo = crypto.Invoice{
 	AgreementID:    2,
 	AgreementTotal: 2,
-	Fee:            2,
+	TransactorFee:  2,
 	Hashlock:       "hashlock2",
 	Provider:       identityTwo.Address,
 }
 
 func TestConsumerInvoiceStorage(t *testing.T) {
+	consumerID := identity.FromAddress("0xconsumer")
 	dir, err := ioutil.TempDir("", "consumerInvoiceTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
@@ -61,39 +62,52 @@ func TestConsumerInvoiceStorage(t *testing.T) {
 	consumerStorage := NewConsumerInvoiceStorage(genericStorage)
 
 	// check if errors are wrapped correctly
-	_, err = consumerStorage.Get(identityOne)
+	_, err = consumerStorage.Get(consumerID, identityOne)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that invoice is stored correctly
-	err = consumerStorage.Store(identityOne, invoiceOne)
+	err = consumerStorage.Store(consumerID, identityOne, invoiceOne)
 	assert.NoError(t, err)
 
-	invoice, err := consumerStorage.Get(identityOne)
+	invoice, err := consumerStorage.Get(consumerID, identityOne)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceOne, invoice)
 
 	// overwrite the invoice, check if it is overwritten
-	err = consumerStorage.Store(identityOne, invoiceTwo)
+	err = consumerStorage.Store(consumerID, identityOne, invoiceTwo)
 	assert.NoError(t, err)
 
-	invoice, err = consumerStorage.Get(identityOne)
+	invoice, err = consumerStorage.Get(consumerID, identityOne)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceTwo, invoice)
 
 	// store two invoices, check if both are gotten correctly
-	err = consumerStorage.Store(identityTwo, invoiceOne)
+	err = consumerStorage.Store(consumerID, identityTwo, invoiceOne)
 	assert.NoError(t, err)
 
-	invoice, err = consumerStorage.Get(identityOne)
+	invoice, err = consumerStorage.Get(consumerID, identityOne)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceTwo, invoice)
 
-	invoice, err = consumerStorage.Get(identityTwo)
+	invoice, err = consumerStorage.Get(consumerID, identityTwo)
+	assert.NoError(t, err)
+	assert.EqualValues(t, invoiceOne, invoice)
+
+	// check for possibility for multiple consumers to store invoices
+	consumerTwo := identity.FromAddress("0xconsumerTwo")
+	_, err = consumerStorage.Get(consumerTwo, identityTwo)
+	assert.Equal(t, ErrNotFound, err)
+
+	err = consumerStorage.Store(consumerTwo, identityTwo, invoiceOne)
+	assert.NoError(t, err)
+
+	invoice, err = consumerStorage.Get(consumerTwo, identityTwo)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceOne, invoice)
 }
 
 func TestProviderInvoiceStorage(t *testing.T) {
+	providerID := identity.FromAddress("0xprovider")
 	dir, err := ioutil.TempDir("", "providerInvoiceTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
@@ -107,34 +121,78 @@ func TestProviderInvoiceStorage(t *testing.T) {
 	providerStorage := NewProviderInvoiceStorage(genericStorage)
 
 	// check if errors are wrapped correctly
-	_, err = providerStorage.Get(identityOne)
+	_, err = providerStorage.Get(providerID, identityOne)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that invoice is stored correctly
-	err = providerStorage.Store(identityOne, invoiceOne)
+	err = providerStorage.Store(providerID, identityOne, invoiceOne)
 	assert.NoError(t, err)
 
-	invoice, err := providerStorage.Get(identityOne)
+	invoice, err := providerStorage.Get(providerID, identityOne)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceOne, invoice)
 
 	// overwrite the invoice, check if it is overwritten
-	err = providerStorage.Store(identityOne, invoiceTwo)
+	err = providerStorage.Store(providerID, identityOne, invoiceTwo)
 	assert.NoError(t, err)
 
-	invoice, err = providerStorage.Get(identityOne)
+	invoice, err = providerStorage.Get(providerID, identityOne)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceTwo, invoice)
 
 	// store two invoices, check if both are gotten correctly
-	err = providerStorage.Store(identityTwo, invoiceOne)
+	err = providerStorage.Store(providerID, identityTwo, invoiceOne)
 	assert.NoError(t, err)
 
-	invoice, err = providerStorage.Get(identityOne)
+	invoice, err = providerStorage.Get(providerID, identityOne)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceTwo, invoice)
 
-	invoice, err = providerStorage.Get(identityTwo)
+	invoice, err = providerStorage.Get(providerID, identityTwo)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceOne, invoice)
+
+	// check if multiple providers can actually store their invoices
+	providerTwo := identity.FromAddress("0xproviderTwo")
+
+	// store and check that invoice is stored correctly
+	err = providerStorage.Store(providerTwo, identityOne, invoiceOne)
+	assert.NoError(t, err)
+
+	invoice, err = providerStorage.Get(providerTwo, identityOne)
+	assert.NoError(t, err)
+	assert.EqualValues(t, invoiceOne, invoice)
+
+	_, err = providerStorage.Get(providerTwo, identityTwo)
+	assert.Equal(t, ErrNotFound, err)
+
+	// test R storage
+	var agreementID1 uint64 = 1
+	r1 := "my r"
+	err = providerStorage.StoreR(providerID, agreementID1, r1)
+	assert.NoError(t, err)
+
+	var agreementID2 uint64 = 1222
+	r2 := "my other r"
+	err = providerStorage.StoreR(providerID, agreementID2, r2)
+	assert.NoError(t, err)
+
+	r, err := providerStorage.GetR(providerID, agreementID2)
+	assert.NoError(t, err)
+	assert.Equal(t, r2, r)
+
+	r, err = providerStorage.GetR(providerID, agreementID1)
+	assert.NoError(t, err)
+	assert.Equal(t, r1, r)
+
+	// check if multiple providers can actually store their R's
+	r, err = providerStorage.GetR(providerTwo, agreementID2)
+	assert.Equal(t, ErrNotFound, err)
+
+	err = providerStorage.StoreR(providerTwo, agreementID2, r2)
+	assert.NoError(t, err)
+
+	r, err = providerStorage.GetR(providerID, agreementID2)
+	assert.NoError(t, err)
+	assert.Equal(t, r2, r)
 }

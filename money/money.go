@@ -27,9 +27,11 @@ type Money struct {
 	Currency Currency `json:"currency,omitempty"`
 }
 
-// NewMoney returns a new instance of Money
-func NewMoney(amount float64, currency Currency) Money {
-	return Money{uint64(amount * 100000000), currency}
+// NewMoney returns a new instance of Money.
+// The money is a representation of myst in a uint64 form, with the decimal part expanded.
+// This means, that one myst is equivalent to 10 0000 000.
+func NewMoney(amount uint64, currency Currency) Money {
+	return Money{amount, currency}
 }
 
 // String converts struct to string

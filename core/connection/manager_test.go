@@ -53,6 +53,7 @@ type testContext struct {
 var (
 	consumerID            = identity.FromAddress("identity-1")
 	activeProviderID      = identity.FromAddress("fake-node-1")
+	accountantID          = identity.FromAddress("accountant")
 	activeProviderContact = market.Contact{}
 	activeServiceType     = "fake-service"
 	activeProposal        = market.ServiceProposal{
@@ -122,13 +123,13 @@ func (tc *testContext) SetupTest() {
 		dialogCreator,
 		func(paymentInfo *promise.PaymentInfo,
 			dialog communication.Dialog,
-			consumer, provider identity.Identity) (PaymentIssuer, error) {
+			consumer, provider, accountant identity.Identity) (PaymentIssuer, error) {
 			if paymentInfo == nil {
 				paymentInfo = &promise.PaymentInfo{}
 			}
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				initialState:      *paymentInfo,
-				paymentDefinition: dto.PaymentPerTime{},
+				paymentDefinition: dto.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
 			return tc.MockPaymentIssuer, nil
@@ -138,6 +139,7 @@ func (tc *testContext) SetupTest() {
 		tc.statusSender,
 		tc.fakeResolver,
 		tc.ipCheckParams,
+		false,
 	)
 }
 
@@ -148,12 +150,12 @@ func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 	tc.fakeConnectionFactory.mockError = errors.New("fatal connection error")
 
-	assert.Error(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.Error(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 }
@@ -162,7 +164,7 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
 
 	go func() {
-		tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+		tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	}()
 
 	waitABit()
@@ -178,7 +180,7 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 		tc.fakeConnectionFactory.mockConnection.stopBlock = nil
 	}()
 
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 
@@ -199,8 +201,8 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
-	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), ErrAlreadyExists, tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
+	assert.Equal(tc.T(), ErrAlreadyExists, tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 }
 
 func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
@@ -208,14 +210,14 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 }
 
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
-	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 	tc.fakeConnectionFactory.mockConnection.reportState(reconnectingState)
 	waitABit()
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
-	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
@@ -224,13 +226,13 @@ func (tc *testContext) TestDoubleDisconnectResultsInError() {
 }
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
-	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
-	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
@@ -240,11 +242,11 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 
 func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
 	tc.fakeConnectionFactory.mockError = errors.New("failed to create connection instance")
-	assert.Error(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
+	assert.Error(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 }
 
 func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutError() {
-	tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 }
 
@@ -257,7 +259,7 @@ func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	var err error
 	go func() {
 		defer connectWaiter.Done()
-		err = tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+		err = tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	}()
 
 	waitABit()
@@ -278,7 +280,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 	var err error
 	go func() {
 		defer connectWaiter.Done()
-		err = tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+		err = tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	}()
 	waitABit()
 	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
@@ -287,7 +289,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 }
 
 func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() {
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	waitABit()
 	assert.NoError(tc.T(), err)
 	assert.True(tc.T(), tc.MockPaymentIssuer.StartCalled())
@@ -295,7 +297,7 @@ func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() 
 
 func (tc *testContext) Test_PaymentManager_OnConnectErrorIsStopped() {
 	tc.fakeConnectionFactory.mockConnection.onStartReturnError = errors.New("fatal connection error")
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Error(tc.T(), err)
 	assert.True(tc.T(), tc.MockPaymentIssuer.StopCalled())
 }
@@ -304,7 +306,7 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	tc.stubPublisher.Clear()
 
 	tc.fakeConnectionFactory.mockConnection.onStartReturnError = errors.New("fatal connection error")
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Error(tc.T(), err)
 
 	history := tc.stubPublisher.GetEventHistory()
@@ -340,7 +342,7 @@ func (tc *testContext) Test_ManagerSetsPaymentInfo() {
 		},
 		FreeCredit: 100,
 	}
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Nil(tc.T(), err)
 	assert.Exactly(tc.T(), *paymentInfo, tc.MockPaymentIssuer.initialState)
 }
@@ -352,7 +354,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 		connectedState,
 	}
 
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	<-tc.ipCheckParams.Done
 
@@ -401,7 +403,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 		connectedState,
 	}
 
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	<-tc.ipCheckParams.Done
 
@@ -435,7 +437,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	// Simulate IP change.
 	tc.connManager.ipResolver = ip.NewResolverMock("10.0.0.4", "10.0.5")
 
-	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	<-tc.ipCheckParams.Done
 
@@ -475,7 +477,7 @@ func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.L
 
 type MockPaymentIssuer struct {
 	initialState      promise.PaymentInfo
-	paymentDefinition dto.PaymentPerTime
+	paymentDefinition dto.PaymentRate
 	startCalled       bool
 	stopCalled        bool
 	MockError         error

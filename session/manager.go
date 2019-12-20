@@ -84,7 +84,7 @@ type Storage interface {
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (PaymentEngine, error)
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func() (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, accountantID identity.Identity) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -102,6 +102,7 @@ func NewManager(
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
+	paymentsDisabled bool,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
@@ -114,6 +115,7 @@ func NewManager(
 		publisher:             publisher,
 		paymentEngineFactory:  paymentEngineFactory,
 		creationLock:          sync.Mutex{},
+		paymentsDisabled:      paymentsDisabled,
 	}
 }
 
@@ -128,8 +130,8 @@ type Manager struct {
 	natEventGetter        NATEventGetter
 	serviceId             string
 	publisher             publisher
-
-	creationLock sync.Mutex
+	paymentsDisabled      bool
+	creationLock          sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
@@ -154,9 +156,9 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 
 	// TODO: this whole block needs to go when we deprecate the old payment pingpong
 	var paymentEngine PaymentEngine
-	if consumerInfo.PaymentVersion == PaymentVersionV2 {
+	if consumerInfo.PaymentVersion == PaymentVersionV3 && !manager.paymentsDisabled {
 		log.Info().Msg("Using new payments")
-		engine, err := manager.paymentEngineFactory()
+		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID)
 		if err != nil {
 			return sessionInstance, err
 		}

@@ -24,6 +24,12 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
+// Fees represents the transactor fee
+type Fees struct {
+	Registration uint64 `json:"registration"`
+	Settlement   uint64 `json:"settlement"`
+}
+
 // StatusDTO holds connection status and session id
 type StatusDTO struct {
 	Status    string      `json:"status"`
@@ -68,6 +74,13 @@ type ServiceLocationDTO struct {
 // IdentityDTO holds identity address
 type IdentityDTO struct {
 	Address string `json:"id"`
+}
+
+// IdentityStatusDTO holds identity status with balance
+type IdentityStatusDTO struct {
+	ChannelAddress string `json:"channel_address"`
+	IsRegistered   bool   `json:"is_registered"`
+	Balance        uint64 `json:"balance"`
 }
 
 // IdentityList holds returned list of identities
