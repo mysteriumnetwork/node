@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/firewall"
 	nats_lib "github.com/nats-io/go-nats"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,24 +38,24 @@ const (
 )
 
 // ParseServerURI validates given NATS server address
-func ParseServerURI(uri string) (*url.URL, error) {
-	// Add scheme first otherwise url.Parse() fails.
-	if !strings.HasPrefix(uri, "nats:") {
-		uri = fmt.Sprintf("nats://%s", uri)
+func ParseServerURI(serverURI string) (*url.URL, error) {
+	// Add scheme first otherwise serverURL.Parse() fails.
+	if !strings.HasPrefix(serverURI, "nats:") {
+		serverURI = fmt.Sprintf("nats://%s", serverURI)
 	}
 
-	url, err := url.Parse(uri)
+	serverURL, err := url.Parse(serverURI)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, `failed to parse NATS server URI "%s"`, serverURI)
 	}
-	if url.Port() == "" {
-		url.Host = fmt.Sprintf("%s:%d", url.Host, BrokerPort)
+	if serverURL.Port() == "" {
+		serverURL.Host = fmt.Sprintf("%s:%d", serverURL.Host, BrokerPort)
 	}
 
-	return url, nil
+	return serverURL, nil
 }
 
-// NewConnection create new ConnectionWrap to given servers
+// NewConnection create new ConnectionWrap to given servers`
 func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	connection := &ConnectionWrap{
 		servers: make([]string, len(serverURIs)),
@@ -71,7 +72,7 @@ func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	return connection, nil
 }
 
-// NewConnection creates connection instances and connects instantly
+// OpenConnection creates connection instances and connects instantly
 func OpenConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	connection, err := NewConnection(serverURIs...)
 	if err != nil {
@@ -101,11 +102,15 @@ func (c *ConnectionWrap) Open() (err error) {
 
 	c.removeRules, err = firewall.AllowURLAccess(c.servers...)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, c.servers)
 	}
 
 	c.Conn, err = options.Connect()
-	return err
+	if err != nil {
+		return errors.Wrapf(err, `failed to connect to NATS servers "%v"`, c.servers)
+	}
+
+	return nil
 }
 
 // Close destructs the connection
@@ -117,7 +122,7 @@ func (c *ConnectionWrap) Close() {
 	if c.removeRules != nil {
 		c.removeRules()
 	}
-	c.removeRules = func() {}
+	c.removeRules = nil
 }
 
 // Check checks the connection

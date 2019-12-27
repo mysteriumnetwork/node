@@ -39,8 +39,8 @@ func TestParseServerURI(t *testing.T) {
 		{"nats://127.0.0.1:4333", &url.URL{Scheme: "nats", Host: "127.0.0.1:4333"}, nil},
 		{"nats://example.com:4333", &url.URL{Scheme: "nats", Host: "example.com:4333"}, nil},
 
-		{"nats:// example.com", nil, errors.New("parse nats:// example.com: invalid character \" \" in host name")},
-		{"nats://example.com:a", nil, errors.New("parse nats://example.com:a: invalid port \":a\" after host")},
+		{"nats:// example.com", nil, errors.New(`failed to parse NATS server URI "nats:// example.com": parse nats:// example.com: invalid character " " in host name`)},
+		{"nats://example.com:a", nil, errors.New(`failed to parse NATS server URI "nats://example.com:a": parse nats://example.com:a: invalid port ":a" after host`)},
 	}
 
 	for _, tc := range tests {
@@ -78,7 +78,7 @@ func TestConnectionWrap_NewConnection(t *testing.T) {
 	)
 
 	connection, err = NewConnection("nats:// example.com")
-	assert.EqualError(t, err, "parse nats:// example.com: invalid character \" \" in host name")
+	assert.EqualError(t, err, `failed to parse NATS server URI "nats:// example.com": parse nats:// example.com: invalid character " " in host name`)
 	assert.Nil(t, connection)
 }
 
@@ -91,7 +91,7 @@ func TestConnectionWrap_Close_NotOpened(t *testing.T) {
 
 func TestConnectionWrap_Close_AfterFailedOpen(t *testing.T) {
 	connection, _ := NewConnection("nats://far-server:1234")
-	assert.EqualError(t, connection.Open(), "nats: no servers available for connection")
+	assert.EqualError(t, connection.Open(), `failed to connect to NATS servers "[nats://far-server:1234]": nats: no servers available for connection`)
 
 	connection.Close()
 	assert.Nil(t, connection.removeRules)

@@ -21,17 +21,19 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/pkg/errors"
 )
 
 type registryComposite struct {
 	registries []discovery.ProposalRegistry
 }
 
-// NewRegistry create an instance of composite registry
+// NewRegistry creates an instance of composite registry
 func NewRegistry(registries ...discovery.ProposalRegistry) *registryComposite {
 	return &registryComposite{registries: registries}
 }
 
+// AddRegistry adds registry to set of registries
 func (rc *registryComposite) AddRegistry(registry discovery.ProposalRegistry) {
 	rc.registries = append(rc.registries, registry)
 }
@@ -40,7 +42,8 @@ func (rc *registryComposite) AddRegistry(registry discovery.ProposalRegistry) {
 func (rc *registryComposite) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	for _, registry := range rc.registries {
 		if err := registry.RegisterProposal(proposal, signer); err != nil {
-			return err
+			return errors.Wrapf(err, "failed to register proposal: %v", proposal)
+
 		}
 	}
 
@@ -51,7 +54,7 @@ func (rc *registryComposite) RegisterProposal(proposal market.ServiceProposal, s
 func (rc *registryComposite) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	for _, registry := range rc.registries {
 		if err := registry.UnregisterProposal(proposal, signer); err != nil {
-			return err
+			return errors.Wrapf(err, "failed to unregister proposal: %v", proposal)
 		}
 	}
 
@@ -62,7 +65,7 @@ func (rc *registryComposite) UnregisterProposal(proposal market.ServiceProposal,
 func (rc *registryComposite) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	for _, registry := range rc.registries {
 		if err := registry.PingProposal(proposal, signer); err != nil {
-			return err
+			return errors.Wrapf(err, "failed to ping proposal: %v", proposal)
 		}
 	}
 
