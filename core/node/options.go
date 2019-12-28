@@ -104,11 +104,7 @@ func GetOptions() *Options {
 			EtherClientRPC:              config.GetString(config.FlagEtherRPC),
 			QualityOracle:               config.GetString(config.FlagQualityOracleAddress),
 		},
-		Discovery: OptionsDiscovery{
-			Type:                   DiscoveryType(config.GetString(config.FlagDiscoveryType)),
-			Address:                config.GetString(config.FlagDiscoveryAddress),
-			ProposalFetcherEnabled: true,
-		},
+		Discovery: *GetDiscoveryOptions(),
 		MMN: OptionsMMN{
 			Address: config.GetString(config.FlagMMNAddress),
 			Enabled: config.GetTBool(config.FlagMMNEnabled),
@@ -170,6 +166,20 @@ func GetLogOptions() *logconfig.LogOptions {
 		LogLevel: level,
 		LogHTTP:  config.GetBool(config.FlagLogHTTP),
 		Filepath: filepath,
+	}
+}
+
+// GetDiscoveryOptions retrieves discovery options from the app configuration.
+func GetDiscoveryOptions() *OptionsDiscovery {
+	typeValues := config.GetStringSlice(config.FlagDiscoveryType)
+	types := make([]DiscoveryType, len(typeValues))
+	for i, typeValue := range typeValues {
+		types[i] = DiscoveryType(typeValue)
+	}
+
+	return &OptionsDiscovery{
+		Types:                  types,
+		ProposalFetcherEnabled: true,
 	}
 }
 

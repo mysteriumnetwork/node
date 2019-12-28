@@ -26,24 +26,43 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var _ communication.DialogWaiter = &dialogWaiter{}
 
 func TestDialogWaiter_Factory(t *testing.T) {
-	address := discovery.NewAddress("custom", "nats://far-server:4222")
+	connection := nats.StartConnectionMock()
 	signer := &identity.SignerFake{}
 
-	waiter := NewDialogWaiter(address, signer)
+	waiter := NewDialogWaiter(connection, "custom", signer)
 	assert.NotNil(t, waiter)
-	assert.Equal(t, address, waiter.address)
+	assert.Equal(t, "custom", waiter.topic)
 	assert.Equal(t, signer, waiter.signer)
 }
 
-func TestDialogWaiter_ServeDialogs(t *testing.T) {
+func TestDialogWaiter_GetContact(t *testing.T) {
+	connection := nats.StartConnectionMock()
+	defer connection.Close()
+
+	waiter := NewDialogWaiter(connection, "123456", &identity.SignerFake{})
+	assert.Equal(
+		t,
+		market.Contact{
+			Type: "nats/v1",
+			Definition: nats_discovery.ContactNATSV1{
+				Topic:           "123456",
+				BrokerAddresses: []string{"mockhost"},
+			},
+		},
+		waiter.GetContact(),
+	)
+}
+
+func TestDialogWaiter_Start(t *testing.T) {
 	peerID := identity.FromAddress("0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea")
 
 	connection := nats.StartConnectionMock()
@@ -78,7 +97,7 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 	)
 }
 
-func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
+func TestDialogWaiter_StartTopicUUID(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
@@ -88,9 +107,9 @@ func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
 		dialogReceived: make(chan communication.Dialog),
 	}
 
-	waiter := NewDialogWaiter(discovery.NewAddressWithConnection(connection, "my-topic"), signer)
+	waiter := NewDialogWaiter(connection, "my-topic", signer)
 
-	err := waiter.ServeDialogs(handler)
+	err := waiter.Start(handler)
 	assert.NoError(t, err)
 
 	go func() {
@@ -117,7 +136,7 @@ func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
+func TestDialogWaiter_StartRejectInvalidSignature(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
@@ -134,7 +153,7 @@ func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
 	assert.Nil(t, dialogInstance)
 }
 
-func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
+func TestDialogWaiter_StartRejectConsumersUsingValidator(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
@@ -144,9 +163,16 @@ func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
 		dialogReceived: make(chan communication.Dialog),
 	}
 
-	waiter := NewDialogWaiter(discovery.NewAddressWithConnection(connection, "test-topic"), signer, func(_ identity.Identity) error { return errors.New("expected error") })
+	waiter := NewDialogWaiter(
+		connection,
+		"test-topic",
+		signer,
+		func(_ identity.Identity) error {
+			return errors.New("expected error")
+		},
+	)
 
-	err := waiter.ServeDialogs(mockeDialogHandler)
+	err := waiter.Start(mockeDialogHandler)
 	assert.NoError(t, err)
 
 	msg, err := connection.Request("test-topic.dialog-create", []byte(`{
@@ -168,17 +194,17 @@ func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
 	)
 }
 
-func dialogServe(connection nats.Connection, signer identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
-	topic := "my-topic"
+func dialogServe(connection *nats.ConnectionMock, signer identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
 	waiter = &dialogWaiter{
-		address: discovery.NewAddressWithConnection(connection, topic),
-		signer:  signer,
+		connection: connection,
+		topic:      "my-topic",
+		signer:     signer,
 	}
 	handler = &dialogHandler{
 		dialogReceived: make(chan communication.Dialog),
 	}
 
-	err := waiter.ServeDialogs(handler)
+	err := waiter.Start(handler)
 	if err != nil {
 		panic(err)
 	}

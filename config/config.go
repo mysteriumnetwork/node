@@ -216,6 +216,12 @@ func (cfg *Config) GetString(key string) string {
 	return cast.ToString(cfg.Get(key))
 }
 
+// GetStringSlice returns config value as []string.
+func (cfg *Config) GetStringSlice(key string) []string {
+	value := cfg.Get(key).(*cli.StringSlice)
+	return cast.ToStringSlice([]string(*value))
+}
+
 // ParseBoolFlag parses a cli.BoolFlag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseBoolFlag(ctx *cli.Context, flag cli.BoolFlag) {
@@ -307,6 +313,19 @@ func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
 	}
 }
 
+// ParseStringSliceFlag parses a cli.StringSliceFlag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFlag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.StringSlice(flag.Name))
+	} else if ctx.GlobalIsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.GlobalStringSlice(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
 // GetBool shorthand for getting current configuration value for cli.BoolFlag.
 func GetBool(flag cli.BoolFlag) bool {
 	return Current.GetBool(flag.Name)
@@ -325,6 +344,11 @@ func GetInt(flag cli.IntFlag) int {
 // GetString shorthand for getting current configuration value for cli.StringFlag.
 func GetString(flag cli.StringFlag) string {
 	return Current.GetString(flag.Name)
+}
+
+// GetStringSlice shorthand for getting current configuration value for cli.StringSliceFlag.
+func GetStringSlice(flag cli.StringSliceFlag) []string {
+	return Current.GetStringSlice(flag.Name)
 }
 
 // GetDuration shorthand for getting current configuration value for cli.DurationFlag.

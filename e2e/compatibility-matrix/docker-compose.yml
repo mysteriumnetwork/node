@@ -27,7 +27,7 @@ services:
       --experiment-promise-check
       --localnet
       --broker-address=broker
-      --discovery-address=http://mysterium-api/v1
+      --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://ganache:8545
       service openvpn,noop,wireguard
       --agreed-terms-and-conditions
@@ -51,7 +51,8 @@ services:
       --experiment-promise-check
       --localnet
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --discovery-address=http://mysterium-api/v1
+      --api.address=http://mysterium-api/v1
+      --broker-address=http://mysterium-api/v1
       --ether.client.rpc=http://ganache:8545
       daemon
 

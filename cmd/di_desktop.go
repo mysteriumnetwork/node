@@ -20,10 +20,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -225,11 +226,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
-		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
-		if err != nil {
-			return nil, err
-		}
-
 		allowedIdentityValidator := func(peerID identity.Identity) error {
 			if len(allowedIDs) == 0 {
 				return nil
@@ -244,7 +240,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		}
 
 		return nats_dialog.NewDialogWaiter(
-			address,
+			di.BrokerConnection,
+			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
 			allowedIdentityValidator,
 		), nil

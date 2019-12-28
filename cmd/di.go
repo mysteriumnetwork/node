@@ -39,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery"
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
 	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
+	discovery_composite "github.com/mysteriumnetwork/node/core/discovery/composite"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -116,6 +117,7 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
+	BrokerConnection  nats.Connection
 	EtherClient       *ethclient.Client
 
 	NATService       nat.NATService
@@ -369,6 +371,9 @@ func (di *Dependencies) Shutdown() (err error) {
 		if err := di.Storage.Close(); err != nil {
 			errs = append(errs, err)
 		}
+	}
+	if di.BrokerConnection != nil {
+		di.BrokerConnection.Close()
 	}
 
 	firewall.Reset()
@@ -681,8 +686,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
+	if di.BrokerConnection, err = nats.OpenConnection(di.NetworkDefinition.BrokerAddress); err != nil {
+		return err
+	}
 
+	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
 	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
 		return err
 	}
@@ -718,15 +726,20 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
-	var registry discovery.ProposalRegistry
-	switch options.Type {
-	case node.DiscoveryTypeAPI:
-		registry = discovery_api.NewRegistry(di.MysteriumAPI)
-	case node.DiscoveryTypeBroker:
-		sender := discovery_broker.NewSender(nats.NewConnectionMock())
-		registry = discovery_broker.NewRegistry(sender)
-	default:
-		return errors.Errorf("unknown discovery provider: %s", options.Type)
+	registry := discovery_composite.NewRegistry()
+	for _, discoveryType := range options.Types {
+		switch discoveryType {
+		case node.DiscoveryTypeAPI:
+			registry.AddRegistry(
+				discovery_api.NewRegistry(di.MysteriumAPI),
+			)
+		case node.DiscoveryTypeBroker:
+			registry.AddRegistry(
+				discovery_broker.NewRegistry(di.BrokerConnection),
+			)
+		default:
+			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
+		}
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {

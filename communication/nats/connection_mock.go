@@ -37,7 +37,7 @@ func NewConnectionMock() *ConnectionMock {
 // StartConnectionMock creates connection and starts it immediately
 func StartConnectionMock() *ConnectionMock {
 	connection := NewConnectionMock()
-	connection.Start()
+	connection.Open()
 
 	return connection
 }
@@ -152,19 +152,25 @@ func (conn *ConnectionMock) Request(subject string, payload []byte, timeout time
 	}
 }
 
-// Start starts the connection mock
-func (conn *ConnectionMock) Start() {
+// Open starts the connection
+func (conn *ConnectionMock) Open() error {
 	go conn.queueProcessing()
+	return nil
 }
 
-// Check checks the connection mock
+// Close destructs the connection
+func (conn *ConnectionMock) Close() {
+	conn.queueShutdown <- true
+}
+
+// Check checks the connection
 func (conn *ConnectionMock) Check() error {
 	return nil
 }
 
-// Close closes the connection mock
-func (conn *ConnectionMock) Close() {
-	conn.queueShutdown <- true
+// Servers returns list of currently connected servers
+func (conn *ConnectionMock) Servers() []string {
+	return []string{"mockhost"}
 }
 
 func (conn *ConnectionMock) subscriptionAdd(subject string, handler nats.MsgHandler) {

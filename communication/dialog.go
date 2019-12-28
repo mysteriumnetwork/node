@@ -36,9 +36,9 @@ type Dialog interface {
 //   - negotiates with Dialog initiator
 //   - finally creates Dialog, when it is accepted
 type DialogWaiter interface {
-	Start() (market.Contact, error)
+	GetContact() market.Contact
+	Start(DialogHandler) error
 	Stop() error
-	ServeDialogs(DialogHandler) error
 }
 
 // DialogHandler defines how to handle incoming Dialog

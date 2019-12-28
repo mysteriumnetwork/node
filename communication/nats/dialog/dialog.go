@@ -19,20 +19,20 @@ package dialog
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
 type dialog struct {
 	communication.Sender
 	communication.Receiver
-	peerID      identity.Identity
-	peerAddress *discovery.AddressNATS
+	peerID         identity.Identity
+	peerConnection nats.Connection
 }
 
 func (dialog *dialog) Close() error {
-	if dialog.peerAddress != nil {
-		dialog.peerAddress.Disconnect()
+	if dialog.peerConnection != nil {
+		dialog.peerConnection.Close()
 	}
 	return nil
 }

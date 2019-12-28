@@ -22,7 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
@@ -43,8 +43,14 @@ func TestDialogEstablisher_Factory(t *testing.T) {
 func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
 	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
+	peerContact := market.Contact{
+		Type: nats_discovery.TypeContactNATSV1,
+		Definition: nats_discovery.ContactNATSV1{
+			Topic: "peer-topic",
+		},
+	}
 
-	connection := nats.StartConnectionMock()
+	connection := nats.NewConnectionMock()
 	connection.MockResponse(
 		"peer-topic.dialog-create",
 		[]byte(`{
@@ -57,7 +63,7 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	signer := &identity.SignerFake{}
 	establisher := mockEstablisher(myID, connection, signer)
 
-	dialogInstance, err := establisher.EstablishDialog(peerID, market.Contact{})
+	dialogInstance, err := establisher.EstablishDialog(peerID, peerContact)
 	assert.NoError(t, err)
 	defer dialogInstance.Close()
 	assert.NotNil(t, dialogInstance)
@@ -78,11 +84,17 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	)
 }
 
-func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
+func TestDialogEstablisher_EstablishDialogWhenResponseHijacked(t *testing.T) {
 	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
 	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
+	peerContact := market.Contact{
+		Type: nats_discovery.TypeContactNATSV1,
+		Definition: nats_discovery.ContactNATSV1{
+			Topic: "peer-topic",
+		},
+	}
 
-	connection := nats.StartConnectionMock()
+	connection := nats.NewConnectionMock()
 	connection.MockResponse(
 		"peer-topic.dialog-create",
 		[]byte(`{
@@ -94,20 +106,40 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 
 	establisher := mockEstablisher(myID, connection, &identity.SignerFake{})
 
-	dialogInstance, err := establisher.EstablishDialog(peerID, market.Contact{})
+	dialogInstance, err := establisher.EstablishDialog(peerID, peerContact)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "dialog creation error: failed to unpack response 'peer-topic.dialog-create': invalid message signature ")
 	assert.Nil(t, dialogInstance)
 }
 
-func mockEstablisher(ID identity.Identity, connection nats.Connection, signer identity.Signer) *dialogEstablisher {
-	peerTopic := "peer-topic"
+func TestDialogEstablisher_validateContactUnknownType(t *testing.T) {
+	contact := market.Contact{
+		Type: "natc/v1",
+	}
 
+	contactNats, err := validateContact(contact)
+	assert.EqualError(t, err, "invalid contact type: natc/v1")
+	assert.Equal(t, nats_discovery.ContactNATSV1{}, contactNats)
+}
+
+func TestDialogEstablisher_validateContactUnknownDefinition(t *testing.T) {
+	type badDefinition struct{}
+	contact := market.Contact{
+		Type:       "nats/v1",
+		Definition: badDefinition{},
+	}
+
+	contactNats, err := validateContact(contact)
+	assert.EqualError(t, err, "invalid contact definition: dialog.badDefinition{}")
+	assert.Equal(t, nats_discovery.ContactNATSV1{}, contactNats)
+}
+
+func mockEstablisher(ID identity.Identity, connection *nats.ConnectionMock, signer identity.Signer) *dialogEstablisher {
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
-		peerAddressFactory: func(contact market.Contact) (*discovery.AddressNATS, error) {
-			return discovery.NewAddressWithConnection(connection, peerTopic), nil
+		peerConnectionFactory: func(_ nats_discovery.ContactNATSV1) (nats.Connection, error) {
+			return connection, connection.Open()
 		},
 	}
 }
