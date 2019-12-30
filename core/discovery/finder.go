@@ -17,53 +17,12 @@
 
 package discovery
 
-import (
-	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/mysterium"
-)
-
-// ProposalReducer proposal match function
-type ProposalReducer func(proposal market.ServiceProposal) bool
-
-// ProposalFilter defines interface with proposal match function
-type ProposalFilter interface {
-	Matches(proposal market.ServiceProposal) bool
-	ToAPIQuery() mysterium.ProposalsQuery
-}
-
 // Finder finds proposals from local storage
 type Finder struct {
-	storage *ProposalStorage
+	*ProposalStorage
 }
 
 // NewFinder creates instance of local storage Finder
 func NewFinder(storage *ProposalStorage) *Finder {
-	return &Finder{storage: storage}
-}
-
-// GetProposal fetches service proposal from discovery by exact ID
-func (finder *Finder) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	for _, proposal := range finder.storage.Proposals() {
-		if proposal.UniqueID() == id {
-			return &proposal, nil
-		}
-	}
-
-	return nil, nil
-}
-
-// MatchProposals fetches currently active service proposals from discovery by match function
-func (finder *Finder) MatchProposals(match ProposalReducer) ([]market.ServiceProposal, error) {
-	proposalsFiltered := make([]market.ServiceProposal, 0)
-	for _, proposal := range finder.storage.Proposals() {
-		if match(proposal) {
-			proposalsFiltered = append(proposalsFiltered, proposal)
-		}
-	}
-	return proposalsFiltered, nil
-}
-
-// FindProposals fetches currently active service proposals from discovery by given filter
-func (finder *Finder) FindProposals(filter ProposalFilter) ([]market.ServiceProposal, error) {
-	return finder.MatchProposals(filter.Matches)
+	return &Finder{ProposalStorage: storage}
 }

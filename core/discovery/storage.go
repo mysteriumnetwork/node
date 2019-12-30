@@ -18,10 +18,21 @@
 package discovery
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 )
+
+// ProposalReducer proposal match function
+type ProposalReducer func(proposal market.ServiceProposal) bool
+
+// ProposalFilter defines interface with proposal match function
+type ProposalFilter interface {
+	Matches(proposal market.ServiceProposal) bool
+	ToAPIQuery() mysterium.ProposalsQuery
+}
 
 // NewStorage creates new instance of ProposalStorage
 func NewStorage() *ProposalStorage {
@@ -36,16 +47,89 @@ type ProposalStorage struct {
 	mutex     sync.RWMutex
 }
 
-// Proposals returns table of proposals in storage
+// Proposals returns list of proposals in storage
 func (storage *ProposalStorage) Proposals() []market.ServiceProposal {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
+
 	return storage.proposals
 }
 
-// Set puts given proposal to storage
+// MatchProposals fetches currently active service proposals from discovery by match function
+func (storage *ProposalStorage) MatchProposals(match ProposalReducer) ([]market.ServiceProposal, error) {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	proposals := make([]market.ServiceProposal, 0)
+	for _, proposal := range storage.proposals {
+		if match(proposal) {
+			proposals = append(proposals, proposal)
+		}
+	}
+	return proposals, nil
+}
+
+// FindProposals fetches currently active service proposals from discovery by given filter
+func (storage *ProposalStorage) FindProposals(filter ProposalFilter) ([]market.ServiceProposal, error) {
+	return storage.MatchProposals(filter.Matches)
+}
+
+// Set puts given list proposals to storage
 func (storage *ProposalStorage) Set(proposals ...market.ServiceProposal) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
+
 	storage.proposals = proposals
+}
+
+// HasProposal checks if proposal exists in storage
+func (storage *ProposalStorage) HasProposal(id market.ProposalID) bool {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	_, exist := storage.getProposalIndex(id)
+	return exist
+}
+
+// GetProposal returns proposal from storage
+func (storage *ProposalStorage) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	index, exist := storage.getProposalIndex(id)
+	if !exist {
+		return nil, errors.New("proposal does not exist")
+	}
+	return &storage.proposals[index], nil
+}
+
+// AddProposal appends given proposal to storage
+func (storage *ProposalStorage) AddProposal(proposal market.ServiceProposal) {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	if _, exist := storage.getProposalIndex(proposal.UniqueID()); exist {
+		return
+	}
+	storage.proposals = append(storage.proposals, proposal)
+}
+
+// RemoveProposal take out given proposal from storage
+func (storage *ProposalStorage) RemoveProposal(proposal market.ServiceProposal) {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	if index, exist := storage.getProposalIndex(proposal.UniqueID()); exist {
+		storage.proposals = append(storage.proposals[:index], storage.proposals[index+1:]...)
+	}
+}
+
+func (storage *ProposalStorage) getProposalIndex(id market.ProposalID) (int, bool) {
+	for index, proposal := range storage.proposals {
+		if proposal.UniqueID() == id {
+			return index, true
+		}
+	}
+
+	return 0, false
 }

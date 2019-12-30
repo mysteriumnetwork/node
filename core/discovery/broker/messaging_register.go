@@ -29,19 +29,37 @@ type registerMessage struct {
 
 const registerEndpoint = communication.MessageEndpoint("proposal-register")
 
-// Dialog boilerplate below, please ignore
-
 // registerProducer
 type registerProducer struct {
 	message *registerMessage
 }
 
 // GetMessageEndpoint returns endpoint where to send messages
-func (pmp *registerProducer) GetMessageEndpoint() communication.MessageEndpoint {
+func (p *registerProducer) GetMessageEndpoint() communication.MessageEndpoint {
 	return registerEndpoint
 }
 
 // Produce creates message which will be serialized to endpoint
-func (pmp *registerProducer) Produce() (requestPtr interface{}) {
-	return pmp.message
+func (p *registerProducer) Produce() (requestPtr interface{}) {
+	return p.message
+}
+
+// registerConsumer
+type registerConsumer struct {
+	Callback func(registerMessage) error
+}
+
+// GetMessageEndpoint returns endpoint there to receive messages
+func (c *registerConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return registerEndpoint
+}
+
+// NewMessage creates struct where message from endpoint will be serialized
+func (c *registerConsumer) NewMessage() (messagePtr interface{}) {
+	return &registerMessage{}
+}
+
+// Consume handles messages from endpoint
+func (c *registerConsumer) Consume(messagePtr interface{}) error {
+	return c.Callback(*messagePtr.(*registerMessage))
 }

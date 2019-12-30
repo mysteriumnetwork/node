@@ -29,19 +29,37 @@ type unregisterMessage struct {
 
 const unregisterEndpoint = communication.MessageEndpoint("proposal-unregister")
 
-// Dialog boilerplate below, please ignore
-
 // unregisterProducer
 type unregisterProducer struct {
 	message *unregisterMessage
 }
 
 // GetMessageEndpoint returns endpoint where to send messages
-func (pmp *unregisterProducer) GetMessageEndpoint() communication.MessageEndpoint {
+func (p *unregisterProducer) GetMessageEndpoint() communication.MessageEndpoint {
 	return unregisterEndpoint
 }
 
 // Produce creates message which will be serialized to endpoint
-func (pmp *unregisterProducer) Produce() (requestPtr interface{}) {
-	return pmp.message
+func (p *unregisterProducer) Produce() (requestPtr interface{}) {
+	return p.message
+}
+
+// registerConsumer
+type unregisterConsumer struct {
+	Callback func(unregisterMessage) error
+}
+
+// GetMessageEndpoint returns endpoint there to receive messages
+func (c *unregisterConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return unregisterEndpoint
+}
+
+// NewMessage creates struct where message from endpoint will be serialized
+func (c *unregisterConsumer) NewMessage() (messagePtr interface{}) {
+	return &unregisterMessage{}
+}
+
+// Consume handles messages from endpoint
+func (c *unregisterConsumer) Consume(messagePtr interface{}) error {
+	return c.Callback(*messagePtr.(*unregisterMessage))
 }
