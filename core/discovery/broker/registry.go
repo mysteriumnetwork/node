@@ -49,6 +49,6 @@ func (registry *registry) UnregisterProposal(proposal market.ServiceProposal, si
 
 // PingProposal pings service proposal as being alive
 func (registry *registry) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	message := &registerMessage{Proposal: proposal}
-	return registry.sender.Send(&registerProducer{message: message})
+	message := &pingMessage{Proposal: proposal}
+	return registry.sender.Send(&pingProducer{message: message})
 }

@@ -743,14 +743,14 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 			registry.AddRegistry(
 				discovery_broker.NewRegistry(di.BrokerConnection),
 			)
-			di.DiscoveryFinder = discovery_broker.NewProposalSubscriber(di.DiscoveryStorage, di.BrokerConnection)
+			di.DiscoveryFinder = discovery_broker.NewProposalSubscriber(di.DiscoveryStorage, 61*time.Second, di.BrokerConnection)
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory, di.EventBus)
+		return discovery.NewService(di.IdentityRegistry, registry, 60*time.Second, di.SignerFactory, di.EventBus)
 	}
 	return nil
 }

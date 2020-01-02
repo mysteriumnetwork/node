@@ -18,6 +18,7 @@
 package broker
 
 import (
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -28,15 +29,30 @@ import (
 
 // proposalSubscriber responsible for handling proposal events through Broker (Mysterium Communication)
 type proposalSubscriber struct {
-	proposalStorage *discovery.ProposalStorage
-	receiver        communication.Receiver
+	proposalStorage  *discovery.ProposalStorage
+	proposalIdleness time.Duration
+	receiver         communication.Receiver
+
+	watchdogStep time.Duration
+	watchdogStop chan bool
+	watchdogLock sync.Mutex
+	watchdogSeen map[market.ProposalID]time.Time
 }
 
 // NewProposalSubscriber returns new proposalSubscriber instance.
-func NewProposalSubscriber(proposalsStorage *discovery.ProposalStorage, connection nats.Connection) *proposalSubscriber {
+func NewProposalSubscriber(
+	proposalsStorage *discovery.ProposalStorage,
+	proposalIdleness time.Duration,
+	connection nats.Connection,
+) *proposalSubscriber {
 	return &proposalSubscriber{
-		proposalStorage: proposalsStorage,
-		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
+		proposalStorage:  proposalsStorage,
+		proposalIdleness: proposalIdleness,
+		receiver:         nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
+
+		watchdogStep: proposalIdleness / 10,
+		watchdogStop: make(chan bool),
+		watchdogSeen: make(map[market.ProposalID]time.Time, 0),
 	}
 }
 
@@ -52,25 +68,64 @@ func (s *proposalSubscriber) Start() error {
 		return errSubscribe
 	}
 
+	errSubscribe = s.receiver.Receive(&pingConsumer{Callback: s.proposalPingMessage})
+	if errSubscribe != nil {
+		return errSubscribe
+	}
+
+	go s.proposalWatchdog()
 	return nil
 }
 
 // Stop ends proposals synchronisation to storage
-func (s *proposalSubscriber) Stop() {}
+func (s *proposalSubscriber) Stop() {
+	close(s.watchdogStop)
+}
 
 func (s *proposalSubscriber) proposalRegisterMessage(message registerMessage) error {
 	s.proposalStorage.AddProposal(message.Proposal)
-	go s.idleProposalUnregister(message.Proposal)
+
+	s.watchdogLock.Lock()
+	defer s.watchdogLock.Unlock()
+	s.watchdogSeen[message.Proposal.UniqueID()] = time.Now()
 
 	return nil
 }
 
 func (s *proposalSubscriber) proposalUnregisterMessage(message unregisterMessage) error {
-	s.proposalStorage.RemoveProposal(message.Proposal)
+	s.proposalStorage.RemoveProposal(message.Proposal.UniqueID())
+
+	s.watchdogLock.Lock()
+	defer s.watchdogLock.Unlock()
+	delete(s.watchdogSeen, message.Proposal.UniqueID())
+
 	return nil
 }
 
-func (s *proposalSubscriber) idleProposalUnregister(proposal market.ServiceProposal) {
-	<-time.After(2 * time.Minute)
-	s.proposalStorage.RemoveProposal(proposal)
+func (s *proposalSubscriber) proposalPingMessage(message pingMessage) error {
+	s.proposalStorage.AddProposal(message.Proposal)
+
+	s.watchdogLock.Lock()
+	defer s.watchdogLock.Unlock()
+	s.watchdogSeen[message.Proposal.UniqueID()] = time.Now()
+
+	return nil
+}
+
+func (s *proposalSubscriber) proposalWatchdog() {
+	for {
+		select {
+		case <-s.watchdogStop:
+			return
+		case <-time.After(s.watchdogStep):
+			s.watchdogLock.Lock()
+			for proposalID, proposalSeen := range s.watchdogSeen {
+				if time.Now().After(proposalSeen.Add(s.proposalIdleness)) {
+					s.proposalStorage.RemoveProposal(proposalID)
+					delete(s.watchdogSeen, proposalID)
+				}
+			}
+			s.watchdogLock.Unlock()
+		}
+	}
 }

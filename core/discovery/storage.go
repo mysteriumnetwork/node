@@ -121,11 +121,11 @@ func (storage *ProposalStorage) AddProposal(proposal market.ServiceProposal) {
 }
 
 // RemoveProposal take out given proposal from storage
-func (storage *ProposalStorage) RemoveProposal(proposal market.ServiceProposal) {
+func (storage *ProposalStorage) RemoveProposal(id market.ProposalID) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 
-	if index, exist := storage.getProposalIndex(proposal.UniqueID()); exist {
+	if index, exist := storage.getProposalIndex(id); exist {
 		storage.proposals = append(storage.proposals[:index], storage.proposals[index+1:]...)
 	}
 }

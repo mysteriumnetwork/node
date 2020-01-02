@@ -67,6 +67,7 @@ type Discovery struct {
 	identityRegistry identity_registry.IdentityRegistry
 	ownIdentity      identity.Identity
 	proposalRegistry ProposalRegistry
+	proposalPingTTL  time.Duration
 	signerCreate     identity.SignerFactory
 	signer           identity.Signer
 	proposal         market.ServiceProposal
@@ -85,12 +86,14 @@ type Discovery struct {
 func NewService(
 	identityRegistry identity_registry.IdentityRegistry,
 	proposalRegistry ProposalRegistry,
+	proposalPingTTL time.Duration,
 	signerCreate identity.SignerFactory,
 	eventBus eventbus.EventBus,
 ) *Discovery {
 	return &Discovery{
 		identityRegistry:            identityRegistry,
 		proposalRegistry:            proposalRegistry,
+		proposalPingTTL:             proposalPingTTL,
 		eventBus:                    eventBus,
 		signerCreate:                signerCreate,
 		statusChan:                  make(chan Status),
@@ -208,7 +211,7 @@ func (d *Discovery) registerProposal() {
 }
 
 func (d *Discovery) pingProposal() {
-	time.Sleep(1 * time.Minute)
+	time.Sleep(d.proposalPingTTL)
 	err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping proposal")

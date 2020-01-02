@@ -48,7 +48,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 
 	storage := discovery.NewStorage()
 
-	subscriber := NewProposalSubscriber(storage, connection)
+	subscriber := NewProposalSubscriber(storage, 1*time.Second, connection)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -57,6 +57,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1"}
 	}`)
 	waitABit()
+
 	assert.Len(t, storage.Proposals(), 1)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, storage.Proposals())
 
@@ -64,8 +65,54 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x2"}
 	}`)
 	waitABit()
+
 	assert.Len(t, storage.Proposals(), 2)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, storage.Proposals())
+}
+
+func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
+	connection := nats.StartConnectionMock()
+	defer connection.Close()
+
+	storage := discovery.NewStorage()
+
+	subscriber := NewProposalSubscriber(storage, 10*time.Millisecond, connection)
+	err := subscriber.Start()
+	defer subscriber.Stop()
+	assert.NoError(t, err)
+
+	proposalRegister(connection, `{
+		"proposal": {"provider_id": "0x1"}
+	}`)
+	time.Sleep(15 * time.Millisecond)
+
+	assert.Len(t, storage.Proposals(), 0)
+	assert.Exactly(t, []market.ServiceProposal{}, storage.Proposals())
+}
+
+func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
+	connection := nats.StartConnectionMock()
+	defer connection.Close()
+
+	storage := discovery.NewStorage()
+
+	subscriber := NewProposalSubscriber(storage, 10*time.Millisecond, connection)
+	err := subscriber.Start()
+	defer subscriber.Stop()
+	assert.NoError(t, err)
+
+	proposalRegister(connection, `{
+		"proposal": {"provider_id": "0x1"}
+	}`)
+	time.Sleep(15 * time.Millisecond)
+
+	proposalPing(connection, `{
+		"proposal": {"provider_id": "0x1"}
+	}`)
+	time.Sleep(1 * time.Millisecond)
+
+	assert.Len(t, storage.Proposals(), 1)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
@@ -76,7 +123,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	storage.AddProposal(proposalFirst)
 	storage.AddProposal(proposalSecond)
 
-	subscriber := NewProposalSubscriber(storage, connection)
+	subscriber := NewProposalSubscriber(storage, 1*time.Second, connection)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -85,6 +132,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1"}
 	}`)
 	waitABit()
+
 	assert.Len(t, storage.Proposals(), 1)
 	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, storage.Proposals())
 }
@@ -98,6 +146,13 @@ func proposalRegister(connection nats.Connection, payload string) {
 
 func proposalUnregister(connection nats.Connection, payload string) {
 	err := connection.Publish("*.proposal-unregister", []byte(payload))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func proposalPing(connection nats.Connection, payload string) {
+	err := connection.Publish("*.proposal-ping", []byte(payload))
 	if err != nil {
 		panic(err)
 	}

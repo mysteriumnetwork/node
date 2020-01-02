@@ -44,6 +44,7 @@ func discoveryWithMockedDependencies() *Discovery {
 			return &identity.SignerFake{}
 		},
 		proposalRegistry: &mockedProposalRegistry{},
+		proposalPingTTL:  1 * time.Minute,
 		eventBus:         eventbus.New(),
 		stop:             make(chan struct{}),
 	}

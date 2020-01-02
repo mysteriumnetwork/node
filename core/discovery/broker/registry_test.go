@@ -89,7 +89,7 @@ func Test_Registry_PingProposal(t *testing.T) {
 	err := registry.PingProposal(newProposal, &identity.SignerFake{})
 	assert.NoError(t, err)
 
-	assert.Equal(t, "*.proposal-register", connection.GetLastMessageSubject())
+	assert.Equal(t, "*.proposal-ping", connection.GetLastMessageSubject())
 	assert.JSONEq(
 		t,
 		`{

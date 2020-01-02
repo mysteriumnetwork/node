@@ -178,7 +178,7 @@ func Test_Storage_AddProposal(t *testing.T) {
 
 func Test_Storage_RemoveProposal(t *testing.T) {
 	storage := NewStorage()
-	storage.RemoveProposal(proposalProvider1Streaming)
+	storage.RemoveProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
 	assert.Equal(
 		t,
 		[]market.ServiceProposal{},
@@ -186,7 +186,7 @@ func Test_Storage_RemoveProposal(t *testing.T) {
 	)
 
 	storage = mockStorage()
-	storage.RemoveProposal(proposalProvider1Streaming)
+	storage.RemoveProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
 	assert.Equal(
 		t,
 		[]market.ServiceProposal{
