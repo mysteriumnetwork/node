@@ -19,7 +19,6 @@ package mysterium
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -78,16 +77,6 @@ type MobileNode struct {
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
 type MobileNetworkOptions node.OptionsNetwork
 
-// MobileLogOptions alias for logconfig.LogOptions
-type MobileLogOptions logconfig.LogOptions
-
-// DefaultLogOptions default logging options for mobile
-func DefaultLogOptions() *MobileLogOptions {
-	return &MobileLogOptions{
-		LogLevel: zerolog.DebugLevel,
-	}
-}
-
 // DefaultNetworkOptions returns default network options to connect with
 func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
@@ -100,26 +89,24 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 }
 
 // NewNode function creates new Node
-func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
+func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
-	var dataDir, currentDir string
 	if appPath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-		dataDir = filepath.Join(home, ".mysterium")
-	} else {
-		dataDir = filepath.Join(appPath, ".mysterium")
-		currentDir = appPath
+		return nil, errors.New("node app path is required")
 	}
+	dataDir := filepath.Join(appPath, ".mysterium")
+	currentDir := appPath
 
 	network := node.OptionsNetwork(*optionsNetwork)
-	log := logconfig.LogOptions(*logOptions)
+	logOptions := logconfig.LogOptions{
+		LogLevel: zerolog.DebugLevel,
+		LogHTTP:  false,
+		Filepath: filepath.Join(dataDir, "mysterium-node"),
+	}
 
 	options := node.Options{
-		LogOptions: log,
+		LogOptions: logOptions,
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
 			Storage:  filepath.Join(dataDir, "db"),
