@@ -580,7 +580,12 @@ func (c *cliApp) quit() {
 }
 
 func (c *cliApp) identities(argsString string) {
-	const usage = "identities command:\n    list\n    new [passphrase]\n    register <identity> <stake> [beneficiary]\n    topup <identity>"
+	const usage = `identities command:
+    list
+    new [passphrase]
+    register <identity> <stake> [beneficiary]
+    topup <identity>`
+
 	if len(argsString) == 0 {
 		info(usage)
 		return
