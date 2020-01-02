@@ -662,19 +662,9 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"identities",
 			readline.PcItem("list"),
 			readline.PcItem("new"),
-			readline.PcItem(
-				"unlock",
-				readline.PcItemDynamic(
-					getIdentityOptionList(tequilapi),
-				),
-			),
-			readline.PcItem(
-				"register",
-				readline.PcItemDynamic(
-					getIdentityOptionList(tequilapi),
-				),
-			),
-			readline.PcItem("topup"),
+			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("topup", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),
@@ -687,23 +677,14 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		readline.PcItem("stop"),
 		readline.PcItem(
 			"payout",
-			readline.PcItem("set",
-				readline.PcItemDynamic(
-					getIdentityOptionList(tequilapi),
-				),
-			),
+			readline.PcItem("set", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem(
 			"license",
 			readline.PcItem("warranty"),
 			readline.PcItem("conditions"),
 		),
-		readline.PcItem(
-			"registration",
-			readline.PcItemDynamic(
-				getIdentityOptionList(tequilapi),
-			),
-		),
+		readline.PcItem("registration", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 	)
 }
 
