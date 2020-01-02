@@ -52,7 +52,7 @@ type MobileNode struct {
 	node                               *node.Node
 	connectionManager                  connection.Manager
 	locationResolver                   *location.Cache
-	discoveryFinder                    *discovery.Finder
+	discoveryStorage                   *discovery.ProposalStorage
 	identitySelector                   selector.Handler
 	signerFactory                      identity.SignerFactory
 	natPinger                          natPinger
@@ -168,7 +168,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		node:                         di.Node,
 		connectionManager:            di.ConnectionManager,
 		locationResolver:             di.LocationResolver,
-		discoveryFinder:              di.DiscoveryFinder,
+		discoveryStorage:             di.DiscoveryStorage,
 		identitySelector:             di.IdentitySelector,
 		signerFactory:                di.SignerFactory,
 		natPinger:                    di.NATPinger,
@@ -184,8 +184,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		channelImplementationAddress: options.Transactor.ChannelImplementation,
 		registryAddress:              options.Transactor.RegistryAddress,
 		proposalsManager: newProposalsManager(
-			di.DiscoveryFinder,
-			di.ProposalStorage,
+			di.DiscoveryStorage,
 			di.MysteriumAPI,
 			di.QualityClient,
 		),
@@ -301,7 +300,7 @@ type ConnectRequest struct {
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) error {
-	proposal, err := mb.discoveryFinder.GetProposal(market.ProposalID{
+	proposal, err := mb.discoveryStorage.GetProposal(market.ProposalID{
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})

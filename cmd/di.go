@@ -129,10 +129,9 @@ type Dependencies struct {
 	IdentityRegistry identity_registry.IdentityRegistry
 	IdentitySelector identity_selector.Handler
 
-	DiscoveryFactory    service.DiscoveryFactory
-	DiscoveryFinder     *discovery.Finder
-	ProposalStorage     *discovery.ProposalStorage
-	DiscoveryFetcherAPI discovery_api.Fetcher
+	DiscoveryFactory service.DiscoveryFactory
+	DiscoveryStorage *discovery.ProposalStorage
+	DiscoveryFinder  discovery.ProposalFinder
 
 	QualityMetricsSender *quality.Sender
 	QualityClient        *quality.MysteriumMORQA
@@ -263,7 +262,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
-	if err = di.DiscoveryFetcherAPI.Start(); err != nil {
+	if err = di.DiscoveryFinder.Start(); err != nil {
 		return err
 	}
 	if err := di.Node.Start(); err != nil {
@@ -364,8 +363,8 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-	if di.DiscoveryFetcherAPI != nil {
-		di.DiscoveryFetcherAPI.Stop()
+	if di.DiscoveryFinder != nil {
+		di.DiscoveryFinder.Stop()
 	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
@@ -554,10 +553,10 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder, di.IdentityRegistry)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryStorage, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.QualityClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryStorage, di.QualityClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
@@ -726,6 +725,8 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
+	di.DiscoveryStorage = discovery.NewStorage()
+
 	registry := discovery_composite.NewRegistry()
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
@@ -733,10 +734,16 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 			registry.AddRegistry(
 				discovery_api.NewRegistry(di.MysteriumAPI),
 			)
+			if !options.ProposalFetcherEnabled {
+				di.DiscoveryFinder = discovery_api.NewNoopFetcher()
+			} else {
+				di.DiscoveryFinder = discovery_api.NewFetcher(di.DiscoveryStorage, di.MysteriumAPI.Proposals, 30*time.Second)
+			}
 		case node.DiscoveryTypeBroker:
 			registry.AddRegistry(
 				discovery_broker.NewRegistry(di.BrokerConnection),
 			)
+			di.DiscoveryFinder = discovery_broker.NewProposalSubscriber(di.DiscoveryStorage, di.BrokerConnection)
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
@@ -745,16 +752,6 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory, di.EventBus)
 	}
-
-	di.ProposalStorage = discovery.NewStorage()
-	di.DiscoveryFinder = discovery.NewFinder(di.ProposalStorage)
-
-	if !options.ProposalFetcherEnabled {
-		di.DiscoveryFetcherAPI = discovery_api.NewNoopFetcher()
-	} else {
-		di.DiscoveryFetcherAPI = discovery_api.NewFetcher(di.ProposalStorage, di.MysteriumAPI.Proposals, 30*time.Second)
-	}
-
 	return nil
 }
 

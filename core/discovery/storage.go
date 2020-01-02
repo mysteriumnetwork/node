@@ -25,6 +25,12 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
+// ProposalFinder continuously tracks service proposals from discovery service to storage
+type ProposalFinder interface {
+	Start() error
+	Stop()
+}
+
 // ProposalReducer proposal match function
 type ProposalReducer func(proposal market.ServiceProposal) bool
 
@@ -75,7 +81,7 @@ func (storage *ProposalStorage) FindProposals(filter ProposalFilter) ([]market.S
 }
 
 // Set puts given list proposals to storage
-func (storage *ProposalStorage) Set(proposals ...market.ServiceProposal) {
+func (storage *ProposalStorage) Set(proposals []market.ServiceProposal) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 

@@ -134,7 +134,7 @@ func Test_Storage_GetProposal(t *testing.T) {
 
 func Test_Storage_Set(t *testing.T) {
 	storage := mockStorage()
-	storage.Set([]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop}...)
+	storage.Set([]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop})
 	assert.Equal(
 		t,
 		[]market.ServiceProposal{

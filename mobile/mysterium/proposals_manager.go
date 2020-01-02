@@ -71,11 +71,6 @@ type getProposalResponse struct {
 	Proposal *proposal `json:"proposal"`
 }
 
-type discoveryFinder interface {
-	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
-	MatchProposals(match discovery.ProposalReducer) ([]market.ServiceProposal, error)
-}
-
 type proposalStorage interface {
 	Set(proposals ...market.ServiceProposal)
 }
@@ -89,24 +84,21 @@ type qualityFinder interface {
 }
 
 func newProposalsManager(
-	discoveryFinder discoveryFinder,
-	proposalsStore proposalStorage,
+	proposalsStore *discovery.ProposalStorage,
 	mysteriumAPI mysteriumAPI,
 	qualityFinder qualityFinder,
 ) *proposalsManager {
 	return &proposalsManager{
-		discoveryFinder: discoveryFinder,
-		proposalsStore:  proposalsStore,
-		mysteriumAPI:    mysteriumAPI,
-		qualityFinder:   qualityFinder,
+		proposalsStore: proposalsStore,
+		mysteriumAPI:   mysteriumAPI,
+		qualityFinder:  qualityFinder,
 	}
 }
 
 type proposalsManager struct {
-	discoveryFinder discoveryFinder
-	proposalsStore  proposalStorage
-	mysteriumAPI    mysteriumAPI
-	qualityFinder   qualityFinder
+	proposalsStore *discovery.ProposalStorage
+	mysteriumAPI   mysteriumAPI
+	qualityFinder  qualityFinder
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error) {
@@ -132,7 +124,7 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 }
 
 func (m *proposalsManager) getProposal(req *GetProposalRequest) ([]byte, error) {
-	proposal, err := m.discoveryFinder.GetProposal(market.ProposalID{
+	proposal, err := m.proposalsStore.GetProposal(market.ProposalID{
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})
@@ -147,7 +139,7 @@ func (m *proposalsManager) getProposal(req *GetProposalRequest) ([]byte, error) 
 }
 
 func (m *proposalsManager) getFromCache() ([]market.ServiceProposal, error) {
-	return m.discoveryFinder.MatchProposals(func(v market.ServiceProposal) bool {
+	return m.proposalsStore.MatchProposals(func(v market.ServiceProposal) bool {
 		return true
 	})
 }
@@ -182,7 +174,7 @@ func (m *proposalsManager) getFromAPI(showOpenvpnProposals, showWireguardProposa
 }
 
 func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
-	m.proposalsStore.Set(proposals...)
+	m.proposalsStore.Set(proposals)
 }
 
 func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) ([]byte, error) {

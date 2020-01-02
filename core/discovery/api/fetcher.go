@@ -91,6 +91,6 @@ func (fetcher *fetcher) fetchDo() error {
 	}
 
 	log.Debug().Msgf("Proposals fetched: %d", len(proposals))
-	fetcher.proposalStorage.Set(proposals...)
+	fetcher.proposalStorage.Set(proposals)
 	return nil
 }

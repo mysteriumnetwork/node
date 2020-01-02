@@ -31,22 +31,19 @@ import (
 type proposalManagerTestSuite struct {
 	suite.Suite
 
-	discoveryFinder discoveryFinder
-	proposalsStore  proposalStorage
-	mysteriumAPI    mysteriumAPI
-	qualityFinder   qualityFinder
+	proposalsStore *discovery.ProposalStorage
+	mysteriumAPI   mysteriumAPI
+	qualityFinder  qualityFinder
 
 	proposalsManager *proposalsManager
 }
 
 func (s *proposalManagerTestSuite) SetupTest() {
-	s.discoveryFinder = &mockDiscoveryFinder{}
-	s.proposalsStore = &mockProposalsStore{}
+	s.proposalsStore = discovery.NewStorage()
 	s.mysteriumAPI = &mockMysteriumAPI{}
 	s.qualityFinder = &mockQualityFinder{}
 
 	s.proposalsManager = newProposalsManager(
-		s.discoveryFinder,
 		s.proposalsStore,
 		s.mysteriumAPI,
 		s.qualityFinder,
@@ -54,11 +51,9 @@ func (s *proposalManagerTestSuite) SetupTest() {
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
-	s.proposalsManager.discoveryFinder = &mockDiscoveryFinder{
-		proposals: []market.ServiceProposal{
-			{ProviderID: "p1", ServiceType: "openvpn"},
-		},
-	}
+	s.proposalsStore.Set([]market.ServiceProposal{
+		{ProviderID: "p1", ServiceType: "openvpn"},
+	})
 	s.proposalsManager.qualityFinder = &mockQualityFinder{
 		metrics: []quality.ConnectMetric{
 			{
@@ -86,9 +81,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() {
-	s.proposalsManager.discoveryFinder = &mockDiscoveryFinder{
-		proposals: []market.ServiceProposal{},
-	}
+	s.proposalsStore.Set([]market.ServiceProposal{})
 	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{
 		proposals: []market.ServiceProposal{
 			{ProviderID: "p1", ServiceType: "wireguard"},
@@ -105,11 +98,9 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 }
 
 func (s *proposalManagerTestSuite) TestGetSingleProposal() {
-	s.proposalsManager.discoveryFinder = &mockDiscoveryFinder{
-		proposals: []market.ServiceProposal{
-			{ProviderID: "p1", ServiceType: "wireguard"},
-		},
-	}
+	s.proposalsStore.Set([]market.ServiceProposal{
+		{ProviderID: "p1", ServiceType: "wireguard"},
+	})
 	bytes, err := s.proposalsManager.getProposal(&GetProposalRequest{
 		ProviderID:  "p1",
 		ServiceType: "wireguard",
@@ -121,31 +112,6 @@ func (s *proposalManagerTestSuite) TestGetSingleProposal() {
 
 func TestProposalManagerSuite(t *testing.T) {
 	suite.Run(t, new(proposalManagerTestSuite))
-}
-
-type mockDiscoveryFinder struct {
-	proposals []market.ServiceProposal
-}
-
-func (m *mockDiscoveryFinder) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	for _, p := range m.proposals {
-		if p.ProviderID == id.ProviderID && p.ServiceType == id.ServiceType {
-			return &p, nil
-		}
-	}
-	return nil, nil
-}
-
-func (m *mockDiscoveryFinder) MatchProposals(match discovery.ProposalReducer) ([]market.ServiceProposal, error) {
-	return m.proposals, nil
-}
-
-type mockProposalsStore struct {
-	addedProposals []market.ServiceProposal
-}
-
-func (m *mockProposalsStore) Set(proposals ...market.ServiceProposal) {
-	m.addedProposals = proposals
 }
 
 type mockMysteriumAPI struct {
