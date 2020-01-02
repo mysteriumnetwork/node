@@ -170,7 +170,6 @@ func (c *cliApp) handleActions(line string) {
 		handler func(argsString string)
 	}{
 		{"connect", c.connect},
-		{"unlock", c.unlock},
 		{"identities", c.identities},
 		{"payout", c.payout},
 		{"version", c.version},
@@ -374,35 +373,6 @@ func (c *cliApp) connect(argsString string) {
 	success("Connected.")
 }
 
-func (c *cliApp) unlock(argsString string) {
-	unlockSignature := "unlock <identity> [passphrase]"
-	if len(argsString) == 0 {
-		info("Press tab to select identity.\n", unlockSignature)
-		return
-	}
-
-	args := strings.Fields(argsString)
-	var identity, passphrase string
-
-	if len(args) == 1 {
-		identity, passphrase = args[0], ""
-	} else if len(args) == 2 {
-		identity, passphrase = args[0], args[1]
-	} else {
-		info("Please type in identity and optional passphrase.\n", unlockSignature)
-		return
-	}
-
-	info("Unlocking", identity)
-	err := c.tequilapi.Unlock(identity, passphrase)
-	if err != nil {
-		warn(err)
-		return
-	}
-
-	success(fmt.Sprintf("Identity %s unlocked.", identity))
-}
-
 func (c *cliApp) payout(argsString string) {
 	args := strings.Fields(argsString)
 
@@ -584,6 +554,7 @@ func (c *cliApp) identities(argsString string) {
 	const usage = `identities command:
     list
     new [passphrase]
+    unlock <identity> [passphrase]
     register <identity> [stake] [beneficiary]
     topup <identity>`
 
@@ -594,7 +565,7 @@ func (c *cliApp) identities(argsString string) {
 
 	args := strings.Fields(argsString)
 	switch args[0] {
-	case "new", "list", "register", "topup": // Known sub-commands.
+	case "list", "new", "unlock", "register", "topup": // Known sub-commands.
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -607,6 +578,7 @@ func (c *cliApp) identities(argsString string) {
 	}
 
 	action := args[0]
+	actionArgs := args[1:]
 	if action == "list" {
 		if len(args) > 1 {
 			info(usage)
@@ -641,6 +613,10 @@ func (c *cliApp) identities(argsString string) {
 			return
 		}
 		success("New identity created:", id.Address)
+	}
+
+	if action == "unlock" {
+		c.unlockIdentity(actionArgs)
 	}
 
 	if action == "register" {
@@ -834,8 +810,14 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		),
 		readline.PcItem(
 			"identities",
-			readline.PcItem("new"),
 			readline.PcItem("list"),
+			readline.PcItem("new"),
+			readline.PcItem(
+				"unlock",
+				readline.PcItemDynamic(
+					getIdentityOptionList(tequilapi),
+				),
+			),
 			readline.PcItem(
 				"register",
 				readline.PcItemDynamic(
@@ -853,12 +835,6 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
 		readline.PcItem("stop"),
-		readline.PcItem(
-			"unlock",
-			readline.PcItemDynamic(
-				getIdentityOptionList(tequilapi),
-			),
-		),
 		readline.PcItem(
 			"payout",
 			readline.PcItem("set",
