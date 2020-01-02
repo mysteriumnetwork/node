@@ -583,7 +583,7 @@ func (c *cliApp) identities(argsString string) {
 	const usage = `identities command:
     list
     new [passphrase]
-    register <identity> <stake> [beneficiary]
+    register <identity> [stake] [beneficiary]
     topup <identity>`
 
 	if len(argsString) == 0 {
@@ -643,22 +643,21 @@ func (c *cliApp) identities(argsString string) {
 	}
 
 	if action == "register" {
-		var address string
-		var beneficiary string
+		if len(args) < 2 {
+			info(usage)
+			return
+		}
+		var address = args[1]
 		var stake uint64
 		if len(args) >= 3 {
-			address = args[1]
 			s, err := strconv.ParseUint(args[2], 10, 64)
 			if err != nil {
 				warn(errors.Wrap(err, "could not parse stake"))
 			}
 			stake = s
-		} else {
-			info(usage)
-			return
 		}
-
-		if len(args) == 4 {
+		var beneficiary string
+		if len(args) >= 4 {
 			beneficiary = args[3]
 		}
 
