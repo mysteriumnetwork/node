@@ -19,19 +19,101 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
-func (c *cliApp) unlockIdentity(args []string) {
-	usage := "unlock <identity> [passphrase]"
-	if len(args) == 0 {
-		info("Please type in identity and optional passphrase.\n", usage)
+func (c *cliApp) identities(argsString string) {
+	var usage = strings.Join([]string{
+		"Usage: identities <action> [args]",
+		"Available actions:",
+		"  " + usageListIdentities,
+		"  " + usageNewIdentity,
+		"  " + usageUnlockIdentity,
+		"  " + usageRegisterIdentity,
+		"  " + usageTopupIdentity,
+	}, "\n")
+
+	if len(argsString) == 0 {
+		info(usage)
 		return
 	}
 
-	identity := args[0]
-	var passphrase string
-	if len(args) >= 2 {
+	args := strings.Fields(argsString)
+	action := args[0]
+	actionArgs := args[1:]
+
+	switch action {
+	case "list":
+		c.listIdentities(actionArgs)
+	case "new":
+		c.newIdentity(actionArgs)
+	case "unlock":
+		c.unlockIdentity(actionArgs)
+	case "register":
+		c.registerIdentity(actionArgs)
+	case "topup":
+		c.topupIdentity(actionArgs)
+	default:
+		warnf("Unknown sub-command '%s'\n", argsString)
+		fmt.Println(usage)
+	}
+}
+
+const usageListIdentities = "list"
+
+func (c *cliApp) listIdentities(args []string) {
+	if len(args) > 0 {
+		info("Usage: " + usageListIdentities)
+		return
+	}
+	ids, err := c.tequilapi.GetIdentities()
+	if err != nil {
+		fmt.Println("Error occurred:", err)
+		return
+	}
+
+	for _, id := range ids {
+		status("+", id.Address)
+	}
+	return
+}
+
+const usageNewIdentity = "new [passphrase]"
+
+func (c *cliApp) newIdentity(args []string) {
+	if len(args) > 1 {
+		info("Usage: " + usageNewIdentity)
+		return
+	}
+	passphrase := identityDefaultPassphrase
+	if len(args) == 1 {
 		passphrase = args[1]
+	}
+
+	id, err := c.tequilapi.NewIdentity(passphrase)
+	if err != nil {
+		warn(err)
+		return
+	}
+	success("New identity created:", id.Address)
+}
+
+const usageUnlockIdentity = "unlock <identity> [passphrase]"
+
+func (c *cliApp) unlockIdentity(actionArgs []string) {
+	if len(actionArgs) < 1 {
+		info("Usage: " + usageUnlockIdentity)
+		return
+	}
+
+	identity := actionArgs[0]
+	var passphrase string
+	if len(actionArgs) >= 2 {
+		passphrase = actionArgs[1]
 	}
 
 	info("Unlocking", identity)
@@ -42,4 +124,85 @@ func (c *cliApp) unlockIdentity(args []string) {
 	}
 
 	success(fmt.Sprintf("Identity %s unlocked.", identity))
+}
+
+const usageRegisterIdentity = "register <identity> [stake] [beneficiary]"
+
+func (c *cliApp) registerIdentity(actionArgs []string) {
+	if len(actionArgs) < 1 || len(actionArgs) > 3 {
+		info("Usage: " + usageRegisterIdentity)
+		return
+	}
+
+	var address = actionArgs[0]
+	var stake uint64
+	if len(actionArgs) >= 2 {
+		s, err := strconv.ParseUint(actionArgs[1], 10, 64)
+		if err != nil {
+			warn(errors.Wrap(err, "could not parse stake"))
+		}
+		stake = s
+	}
+	var beneficiary string
+	if len(actionArgs) >= 3 {
+		beneficiary = actionArgs[2]
+	}
+
+	fees, err := c.tequilapi.GetTransactorFees()
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration)
+	if err != nil {
+		warn(errors.Wrap(err, "could not register identity"))
+		return
+	}
+
+	info("Waiting for registration to complete")
+	var registered, timeout bool
+	for timer := time.After(3 * time.Minute); !timeout && !registered; {
+		time.Sleep(2 * time.Second)
+		status, err := c.tequilapi.GetIdentityStatus(address)
+		if err != nil {
+			warn(err)
+		}
+		select {
+		case <-timer:
+			timeout = true
+		default:
+			if status.IsRegistered {
+				registered = true
+				fmt.Println()
+			} else {
+				fmt.Print(".")
+			}
+		}
+	}
+
+	if registered {
+		success("Identity registered")
+	} else if timeout {
+		warn("Identity registration timed out")
+	} else {
+		warn("Something went wrong")
+	}
+}
+
+const usageTopupIdentity = "topup <identity>"
+
+func (c *cliApp) topupIdentity(args []string) {
+	if len(args) != 1 {
+		info("Usage: " + usageTopupIdentity)
+		return
+	}
+
+	address := args[0]
+	err := c.tequilapi.TopUp(address)
+	if err != nil {
+		warn(err)
+		return
+	}
+	success("Identity topped up")
 }
