@@ -775,7 +775,7 @@ func (c *cliApp) license(argsString string) {
 
 func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
 	return func(line string) []string {
-		identities := []string{"new"}
+		var identities []string
 		ids, err := tequilapi.GetIdentities()
 		if err != nil {
 			warn(err)
@@ -836,7 +836,12 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"identities",
 			readline.PcItem("new"),
 			readline.PcItem("list"),
-			readline.PcItem("register"),
+			readline.PcItem(
+				"register",
+				readline.PcItemDynamic(
+					getIdentityOptionList(tequilapi),
+				),
+			),
 			readline.PcItem("topup"),
 		),
 		readline.PcItem("status"),
