@@ -216,10 +216,8 @@ func (p *Peer) Encode() string {
 	if p.Endpoint != nil {
 		res.WriteString(fmt.Sprintf("endpoint=%s\n", p.Endpoint.String()))
 	}
-	if len(p.AllowedIPs) > 0 {
-		for _, ip := range p.AllowedIPs {
-			res.WriteString(fmt.Sprintf("allowed_ip=%s\n", ip))
-		}
+	for _, ip := range p.AllowedIPs {
+		res.WriteString(fmt.Sprintf("allowed_ip=%s\n", ip))
 	}
 	return res.String()
 }
