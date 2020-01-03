@@ -51,16 +51,13 @@ func NewWireguardClient() (*client, error) {
 
 func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr net.IPNet) error {
 	var deviceConfig wgtypes.Config
-	if config != nil {
-		port := config.ListenPort()
-		privateKey, err := stringToKey(config.PrivateKey())
-		if err != nil {
-			return err
-		}
-		deviceConfig.PrivateKey = &privateKey
-		deviceConfig.ListenPort = &port
+	port := config.ListenPort
+	privateKey, err := stringToKey(config.PrivateKey)
+	if err != nil {
+		return err
 	}
-
+	deviceConfig.PrivateKey = &privateKey
+	deviceConfig.ListenPort = &port
 	if err := c.up(iface, ipAddr); err != nil {
 		return err
 	}
@@ -68,9 +65,9 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr ne
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) AddPeer(iface string, peer wg.PeerInfo, _ ...string) error {
-	endpoint := peer.Endpoint()
-	publicKey, err := stringToKey(peer.PublicKey())
+func (c *client) AddPeer(iface string, peer wg.AddPeerOptions, _ ...string) error {
+	endpoint := peer.Endpoint
+	publicKey, err := stringToKey(peer.PublicKey)
 	if err != nil {
 		return err
 	}
@@ -96,17 +93,17 @@ func (c *client) RemovePeer(iface string, publicKey string) error {
 	}}})
 }
 
-func (c *client) PeerStats() (wg.Stats, error) {
+func (c *client) PeerStats() (*wg.Stats, error) {
 	d, err := c.wgClient.Device(c.iface)
 	if err != nil {
-		return wg.Stats{}, err
+		return nil, err
 	}
 
 	if len(d.Peers) != 1 {
-		return wg.Stats{}, errors.New("exactly 1 peer expected")
+		return nil, errors.New("kernelspace: exactly 1 peer expected")
 	}
 
-	return wg.Stats{
+	return &wg.Stats{
 		BytesReceived: uint64(d.Peers[0].ReceiveBytes),
 		BytesSent:     uint64(d.Peers[0].TransmitBytes),
 		LastHandshake: d.Peers[0].LastHandshakeTime,

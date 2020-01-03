@@ -84,7 +84,11 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return errors.Wrap(err, "failed to start connection endpoint")
 	}
 
-	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
+	peerInfo := wg.AddPeerOptions{
+		Endpoint:  &c.config.Provider.Endpoint,
+		PublicKey: c.config.Provider.PublicKey,
+	}
+	if err := c.connectionEndpoint.AddPeer(c.connectionEndpoint.InterfaceName(), peerInfo); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
 		removeAllowedIPRule()

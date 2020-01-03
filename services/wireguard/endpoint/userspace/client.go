@@ -18,9 +18,10 @@
 package userspace
 
 import (
+	"bufio"
 	"encoding/base64"
 	"net"
-	"time"
+	"strings"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/pkg/errors"
@@ -30,7 +31,7 @@ import (
 
 type client struct {
 	tun    tun.Device
-	devAPI *device.DeviceApi
+	devAPI *device.Device
 }
 
 // NewWireguardClient creates new wireguard user space client.
@@ -43,47 +44,23 @@ func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net
 		return errors.Wrap(err, "failed to create TUN device")
 	}
 
-	c.devAPI = device.UserspaceDeviceApi(c.tun)
-	if err := c.devAPI.SetListeningPort(uint16(config.ListenPort())); err != nil {
-		return errors.Wrap(err, "failed to set listening port")
+	c.devAPI = device.NewDevice(c.tun, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+	if err := c.setDeviceConfig(config.Encode()); err != nil {
+		return errors.Wrap(err, "failed to configure initial device")
 	}
-
-	key, err := base64stringTo32ByteArray(config.PrivateKey())
-	if err != nil {
-		return errors.Wrap(err, "failed to parse private key from config")
-	}
-
-	if err := c.devAPI.SetPrivateKey(device.NoisePrivateKey(key)); err != nil {
-		return errors.Wrap(err, "failed to set private key to userspace device API")
-	}
-
-	c.devAPI.Boot()
 	return nil
 }
 
-func (c *client) AddPeer(name string, peer wg.PeerInfo, allowedIPs ...string) error {
-	key, err := base64stringTo32ByteArray(peer.PublicKey())
-	if err != nil {
-		return err
-	}
-
-	extPeer := device.ExternalPeer{
-		PublicKey:  device.NoisePublicKey(key),
+func (c *client) AddPeer(iface string, peer wg.AddPeerOptions, _ ...string) error {
+	p := wg.Peer{
+		PublicKey:  peer.PublicKey,
 		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
+		Endpoint:   peer.Endpoint,
 	}
-
-	if len(allowedIPs) > 0 {
-		extPeer.AllowedIPs = allowedIPs
+	if err := c.setDeviceConfig(p.Encode()); err != nil {
+		errors.Wrap(err, "failed to add device peer")
 	}
-
-	if ep := peer.Endpoint(); ep != nil {
-		extPeer.RemoteEndpoint, err = device.CreateEndpoint(ep.String())
-		if err != nil {
-			return err
-		}
-	}
-
-	return c.devAPI.AddPeer(extPeer)
+	return nil
 }
 
 func (c *client) RemovePeer(_ string, publicKey string) error {
@@ -93,7 +70,6 @@ func (c *client) RemovePeer(_ string, publicKey string) error {
 	}
 
 	c.devAPI.RemovePeer(key)
-
 	return nil
 }
 
@@ -109,25 +85,28 @@ func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
 	return addDefaultRoute(iface)
 }
 
-func (c *client) PeerStats() (wg.Stats, error) {
-	peers, err := c.devAPI.Peers()
+func (c *client) PeerStats() (*wg.Stats, error) {
+	deviceState, err := wg.ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
-		return wg.Stats{}, nil
+		return nil, err
 	}
-
-	if len(peers) != 1 {
-		return wg.Stats{}, errors.New("exactly 1 peer expected")
+	stats, err := wg.ParseDevicePeerStats(deviceState)
+	if err != nil {
+		return nil, err
 	}
-
-	return wg.Stats{
-		BytesSent:     peers[0].Stats.Sent,
-		BytesReceived: peers[0].Stats.Received,
-		LastHandshake: time.Unix(int64(peers[0].LastHanshake), 0),
-	}, nil
+	return stats, nil
 }
 
 func (c *client) DestroyDevice(name string) error {
 	return destroyDevice(name)
+}
+
+func (c *client) setDeviceConfig(config string) error {
+	if err := c.devAPI.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
+		return errors.Wrap(err, "failed to set device config")
+	}
+	c.devAPI.Up()
+	return nil
 }
 
 func base64stringTo32ByteArray(s string) (res [32]byte, err error) {

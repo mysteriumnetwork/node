@@ -32,9 +32,10 @@ type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
-	AddPeer(name string, peer wg.PeerInfo, allowedIP ...string) error
+	AddPeer(iface string, peer wg.AddPeerOptions, allowedIP ...string) error
+	// TODO(anjmao): Use peer wg.PeerInfo here too?
 	RemovePeer(name string, publicKey string) error
-	PeerStats() (wg.Stats, error)
+	PeerStats() (*wg.Stats, error)
 	Close() error
 }
 
@@ -49,6 +50,8 @@ type connectionEndpoint struct {
 	releasePortMapping func()
 	mapPort            func(port int) (releasePortMapping func())
 	connectDelay       int // connect delay in milliseconds
+
+	deviceConfig wg.DeviceConfig
 }
 
 // Start starts and configure wireguard network interface for providing service.
@@ -64,7 +67,6 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	}
 
 	ce.iface = iface
-	var deviceConfig deviceConfig
 	if config == nil {
 		// nil config mean its a provider Start
 		pubIP, err := ce.ipResolver.GetPublicIP()
@@ -89,14 +91,14 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		ce.endpoint.Port = port
 		ce.releasePortMapping = ce.mapPort(port)
 		ce.privateKey = privateKey
-		deviceConfig.listenPort = ce.endpoint.Port
+		ce.deviceConfig.ListenPort = ce.endpoint.Port
 	} else {
 		ce.ipAddr = config.Consumer.IPAddress
 		ce.privateKey = config.Consumer.PrivateKey
 	}
 
-	deviceConfig.privateKey = ce.privateKey
-	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
+	ce.deviceConfig.PrivateKey = ce.privateKey
+	return ce.wgClient.ConfigureDevice(ce.iface, ce.deviceConfig, ce.ipAddr)
 }
 
 // InterfaceName returns a connection endpoint interface name.
@@ -104,9 +106,9 @@ func (ce *connectionEndpoint) InterfaceName() string {
 	return ce.iface
 }
 
-// AddPeer adds new wireguard peer to the wireguard network interface.
-func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr, allowedIP ...string) error {
-	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey}, allowedIP...)
+// AddPeer adds new wireguard peer to the wireguard device config.
+func (ce *connectionEndpoint) AddPeer(iface string, peer wg.AddPeerOptions) error {
+	return ce.wgClient.AddPeer(iface, peer)
 }
 
 // RemovePeer removes a wireguard peer from the wireguard network interface.
@@ -115,7 +117,7 @@ func (ce *connectionEndpoint) RemovePeer(publicKey string) error {
 }
 
 // PeerStats returns stats information about connected peer.
-func (ce *connectionEndpoint) PeerStats() (wg.Stats, error) {
+func (ce *connectionEndpoint) PeerStats() (*wg.Stats, error) {
 	return ce.wgClient.PeerStats()
 }
 
@@ -179,19 +181,6 @@ func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
 	}
 
 	return nil
-}
-
-type deviceConfig struct {
-	privateKey string
-	listenPort int
-}
-
-func (d deviceConfig) PrivateKey() string {
-	return d.privateKey
-}
-
-func (d deviceConfig) ListenPort() int {
-	return d.listenPort
 }
 
 type peerInfo struct {
