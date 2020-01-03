@@ -77,7 +77,7 @@ func NewServerConfig(
 	serverConfig.SetFlag("management-client-auth")
 	serverConfig.SetParam("verify-client-cert", "none")
 	serverConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
-	serverConfig.SetParam("reneg-sec", "60")
+	serverConfig.SetParam("reneg-sec", "3600")
 	serverConfig.SetKeepAlive(10, 60)
 	serverConfig.SetPingTimerRemote()
 	serverConfig.SetPersistKey()
