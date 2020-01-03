@@ -20,7 +20,6 @@ package userspace
 import (
 	"bufio"
 	"encoding/base64"
-	"fmt"
 	"net"
 	"strings"
 
@@ -107,7 +106,6 @@ func (c *client) setDeviceConfig(config string) error {
 		return errors.Wrap(err, "failed to set device config")
 	}
 	c.devAPI.Up()
-	fmt.Printf("---------setDeviceConfig: %s\n", config)
 	return nil
 }
 

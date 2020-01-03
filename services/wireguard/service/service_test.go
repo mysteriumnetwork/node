@@ -100,7 +100,7 @@ func (mce *mockConnectionEndpoint) InterfaceName() string                       
 func (mce *mockConnectionEndpoint) Stop() error                                  { return nil }
 func (mce *mockConnectionEndpoint) Start(_ *wg.ServiceConfig) error              { return nil }
 func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)            { return wg.ServiceConfig{}, nil }
-func (mce *mockConnectionEndpoint) AddPeer(_ string, _p wg.AddPeerOptions) error { return nil }
+func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wg.AddPeerOptions) error { return nil }
 func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                    { return nil }
 func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error               { return nil }
 func (mce *mockConnectionEndpoint) PeerStats() (*wg.Stats, error) {
