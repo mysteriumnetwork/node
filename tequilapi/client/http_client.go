@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -43,10 +44,7 @@ type httpRequestInterface interface {
 
 func newHTTPClient(baseURL string, ua string) *httpClient {
 	return &httpClient{
-		http: &http.Client{
-			Transport: &http.Transport{},
-			Timeout:   100 * time.Second,
-		},
+		http:    requests.NewHTTPClient("0.0.0.0", 100*time.Second),
 		baseURL: baseURL,
 		ua:      ua,
 	}
