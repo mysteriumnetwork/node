@@ -69,7 +69,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 
 	clientConfig.SetParam("auth", "none")
 
-	clientConfig.SetParam("reneg-sec", "60")
+	clientConfig.SetParam("reneg-sec", "0")
 	clientConfig.SetParam("resolv-retry", "infinite")
 	clientConfig.SetParam("redirect-gateway", "def1", "bypass-dhcp")
 
