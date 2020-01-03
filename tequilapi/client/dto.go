@@ -55,6 +55,13 @@ type ProposalDTO struct {
 	ProviderID        string               `json:"providerId"`
 	ServiceType       string               `json:"serviceType"`
 	ServiceDefinition ServiceDefinitionDTO `json:"serviceDefinition"`
+	AccessPolicies    []AccessPolicy       `json:"accessPolicies"`
+}
+
+// AccessPolicy represents the access controls for proposal
+type AccessPolicy struct {
+	ID     string `json:"id"`
+	Source string `json:"source"`
 }
 
 func (p ProposalDTO) String() string {
