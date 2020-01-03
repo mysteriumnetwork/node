@@ -104,7 +104,7 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	defer idm.unlockedMu.Unlock()
 
 	if idm.unlocked[address] {
-		log.Debug().Msg("unlocked identity found in cache, skipping keystore: %s" + address)
+		log.Debug().Msg("Unlocked identity found in cache, skipping keystore: " + address)
 		return nil
 	}
 

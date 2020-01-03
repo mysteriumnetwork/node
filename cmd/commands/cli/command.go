@@ -23,7 +23,6 @@ import (
 	"io"
 	stdlog "log"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -169,7 +168,6 @@ func (c *cliApp) handleActions(line string) {
 		handler func(argsString string)
 	}{
 		{"connect", c.connect},
-		{"unlock", c.unlock},
 		{"identities", c.identities},
 		{"payout", c.payout},
 		{"version", c.version},
@@ -312,18 +310,18 @@ func (c *cliApp) serviceGet(id string) {
 func (c *cliApp) connect(argsString string) {
 	args := strings.Fields(argsString)
 
-	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <accountant-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
-	if len(args) < 4 {
+	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
+	if len(args) < 3 {
 		info(helpMsg)
 		return
 	}
 
-	consumerID, providerID, accountantID, serviceType := args[0], args[1], args[2], args[3]
+	consumerID, providerID, serviceType := args[0], args[1], args[2]
 
 	var disableKillSwitch bool
 	var dns connection.DNSOption
 	var err error
-	for _, arg := range args[4:] {
+	for _, arg := range args[3:] {
 		if strings.HasPrefix(arg, "dns=") {
 			kv := strings.Split(arg, "=")
 			dns, err = connection.NewDNSOption(kv[1])
@@ -361,6 +359,7 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
+	accountantID := config.GetString(config.FlagAccountantID)
 	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, accountantID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
@@ -370,35 +369,6 @@ func (c *cliApp) connect(argsString string) {
 	c.currentConsumerID = consumerID
 
 	success("Connected.")
-}
-
-func (c *cliApp) unlock(argsString string) {
-	unlockSignature := "unlock <identity> [passphrase]"
-	if len(argsString) == 0 {
-		info("Press tab to select identity.\n", unlockSignature)
-		return
-	}
-
-	args := strings.Fields(argsString)
-	var identity, passphrase string
-
-	if len(args) == 1 {
-		identity, passphrase = args[0], ""
-	} else if len(args) == 2 {
-		identity, passphrase = args[0], args[1]
-	} else {
-		info("Please type in identity and optional passphrase.\n", unlockSignature)
-		return
-	}
-
-	info("Unlocking", identity)
-	err := c.tequilapi.Unlock(identity, passphrase)
-	if err != nil {
-		warn(err)
-		return
-	}
-
-	success(fmt.Sprintf("Identity %s unlocked.", identity))
 }
 
 func (c *cliApp) payout(argsString string) {
@@ -578,116 +548,6 @@ func (c *cliApp) quit() {
 	stop()
 }
 
-func (c *cliApp) identities(argsString string) {
-	const usage = "identities command:\n    list\n    new [passphrase]\n    register <identity> <stake> [beneficiary]\n    topup <identity>"
-	if len(argsString) == 0 {
-		info(usage)
-		return
-	}
-
-	args := strings.Fields(argsString)
-	switch args[0] {
-	case "new", "list", "register", "topup": // Known sub-commands.
-	default:
-		warnf("Unknown sub-command '%s'\n", argsString)
-		fmt.Println(usage)
-		return
-	}
-
-	if len(args) < 1 {
-		info(usage)
-		return
-	}
-
-	action := args[0]
-	if action == "list" {
-		if len(args) > 1 {
-			info(usage)
-			return
-		}
-		ids, err := c.tequilapi.GetIdentities()
-		if err != nil {
-			fmt.Println("Error occurred:", err)
-			return
-		}
-
-		for _, id := range ids {
-			status("+", id.Address)
-		}
-		return
-	}
-
-	if action == "new" {
-		var passphrase string
-		if len(args) == 1 {
-			passphrase = identityDefaultPassphrase
-		} else if len(args) == 2 {
-			passphrase = args[1]
-		} else {
-			info(usage)
-			return
-		}
-
-		id, err := c.tequilapi.NewIdentity(passphrase)
-		if err != nil {
-			warn(err)
-			return
-		}
-		success("New identity created:", id.Address)
-	}
-
-	if action == "register" {
-		var address string
-		var beneficiary string
-		var stake uint64
-		if len(args) >= 3 {
-			address = args[1]
-			s, err := strconv.ParseUint(args[2], 10, 64)
-			if err != nil {
-				warn(errors.Wrap(err, "could not parse stake"))
-			}
-			stake = s
-		} else {
-			info(usage)
-			return
-		}
-
-		if len(args) == 4 {
-			beneficiary = args[3]
-		}
-
-		fees, err := c.tequilapi.GetTransactorFees()
-		if err != nil {
-			warn(err)
-			return
-		}
-
-		err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration)
-		if err != nil {
-			warn(errors.Wrap(err, "could not register identity"))
-			return
-		}
-		success("identity registered")
-	}
-
-	if action == "topup" {
-		var address string
-		if len(args) != 2 {
-			info(usage)
-			return
-
-		}
-		address = args[1]
-
-		err := c.tequilapi.TopUp(address)
-		if err != nil {
-			warn(err)
-			return
-		}
-		success("identity topped up")
-	}
-}
-
 func (c *cliApp) registration(argsString string) {
 	if argsString == "" {
 		warn("Please supply identity")
@@ -741,7 +601,7 @@ func (c *cliApp) license(argsString string) {
 
 func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
 	return func(line string) []string {
-		identities := []string{"new"}
+		var identities []string
 		ids, err := tequilapi.GetIdentities()
 		if err != nil {
 			warn(err)
@@ -800,10 +660,11 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		),
 		readline.PcItem(
 			"identities",
-			readline.PcItem("new"),
 			readline.PcItem("list"),
-			readline.PcItem("register"),
-			readline.PcItem("topup"),
+			readline.PcItem("new"),
+			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("topup", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),
@@ -815,30 +676,15 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		readline.PcItem("quit"),
 		readline.PcItem("stop"),
 		readline.PcItem(
-			"unlock",
-			readline.PcItemDynamic(
-				getIdentityOptionList(tequilapi),
-			),
-		),
-		readline.PcItem(
 			"payout",
-			readline.PcItem("set",
-				readline.PcItemDynamic(
-					getIdentityOptionList(tequilapi),
-				),
-			),
+			readline.PcItem("set", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem(
 			"license",
 			readline.PcItem("warranty"),
 			readline.PcItem("conditions"),
 		),
-		readline.PcItem(
-			"registration",
-			readline.PcItemDynamic(
-				getIdentityOptionList(tequilapi),
-			),
-		),
+		readline.PcItem("registration", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 	)
 }
 
