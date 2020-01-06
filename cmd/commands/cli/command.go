@@ -507,7 +507,12 @@ func (c *cliApp) proposals(filter string) {
 			country = "Unknown"
 		}
 
-		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, country)
+		var policies []string
+		for _, policy := range proposal.AccessPolicies {
+			policies = append(policies, policy.ID)
+		}
+
+		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","))
 
 		if filter == "" ||
 			strings.Contains(proposal.ProviderID, filter) ||
