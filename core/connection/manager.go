@@ -409,6 +409,7 @@ func (manager *connectionManager) Status() Status {
 
 func (manager *connectionManager) setStatus(cs Status) {
 	manager.statusLock.Lock()
+	log.Info().Msgf("Connection state: %v → %v", manager.status.State, cs.State)
 	manager.status = cs
 	manager.statusLock.Unlock()
 }
@@ -517,7 +518,6 @@ func (manager *connectionManager) onStateChanged(state State) {
 
 	switch state {
 	case Connected:
-		log.Debug().Msg("Connected state issued")
 		sessionInfo := manager.getCurrentSession()
 		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal))
 	case Reconnecting:
