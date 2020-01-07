@@ -45,7 +45,7 @@ type Creator interface {
 	Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerPrams *traversal.Params) (Session, error)
 }
 
-// GetMessageEndpoint returns endpoint there to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages
 func (consumer *createConsumer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }

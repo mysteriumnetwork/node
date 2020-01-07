@@ -49,7 +49,7 @@ type registerConsumer struct {
 	Callback func(registerMessage) error
 }
 
-// GetMessageEndpoint returns endpoint there to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages
 func (c *registerConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return registerEndpoint
 }

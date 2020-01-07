@@ -26,7 +26,7 @@ type BalanceMessageConsumer struct {
 	Callback func(BalanceMessage) error
 }
 
-// GetMessageEndpoint returns endpoint there to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages
 func (consumer *BalanceMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return balanceEndpoint
 }

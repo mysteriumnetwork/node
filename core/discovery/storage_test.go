@@ -55,11 +55,11 @@ func (filter *filter) ToAPIQuery() mysterium.ProposalsQuery {
 	}
 }
 
-func Test_Storage_List(t *testing.T) {
-	storage := NewStorage()
+func Test_Storage_Proposals(t *testing.T) {
+	storage := createEmptyStorage()
 	assert.Equal(t, []market.ServiceProposal{}, storage.Proposals())
 
-	storage = mockStorage()
+	storage = createFullStorage()
 	assert.Equal(
 		t,
 		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop, proposalProvider2Streaming},
@@ -68,7 +68,7 @@ func Test_Storage_List(t *testing.T) {
 }
 
 func Test_Finder_MatchProposals(t *testing.T) {
-	storage := mockStorage()
+	storage := createFullStorage()
 
 	proposals, err := storage.MatchProposals(reducer.All())
 	assert.NoError(t, err)
@@ -88,7 +88,7 @@ func Test_Finder_MatchProposals(t *testing.T) {
 }
 
 func Test_Finder_FindProposals(t *testing.T) {
-	storage := mockStorage()
+	storage := createFullStorage()
 
 	proposals, err := storage.FindProposals(&filter{})
 	assert.NoError(t, err)
@@ -108,23 +108,23 @@ func Test_Finder_FindProposals(t *testing.T) {
 }
 
 func Test_Storage_HasProposal(t *testing.T) {
-	storage := NewStorage()
+	storage := createEmptyStorage()
 	assert.False(t, storage.HasProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"}))
 
-	storage = mockStorage()
+	storage = createFullStorage()
 	assert.False(t, storage.HasProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"}))
 	assert.True(t, storage.HasProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"}))
 }
 
 func Test_Storage_GetProposal(t *testing.T) {
-	storage := NewStorage()
+	storage := createEmptyStorage()
 	proposal, err := storage.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"})
-	assert.EqualError(t, err, "proposal does not exist")
+	assert.EqualError(t, err, "proposal does not exist: {unknown 0x1 0}")
 	assert.Nil(t, proposal)
 
-	storage = mockStorage()
+	storage = createFullStorage()
 	proposal, err = storage.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"})
-	assert.EqualError(t, err, "proposal does not exist")
+	assert.EqualError(t, err, "proposal does not exist: {unknown 0x1 0}")
 	assert.Nil(t, proposal)
 
 	proposal, err = storage.GetProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
@@ -133,7 +133,7 @@ func Test_Storage_GetProposal(t *testing.T) {
 }
 
 func Test_Storage_Set(t *testing.T) {
-	storage := mockStorage()
+	storage := createFullStorage()
 	storage.Set([]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop})
 	assert.Equal(
 		t,
@@ -146,7 +146,7 @@ func Test_Storage_Set(t *testing.T) {
 }
 
 func Test_Storage_AddProposal(t *testing.T) {
-	storage := NewStorage()
+	storage := createEmptyStorage()
 	storage.AddProposal(proposalProvider1Streaming)
 	assert.Equal(
 		t,
@@ -177,7 +177,7 @@ func Test_Storage_AddProposal(t *testing.T) {
 }
 
 func Test_Storage_RemoveProposal(t *testing.T) {
-	storage := NewStorage()
+	storage := createEmptyStorage()
 	storage.RemoveProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
 	assert.Equal(
 		t,
@@ -185,7 +185,7 @@ func Test_Storage_RemoveProposal(t *testing.T) {
 		storage.proposals,
 	)
 
-	storage = mockStorage()
+	storage = createFullStorage()
 	storage.RemoveProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
 	assert.Equal(
 		t,
@@ -197,12 +197,16 @@ func Test_Storage_RemoveProposal(t *testing.T) {
 	)
 }
 
-func mockStorage() *ProposalStorage {
+func createEmptyStorage() *ProposalStorage {
+	return &ProposalStorage{
+		proposals: []market.ServiceProposal{},
+	}
+}
+
+func createFullStorage() *ProposalStorage {
 	return &ProposalStorage{
 		proposals: []market.ServiceProposal{
-			proposalProvider1Streaming,
-			proposalProvider1Noop,
-			proposalProvider2Streaming,
+			proposalProvider1Streaming, proposalProvider1Noop, proposalProvider2Streaming,
 		},
 	}
 }

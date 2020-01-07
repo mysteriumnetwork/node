@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ type pingConsumer struct {
 	Callback func(pingMessage) error
 }
 
-// GetMessageEndpoint returns endpoint there to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages
 func (c *pingConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return pingEndpoint
 }

@@ -27,8 +27,8 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// proposalSubscriber responsible for handling proposal events through Broker (Mysterium Communication)
-type proposalSubscriber struct {
+// ProposalSubscriber responsible for handling proposal events through Broker (Mysterium Communication)
+type ProposalSubscriber struct {
 	proposalStorage  *discovery.ProposalStorage
 	proposalIdleness time.Duration
 	receiver         communication.Receiver
@@ -39,60 +39,60 @@ type proposalSubscriber struct {
 	watchdogSeen map[market.ProposalID]time.Time
 }
 
-// NewProposalSubscriber returns new proposalSubscriber instance.
+// NewProposalSubscriber returns new ProposalSubscriber instance.
 func NewProposalSubscriber(
 	proposalsStorage *discovery.ProposalStorage,
 	proposalIdleness time.Duration,
 	connection nats.Connection,
-) *proposalSubscriber {
-	return &proposalSubscriber{
+) *ProposalSubscriber {
+	return &ProposalSubscriber{
 		proposalStorage:  proposalsStorage,
 		proposalIdleness: proposalIdleness,
 		receiver:         nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
 
 		watchdogStep: proposalIdleness / 10,
 		watchdogStop: make(chan bool),
-		watchdogSeen: make(map[market.ProposalID]time.Time, 0),
+		watchdogSeen: make(map[market.ProposalID]time.Time),
 	}
 }
 
-// Start begins proposals synchronisation to storage
-func (s *proposalSubscriber) Start() error {
-	errSubscribe := s.receiver.Receive(&registerConsumer{Callback: s.proposalRegisterMessage})
-	if errSubscribe != nil {
-		return errSubscribe
+// Start begins proposals synchronization to storage
+func (s *ProposalSubscriber) Start() error {
+	err := s.receiver.Receive(&registerConsumer{Callback: s.proposalRegisterMessage})
+	if err != nil {
+		return err
 	}
 
-	errSubscribe = s.receiver.Receive(&unregisterConsumer{Callback: s.proposalUnregisterMessage})
-	if errSubscribe != nil {
-		return errSubscribe
+	err = s.receiver.Receive(&unregisterConsumer{Callback: s.proposalUnregisterMessage})
+	if err != nil {
+		return err
 	}
 
-	errSubscribe = s.receiver.Receive(&pingConsumer{Callback: s.proposalPingMessage})
-	if errSubscribe != nil {
-		return errSubscribe
+	err = s.receiver.Receive(&pingConsumer{Callback: s.proposalPingMessage})
+	if err != nil {
+		return err
 	}
 
 	go s.proposalWatchdog()
 	return nil
 }
 
-// Stop ends proposals synchronisation to storage
-func (s *proposalSubscriber) Stop() {
+// Stop ends proposals synchronization to storage
+func (s *ProposalSubscriber) Stop() {
 	close(s.watchdogStop)
 }
 
-func (s *proposalSubscriber) proposalRegisterMessage(message registerMessage) error {
+func (s *ProposalSubscriber) proposalRegisterMessage(message registerMessage) error {
 	s.proposalStorage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
 	defer s.watchdogLock.Unlock()
-	s.watchdogSeen[message.Proposal.UniqueID()] = time.Now()
+	s.watchdogSeen[message.Proposal.UniqueID()] = time.Now().UTC()
 
 	return nil
 }
 
-func (s *proposalSubscriber) proposalUnregisterMessage(message unregisterMessage) error {
+func (s *ProposalSubscriber) proposalUnregisterMessage(message unregisterMessage) error {
 	s.proposalStorage.RemoveProposal(message.Proposal.UniqueID())
 
 	s.watchdogLock.Lock()
@@ -102,7 +102,7 @@ func (s *proposalSubscriber) proposalUnregisterMessage(message unregisterMessage
 	return nil
 }
 
-func (s *proposalSubscriber) proposalPingMessage(message pingMessage) error {
+func (s *ProposalSubscriber) proposalPingMessage(message pingMessage) error {
 	s.proposalStorage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
@@ -112,7 +112,7 @@ func (s *proposalSubscriber) proposalPingMessage(message pingMessage) error {
 	return nil
 }
 
-func (s *proposalSubscriber) proposalWatchdog() {
+func (s *ProposalSubscriber) proposalWatchdog() {
 	for {
 		select {
 		case <-s.watchdogStop:

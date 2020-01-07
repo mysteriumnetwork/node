@@ -87,7 +87,6 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	time.Sleep(15 * time.Millisecond)
 
 	assert.Len(t, storage.Proposals(), 0)
-	assert.Exactly(t, []market.ServiceProposal{}, storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {

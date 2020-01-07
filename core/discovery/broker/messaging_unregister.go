@@ -49,7 +49,7 @@ type unregisterConsumer struct {
 	Callback func(unregisterMessage) error
 }
 
-// GetMessageEndpoint returns endpoint there to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages
 func (c *unregisterConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return unregisterEndpoint
 }
