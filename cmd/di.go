@@ -40,6 +40,7 @@ import (
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
 	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
 	discovery_composite "github.com/mysteriumnetwork/node/core/discovery/composite"
+	discovery_noop "github.com/mysteriumnetwork/node/core/discovery/noop"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -728,29 +729,36 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	di.DiscoveryStorage = discovery.NewStorage()
 
 	discoveryRegistry := discovery_composite.NewRegistry()
+	discoveryFinder := discovery_composite.NewFinder()
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
 			discoveryRegistry.AddRegistry(
 				discovery_api.NewRegistry(di.MysteriumAPI),
 			)
+
 			if !options.ProposalFetcherEnabled {
-				di.DiscoveryFinder = discovery_api.NewNoopFetcher()
+				discoveryFinder.AddFinder(discovery_noop.NewFinder())
 			} else {
-				di.DiscoveryFinder = discovery_api.NewFetcher(di.DiscoveryStorage, di.MysteriumAPI.Proposals, 30*time.Second)
+				discoveryFinder.AddFinder(
+					discovery_api.NewFinder(di.DiscoveryStorage, di.MysteriumAPI.Proposals, 30*time.Second),
+				)
 			}
 		case node.DiscoveryTypeBroker:
 			discoveryRegistry.AddRegistry(
 				discovery_broker.NewRegistry(di.BrokerConnection),
 			)
-			// Proposals are pinged each 60 seconds, see `discovery.NewService()`
-			// So timeout proposals after 61 second (1 second inactivity tolerated)
-			di.DiscoveryFinder = discovery_broker.NewProposalSubscriber(di.DiscoveryStorage, di.BrokerConnection, 61*time.Second, 1*time.Second)
+			discoveryFinder.AddFinder(
+				// Proposals are pinged each 60 seconds, see `discovery.NewService()`
+				// So timeout proposals after 61 second (1 second inactivity tolerated)
+				discovery_broker.NewFinder(di.DiscoveryStorage, di.BrokerConnection, 61*time.Second, 1*time.Second),
+			)
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
 	}
 
+	di.DiscoveryFinder = discoveryFinder
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, 60*time.Second, di.SignerFactory, di.EventBus)
 	}

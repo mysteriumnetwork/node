@@ -56,7 +56,7 @@ func waitForInitialFetch() {
 
 func Test_Fetcher_StartFetchesInitialProposals(t *testing.T) {
 	storage := discovery.NewStorage()
-	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Hour)
+	fetcher := NewFinder(storage, proposalsCurrent.Fetch, time.Hour)
 
 	proposalsCurrent.Mock(proposalFirst, proposalSecond)
 	err := fetcher.Start()
@@ -72,7 +72,7 @@ func Test_Fetcher_StartFetchesInitialProposals(t *testing.T) {
 
 func Test_Fetcher_StartFetchesNewProposals(t *testing.T) {
 	storage := discovery.NewStorage()
-	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Millisecond)
+	fetcher := NewFinder(storage, proposalsCurrent.Fetch, time.Millisecond)
 
 	err := fetcher.Start()
 	defer fetcher.Stop()

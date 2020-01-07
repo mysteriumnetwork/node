@@ -15,18 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package api
+package noop
 
-// NewNoopFetcher returns noop fetcher which is used to
+// NewFinder returns noop instance of noop finder which is used to
 // disable proposals auto fetching.
-func NewNoopFetcher() Fetcher {
-	return &noopFetcher{}
+func NewFinder() *finderNoop {
+	return &finderNoop{}
 }
 
-type noopFetcher struct{}
+type finderNoop struct{}
 
-func (n noopFetcher) Start() error {
+func (fn finderNoop) Start() error {
 	return nil
 }
 
-func (n noopFetcher) Stop() {}
+func (fn finderNoop) Stop() {}

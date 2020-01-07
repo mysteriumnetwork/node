@@ -28,14 +28,8 @@ import (
 // FetchCallback does real fetch of proposals through Mysterium API
 type FetchCallback func() ([]market.ServiceProposal, error)
 
-// Fetcher continuously fetches service proposals from discovery service
-type Fetcher interface {
-	Start() error
-	Stop()
-}
-
-// Fetcher represents async proposal fetcher from Mysterium API
-type fetcher struct {
+// finderAPI represents async proposal fetcher from Mysterium API
+type finderAPI struct {
 	fetch         FetchCallback
 	fetchInterval time.Duration
 	fetchShutdown chan bool
@@ -43,9 +37,9 @@ type fetcher struct {
 	proposalStorage *discovery.ProposalStorage
 }
 
-// NewFetcher create instance of Fetcher
-func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) Fetcher {
-	return &fetcher{
+// NewFinder create instance of API finder
+func NewFinder(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) *finderAPI {
+	return &finderAPI{
 		fetch:         callback,
 		fetchInterval: interval,
 
@@ -54,43 +48,43 @@ func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallb
 }
 
 // Start begins fetching proposals to storage
-func (fetcher *fetcher) Start() error {
+func (fa *finderAPI) Start() error {
 	go func() {
-		if err := fetcher.fetchDo(); err != nil {
+		if err := fa.fetchDo(); err != nil {
 			log.Warn().Err(err).Msg("Initial proposal fetch failed, continuing")
 		}
 	}()
 
-	fetcher.fetchShutdown = make(chan bool, 1)
-	go fetcher.fetchLoop()
+	fa.fetchShutdown = make(chan bool, 1)
+	go fa.fetchLoop()
 
 	return nil
 }
 
 // Stop ends fetching proposals to storage
-func (fetcher *fetcher) Stop() {
-	fetcher.fetchShutdown <- true
+func (fa *finderAPI) Stop() {
+	fa.fetchShutdown <- true
 }
 
-func (fetcher *fetcher) fetchLoop() {
+func (fa *finderAPI) fetchLoop() {
 	for {
 		select {
-		case <-fetcher.fetchShutdown:
+		case <-fa.fetchShutdown:
 			break
-		case <-time.After(fetcher.fetchInterval):
-			_ = fetcher.fetchDo()
+		case <-time.After(fa.fetchInterval):
+			_ = fa.fetchDo()
 		}
 	}
 }
 
-func (fetcher *fetcher) fetchDo() error {
-	proposals, err := fetcher.fetch()
+func (fa *finderAPI) fetchDo() error {
+	proposals, err := fa.fetch()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to fetch proposals")
 		return err
 	}
 
 	log.Debug().Msgf("Proposals fetched: %d", len(proposals))
-	fetcher.proposalStorage.Set(proposals)
+	fa.proposalStorage.AddProposal(proposals...)
 	return nil
 }

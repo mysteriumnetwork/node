@@ -48,7 +48,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 
 	storage := discovery.NewStorage()
 
-	subscriber := NewProposalSubscriber(connection, storage, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -76,7 +76,7 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 
 	storage := discovery.NewStorage()
 
-	subscriber := NewProposalSubscriber(connection, storage, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -95,7 +95,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 
 	storage := discovery.NewStorage()
 
-	subscriber := NewProposalSubscriber(connection, storage, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -122,7 +122,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	storage.AddProposal(proposalFirst)
 	storage.AddProposal(proposalSecond)
 
-	subscriber := NewProposalSubscriber(connection, storage, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)

@@ -133,7 +133,18 @@ func Test_Storage_GetProposal(t *testing.T) {
 }
 
 func Test_Storage_Set(t *testing.T) {
-	storage := createFullStorage()
+	storage := createEmptyStorage()
+	storage.Set([]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop})
+	assert.Equal(
+		t,
+		[]market.ServiceProposal{
+			proposalProvider1Streaming,
+			proposalProvider1Noop,
+		},
+		storage.proposals,
+	)
+
+	storage = createFullStorage()
 	storage.Set([]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop})
 	assert.Equal(
 		t,
@@ -147,30 +158,45 @@ func Test_Storage_Set(t *testing.T) {
 
 func Test_Storage_AddProposal(t *testing.T) {
 	storage := createEmptyStorage()
-	storage.AddProposal(proposalProvider1Streaming)
-	assert.Equal(
-		t,
-		[]market.ServiceProposal{
-			proposalProvider1Streaming,
-		},
-		storage.proposals,
-	)
-
-	storage.AddProposal(proposalProvider1Streaming)
-	assert.Equal(
-		t,
-		[]market.ServiceProposal{
-			proposalProvider1Streaming,
-		},
-		storage.proposals,
-	)
-
-	storage.AddProposal(proposalProvider1Noop)
+	storage.AddProposal(proposalProvider1Streaming, proposalProvider1Noop)
 	assert.Equal(
 		t,
 		[]market.ServiceProposal{
 			proposalProvider1Streaming,
 			proposalProvider1Noop,
+		},
+		storage.proposals,
+	)
+
+	storage.AddProposal(proposalProvider1Streaming)
+	assert.Equal(
+		t,
+		[]market.ServiceProposal{
+			proposalProvider1Streaming,
+			proposalProvider1Noop,
+		},
+		storage.proposals,
+	)
+
+	storage.AddProposal(proposalProvider2Streaming)
+	assert.Equal(
+		t,
+		[]market.ServiceProposal{
+			proposalProvider1Streaming,
+			proposalProvider1Noop,
+			proposalProvider2Streaming,
+		},
+		storage.proposals,
+	)
+
+	storage = createFullStorage()
+	storage.AddProposal(proposalProvider1Streaming, proposalProvider1Noop)
+	assert.Equal(
+		t,
+		[]market.ServiceProposal{
+			proposalProvider1Streaming,
+			proposalProvider1Noop,
+			proposalProvider2Streaming,
 		},
 		storage.proposals,
 	)

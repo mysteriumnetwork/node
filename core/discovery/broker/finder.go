@@ -27,8 +27,8 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// ProposalSubscriber responsible for handling proposal events through Broker (Mysterium Communication)
-type ProposalSubscriber struct {
+// finderBroker responsible for handling proposal events through Broker (Mysterium Communication)
+type finderBroker struct {
 	storage         *discovery.ProposalStorage
 	receiver        communication.Receiver
 	timeoutInterval time.Duration
@@ -39,14 +39,14 @@ type ProposalSubscriber struct {
 	watchdogSeen map[market.ProposalID]time.Time
 }
 
-// NewProposalSubscriber returns new ProposalSubscriber instance.
-func NewProposalSubscriber(
+// NewFinder returns new instance of broker finder.
+func NewFinder(
 	proposalsStorage *discovery.ProposalStorage,
 	connection nats.Connection,
 	proposalTimeoutInterval time.Duration,
 	proposalCheckInterval time.Duration,
-) *ProposalSubscriber {
-	return &ProposalSubscriber{
+) *finderBroker {
+	return &finderBroker{
 		storage:         proposalsStorage,
 		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
 		timeoutInterval: proposalTimeoutInterval,
@@ -58,7 +58,7 @@ func NewProposalSubscriber(
 }
 
 // Start begins proposals synchronization to storage
-func (s *ProposalSubscriber) Start() error {
+func (s *finderBroker) Start() error {
 	err := s.receiver.Receive(&registerConsumer{Callback: s.proposalRegisterMessage})
 	if err != nil {
 		return err
@@ -79,11 +79,11 @@ func (s *ProposalSubscriber) Start() error {
 }
 
 // Stop ends proposals synchronization to storage
-func (s *ProposalSubscriber) Stop() {
+func (s *finderBroker) Stop() {
 	close(s.watchdogStop)
 }
 
-func (s *ProposalSubscriber) proposalRegisterMessage(message registerMessage) error {
+func (s *finderBroker) proposalRegisterMessage(message registerMessage) error {
 	s.storage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
@@ -93,7 +93,7 @@ func (s *ProposalSubscriber) proposalRegisterMessage(message registerMessage) er
 	return nil
 }
 
-func (s *ProposalSubscriber) proposalUnregisterMessage(message unregisterMessage) error {
+func (s *finderBroker) proposalUnregisterMessage(message unregisterMessage) error {
 	s.storage.RemoveProposal(message.Proposal.UniqueID())
 
 	s.watchdogLock.Lock()
@@ -103,7 +103,7 @@ func (s *ProposalSubscriber) proposalUnregisterMessage(message unregisterMessage
 	return nil
 }
 
-func (s *ProposalSubscriber) proposalPingMessage(message pingMessage) error {
+func (s *finderBroker) proposalPingMessage(message pingMessage) error {
 	s.storage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
@@ -113,7 +113,7 @@ func (s *ProposalSubscriber) proposalPingMessage(message pingMessage) error {
 	return nil
 }
 
-func (s *ProposalSubscriber) proposalWatchdog() {
+func (s *finderBroker) proposalWatchdog() {
 	for {
 		select {
 		case <-s.watchdogStop:

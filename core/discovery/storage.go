@@ -110,14 +110,15 @@ func (s *ProposalStorage) GetProposal(id market.ProposalID) (*market.ServiceProp
 }
 
 // AddProposal appends given proposal to storage
-func (s *ProposalStorage) AddProposal(proposal market.ServiceProposal) {
+func (s *ProposalStorage) AddProposal(proposals ...market.ServiceProposal) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if _, exist := s.getProposalIndex(proposal.UniqueID()); exist {
-		return
+	for _, proposal := range proposals {
+		if _, exist := s.getProposalIndex(proposal.UniqueID()); !exist {
+			s.proposals = append(s.proposals, proposal)
+		}
 	}
-	s.proposals = append(s.proposals, proposal)
 }
 
 // RemoveProposal removes proposal from storage
