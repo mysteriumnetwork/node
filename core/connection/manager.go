@@ -266,6 +266,8 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 		return err
 	}
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: payments")
+		defer log.Trace().Msg("Cleaning: payments DONE")
 		payments.Stop()
 		return nil
 	})
@@ -277,6 +279,7 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 func (manager *connectionManager) cleanConnection() {
 	manager.cancel()
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Connection manager cleaning up: (%v/%v)", i+1, len(manager.cleanup))
 		err := manager.cleanup[i]()
 		if err != nil {
 			log.Warn().Err(err).Msg("Cleanup error")
@@ -291,7 +294,11 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 		return nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, dialog.Close)
+	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: closing dialog")
+		defer log.Trace().Msg("Cleaning: closing dialog DONE")
+		return dialog.Close()
+	})
 	return dialog, err
 }
 
@@ -317,7 +324,11 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, func() error { return session.RequestSessionDestroy(dialog, s.ID) })
+	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: requesting session destroy")
+		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
+		return session.RequestSessionDestroy(dialog, s.ID)
+	})
 
 	// set the session info for future use
 	sessionInfo := SessionInfo{
@@ -339,6 +350,8 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	})
 
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: publishing session ended status")
+		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 			Status:      SessionEndedStatus,
 			SessionInfo: manager.getCurrentSession(),
@@ -381,6 +394,8 @@ func (manager *connectionManager) startConnection(
 	unsubscribeStats := manager.consumeStats(statisticsChannel)
 	manager.cleanup = append(manager.cleanup, unsubscribeStats)
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: stopping connection")
+		defer log.Trace().Msg("Cleaning: stopping connection DONE")
 		connection.Stop()
 		return nil
 	})
@@ -535,6 +550,8 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 		return err
 	}
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: traffic block rule")
+		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
 		removeRule()
 		return nil
 	})
