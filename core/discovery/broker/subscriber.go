@@ -29,9 +29,9 @@ import (
 
 // ProposalSubscriber responsible for handling proposal events through Broker (Mysterium Communication)
 type ProposalSubscriber struct {
-	proposalStorage  *discovery.ProposalStorage
-	proposalIdleness time.Duration
-	receiver         communication.Receiver
+	storage         *discovery.ProposalStorage
+	receiver        communication.Receiver
+	timeoutInterval time.Duration
 
 	watchdogStep time.Duration
 	watchdogStop chan bool
@@ -42,15 +42,16 @@ type ProposalSubscriber struct {
 // NewProposalSubscriber returns new ProposalSubscriber instance.
 func NewProposalSubscriber(
 	proposalsStorage *discovery.ProposalStorage,
-	proposalIdleness time.Duration,
 	connection nats.Connection,
+	proposalTimeoutInterval time.Duration,
+	proposalCheckInterval time.Duration,
 ) *ProposalSubscriber {
 	return &ProposalSubscriber{
-		proposalStorage:  proposalsStorage,
-		proposalIdleness: proposalIdleness,
-		receiver:         nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
+		storage:         proposalsStorage,
+		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
+		timeoutInterval: proposalTimeoutInterval,
 
-		watchdogStep: proposalIdleness / 10,
+		watchdogStep: proposalCheckInterval,
 		watchdogStop: make(chan bool),
 		watchdogSeen: make(map[market.ProposalID]time.Time),
 	}
@@ -83,7 +84,7 @@ func (s *ProposalSubscriber) Stop() {
 }
 
 func (s *ProposalSubscriber) proposalRegisterMessage(message registerMessage) error {
-	s.proposalStorage.AddProposal(message.Proposal)
+	s.storage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
 	defer s.watchdogLock.Unlock()
@@ -93,7 +94,7 @@ func (s *ProposalSubscriber) proposalRegisterMessage(message registerMessage) er
 }
 
 func (s *ProposalSubscriber) proposalUnregisterMessage(message unregisterMessage) error {
-	s.proposalStorage.RemoveProposal(message.Proposal.UniqueID())
+	s.storage.RemoveProposal(message.Proposal.UniqueID())
 
 	s.watchdogLock.Lock()
 	defer s.watchdogLock.Unlock()
@@ -103,7 +104,7 @@ func (s *ProposalSubscriber) proposalUnregisterMessage(message unregisterMessage
 }
 
 func (s *ProposalSubscriber) proposalPingMessage(message pingMessage) error {
-	s.proposalStorage.AddProposal(message.Proposal)
+	s.storage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
 	defer s.watchdogLock.Unlock()
@@ -120,8 +121,8 @@ func (s *ProposalSubscriber) proposalWatchdog() {
 		case <-time.After(s.watchdogStep):
 			s.watchdogLock.Lock()
 			for proposalID, proposalSeen := range s.watchdogSeen {
-				if time.Now().After(proposalSeen.Add(s.proposalIdleness)) {
-					s.proposalStorage.RemoveProposal(proposalID)
+				if time.Now().After(proposalSeen.Add(s.timeoutInterval)) {
+					s.storage.RemoveProposal(proposalID)
 					delete(s.watchdogSeen, proposalID)
 				}
 			}

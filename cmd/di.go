@@ -727,11 +727,11 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
 	di.DiscoveryStorage = discovery.NewStorage()
 
-	registry := discovery_composite.NewRegistry()
+	discoveryRegistry := discovery_composite.NewRegistry()
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
-			registry.AddRegistry(
+			discoveryRegistry.AddRegistry(
 				discovery_api.NewRegistry(di.MysteriumAPI),
 			)
 			if !options.ProposalFetcherEnabled {
@@ -740,17 +740,19 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 				di.DiscoveryFinder = discovery_api.NewFetcher(di.DiscoveryStorage, di.MysteriumAPI.Proposals, 30*time.Second)
 			}
 		case node.DiscoveryTypeBroker:
-			registry.AddRegistry(
+			discoveryRegistry.AddRegistry(
 				discovery_broker.NewRegistry(di.BrokerConnection),
 			)
-			di.DiscoveryFinder = discovery_broker.NewProposalSubscriber(di.DiscoveryStorage, 61*time.Second, di.BrokerConnection)
+			// Proposals are pinged each 60 seconds, see `discovery.NewService()`
+			// So timeout proposals after 61 second (1 second inactivity tolerated)
+			di.DiscoveryFinder = discovery_broker.NewProposalSubscriber(di.DiscoveryStorage, di.BrokerConnection, 61*time.Second, 1*time.Second)
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, registry, 60*time.Second, di.SignerFactory, di.EventBus)
+		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, 60*time.Second, di.SignerFactory, di.EventBus)
 	}
 	return nil
 }
