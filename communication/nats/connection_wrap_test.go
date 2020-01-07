@@ -55,7 +55,7 @@ func TestParseServerURI(t *testing.T) {
 }
 
 func TestConnectionWrap_NewConnection(t *testing.T) {
-	connection, err := NewConnection("nats://127.0.0.1:4222")
+	connection, err := newConnection("nats://127.0.0.1:4222")
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
@@ -66,7 +66,7 @@ func TestConnectionWrap_NewConnection(t *testing.T) {
 		*connection,
 	)
 
-	connection, err = NewConnection("nats://127.0.0.1")
+	connection, err = newConnection("nats://127.0.0.1")
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
@@ -77,20 +77,20 @@ func TestConnectionWrap_NewConnection(t *testing.T) {
 		*connection,
 	)
 
-	connection, err = NewConnection("nats:// example.com")
+	connection, err = newConnection("nats:// example.com")
 	assert.EqualError(t, err, `failed to parse NATS server URI "nats:// example.com": parse nats:// example.com: invalid character " " in host name`)
 	assert.Nil(t, connection)
 }
 
 func TestConnectionWrap_Close_NotOpened(t *testing.T) {
-	connection, _ := NewConnection("nats://far-server:1234")
+	connection, _ := newConnection("nats://far-server:1234")
 	connection.Close()
 
 	assert.Nil(t, connection.removeRules)
 }
 
 func TestConnectionWrap_Close_AfterFailedOpen(t *testing.T) {
-	connection, _ := NewConnection("nats://far-server:1234")
+	connection, _ := newConnection("nats://far-server:1234")
 	assert.EqualError(t, connection.Open(), `failed to connect to NATS servers "[nats://far-server:1234]": nats: no servers available for connection`)
 
 	connection.Close()
@@ -98,6 +98,6 @@ func TestConnectionWrap_Close_AfterFailedOpen(t *testing.T) {
 }
 
 func TestConnectionWrap_Servers(t *testing.T) {
-	connection, _ := NewConnection("nats://far-server:1234")
+	connection, _ := newConnection("nats://far-server:1234")
 	assert.Equal(t, []string{"nats://far-server:1234"}, connection.Servers())
 }

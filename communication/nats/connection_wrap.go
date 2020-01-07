@@ -55,8 +55,7 @@ func ParseServerURI(serverURI string) (*url.URL, error) {
 	return serverURL, nil
 }
 
-// NewConnection create new ConnectionWrap to given servers`
-func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
+func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	connection := &ConnectionWrap{
 		servers: make([]string, len(serverURIs)),
 	}
@@ -74,10 +73,12 @@ func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
 
 // OpenConnection creates connection instances and connects instantly
 func OpenConnection(serverURIs ...string) (*ConnectionWrap, error) {
-	connection, err := NewConnection(serverURIs...)
+	connection, err := newConnection(serverURIs...)
 	if err != nil {
 		return connection, err
 	}
+
+	log.Debug().Msg("Connecting to NATS servers: " + strings.Join(serverURIs, ","))
 
 	return connection, connection.Open()
 }
