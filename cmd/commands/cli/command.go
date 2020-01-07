@@ -172,7 +172,6 @@ func (c *cliApp) handleActions(line string) {
 		{"payout", c.payout},
 		{"version", c.version},
 		{"license", c.license},
-		{"registration", c.registration},
 		{"proposals", c.proposals},
 		{"service", c.service},
 	}
@@ -551,35 +550,6 @@ func (c *cliApp) help() {
 func (c *cliApp) quit() {
 	stop := utils.SoftKiller(c.Kill)
 	stop()
-}
-
-func (c *cliApp) registration(argsString string) {
-	if argsString == "" {
-		warn("Please supply identity")
-		return
-	}
-	status, err := c.tequilapi.IdentityRegistrationStatus(argsString)
-	if err != nil {
-		warn("Something went wrong: ", err)
-		return
-	}
-	if status.Registered {
-		info("Already registered")
-		return
-	}
-	info("Identity is not registered yet. In order to do that - please call payments contract with the following data")
-	info("Public key: part1 ->", status.PublicKey.Part1)
-	info("            part2 ->", status.PublicKey.Part2)
-	info("Signature: S ->", status.Signature.S)
-	info("           R ->", status.Signature.R)
-	info("           V ->", status.Signature.V)
-	info("OR proceed with direct link:")
-	infof(" https://wallet.mysterium.network/?part1=%s&part2=%s&s=%s&r=%s&v=%d\n",
-		status.PublicKey.Part1,
-		status.PublicKey.Part2,
-		status.Signature.S,
-		status.Signature.R,
-		status.Signature.V)
 }
 
 func (c *cliApp) stopClient() {
