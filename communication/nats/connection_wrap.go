@@ -98,8 +98,9 @@ func (c *ConnectionWrap) Open() (err error) {
 	options.ReconnectWait = BrokerReconnectWait
 	options.Timeout = BrokerTimeout
 	options.PingInterval = 10 * time.Second
-	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("Disconnected") }
-	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("Reconnected") }
+	options.ClosedCB = func(conn *nats_lib.Conn) { log.Warn().Msg("NATS: connection closed") }
+	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: disconnected") }
+	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: reconnected") }
 
 	c.removeRules, err = firewall.AllowURLAccess(c.servers...)
 	if err != nil {
