@@ -34,7 +34,7 @@ func TestDialogEstablisher_Factory(t *testing.T) {
 	id := identity.FromAddress("123456")
 	signer := &identity.SignerFake{}
 
-	establisher := NewDialogEstablisher(id, signer)
+	establisher := NewDialogEstablisher(id, signer, nats.NewBrokerConnector())
 	assert.NotNil(t, establisher)
 	assert.Equal(t, id, establisher.ID)
 	assert.Equal(t, signer, establisher.Signer)
@@ -61,7 +61,7 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}
-	establisher := mockEstablisher(myID, connection, signer)
+	establisher := NewDialogEstablisher(myID, signer, &mockConnector{conn: connection})
 
 	dialogInstance, err := establisher.EstablishDialog(peerID, peerContact)
 	assert.NoError(t, err)
@@ -104,7 +104,7 @@ func TestDialogEstablisher_EstablishDialogWhenResponseHijacked(t *testing.T) {
 	)
 	defer connection.Close()
 
-	establisher := mockEstablisher(myID, connection, &identity.SignerFake{})
+	establisher := NewDialogEstablisher(myID, &identity.SignerFake{}, &mockConnector{connection})
 
 	dialogInstance, err := establisher.EstablishDialog(peerID, peerContact)
 	assert.Error(t, err)
@@ -134,12 +134,10 @@ func TestDialogEstablisher_validateContactUnknownDefinition(t *testing.T) {
 	assert.Equal(t, nats_discovery.ContactNATSV1{}, contactNats)
 }
 
-func mockEstablisher(ID identity.Identity, connection *nats.ConnectionMock, signer identity.Signer) *dialogEstablisher {
-	return &dialogEstablisher{
-		ID:     ID,
-		Signer: signer,
-		peerConnectionFactory: func(_ nats_discovery.ContactNATSV1) (nats.Connection, error) {
-			return connection, connection.Open()
-		},
-	}
+type mockConnector struct {
+	conn nats.Connection
+}
+
+func (m mockConnector) Connect(_ ...string) (nats.Connection, error) {
+	return m.conn, m.conn.Open()
 }
