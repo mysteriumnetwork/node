@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"math"
 	"strings"
 	"sync"
@@ -186,7 +187,7 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error {
 	invoice, ok := it.getMarkedInvoice(pm.Promise.Hashlock)
 	if !ok {
-		log.Debug().Msgf("consumer sent exchange message with missing expired hashlock %v, skipping", invoice.invoice.Hashlock)
+		log.Debug().Msgf("consumer sent exchange message with missing expired hashlock %s, skipping", invoice.invoice.Hashlock)
 		return ErrInvoiceExpired
 	}
 
@@ -216,7 +217,7 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 			log.Error().Err(err).Msg("Could not reveal R")
 			it.incrementAccountantFailureCount()
 			if it.getAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
-				return errors.Wrap(err, "could not call accountant")
+				return errors.Wrap(err, "max failure count calling accountant reached")
 			}
 			log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
 			return nil
@@ -232,7 +233,7 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 
 	err = it.deps.InvoiceStorage.StoreR(it.deps.ProviderID, it.agreementID, hex.EncodeToString(invoice.r))
 	if err != nil {
-		return errors.Wrap(err, "could not store r")
+		return errors.Wrap(err, fmt.Sprintf("could not store r: %s", hex.EncodeToString(invoice.r)))
 	}
 
 	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
@@ -274,7 +275,6 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
 	})
-	it.resetAccountantFailureCount()
 	return nil
 }
 
@@ -294,7 +294,7 @@ func (it *InvoiceTracker) Start() error {
 
 	fees, err := it.deps.FeeProvider.FetchSettleFees()
 	if err != nil {
-		return errors.Wrap(err, "could not fetch fees")
+		return errors.Wrap(err, "could not fetch settlement fees")
 	}
 	it.transactorFee = fees.Fee
 
@@ -327,18 +327,18 @@ func (it *InvoiceTracker) Start() error {
 		case <-firstSend:
 			err := it.sendInvoice()
 			if err != nil {
-				return err
+				return errors.Wrap(err, "sending first invoice failed")
 			}
 		case <-it.stop:
 			return nil
 		case <-time.After(it.deps.ChargePeriod):
 			err := it.sendInvoice()
 			if err != nil {
-				return err
+				return errors.Wrap(err, "sending of invoice failed")
 			}
 		case emErr := <-emErrors:
 			if emErr != nil {
-				return emErr
+				return errors.Wrap(emErr, "failed to get exchange message")
 			}
 		}
 	}
