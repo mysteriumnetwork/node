@@ -107,14 +107,15 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 
 	// These are populated by Connect at runtime.
-	ctx             context.Context
-	status          Status
-	statusLock      sync.RWMutex
-	sessionInfo     SessionInfo
-	disablePayments bool
-	sessionInfoMu   sync.Mutex
-	cleanup         []func() error
-	cancel          func()
+	ctx                    context.Context
+	status                 Status
+	statusLock             sync.RWMutex
+	sessionInfo            SessionInfo
+	disablePayments        bool
+	sessionInfoMu          sync.Mutex
+	cleanup                []func() error
+	cleanupAfterDisconnect []func() error
+	cancel                 func()
 
 	discoLock sync.Mutex
 }
@@ -279,13 +280,25 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 func (manager *connectionManager) cleanConnection() {
 	manager.cancel()
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
-		log.Trace().Msgf("Connection manager cleaning up: (%v/%v)", i+1, len(manager.cleanup))
+		log.Trace().Msgf("Connection cleaning up: (%v/%v)", i+1, len(manager.cleanup))
 		err := manager.cleanup[i]()
 		if err != nil {
 			log.Warn().Err(err).Msg("Cleanup error")
 		}
 	}
-	manager.cleanup = make([]func() error, 0)
+	manager.cleanup = nil
+}
+
+func (manager *connectionManager) cleanAfterDisconnect() {
+	manager.cancel()
+	for i := len(manager.cleanupAfterDisconnect) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Connection cleaning up (after disconnect): (%v/%v)", i+1, len(manager.cleanupAfterDisconnect))
+		err := manager.cleanupAfterDisconnect[i]()
+		if err != nil {
+			log.Warn().Err(err).Msg("Cleanup error")
+		}
+	}
+	manager.cleanupAfterDisconnect = nil
 }
 
 func (manager *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
@@ -294,7 +307,7 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 		return nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
 		log.Trace().Msg("Cleaning: closing dialog")
 		defer log.Trace().Msg("Cleaning: closing dialog DONE")
 		return dialog.Close()
@@ -324,7 +337,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 		return session.RequestSessionDestroy(dialog, s.ID)
@@ -447,8 +460,10 @@ func (manager *connectionManager) Disconnect() error {
 	manager.setStatus(statusDisconnecting())
 	manager.cleanConnection()
 	manager.setStatus(statusNotConnected())
-
 	manager.publishStateEvent(NotConnected)
+
+	manager.cleanAfterDisconnect()
+
 	return nil
 }
 
