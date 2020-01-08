@@ -42,9 +42,6 @@ func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI strin
 
 // RequestPromise requests a promise from accountant.
 func (ac *AccountantCaller) RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error) {
-	if true {
-		return crypto.Promise{}, errors.New("fake")
-	}
 	req, err := requests.NewPostRequest(ac.accountantBaseURI, "request_promise", em)
 	if err != nil {
 		return crypto.Promise{}, errors.Wrap(err, "could not form request_promise request")
@@ -63,9 +60,6 @@ type RevealObject struct {
 
 // RevealR reveals hashlock key 'r' from 'provider' to the accountant for the agreement identified by 'agreementID'.
 func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) error {
-	if true {
-		return errors.New("fake")
-	}
 	req, err := requests.NewPostRequest(ac.accountantBaseURI, "reveal_r", RevealObject{
 		R:           r,
 		Provider:    provider,

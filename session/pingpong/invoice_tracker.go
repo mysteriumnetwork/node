@@ -19,10 +19,10 @@ package pingpong
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"math"
+	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -73,7 +73,6 @@ type bcHelper interface {
 type providerInvoiceStorage interface {
 	Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error)
 	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
-	GetNewAgreementID(providerIdentity identity.Identity) (uint64, error)
 	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
 	GetR(providerID identity.Identity, agreementID uint64) (string, error)
 }
@@ -182,6 +181,11 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 			return nil
 		}
 	}
+}
+
+func (it *InvoiceTracker) generateAgreementID() {
+	rand.Seed(time.Now().UnixNano())
+	it.agreementID = rand.Uint64()
 }
 
 func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error {
@@ -337,12 +341,7 @@ func (it *InvoiceTracker) Start() error {
 		return ErrAccountantFeeTooLarge
 	}
 
-	agreementID, err := it.deps.InvoiceStorage.GetNewAgreementID(it.deps.ProviderID)
-	if err != nil {
-		return errors.Wrap(err, "could not get new agreement id")
-	}
-
-	it.agreementID = agreementID
+	it.generateAgreementID()
 
 	emErrors := make(chan error)
 	go func() {
