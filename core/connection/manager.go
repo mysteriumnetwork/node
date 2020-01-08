@@ -197,6 +197,12 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}
 
 	go manager.checkSessionIP(dialog, sessionDTO.ID, originalPublicIP)
+
+	go func() {
+		<-manager.ipCheckParams.Done
+		log.Trace().Msgf("IP check is done for session %v", sessionDTO.ID)
+	}()
+
 	return nil
 }
 
@@ -350,8 +356,7 @@ func (manager *connectionManager) startConnection(
 	params ConnectParams,
 	sessionDTO session.SessionDto,
 	stateChannel chan State,
-	statisticsChannel chan consumer.SessionStatistics) (err error) {
-
+	statisticsChannel <-chan consumer.SessionStatistics) (err error) {
 	defer func() {
 		if err != nil {
 			log.Info().Err(err).Msg("Cancelling connection initiation: ")
@@ -371,6 +376,10 @@ func (manager *connectionManager) startConnection(
 	if err = connection.Start(connectOptions); err != nil {
 		return err
 	}
+
+	// Consume statistics right after start - openvpn3 will publish them even before connected state.
+	unsubscribeStats := manager.consumeStats(statisticsChannel)
+	manager.cleanup = append(manager.cleanup, unsubscribeStats)
 	manager.cleanup = append(manager.cleanup, func() error {
 		connection.Stop()
 		return nil
@@ -381,8 +390,6 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	// Consume statistics right after start - openvpn3 will publish them even before connected state.
-	go manager.consumeStats(statisticsChannel)
 	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
 	if err != nil {
 		return err
@@ -484,13 +491,24 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 	logDisconnectError(manager.Disconnect())
 }
 
-func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
-	for stats := range statisticsChannel {
-		manager.eventPublisher.Publish(StatisticsEventTopic, SessionStatsEvent{
-			Stats:       stats,
-			SessionInfo: manager.getCurrentSession(),
-		})
-	}
+func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) func() error {
+	stop := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case stats := <-statisticsChannel:
+				manager.eventPublisher.Publish(StatisticsEventTopic, SessionStatsEvent{
+					Stats:       stats,
+					SessionInfo: manager.getCurrentSession(),
+				})
+			case <-stop:
+				return
+			}
+		}
+	}()
+
+	return func() error { close(stop); return nil }
 }
 
 func (manager *connectionManager) onStateChanged(state State) {

@@ -84,6 +84,7 @@ services:
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -keystoreDir /keystore
       -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -boltPath /bolt.db
     volumes:
       - "./deployer/keystore:/keystore"
 

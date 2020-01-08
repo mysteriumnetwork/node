@@ -356,7 +356,6 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	<-tc.ipCheckParams.Done
 
 	waitABit()
 
@@ -405,7 +404,8 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 
 	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	<-tc.ipCheckParams.Done
+
+	waitABit()
 
 	// Check that state event with StateIPNotChanged status was called.
 	history := tc.stubPublisher.GetEventHistory()
@@ -439,7 +439,8 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 
 	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	<-tc.ipCheckParams.Done
+
+	waitABit()
 
 	// Check that state event with StateIPNotChanged status was not called.
 	history := tc.stubPublisher.GetEventHistory()
@@ -457,8 +458,8 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 		StatusCode: connectivity.StatusConnectionOk,
 		Message:    "",
 	}
-	assert.NotNil(tc.T(), tc.statusSender.sentMsg)
-	assert.Equal(tc.T(), &expectedStatusMsg, tc.statusSender.sentMsg)
+
+	assert.Equal(tc.T(), expectedStatusMsg, tc.statusSender.getSentMsg())
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -521,4 +522,10 @@ func (s *mockStatusSender) Send(dialog communication.Sender, msg *connectivity.S
 	s.Lock()
 	defer s.Unlock()
 	s.sentMsg = msg
+}
+
+func (s *mockStatusSender) getSentMsg() connectivity.StatusMessage {
+	s.Lock()
+	defer s.Unlock()
+	return *s.sentMsg
 }
