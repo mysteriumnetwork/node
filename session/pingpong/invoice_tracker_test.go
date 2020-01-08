@@ -420,7 +420,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.Equal(t, uint64(1), invoice.AgreementID)
 	assert.True(t, invoice.AgreementTotal > 0)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))

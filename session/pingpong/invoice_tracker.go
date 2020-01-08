@@ -19,9 +19,9 @@ package pingpong
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/hex"
 	"math"
+	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,7 +60,6 @@ type bcHelper interface {
 type providerInvoiceStorage interface {
 	Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error)
 	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
-	GetNewAgreementID(providerIdentity identity.Identity) (uint64, error)
 	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
 	GetR(providerID identity.Identity, agreementID uint64) (string, error)
 }
@@ -183,11 +182,9 @@ func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time
 	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
 }
 
-func (it *InvoiceTracker) generateInitialInvoice() error {
-	agreementID, err := it.invoiceStorage.GetNewAgreementID(it.providerID)
-	if err != nil {
-		return errors.Wrap(err, "could not get new agreement id")
-	}
+func (it *InvoiceTracker) generateInitialInvoice() {
+	rand.Seed(time.Now().UnixNano())
+	agreementID := rand.Uint64()
 
 	r := it.generateR()
 	invoice := crypto.CreateInvoice(agreementID, it.paymentInfo.GetPrice().Amount, 0, r)
@@ -196,7 +193,6 @@ func (it *InvoiceTracker) generateInitialInvoice() error {
 		invoice: invoice,
 		r:       r,
 	}
-	return nil
 }
 
 // Start stars the invoice tracker
@@ -229,10 +225,7 @@ func (it *InvoiceTracker) Start() error {
 		return ErrAccountantFeeTooLarge
 	}
 
-	err = it.generateInitialInvoice()
-	if err != nil {
-		return errors.Wrap(err, "could not generate initial invoice")
-	}
+	it.generateInitialInvoice()
 
 	// give the consumer a second to start up his payments before sending the first request
 	firstSend := time.After(time.Second)
