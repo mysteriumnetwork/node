@@ -200,35 +200,14 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 	it.markInvoicePaid(pm.Promise.Hashlock)
 	it.resetNotReceivedExchangeMessageCount()
 
-	needsRevealing := false
-	accountantPromise, err := it.deps.AccountantPromiseStorage.Get(it.deps.ProviderID, it.deps.AccountantID)
+	err = it.revealPromise()
 	switch err {
+	case errHandled:
+		return nil
 	case nil:
-		needsRevealing = !accountantPromise.Revealed
-	case ErrNotFound:
-		needsRevealing = false
+		break
 	default:
-		return errors.Wrap(err, "could not get accountant promise")
-	}
-
-	if needsRevealing {
-		err = it.deps.AccountantCaller.RevealR(accountantPromise.R, it.deps.ProviderID.Address, accountantPromise.AgreementID)
-		if err != nil {
-			log.Error().Err(err).Msg("Could not reveal R")
-			it.incrementAccountantFailureCount()
-			if it.getAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
-				return errors.Wrap(err, "max failure count calling accountant reached")
-			}
-			log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
-			return nil
-		}
-		it.resetAccountantFailureCount()
-		accountantPromise.Revealed = true
-		err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, accountantPromise)
-		if err != nil {
-			return errors.Wrap(err, "could not store accountant promise")
-		}
-		log.Debug().Msg("Accountant promise stored")
+		return err
 	}
 
 	err = it.deps.InvoiceStorage.StoreR(it.deps.ProviderID, it.agreementID, hex.EncodeToString(invoice.r))
@@ -236,6 +215,18 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 		return errors.Wrap(err, fmt.Sprintf("could not store r: %s", hex.EncodeToString(invoice.r)))
 	}
 
+	err = it.requestPromise(invoice.r, pm)
+	switch err {
+	case errHandled:
+		return nil
+	default:
+		return err
+	}
+}
+
+var errHandled = errors.New("error handled, please skip")
+
+func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) error {
 	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not call accountant")
@@ -253,13 +244,13 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 			return errors.Wrap(err, "could not call accountant")
 		}
 		log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
-		return nil
+		return errHandled
 	}
 	it.resetAccountantFailureCount()
 
 	ap := AccountantPromise{
 		Promise:     promise,
-		R:           hex.EncodeToString(invoice.r),
+		R:           hex.EncodeToString(r),
 		Revealed:    false,
 		AgreementID: it.agreementID,
 	}
@@ -269,12 +260,50 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 	}
 	log.Debug().Msg("Accountant promise stored")
 
-	promise.R = invoice.r
+	promise.R = r
 	it.deps.Publisher.Publish(AccountantPromiseTopic, AccountantPromiseEventPayload{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
 	})
+	return nil
+}
+
+func (it *InvoiceTracker) revealPromise() error {
+	needsRevealing := false
+	accountantPromise, err := it.deps.AccountantPromiseStorage.Get(it.deps.ProviderID, it.deps.AccountantID)
+	switch err {
+	case nil:
+		needsRevealing = !accountantPromise.Revealed
+	case ErrNotFound:
+		needsRevealing = false
+	default:
+		return errors.Wrap(err, "could not get accountant promise")
+	}
+
+	if !needsRevealing {
+		return nil
+	}
+
+	err = it.deps.AccountantCaller.RevealR(accountantPromise.R, it.deps.ProviderID.Address, accountantPromise.AgreementID)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not reveal R")
+		it.incrementAccountantFailureCount()
+		if it.getAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
+			return errors.Wrap(err, "max failure count calling accountant reached")
+		}
+		log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
+		return errHandled
+	}
+
+	it.resetAccountantFailureCount()
+	accountantPromise.Revealed = true
+	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, accountantPromise)
+	if err != nil {
+		return errors.Wrap(err, "could not store accountant promise")
+	}
+	log.Debug().Msg("Accountant promise stored")
+
 	return nil
 }
 
