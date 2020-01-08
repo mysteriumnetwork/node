@@ -356,7 +356,6 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
-
 	defer invoiceTracker.Stop()
 
 	errChan := make(chan error)
@@ -482,9 +481,10 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		accountantFailureCount     uint64
 		accountantPromiseStorage   accountantPromiseStorage
 		accountantID               identity.Identity
-		lastInvoice                lastInvoice
+		AgreementID                uint64
 		lastExchangeMessage        crypto.ExchangeMessage
 		accountantCaller           accountantCaller
+		invoicesSent               map[string]sentInvoice
 		channelImplementation      string
 		registryAddress            string
 	}
@@ -494,10 +494,6 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		wantErr bool
 		em      *crypto.ExchangeMessage
 	}{
-		{
-			name:    "errors on timeout",
-			wantErr: true,
-		},
 		{
 			name:    "errors on invalid signature",
 			wantErr: true,
@@ -524,10 +520,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 			fields: fields{
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
-				lastInvoice: lastInvoice{
-					invoice: crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"},
-				},
-				peer: identity.FromAddress(addr2),
+				peer:                       identity.FromAddress(addr2),
 			},
 			em: &msg2,
 		},
@@ -537,43 +530,45 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 			fields: fields{
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
-				lastInvoice: lastInvoice{
-					invoice: crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"},
+				accountantCaller:           &mockAccountantCaller{},
+				accountantPromiseStorage:   &mockAccountantPromiseStorage{},
+				peer:                       identity.FromAddress(addr3),
+				registryAddress:            mockRegistryAddress,
+				channelImplementation:      mockChannelImplementation,
+				accountantID:               identity.FromAddress(mockAccountantAddress),
+				invoicesSent: map[string]sentInvoice{
+					hex.EncodeToString(msg3.Promise.Hashlock): sentInvoice{
+						invoice: crypto.Invoice{
+							Hashlock: hex.EncodeToString(msg3.Promise.Hashlock),
+						},
+					},
 				},
-				accountantCaller:         &mockAccountantCaller{},
-				accountantPromiseStorage: &mockAccountantPromiseStorage{},
-				peer:                     identity.FromAddress(addr3),
-				registryAddress:          mockRegistryAddress,
-				channelImplementation:    mockChannelImplementation,
-				accountantID:             identity.FromAddress(mockAccountantAddress),
 			},
 			em: &msg3,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			deps := InvoiceTrackerDeps{
+				Peer:                       tt.fields.peer,
+				ExchangeMessageChan:        tt.fields.exchangeMessageChan,
+				ExchangeMessageWaitTimeout: tt.fields.exchangeMessageWaitTimeout,
+				AccountantPromiseStorage:   tt.fields.accountantPromiseStorage,
+				AccountantID:               tt.fields.accountantID,
+				AccountantCaller:           tt.fields.accountantCaller,
+				Registry:                   tt.fields.registryAddress,
+				Publisher:                  &mockPublisher{},
+				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
+				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
+			}
 			it := &InvoiceTracker{
-				peer:                       tt.fields.peer,
-				exchangeMessageChan:        tt.fields.exchangeMessageChan,
-				exchangeMessageWaitTimeout: tt.fields.exchangeMessageWaitTimeout,
-				accountantFailureCount:     tt.fields.accountantFailureCount,
-				accountantPromiseStorage:   tt.fields.accountantPromiseStorage,
-				accountantID:               tt.fields.accountantID,
-				lastExchangeMessage:        tt.fields.lastExchangeMessage,
-				accountantCaller:           tt.fields.accountantCaller,
-				lastInvoice:                tt.fields.lastInvoice,
-				registryAddress:            tt.fields.registryAddress,
-				publisher:                  &mockPublisher{},
-				invoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
-				channelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
+				accountantFailureCount: tt.fields.accountantFailureCount,
+				lastExchangeMessage:    tt.fields.lastExchangeMessage,
+				agreementID:            tt.fields.AgreementID,
+				deps:                   deps,
+				invoicesSent:           tt.fields.invoicesSent,
 			}
-			if tt.em != nil {
-				go func() {
-					time.Sleep(time.Millisecond * 5)
-					tt.fields.exchangeMessageChan <- *tt.em
-				}()
-			}
-			if err := it.receiveExchangeMessageOrTimeout(); (err != nil) != tt.wantErr {
+			if err := it.handleExchangeMessage(*tt.em); (err != nil) != tt.wantErr {
 				t.Errorf("InvoiceTracker.receiveExchangeMessageOrTimeout() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
