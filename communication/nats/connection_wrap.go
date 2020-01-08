@@ -28,12 +28,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Broker Constants
 const (
-	BrokerPort          = 4222
-	BrokerMaxReconnect  = -1
-	BrokerReconnectWait = 1 * time.Second
-	BrokerTimeout       = 5 * time.Second
+	// DefaultBrokerPort broker port.
+	DefaultBrokerPort = 4222
 )
 
 // ParseServerURI validates given NATS server address
@@ -48,7 +45,7 @@ func ParseServerURI(serverURI string) (*url.URL, error) {
 		return nil, errors.Wrapf(err, `failed to parse NATS server URI "%s"`, serverURI)
 	}
 	if serverURL.Port() == "" {
-		serverURL.Host = fmt.Sprintf("%s:%d", serverURL.Host, BrokerPort)
+		serverURL.Host = fmt.Sprintf("%s:%d", serverURL.Host, DefaultBrokerPort)
 	}
 
 	return serverURL, nil
@@ -81,9 +78,9 @@ type ConnectionWrap struct {
 func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options := nats_lib.GetDefaultOptions()
 	options.Servers = c.servers
-	options.MaxReconnect = BrokerMaxReconnect
-	options.ReconnectWait = BrokerReconnectWait
-	options.Timeout = BrokerTimeout
+	options.MaxReconnect = -1
+	options.ReconnectWait = 1 * time.Second
+	options.Timeout = 5 * time.Second
 	options.PingInterval = 10 * time.Second
 	options.ClosedCB = func(conn *nats_lib.Conn) { log.Warn().Msg("NATS: connection closed") }
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: disconnected") }
