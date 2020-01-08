@@ -24,31 +24,31 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-type registry struct {
+type registryBroker struct {
 	sender communication.Sender
 }
 
-// NewRegistry create an instance of Broker registry
-func NewRegistry(connection nats.Connection) *registry {
-	return &registry{
+// NewRegistry create an instance of Broker registryBroker
+func NewRegistry(connection nats.Connection) *registryBroker {
+	return &registryBroker{
 		sender: nats.NewSender(connection, communication.NewCodecJSON(), "*"),
 	}
 }
 
 // RegisterProposal registers service proposal to discovery service
-func (registry *registry) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+func (rb *registryBroker) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	message := &registerMessage{Proposal: proposal}
-	return registry.sender.Send(&registerProducer{message: message})
+	return rb.sender.Send(&registerProducer{message: message})
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (registry *registry) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+func (rb *registryBroker) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	message := &unregisterMessage{Proposal: proposal}
-	return registry.sender.Send(&unregisterProducer{message: message})
+	return rb.sender.Send(&unregisterProducer{message: message})
 }
 
 // PingProposal pings service proposal as being alive
-func (registry *registry) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	message := &registerMessage{Proposal: proposal}
-	return registry.sender.Send(&registerProducer{message: message})
+func (rb *registryBroker) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	message := &pingMessage{Proposal: proposal}
+	return rb.sender.Send(&pingProducer{message: message})
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,44 +22,44 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// registerMessage structure represents message that the Provider sends about newly announced Proposal
-type registerMessage struct {
+// pingMessage structure represents message that the Provider sends about healthy Proposal
+type pingMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const registerEndpoint = communication.MessageEndpoint("proposal-register")
+const pingEndpoint = communication.MessageEndpoint("proposal-ping")
 
-// registerProducer
-type registerProducer struct {
-	message *registerMessage
+// pingProducer
+type pingProducer struct {
+	message *pingMessage
 }
 
 // GetMessageEndpoint returns endpoint where to send messages
-func (p *registerProducer) GetMessageEndpoint() communication.MessageEndpoint {
-	return registerEndpoint
+func (p *pingProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return pingEndpoint
 }
 
 // Produce creates message which will be serialized to endpoint
-func (p *registerProducer) Produce() (requestPtr interface{}) {
+func (p *pingProducer) Produce() (requestPtr interface{}) {
 	return p.message
 }
 
-// registerConsumer
-type registerConsumer struct {
-	Callback func(registerMessage) error
+// pingConsumer
+type pingConsumer struct {
+	Callback func(pingMessage) error
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (c *registerConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return registerEndpoint
+func (c *pingConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return pingEndpoint
 }
 
 // NewMessage creates struct where message from endpoint will be serialized
-func (c *registerConsumer) NewMessage() (messagePtr interface{}) {
-	return &registerMessage{}
+func (c *pingConsumer) NewMessage() (messagePtr interface{}) {
+	return &pingMessage{}
 }
 
 // Consume handles messages from endpoint
-func (c *registerConsumer) Consume(messagePtr interface{}) error {
-	return c.Callback(*messagePtr.(*registerMessage))
+func (c *pingConsumer) Consume(messagePtr interface{}) error {
+	return c.Callback(*messagePtr.(*pingMessage))
 }

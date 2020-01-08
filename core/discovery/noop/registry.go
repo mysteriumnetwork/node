@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,36 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package api
+package noop
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
-type registryAPI struct {
-	mysteriumAPI *mysterium.MysteriumAPI
-}
+type registryNoop struct{}
 
-// NewRegistry create instance if API registry
-func NewRegistry(mysteriumAPI *mysterium.MysteriumAPI) *registryAPI {
-	return &registryAPI{
-		mysteriumAPI: mysteriumAPI,
-	}
+// NewRegistry creates an instance of composite registry
+func NewRegistry() *registryNoop {
+	return &registryNoop{}
 }
 
 // RegisterProposal registers service proposal to discovery service
-func (ra *registryAPI) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return ra.mysteriumAPI.RegisterProposal(proposal, signer)
+func (rc *registryNoop) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	return nil
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (ra *registryAPI) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return ra.mysteriumAPI.UnregisterProposal(proposal, signer)
+func (rc *registryNoop) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	return nil
 }
 
 // PingProposal pings service proposal as being alive
-func (ra *registryAPI) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return ra.mysteriumAPI.PingProposal(proposal, signer)
+func (rc *registryNoop) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	return nil
 }

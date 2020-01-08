@@ -40,6 +40,7 @@ import (
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
 	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
 	discovery_composite "github.com/mysteriumnetwork/node/core/discovery/composite"
+	discovery_noop "github.com/mysteriumnetwork/node/core/discovery/noop"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -129,10 +130,9 @@ type Dependencies struct {
 	IdentityRegistry identity_registry.IdentityRegistry
 	IdentitySelector identity_selector.Handler
 
-	DiscoveryFactory    service.DiscoveryFactory
-	DiscoveryFinder     *discovery.Finder
-	ProposalStorage     *discovery.ProposalStorage
-	DiscoveryFetcherAPI discovery_api.Fetcher
+	DiscoveryFactory service.DiscoveryFactory
+	DiscoveryStorage *discovery.ProposalStorage
+	DiscoveryFinder  discovery.ProposalFinder
 
 	QualityMetricsSender *quality.Sender
 	QualityClient        *quality.MysteriumMORQA
@@ -263,7 +263,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
-	if err = di.DiscoveryFetcherAPI.Start(); err != nil {
+	if err = di.DiscoveryFinder.Start(); err != nil {
 		return err
 	}
 	if err := di.Node.Start(); err != nil {
@@ -364,8 +364,8 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-	if di.DiscoveryFetcherAPI != nil {
-		di.DiscoveryFetcherAPI.Stop()
+	if di.DiscoveryFinder != nil {
+		di.DiscoveryFinder.Stop()
 	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
@@ -554,10 +554,10 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder, di.IdentityRegistry)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryStorage, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.QualityClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryStorage, di.QualityClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
@@ -726,35 +726,42 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
-	registry := discovery_composite.NewRegistry()
+	di.DiscoveryStorage = discovery.NewStorage()
+
+	discoveryRegistry := discovery_composite.NewRegistry()
+	discoveryFinder := discovery_composite.NewFinder()
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
-			registry.AddRegistry(
+			discoveryRegistry.AddRegistry(
 				discovery_api.NewRegistry(di.MysteriumAPI),
 			)
+
+			if !options.ProposalFetcherEnabled {
+				discoveryFinder.AddFinder(discovery_noop.NewFinder())
+			} else {
+				discoveryFinder.AddFinder(
+					discovery_api.NewFinder(di.DiscoveryStorage, di.MysteriumAPI.Proposals, 30*time.Minute),
+				)
+			}
 		case node.DiscoveryTypeBroker:
-			registry.AddRegistry(
+			discoveryRegistry.AddRegistry(
 				discovery_broker.NewRegistry(di.BrokerConnection),
+			)
+			discoveryFinder.AddFinder(
+				// Proposals are pinged each 60 seconds, see `discovery.NewService()`
+				// So timeout proposals after 61 second (1 second inactivity tolerated)
+				discovery_broker.NewFinder(di.DiscoveryStorage, di.BrokerConnection, 61*time.Second, 1*time.Second),
 			)
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
 	}
 
+	di.DiscoveryFinder = discoveryFinder
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory, di.EventBus)
+		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, 60*time.Second, di.SignerFactory, di.EventBus)
 	}
-
-	di.ProposalStorage = discovery.NewStorage()
-	di.DiscoveryFinder = discovery.NewFinder(di.ProposalStorage)
-
-	if !options.ProposalFetcherEnabled {
-		di.DiscoveryFetcherAPI = discovery_api.NewNoopFetcher()
-	} else {
-		di.DiscoveryFetcherAPI = discovery_api.NewFetcher(di.ProposalStorage, di.MysteriumAPI.Proposals, 30*time.Second)
-	}
-
 	return nil
 }
 
