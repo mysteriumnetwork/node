@@ -51,7 +51,7 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		log.Debug().Msgf("Message %q received: %s", messageTopic, msg.Data)
+		log.WithLevel(levelFor(msg)).Msgf("Message %q received: %s", messageTopic, msg.Data)
 		messagePtr := consumer.NewMessage()
 		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
@@ -96,7 +96,7 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		log.Debug().Msgf("Request %q received: %s", requestTopic, msg.Data)
+		log.WithLevel(levelFor(msg)).Msgf("Request %q received: %s", requestTopic, msg.Data)
 		requestPtr := consumer.NewRequest()
 		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
