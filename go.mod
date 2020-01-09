@@ -43,6 +43,7 @@ require (
 	github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
+	github.com/nats-io/nats-server v1.4.1
 	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect
 	github.com/nwaples/rardecode v1.0.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228

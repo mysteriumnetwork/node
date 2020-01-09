@@ -27,21 +27,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type connector interface {
+	Connect(serverURIs ...string) (nats.Connection, error)
+}
+
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
-func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogEstablisher {
+func NewDialogEstablisher(ID identity.Identity, signer identity.Signer, connector connector) *dialogEstablisher {
 	return &dialogEstablisher{
-		ID:     ID,
-		Signer: signer,
-		peerConnectionFactory: func(peerContact nats_discovery.ContactNATSV1) (nats.Connection, error) {
-			return nats.OpenConnection(peerContact.BrokerAddresses...)
-		},
+		ID:        ID,
+		Signer:    signer,
+		connector: connector,
 	}
 }
 
 type dialogEstablisher struct {
-	ID                    identity.Identity
-	Signer                identity.Signer
-	peerConnectionFactory func(nats_discovery.ContactNATSV1) (nats.Connection, error)
+	ID        identity.Identity
+	Signer    identity.Signer
+	connector connector
 }
 
 func (e *dialogEstablisher) EstablishDialog(
@@ -54,7 +56,7 @@ func (e *dialogEstablisher) EstablishDialog(
 		return nil, errors.Wrapf(err, "invalid contact: %#v", peerContact)
 	}
 
-	peerConnection, err := e.peerConnectionFactory(peerContactNats)
+	peerConnection, err := e.connector.Connect(peerContactNats.BrokerAddresses...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
 	}

@@ -107,14 +107,15 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 
 	// These are populated by Connect at runtime.
-	ctx             context.Context
-	status          Status
-	statusLock      sync.RWMutex
-	sessionInfo     SessionInfo
-	disablePayments bool
-	sessionInfoMu   sync.Mutex
-	cleanup         []func() error
-	cancel          func()
+	ctx                    context.Context
+	status                 Status
+	statusLock             sync.RWMutex
+	sessionInfo            SessionInfo
+	disablePayments        bool
+	sessionInfoMu          sync.Mutex
+	cleanup                []func() error
+	cleanupAfterDisconnect []func() error
+	cancel                 func()
 
 	discoLock sync.Mutex
 }
@@ -266,6 +267,8 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 		return err
 	}
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: payments")
+		defer log.Trace().Msg("Cleaning: payments DONE")
 		payments.Stop()
 		return nil
 	})
@@ -277,12 +280,25 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 func (manager *connectionManager) cleanConnection() {
 	manager.cancel()
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Connection cleaning up: (%v/%v)", i+1, len(manager.cleanup))
 		err := manager.cleanup[i]()
 		if err != nil {
 			log.Warn().Err(err).Msg("Cleanup error")
 		}
 	}
-	manager.cleanup = make([]func() error, 0)
+	manager.cleanup = nil
+}
+
+func (manager *connectionManager) cleanAfterDisconnect() {
+	manager.cancel()
+	for i := len(manager.cleanupAfterDisconnect) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Connection cleaning up (after disconnect): (%v/%v)", i+1, len(manager.cleanupAfterDisconnect))
+		err := manager.cleanupAfterDisconnect[i]()
+		if err != nil {
+			log.Warn().Err(err).Msg("Cleanup error")
+		}
+	}
+	manager.cleanupAfterDisconnect = nil
 }
 
 func (manager *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
@@ -291,7 +307,11 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 		return nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, dialog.Close)
+	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+		log.Trace().Msg("Cleaning: closing dialog")
+		defer log.Trace().Msg("Cleaning: closing dialog DONE")
+		return dialog.Close()
+	})
 	return dialog, err
 }
 
@@ -317,7 +337,11 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, func() error { return session.RequestSessionDestroy(dialog, s.ID) })
+	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+		log.Trace().Msg("Cleaning: requesting session destroy")
+		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
+		return session.RequestSessionDestroy(dialog, s.ID)
+	})
 
 	// set the session info for future use
 	sessionInfo := SessionInfo{
@@ -339,6 +363,8 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	})
 
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: publishing session ended status")
+		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 			Status:      SessionEndedStatus,
 			SessionInfo: manager.getCurrentSession(),
@@ -381,6 +407,8 @@ func (manager *connectionManager) startConnection(
 	unsubscribeStats := manager.consumeStats(statisticsChannel)
 	manager.cleanup = append(manager.cleanup, unsubscribeStats)
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: stopping connection")
+		defer log.Trace().Msg("Cleaning: stopping connection DONE")
 		connection.Stop()
 		return nil
 	})
@@ -409,6 +437,7 @@ func (manager *connectionManager) Status() Status {
 
 func (manager *connectionManager) setStatus(cs Status) {
 	manager.statusLock.Lock()
+	log.Info().Msgf("Connection state: %v → %v", manager.status.State, cs.State)
 	manager.status = cs
 	manager.statusLock.Unlock()
 }
@@ -431,8 +460,10 @@ func (manager *connectionManager) Disconnect() error {
 	manager.setStatus(statusDisconnecting())
 	manager.cleanConnection()
 	manager.setStatus(statusNotConnected())
-
 	manager.publishStateEvent(NotConnected)
+
+	manager.cleanAfterDisconnect()
+
 	return nil
 }
 
@@ -517,7 +548,6 @@ func (manager *connectionManager) onStateChanged(state State) {
 
 	switch state {
 	case Connected:
-		log.Debug().Msg("Connected state issued")
 		sessionInfo := manager.getCurrentSession()
 		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal))
 	case Reconnecting:
@@ -535,6 +565,8 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 		return err
 	}
 	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: traffic block rule")
+		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
 		removeRule()
 		return nil
 	})

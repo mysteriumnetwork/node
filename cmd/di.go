@@ -118,8 +118,10 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
-	BrokerConnection  nats.Connection
 	EtherClient       *ethclient.Client
+
+	BrokerConnector  *nats.BrokerConnector
+	BrokerConnection nats.Connection
 
 	NATService       nat.NATService
 	Storage          *boltdb.Bolt
@@ -184,6 +186,7 @@ type Dependencies struct {
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Configure(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
+	di.BrokerConnector = nats.NewBrokerConnector()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
@@ -467,7 +470,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
-		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
+		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID), di.BrokerConnector)
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
@@ -686,7 +689,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	if di.BrokerConnection, err = nats.OpenConnection(di.NetworkDefinition.BrokerAddress); err != nil {
+	if di.BrokerConnection, err = di.BrokerConnector.Connect(di.NetworkDefinition.BrokerAddress); err != nil {
 		return err
 	}
 
@@ -905,6 +908,7 @@ func (di *Dependencies) handleHTTPClientConnections() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()
+			di.BrokerConnector.ReconnectAll()
 		}
 		latestState = e.State
 	})

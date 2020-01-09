@@ -23,18 +23,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/firewall"
 	nats_lib "github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
-// Broker Constants
 const (
-	BrokerPort          = 4222
-	BrokerMaxReconnect  = -1
-	BrokerReconnectWait = 1 * time.Second
-	BrokerTimeout       = 5 * time.Second
+	// DefaultBrokerPort broker port.
+	DefaultBrokerPort = 4222
 )
 
 // ParseServerURI validates given NATS server address
@@ -49,16 +45,16 @@ func ParseServerURI(serverURI string) (*url.URL, error) {
 		return nil, errors.Wrapf(err, `failed to parse NATS server URI "%s"`, serverURI)
 	}
 	if serverURL.Port() == "" {
-		serverURL.Host = fmt.Sprintf("%s:%d", serverURL.Host, BrokerPort)
+		serverURL.Host = fmt.Sprintf("%s:%d", serverURL.Host, DefaultBrokerPort)
 	}
 
 	return serverURL, nil
 }
 
-// NewConnection create new ConnectionWrap to given servers`
-func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
+func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	connection := &ConnectionWrap{
 		servers: make([]string, len(serverURIs)),
+		onClose: func() {},
 	}
 
 	for i, server := range serverURIs {
@@ -72,40 +68,30 @@ func NewConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	return connection, nil
 }
 
-// OpenConnection creates connection instances and connects instantly
-func OpenConnection(serverURIs ...string) (*ConnectionWrap, error) {
-	connection, err := NewConnection(serverURIs...)
-	if err != nil {
-		return connection, err
-	}
-
-	return connection, connection.Open()
-}
-
 // ConnectionWrap defines wrapped connection to NATS server(s)
 type ConnectionWrap struct {
 	*nats_lib.Conn
-	servers     []string
-	removeRules func()
+	servers []string
+	onClose func()
 }
 
-// Open starts the connection
-func (c *ConnectionWrap) Open() (err error) {
+func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options := nats_lib.GetDefaultOptions()
 	options.Servers = c.servers
-	options.MaxReconnect = BrokerMaxReconnect
-	options.ReconnectWait = BrokerReconnectWait
-	options.Timeout = BrokerTimeout
+	options.MaxReconnect = -1
+	options.ReconnectWait = 1 * time.Second
+	options.Timeout = 5 * time.Second
 	options.PingInterval = 10 * time.Second
-	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("Disconnected") }
-	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("Reconnected") }
+	options.ClosedCB = func(conn *nats_lib.Conn) { log.Warn().Msg("NATS: connection closed") }
+	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: disconnected") }
+	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: reconnected") }
+	return options
+}
 
-	c.removeRules, err = firewall.AllowURLAccess(c.servers...)
-	if err != nil {
-		return errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, c.servers)
-	}
-
-	c.Conn, err = options.Connect()
+// Open starts the connection: left for test compatibility.
+// Deprecated: Use nats.BrokerConnector#Connect() instead.
+func (c *ConnectionWrap) Open() (err error) {
+	c.Conn, err = c.connectOptions().Connect()
 	if err != nil {
 		return errors.Wrapf(err, `failed to connect to NATS servers "%v"`, c.servers)
 	}
@@ -118,11 +104,7 @@ func (c *ConnectionWrap) Close() {
 	if c.Conn != nil {
 		c.Conn.Close()
 	}
-
-	if c.removeRules != nil {
-		c.removeRules()
-	}
-	c.removeRules = nil
+	c.onClose()
 }
 
 // Check checks the connection
@@ -130,7 +112,7 @@ func (c *ConnectionWrap) Check() error {
 	// Flush sends ping request and tries to send all cached data.
 	// It return an error if something wrong happened. All other requests
 	// will be added to queue to be sent after reconnecting.
-	return c.Conn.Flush()
+	return c.Conn.FlushTimeout(3 * time.Second)
 }
 
 // Servers returns list of currently connected servers
