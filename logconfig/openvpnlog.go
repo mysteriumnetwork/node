@@ -62,3 +62,12 @@ func (l zerologOpenvpnLogger) Debug(args ...interface{}) {
 	}
 	log.Debug().Msg(strings.Join(strs, " "))
 }
+
+// Trace logs go-openvpn trace message.
+func (l zerologOpenvpnLogger) Trace(args ...interface{}) {
+	strs := make([]string, len(args))
+	for i, v := range args {
+		strs[i] = fmt.Sprint(v)
+	}
+	log.Trace().Msg(strings.Join(strs, " "))
+}
