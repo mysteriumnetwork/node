@@ -20,6 +20,7 @@ package config
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog"
@@ -35,6 +36,12 @@ var (
 		Name:  "discovery.type",
 		Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
 		Value: &cli.StringSlice{"api", "broker"},
+	}
+	// FlagDiscoveryPingInterval proposal ping interval in seconds.
+	FlagDiscoveryPingInterval = cli.DurationFlag{
+		Name:  "discovery.ping",
+		Usage: `Proposal update interval `,
+		Value: 180 * time.Second,
 	}
 	// FlagBindAddress IP address to bind to.
 	FlagBindAddress = cli.StringFlag{
@@ -164,6 +171,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	*flags = append(*flags,
 		FlagBindAddress,
 		FlagDiscoveryType,
+		FlagDiscoveryPingInterval,
 		FlagFeedbackURL,
 		FlagFirewallKillSwitch,
 		FlagFirewallProtectedNetworks,
@@ -197,6 +205,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
+	Current.ParseDurationFlag(ctx, FlagDiscoveryPingInterval)
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)

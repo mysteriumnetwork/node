@@ -180,6 +180,7 @@ func GetDiscoveryOptions() *OptionsDiscovery {
 	return &OptionsDiscovery{
 		Types:                  types,
 		ProposalFetcherEnabled: true,
+		PingInterval:           config.GetDuration(config.FlagDiscoveryPingInterval),
 	}
 }
 
