@@ -218,11 +218,12 @@ func (cfg *Config) GetString(key string) string {
 
 // GetStringSlice returns config value as []string.
 func (cfg *Config) GetStringSlice(key string) []string {
-	switch cfg.Get(key).(type) {
+	val := cfg.Get(key)
+	switch val.(type) {
 	case *cli.StringSlice:
-		return cast.ToStringSlice([]string(*cfg.Get(key).(*cli.StringSlice)))
+		return cast.ToStringSlice([]string(*val.(*cli.StringSlice)))
 	default:
-		return cast.ToStringSlice(cfg.Get(key))
+		return cast.ToStringSlice(val)
 	}
 }
 
