@@ -218,8 +218,7 @@ func (cfg *Config) GetString(key string) string {
 
 // GetStringSlice returns config value as []string.
 func (cfg *Config) GetStringSlice(key string) []string {
-	value := cfg.Get(key).(*cli.StringSlice)
-	return cast.ToStringSlice([]string(*value))
+	return cast.ToStringSlice(cfg.Get(key))
 }
 
 // ParseBoolFlag parses a cli.BoolFlag from command's context and
