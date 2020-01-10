@@ -744,7 +744,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 				discoveryFinder.AddFinder(discovery_noop.NewFinder())
 			} else {
 				discoveryFinder.AddFinder(
-					discovery_api.NewFinder(di.DiscoveryStorage, di.MysteriumAPI.Proposals, 30*time.Second),
+					discovery_api.NewFinder(di.DiscoveryStorage, di.MysteriumAPI.Proposals, options.FetchInterval),
 				)
 			}
 		case node.DiscoveryTypeBroker:

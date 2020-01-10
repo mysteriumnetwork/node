@@ -40,7 +40,13 @@ var (
 	// FlagDiscoveryPingInterval proposal ping interval in seconds.
 	FlagDiscoveryPingInterval = cli.DurationFlag{
 		Name:  "discovery.ping",
-		Usage: `Proposal update interval `,
+		Usage: `Proposal update interval { "30s", "3m", "1h20m30s" }`,
+		Value: 180 * time.Second,
+	}
+	// FlagDiscoveryFetchInterval proposal fetch interval in seconds.
+	FlagDiscoveryFetchInterval = cli.DurationFlag{
+		Name:  "discovery.fetch",
+		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
 		Value: 180 * time.Second,
 	}
 	// FlagBindAddress IP address to bind to.
@@ -174,6 +180,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagBindAddress,
 		&FlagDiscoveryType,
 		&FlagDiscoveryPingInterval,
+		&FlagDiscoveryFetchInterval,
 		&FlagFeedbackURL,
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
@@ -208,6 +215,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryPingInterval)
+	Current.ParseDurationFlag(ctx, FlagDiscoveryFetchInterval)
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
