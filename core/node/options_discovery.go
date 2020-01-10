@@ -17,6 +17,8 @@
 
 package node
 
+import "time"
+
 // DiscoveryType identifies proposal discovery provider
 type DiscoveryType string
 
@@ -32,4 +34,5 @@ type OptionsDiscovery struct {
 	Types                  []DiscoveryType
 	Address                string
 	ProposalFetcherEnabled bool
+	PingInterval           time.Duration
 }

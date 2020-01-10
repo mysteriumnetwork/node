@@ -763,7 +763,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 
 	di.DiscoveryFinder = discoveryFinder
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, 60*time.Second, di.SignerFactory, di.EventBus)
+		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
 	}
 	return nil
 }
