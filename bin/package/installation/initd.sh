@@ -115,8 +115,8 @@ function start() {
         --runtime-dir=$OS_DIR_RUN \
         $DAEMON_OPTS \
         service \
-        $SERVICE_OPTS \
         --agreed-terms-and-conditions \
+        $SERVICE_OPTS \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 
