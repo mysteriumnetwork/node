@@ -34,7 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // NewCommand function creates service command

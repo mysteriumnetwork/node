@@ -18,7 +18,7 @@
 package config
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -51,10 +51,10 @@ var (
 // RegisterFlagsServiceOpenvpn registers OpenVPN CLI flags for parsing them later
 func RegisterFlagsServiceOpenvpn(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		FlagOpenvpnProtocol,
-		FlagOpenvpnPort,
-		FlagOpenvpnSubnet,
-		FlagOpenvpnNetmask,
+		&FlagOpenvpnProtocol,
+		&FlagOpenvpnPort,
+		&FlagOpenvpnSubnet,
+		&FlagOpenvpnNetmask,
 	)
 }
 

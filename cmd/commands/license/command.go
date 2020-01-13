@@ -22,7 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/metadata"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // NewCommand function creates license command
@@ -31,7 +31,7 @@ func NewCommand(licenseCopyright string) *cli.Command {
 		Name:      "license",
 		Usage:     "Show license",
 		ArgsUsage: " ",
-		Flags:     []cli.Flag{config.LicenseWarrantyFlag, config.LicenseConditionsFlag},
+		Flags:     []cli.Flag{&config.LicenseWarrantyFlag, &config.LicenseConditionsFlag},
 		Action: func(ctx *cli.Context) error {
 			if ctx.IsSet(config.LicenseWarrantyFlag.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseWarranty)

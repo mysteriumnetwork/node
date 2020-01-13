@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 	FlagDiscoveryType = cli.StringSliceFlag{
 		Name:  "discovery.type",
 		Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
-		Value: &cli.StringSlice{"api", "broker"},
+		Value: cli.NewStringSlice("api", "broker"),
 	}
 	// FlagDiscoveryPingInterval proposal ping interval in seconds.
 	FlagDiscoveryPingInterval = cli.DurationFlag{
@@ -100,9 +100,10 @@ var (
 		Value: metadata.DefaultNetwork.MMNAddress,
 	}
 	// FlagMMNEnabled registers node to my.mysterium.network.
-	FlagMMNEnabled = cli.BoolTFlag{
+	FlagMMNEnabled = cli.BoolFlag{
 		Name:  "mymysterium.enabled",
 		Usage: "Enables my.mysterium.network integration",
+		Value: true,
 	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
 	FlagOpenvpnBinary = cli.StringFlag{
@@ -138,9 +139,10 @@ var (
 		Value: 4050,
 	}
 	// FlagUIEnable enables built-in web UI for node.
-	FlagUIEnable = cli.BoolTFlag{
+	FlagUIEnable = cli.BoolFlag{
 		Name:  "ui.enable",
-		Usage: "enables the ui",
+		Usage: "Enables the Web UI",
+		Value: true,
 	}
 	// FlagUIPort runs web UI on the specified port.
 	FlagUIPort = cli.IntFlag{
@@ -169,25 +171,25 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsPayments(flags)
 
 	*flags = append(*flags,
-		FlagBindAddress,
-		FlagDiscoveryType,
-		FlagDiscoveryPingInterval,
-		FlagFeedbackURL,
-		FlagFirewallKillSwitch,
-		FlagFirewallProtectedNetworks,
-		FlagKeystoreLightweight,
-		FlagLogHTTP,
-		FlagLogLevel,
-		FlagMMNAddress,
-		FlagMMNEnabled,
-		FlagOpenvpnBinary,
-		FlagQualityType,
-		FlagQualityAddress,
-		FlagTequilapiAddress,
-		FlagTequilapiPort,
-		FlagUIEnable,
-		FlagUIPort,
-		FlagVendorID,
+		&FlagBindAddress,
+		&FlagDiscoveryType,
+		&FlagDiscoveryPingInterval,
+		&FlagFeedbackURL,
+		&FlagFirewallKillSwitch,
+		&FlagFirewallProtectedNetworks,
+		&FlagKeystoreLightweight,
+		&FlagLogHTTP,
+		&FlagLogLevel,
+		&FlagMMNAddress,
+		&FlagMMNEnabled,
+		&FlagOpenvpnBinary,
+		&FlagQualityType,
+		&FlagQualityAddress,
+		&FlagTequilapiAddress,
+		&FlagTequilapiPort,
+		&FlagUIEnable,
+		&FlagUIPort,
+		&FlagVendorID,
 	)
 
 	return nil
@@ -213,13 +215,13 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
 	Current.ParseStringFlag(ctx, FlagMMNAddress)
-	Current.ParseBoolTFlag(ctx, FlagMMNEnabled)
+	Current.ParseBoolFlag(ctx, FlagMMNEnabled)
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
 	Current.ParseStringFlag(ctx, FlagQualityType)
 	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
-	Current.ParseBoolTFlag(ctx, FlagUIEnable)
+	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 }

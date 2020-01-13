@@ -29,7 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -68,7 +68,7 @@ func NewCommand() (*cli.App, error) {
 
 	app := cli.NewApp()
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
-	app.Authors = []cli.Author{
+	app.Authors = []*cli.Author{
 		{Name: `The "MysteriumNetwork/node" Authors`, Email: "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
@@ -76,12 +76,12 @@ func NewCommand() (*cli.App, error) {
 	if err := config.RegisterFlagsNode(&app.Flags); err != nil {
 		return nil, err
 	}
-	app.Commands = []cli.Command{
-		*versionCommand,
-		*licenseCommand,
-		*serviceCommand,
-		*daemonCommand,
-		*cliCommand,
+	app.Commands = []*cli.Command{
+		versionCommand,
+		licenseCommand,
+		serviceCommand,
+		daemonCommand,
+		cliCommand,
 	}
 
 	return app, nil

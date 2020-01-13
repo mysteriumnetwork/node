@@ -43,7 +43,7 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 const cliCommandName = "cli"

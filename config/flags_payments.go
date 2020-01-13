@@ -20,7 +20,7 @@ package config
 import (
 	"time"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -71,13 +71,13 @@ var (
 func RegisterFlagsPayments(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		FlagPaymentsMaxAccountantFee,
-		FlagPaymentsBCTimeout,
-		FlagPaymentsAccountantPromiseSettleThreshold,
-		FlagPaymentsAccountantPromiseSettleTimeout,
-		FlagPaymentsMystSCAddress,
-		FlagPaymentsMaxRRecovery,
-		FlagPaymentsDisable,
+		&FlagPaymentsMaxAccountantFee,
+		&FlagPaymentsBCTimeout,
+		&FlagPaymentsAccountantPromiseSettleThreshold,
+		&FlagPaymentsAccountantPromiseSettleTimeout,
+		&FlagPaymentsMystSCAddress,
+		&FlagPaymentsMaxRRecovery,
+		&FlagPaymentsDisable,
 	)
 }
 

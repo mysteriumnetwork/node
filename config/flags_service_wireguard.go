@@ -18,7 +18,7 @@
 package config
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -45,9 +45,9 @@ var (
 // RegisterFlagsServiceWireguard function register Wireguard flags to flag list
 func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		FlagWireguardConnectDelay,
-		FlagWireguardListenPorts,
-		FlagWireguardListenSubnet,
+		&FlagWireguardConnectDelay,
+		&FlagWireguardListenPorts,
+		&FlagWireguardListenSubnet,
 	)
 }
 

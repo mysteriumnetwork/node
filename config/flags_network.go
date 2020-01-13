@@ -19,7 +19,7 @@ package config
 
 import (
 	"github.com/mysteriumnetwork/node/metadata"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -64,9 +64,10 @@ var (
 		Value: metadata.DefaultNetwork.QualityOracle,
 	}
 	// FlagNATPunching enables NAT hole punching.
-	FlagNATPunching = cli.BoolTFlag{
+	FlagNATPunching = cli.BoolFlag{
 		Name:  "experiment-natpunching",
 		Usage: "Enables NAT hole punching",
+		Value: true,
 	}
 )
 
@@ -74,14 +75,14 @@ var (
 func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		FlagTestnet,
-		FlagLocalnet,
-		FlagNATPunching,
-		FlagAPIAddress,
-		FlagBrokerAddress,
-		FlagEtherRPC,
-		FlagQualityOracleAddress,
-		FlagAccessPolicyAddress,
+		&FlagTestnet,
+		&FlagLocalnet,
+		&FlagNATPunching,
+		&FlagAPIAddress,
+		&FlagBrokerAddress,
+		&FlagEtherRPC,
+		&FlagQualityOracleAddress,
+		&FlagAccessPolicyAddress,
 	)
 }
 
@@ -94,5 +95,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseStringFlag(ctx, FlagQualityOracleAddress)
-	Current.ParseBoolTFlag(ctx, FlagNATPunching)
+	Current.ParseBoolFlag(ctx, FlagNATPunching)
 }
