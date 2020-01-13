@@ -21,7 +21,7 @@ package payment
 
 import (
 	"math"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -85,6 +85,7 @@ type SessionBalance struct {
 
 	sequenceID              uint64
 	notReceivedPromiseCount uint64
+	notReceivedPromiseLock  sync.Mutex
 	maxNotReceivedPromises  uint64
 }
 
@@ -149,15 +150,21 @@ func (sb *SessionBalance) Start() error {
 }
 
 func (sb *SessionBalance) markPromiseNotReceived() {
-	atomic.AddUint64(&sb.notReceivedPromiseCount, 1)
+	sb.notReceivedPromiseLock.Lock()
+	defer sb.notReceivedPromiseLock.Unlock()
+	sb.notReceivedPromiseCount++
 }
 
 func (sb *SessionBalance) resetNotReceivedPromiseCount() {
-	atomic.SwapUint64(&sb.notReceivedPromiseCount, 0)
+	sb.notReceivedPromiseLock.Lock()
+	defer sb.notReceivedPromiseLock.Unlock()
+	sb.notReceivedPromiseCount = 0
 }
 
 func (sb *SessionBalance) getNotReceivedPromiseCount() uint64 {
-	return atomic.LoadUint64(&sb.notReceivedPromiseCount)
+	sb.notReceivedPromiseLock.Lock()
+	defer sb.notReceivedPromiseLock.Unlock()
+	return sb.notReceivedPromiseCount
 }
 
 func (sb *SessionBalance) sendBalanceExpectPromise() error {

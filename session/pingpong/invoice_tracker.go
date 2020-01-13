@@ -25,7 +25,6 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -96,17 +95,21 @@ type sentInvoice struct {
 
 // InvoiceTracker keeps tab of invoices and sends them to the consumer.
 type InvoiceTracker struct {
-	stop                            chan struct{}
-	accountantFailureCount          uint64
+	stop                       chan struct{}
+	accountantFailureCount     uint64
+	accountantFailureCountLock sync.Mutex
+
 	notReceivedExchangeMessageCount uint64
-	maxNotReceivedExchangeMessages  uint64
-	once                            sync.Once
-	agreementID                     uint64
-	lastExchangeMessage             crypto.ExchangeMessage
-	transactorFee                   uint64
-	invoicesSent                    map[string]sentInvoice
-	invoiceLock                     sync.Mutex
-	deps                            InvoiceTrackerDeps
+	exchangeMessageCountLock        sync.Mutex
+
+	maxNotReceivedExchangeMessages uint64
+	once                           sync.Once
+	agreementID                    uint64
+	lastExchangeMessage            crypto.ExchangeMessage
+	transactorFee                  uint64
+	invoicesSent                   map[string]sentInvoice
+	invoiceLock                    sync.Mutex
+	deps                           InvoiceTrackerDeps
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -373,15 +376,21 @@ func (it *InvoiceTracker) Start() error {
 }
 
 func (it *InvoiceTracker) markExchangeMessageNotReceived() {
-	atomic.AddUint64(&it.notReceivedExchangeMessageCount, 1)
+	it.exchangeMessageCountLock.Lock()
+	defer it.exchangeMessageCountLock.Unlock()
+	it.notReceivedExchangeMessageCount++
 }
 
 func (it *InvoiceTracker) resetNotReceivedExchangeMessageCount() {
-	atomic.SwapUint64(&it.notReceivedExchangeMessageCount, 0)
+	it.exchangeMessageCountLock.Lock()
+	defer it.exchangeMessageCountLock.Unlock()
+	it.notReceivedExchangeMessageCount = 0
 }
 
 func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
-	return atomic.LoadUint64(&it.notReceivedExchangeMessageCount)
+	it.exchangeMessageCountLock.Lock()
+	defer it.exchangeMessageCountLock.Unlock()
+	return it.notReceivedExchangeMessageCount
 }
 
 func (it *InvoiceTracker) generateR() []byte {
@@ -446,15 +455,21 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 }
 
 func (it *InvoiceTracker) incrementAccountantFailureCount() {
-	atomic.AddUint64(&it.accountantFailureCount, 1)
+	it.accountantFailureCountLock.Lock()
+	defer it.accountantFailureCountLock.Unlock()
+	it.accountantFailureCount++
 }
 
 func (it *InvoiceTracker) resetAccountantFailureCount() {
-	atomic.SwapUint64(&it.accountantFailureCount, 0)
+	it.accountantFailureCountLock.Lock()
+	defer it.accountantFailureCountLock.Unlock()
+	it.accountantFailureCount = 0
 }
 
 func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
-	return atomic.LoadUint64(&it.accountantFailureCount)
+	it.accountantFailureCountLock.Lock()
+	defer it.accountantFailureCountLock.Unlock()
+	return it.accountantFailureCount
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
