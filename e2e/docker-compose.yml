@@ -34,6 +34,7 @@ services:
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
+      --log-level=trace
       service openvpn,noop,wireguard
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -50,6 +51,7 @@ services:
       - ipify
       - transactor
       - accountant
+      - myst-provider
     cap_add:
       - NET_ADMIN
     expose:
@@ -63,6 +65,7 @@ services:
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --ip-detector=http://ipify:3000/?format=json
       --localnet
+      --log-level=trace
       --broker-address=broker
       --api.address=http://mysterium-api:8001/v1
       --ether.client.rpc=ws://ganache:8545
