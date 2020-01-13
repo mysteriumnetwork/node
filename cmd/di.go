@@ -752,9 +752,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 				discovery_broker.NewRegistry(di.BrokerConnection),
 			)
 			discoveryFinder.AddFinder(
-				// Proposals are pinged each 60 seconds, see `discovery.NewService()`
-				// So timeout proposals after 61 second (1 second inactivity tolerated)
-				discovery_broker.NewFinder(di.DiscoveryStorage, di.BrokerConnection, 61*time.Second, 1*time.Second),
+				discovery_broker.NewFinder(di.DiscoveryStorage, di.BrokerConnection, options.PingInterval+time.Second, 1*time.Second),
 			)
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
