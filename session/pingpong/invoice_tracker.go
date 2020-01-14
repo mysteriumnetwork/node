@@ -265,7 +265,6 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	if err != nil {
 		return errors.Wrap(err, "could not store accountant promise")
 	}
-	log.Debug().Msg("Accountant promise stored")
 
 	promise.R = r
 	it.deps.Publisher.Publish(AccountantPromiseTopic, AccountantPromiseEventPayload{
@@ -309,7 +308,6 @@ func (it *InvoiceTracker) revealPromise() error {
 	if err != nil {
 		return errors.Wrap(err, "could not store accountant promise")
 	}
-	log.Debug().Msg("Accountant promise stored")
 
 	return nil
 }
