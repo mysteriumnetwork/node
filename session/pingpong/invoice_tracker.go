@@ -237,15 +237,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not call accountant")
-
-		// TODO: handle this better
-		if strings.Contains(err.Error(), "400 Bad Request") {
-			recoveryError := it.initiateRRecovery()
-			if recoveryError != nil {
-				return errors.Wrap(err, "could not recover R")
-			}
-		}
-
+		// TODO: handle separate errors better
 		it.incrementAccountantFailureCount()
 		if it.getAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
 			return errors.Wrap(err, "could not call accountant")
@@ -505,31 +497,6 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
 	}
 	return nil
-}
-
-func (it *InvoiceTracker) initiateRRecovery() error {
-	currentAgreement := it.agreementID
-
-	var minBound uint64 = 1
-	if currentAgreement > it.deps.MaxRRecoveryLength {
-		minBound = currentAgreement - it.deps.MaxRRecoveryLength
-	}
-
-	for i := currentAgreement; i >= minBound; i-- {
-		r, err := it.deps.InvoiceStorage.GetR(it.deps.ProviderID, i)
-		if err != nil {
-			return errors.Wrap(err, "could not get R")
-		}
-		err = it.deps.AccountantCaller.RevealR(r, it.deps.ProviderID.Address, i)
-		if err != nil {
-			log.Warn().Err(err).Msgf("revealing %v", i)
-		} else {
-			log.Info().Msg("r recovered")
-			return nil
-		}
-	}
-
-	return errors.New("R recovery failed")
 }
 
 // Stop stops the invoice tracker.
