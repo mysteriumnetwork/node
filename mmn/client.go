@@ -20,6 +20,7 @@ package mmn
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/rs/zerolog/log"
 )
 
 // NodeInformationDto contains node information to be sent to MMN
@@ -58,6 +59,7 @@ type client struct {
 }
 
 func (m *client) RegisterNode(info *NodeInformationDto) error {
+	log.Debug().Msgf("Registering node to MMN: %+v", *info)
 	id := identity.FromAddress(info.Identity)
 	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))
 	if err != nil {
@@ -68,6 +70,7 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 }
 
 func (m *client) UpdateNodeType(info *NodeInformationDto) error {
+	log.Debug().Msgf("Updating node type: %+v", *info)
 	id := identity.FromAddress(info.Identity)
 	nodeType := NodeTypeDto{
 		IsProvider: info.IsProvider,
