@@ -194,7 +194,10 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[id]; ok {
 		if v.BCBalance != 0 {
-			after := v.BCBalance - b
+			var after uint64
+			if v.BCBalance > b {
+				after = v.BCBalance - b
+			}
 			go cbt.publishChangeEvent(id, v.CurrentEstimate, after)
 			v.CurrentEstimate = after
 			cbt.balances[id] = v
