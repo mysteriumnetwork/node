@@ -15,7 +15,7 @@ RuntimeDirectoryMode=0750
 LogsDirectory=mysterium-node
 
 EnvironmentFile=-/etc/default/mysterium-node
-ExecStart=/usr/bin/myst $CONF_DIR $DATA_DIR $RUN_DIR $DAEMON_OPTS service $SERVICE_OPTS --agreed-terms-and-conditions
+ExecStart=/usr/bin/myst $CONF_DIR $DATA_DIR $RUN_DIR $DAEMON_OPTS service --agreed-terms-and-conditions $SERVICE_OPTS
 KillMode=process
 TimeoutStopSec=10
 SendSIGKILL=yes

@@ -26,7 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // LoadUserConfig determines config location from the context
@@ -57,7 +57,7 @@ func LoadUserConfigQuietly(ctx *cli.Context) error {
 }
 
 func resolveLocation(ctx *cli.Context) (configDir string, configFilePath string) {
-	configDir = ctx.GlobalString("config-dir")
+	configDir = ctx.String("config-dir")
 	configFilePath = path.Join(configDir, "config.toml")
 	return configDir, configFilePath
 }

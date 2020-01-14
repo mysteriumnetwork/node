@@ -18,7 +18,7 @@
 package config
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // Options describes options shared among multiple services
@@ -61,11 +61,11 @@ var (
 // RegisterFlagsServiceShared registers shared service CLI flags
 func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		FlagIdentity,
-		FlagIdentityPassphrase,
-		FlagAgreedTermsConditions,
-		FlagAccessPolicies,
-		FlagShaperEnabled,
+		&FlagIdentity,
+		&FlagIdentityPassphrase,
+		&FlagAgreedTermsConditions,
+		&FlagAccessPolicies,
+		&FlagShaperEnabled,
 	)
 }
 

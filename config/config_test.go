@@ -18,11 +18,14 @@
 package config
 
 import (
+	"flag"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli/v2"
 )
 
 // This only tests user configuration, not the merging between multiple option sources
@@ -84,4 +87,64 @@ func NewTempFileName(t *testing.T) string {
 	file, err := ioutil.TempFile("", "*")
 	assert.NoError(t, err)
 	return file.Name()
+}
+
+func TestConfig_ParseStringSliceFlag(t *testing.T) {
+	var tests = []struct {
+		name     string
+		args     string
+		defaults *cli.StringSlice
+		values   []string
+	}{
+		{
+			name:     "parse single value",
+			defaults: cli.NewStringSlice("api", "broker"),
+			args:     "--discovery.type broker",
+			values:   []string{"broker"},
+		},
+		{
+			name:     "parse multiple values",
+			defaults: cli.NewStringSlice("api", "broker"),
+			args:     "--discovery.type api --discovery.type broker",
+			values:   []string{"api", "broker"},
+		},
+		{
+			name:     "empty args use defaults",
+			defaults: cli.NewStringSlice("api", "broker"),
+			args:     "",
+			values:   []string{"api", "broker"},
+		},
+		{
+			name:   "nil default returns empty slice",
+			args:   "",
+			values: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// given
+			sliceFlag := cli.StringSliceFlag{
+				Name:  "discovery.type",
+				Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
+				Value: tc.defaults,
+			}
+			cfg := NewConfig()
+			flagSet := flag.NewFlagSet("", flag.ContinueOnError)
+			must(t, sliceFlag.Apply(flagSet))
+			ctx := cli.NewContext(nil, flagSet, nil)
+			must(t, flagSet.Parse(strings.Split(tc.args, " ")))
+
+			// when
+			cfg.ParseStringSliceFlag(ctx, sliceFlag)
+			value := cfg.GetStringSlice(sliceFlag.Name)
+
+			// then
+			assert.Equal(t, tc.values, value)
+		})
+	}
+}
+
+func must(t *testing.T, err error) {
+	assert.NoError(t, err)
 }

@@ -92,5 +92,5 @@ services:
   go-runner:
     image: golang:1.13
     volumes:
-      - $GOPATH:/go
+      - ../../:/go/src/github.com/mysteriumnetwork/node
     working_dir: /go/src/github.com/mysteriumnetwork/node

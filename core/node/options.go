@@ -86,7 +86,7 @@ func GetOptions() *Options {
 		TequilapiEnabled: true,
 		BindAddress:      config.GetString(config.FlagBindAddress),
 		UI: OptionsUI{
-			UIEnabled: config.GetTBool(config.FlagUIEnable),
+			UIEnabled: config.GetBool(config.FlagUIEnable),
 			UIPort:    config.GetInt(config.FlagUIPort),
 		},
 		FeedbackURL: config.GetString(config.FlagFeedbackURL),
@@ -97,7 +97,7 @@ func GetOptions() *Options {
 		OptionsNetwork: OptionsNetwork{
 			Testnet:                     config.GetBool(config.FlagTestnet),
 			Localnet:                    config.GetBool(config.FlagLocalnet),
-			ExperimentNATPunching:       config.GetTBool(config.FlagNATPunching),
+			ExperimentNATPunching:       config.GetBool(config.FlagNATPunching),
 			MysteriumAPIAddress:         config.GetString(config.FlagAPIAddress),
 			AccessPolicyEndpointAddress: config.GetString(config.FlagAccessPolicyAddress),
 			BrokerAddress:               config.GetString(config.FlagBrokerAddress),
@@ -107,7 +107,7 @@ func GetOptions() *Options {
 		Discovery: *GetDiscoveryOptions(),
 		MMN: OptionsMMN{
 			Address: config.GetString(config.FlagMMNAddress),
-			Enabled: config.GetTBool(config.FlagMMNEnabled),
+			Enabled: config.GetBool(config.FlagMMNEnabled),
 		},
 		Quality: OptionsQuality{
 			Type:    QualityType(config.GetString(config.FlagQualityType)),

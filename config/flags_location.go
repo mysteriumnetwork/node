@@ -20,7 +20,7 @@ package config
 import (
 	"fmt"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -65,12 +65,12 @@ var (
 // RegisterFlagsLocation function registers location flags to flag list.
 func RegisterFlagsLocation(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		FlagIPDetectorURL,
-		FlagLocationType,
-		FlagLocationAddress,
-		FlagLocationCountry,
-		FlagLocationCity,
-		FlagLocationNodeType,
+		&FlagIPDetectorURL,
+		&FlagLocationType,
+		&FlagLocationAddress,
+		&FlagLocationCountry,
+		&FlagLocationCity,
+		&FlagLocationNodeType,
 	)
 }
 

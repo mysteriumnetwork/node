@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/metadata"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -67,12 +67,12 @@ var (
 func RegisterFlagsTransactor(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		FlagTransactorAddress,
-		FlagTransactorRegistryAddress,
-		FlagTransactorChannelImplementation,
-		FlagTransactorProviderMaxRegistrationAttempts,
-		FlagTransactorProviderRegistrationRetryDelay,
-		FlagTransactorProviderRegistrationStake,
+		&FlagTransactorAddress,
+		&FlagTransactorRegistryAddress,
+		&FlagTransactorChannelImplementation,
+		&FlagTransactorProviderMaxRegistrationAttempts,
+		&FlagTransactorProviderRegistrationRetryDelay,
+		&FlagTransactorProviderRegistrationStake,
 	)
 }
 

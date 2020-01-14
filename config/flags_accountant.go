@@ -19,7 +19,7 @@ package config
 
 import (
 	"github.com/mysteriumnetwork/node/metadata"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -41,8 +41,8 @@ var (
 func RegisterFlagsAccountant(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		FlagAccountantAddress,
-		FlagAccountantID,
+		&FlagAccountantAddress,
+		&FlagAccountantID,
 	)
 }
 

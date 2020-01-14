@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // Config stores application configuration in 3 separate maps (listed from the lowest priority to the highest):
@@ -218,31 +218,16 @@ func (cfg *Config) GetString(key string) string {
 
 // GetStringSlice returns config value as []string.
 func (cfg *Config) GetStringSlice(key string) []string {
-	value := cfg.Get(key).(*cli.StringSlice)
-	return cast.ToStringSlice([]string(*value))
+	value := cfg.Get(key).([]string)
+	return cast.ToStringSlice(value)
 }
 
 // ParseBoolFlag parses a cli.BoolFlag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseBoolFlag(ctx *cli.Context, flag cli.BoolFlag) {
-	cfg.SetDefault(flag.Name, false)
+	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Bool(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalBool(flag.Name))
-	} else {
-		cfg.RemoveCLI(flag.Name)
-	}
-}
-
-// ParseBoolTFlag parses a cli.BoolTFlag from command's context and
-// sets default and CLI values to the application configuration.
-func (cfg *Config) ParseBoolTFlag(ctx *cli.Context, flag cli.BoolTFlag) {
-	cfg.SetDefault(flag.Name, true)
-	if ctx.IsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.Bool(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalBool(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -254,8 +239,6 @@ func (cfg *Config) ParseIntFlag(ctx *cli.Context, flag cli.IntFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Int(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalInt(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -267,8 +250,6 @@ func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Uint64(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalUint64(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -280,8 +261,6 @@ func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Float64(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalFloat64(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -293,8 +272,6 @@ func (cfg *Config) ParseDurationFlag(ctx *cli.Context, flag cli.DurationFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.Duration(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalDuration(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -306,8 +283,6 @@ func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
 	cfg.SetDefault(flag.Name, flag.Value)
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.String(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalString(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -316,11 +291,9 @@ func (cfg *Config) ParseStringFlag(ctx *cli.Context, flag cli.StringFlag) {
 // ParseStringSliceFlag parses a cli.StringSliceFlag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFlag) {
-	cfg.SetDefault(flag.Name, flag.Value)
+	cfg.SetDefault(flag.Name, flag.Value.Value())
 	if ctx.IsSet(flag.Name) {
 		cfg.SetCLI(flag.Name, ctx.StringSlice(flag.Name))
-	} else if ctx.GlobalIsSet(flag.Name) {
-		cfg.SetCLI(flag.Name, ctx.GlobalStringSlice(flag.Name))
 	} else {
 		cfg.RemoveCLI(flag.Name)
 	}
@@ -328,11 +301,6 @@ func (cfg *Config) ParseStringSliceFlag(ctx *cli.Context, flag cli.StringSliceFl
 
 // GetBool shorthand for getting current configuration value for cli.BoolFlag.
 func GetBool(flag cli.BoolFlag) bool {
-	return Current.GetBool(flag.Name)
-}
-
-// GetTBool shorthand for getting current configuration value for cli.BoolTFlag.
-func GetTBool(flag cli.BoolTFlag) bool {
 	return Current.GetBool(flag.Name)
 }
 

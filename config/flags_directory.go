@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -65,10 +65,10 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 	FlagRuntimeDir.Value = currentDir
 
 	*flags = append(*flags,
-		FlagConfigDir,
-		FlagDataDir,
-		FlagLogDir,
-		FlagRuntimeDir,
+		&FlagConfigDir,
+		&FlagDataDir,
+		&FlagLogDir,
+		&FlagRuntimeDir,
 	)
 	return nil
 }

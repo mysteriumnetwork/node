@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var DefaultOptionsOpenvpn = Options{

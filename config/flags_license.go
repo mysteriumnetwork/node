@@ -17,7 +17,7 @@
 
 package config
 
-import "gopkg.in/urfave/cli.v1"
+import "github.com/urfave/cli/v2"
 
 var (
 	// LicenseWarrantyFlag flag allows to print license warranty
