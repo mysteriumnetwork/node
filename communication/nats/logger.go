@@ -18,16 +18,18 @@
 package nats
 
 import (
-	"github.com/nats-io/go-nats"
 	"github.com/rs/zerolog"
 )
 
 // Change this to slice as needed
-var traceLevelSubject = "*.proposal-register"
+var logLevelsByTopic = map[string]zerolog.Level{
+	"*.proposal-register": zerolog.TraceLevel,
+	"*.proposal-ping":     zerolog.TraceLevel,
+}
 
-func levelFor(msg *nats.Msg) zerolog.Level {
-	if msg.Subject == traceLevelSubject {
-		return zerolog.TraceLevel
+func levelFor(topic string) zerolog.Level {
+	if level, exist := logLevelsByTopic[topic]; exist {
+		return level
 	}
 	return zerolog.DebugLevel
 }

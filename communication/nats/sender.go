@@ -57,7 +57,7 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 		log.Warn().Err(err).Msg("Connection failed")
 	}
 
-	log.Debug().Msgf("Message %q sending: %s", messageTopic, messageData)
+	log.WithLevel(levelFor(messageTopic)).Msgf("Message %q sending: %s", messageTopic, messageData)
 	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to send message '%s'", messageTopic)
@@ -81,7 +81,7 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 		log.Warn().Err(err).Msg("Connection failed")
 	}
 
-	log.Debug().Msgf("Request %q sending: %s", requestTopic, requestData)
+	log.WithLevel(levelFor(requestTopic)).Msgf("Request %q sending: %s", requestTopic, requestData)
 	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to send request '%s'", requestTopic)
