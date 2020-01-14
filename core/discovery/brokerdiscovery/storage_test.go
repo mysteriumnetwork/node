@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/stretchr/testify/assert"
@@ -226,12 +227,14 @@ func Test_Storage_RemoveProposal(t *testing.T) {
 
 func createEmptyStorage() *ProposalStorage {
 	return &ProposalStorage{
-		proposals: []market.ServiceProposal{},
+		eventPublisher: eventbus.New(),
+		proposals:      []market.ServiceProposal{},
 	}
 }
 
 func createFullStorage() *ProposalStorage {
 	return &ProposalStorage{
+		eventPublisher: eventbus.New(),
 		proposals: []market.ServiceProposal{
 			proposalProvider1Streaming, proposalProvider1Noop, proposalProvider2Streaming,
 		},

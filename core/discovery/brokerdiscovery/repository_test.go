@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +46,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -71,7 +72,7 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -88,7 +89,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -111,7 +112,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
 	subscriber.storage.AddProposal(proposalFirst, proposalSecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()

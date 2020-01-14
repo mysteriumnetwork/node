@@ -737,7 +737,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
 		case node.DiscoveryTypeBroker:
 			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
-			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, options.PingInterval+time.Second, 1*time.Second)
+			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
 			proposalRepository.Add(brokerRepository)
 			di.DiscoveryWorker = brokerRepository
 		default:
