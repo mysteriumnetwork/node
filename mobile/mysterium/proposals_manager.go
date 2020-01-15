@@ -108,9 +108,7 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 		if err != nil {
 			return nil, err
 		}
-		if len(cachedProposals) > 0 {
-			return m.mapToProposalsResponse(cachedProposals)
-		}
+		return m.mapToProposalsResponse(cachedProposals)
 	}
 
 	// Get proposals from remote discovery api and store in cache.

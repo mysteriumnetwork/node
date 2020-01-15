@@ -90,7 +90,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		ShowOpenvpnProposals:   false,
 		ShowWireguardProposals: false,
-		Refresh:                false,
+		Refresh:                true,
 	})
 
 	assert.NoError(s.T(), err)

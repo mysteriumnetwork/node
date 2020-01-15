@@ -199,9 +199,12 @@ services:
     expose:
       - 4050
     command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --ip-detector=http://ipify:3000/?format=json
       --localnet
+      --log-level=debug
       --broker-address=broker
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
@@ -253,6 +256,8 @@ services:
     volumes:
       - ../../e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
@@ -267,6 +272,7 @@ services:
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
+      --log-level=debug
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5

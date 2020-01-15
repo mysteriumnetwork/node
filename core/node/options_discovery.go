@@ -35,4 +35,5 @@ type OptionsDiscovery struct {
 	Address                string
 	ProposalFetcherEnabled bool
 	PingInterval           time.Duration
+	FetchInterval          time.Duration
 }
