@@ -143,13 +143,35 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.wg.Add(1)
 	log.Info().Msg("Wireguard service started successfully")
 
-	manager.wg.Wait()
+	// Start DNS proxy.
+	m.dnsPort = 11253
+	m.dnsOK = false
+	m.dnsProxyMu.Lock()
+	defer m.dnsProxyMu.Unlock()
+	m.dnsProxy = dns.NewProxy("", m.dnsPort)
+	if err := m.dnsProxy.Run(); err != nil {
+		log.Warn().Err(err).Msg("Provider DNS will not be available")
+	} else {
+		// m.dnsProxy = dnsProxy
+		m.dnsOK = true
+	}
+
+	<-m.done
 	return nil
 }
 
 // Stop stops service.
-func (manager *Manager) Stop() error {
-	manager.wg.Done()
+func (m *Manager) Stop() error {
+	close(m.done)
+
+	// Stop DNS proxy.
+	m.dnsProxyMu.Lock()
+	defer m.dnsProxyMu.Unlock()
+	if m.dnsProxy != nil {
+		if err := m.dnsProxy.Stop(); err != nil {
+			log.Error().Err(err).Msg("Failed to stop DNS server")
+		}
+	}
 
 	log.Info().Msg("Wireguard service stopped")
 	return nil
