@@ -29,11 +29,8 @@ import (
 )
 
 var (
-	config       = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
-	mockConsumer = func(json.RawMessage, *traversal.Params) (*ConfigParams, error) {
-		return &ConfigParams{SessionServiceConfig: config, TraversalParams: &traversal.Params{}}, nil
-	}
-	mpl = &mockPromiseLoader{}
+	config = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
+	mpl    = &mockPromiseLoader{}
 )
 
 func TestConsumer_Success(t *testing.T) {
@@ -44,10 +41,10 @@ func TestConsumer_Success(t *testing.T) {
 		},
 	}
 	consumer := createConsumer{
-		sessionCreator: mockManager,
-		peerID:         identity.FromAddress("peer-id"),
-		configProvider: mockConsumer,
-		promiseLoader:  mpl,
+		sessionCreator:         mockManager,
+		peerID:                 identity.FromAddress("peer-id"),
+		providerConfigProvider: mockConfigProvider{},
+		promiseLoader:          mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -75,9 +72,9 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 		returnError: ErrorInvalidProposal,
 	}
 	consumer := createConsumer{
-		sessionCreator: mockManager,
-		configProvider: mockConsumer,
-		promiseLoader:  mpl,
+		sessionCreator:         mockManager,
+		providerConfigProvider: mockConfigProvider{},
+		promiseLoader:          mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -92,9 +89,9 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 		returnError: errors.New("fatality"),
 	}
 	consumer := createConsumer{
-		sessionCreator: mockManager,
-		configProvider: mockConsumer,
-		promiseLoader:  mpl,
+		sessionCreator:         mockManager,
+		providerConfigProvider: mockConfigProvider{},
+		promiseLoader:          mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -112,10 +109,10 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 		},
 	}
 	consumer := createConsumer{
-		sessionCreator: mockManager,
-		peerID:         identity.FromAddress("peer-id"),
-		configProvider: mockConsumer,
-		promiseLoader:  mpl,
+		sessionCreator:         mockManager,
+		peerID:                 identity.FromAddress("peer-id"),
+		providerConfigProvider: mockConfigProvider{},
+		promiseLoader:          mpl,
 	}
 
 	issuerID := identity.FromAddress("some-peer-id")
@@ -128,6 +125,13 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 	_, err := consumer.Consume(request)
 	assert.Nil(t, err)
 	assert.Equal(t, issuerID, mockManager.lastIssuerID)
+}
+
+type mockConfigProvider struct {
+}
+
+func (mockConfigProvider) ProvideConfig(sessionConfig json.RawMessage) (*ConfigParams, error) {
+	return &ConfigParams{SessionServiceConfig: config, TraversalParams: &traversal.Params{}}, nil
 }
 
 // managerFake represents fake Manager usually useful in tests

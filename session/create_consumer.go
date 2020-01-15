@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/pkg/errors"
 )
 
 // PromiseLoader loads the last known promise info for the given consumer
@@ -33,11 +34,11 @@ type PromiseLoader interface {
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
-	sessionCreator Creator
-	receiverID     identity.Identity
-	peerID         identity.Identity
-	configProvider ConfigProvider
-	promiseLoader  PromiseLoader
+	sessionCreator         Creator
+	receiverID             identity.Identity
+	peerID                 identity.Identity
+	providerConfigProvider ConfigProvider
+	promiseLoader          PromiseLoader
 }
 
 // Creator defines method for session creation
@@ -60,9 +61,10 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	sessionConfigParams, err := consumer.configProvider(request.Config, &traversal.Params{})
+	// Pass given consumer config to provider's service config provider.
+	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(request.Config)
 	if err != nil {
-		return responseInternalError, err
+		return responseInternalError, errors.Wrap(err, "could not get provider session config")
 	}
 
 	var indicateNewVersion bool
@@ -77,9 +79,6 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 			IssuerID: issuerID,
 		}
 	}
-
-	sessionConfigParams.TraversalParams.RequestConfig = request.Config
-	sessionConfigParams.TraversalParams.Cancel = make(chan struct{})
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
 	switch err {

@@ -19,7 +19,6 @@ package service
 
 import (
 	"crypto/x509/pkix"
-	"encoding/json"
 	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
@@ -29,10 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/rs/zerolog/log"
 )
@@ -78,7 +75,7 @@ func NewManager(nodeOptions node.Options,
 		outboundIP:                     location.OutIP,
 		currentLocation:                location.Country,
 		natService:                     natService,
-		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions, natEventGetter, portPool),
+		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		processLauncher:                newProcessLauncher(nodeOptions, sessionValidator, callback),
 		natPingerPorts:                 port.NewPool(),
@@ -108,8 +105,8 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 }
 
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
-func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter, portPool port.ServicePortSupplier) SessionConfigNegotiatorFactory {
-	return func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
+func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options) SessionConfigNegotiatorFactory {
+	return func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
 		vpnConfig := &openvpn_service.VPNConfig{
 			RemoteIP:        serverIP,
@@ -122,26 +119,19 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 			vpnConfig.DNSIPs = dnsIP.String()
 		}
 		return &OpenvpnConfigNegotiator{
-			natEventGetter: natEventGetter,
-			vpnConfig:      vpnConfig,
-			portPool:       portPool,
+			vpnConfig: vpnConfig,
 		}
 	}
 }
 
 // OpenvpnConfigNegotiator knows how to send the openvpn config to the consumer
 type OpenvpnConfigNegotiator struct {
-	natEventGetter NATEventGetter
-	vpnConfig      *openvpn_service.VPNConfig
-	portPool       port.ServicePortSupplier
+	vpnConfig *openvpn_service.VPNConfig
 }
 
-// ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
-	ocn.vpnConfig.LocalPort = traversalParams.ConsumerPort
-	ocn.vpnConfig.RemotePort = traversalParams.ProviderPort
-
-	return &session.ConfigParams{SessionServiceConfig: ocn.vpnConfig, TraversalParams: traversalParams}, nil
+// ProvideVPNConfig returns the config for OpenVPN
+func (ocn *OpenvpnConfigNegotiator) ProvideVPNConfig() *openvpn_service.VPNConfig {
+	return ocn.vpnConfig
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {

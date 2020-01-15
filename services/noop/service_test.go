@@ -59,9 +59,9 @@ func Test_GetProposal(t *testing.T) {
 
 func Test_Manager_ProvideConfig(t *testing.T) {
 	manager := NewManager()
-	sessionConfig, err := manager.ProvideConfig(nil, nil)
+	sessionConfig, err := manager.ProvideConfig(nil)
 	assert.NoError(t, err)
-	assert.Nil(t, sessionConfig.TraversalParams)
+	assert.NotNil(t, sessionConfig.TraversalParams)
 	assert.Nil(t, sessionConfig.SessionServiceConfig)
 	assert.Nil(t, sessionConfig.SessionDestroyCallback)
 }
