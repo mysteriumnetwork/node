@@ -65,10 +65,8 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/nat/traversal/config"
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -88,18 +86,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
-
-// NatPinger is responsible for pinging nat holes
-type NatPinger interface {
-	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
-	PingTarget(*traversal.Params)
-	BindServicePort(serviceType services.ServiceType, port int)
-	Start()
-	Stop()
-	SetProtectSocketCallback(SocketProtect func(socket int) bool)
-	StopNATProxy()
-	Valid() bool
-}
 
 // UIServer represents our web server
 type UIServer interface {
@@ -152,7 +138,7 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.EventBasedStorage
 
-	NATPinger      NatPinger
+	NATPinger      traversal.NatPinger
 	NATTracker     *event.Tracker
 	NATEventSender *event.Sender
 
@@ -820,7 +806,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
 			di.NATTracker,
-			config.NewConfigParser(),
 			traversal.NewNATProxy(),
 			mapping.StageName,
 			di.EventBus,

@@ -23,7 +23,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/mysteriumnetwork/node/services"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,7 +30,7 @@ const bufferLen = 2048 * 1024
 
 // NATProxy provides traffic proxying functionality for registered services
 type NATProxy struct {
-	servicePorts  map[services.ServiceType]int
+	servicePorts  map[string]int
 	addrLast      *net.UDPAddr
 	socketProtect func(socket int) bool
 }
@@ -161,13 +160,13 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 // NewNATProxy constructs an instance of NATProxy
 func NewNATProxy() *NATProxy {
 	return &NATProxy{
-		servicePorts: make(map[services.ServiceType]int),
+		servicePorts: make(map[string]int),
 	}
 }
 
 // handOff traffic incoming through NATPinger punched hole should be handed off to NATPoxy
-func (np *NATProxy) handOff(serviceType services.ServiceType, incomingConn *net.UDPConn) {
-	proxyConn, err := np.getConnection(serviceType)
+func (np *NATProxy) handOff(key string, incomingConn *net.UDPConn) {
+	proxyConn, err := np.getConnection(key)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to connect to NATProxy")
 		return
@@ -192,21 +191,21 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 		totalBytes)
 }
 
-func (np *NATProxy) registerServicePort(serviceType services.ServiceType, port int) {
-	log.Info().Msgf("Registering service %s for port %d to NATProxy", serviceType, port)
-	np.servicePorts[serviceType] = port
+func (np *NATProxy) registerServicePort(key string, port int) {
+	log.Info().Msgf("Registering service %s for port %d to NATProxy", key, port)
+	np.servicePorts[key] = port
 }
 
-func (np *NATProxy) getConnection(serviceType services.ServiceType) (*net.UDPConn, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", np.servicePorts[serviceType]))
+func (np *NATProxy) getConnection(key string) (*net.UDPConn, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", np.servicePorts[key]))
 	if err != nil {
 		return nil, err
 	}
 	return net.DialUDP("udp", nil, udpAddr)
 }
 
-func (np *NATProxy) isAvailable(serviceType services.ServiceType) bool {
-	return np.servicePorts[serviceType] > 0
+func (np *NATProxy) isAvailable(key string) bool {
+	return np.servicePorts[key] > 0
 }
 
 func (np *NATProxy) setProtectSocketCallback(socketProtect func(socket int) bool) {
