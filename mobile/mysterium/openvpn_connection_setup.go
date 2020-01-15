@@ -94,20 +94,20 @@ func (wrapper *openvpnConnection) Wait() error {
 }
 
 func (wrapper *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
-	ip, err := wrapper.ipResolver.GetPublicIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get consumer config")
-	}
-
 	switch wrapper.natPinger.(type) {
 	case *traversal.NoopPinger:
 		log.Info().Msg("Noop pinger detected, returning nil client config.")
 		return nil, nil
 	}
 
+	publicIP, err := wrapper.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get consumer config")
+	}
+
 	return &openvpn.ConsumerConfig{
 		// skip sending port here, since provider generates port for consumer in VPNConfig
-		IP: &ip,
+		IP: publicIP,
 	}, nil
 }
 
