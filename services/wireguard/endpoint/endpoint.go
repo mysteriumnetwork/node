@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,8 +33,7 @@ type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
-	AddPeer(iface string, peer wg.AddPeerOptions, allowedIP ...string) error
-	// TODO(anjmao): Use peer wg.PeerInfo here too?
+	AddPeer(iface string, peer wg.Peer) error
 	RemovePeer(name string, publicKey string) error
 	PeerStats() (*wg.Stats, error)
 	Close() error
@@ -50,40 +50,38 @@ type connectionEndpoint struct {
 	releasePortMapping func()
 	mapPort            func(port int) (releasePortMapping func())
 	connectDelay       int // connect delay in milliseconds
-
-	deviceConfig wg.DeviceConfig
 }
 
 // Start starts and configure wireguard network interface for providing service.
 // If config is nil, required options will be generated automatically.
-func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
+func (ce *connectionEndpoint) Start(config wg.StartConfig) error {
 	if err := ce.cleanAbandonedInterfaces(); err != nil {
 		return err
 	}
 
 	iface, err := ce.resourceAllocator.AllocateInterface()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not allocate interface")
 	}
 
+	var deviceConfig wg.DeviceConfig
 	ce.iface = iface
-	if config == nil {
-		// nil config mean its a provider Start
+	if config.Consumer == nil {
 		pubIP, err := ce.ipResolver.GetPublicIP()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not get public IP")
 		}
 		port, err := ce.resourceAllocator.AllocatePort()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not allocate port")
 		}
 		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not generate private key")
 		}
 		ipAddr, err := ce.resourceAllocator.AllocateIPNet()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not allocate IP NET")
 		}
 		ce.ipAddr = ipAddr
 		ce.ipAddr.IP = netutil.FirstIP(ce.ipAddr)
@@ -91,14 +89,18 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		ce.endpoint.Port = port
 		ce.releasePortMapping = ce.mapPort(port)
 		ce.privateKey = privateKey
-		ce.deviceConfig.ListenPort = ce.endpoint.Port
+		deviceConfig.ListenPort = ce.endpoint.Port
 	} else {
 		ce.ipAddr = config.Consumer.IPAddress
 		ce.privateKey = config.Consumer.PrivateKey
+		deviceConfig.ListenPort = config.Consumer.ListenPort
 	}
 
-	ce.deviceConfig.PrivateKey = ce.privateKey
-	return ce.wgClient.ConfigureDevice(ce.iface, ce.deviceConfig, ce.ipAddr)
+	deviceConfig.PrivateKey = ce.privateKey
+	if err := ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr); err != nil {
+		return errors.Wrap(err, "could not configure device")
+	}
+	return nil
 }
 
 // InterfaceName returns a connection endpoint interface name.
@@ -107,7 +109,7 @@ func (ce *connectionEndpoint) InterfaceName() string {
 }
 
 // AddPeer adds new wireguard peer to the wireguard device config.
-func (ce *connectionEndpoint) AddPeer(iface string, peer wg.AddPeerOptions) error {
+func (ce *connectionEndpoint) AddPeer(iface string, peer wg.Peer) error {
 	return ce.wgClient.AddPeer(iface, peer)
 }
 

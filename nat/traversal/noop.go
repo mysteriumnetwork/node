@@ -21,7 +21,7 @@ package traversal
 type NoopPinger struct{}
 
 // NewNoopPinger returns noop nat pinger
-func NewNoopPinger() NatPinger {
+func NewNoopPinger() NATPinger {
 	return &NoopPinger{}
 }
 

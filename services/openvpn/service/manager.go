@@ -34,10 +34,8 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/node/utils/stringutil"
 	"github.com/pkg/errors"
@@ -60,7 +58,7 @@ type ConfigNegotiator interface {
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
-	BindServicePort(serviceType services.ServiceType, port int)
+	BindServicePort(key string, port int)
 	Stop()
 	Valid() bool
 }
@@ -86,7 +84,6 @@ type Manager struct {
 	eventListener  eventListener
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
-	consumerConfig                 openvpn_service.ConsumerConfig
 
 	vpnNetwork               net.IPNet
 	vpnServerPort            int
@@ -194,16 +191,17 @@ func (m *Manager) Stop() error {
 		m.openvpnProcess.Stop()
 	}
 
-	errStop := utils.ErrorCollection{}
 	if m.dnsProxy != nil {
-		errStop.Add(m.dnsProxy.Stop())
+		if err := m.dnsProxy.Stop(); err != nil {
+			return errors.Wrap(err, "could not stop DNS proxy")
+		}
 	}
 
-	return errStop.Errorf("ErrorCollection(%s)", ", ")
+	return nil
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error) {
 	if m.vpnServiceConfigProvider == nil {
 		return nil, errors.New("Config provider not initialized")
 	}
@@ -211,16 +209,19 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 		return nil, errors.New("Service port not initialized")
 	}
 
-	traversalParams = &traversal.Params{ProviderPort: m.vpnServerPort}
+	traversalParams := &traversal.Params{
+		Cancel:       make(chan struct{}),
+		ProviderPort: m.vpnServerPort,
+	}
+	vpnConfig := m.vpnServiceConfigProvider.ProvideVPNConfig()
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
-		var c openvpn_service.ConsumerConfig
-		err := json.Unmarshal(sessionConfig, &c)
+		var consumerConfig openvpn_service.ConsumerConfig
+		err := json.Unmarshal(sessionConfig, &consumerConfig)
 		if err != nil {
-			return nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
+			return nil, errors.Wrap(err, "could not parse consumer config")
 		}
-		m.consumerConfig = c
 
 		if m.isBehindNAT() && m.portMappingFailed() {
 			pp, err := m.natPingerPorts.Acquire()
@@ -235,10 +236,18 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 
 			traversalParams.ProviderPort = pp.Num()
 			traversalParams.ConsumerPort = cp.Num()
+			// For OpenVPN only one running NAT proxy required.
+			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
+			vpnConfig.LocalPort = traversalParams.ConsumerPort
+			vpnConfig.RemotePort = traversalParams.ProviderPort
+			if consumerConfig.IP == "" {
+				return nil, errors.New("remote party does not support NAT Hole punching, public IP is missing")
+			}
+			traversalParams.ConsumerPublicIP = consumerConfig.IP
 		}
 	}
 
-	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, traversalParams)
+	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
 }
 
 func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.State) error {
@@ -278,13 +287,13 @@ func (m *Manager) isBehindNAT() bool {
 }
 
 func (m *Manager) portMappingFailed() bool {
-	event := m.natEventGetter.LastEvent()
-	if event == nil {
+	lastEvent := m.natEventGetter.LastEvent()
+	if lastEvent == nil {
 		return false
 	}
 
-	if event.Stage == traversal.StageName {
+	if lastEvent.Stage == traversal.StageName {
 		return true
 	}
-	return event.Stage == mapping.StageName && !event.Successful
+	return lastEvent.Stage == mapping.StageName && !lastEvent.Successful
 }

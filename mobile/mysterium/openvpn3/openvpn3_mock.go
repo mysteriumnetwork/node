@@ -62,7 +62,7 @@ func (s Session) Start() {
 
 // Wait mock
 func (s Session) Wait() error {
-	return errors.New("using mock openvp3")
+	return errors.New("using mock openvpn3")
 }
 
 // Reconnect mock

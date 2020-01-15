@@ -19,7 +19,9 @@ package kernelspace
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net"
+	"time"
 
 	"github.com/jackpal/gateway"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -29,11 +31,6 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
-
-var allowedIPs = []net.IPNet{
-	{IP: net.IPv4zero, Mask: net.CIDRMask(0, 32)},
-	{IP: net.IPv6zero, Mask: net.CIDRMask(0, 128)},
-}
 
 type client struct {
 	iface    string
@@ -65,18 +62,36 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr ne
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) AddPeer(iface string, peer wg.AddPeerOptions, _ ...string) error {
+func (c *client) AddPeer(iface string, peer wg.Peer) error {
 	endpoint := peer.Endpoint
 	publicKey, err := stringToKey(peer.PublicKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not convert string key to wgtypes.Key")
+	}
+
+	// Apply keep alive interval
+	var keepAliveInterval *time.Duration
+	if peer.KeepAlivePeriodSeconds > 0 {
+		interval := time.Duration(peer.KeepAlivePeriodSeconds) * time.Second
+		keepAliveInterval = &interval
+	}
+
+	// Apply allowed IPs network
+	var allowedIPs []net.IPNet
+	for _, ip := range peer.AllowedIPs {
+		_, network, err := net.ParseCIDR(ip)
+		if err != nil {
+			return fmt.Errorf("could not parse IP %q: %v", ip, err)
+		}
+		allowedIPs = append(allowedIPs, *network)
 	}
 
 	var deviceConfig wgtypes.Config
 	deviceConfig.Peers = []wgtypes.PeerConfig{{
-		Endpoint:   endpoint,
-		PublicKey:  publicKey,
-		AllowedIPs: allowedIPs,
+		Endpoint:                    endpoint,
+		PublicKey:                   publicKey,
+		AllowedIPs:                  allowedIPs,
+		PersistentKeepaliveInterval: keepAliveInterval,
 	}}
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }

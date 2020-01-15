@@ -24,8 +24,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// NatPinger allows to send nat pings as well as stop it
-type NatPinger interface {
+// NATPinger allows to send nat pings as well as stop it
+type NATPinger interface {
 	Start()
 	Stop()
 }
@@ -46,7 +46,7 @@ func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
 	publisher Publisher,
-	natPinger NatPinger,
+	natPinger NATPinger,
 	uiServer UIServer,
 ) *Node {
 	return &Node{
@@ -63,7 +63,7 @@ type Node struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 	publisher         Publisher
-	natPinger         NatPinger
+	natPinger         NATPinger
 	uiServer          UIServer
 }
 

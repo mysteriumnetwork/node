@@ -51,13 +51,8 @@ func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net
 	return nil
 }
 
-func (c *client) AddPeer(iface string, peer wg.AddPeerOptions, _ ...string) error {
-	p := wg.Peer{
-		PublicKey:  peer.PublicKey,
-		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
-		Endpoint:   peer.Endpoint,
-	}
-	if err := c.setDeviceConfig(p.Encode()); err != nil {
+func (c *client) AddPeer(iface string, peer wg.Peer) error {
+	if err := c.setDeviceConfig(peer.Encode()); err != nil {
 		errors.Wrap(err, "failed to add device peer")
 	}
 	return nil

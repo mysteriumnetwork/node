@@ -153,10 +153,10 @@ func TestPeerConfig_Encode(t *testing.T) {
 		{
 			name: "Test encode all filled values",
 			peer: Peer{
-				PublicKey:       "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
-				Endpoint:        endpoint(),
-				AllowedIPs:      []string{"192.168.4.10/32", "192.168.4.11/32"},
-				KeepAlivePeriod: 20,
+				PublicKey:              "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
+				Endpoint:               endpoint(),
+				AllowedIPs:             []string{"192.168.4.10/32", "192.168.4.11/32"},
+				KeepAlivePeriodSeconds: 20,
 			},
 			expected: `public_key=0f2c702c9fbe8d53be6b3bacbbbacf127cdd81f9bed1f88e050d464db924dd04
 persistent_keepalive_interval=20
@@ -168,10 +168,10 @@ allowed_ip=192.168.4.11/32
 		{
 			name: "Test encode default values",
 			peer: Peer{
-				PublicKey:       "",
-				Endpoint:        nil,
-				AllowedIPs:      []string{},
-				KeepAlivePeriod: 0,
+				PublicKey:              "",
+				Endpoint:               nil,
+				AllowedIPs:             []string{},
+				KeepAlivePeriodSeconds: 0,
 			},
 			expected: `public_key=
 persistent_keepalive_interval=0

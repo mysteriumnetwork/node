@@ -18,7 +18,6 @@
 package service
 
 import (
-	"encoding/json"
 	"net"
 	"testing"
 	"time"
@@ -63,19 +62,6 @@ func Test_GetProposal(t *testing.T) {
 	)
 }
 
-func Test_Manager_Serve(t *testing.T) {
-	manager := newManagerStub(pubIP, outIP, country)
-
-	go func() {
-		err := manager.Serve(providerID)
-		assert.NoError(t, err)
-	}()
-
-	sessionConfig, err := manager.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`), nil)
-	assert.NoError(t, err)
-	assert.NotNil(t, sessionConfig)
-}
-
 func Test_Manager_Stop(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
 
@@ -89,6 +75,15 @@ func Test_Manager_Stop(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func Test_Manager_ProviderConfig_FailsWhenSessionConfigIsInvalid(t *testing.T) {
+	manager := newManagerStub(pubIP, outIP, country)
+
+	params, err := manager.ProvideConfig(nil)
+
+	assert.Nil(t, params)
+	assert.Error(t, err)
+}
+
 // usually time.Sleep call gives a chance for other goroutines to kick in important when testing async code
 func waitABit() {
 	time.Sleep(10 * time.Millisecond)
@@ -96,19 +91,20 @@ func waitABit() {
 
 type mockConnectionEndpoint struct{}
 
-func (mce *mockConnectionEndpoint) InterfaceName() string                       { return "mce0" }
-func (mce *mockConnectionEndpoint) Stop() error                                 { return nil }
-func (mce *mockConnectionEndpoint) Start(_ *wg.ServiceConfig) error             { return nil }
-func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)           { return wg.ServiceConfig{}, nil }
-func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wg.AddPeerOptions) error { return nil }
-func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                   { return nil }
-func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error              { return nil }
+func (mce *mockConnectionEndpoint) InterfaceName() string             { return "mce0" }
+func (mce *mockConnectionEndpoint) Stop() error                       { return nil }
+func (mce *mockConnectionEndpoint) Start(_ wg.StartConfig) error      { return nil }
+func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error) { return wg.ServiceConfig{}, nil }
+func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wg.Peer) error { return nil }
+func (mce *mockConnectionEndpoint) RemovePeer(_ string) error         { return nil }
+func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error    { return nil }
 func (mce *mockConnectionEndpoint) PeerStats() (*wg.Stats, error) {
 	return &wg.Stats{LastHandshake: time.Now()}, nil
 }
 
 func newManagerStub(pub, out, country string) *Manager {
 	return &Manager{
+		done:       make(chan struct{}),
 		ipResolver: ip.NewResolverMock("1.2.3.4"),
 		natService: &serviceFake{},
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {

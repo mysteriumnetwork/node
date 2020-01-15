@@ -512,6 +512,8 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 	wireguard.Bootstrap()
 	factory := &WireguardConnectionFactory{
 		tunnelSetup: wgTunnelSetup,
+		ipResolver:  mb.ipResolver,
+		natPinger:   mb.natPinger,
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
 }

@@ -102,11 +102,10 @@ func (wrapper *openvpnConnection) GetConfig() (connection.ConsumerConfig, error)
 
 	publicIP, err := wrapper.ipResolver.GetPublicIP()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get consumer config")
+		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
 	return &openvpn.ConsumerConfig{
-		// skip sending port here, since provider generates port for consumer in VPNConfig
 		IP: publicIP,
 	}, nil
 }

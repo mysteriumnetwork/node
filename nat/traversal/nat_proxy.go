@@ -74,7 +74,7 @@ func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, 
 	np.socketProtect(int(fd.Fd()))
 
 	for {
-		log.Info().Msg("Waiting connect from openvpn3 client process")
+		log.Info().Msg("Waiting connect from client")
 		// If for some reason consumer disconnects, new connection will be from different port
 		proxyConn, err := net.ListenUDP("udp4", laddr)
 		if err != nil {

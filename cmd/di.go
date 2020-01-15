@@ -138,7 +138,7 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.EventBasedStorage
 
-	NATPinger      traversal.NatPinger
+	NATPinger      traversal.NATPinger
 	NATTracker     *event.Tracker
 	NATEventSender *event.Sender
 

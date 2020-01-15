@@ -40,8 +40,8 @@ var (
 	errNATPunchAttemptTimedOut = errors.New("NAT punch attempt timed out")
 )
 
-// NatPinger is responsible for pinging nat holes
-type NatPinger interface {
+// NATPinger is responsible for pinging nat holes
+type NATPinger interface {
 	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
 	PingTarget(*Params)
 	BindServicePort(key string, port int)
@@ -59,14 +59,14 @@ type Pinger struct {
 	stop           chan struct{}
 	stopNATProxy   chan struct{}
 	once           sync.Once
-	natEventWaiter NatEventWaiter
+	natEventWaiter NATEventWaiter
 	natProxy       *NATProxy
 	previousStage  string
 	eventPublisher Publisher
 }
 
-// NatEventWaiter is responsible for waiting for nat events
-type NatEventWaiter interface {
+// NATEventWaiter is responsible for waiting for nat events
+type NATEventWaiter interface {
 	WaitForEvent() event.Event
 }
 
@@ -81,7 +81,7 @@ type Publisher interface {
 }
 
 // NewPinger returns Pinger instance
-func NewPinger(waiter NatEventWaiter, proxy *NATProxy, previousStage string, publisher Publisher) NatPinger {
+func NewPinger(waiter NATEventWaiter, proxy *NATProxy, previousStage string, publisher Publisher) NATPinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})

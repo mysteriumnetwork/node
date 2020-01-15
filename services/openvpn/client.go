@@ -47,7 +47,6 @@ type Client struct {
 	processFactory      processFactory
 	ipResolver          ip.Resolver
 	natPinger           NATPinger
-	publicIP            string
 	pingerStop          chan struct{}
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
@@ -109,25 +108,25 @@ func (c *Client) Stop() {
 
 // GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
-	ip, err := c.ipResolver.GetPublicIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get consumer config")
-	}
-	c.publicIP = ip
-
 	switch c.natPinger.(type) {
 	case *traversal.NoopPinger:
 		log.Info().Msg("Noop pinger detected, returning nil client config.")
 		return nil, nil
 	}
 
+	publicIP, err := c.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get consumer public IP")
+	}
+
 	return &ConsumerConfig{
-		IP: &ip,
+		IP: publicIP,
 	}, nil
 }
 
 //VPNConfig structure represents VPN configuration options for given session
 type VPNConfig struct {
+	// OriginalRemoteIP and OriginalRemotePort are used for NAT punching from consumer side.
 	OriginalRemoteIP   string
 	OriginalRemotePort int
 
