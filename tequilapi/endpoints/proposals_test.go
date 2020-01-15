@@ -22,7 +22,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +50,7 @@ var serviceProposals = []market.ServiceProposal{
 }
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
-	mockProposalProvider := &mockProposalProvider{
+	repository := &mockProposalRepository{
 		//we assume that underling component does correct filtering
 		proposals: []market.ServiceProposal{serviceProposals[0]},
 	}
@@ -67,7 +67,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mockQualityProvider{}).List
+	handlerFunc := NewProposalsEndpoint(repository, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -90,11 +90,11 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	assert.Equal(t, &proposalsFilter{providerID: "0xProviderId"}, mockProposalProvider.recordedFilter)
+	assert.Equal(t, &proposal.Filter{ProviderID: "0xProviderId"}, repository.recordedFilter)
 }
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
-	mockProposalProvider := &mockProposalProvider{
+	repository := &mockProposalRepository{
 		proposals: []market.ServiceProposal{serviceProposals[0]},
 	}
 
@@ -111,7 +111,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mockQualityProvider{}).List
+	handlerFunc := NewProposalsEndpoint(repository, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -135,16 +135,16 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 		resp.Body.String(),
 	)
 	assert.Equal(t,
-		&proposalsFilter{
-			accessPolicyID:     "accessPolicyId",
-			accessPolicySource: "accessPolicySource",
+		&proposal.Filter{
+			AccessPolicyID:     "accessPolicyId",
+			AccessPolicySource: "accessPolicySource",
 		},
-		mockProposalProvider.recordedFilter,
+		repository.recordedFilter,
 	)
 }
 
 func TestProposalsEndpointList(t *testing.T) {
-	proposalProvider := &mockProposalProvider{
+	repository := &mockProposalRepository{
 		proposals: serviceProposals,
 	}
 
@@ -156,7 +156,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(proposalProvider, &mockQualityProvider{}).List
+	handlerFunc := NewProposalsEndpoint(repository, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -194,7 +194,7 @@ func TestProposalsEndpointList(t *testing.T) {
 }
 
 func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
-	proposalProvider := &mockProposalProvider{
+	repository := &mockProposalRepository{
 		proposals: serviceProposals,
 	}
 	req, err := http.NewRequest(
@@ -205,7 +205,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(proposalProvider, &mockQualityProvider{}).List
+	handlerFunc := NewProposalsEndpoint(repository, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -268,21 +268,19 @@ func (m *mockQualityProvider) ProposalsMetrics() []quality.ConnectMetric {
 	}
 }
 
-type mockProposalProvider struct {
-	recordedFilter discovery.ProposalFilter
+type mockProposalRepository struct {
 	proposals      []market.ServiceProposal
+	recordedFilter *proposal.Filter
 }
 
-func (mpp *mockProposalProvider) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	if len(mpp.proposals) == 0 {
+func (m *mockProposalRepository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	if len(m.proposals) == 0 {
 		return nil, nil
 	}
-	return &mpp.proposals[0], nil
+	return &m.proposals[0], nil
 }
 
-func (mpp *mockProposalProvider) FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error) {
-	mpp.recordedFilter = filter
-	return mpp.proposals, nil
+func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+	m.recordedFilter = filter
+	return m.proposals, nil
 }
-
-var _ ProposalFinder = &mockProposalProvider{}

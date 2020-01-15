@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,30 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package brokerdiscovery
 
 import (
 	"fmt"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
-// ProposalFinder continuously tracks service proposals from discovery service to storage
-type ProposalFinder interface {
+// Worker continuously tracks service proposals from discovery service to storage
+type Worker interface {
 	Start() error
 	Stop()
 }
 
 // ProposalReducer proposal match function
 type ProposalReducer func(proposal market.ServiceProposal) bool
-
-// ProposalFilter defines interface with proposal match function
-type ProposalFilter interface {
-	Matches(proposal market.ServiceProposal) bool
-	ToAPIQuery() mysterium.ProposalsQuery
-}
 
 // NewStorage creates new instance of ProposalStorage
 func NewStorage() *ProposalStorage {
@@ -67,16 +61,16 @@ func (s *ProposalStorage) MatchProposals(match ProposalReducer) ([]market.Servic
 	defer s.mutex.Unlock()
 
 	proposals := make([]market.ServiceProposal, 0)
-	for _, proposal := range s.proposals {
-		if match(proposal) {
-			proposals = append(proposals, proposal)
+	for _, p := range s.proposals {
+		if match(p) {
+			proposals = append(proposals, p)
 		}
 	}
 	return proposals, nil
 }
 
 // FindProposals fetches currently active service proposals from storage by given filter
-func (s *ProposalStorage) FindProposals(filter ProposalFilter) ([]market.ServiceProposal, error) {
+func (s *ProposalStorage) FindProposals(filter proposal.Filter) ([]market.ServiceProposal, error) {
 	return s.MatchProposals(filter.Matches)
 }
 

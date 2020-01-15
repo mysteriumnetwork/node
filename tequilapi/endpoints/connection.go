@@ -26,6 +26,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -90,7 +91,7 @@ type connectionResponse struct {
 	SessionID string `json:"sessionId,omitempty"`
 
 	// example: {"id":1,"providerId":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","serviceType":"openvpn","serviceDefinition":{"locationOriginate":{"asn":"","country":"CA"}}}
-	Proposal *proposal `json:"proposal,omitempty"`
+	Proposal *proposalDTO `json:"proposal,omitempty"`
 }
 
 // swagger:model IPDTO
@@ -133,17 +134,17 @@ type ConnectionEndpoint struct {
 	manager           connection.Manager
 	statisticsTracker SessionStatisticsTracker
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
-	proposalProvider ProposalGetter
-	identityRegistry identityRegistry
+	proposalRepository proposal.Repository
+	identityRegistry   identityRegistry
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter, identityRegistry identityRegistry) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, statsKeeper SessionStatisticsTracker, proposalRepository proposal.Repository, identityRegistry identityRegistry) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
-		manager:           manager,
-		statisticsTracker: statsKeeper,
-		proposalProvider:  proposalProvider,
-		identityRegistry:  identityRegistry,
+		manager:            manager,
+		statisticsTracker:  statsKeeper,
+		proposalRepository: proposalRepository,
+		identityRegistry:   identityRegistry,
 	}
 }
 
@@ -232,7 +233,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	// TODO Pass proposal ID directly in request
-	proposal, err := ce.proposalProvider.GetProposal(market.ProposalID{
+	proposal, err := ce.proposalRepository.Proposal(market.ProposalID{
 		ProviderID:  cr.ProviderID,
 		ServiceType: cr.ServiceType,
 	})
@@ -324,8 +325,8 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter, identityRegistry identityRegistry) {
-	connectionEndpoint := NewConnectionEndpoint(manager, statsKeeper, proposalProvider, identityRegistry)
+	statsKeeper SessionStatisticsTracker, proposalRepository proposal.Repository, identityRegistry identityRegistry) {
+	connectionEndpoint := NewConnectionEndpoint(manager, statsKeeper, proposalRepository, identityRegistry)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)

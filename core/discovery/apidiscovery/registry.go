@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,31 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package noop
+package apidiscovery
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
-type registryNoop struct{}
+type registryAPI struct {
+	mysteriumAPI *mysterium.MysteriumAPI
+}
 
-// NewRegistry creates an instance of composite registry
-func NewRegistry() *registryNoop {
-	return &registryNoop{}
+// NewRegistry create instance if API registry
+func NewRegistry(mysteriumAPI *mysterium.MysteriumAPI) *registryAPI {
+	return &registryAPI{
+		mysteriumAPI: mysteriumAPI,
+	}
 }
 
 // RegisterProposal registers service proposal to discovery service
-func (rc *registryNoop) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return nil
+func (ra *registryAPI) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	return ra.mysteriumAPI.RegisterProposal(proposal, signer)
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (rc *registryNoop) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return nil
+func (ra *registryAPI) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	return ra.mysteriumAPI.UnregisterProposal(proposal, signer)
 }
 
 // PingProposal pings service proposal as being alive
-func (rc *registryNoop) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return nil
+func (ra *registryAPI) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	return ra.mysteriumAPI.PingProposal(proposal, signer)
 }

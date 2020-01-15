@@ -15,14 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package broker
+package brokerdiscovery
 
 import (
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,9 +45,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	storage := discovery.NewStorage()
-
-	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -58,25 +55,23 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	}`)
 	time.Sleep(5 * time.Millisecond)
 
-	assert.Len(t, storage.Proposals(), 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, storage.Proposals())
+	assert.Len(t, subscriber.storage.Proposals(), 1)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, subscriber.storage.Proposals())
 
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x2"}
 	}`)
 	time.Sleep(1 * time.Millisecond)
 
-	assert.Len(t, storage.Proposals(), 2)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, storage.Proposals())
+	assert.Len(t, subscriber.storage.Proposals(), 2)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, subscriber.storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	storage := discovery.NewStorage()
-
-	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -86,16 +81,14 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	}`)
 	time.Sleep(15 * time.Millisecond)
 
-	assert.Len(t, storage.Proposals(), 0)
+	assert.Empty(t, subscriber.storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	storage := discovery.NewStorage()
-
-	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -110,19 +103,16 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	}`)
 	time.Sleep(1 * time.Millisecond)
 
-	assert.Len(t, storage.Proposals(), 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, storage.Proposals())
+	assert.Len(t, subscriber.storage.Proposals(), 1)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, subscriber.storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	storage := discovery.NewStorage()
-	storage.AddProposal(proposalFirst)
-	storage.AddProposal(proposalSecond)
-
-	subscriber := NewFinder(storage, connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber := NewRepository(connection, 10*time.Millisecond, 1*time.Millisecond)
+	subscriber.storage.AddProposal(proposalFirst, proposalSecond)
 	err := subscriber.Start()
 	defer subscriber.Stop()
 	assert.NoError(t, err)
@@ -132,8 +122,8 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	}`)
 	time.Sleep(1 * time.Millisecond)
 
-	assert.Len(t, storage.Proposals(), 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, storage.Proposals())
+	assert.Len(t, subscriber.storage.Proposals(), 1)
+	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, subscriber.storage.Proposals())
 }
 
 func proposalRegister(connection nats.Connection, payload string) {

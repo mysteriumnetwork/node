@@ -20,7 +20,7 @@ package mysterium
 import (
 	"encoding/json"
 
-	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -55,7 +55,7 @@ type GetProposalRequest struct {
 	ServiceType string
 }
 
-type proposal struct {
+type proposalDTO struct {
 	ID           int                  `json:"id"`
 	ProviderID   string               `json:"providerId"`
 	ServiceType  string               `json:"serviceType"`
@@ -64,15 +64,11 @@ type proposal struct {
 }
 
 type getProposalsResponse struct {
-	Proposals []*proposal `json:"proposals"`
+	Proposals []*proposalDTO `json:"proposals"`
 }
 
 type getProposalResponse struct {
-	Proposal *proposal `json:"proposal"`
-}
-
-type proposalStorage interface {
-	Set(proposals ...market.ServiceProposal)
+	Proposal *proposalDTO `json:"proposal"`
 }
 
 type mysteriumAPI interface {
@@ -84,35 +80,35 @@ type qualityFinder interface {
 }
 
 func newProposalsManager(
-	proposalsStore *discovery.ProposalStorage,
+	repository proposal.Repository,
 	mysteriumAPI mysteriumAPI,
 	qualityFinder qualityFinder,
 ) *proposalsManager {
 	return &proposalsManager{
-		proposalsStore: proposalsStore,
-		mysteriumAPI:   mysteriumAPI,
-		qualityFinder:  qualityFinder,
+		repository:    repository,
+		mysteriumAPI:  mysteriumAPI,
+		qualityFinder: qualityFinder,
 	}
 }
 
 type proposalsManager struct {
-	proposalsStore *discovery.ProposalStorage
-	mysteriumAPI   mysteriumAPI
-	qualityFinder  qualityFinder
+	repository    proposal.Repository
+	cache         []market.ServiceProposal
+	mysteriumAPI  mysteriumAPI
+	qualityFinder qualityFinder
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error) {
 	// Get proposals from cache if exists.
 	if !req.Refresh {
-		cachedProposals, err := m.getFromCache()
-		if err != nil {
-			return nil, err
+		cachedProposals := m.getFromCache()
+		if len(cachedProposals) > 0 {
+			return m.mapToProposalsResponse(cachedProposals)
 		}
-		return m.mapToProposalsResponse(cachedProposals)
 	}
 
 	// Get proposals from remote discovery api and store in cache.
-	apiProposals, err := m.getFromAPI(req.ShowOpenvpnProposals, req.ShowWireguardProposals)
+	apiProposals, err := m.getFromRepository()
 	if err != nil {
 		return nil, err
 	}
@@ -122,40 +118,27 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 }
 
 func (m *proposalsManager) getProposal(req *GetProposalRequest) ([]byte, error) {
-	proposal, err := m.proposalsStore.GetProposal(market.ProposalID{
+	result, err := m.repository.Proposal(market.ProposalID{
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	if proposal == nil {
+	if result == nil {
 		return nil, nil
 	}
-	return m.mapToProposalResponse(proposal)
+	return m.mapToProposalResponse(result)
 }
 
-func (m *proposalsManager) getFromCache() ([]market.ServiceProposal, error) {
-	return m.proposalsStore.MatchProposals(func(v market.ServiceProposal) bool {
-		return true
+func (m *proposalsManager) getFromCache() []market.ServiceProposal {
+	return m.cache
+}
+
+func (m *proposalsManager) getFromRepository() ([]market.ServiceProposal, error) {
+	allProposals, err := m.repository.Proposals(&proposal.Filter{
+		ServiceType: "all",
 	})
-}
-
-func (m *proposalsManager) getFromAPI(showOpenvpnProposals, showWireguardProposals bool) ([]market.ServiceProposal, error) {
-	var serviceType string
-	if showOpenvpnProposals && showWireguardProposals {
-		serviceType = "all"
-	} else if showOpenvpnProposals {
-		serviceType = openvpn.ServiceType
-	} else if showWireguardProposals {
-		serviceType = wireguard.ServiceType
-	}
-	query := mysterium.ProposalsQuery{
-		ServiceType:     serviceType,
-		AccessPolicyAll: false,
-	}
-	allProposals, err := m.mysteriumAPI.QueryProposals(query)
 	if err != nil {
 		return nil, err
 	}
@@ -172,13 +155,13 @@ func (m *proposalsManager) getFromAPI(showOpenvpnProposals, showWireguardProposa
 }
 
 func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
-	m.proposalsStore.Set(proposals)
+	m.cache = proposals
 }
 
 func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) ([]byte, error) {
-	var proposals []*proposal
+	var proposals []*proposalDTO
 	for _, p := range serviceProposals {
-		proposals = append(proposals, &proposal{
+		proposals = append(proposals, &proposalDTO{
 			ID:          p.ID,
 			ProviderID:  p.ProviderID,
 			ServiceType: p.ServiceType,
@@ -197,13 +180,13 @@ func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.Serv
 }
 
 func (m *proposalsManager) mapToProposalResponse(p *market.ServiceProposal) ([]byte, error) {
-	proposal := &proposal{
+	dto := &proposalDTO{
 		ID:          p.ID,
 		ProviderID:  p.ProviderID,
 		ServiceType: p.ServiceType,
 		CountryCode: m.getServiceCountryCode(p),
 	}
-	res := &getProposalResponse{Proposal: proposal}
+	res := &getProposalResponse{Proposal: dto}
 	bytes, err := json.Marshal(res)
 	if err != nil {
 		return nil, err
@@ -218,7 +201,7 @@ func (m *proposalsManager) getServiceCountryCode(p *market.ServiceProposal) stri
 	return p.ServiceDefinition.GetLocation().Country
 }
 
-func (m *proposalsManager) addQualityData(proposals []*proposal) {
+func (m *proposalsManager) addQualityData(proposals []*proposalDTO) {
 	metrics := m.qualityFinder.ProposalsMetrics()
 
 	// Convert metrics slice to map for fast lookup.

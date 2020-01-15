@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package endpoints
+package proposal
 
 import (
 	"testing"
@@ -69,7 +69,7 @@ func (service mockService) GetLocation() market.Location {
 }
 
 func Test_ProposalFilter_FiltersAll(t *testing.T) {
-	filter := &proposalsFilter{}
+	filter := &Filter{}
 	assert.True(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
 	assert.True(t, filter.Matches(proposalProvider1Noop))
@@ -77,8 +77,8 @@ func Test_ProposalFilter_FiltersAll(t *testing.T) {
 }
 
 func Test_ProposalFilter_FiltersByProviderID(t *testing.T) {
-	filter := &proposalsFilter{
-		providerID: provider1,
+	filter := &Filter{
+		ProviderID: provider1,
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -87,16 +87,16 @@ func Test_ProposalFilter_FiltersByProviderID(t *testing.T) {
 }
 
 func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
-	filter := &proposalsFilter{
-		serviceType: serviceTypeNoop,
+	filter := &Filter{
+		ServiceType: serviceTypeNoop,
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
 	assert.True(t, filter.Matches(proposalProvider1Noop))
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 
-	filter = &proposalsFilter{
-		serviceType: serviceTypeStreaming,
+	filter = &Filter{
+		ServiceType: serviceTypeStreaming,
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -105,16 +105,16 @@ func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
 }
 
 func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
-	filter := &proposalsFilter{
-		locationType: "datacenter",
+	filter := &Filter{
+		LocationType: "datacenter",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
 	assert.False(t, filter.Matches(proposalProvider1Noop))
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 
-	filter = &proposalsFilter{
-		locationType: "residential",
+	filter = &Filter{
+		LocationType: "residential",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
@@ -123,25 +123,25 @@ func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 }
 
 func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
-	filter := &proposalsFilter{
-		accessPolicyID: "whitelist",
+	filter := &Filter{
+		AccessPolicyID: "whitelist",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
 	assert.False(t, filter.Matches(proposalProvider1Noop))
 	assert.True(t, filter.Matches(proposalProvider2Streaming))
 
-	filter = &proposalsFilter{
-		accessPolicyID: "blacklist",
+	filter = &Filter{
+		AccessPolicyID: "blacklist",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
 	assert.False(t, filter.Matches(proposalProvider1Noop))
 	assert.True(t, filter.Matches(proposalProvider2Streaming))
 
-	filter = &proposalsFilter{
-		accessPolicyID:     "whitelist",
-		accessPolicySource: "unknown.txt",
+	filter = &Filter{
+		AccessPolicyID:     "whitelist",
+		AccessPolicySource: "unknown.txt",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
