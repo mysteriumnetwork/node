@@ -48,7 +48,7 @@ test:
   stage: test
   tags: [go]
   script:
-    - go run mage.go -v Test
+    - go run mage.go -v TestWithCoverage
     - touch $CI_PROJECT_DIR/success
   after_script:
     - |
