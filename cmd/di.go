@@ -454,7 +454,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(discovery.ProposalEventTopic, di.QualityMetricsSender.SendProposalEvent)
+	err = di.EventBus.SubscribeAsync(discovery.EventTopicProposalAnnounce, di.QualityMetricsSender.SendProposalEvent)
 	if err != nil {
 		return err
 	}

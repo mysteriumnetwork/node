@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,14 +88,14 @@ func (s *ProposalStorage) Set(proposals []market.ServiceProposal) {
 	for _, p := range proposals {
 		index, exist := s.getProposalIndex(proposalsOld, p.UniqueID())
 		if exist {
-			go s.eventPublisher.Publish(discovery.ProposalUpdatedEventTopic, p)
+			go s.eventPublisher.Publish(discovery.EventTopicProposalUpdated, p)
 			proposalsOld = append(proposalsOld[:index], proposalsOld[index+1:]...)
 		} else {
-			go s.eventPublisher.Publish(discovery.ProposalAddedEventTopic, p)
+			go s.eventPublisher.Publish(discovery.EventTopicProposalAdded, p)
 		}
 	}
 	for _, p := range proposalsOld {
-		go s.eventPublisher.Publish(discovery.ProposalRemovedEventTopic, p)
+		go s.eventPublisher.Publish(discovery.EventTopicProposalRemoved, p)
 	}
 	s.proposals = proposals
 }
@@ -127,9 +127,12 @@ func (s *ProposalStorage) AddProposal(proposals ...market.ServiceProposal) {
 	defer s.mutex.Unlock()
 
 	for _, p := range proposals {
-		if _, exist := s.getProposalIndex(s.proposals, p.UniqueID()); !exist {
-			go s.eventPublisher.Publish(discovery.ProposalAddedEventTopic, p)
+		if index, exist := s.getProposalIndex(s.proposals, p.UniqueID()); !exist {
+			s.eventPublisher.Publish(discovery.EventTopicProposalAdded, p)
 			s.proposals = append(s.proposals, p)
+		} else {
+			s.eventPublisher.Publish(discovery.EventTopicProposalUpdated, p)
+			s.proposals[index] = p
 		}
 	}
 }
@@ -140,7 +143,7 @@ func (s *ProposalStorage) RemoveProposal(id market.ProposalID) {
 	defer s.mutex.Unlock()
 
 	if index, exist := s.getProposalIndex(s.proposals, id); exist {
-		go s.eventPublisher.Publish(discovery.ProposalRemovedEventTopic, s.proposals[index])
+		go s.eventPublisher.Publish(discovery.EventTopicProposalRemoved, s.proposals[index])
 		s.proposals = append(s.proposals[:index], s.proposals[index+1:]...)
 	}
 }

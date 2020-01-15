@@ -44,6 +44,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // MobileNode represents node object tuned for mobile devices
@@ -212,24 +213,27 @@ type ProposalChangeCallback interface {
 
 // RegisterProposalAddedCallback registers callback which is called on newly announced proposals
 func (mb *MobileNode) RegisterProposalAddedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.ProposalAddedEventTopic, func(proposal market.ServiceProposal) {
-		proposalPayload, _ := mb.proposalsManager.mapToProposalResponse(&proposal)
+	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalAdded, func(proposal market.ServiceProposal) {
+		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
+		log.Error().Err(err).Msg("Proposal mapping failed")
 		cb.OnChange(proposalPayload)
 	})
 }
 
-// RegisterProposalAddedCallback registers callback which is called on re-announced proposals
+// RegisterProposalUpdatedCallback registers callback which is called on re-announced proposals
 func (mb *MobileNode) RegisterProposalUpdatedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.ProposalUpdatedEventTopic, func(proposal market.ServiceProposal) {
-		proposalPayload, _ := mb.proposalsManager.mapToProposalResponse(&proposal)
+	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalUpdated, func(proposal market.ServiceProposal) {
+		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
+		log.Error().Err(err).Msg("Proposal mapping failed")
 		cb.OnChange(proposalPayload)
 	})
 }
 
-// RegisterProposalAddedCallback registers callback which is called on re-announced proposals
+// RegisterProposalRemovedCallback registers callback which is called on de-announced proposals
 func (mb *MobileNode) RegisterProposalRemovedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.ProposalRemovedEventTopic, func(proposal market.ServiceProposal) {
-		proposalPayload, _ := mb.proposalsManager.mapToProposalResponse(&proposal)
+	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalRemoved, func(proposal market.ServiceProposal) {
+		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
+		log.Error().Err(err).Msg("Proposal mapping failed")
 		cb.OnChange(proposalPayload)
 	})
 }
