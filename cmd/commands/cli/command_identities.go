@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 )
 
@@ -35,6 +37,7 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
 		"  " + usageTopupIdentity,
+		"  " + usageSettle,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -57,6 +60,8 @@ func (c *cliApp) identities(argsString string) {
 		c.registerIdentity(actionArgs)
 	case "topup":
 		c.topupIdentity(actionArgs)
+	case "settle":
+		c.settle(actionArgs)
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -159,7 +164,6 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		warn(errors.Wrap(err, "could not register identity"))
 		return
 	}
-
 	info("Waiting for registration to complete")
 	var registered, timeout bool
 	for timer := time.After(3 * time.Minute); !timeout && !registered; {
@@ -205,4 +209,40 @@ func (c *cliApp) topupIdentity(args []string) {
 		return
 	}
 	success("Identity topped up")
+}
+
+const usageSettle = "settle <providerIdentity>"
+
+func (c *cliApp) settle(args []string) {
+	if len(args) != 1 {
+		info("Usage: " + usageSettle)
+		return
+	}
+	accountantID := config.GetString(config.FlagAccountantID)
+	info("Waiting for settlement to complete")
+	errChan := make(chan error)
+
+	go func() {
+		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), identity.FromAddress(accountantID), true)
+	}()
+
+	timeout := time.After(time.Minute * 2)
+	for {
+		select {
+		case <-timeout:
+			fmt.Println()
+			warn("Settlement timed out")
+			return
+		case <-time.After(time.Millisecond * 500):
+			fmt.Print(".")
+		case err := <-errChan:
+			fmt.Println()
+			if err != nil {
+				warn("settlement failed: ", err.Error())
+				return
+			}
+			info("settlement succeeded")
+			return
+		}
+	}
 }

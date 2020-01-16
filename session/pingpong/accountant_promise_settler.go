@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
@@ -254,7 +255,7 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 		case <-aps.stop:
 			return
 		case p := <-aps.settleQueue:
-			aps.settle(p, nil)
+			go aps.settle(p)
 		}
 	}
 }
@@ -262,12 +263,8 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 // ErrNothingToSettle indicates that there is nothing to settle.
 var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
-// ForceSettleAsync forces the settling of promises for the given accountant and provider combo without waiting for the result.
-func (aps *AccountantPromiseSettler) ForceSettleAsync(providerID, accountantID identity.Identity) error {
-	return aps.forceSettle(providerID, accountantID, nil)
-}
-
-func (aps *AccountantPromiseSettler) forceSettle(providerID, accountantID identity.Identity, errChan *chan error) error {
+// ForceSettle forces the settlement for a provider
+func (aps *AccountantPromiseSettler) ForceSettle(providerID, accountantID identity.Identity) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
@@ -276,46 +273,38 @@ func (aps *AccountantPromiseSettler) forceSettle(providerID, accountantID identi
 		return errors.Wrap(err, "could not get promise from storage")
 	}
 
-	aps.settle(receivedPromise{
-		promise:  promise.Promise,
-		provider: providerID,
-	}, errChan)
-
-	if errChan != nil {
-		err = <-*errChan
-		return err
+	hexR, err := hex.DecodeString(promise.R)
+	if err != nil {
+		return errors.Wrap(err, "could not decode R")
 	}
 
-	return nil
-}
-
-// ForceSettleSync forces the settling of promises for the given accountant and provider combo and waits for the result.
-func (aps *AccountantPromiseSettler) ForceSettleSync(providerID, accountantID identity.Identity) error {
-	errChan := make(chan error)
-	return aps.forceSettle(providerID, accountantID, &errChan)
+	promise.Promise.R = hexR
+	return aps.settle(receivedPromise{
+		promise:  promise.Promise,
+		provider: providerID,
+	})
 }
 
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
-func (aps *AccountantPromiseSettler) settle(p receivedPromise, waiter *chan error) {
+func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
 	aps.setSettling(p.provider, true)
 	log.Info().Msgf("Marked provider %v as requesting setlement", p.provider)
 	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
 	if err != nil {
 		aps.setSettling(p.provider, false)
 		log.Error().Err(err).Msg("Could not subscribe to promise settlement")
-		return
+		return err
 	}
+
+	errCh := make(chan error)
 	go func() {
 		defer cancel()
 		defer aps.setSettling(p.provider, false)
+		defer close(errCh)
 		select {
 		case <-aps.stop:
-			// send a signal to waiter that the settlement was cancelled
-			if waiter != nil {
-				*waiter <- ErrSettleTimeout
-			}
 			return
 		case _, more := <-sink:
 			if !more {
@@ -323,11 +312,6 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise, waiter *chan erro
 			}
 
 			log.Info().Msgf("Settling complete for provider %v", p.provider)
-
-			// send a signal to waiter that the settlement was complete
-			if waiter != nil {
-				close(*waiter)
-			}
 
 			err := aps.resyncState(p.provider)
 			if err != nil {
@@ -341,11 +325,8 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise, waiter *chan erro
 		case <-time.After(aps.config.MaxWaitForSettlement):
 			log.Info().Msgf("Settle timeout for %v", p.provider)
 
-			// send a signal to waiter that the settlement has timedout
-			if waiter != nil {
-				*waiter <- ErrSettleTimeout
-			}
-
+			// send a signal to waiter that the settlement has timed out
+			errCh <- ErrSettleTimeout
 			return
 		}
 	}()
@@ -354,8 +335,10 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise, waiter *chan erro
 	if err != nil {
 		cancel()
 		log.Error().Err(err).Msgf("Could not settle promise for %v", p.provider.Address)
-		return
+		return err
 	}
+
+	return <-errCh
 }
 
 func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling bool) {

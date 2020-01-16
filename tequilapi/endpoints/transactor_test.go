@@ -175,7 +175,7 @@ func Test_SettleAsync_ReturnsError(t *testing.T) {
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
 	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")})
 
-	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	settleRequest := `asdasdasd`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/settle/async",
@@ -187,7 +187,7 @@ func Test_SettleAsync_ReturnsError(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.JSONEq(t, `{"message":"settling failed: explosions everywhere"}`, resp.Body.String())
+	assert.JSONEq(t, `{"message":"failed to unmarshal settle request: invalid character 'a' looking for beginning of value"}`, resp.Body.String())
 }
 
 func Test_SettleSync_OK(t *testing.T) {
@@ -210,7 +210,7 @@ func Test_SettleSync_OK(t *testing.T) {
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
-	assert.Equal(t, http.StatusAccepted, resp.Code)
+	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.Equal(t, "", resp.Body.String())
 }
 
@@ -271,10 +271,6 @@ type mockSettler struct {
 	errToReturn error
 }
 
-func (ms *mockSettler) ForceSettleSync(providerID, accountantID identity.Identity) error {
-	return ms.errToReturn
-}
-
-func (ms *mockSettler) ForceSettleAsync(providerID, accountantID identity.Identity) error {
+func (ms *mockSettler) ForceSettle(providerID, accountantID identity.Identity) error {
 	return ms.errToReturn
 }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -39,8 +40,7 @@ type Transactor interface {
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
-	ForceSettleSync(providerID, accountantID identity.Identity) error
-	ForceSettleAsync(providerID, accountantID identity.Identity) error
+	ForceSettle(providerID, accountantID identity.Identity) error
 }
 
 type transactorEndpoint struct {
@@ -97,12 +97,13 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 }
 
 // SettleRequest represents the request to settle accountant promises
+// swagger:model SettleRequest
 type SettleRequest struct {
 	AccountantID string `json:"accountant_id"`
 	ProviderID   string `json:"provider_id"`
 }
 
-// swagger:operation POST /transactor/settle/sync ErrorMessageDTO
+// swagger:operation POST /transactor/settle/sync SettleSync
 // ---
 // summary: forces the settlement of promises for the given provider and accountant
 // description: Forces a settlement for the accountant promises and blocks until the settlement is complete.
@@ -120,15 +121,16 @@ type SettleRequest struct {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, te.promiseSettler.ForceSettleSync)
+	err := te.settle(request, te.promiseSettler.ForceSettle)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 
-	resp.WriteHeader(http.StatusAccepted)
+	resp.WriteHeader(http.StatusOK)
 }
 
-// swagger:operation POST /transactor/settle/async ErrorMessageDTO
+// swagger:operation POST /transactor/settle/async SettleAsync
 // ---
 // summary: forces the settlement of promises for the given provider and accountant
 // description: Forces a settlement for the accountant promises. Does not wait for completion.
@@ -146,9 +148,18 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, te.promiseSettler.ForceSettleAsync)
+	err := te.settle(request, func(provider, accountant identity.Identity) error {
+		go func() {
+			err := te.promiseSettler.ForceSettle(provider, accountant)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not settle provider(%q) promises", provider.Address)
+			}
+		}()
+		return nil
+	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 
 	resp.WriteHeader(http.StatusAccepted)
@@ -165,7 +176,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), identity.FromAddress(req.AccountantID)), "settling failed")
 }
 
-// swagger:operation POST /transactor/topup ErrorMessageDTO
+// swagger:operation POST /transactor/topup
 // ---
 // summary: tops up myst to the given identity
 // description: tops up myst to the given identity
