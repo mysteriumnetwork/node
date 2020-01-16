@@ -40,6 +40,10 @@ type transactor interface {
 	SettleAndRebalance(id string, promise crypto.Promise) error
 }
 
+type promiseStorage interface {
+	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
+}
+
 type receivedPromise struct {
 	provider identity.Identity
 	promise  crypto.Promise
@@ -54,6 +58,7 @@ type AccountantPromiseSettler struct {
 	registrationStatusProvider registrationStatusProvider
 	ks                         ks
 	transactor                 transactor
+	promiseStorage             promiseStorage
 
 	currentState map[identity.Identity]state
 	settleQueue  chan receivedPromise
@@ -69,7 +74,7 @@ type AccountantPromiseSettlerConfig struct {
 }
 
 // NewAccountantPromiseSettler creates a new instance of accountant promise settler.
-func NewAccountantPromiseSettler(transactor transactor, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, accountantPromiseGetter accountantPromiseGetter, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
+func NewAccountantPromiseSettler(transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, accountantPromiseGetter accountantPromiseGetter, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
 	return &AccountantPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		accountantPromiseGetter:    accountantPromiseGetter,
@@ -77,6 +82,7 @@ func NewAccountantPromiseSettler(transactor transactor, providerChannelStatusPro
 		registrationStatusProvider: registrationStatusProvider,
 		config:                     config,
 		currentState:               make(map[identity.Identity]state),
+		promiseStorage:             promiseStorage,
 
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
@@ -248,12 +254,51 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 		case <-aps.stop:
 			return
 		case p := <-aps.settleQueue:
-			aps.settle(p)
+			aps.settle(p, nil)
 		}
 	}
 }
 
-func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
+// ErrNothingToSettle indicates that there is nothing to settle.
+var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
+
+// ForceSettleAsync forces the settling of promises for the given accountant and provider combo without waiting for the result.
+func (aps *AccountantPromiseSettler) ForceSettleAsync(providerID, accountantID identity.Identity) error {
+	return aps.forceSettle(providerID, accountantID, nil)
+}
+
+func (aps *AccountantPromiseSettler) forceSettle(providerID, accountantID identity.Identity, errChan *chan error) error {
+	promise, err := aps.promiseStorage.Get(providerID, accountantID)
+	if err == ErrNotFound {
+		return ErrNothingToSettle
+	}
+	if err != nil {
+		return errors.Wrap(err, "could not get promise from storage")
+	}
+
+	aps.settle(receivedPromise{
+		promise:  promise.Promise,
+		provider: providerID,
+	}, errChan)
+
+	if errChan != nil {
+		err = <-*errChan
+		return err
+	}
+
+	return nil
+}
+
+// ForceSettleSync forces the settling of promises for the given accountant and provider combo and waits for the result.
+func (aps *AccountantPromiseSettler) ForceSettleSync(providerID, accountantID identity.Identity) error {
+	errChan := make(chan error)
+	return aps.forceSettle(providerID, accountantID, &errChan)
+}
+
+// ErrSettleTimeout indicates that the settlement has timed out
+var ErrSettleTimeout = errors.New("settle timeout")
+
+func (aps *AccountantPromiseSettler) settle(p receivedPromise, waiter *chan error) {
 	aps.setSettling(p.provider, true)
 	log.Info().Msgf("Marked provider %v as requesting setlement", p.provider)
 	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
@@ -267,6 +312,10 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
 		defer aps.setSettling(p.provider, false)
 		select {
 		case <-aps.stop:
+			// send a signal to waiter that the settlement was cancelled
+			if waiter != nil {
+				*waiter <- ErrSettleTimeout
+			}
 			return
 		case _, more := <-sink:
 			if !more {
@@ -274,6 +323,12 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
 			}
 
 			log.Info().Msgf("Settling complete for provider %v", p.provider)
+
+			// send a signal to waiter that the settlement was complete
+			if waiter != nil {
+				close(*waiter)
+			}
+
 			err := aps.resyncState(p.provider)
 			if err != nil {
 				// This will get retried so we do not need to explicitly retry
@@ -285,6 +340,12 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) {
 			return
 		case <-time.After(aps.config.MaxWaitForSettlement):
 			log.Info().Msgf("Settle timeout for %v", p.provider)
+
+			// send a signal to waiter that the settlement has timedout
+			if waiter != nil {
+				*waiter <- ErrSettleTimeout
+			}
+
 			return
 		}
 	}()
