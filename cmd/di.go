@@ -176,6 +176,7 @@ type Dependencies struct {
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
+	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
 }
 
 // Bootstrap initiates all container dependencies
@@ -557,7 +558,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
