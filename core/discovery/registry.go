@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package composite
+package discovery
 
 import (
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
 )
 
 type registryComposite struct {
-	registries []discovery.ProposalRegistry
+	registries []ProposalRegistry
 }
 
 // NewRegistry creates an instance of composite registry
-func NewRegistry(registries ...discovery.ProposalRegistry) *registryComposite {
+func NewRegistry(registries ...ProposalRegistry) *registryComposite {
 	return &registryComposite{registries: registries}
 }
 
 // AddRegistry adds registry to set of registries
-func (rc *registryComposite) AddRegistry(registry discovery.ProposalRegistry) {
+func (rc *registryComposite) AddRegistry(registry ProposalRegistry) {
 	rc.registries = append(rc.registries, registry)
 }
 

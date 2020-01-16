@@ -83,7 +83,7 @@ type serviceInfo struct {
 	// example: Running
 	Status string `json:"status"`
 
-	Proposal proposal `json:"proposal"`
+	Proposal proposalDTO `json:"proposal"`
 
 	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
 }

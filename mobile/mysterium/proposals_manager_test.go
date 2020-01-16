@@ -20,7 +20,7 @@ package mysterium
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -31,29 +31,29 @@ import (
 type proposalManagerTestSuite struct {
 	suite.Suite
 
-	proposalsStore *discovery.ProposalStorage
-	mysteriumAPI   mysteriumAPI
-	qualityFinder  qualityFinder
+	repository    *mockRepository
+	mysteriumAPI  mysteriumAPI
+	qualityFinder qualityFinder
 
 	proposalsManager *proposalsManager
 }
 
 func (s *proposalManagerTestSuite) SetupTest() {
-	s.proposalsStore = discovery.NewStorage()
+	s.repository = &mockRepository{}
 	s.mysteriumAPI = &mockMysteriumAPI{}
 	s.qualityFinder = &mockQualityFinder{}
 
 	s.proposalsManager = newProposalsManager(
-		s.proposalsStore,
+		s.repository,
 		s.mysteriumAPI,
 		s.qualityFinder,
 	)
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
-	s.proposalsStore.Set([]market.ServiceProposal{
+	s.proposalsManager.cache = []market.ServiceProposal{
 		{ProviderID: "p1", ServiceType: "openvpn"},
-	})
+	}
 	s.proposalsManager.qualityFinder = &mockQualityFinder{
 		metrics: []quality.ConnectMetric{
 			{
@@ -81,12 +81,10 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() {
-	s.proposalsStore.Set([]market.ServiceProposal{})
-	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{
-		proposals: []market.ServiceProposal{
-			{ProviderID: "p1", ServiceType: "wireguard"},
-		},
+	s.repository.data = []market.ServiceProposal{
+		{ProviderID: "p1", ServiceType: "wireguard"},
 	}
+	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{}
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		ShowOpenvpnProposals:   false,
 		ShowWireguardProposals: false,
@@ -98,9 +96,9 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 }
 
 func (s *proposalManagerTestSuite) TestGetSingleProposal() {
-	s.proposalsStore.Set([]market.ServiceProposal{
+	s.repository.data = []market.ServiceProposal{
 		{ProviderID: "p1", ServiceType: "wireguard"},
-	})
+	}
 	bytes, err := s.proposalsManager.getProposal(&GetProposalRequest{
 		ProviderID:  "p1",
 		ServiceType: "wireguard",
@@ -112,6 +110,21 @@ func (s *proposalManagerTestSuite) TestGetSingleProposal() {
 
 func TestProposalManagerSuite(t *testing.T) {
 	suite.Run(t, new(proposalManagerTestSuite))
+}
+
+type mockRepository struct {
+	data []market.ServiceProposal
+}
+
+func (m *mockRepository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	if len(m.data) == 0 {
+		return nil, nil
+	}
+	return &m.data[0], nil
+}
+
+func (m *mockRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+	return m.data, nil
 }
 
 type mockMysteriumAPI struct {

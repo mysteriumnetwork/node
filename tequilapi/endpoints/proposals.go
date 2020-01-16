@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -29,7 +29,7 @@ import (
 
 // swagger:model ProposalsList
 type proposalsRes struct {
-	Proposals []*proposal `json:"proposals"`
+	Proposals []*proposalDTO `json:"proposals"`
 }
 
 // swagger:model ServiceLocationDTO
@@ -60,7 +60,7 @@ type metricsRes struct {
 }
 
 // swagger:model ProposalDTO
-type proposal struct {
+type proposalDTO struct {
 	// per provider unique serial number of service description provided
 	// example: 5
 	ID int `json:"id"`
@@ -83,8 +83,8 @@ type proposal struct {
 	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
 
-func proposalToRes(p market.ServiceProposal) *proposal {
-	return &proposal{
+func proposalToRes(p market.ServiceProposal) *proposalDTO {
+	return &proposalDTO{
 		ID:          p.ID,
 		ProviderID:  p.ProviderID,
 		ServiceType: p.ServiceType,
@@ -103,26 +103,21 @@ func proposalToRes(p market.ServiceProposal) *proposal {
 	}
 }
 
-// ProposalFinder defines interface to fetch currently active service proposals from discovery by given filter
-type ProposalFinder interface {
-	FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error)
-}
-
 // QualityFinder allows to fetch proposal quality data
 type QualityFinder interface {
 	ProposalsMetrics() []quality.ConnectMetric
 }
 
 type proposalsEndpoint struct {
-	proposalProvider ProposalFinder
-	qualityProvider  QualityFinder
+	proposalRepository proposal.Repository
+	qualityProvider    QualityFinder
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalProvider ProposalFinder, qualityProvider QualityFinder) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvider QualityFinder) *proposalsEndpoint {
 	return &proposalsEndpoint{
-		proposalProvider: proposalProvider,
-		qualityProvider:  qualityProvider,
+		proposalRepository: proposalRepository,
+		qualityProvider:    qualityProvider,
 	}
 }
 
@@ -163,18 +158,18 @@ func NewProposalsEndpoint(proposalProvider ProposalFinder, qualityProvider Quali
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
-	proposals, err := pe.proposalProvider.FindProposals(&proposalsFilter{
-		providerID:         req.URL.Query().Get("providerId"),
-		serviceType:        req.URL.Query().Get("serviceType"),
-		accessPolicyID:     req.URL.Query().Get("accessPolicyId"),
-		accessPolicySource: req.URL.Query().Get("accessPolicySource"),
+	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
+		ProviderID:         req.URL.Query().Get("providerId"),
+		ServiceType:        req.URL.Query().Get("serviceType"),
+		AccessPolicyID:     req.URL.Query().Get("accessPolicyId"),
+		AccessPolicySource: req.URL.Query().Get("accessPolicySource"),
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	proposalsRes := proposalsRes{Proposals: []*proposal{}}
+	proposalsRes := proposalsRes{Proposals: []*proposalDTO{}}
 	for _, p := range proposals {
 		proposalsRes.Proposals = append(proposalsRes.Proposals, proposalToRes(p))
 	}
@@ -188,13 +183,13 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalFinder, qualityProvider QualityFinder) {
-	pe := NewProposalsEndpoint(proposalProvider, qualityProvider)
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository, qualityProvider QualityFinder) {
+	pe := NewProposalsEndpoint(proposalRepository, qualityProvider)
 	router.GET("/proposals", pe.List)
 }
 
 // addProposalMetrics adds quality metrics to proposals.
-func addProposalMetrics(proposals []*proposal, metrics []quality.ConnectMetric) {
+func addProposalMetrics(proposals []*proposalDTO, metrics []quality.ConnectMetric) {
 	// Convert metrics slice to map for fast lookup.
 	metricsMap := map[string]quality.ConnectMetric{}
 	for _, m := range metrics {

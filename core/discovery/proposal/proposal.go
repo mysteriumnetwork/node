@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package noop
+package proposal
 
-// NewFinder returns noop instance of noop finder which is used to
-// disable proposals auto fetching.
-func NewFinder() *finderNoop {
-	return &finderNoop{}
+import (
+	"github.com/mysteriumnetwork/node/market"
+)
+
+// Repository provides proposals.
+type Repository interface {
+	// Proposal returns a single proposal by its ID.
+	Proposal(id market.ProposalID) (*market.ServiceProposal, error)
+	// Proposals returns proposals matching the filter.
+	Proposals(filter *Filter) ([]market.ServiceProposal, error)
 }
-
-type finderNoop struct{}
-
-func (fn finderNoop) Start() error {
-	return nil
-}
-
-func (fn finderNoop) Stop() {}

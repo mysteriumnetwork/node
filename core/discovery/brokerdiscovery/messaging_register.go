@@ -15,51 +15,51 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package broker
+package brokerdiscovery
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// unregisterMessage structure represents message that the Provider sends about de-announced Proposal
-type unregisterMessage struct {
+// registerMessage structure represents message that the Provider sends about newly announced Proposal
+type registerMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const unregisterEndpoint = communication.MessageEndpoint("proposal-unregister")
+const registerEndpoint = communication.MessageEndpoint("proposal-register")
 
-// unregisterProducer
-type unregisterProducer struct {
-	message *unregisterMessage
+// registerProducer
+type registerProducer struct {
+	message *registerMessage
 }
 
 // GetMessageEndpoint returns endpoint where to send messages
-func (p *unregisterProducer) GetMessageEndpoint() communication.MessageEndpoint {
-	return unregisterEndpoint
+func (p *registerProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return registerEndpoint
 }
 
 // Produce creates message which will be serialized to endpoint
-func (p *unregisterProducer) Produce() (requestPtr interface{}) {
+func (p *registerProducer) Produce() (requestPtr interface{}) {
 	return p.message
 }
 
 // registerConsumer
-type unregisterConsumer struct {
-	Callback func(unregisterMessage) error
+type registerConsumer struct {
+	Callback func(registerMessage) error
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (c *unregisterConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return unregisterEndpoint
+func (c *registerConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return registerEndpoint
 }
 
 // NewMessage creates struct where message from endpoint will be serialized
-func (c *unregisterConsumer) NewMessage() (messagePtr interface{}) {
-	return &unregisterMessage{}
+func (c *registerConsumer) NewMessage() (messagePtr interface{}) {
+	return &registerMessage{}
 }
 
 // Consume handles messages from endpoint
-func (c *unregisterConsumer) Consume(messagePtr interface{}) error {
-	return c.Callback(*messagePtr.(*unregisterMessage))
+func (c *registerConsumer) Consume(messagePtr interface{}) error {
+	return c.Callback(*messagePtr.(*registerMessage))
 }

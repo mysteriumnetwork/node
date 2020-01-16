@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,11 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package brokerdiscovery
 
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -90,7 +91,7 @@ func Test_Finder_MatchProposals(t *testing.T) {
 func Test_Finder_FindProposals(t *testing.T) {
 	storage := createFullStorage()
 
-	proposals, err := storage.FindProposals(&filter{})
+	proposals, err := storage.FindProposals(proposal.Filter{})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 3)
 	assert.Exactly(t,
@@ -98,7 +99,7 @@ func Test_Finder_FindProposals(t *testing.T) {
 		proposals,
 	)
 
-	proposals, err = storage.FindProposals(&filter{"streaming"})
+	proposals, err = storage.FindProposals(proposal.Filter{ServiceType: "streaming"})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 2)
 	assert.Exactly(t,
@@ -118,18 +119,18 @@ func Test_Storage_HasProposal(t *testing.T) {
 
 func Test_Storage_GetProposal(t *testing.T) {
 	storage := createEmptyStorage()
-	proposal, err := storage.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"})
+	p, err := storage.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"})
 	assert.EqualError(t, err, "proposal does not exist: {unknown 0x1 0}")
-	assert.Nil(t, proposal)
+	assert.Nil(t, p)
 
 	storage = createFullStorage()
-	proposal, err = storage.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"})
+	p, err = storage.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x1"})
 	assert.EqualError(t, err, "proposal does not exist: {unknown 0x1 0}")
-	assert.Nil(t, proposal)
+	assert.Nil(t, p)
 
-	proposal, err = storage.GetProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
+	p, err = storage.GetProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
 	assert.NoError(t, err)
-	assert.Exactly(t, proposalProvider1Streaming, *proposal)
+	assert.Exactly(t, proposalProvider1Streaming, *p)
 }
 
 func Test_Storage_Set(t *testing.T) {

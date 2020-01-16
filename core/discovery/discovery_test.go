@@ -24,14 +24,14 @@ import (
 
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	identityregistry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	providerID = identity.FromAddress("my-identity")
-	proposal   = market.ServiceProposal{
+	providerID      = identity.FromAddress("my-identity")
+	serviceProposal = market.ServiceProposal{
 		ProviderID: providerID.Address,
 	}
 )
@@ -52,9 +52,9 @@ func discoveryWithMockedDependencies() *Discovery {
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.RegisteredProvider}
+	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.RegisteredProvider}
 
-	d.Start(providerID, proposal)
+	d.Start(providerID, serviceProposal)
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -62,16 +62,16 @@ func TestStartRegistersProposal(t *testing.T) {
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.Unregistered}
+	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Unregistered}
 
-	d.Start(providerID, proposal)
+	d.Start(providerID, serviceProposal)
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
-	d.eventBus.Publish(identity_registry.RegistrationEventTopic, identity_registry.RegistrationEventPayload{
+	d.eventBus.Publish(identityregistry.RegistrationEventTopic, identityregistry.RegistrationEventPayload{
 		ID:     providerID,
-		Status: identity_registry.RegisteredProvider,
+		Status: identityregistry.RegisteredProvider,
 	})
 
 	actualStatus = observeStatus(d, PingProposal)
@@ -80,18 +80,18 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 
 func TestStartRegisterIdentityCancelled(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	mockRegistry := &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.Unregistered}
+	mockRegistry := &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Unregistered}
 	d.identityRegistry = mockRegistry
 
-	d.Start(providerID, proposal)
+	d.Start(providerID, serviceProposal)
 	defer d.Stop()
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
-	d.eventBus.Publish(identity_registry.RegistrationEventTopic, identity_registry.RegistrationEventPayload{
+	d.eventBus.Publish(identityregistry.RegistrationEventTopic, identityregistry.RegistrationEventPayload{
 		ID:     providerID,
-		Status: identity_registry.RegistrationError,
+		Status: identityregistry.RegistrationError,
 	})
 
 	actualStatus = observeStatus(d, IdentityRegisterFailed)
@@ -100,9 +100,9 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 
 func TestStartStopUnregisterProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationStatus: identity_registry.RegisteredProvider}
+	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.RegisteredProvider}
 
-	d.Start(providerID, proposal)
+	d.Start(providerID, serviceProposal)
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)

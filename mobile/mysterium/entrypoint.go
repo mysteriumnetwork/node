@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -52,7 +51,6 @@ type MobileNode struct {
 	node                               *node.Node
 	connectionManager                  connection.Manager
 	locationResolver                   *location.Cache
-	discoveryStorage                   *discovery.ProposalStorage
 	identitySelector                   selector.Handler
 	signerFactory                      identity.SignerFactory
 	natPinger                          natPinger
@@ -168,7 +166,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		node:                         di.Node,
 		connectionManager:            di.ConnectionManager,
 		locationResolver:             di.LocationResolver,
-		discoveryStorage:             di.DiscoveryStorage,
 		identitySelector:             di.IdentitySelector,
 		signerFactory:                di.SignerFactory,
 		natPinger:                    di.NATPinger,
@@ -184,7 +181,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		channelImplementationAddress: options.Transactor.ChannelImplementation,
 		registryAddress:              options.Transactor.RegistryAddress,
 		proposalsManager: newProposalsManager(
-			di.DiscoveryStorage,
+			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
 		),
@@ -300,7 +297,7 @@ type ConnectRequest struct {
 
 // Connect connects to given provider.
 func (mb *MobileNode) Connect(req *ConnectRequest) error {
-	proposal, err := mb.discoveryStorage.GetProposal(market.ProposalID{
+	proposal, err := mb.proposalsManager.repository.Proposal(market.ProposalID{
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})

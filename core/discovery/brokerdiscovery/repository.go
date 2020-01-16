@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package broker
+package brokerdiscovery
 
 import (
 	"sync"
@@ -23,13 +23,13 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// finderBroker responsible for handling proposal events through Broker (Mysterium Communication)
-type finderBroker struct {
-	storage         *discovery.ProposalStorage
+// Repository provides proposals from the broker.
+type Repository struct {
+	storage         *ProposalStorage
 	receiver        communication.Receiver
 	timeoutInterval time.Duration
 
@@ -39,15 +39,14 @@ type finderBroker struct {
 	watchdogSeen map[market.ProposalID]time.Time
 }
 
-// NewFinder returns new instance of broker finder.
-func NewFinder(
-	proposalsStorage *discovery.ProposalStorage,
+// NewRepository constructs a new proposal repository (backed by the broker).
+func NewRepository(
 	connection nats.Connection,
 	proposalTimeoutInterval time.Duration,
 	proposalCheckInterval time.Duration,
-) *finderBroker {
-	return &finderBroker{
-		storage:         proposalsStorage,
+) *Repository {
+	return &Repository{
+		storage:         NewStorage(),
 		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
 		timeoutInterval: proposalTimeoutInterval,
 
@@ -57,8 +56,18 @@ func NewFinder(
 	}
 }
 
+// Proposal returns a single proposal by its ID.
+func (s *Repository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	return s.storage.GetProposal(id)
+}
+
+// Proposals returns proposals matching the filter.
+func (s *Repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+	return s.storage.FindProposals(*filter)
+}
+
 // Start begins proposals synchronization to storage
-func (s *finderBroker) Start() error {
+func (s *Repository) Start() error {
 	err := s.receiver.Receive(&registerConsumer{Callback: s.proposalRegisterMessage})
 	if err != nil {
 		return err
@@ -79,11 +88,11 @@ func (s *finderBroker) Start() error {
 }
 
 // Stop ends proposals synchronization to storage
-func (s *finderBroker) Stop() {
+func (s *Repository) Stop() {
 	close(s.watchdogStop)
 }
 
-func (s *finderBroker) proposalRegisterMessage(message registerMessage) error {
+func (s *Repository) proposalRegisterMessage(message registerMessage) error {
 	s.storage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
@@ -93,7 +102,7 @@ func (s *finderBroker) proposalRegisterMessage(message registerMessage) error {
 	return nil
 }
 
-func (s *finderBroker) proposalUnregisterMessage(message unregisterMessage) error {
+func (s *Repository) proposalUnregisterMessage(message unregisterMessage) error {
 	s.storage.RemoveProposal(message.Proposal.UniqueID())
 
 	s.watchdogLock.Lock()
@@ -103,7 +112,7 @@ func (s *finderBroker) proposalUnregisterMessage(message unregisterMessage) erro
 	return nil
 }
 
-func (s *finderBroker) proposalPingMessage(message pingMessage) error {
+func (s *Repository) proposalPingMessage(message pingMessage) error {
 	s.storage.AddProposal(message.Proposal)
 
 	s.watchdogLock.Lock()
@@ -113,7 +122,7 @@ func (s *finderBroker) proposalPingMessage(message pingMessage) error {
 	return nil
 }
 
-func (s *finderBroker) proposalWatchdog() {
+func (s *Repository) proposalWatchdog() {
 	for {
 		select {
 		case <-s.watchdogStop:
