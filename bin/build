@@ -3,6 +3,9 @@
 # Usage:
 #> bin/build
 #
+# Compile with race detector enabled:
+#> FLAG_RACE=true bin/build
+#
 # Cross compile (Unix):
 #> GOOS=linux GOARCH=amd64 bin/build
 #
@@ -22,10 +25,11 @@ source bin/helpers/output.sh
 export GOOS=${GOOS:-`go env GOHOSTOS`}
 export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
 export GOBIN=`pwd`/build/myst
+if [ "$FLAG_RACE" == "true" ]; then R=-race; fi
 
 echo "Compiling 'myst' for '$GOOS/$GOARCH'.."
 
-go build -ldflags="-w -s $(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go
+go build $R -ldflags="-w -s $(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go
 if [ $? -ne 0 ]; then
     print_error "Compile failed!"
     exit 1

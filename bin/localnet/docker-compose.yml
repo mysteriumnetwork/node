@@ -24,7 +24,7 @@ services:
     ports:
       - 8001:8001
     expose:
-    - 8001
+      - 8001
     environment:
       APP_PORT: 8001
       DB_HOST: db
@@ -36,8 +36,8 @@ services:
       ETHER_MINING_MODE: "poa"
       DISCOVERY_VERIFY_IDENTITY: "false"
     depends_on:
-    - db
-    - ganache
+      - db
+      - ganache
 
   #private blockchain
   ganache:
@@ -48,7 +48,6 @@ services:
       - 8545
     command: >
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
-
   transactor:
     image: mysteriumnetwork/transactor:0.1.0
     environment:

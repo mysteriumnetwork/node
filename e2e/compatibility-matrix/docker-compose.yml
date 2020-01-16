@@ -93,7 +93,6 @@ services:
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       openvpn,noop,wireguard
 
-
   myst-consumer-local:
     build:
       context: ../..

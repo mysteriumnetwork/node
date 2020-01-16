@@ -1,4 +1,4 @@
-version: '2.4'
+version: '3.0'
 
 services:
   ipify:
@@ -24,6 +24,9 @@ services:
     expose:
       - 4222
       - 8222
+    ports:
+      - 4222:4222
+      - 8222:4222
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -100,7 +103,7 @@ services:
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -balanceCheckInterval 1s
     volumes:
-      - "../../bin/localnet/deployer/keystore:/keystore"
+      - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254
     networks:
       public0:
@@ -141,8 +144,8 @@ services:
 
   router:
     build:
-      context: ../..
-      dockerfile: e2e/docker/forwarder/Dockerfile
+      context: .
+      dockerfile: ./e2e/docker/forwarder/Dockerfile
     cap_add:
       - NET_ADMIN
     environment:
@@ -155,8 +158,8 @@ services:
 
   forwarder:
     build:
-      context: ../..
-      dockerfile: e2e/docker/forwarder/Dockerfile
+      context: .
+      dockerfile: ./e2e/docker/forwarder/Dockerfile
     cap_add:
       - NET_ADMIN
     depends_on:
@@ -171,8 +174,8 @@ services:
 
   forwarder2:
     build:
-      context: ../..
-      dockerfile: e2e/docker/forwarder/Dockerfile
+      context: .
+      dockerfile: ./e2e/docker/forwarder/Dockerfile
     cap_add:
       - NET_ADMIN
     depends_on:
@@ -188,8 +191,8 @@ services:
 
   myst-consumer:
     build:
-      context: ../..
-      dockerfile: bin/docker/alpine/Dockerfile
+      context: .
+      dockerfile: ./e2e/docker/node/Dockerfile
     environment:
       - DEFAULT_ROUTE=10.100.1.2
     depends_on:
@@ -220,30 +223,10 @@ services:
       priv1:
         ipv4_address: 10.100.1.101
 
-  accountant:
-    image: mysteriumnetwork/accountant:latest
-    environment:
-      PORT: 8889
-    expose:
-      - 8889
-    depends_on:
-      - ganache
-    command: >
-      -identityPassphrase ""
-      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
-      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -keystoreDir /keystore
-      -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-    volumes:
-      - "./../bin/localnet/deployer/keystore:/keystore"
-
   myst-provider:
     build:
-      context: ../..
-      dockerfile: bin/docker/alpine/Dockerfile
+      context: .
+      dockerfile: ./e2e/docker/node/Dockerfile
     environment:
       - DEFAULT_ROUTE=10.100.0.2
     depends_on:
@@ -254,7 +237,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ../../e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -284,11 +267,34 @@ services:
       priv0:
         ipv4_address: 10.100.0.102
 
-  go-runner:
-    image: golang:1.13
+  accountant:
+    image: mysteriumnetwork/accountant:latest
+    environment:
+      PORT: 8889
+    expose:
+      - 8889
+    depends_on:
+      - ganache
+    command: >
+      -identityPassphrase ""
+      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -rpcEndpoint ws://ganache:8545
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -keystoreDir /keystore
+      -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
     volumes:
-      - $GOPATH:/go
-    working_dir: /go/src/github.com/mysteriumnetwork/node
+      - ./e2e/blockchain/keystore:/keystore
+
+  go-runner:
+    build:
+      context: .
+      dockerfile: ./e2e/docker/gorunner/Dockerfile
+    volumes:
+      - ./:/node
+      - $HOME/.node_e2e_runner_go_pkg_mod:/go/pkg/mod
+    working_dir: /node
     dns: 172.30.0.254
     networks:
       public0:
