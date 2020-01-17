@@ -293,7 +293,7 @@ services:
       dockerfile: ./e2e/docker/gorunner/Dockerfile
     volumes:
       - ./:/node
-      - $HOME/.node_e2e_runner_go_pkg_mod:/go/pkg/mod
+      - $GOPATH/pkg/mod:/go/pkg/mod
     working_dir: /node
     dns: 172.30.0.254
     networks:
