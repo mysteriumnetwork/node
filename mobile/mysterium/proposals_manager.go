@@ -136,9 +136,7 @@ func (m *proposalsManager) getFromCache() []market.ServiceProposal {
 }
 
 func (m *proposalsManager) getFromRepository() ([]market.ServiceProposal, error) {
-	allProposals, err := m.repository.Proposals(&proposal.Filter{
-		ServiceType: "all",
-	})
+	allProposals, err := m.repository.Proposals(&proposal.Filter{})
 	if err != nil {
 		return nil, err
 	}
