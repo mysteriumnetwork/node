@@ -101,89 +101,106 @@ func waitForBalance(balanceTracker *ConsumerBalanceTracker, id identity.Identity
 	return errors.New("did not get balance in time")
 }
 
-func TestConsumerBalanceTracker_updateBCBalance(t *testing.T) {
+func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 	type fields struct {
-		balances map[identity.Identity]Balance
+		balances                 map[identity.Identity]Balance
+		accountantBalanceFetcher func(id string) (ConsumerData, error)
 	}
 	type args struct {
-		id                 identity.Identity
-		bcBalance          uint64
-		accountantPromised uint64
+		id identity.Identity
 	}
 	tests := []struct {
-		name            string
-		fields          fields
-		args            args
-		expectedBalance uint64
+		name             string
+		fields           fields
+		args             args
+		expectedBalance  uint64
+		expectedEstimate uint64
 	}{
 		{
-			name: "defaults to diff between bc and accountant promised",
+			name: "set balance to an unknown identity",
 			fields: fields{
 				balances: make(map[identity.Identity]Balance),
+				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
+					return ConsumerData{
+						Balance: 100,
+					}, nil
+				},
 			},
 			args: args{
-				id:                 mockID,
-				bcBalance:          100000,
-				accountantPromised: 100,
+				id: mockID,
 			},
-			expectedBalance: 100000 - 100,
+			expectedBalance:  100,
+			expectedEstimate: 100,
 		},
 		{
-			name: "returns zero on exhausted balance",
+			name: "increases balance to an known identity",
 			fields: fields{
-				balances: map[identity.Identity]Balance{mockID: Balance{
-					BCBalance:       100000,
-					CurrentEstimate: 100000,
-				}},
+				balances: map[identity.Identity]Balance{
+					mockID: Balance{
+						BCBalance:       1020,
+						CurrentEstimate: 1010,
+					},
+				},
+				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
+					return ConsumerData{
+						Balance: 1100,
+					}, nil
+				},
 			},
 			args: args{
-				id:                 mockID,
-				bcBalance:          9,
-				accountantPromised: 100,
+				id: mockID,
 			},
-			expectedBalance: 0,
+			expectedBalance:  1100,
+			expectedEstimate: 1090,
 		},
 		{
-			name: "calculates balance correctly",
+			name: "decreases balance to an known identity",
 			fields: fields{
-				balances: map[identity.Identity]Balance{mockID: Balance{
-					BCBalance:       100000,
-					CurrentEstimate: 100000,
-				}},
+				balances: map[identity.Identity]Balance{
+					mockID: Balance{
+						BCBalance:       1020,
+						CurrentEstimate: 1010,
+					},
+				},
+				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
+					return ConsumerData{
+						Balance: 1000,
+					}, nil
+				},
 			},
 			args: args{
-				id:                 mockID,
-				bcBalance:          100100,
-				accountantPromised: 50,
+				id: mockID,
 			},
-			expectedBalance: 100050,
+			expectedBalance:  1000,
+			expectedEstimate: 990,
 		},
 		{
-			name: "ignores change on underflow",
+			name: "ignores errors, sets nothing",
 			fields: fields{
-				balances: map[identity.Identity]Balance{mockID: Balance{
-					BCBalance:       100000,
-					CurrentEstimate: 100000,
-				}},
+				balances: make(map[identity.Identity]Balance),
+				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
+					return ConsumerData{}, errors.New("explosions")
+				},
 			},
 			args: args{
-				id:                 mockID,
-				bcBalance:          100001,
-				accountantPromised: 50,
+				id: mockID,
 			},
-			expectedBalance: 100000,
+			expectedBalance:  0,
+			expectedEstimate: 0,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cbt := &ConsumerBalanceTracker{
-				balances:  tt.fields.balances,
-				publisher: eventbus.New(),
+				balances:                 tt.fields.balances,
+				publisher:                eventbus.New(),
+				accountantBalanceFetcher: tt.fields.accountantBalanceFetcher,
 			}
-			cbt.updateBCBalance(tt.args.id, tt.args.bcBalance, tt.args.accountantPromised)
 
-			res := cbt.GetBalance(tt.args.id)
-			assert.Equal(t, tt.expectedBalance, res)
+			cbt.updateBalanceFromAccountant(tt.args.id)
+			res := cbt.balances[tt.args.id]
+			assert.Equal(t, tt.expectedBalance, res.BCBalance)
+			assert.Equal(t, tt.expectedEstimate, res.CurrentEstimate)
 		})
 	}
 }
