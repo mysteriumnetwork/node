@@ -50,7 +50,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
     && rm -f ${PACKAGE_FILE} \
     && ${FPM_BIN} \
         --name="myst" \
-        --description="Mysterium Node for decentralised VPN built on blockchain" \
+        --description="Mysterium Node for decentralised VPN Network" \
         --url="https://mysterium.network/" \
         --vendor="MysteriumNetwork" \
         --license="GPL-3.0" \

@@ -1,7 +1,7 @@
 # If you modify this, please also make sure to edit initd.sh
 
 [Unit]
-Description=Server for decentralised VPN built on blockchain
+Description=Server for Mysterium - decentralised VPN Network
 Documentation=https://mysterium.network/
 Requires=network-online.target
 After=network-online.target
