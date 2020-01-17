@@ -51,15 +51,5 @@ func (a *apiRepository) Proposal(id market.ProposalID) (*market.ServiceProposal,
 
 // Proposals returns proposals matching filter.
 func (a *apiRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
-	proposals, err := a.discoveryAPI.Proposals()
-	if err != nil {
-		return nil, err
-	}
-	var filtered []market.ServiceProposal
-	for _, p := range proposals {
-		if filter.Matches(p) {
-			filtered = append(filtered, p)
-		}
-	}
-	return filtered, nil
+	return a.discoveryAPI.QueryProposals(filter.ToAPIQuery())
 }
