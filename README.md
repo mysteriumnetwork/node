@@ -49,20 +49,26 @@ Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Deb
 
 ### Docker
 
-To run a node as docker container you will need [docker](https://www.docker.com/).
-You should be able to run a node on any OS that supports docker.
-Tested on these OSes so far: _Debian 9_, _Ubuntu 16.04_ and _Centos 7_.
+Our docker images can be found in [Docker hub](https://hub.docker.com/r/mysteriumnetwork/myst).
 
-You can get latest node docker images here: https://hub.docker.com/r/mysteriumnetwork/myst/
+To run a node in a docker container you will need [docker](https://www.docker.com/). On Linux, to manage docker as a non-root user (execute commands without `sudo`), follow [postinstall guide](https://docs.docker.com/install/linux/linux-postinstall/).
+You should be able to run a node on any OS that supports docker. We have tested it on these OSes so far:
+- Debian 9
+- Ubuntu 16.04
+- Centos 7
 
 Run node:
 ```bash
-sudo docker run --cap-add NET_ADMIN --net host --name myst -d mysteriumnetwork/myst service --agreed-terms-and-conditions
+docker run \
+  --cap-add NET_ADMIN \
+  --net host \
+  --name myst -d \
+  mysteriumnetwork/myst service --agreed-terms-and-conditions
 ```
 
 Access service logs:
 ```bash
-sudo docker logs -f myst
+docker logs -f myst
 ```
 
 ### Further information
@@ -76,7 +82,7 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 * [travis](https://travis-ci.com/) - Travis continuous integration tool
 * [docker](https://www.docker.com/what-docker) - Containerize applications
 * [openvpn](https://openvpn.net) - Solid VPN solution
-* [wireguard](https://www.wireguard.com/) - extremely simple yet fast and modern VPN
+* [wireguard](https://www.wireguard.com/) - Extremely simple yet fast and modern VPN
 
 ## Contributing
 
