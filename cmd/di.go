@@ -37,8 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
-	"github.com/mysteriumnetwork/node/core/discovery/apidiscovery"
-	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -133,7 +131,6 @@ type Dependencies struct {
 
 	DiscoveryFactory   service.DiscoveryFactory
 	ProposalRepository proposal.Repository
-	DiscoveryWorker    brokerdiscovery.Worker
 
 	QualityMetricsSender *quality.Sender
 	QualityClient        *quality.MysteriumMORQA
@@ -265,9 +262,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
-	if err = di.DiscoveryWorker.Start(); err != nil {
-		return err
-	}
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
@@ -365,9 +359,6 @@ func (di *Dependencies) Shutdown() (err error) {
 		if err := di.NATService.Disable(); err != nil {
 			errs = append(errs, err)
 		}
-	}
-	if di.DiscoveryWorker != nil {
-		di.DiscoveryWorker.Stop()
 	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
@@ -580,7 +571,6 @@ func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
-	consumerInvoiceStorage *pingpong.ConsumerInvoiceStorage,
 	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
 	promiseStorage session_payment.PromiseStorage,
 	natPingerChan func(*traversal.Params),
@@ -725,30 +715,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		di.SignerFactory,
 	)
 
-}
-
-func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
-	proposalRepository := discovery.NewRepository()
-	discoveryRegistry := discovery.NewRegistry()
-	for _, discoveryType := range options.Types {
-		switch discoveryType {
-		case node.DiscoveryTypeAPI:
-			discoveryRegistry.AddRegistry(apidiscovery.NewRegistry(di.MysteriumAPI))
-			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
-		case node.DiscoveryTypeBroker:
-			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
-			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
-			proposalRepository.Add(brokerRepository)
-			di.DiscoveryWorker = brokerRepository
-		default:
-			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
-		}
-	}
-	di.ProposalRepository = proposalRepository
-	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
-	}
-	return nil
 }
 
 func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options node.OptionsQuality) (err error) {

@@ -252,7 +252,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			proposal,
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
-			di.ConsumerInvoiceStorage,
 			di.AccountantPromiseStorage,
 			di.PromiseStorage,
 			di.NATPinger.PingTarget,
