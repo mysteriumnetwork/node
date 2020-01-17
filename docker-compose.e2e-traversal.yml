@@ -24,9 +24,6 @@ services:
     expose:
       - 4222
       - 8222
-    ports:
-      - 4222:4222
-      - 8222:4222
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -64,8 +61,6 @@ services:
   #private blockchain
   ganache:
     image: trufflesuite/ganache-cli:v6.6.0-beta.0
-    ports:
-      - 8545:8545
     expose:
       - 8545
     command: >

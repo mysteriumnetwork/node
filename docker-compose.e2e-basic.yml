@@ -21,8 +21,6 @@ services:
 
   mysterium-api:
     image: mysteriumnetwork/mysterium-api:0.5.22
-    ports:
-      - 8001:8001
     expose:
       - 8001
     environment:
@@ -42,8 +40,6 @@ services:
   #private blockchain
   ganache:
     image: trufflesuite/ganache-cli:v6.8.1-beta.0
-    ports:
-      - 8545:8545
     expose:
       - 8545
     command: >
@@ -103,9 +99,6 @@ services:
     expose:
       - 1194
       - 4050
-    ports:
-      - 11194:1194
-      - 14050:4050
     volumes:
       - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
@@ -149,8 +142,6 @@ services:
       - NET_ADMIN
     expose:
       - 4050
-    ports:
-      - 24050:4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
