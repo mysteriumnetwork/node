@@ -74,7 +74,7 @@ func (di *Dependencies) bootstrapDiscoveryBroker(options node.OptionsDiscovery) 
 func discoverySyncStart(repository *brokerdiscovery.Repository) error {
 	err := repository.Start()
 	if err != nil {
-		log.Error().Err(err).Msg("broker discovery start failed")
+		log.Error().Err(err).Msg("Broker discovery start failed")
 	}
 	return err
 }

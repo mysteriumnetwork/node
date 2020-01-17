@@ -279,7 +279,7 @@ func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Lis
 
 	tequilaListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort))
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("The port %v seems to be taken. Either you're already running a node or it is already used by another application", nodeOptions.TequilapiPort))
+		return nil, errors.Wrap(err, fmt.Sprintf("the port %v seems to be taken. Either you're already running a node or it is already used by another application", nodeOptions.TequilapiPort))
 	}
 	return tequilaListener, nil
 }
