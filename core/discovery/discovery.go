@@ -45,16 +45,6 @@ const (
 	StatusUndefined
 )
 
-const (
-	// ProposalEventTopic represent proposal events topic.
-	ProposalEventTopic = "proposalEvent"
-)
-
-// Publisher is responsible for publishing given events.
-type Publisher interface {
-	Publish(topic string, data interface{})
-}
-
 // ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
 type ProposalRegistry interface {
 	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
@@ -206,7 +196,7 @@ func (d *Discovery) registerProposal() {
 		d.changeStatus(RegisterProposal)
 		return
 	}
-	d.eventBus.Publish(ProposalEventTopic, d.proposal)
+	d.eventBus.Publish(EventTopicProposalAnnounce, d.proposal)
 	d.changeStatus(PingProposal)
 }
 
@@ -216,7 +206,7 @@ func (d *Discovery) pingProposal() {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping proposal")
 	}
-	d.eventBus.Publish(ProposalEventTopic, d.proposal)
+	d.eventBus.Publish(EventTopicProposalAnnounce, d.proposal)
 	d.changeStatus(PingProposal)
 }
 

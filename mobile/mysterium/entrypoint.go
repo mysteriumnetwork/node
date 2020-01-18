@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -43,33 +44,30 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
-	shutdown                           func() error
-	node                               *node.Node
-	connectionManager                  connection.Manager
-	locationResolver                   *location.Cache
-	identitySelector                   selector.Handler
-	signerFactory                      identity.SignerFactory
-	natPinger                          natPinger
-	ipResolver                         ip.Resolver
-	eventBus                           eventbus.EventBus
-	connectionRegistry                 *connection.Registry
-	statisticsTracker                  *statistics.SessionStatisticsTracker
-	statisticsChangeCallback           StatisticsChangeCallback
-	balanceChangeCallback              BalanceChangeCallback
-	identityRegistrationChangeCallback IdentityRegistrationChangeCallback
-	connectionStatusChangeCallback     ConnectionStatusChangeCallback
-	proposalsManager                   *proposalsManager
-	accountant                         identity.Identity
-	feedbackReporter                   *feedback.Reporter
-	transactor                         *registry.Transactor
-	identityRegistry                   registry.IdentityRegistry
-	consumerBalanceTracker             *pingpong.ConsumerBalanceTracker
-	registryAddress                    string
-	channelImplementationAddress       string
+	shutdown                     func() error
+	node                         *node.Node
+	connectionManager            connection.Manager
+	locationResolver             *location.Cache
+	identitySelector             selector.Handler
+	signerFactory                identity.SignerFactory
+	natPinger                    natPinger
+	ipResolver                   ip.Resolver
+	eventBus                     eventbus.EventBus
+	connectionRegistry           *connection.Registry
+	statisticsTracker            *statistics.SessionStatisticsTracker
+	proposalsManager             *proposalsManager
+	accountant                   identity.Identity
+	feedbackReporter             *feedback.Reporter
+	transactor                   *registry.Transactor
+	identityRegistry             registry.IdentityRegistry
+	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
+	registryAddress              string
+	channelImplementationAddress string
 }
 
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
@@ -186,7 +184,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			di.QualityClient,
 		),
 	}
-	mobileNode.handleEvents()
 	return mobileNode, nil
 }
 
@@ -207,6 +204,38 @@ func (mb *MobileNode) GetProposal(req *GetProposalRequest) ([]byte, error) {
 		return nil, fmt.Errorf("proposal %s-%s not found", status.Proposal.ProviderID, status.Proposal.ServiceType)
 	}
 	return proposal, nil
+}
+
+// ProposalChangeCallback represents proposal callback.
+type ProposalChangeCallback interface {
+	OnChange(proposal []byte)
+}
+
+// RegisterProposalAddedCallback registers callback which is called on newly announced proposals
+func (mb *MobileNode) RegisterProposalAddedCallback(cb ProposalChangeCallback) {
+	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalAdded, func(proposal market.ServiceProposal) {
+		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
+		log.Error().Err(err).Msg("Proposal mapping failed")
+		cb.OnChange(proposalPayload)
+	})
+}
+
+// RegisterProposalUpdatedCallback registers callback which is called on re-announced proposals
+func (mb *MobileNode) RegisterProposalUpdatedCallback(cb ProposalChangeCallback) {
+	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalUpdated, func(proposal market.ServiceProposal) {
+		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
+		log.Error().Err(err).Msg("Proposal mapping failed")
+		cb.OnChange(proposalPayload)
+	})
+}
+
+// RegisterProposalRemovedCallback registers callback which is called on de-announced proposals
+func (mb *MobileNode) RegisterProposalRemovedCallback(cb ProposalChangeCallback) {
+	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalRemoved, func(proposal market.ServiceProposal) {
+		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
+		log.Error().Err(err).Msg("Proposal mapping failed")
+		cb.OnChange(proposalPayload)
+	})
 }
 
 // GetLocationResponse represents location response.
@@ -253,7 +282,10 @@ type StatisticsChangeCallback interface {
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
-	mb.statisticsChangeCallback = cb
+	_ = mb.eventBus.SubscribeAsync(connection.StatisticsEventTopic, func(e connection.SessionStatsEvent) {
+		duration := mb.statisticsTracker.GetSessionDuration()
+		cb.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
+	})
 }
 
 // ConnectionStatusChangeCallback represents status callback.
@@ -264,7 +296,9 @@ type ConnectionStatusChangeCallback interface {
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
-	mb.connectionStatusChangeCallback = cb
+	_ = mb.eventBus.SubscribeAsync(connection.StateEventTopic, func(e connection.StateEvent) {
+		cb.OnChange(string(e.State))
+	})
 }
 
 // BalanceChangeCallback represents balance change callback.
@@ -274,7 +308,9 @@ type BalanceChangeCallback interface {
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
-	mb.balanceChangeCallback = cb
+	_ = mb.eventBus.SubscribeAsync(pingpong.BalanceChangedTopic, func(e pingpong.BalanceChangedEvent) {
+		cb.OnChange(e.Identity.Address, int64(e.Current))
+	})
 }
 
 // IdentityRegistrationChangeCallback represents identity registration status callback.
@@ -284,7 +320,9 @@ type IdentityRegistrationChangeCallback interface {
 
 // RegisterIdentityRegistrationChangeCallback registers callback which is called on identity registration status change.
 func (mb *MobileNode) RegisterIdentityRegistrationChangeCallback(cb IdentityRegistrationChangeCallback) {
-	mb.identityRegistrationChangeCallback = cb
+	_ = mb.eventBus.SubscribeAsync(registry.RegistrationEventTopic, func(e registry.RegistrationEventPayload) {
+		cb.OnChange(e.ID.Address, e.Status.String())
+	})
 }
 
 // ConnectRequest represents connect request.
@@ -476,38 +514,4 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 		tunnelSetup: wgTunnelSetup,
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
-}
-
-func (mb *MobileNode) handleEvents() {
-	_ = mb.eventBus.SubscribeAsync(connection.StateEventTopic, func(e connection.StateEvent) {
-		if mb.connectionStatusChangeCallback == nil {
-			return
-		}
-		mb.connectionStatusChangeCallback.OnChange(string(e.State))
-	})
-
-	_ = mb.eventBus.SubscribeAsync(connection.StatisticsEventTopic, func(e connection.SessionStatsEvent) {
-		if mb.statisticsChangeCallback == nil {
-			return
-		}
-
-		duration := mb.statisticsTracker.GetSessionDuration()
-		mb.statisticsChangeCallback.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
-	})
-
-	_ = mb.eventBus.SubscribeAsync(pingpong.BalanceChangedTopic, func(e pingpong.BalanceChangedEvent) {
-		if mb.balanceChangeCallback == nil {
-			return
-		}
-
-		mb.balanceChangeCallback.OnChange(e.Identity.Address, int64(e.Current))
-	})
-
-	_ = mb.eventBus.SubscribeAsync(registry.RegistrationEventTopic, func(e registry.RegistrationEventPayload) {
-		if mb.identityRegistrationChangeCallback == nil {
-			return
-		}
-
-		mb.identityRegistrationChangeCallback.OnChange(e.ID.Address, e.Status.String())
-	})
 }

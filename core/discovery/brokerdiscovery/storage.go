@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -35,14 +37,17 @@ type Worker interface {
 type ProposalReducer func(proposal market.ServiceProposal) bool
 
 // NewStorage creates new instance of ProposalStorage
-func NewStorage() *ProposalStorage {
+func NewStorage(eventPublisher eventbus.Publisher) *ProposalStorage {
 	return &ProposalStorage{
-		proposals: make([]market.ServiceProposal, 0),
+		eventPublisher: eventPublisher,
+		proposals:      make([]market.ServiceProposal, 0),
 	}
 }
 
 // ProposalStorage represents table of currently active proposals in Mysterium Discovery
 type ProposalStorage struct {
+	eventPublisher eventbus.Publisher
+
 	proposals []market.ServiceProposal
 	mutex     sync.RWMutex
 }
@@ -79,6 +84,19 @@ func (s *ProposalStorage) Set(proposals []market.ServiceProposal) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	proposalsOld := s.proposals
+	for _, p := range proposals {
+		index, exist := s.getProposalIndex(proposalsOld, p.UniqueID())
+		if exist {
+			go s.eventPublisher.Publish(discovery.EventTopicProposalUpdated, p)
+			proposalsOld = append(proposalsOld[:index], proposalsOld[index+1:]...)
+		} else {
+			go s.eventPublisher.Publish(discovery.EventTopicProposalAdded, p)
+		}
+	}
+	for _, p := range proposalsOld {
+		go s.eventPublisher.Publish(discovery.EventTopicProposalRemoved, p)
+	}
 	s.proposals = proposals
 }
 
@@ -87,7 +105,7 @@ func (s *ProposalStorage) HasProposal(id market.ProposalID) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	_, exist := s.getProposalIndex(id)
+	_, exist := s.getProposalIndex(s.proposals, id)
 	return exist
 }
 
@@ -96,7 +114,7 @@ func (s *ProposalStorage) GetProposal(id market.ProposalID) (*market.ServiceProp
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	index, exist := s.getProposalIndex(id)
+	index, exist := s.getProposalIndex(s.proposals, id)
 	if !exist {
 		return nil, fmt.Errorf(`proposal does not exist: %v`, id)
 	}
@@ -108,9 +126,13 @@ func (s *ProposalStorage) AddProposal(proposals ...market.ServiceProposal) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	for _, proposal := range proposals {
-		if _, exist := s.getProposalIndex(proposal.UniqueID()); !exist {
-			s.proposals = append(s.proposals, proposal)
+	for _, p := range proposals {
+		if index, exist := s.getProposalIndex(s.proposals, p.UniqueID()); !exist {
+			s.eventPublisher.Publish(discovery.EventTopicProposalAdded, p)
+			s.proposals = append(s.proposals, p)
+		} else {
+			s.eventPublisher.Publish(discovery.EventTopicProposalUpdated, p)
+			s.proposals[index] = p
 		}
 	}
 }
@@ -120,14 +142,15 @@ func (s *ProposalStorage) RemoveProposal(id market.ProposalID) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if index, exist := s.getProposalIndex(id); exist {
+	if index, exist := s.getProposalIndex(s.proposals, id); exist {
+		go s.eventPublisher.Publish(discovery.EventTopicProposalRemoved, s.proposals[index])
 		s.proposals = append(s.proposals[:index], s.proposals[index+1:]...)
 	}
 }
 
-func (s *ProposalStorage) getProposalIndex(id market.ProposalID) (int, bool) {
-	for index, proposal := range s.proposals {
-		if proposal.UniqueID() == id {
+func (s *ProposalStorage) getProposalIndex(proposals []market.ServiceProposal, id market.ProposalID) (int, bool) {
+	for index, p := range proposals {
+		if p.UniqueID() == id {
 			return index, true
 		}
 	}
