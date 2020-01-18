@@ -72,7 +72,7 @@ type Runner struct {
 	envName string
 }
 
-// Init initialises containers.
+// Up starts containers.
 func (r *Runner) Up() error {
 	if err := r.startAppContainers(); err != nil {
 		return errors.Wrap(err, "could not start app containers")
@@ -84,6 +84,7 @@ func (r *Runner) Up() error {
 	return nil
 }
 
+// Down stops containers.
 func (r *Runner) Down() error {
 	if err := r.compose("down", "--remove-orphans", "--timeout", "30"); err != nil {
 		return errors.Wrap(err, "could not stop environment")
