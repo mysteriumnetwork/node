@@ -15,83 +15,83 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package localnet
+package e2e
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/magefile/mage/sh"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
-const composeFile = "./docker-compose.localnet.yml"
+// NewRunner returns e2e test runners instance
+func NewRunner(composeFiles []string, testEnv, services string) (runner *Runner, cleanup func()) {
+	fileArgs := make([]string, 0)
+	for _, f := range composeFiles {
+		fileArgs = append(fileArgs, "-f", f)
+	}
+	var args []string
+	args = append(args, fileArgs...)
+	args = append(args, "-p", testEnv)
 
-// LocalnetUp starts local environment
-func LocalnetUp() error {
-	logconfig.Bootstrap()
-	runner := newRunner(composeFile)
-	if err := runner.Up(); err != nil {
-		log.Err(err).Msg("Failed to start local environment")
-		if err := runner.Down(); err != nil {
-			log.Err(err).Msg("Failed to cleanup environment")
-		}
+	runner = &Runner{
+		compose:  sh.RunCmd("docker-compose", args...),
+		testEnv:  testEnv,
+		services: services,
+	}
+	return runner, runner.cleanup
+}
+
+// Runner is e2e tests runner responsible for starting test environment and running e2e tests.
+type Runner struct {
+	compose         func(args ...string) error
+	etherPassphrase string
+	testEnv         string
+	services        string
+}
+
+// Init initialises containers.
+func (r *Runner) Init() error {
+	if err := r.startAppContainers(); err != nil {
+		return err
+	}
+
+	if err := r.startProviderConsumerNodes(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// LocalnetDown stops local environment
-func LocalnetDown() error {
-	logconfig.Bootstrap()
-	runner := newRunner(composeFile)
-	return runner.Down()
+// Test runs e2e tests.
+func (r *Runner) Test() error {
+	log.Info().Msg("Running tests for env: " + r.testEnv)
+
+	err := r.compose("run", "go-runner",
+		"go", "test", "-v", "./e2e/...", "-args",
+		"--deployer.keystore-directory=../e2e/blockchain/keystore",
+		"--deployer.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
+		"--deployer.passphrase", r.etherPassphrase,
+		"--provider.tequilapi-host=myst-provider",
+		"--provider.tequilapi-port=4050",
+		"--consumer.tequilapi-host=myst-consumer",
+		"--consumer.tequilapi-port=4050",
+		"--geth.url=ws://ganache:8545",
+		"--consumer.services", r.services,
+	)
+	return errors.Wrap(err, "tests failed!")
 }
 
-// NewRunner returns e2e test runners instance
-func newRunner(composeFiles ...string) *runner {
-	fileArgs := make([]string, 0)
-	for _, f := range composeFiles {
-		fileArgs = append(fileArgs, "-f", f)
-	}
-	envName := "localnet"
-	var args []string
-	args = append(args, fileArgs...)
-	args = append(args, "-p", envName)
-
-	return &runner{
-		compose: sh.RunCmd("docker-compose", args...),
-		envName: envName,
+func (r *Runner) cleanup() {
+	log.Info().Msg("Cleaning up")
+	_ = r.compose("logs")
+	if err := r.compose("down", "--volumes", "--remove-orphans", "--timeout", "30"); err != nil {
+		log.Warn().Err(err).Msg("Cleanup error")
 	}
 }
 
-type runner struct {
-	compose func(args ...string) error
-	envName string
-}
-
-// Up starts containers.
-func (r *runner) Up() error {
-	if err := r.startAppContainers(); err != nil {
-		return errors.Wrap(err, "could not start app containers")
-	}
-
-	if err := r.startProviderConsumerNodes(); err != nil {
-		return errors.Wrap(err, "could not start provider consumer nodes")
-	}
-	return nil
-}
-
-// Down stops containers.
-func (r *runner) Down() error {
-	if err := r.compose("down", "--remove-orphans", "--timeout", "30"); err != nil {
-		return errors.Wrap(err, "could not stop environment")
-	}
-	return nil
-}
-
-func (r *runner) startAppContainers() error {
+func (r *Runner) startAppContainers() error {
 	log.Info().Msg("Starting other services")
 	if err := r.compose("pull"); err != nil {
 		return errors.Wrap(err, "could not pull images")
@@ -139,6 +139,7 @@ func (r *runner) startAppContainers() error {
 		"go", "run", "./e2e/blockchain/deployer.go",
 		"--keystore.directory=./e2e/blockchain/keystore",
 		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
+		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
 		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
@@ -152,7 +153,7 @@ func (r *runner) startAppContainers() error {
 	return nil
 }
 
-func (r *runner) startProviderConsumerNodes() error {
+func (r *Runner) startProviderConsumerNodes() error {
 	log.Info().Msg("Building app images")
 	if err := r.compose("build"); err != nil {
 		return errors.Wrap(err, "building app images failed!")

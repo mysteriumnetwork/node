@@ -1,0 +1,201 @@
+version: '3.0'
+services:
+  morqa:
+    image: mysteriumnetwork/quality-oracle:latest
+    command: >
+      --bind-addr=:8085
+      --prometheus=http://prometheus:9090
+      --metrics-addr=:8080
+    depends_on:
+      - prometheus
+    expose:
+      - 8085
+      - 8080
+
+  prometheus:
+    image: prom/prometheus:v2.10.0
+    volumes:
+      - ./e2e/prometheus:/prometheus
+    command:
+      - '--config.file=/prometheus/prometheus-local.yml'
+      - '--storage.tsdb.path=/data'
+    expose:
+      - 9090
+
+  ipify:
+    image: owlab/ipify
+    expose:
+      - 3000
+
+  broker:
+    image: nats:1.0.4
+    expose:
+      - 4222
+      - 8222
+
+  db:
+    image: percona:5.7
+    restart: always
+    expose:
+      - 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: myst_api
+      MYSQL_USER: myst_api
+      MYSQL_PASSWORD: myst_api
+
+  mysterium-api:
+    image: mysteriumnetwork/mysterium-api:latest
+    expose:
+      - 8001
+    environment:
+      APP_PORT: 8001
+      DB_HOST: db
+      DB_NAME: myst_api
+      DB_USER: myst_api
+      DB_PASSWORD: myst_api
+      ETHER_RPC_URL: "ws://ganache:8545"
+      IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
+      ETHER_MINING_MODE: "poa"
+      DISCOVERY_VERIFY_IDENTITY: "false"
+    depends_on:
+      - db
+      - ganache
+
+  #private blockchain
+  ganache:
+    image: trufflesuite/ganache-cli:v6.8.1-beta.0
+    expose:
+      - 8545
+    command: >
+      --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+
+  transactor:
+    image: mysteriumnetwork/transactor:latest
+    environment:
+      PORT: 8888
+    expose:
+      - 8888
+    depends_on:
+      - ganache
+    command: >
+      -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -rpcEndpoint ws://ganache:8545
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -balanceCheckInterval 1s
+    volumes:
+      - ./e2e/blockchain/keystore:/keystore
+
+  accountant:
+    image: mysteriumnetwork/accountant:latest
+    environment:
+      PORT: 8889
+    expose:
+      - 8889
+    depends_on:
+      - ganache
+    command: >
+      -identityPassphrase ""
+      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -rpcEndpoint ws://ganache:8545
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -keystoreDir /keystore
+      -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -boltPath /bolt.db
+    volumes:
+      - ./e2e/blockchain/keystore:/keystore
+
+  myst-provider:
+    build:
+      context: .
+      dockerfile: ./bin/docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - morqa
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 1194
+      - 4050
+    volumes:
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --ip-detector=http://ipify:3000/?format=json
+      --location.type=manual
+      --location.country=e2e-land
+      --localnet
+      --firewall.protected.networks=""
+      --broker-address=broker
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --keystore.lightweight
+      --log-level=debug
+      --quality.address=http://morqa:8085/api/v1
+      service
+      --agreed-terms-and-conditions
+      --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+      --identity.passphrase=localprovider
+      --openvpn.port=3000
+      openvpn,noop,wireguard
+
+  myst-consumer:
+    build:
+      context: .
+      dockerfile: ./bin/docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - myst-provider
+      - morqa
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --ip-detector=http://ipify:3000/?format=json
+      --localnet
+      --log-level=debug
+      --broker-address=broker
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --keystore.lightweight
+      --firewall.killSwitch.always
+      --quality.address=http://morqa:8085/api/v1
+      daemon
+
+  #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
+  go-runner:
+    build:
+      context: .
+      dockerfile: ./e2e/gorunner/Dockerfile
+    volumes:
+      - ./:/node
+      - $GOPATH/pkg/mod:/go/pkg/mod
+    working_dir: /node

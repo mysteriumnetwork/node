@@ -144,7 +144,8 @@ bin/test
 * **Step 3.** Ensure that all end-to-end tests pass
 
 ```bash
-bin/test_e2e
+go run mage.go -v TestE2EBasic
+go run mage.go -v TestE2ENAT
 ```
 
 After you forked a project, modified sources and run tests, you can create a pull request using this procedure:
