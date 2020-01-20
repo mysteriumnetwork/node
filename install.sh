@@ -144,7 +144,9 @@ install_dependencies() {
     apt-get update
     apt-get install -y wireguard
     apt-get install -y libmnl-dev libelf-dev build-essential pkg-config
-    if [[ "$distr" == "raspbian" ]]; then
+    if [[ "$distr" == "debian" ]]; then
+        apt-get install -y linux-headers-$(dpkg --print-architecture)
+    elif [[ "$distr" == "raspbian" ]]; then
         apt-get install -y raspberrypi-kernel-headers
     else
         apt-get install -y linux-headers-$(uname -r)
