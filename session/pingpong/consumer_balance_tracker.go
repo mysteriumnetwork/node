@@ -132,12 +132,12 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(identity.FromAddress(id))
 	if err != nil {
-		log.Error().Err(err).Msg("could not generate channel address")
+		log.Error().Err(err).Msg("Could not generate channel address")
 		return
 	}
 	sub, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(addr, cbt.mystSCAddress)
 	if err != nil {
-		log.Error().Err(err).Msg("could not subscribe to consumer balance event")
+		log.Error().Err(err).Msg("Could not subscribe to consumer balance event")
 		return
 	}
 	defer cancel()

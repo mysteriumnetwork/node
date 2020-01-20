@@ -80,6 +80,19 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 	return nil
 }
 
+func (receiver *receiverNATS) ReceiveUnsubscribe(endpoint communication.MessageEndpoint) {
+	receiver.mu.Lock()
+	defer receiver.mu.Unlock()
+
+	messageTopic := receiver.messageTopic + string(endpoint)
+	if subscription, found := receiver.subs[messageTopic]; found {
+		if err := subscription.Unsubscribe(); err != nil {
+			log.Error().Err(err).Msg("Failed to unsubscribe from topic: " + messageTopic)
+		}
+		log.Info().Msg("Unsubscribed from " + messageTopic)
+	}
+}
+
 func (receiver *receiverNATS) Unsubscribe() {
 	receiver.mu.Lock()
 	defer receiver.mu.Unlock()

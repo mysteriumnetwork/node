@@ -252,7 +252,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			proposal,
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
-			di.ConsumerInvoiceStorage,
 			di.AccountantPromiseStorage,
 			di.PromiseStorage,
 			di.NATPinger.PingTarget,
@@ -284,7 +283,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
 	if err := di.EventBus.Subscribe(service.StatusTopic, serviceCleaner.HandleServiceStatus); err != nil {
-		log.Error().Msg("failed to subscribe service cleaner")
+		log.Error().Msg("Failed to subscribe service cleaner")
 	}
 
 	return nil

@@ -55,7 +55,7 @@ func main() {
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to execute command: ")
+		log.Error().Err(err).Msg("Failed to execute command: ")
 		os.Exit(1)
 	}
 }

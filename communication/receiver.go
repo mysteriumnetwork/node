@@ -22,6 +22,7 @@ package communication
 //   - listening and serving HTTP-like requests
 type Receiver interface {
 	Receive(consumer MessageConsumer) error
+	ReceiveUnsubscribe(endpoint MessageEndpoint)
 	Respond(consumer RequestConsumer) error
 	Unsubscribe()
 }

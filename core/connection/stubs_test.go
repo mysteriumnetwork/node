@@ -231,6 +231,11 @@ func (md *mockDialog) Respond(consumer communication.RequestConsumer) error {
 	md.assertNotClosed()
 	return nil
 }
+
+func (md *mockDialog) ReceiveUnsubscribe(endpoint communication.MessageEndpoint) {
+	md.assertNotClosed()
+}
+
 func (md *mockDialog) Unsubscribe() {
 	md.assertNotClosed()
 }

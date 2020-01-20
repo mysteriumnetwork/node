@@ -51,9 +51,13 @@ func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
 	consumer.Consume(fd.returnReceiveMessage)
 	return nil
 }
+
 func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
 	return nil
 }
+
+func (fd *fakeDialog) ReceiveUnsubscribe(endpoint communication.MessageEndpoint) {}
+
 func (fd *fakeDialog) Unsubscribe() {}
 
 func (fd *fakeDialog) Send(producer communication.MessageProducer) error {

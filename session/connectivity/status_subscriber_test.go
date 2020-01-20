@@ -70,8 +70,9 @@ func (m *mockDialog) Respond(consumer communication.RequestConsumer) error {
 	return nil
 }
 
-func (m *mockDialog) Unsubscribe() {
-}
+func (m *mockDialog) ReceiveUnsubscribe(endpoint communication.MessageEndpoint) {}
+
+func (m *mockDialog) Unsubscribe() {}
 
 func (m *mockDialog) Close() error {
 	return nil

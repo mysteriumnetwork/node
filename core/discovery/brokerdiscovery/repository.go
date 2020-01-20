@@ -34,8 +34,10 @@ type Repository struct {
 	receiver        communication.Receiver
 	timeoutInterval time.Duration
 
+	stopOnce sync.Once
+	stopChan chan bool
+
 	watchdogStep time.Duration
-	watchdogStop chan bool
 	watchdogLock sync.Mutex
 	watchdogSeen map[market.ProposalID]time.Time
 }
@@ -53,7 +55,6 @@ func NewRepository(
 		timeoutInterval: proposalTimeoutInterval,
 
 		watchdogStep: proposalCheckInterval,
-		watchdogStop: make(chan bool),
 		watchdogSeen: make(map[market.ProposalID]time.Time),
 	}
 }
@@ -85,13 +86,22 @@ func (s *Repository) Start() error {
 		return err
 	}
 
+	s.stopOnce = sync.Once{}
+	s.stopChan = make(chan bool)
 	go s.proposalWatchdog()
+
 	return nil
 }
 
 // Stop ends proposals synchronization to storage
 func (s *Repository) Stop() {
-	close(s.watchdogStop)
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
+
+	s.receiver.ReceiveUnsubscribe(pingEndpoint)
+	s.receiver.ReceiveUnsubscribe(unregisterEndpoint)
+	s.receiver.ReceiveUnsubscribe(registerEndpoint)
 }
 
 func (s *Repository) proposalRegisterMessage(message registerMessage) error {
@@ -127,7 +137,7 @@ func (s *Repository) proposalPingMessage(message pingMessage) error {
 func (s *Repository) proposalWatchdog() {
 	for {
 		select {
-		case <-s.watchdogStop:
+		case <-s.stopChan:
 			return
 		case <-time.After(s.watchdogStep):
 			s.watchdogLock.Lock()
