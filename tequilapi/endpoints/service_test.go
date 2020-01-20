@@ -83,7 +83,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error) {
+func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options service.Options) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}
@@ -120,7 +120,7 @@ var fakeOptionsParser = map[string]ServiceOptionsParser{
 
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser)
 
 	tests := []struct {
 		method         string
@@ -217,7 +217,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 }
 
 func Test_ServiceStartInvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -246,7 +246,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -275,7 +275,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidOptions(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -304,7 +304,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 }
 
 func Test_ServiceStartAlreadyRunning(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -328,7 +328,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 }
 
 func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -339,7 +339,7 @@ func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
 }
 
 func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -372,7 +372,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 	)
 }
 func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
@@ -390,7 +390,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 }
 
 func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
@@ -411,7 +411,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 }
 
 func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -469,7 +469,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 }
 
 func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,

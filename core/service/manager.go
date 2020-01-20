@@ -22,9 +22,9 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -35,6 +35,8 @@ var (
 	ErrorLocation = errors.New("failed to detect service location")
 	// ErrUnsupportedServiceType indicates that manager tried to create an unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type")
+	// ErrUnsupportedAccessPolicy indicates that manager tried to create service with unsupported access policy
+	ErrUnsupportedAccessPolicy = errors.New("unsupported access policy")
 )
 
 // Service interface represents pluggable Mysterium service
@@ -45,7 +47,7 @@ type Service interface {
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
-type DialogWaiterFactory func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error)
+type DialogWaiterFactory func(providerID identity.Identity, serviceType string, policies []market.AccessPolicy) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error)
@@ -70,7 +72,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
-	httpClient *requests.HTTPClient,
+	policyRepo *policy.PolicyRepository,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -79,7 +81,7 @@ func NewManager(
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
-		httpClient:           httpClient,
+		policyRepo:           policyRepo,
 	}
 }
 
@@ -93,25 +95,25 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
-	httpClient       *requests.HTTPClient
+	policyRepo       *policy.PolicyRepository
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(providerID identity.Identity, serviceType string, ap *[]market.AccessPolicy, options Options) (id ID, err error) {
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options Options) (id ID, err error) {
 	service, proposal, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return id, err
 	}
-	proposal.SetAccessPolicies(ap)
 
-	allowedIDs, err := fetchAllowedIDs(manager.httpClient, ap)
-	if err != nil {
-		return id, err
+	policies := manager.policyRepo.Policies(policyIDs)
+	if err = manager.policyRepo.AddPolicies(policies); err != nil {
+		return id, ErrUnsupportedAccessPolicy
 	}
+	proposal.SetAccessPolicies(&policies)
 
-	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, allowedIDs)
+	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, policies)
 	if err != nil {
 		return id, err
 	}

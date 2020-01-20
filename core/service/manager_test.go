@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
@@ -30,9 +31,8 @@ import (
 
 var (
 	serviceType = "the-very-awesome-test-service-type"
+	mockPolicy  = policy.NewPolicyRepository(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
 )
-
-const bindAllAddress = "0.0.0.0"
 
 func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	registry := NewRegistry()
@@ -50,7 +50,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
-		requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout),
+		mockPolicy,
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -75,7 +75,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
-		requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout),
+		mockPolicy,
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -102,7 +102,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		eventBus,
-		requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout),
+		mockPolicy,
 	)
 
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})

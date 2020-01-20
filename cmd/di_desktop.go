@@ -21,12 +21,15 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
@@ -232,33 +235,25 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		log.Warn().Err(err).Msg("Failed to enable NAT forwarding")
 	}
 	di.ServiceRegistry = service.NewRegistry()
+
 	storage := session.NewEventBasedStorage(di.EventBus, session.NewStorageMemory())
+	if err := storage.Subscribe(); err != nil {
+		return errors.Wrap(err, "could not subscribe session to node events")
+	}
 	di.ServiceSessionStorage = storage
 
-	err := storage.Subscribe()
-	if err != nil {
-		return errors.Wrap(err, "could not bootstrap service components")
+	policyRepo := policy.NewPolicyRepository(di.HTTPClient, nodeOptions.AccessPolicyEndpointAddress, 10*time.Minute)
+	policyRepo.Start()
+	if err := di.EventBus.SubscribeAsync(string(event.StatusStopped), policyRepo.Stop); err != nil {
+		return errors.Wrap(err, "could not subscribe policy repository to node events")
 	}
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
-		allowedIdentityValidator := func(peerID identity.Identity) error {
-			if len(allowedIDs) == 0 {
-				return nil
-			}
-
-			for _, id := range allowedIDs {
-				if peerID.Address == id.Address {
-					return nil
-				}
-			}
-			return errors.New("identity is not allowed")
-		}
-
+	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies []market.AccessPolicy) (communication.DialogWaiter, error) {
 		return nats_dialog.NewDialogWaiter(
 			di.BrokerConnection,
 			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
-			allowedIdentityValidator,
+			policy.ValidateAllowedIdentity(policyRepo, policies),
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
@@ -293,7 +288,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		newDialogHandler,
 		di.DiscoveryFactory,
 		di.EventBus,
-		di.HTTPClient,
+		policyRepo,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
