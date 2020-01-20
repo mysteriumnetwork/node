@@ -454,7 +454,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(discovery.ProposalEventTopic, di.QualityMetricsSender.SendProposalEvent)
+	err = di.EventBus.SubscribeAsync(discovery.EventTopicProposalAnnounce, di.QualityMetricsSender.SendProposalEvent)
 	if err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
 		case node.DiscoveryTypeBroker:
 			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
-			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, options.PingInterval+time.Second, 1*time.Second)
+			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
 			proposalRepository.Add(brokerRepository)
 			di.DiscoveryWorker = brokerRepository
 		default:

@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -42,11 +43,12 @@ type Repository struct {
 // NewRepository constructs a new proposal repository (backed by the broker).
 func NewRepository(
 	connection nats.Connection,
+	eventPublisher eventbus.Publisher,
 	proposalTimeoutInterval time.Duration,
 	proposalCheckInterval time.Duration,
 ) *Repository {
 	return &Repository{
-		storage:         NewStorage(),
+		storage:         NewStorage(eventPublisher),
 		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
 		timeoutInterval: proposalTimeoutInterval,
 
