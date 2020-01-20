@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -49,7 +50,7 @@ func Test_RegisterIdentity(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
-	AddRoutesForTransactor(router, tr)
+	AddRoutesForTransactor(router, tr, nil)
 
 	req, err := http.NewRequest(
 		http.MethodPost,
@@ -72,7 +73,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory, &mockPublisher{})
-	AddRoutesForTransactor(router, tr)
+	AddRoutesForTransactor(router, tr, nil)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -95,7 +96,7 @@ func Test_TopUp_OK(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
-	AddRoutesForTransactor(router, tr)
+	AddRoutesForTransactor(router, tr, nil)
 
 	topUpData := `{"identity": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
 	req, err := http.NewRequest(
@@ -120,7 +121,7 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory, &mockPublisher{})
-	AddRoutesForTransactor(router, tr)
+	AddRoutesForTransactor(router, tr, nil)
 
 	topUpData := `{"identity": "0x599d43715DF3070f83355D9D90AE62c159E62A75"}`
 	req, err := http.NewRequest(
@@ -139,6 +140,102 @@ func Test_TopUp_BubblesErrors(t *testing.T) {
 		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
 		resp.Body.String(),
 	)
+}
+
+func Test_SettleAsync_OK(t *testing.T) {
+	mockResponse := ""
+	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
+
+	router := httprouter.New()
+
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
+	AddRoutesForTransactor(router, tr, &mockSettler{})
+
+	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/async",
+		bytes.NewBufferString(settleRequest),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusAccepted, resp.Code)
+	assert.Equal(t, "", resp.Body.String())
+}
+
+func Test_SettleAsync_ReturnsError(t *testing.T) {
+	mockResponse := ""
+	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
+
+	router := httprouter.New()
+
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
+	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")})
+
+	settleRequest := `asdasdasd`
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/async",
+		bytes.NewBufferString(settleRequest),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.JSONEq(t, `{"message":"failed to unmarshal settle request: invalid character 'a' looking for beginning of value"}`, resp.Body.String())
+}
+
+func Test_SettleSync_OK(t *testing.T) {
+	mockResponse := ""
+	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
+
+	router := httprouter.New()
+
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
+	AddRoutesForTransactor(router, tr, &mockSettler{})
+
+	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/sync",
+		bytes.NewBufferString(settleRequest),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, "", resp.Body.String())
+}
+
+func Test_SettleSync_ReturnsError(t *testing.T) {
+	mockResponse := ""
+	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
+
+	router := httprouter.New()
+
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, &mockPublisher{})
+	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")})
+
+	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/transactor/settle/sync",
+		bytes.NewBufferString(settleRequest),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.JSONEq(t, `{"message":"settling failed: explosions everywhere"}`, resp.Body.String())
 }
 
 func newTestTransactorServer(mockStatus int, mockResponse string) *httptest.Server {
@@ -168,4 +265,12 @@ func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
 	b := make([]byte, 65)
 	b = pad(b, 65)
 	return identity.SignatureBytes(b), nil
+}
+
+type mockSettler struct {
+	errToReturn error
+}
+
+func (ms *mockSettler) ForceSettle(providerID, accountantID identity.Identity) error {
+	return ms.errToReturn
 }

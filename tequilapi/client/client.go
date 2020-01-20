@@ -23,7 +23,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/pkg/errors"
 )
 
 // NewClient returns a new instance of Client
@@ -509,4 +511,29 @@ func filterSessionsByStatus(status string, sessions ConnectionSessionListDTO) Co
 	}
 	sessions.Sessions = sessions.Sessions[:matches]
 	return sessions
+}
+
+// Settle requests the settling of accountant promises
+func (client *Client) Settle(providerID, accountantID identity.Identity, waitForBlockchain bool) error {
+	settleRequest := SettleRequest{
+		ProviderID:   providerID.Address,
+		AccountantID: accountantID.Address,
+	}
+
+	path := "transactor/settle/"
+	if waitForBlockchain {
+		path += "sync"
+	} else {
+		path += "async"
+	}
+
+	response, err := client.http.Post(path, settleRequest)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not settle promise")
+	}
+	return nil
 }

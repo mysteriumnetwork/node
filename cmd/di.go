@@ -176,6 +176,7 @@ type Dependencies struct {
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
+	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
 }
 
 // Bootstrap initiates all container dependencies
@@ -248,12 +249,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
-	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
-		return err
-	}
-
-	if err := di.bootstrapAccountantPromiseSettler(nodeOptions); err != nil {
+	if err := di.bootstrapNodeComponents(nodeOptions, tequilaListener); err != nil {
 		return err
 	}
 
@@ -488,6 +484,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.EventBus,
 	)
 
+	if err := di.bootstrapAccountantPromiseSettler(nodeOptions); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
+		return err
+	}
+
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
@@ -557,7 +561,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)

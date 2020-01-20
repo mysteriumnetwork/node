@@ -206,7 +206,8 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 		Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
 		MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 	}
-	settler := pingpong.NewAccountantPromiseSettler(di.Transactor, di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
+	settler := pingpong.NewAccountantPromiseSettler(di.Transactor, di.AccountantPromiseStorage, di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
+	di.AccountantPromiseSettler = settler
 	return settler.Subscribe(di.EventBus)
 }
 

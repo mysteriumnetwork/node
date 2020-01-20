@@ -201,3 +201,9 @@ type NATStatusDTO struct {
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
 }
+
+// SettleRequest represents the request to settle accountant promises
+type SettleRequest struct {
+	AccountantID string `json:"accountant_id"`
+	ProviderID   string `json:"provider_id"`
+}

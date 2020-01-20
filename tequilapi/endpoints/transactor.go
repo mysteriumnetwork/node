@@ -23,7 +23,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -36,14 +38,21 @@ type Transactor interface {
 	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
 }
 
+// promiseSettler settles the given promises
+type promiseSettler interface {
+	ForceSettle(providerID, accountantID identity.Identity) error
+}
+
 type transactorEndpoint struct {
-	transactor Transactor
+	transactor     Transactor
+	promiseSettler promiseSettler
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
-func NewTransactorEndpoint(transactor Transactor) *transactorEndpoint {
+func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler) *transactorEndpoint {
 	return &transactorEndpoint{
-		transactor: transactor,
+		transactor:     transactor,
+		promiseSettler: promiseSettler,
 	}
 }
 
@@ -87,7 +96,87 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 	utils.WriteAsJSON(f, resp)
 }
 
-// swagger:operation POST /transactor/topup ErrorMessageDTO
+// SettleRequest represents the request to settle accountant promises
+// swagger:model SettleRequest
+type SettleRequest struct {
+	AccountantID string `json:"accountant_id"`
+	ProviderID   string `json:"provider_id"`
+}
+
+// swagger:operation POST /transactor/settle/sync SettleSync
+// ---
+// summary: forces the settlement of promises for the given provider and accountant
+// description: Forces a settlement for the accountant promises and blocks until the settlement is complete.
+// parameters:
+// - in: body
+//   name: body
+//   description: settle request body
+//   schema:
+//     $ref: "#/definitions/SettleRequest"
+// responses:
+//   202:
+//     description: settle request accepted
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	err := te.settle(request, te.promiseSettler.ForceSettle)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
+// swagger:operation POST /transactor/settle/async SettleAsync
+// ---
+// summary: forces the settlement of promises for the given provider and accountant
+// description: Forces a settlement for the accountant promises. Does not wait for completion.
+// parameters:
+// - in: body
+//   name: body
+//   description: settle request body
+//   schema:
+//     $ref: "#/definitions/SettleRequest"
+// responses:
+//   202:
+//     description: settle request accepted
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	err := te.settle(request, func(provider, accountant identity.Identity) error {
+		go func() {
+			err := te.promiseSettler.ForceSettle(provider, accountant)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not settle provider(%q) promises", provider.Address)
+			}
+		}()
+		return nil
+	})
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
+func (te *transactorEndpoint) settle(request *http.Request, settler func(identity.Identity, identity.Identity) error) error {
+	req := SettleRequest{}
+
+	err := json.NewDecoder(request.Body).Decode(&req)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal settle request")
+	}
+
+	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), identity.FromAddress(req.AccountantID)), "settling failed")
+}
+
+// swagger:operation POST /transactor/topup
 // ---
 // summary: tops up myst to the given identity
 // description: tops up myst to the given identity
@@ -173,9 +262,11 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor) {
-	te := NewTransactorEndpoint(transactor)
+func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler) {
+	te := NewTransactorEndpoint(transactor, promiseSettler)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/topup", te.TopUp)
+	router.POST("/transactor/settle/sync", te.SettleSync)
+	router.POST("/transactor/settle/async", te.SettleAsync)
 }
