@@ -235,7 +235,7 @@ func PackageDockerSwaggerRedoc() error {
 // does not support go modules yet and go mod vendor does not include c dependencies.
 func vendordModules() error {
 	mg.Deps(checkVend)
-	return sh.RunV("vend", "-replace", "golang.zx2c4.com/wireguard=github.com/mysteriumnetwork/wireguard-go")
+	return sh.RunV("vend")
 }
 
 func checkVend() error {

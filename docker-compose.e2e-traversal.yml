@@ -1,6 +1,40 @@
-version: '2.4'
+version: '3.0'
 
 services:
+  morqa:
+    image: mysteriumnetwork/quality-oracle:latest
+    command: >
+      --bind-addr=:8085
+      --prometheus=http://prometheus:9090
+      --metrics-addr=:8080
+    depends_on:
+      - prometheus
+    expose:
+      - 8085
+      - 8080
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.198
+      public1:
+        ipv4_address: 172.31.0.198
+
+  prometheus:
+    image: prom/prometheus:v2.10.0
+    volumes:
+      - ./e2e/prometheus:/prometheus
+    command:
+      - '--config.file=/prometheus/prometheus-local.yml'
+      - '--storage.tsdb.path=/data'
+    expose:
+      - 9090
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.199
+      public1:
+        ipv4_address: 172.31.0.199
+
   ipify:
     image: owlab/ipify
     expose:
@@ -20,7 +54,7 @@ services:
         ipv4_address: 172.31.0.10
 
   broker:
-    image: nats
+    image: nats:1.0.4
     expose:
       - 4222
       - 8222
@@ -57,59 +91,8 @@ services:
       public1:
         ipv4_address: 172.31.0.201
 
-
-  #private blockchain
-  ganache:
-    image: trufflesuite/ganache-cli:v6.6.0-beta.0
-    ports:
-      - 8545:8545
-    expose:
-      - 8545
-    command: >
-      --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
-    dns: 172.30.0.254
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    networks:
-      public0:
-        ipv4_address: 172.30.0.202
-      public1:
-        ipv4_address: 172.31.0.202
-
-  transactor:
-    image: mysteriumnetwork/transactor:0.1.0
-    environment:
-      PORT: 8888
-    expose:
-      - 8888
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    depends_on:
-      - ganache
-    command: >
-      -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
-      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -balanceCheckInterval 1s
-    volumes:
-      - "../../bin/localnet/deployer/keystore:/keystore"
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.203
-      public1:
-        ipv4_address: 172.31.0.203
-
   mysterium-api:
-    image: mysteriumnetwork/mysterium-api:0.5.22
+    image: mysteriumnetwork/mysterium-api:latest
     expose:
       - 80
     cap_add:
@@ -139,61 +122,88 @@ services:
       public1:
         ipv4_address: 172.31.0.200
 
-  router:
-    build:
-      context: ../..
-      dockerfile: e2e/docker/forwarder/Dockerfile
-    cap_add:
-      - NET_ADMIN
-    environment:
-      - EXT_NAT=172.30.0.1
+  # private blockchain
+  ganache:
+    image: trufflesuite/ganache-cli:v6.6.0-beta.0
+    expose:
+      - 8545
+    command: >
+      --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+    dns: 172.30.0.254
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     networks:
       public0:
-        ipv4_address: 172.30.0.254
+        ipv4_address: 172.30.0.202
       public1:
-        ipv4_address: 172.31.0.254
+        ipv4_address: 172.31.0.202
 
-  forwarder:
-    build:
-      context: ../..
-      dockerfile: e2e/docker/forwarder/Dockerfile
-    cap_add:
-      - NET_ADMIN
-    depends_on:
-      - router
+  transactor:
+    image: mysteriumnetwork/transactor:latest
     environment:
-      - GATEWAY=172.30.0.254
+      PORT: 8888
+    expose:
+      - 8888
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
+    depends_on:
+      - ganache
+    command: >
+      -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -rpcEndpoint ws://ganache:8545
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -balanceCheckInterval 1s
+    volumes:
+      - ./e2e/blockchain/keystore:/keystore
+    dns: 172.30.0.254
     networks:
       public0:
-        ipv4_address: 172.30.0.2
-      priv1:
-        ipv4_address: 10.100.1.2
-
-  forwarder2:
-    build:
-      context: ../..
-      dockerfile: e2e/docker/forwarder/Dockerfile
-    cap_add:
-      - NET_ADMIN
-    depends_on:
-      - router
-    environment:
-      - GATEWAY=172.31.0.254
-    dns: 172.31.0.254
-    networks:
+        ipv4_address: 172.30.0.203
       public1:
-        ipv4_address: 172.31.0.2
-      priv0:
-        ipv4_address: 10.100.0.2
+        ipv4_address: 172.31.0.203
+
+  accountant:
+    image: mysteriumnetwork/accountant:latest
+    environment:
+      PORT: 8889
+    expose:
+      - 8889
+    depends_on:
+      - ganache
+    command: >
+      -identityPassphrase ""
+      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      -rpcEndpoint ws://ganache:8545
+      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
+      -keystoreDir /keystore
+      -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+    volumes:
+      - ./e2e/blockchain/keystore:/keystore
 
   myst-consumer:
     build:
-      context: ../..
-      dockerfile: bin/docker/alpine/Dockerfile
+      context: .
+      dockerfile: ./bin/docker/alpine/Dockerfile
     environment:
       - DEFAULT_ROUTE=10.100.1.2
     depends_on:
       - forwarder
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - morqa
     cap_add:
       - NET_ADMIN
     expose:
@@ -214,47 +224,34 @@ services:
       --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
+      --quality.address=http://morqa:8085/api/v1
       daemon
     dns: 172.30.0.254
     networks:
       priv1:
         ipv4_address: 10.100.1.101
 
-  accountant:
-    image: mysteriumnetwork/accountant:latest
-    environment:
-      PORT: 8889
-    expose:
-      - 8889
-    depends_on:
-      - ganache
-    command: >
-      -identityPassphrase ""
-      -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
-      -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
-      -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
-      -keystoreDir /keystore
-      -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
-    volumes:
-      - "./../bin/localnet/deployer/keystore:/keystore"
-
   myst-provider:
     build:
-      context: ../..
-      dockerfile: bin/docker/alpine/Dockerfile
+      context: .
+      dockerfile: ./bin/docker/alpine/Dockerfile
     environment:
       - DEFAULT_ROUTE=10.100.0.2
     depends_on:
       - forwarder2
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - morqa
     cap_add:
       - NET_ADMIN
     expose:
       - 1194
       - 4050
     volumes:
-      - ../../e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -273,6 +270,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
+      --quality.address=http://morqa:8085/api/v1
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -285,10 +283,13 @@ services:
         ipv4_address: 10.100.0.102
 
   go-runner:
-    image: golang:1.13
+    build:
+      context: .
+      dockerfile: ./e2e/gorunner/Dockerfile
     volumes:
-      - $GOPATH:/go
-    working_dir: /go/src/github.com/mysteriumnetwork/node
+      - ./:/node
+      - $GOPATH/pkg/mod:/go/pkg/mod
+    working_dir: /node
     dns: 172.30.0.254
     networks:
       public0:
@@ -299,6 +300,53 @@ services:
         ipv4_address: 10.100.0.222
       priv1:
         ipv4_address: 10.100.1.222
+
+  router:
+    build:
+      context: .
+      dockerfile: ./e2e/forwarder/Dockerfile
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - EXT_NAT=172.30.0.1
+    networks:
+      public0:
+        ipv4_address: 172.30.0.254
+      public1:
+        ipv4_address: 172.31.0.254
+
+  forwarder:
+    build:
+      context: .
+      dockerfile: ./e2e/forwarder/Dockerfile
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - router
+    environment:
+      - GATEWAY=172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.2
+      priv1:
+        ipv4_address: 10.100.1.2
+
+  forwarder2:
+    build:
+      context: .
+      dockerfile: ./e2e/forwarder/Dockerfile
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - router
+    environment:
+      - GATEWAY=172.31.0.254
+    dns: 172.31.0.254
+    networks:
+      public1:
+        ipv4_address: 172.31.0.2
+      priv0:
+        ipv4_address: 10.100.0.2
 
 networks:
   public0:

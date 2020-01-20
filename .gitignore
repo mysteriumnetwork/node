@@ -10,3 +10,5 @@ tequilapi.json
 e2e/myst-provider/*.log.*
 mage_output_file.go
 coverage.txt
+localnet/volume/consumer
+localnet/volume/provider/db
