@@ -6,6 +6,8 @@ set -o errtrace
 set -o errexit
 set -o pipefail
 
+export DEBIAN_FRONTEND="noninteractive"
+
 # Install latest release of myst for debian/ubuntu/raspbian
 #
 # Variables:
@@ -156,7 +158,7 @@ install_dependencies() {
 
 install_myst() {
     readonly local package_file=$1
-    apt install -y --allow-downgrades "/tmp/$package_file"
+    yes | dpkg -i "/tmp/$package_file"
     service mysterium-node restart
 }
 
