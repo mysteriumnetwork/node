@@ -23,13 +23,23 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
+// TestWithCoverage runs unit tests with coverage report
+func TestWithCoverage() error {
+	packages, err := unitTestPackages()
+	if err != nil {
+		return err
+	}
+	args := append([]string{"test", "-race", "-timeout", "3m", "-cover", "-coverprofile", "coverage.txt", "-covermode", "atomic"}, packages...)
+	return sh.RunV("go", args...)
+}
+
 // Test runs unit tests
 func Test() error {
 	packages, err := unitTestPackages()
 	if err != nil {
 		return err
 	}
-	args := append([]string{"test", "-race", "-timeout", "3m", "-cover", "-coverprofile", "coverage.txt", "-covermode", "atomic"}, packages...)
+	args := append([]string{"test", "-race", "-timeout", "3m"}, packages...)
 	return sh.RunV("go", args...)
 }
 

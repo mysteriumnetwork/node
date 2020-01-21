@@ -54,13 +54,10 @@ type publisher interface {
 	Publish(topic string, data interface{})
 }
 
-// ConfigNegotiator is able to handle config negotiations
-type ConfigNegotiator interface {
-	ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*ConfigParams, error)
+// ConfigProvider is able to handle config negotiations
+type ConfigProvider interface {
+	ProvideConfig(sessionConfig json.RawMessage) (*ConfigParams, error)
 }
-
-// ConfigProvider provides session config for remote client
-type ConfigProvider func(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*ConfigParams, error)
 
 // DestroyCallback cleanups session
 type DestroyCallback func()

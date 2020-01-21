@@ -45,8 +45,8 @@ type Manager struct {
 }
 
 // ProvideConfig provides the session configuration
-func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
-	return &session.ConfigParams{TraversalParams: traversalParams}, nil
+func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+	return &session.ConfigParams{TraversalParams: &traversal.Params{Cancel: make(chan struct{})}}, nil
 }
 
 // Serve starts service - does block

@@ -19,36 +19,43 @@ package connection
 
 import (
 	"github.com/mysteriumnetwork/node/core/connection"
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
+	"github.com/pkg/errors"
 )
 
 // Factory is the wireguard connection factory
 type Factory struct {
-	configDir string
+	configDir  string
+	ipResolver ip.Resolver
+	natPinger  NATPinger
 }
 
 // Create creates a new wireguard connection
 func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not generate private key")
 	}
-	config := wg.ServiceConfig{}
-	config.Consumer.PrivateKey = privateKey
 
 	return &Connection{
-		stopChannel:       make(chan struct{}),
+		done:              make(chan struct{}),
+		statsCheckerStop:  make(chan struct{}),
+		pingerStop:        make(chan struct{}),
 		stateChannel:      stateChannel,
 		statisticsChannel: statisticsChannel,
-		config:            config,
+		privateKey:        privateKey,
 		configDir:         f.configDir,
+		ipResolver:        f.ipResolver,
+		natPinger:         f.natPinger,
 	}, nil
 }
 
 // NewConnectionCreator creates wireguard connections
-func NewConnectionCreator(configDir string) connection.Factory {
+func NewConnectionCreator(configDir string, ipResolver ip.Resolver, natPinger NATPinger) connection.Factory {
 	return &Factory{
-		configDir: configDir,
+		configDir:  configDir,
+		ipResolver: ipResolver,
+		natPinger:  natPinger,
 	}
 }

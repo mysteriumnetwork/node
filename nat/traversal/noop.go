@@ -17,12 +17,13 @@
 
 package traversal
 
-import (
-	"github.com/mysteriumnetwork/node/services"
-)
-
 // NoopPinger does nothing
 type NoopPinger struct{}
+
+// NewNoopPinger returns noop nat pinger
+func NewNoopPinger() NATPinger {
+	return &NoopPinger{}
+}
 
 // Valid returns that noop pinger is not a valid pinger
 func (np *NoopPinger) Valid() bool {
@@ -50,4 +51,4 @@ func (np *NoopPinger) PingProvider(ip string, port int, consumerPort int, stop <
 func (np *NoopPinger) PingTarget(*Params) {}
 
 // BindServicePort does nothing
-func (np *NoopPinger) BindServicePort(serviceType services.ServiceType, port int) {}
+func (np *NoopPinger) BindServicePort(key string, port int) {}

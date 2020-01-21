@@ -54,11 +54,11 @@ func (handler *handler) Handle(dialog communication.Dialog) error {
 func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) error {
 	err := dialog.Respond(
 		&createConsumer{
-			sessionCreator: handler.sessionManagerFactory(dialog),
-			peerID:         dialog.PeerID(),
-			configProvider: handler.configProvider,
-			promiseLoader:  handler.promiseLoader,
-			receiverID:     handler.receiverID,
+			sessionCreator:         handler.sessionManagerFactory(dialog),
+			peerID:                 dialog.PeerID(),
+			providerConfigProvider: handler.configProvider,
+			promiseLoader:          handler.promiseLoader,
+			receiverID:             handler.receiverID,
 		},
 	)
 	if err != nil {

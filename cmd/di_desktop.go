@@ -70,7 +70,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			location, err := di.LocationResolver.DetectLocation()
+			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
@@ -83,7 +83,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			mapPort := func(port int) func() {
 				return mapping.GetPortMappingFunc(
-					location.IP,
+					loc.IP,
 					outIP,
 					"UDP",
 					port,
@@ -99,8 +99,22 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				portPool = port.NewPool()
 			}
 
-			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions, portPool),
-				wireguard_service.GetProposal(location), nil
+			locationInfo := location.ServiceLocationInfo{
+				OutIP:   outIP,
+				PubIP:   loc.IP,
+				Country: loc.Country,
+			}
+
+			svc := wireguard_service.NewManager(
+				di.IPResolver,
+				locationInfo,
+				di.NATService,
+				di.NATPinger,
+				di.NATTracker,
+				mapPort,
+				wgOptions,
+				portPool)
+			return svc, wireguard_service.GetProposal(loc), nil
 		},
 	)
 }
@@ -247,7 +261,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			allowedIdentityValidator,
 		), nil
 	}
-	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) (communication.DialogHandler, error) {
+	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
 		sessionManagerFactory := newSessionManagerFactory(
 			nodeOptions,
 			proposal,
@@ -266,7 +280,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 
 		return session.NewDialogHandler(
 			sessionManagerFactory,
-			configProvider.ProvideConfig,
+			configProvider,
 			di.PromiseStorage,
 			identity.FromAddress(proposal.ProviderID),
 			connectivity.NewStatusSubscriber(di.SessionConnectivityStatusStorage),
@@ -298,7 +312,7 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator(nodeOptions.Directories.Config))
+	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator(nodeOptions.Directories.Config, di.IPResolver, di.NATPinger))
 }
 
 func (di *Dependencies) bootstrapUIServer(options node.Options) {
