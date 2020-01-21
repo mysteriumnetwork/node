@@ -61,6 +61,18 @@ func (method Payment) GetPrice() money.Money {
 	return method.Price
 }
 
+// GetType returns PER_BYTES
+func (method Payment) GetType() string {
+	return PaymentMethod
+}
+
+// GetRate returns the payment rate
+func (method Payment) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerTime: time.Minute,
+	}
+}
+
 // ConnectionEndpoint represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {

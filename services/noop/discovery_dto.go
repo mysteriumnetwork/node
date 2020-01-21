@@ -18,6 +18,8 @@
 package noop
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -47,4 +49,17 @@ type PaymentNoop struct {
 // GetPrice returns price of payment per time
 func (method PaymentNoop) GetPrice() money.Money {
 	return method.Price
+}
+
+// GetType returns NOOP
+func (method PaymentNoop) GetType() string {
+	return PaymentMethodNoop
+}
+
+// GetRate returns the payment rate
+func (method PaymentNoop) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerTime: time.Minute,
+		PerByte: 1000000,
+	}
 }

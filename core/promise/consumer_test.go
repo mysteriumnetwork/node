@@ -20,6 +20,7 @@ package promise
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -128,6 +129,16 @@ type fakePayment struct {
 
 func (fp fakePayment) GetPrice() money.Money {
 	return money.Money{Amount: fp.amount}
+}
+
+func (fp fakePayment) GetType() string {
+	return "PER_TIME"
+}
+
+func (fp fakePayment) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerTime: time.Minute,
+	}
 }
 
 func fakeBlockchain(balance uint64) identity.Balance {
