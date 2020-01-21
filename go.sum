@@ -431,8 +431,8 @@ github.com/mysteriumnetwork/feedback v1.1.1 h1:m1ZDDXiSfrj6Iu7ym9iq58Z7SiMQXaKb6
 github.com/mysteriumnetwork/feedback v1.1.1/go.mod h1:J2o68rWcscgBwPw9tPFZ4xBvrhx+COWSQPvkFKu9I+Q=
 github.com/mysteriumnetwork/go-ci v0.0.0-20190912064927-c54e2b0b3b5c h1:Tt24qNve3Wv04easDjpeAYjHoIaAUTG0MXDeSMclJyg=
 github.com/mysteriumnetwork/go-ci v0.0.0-20190912064927-c54e2b0b3b5c/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
-github.com/mysteriumnetwork/go-ci v0.0.0-20190917134659-78a29f230467 h1:KnCmGmMOy3+Xo9M2PYyPbkvTzY1cDHf6RUtKpiO7k0A=
-github.com/mysteriumnetwork/go-ci v0.0.0-20190917134659-78a29f230467/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
+github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c h1:8LI4spVFC7pcYxSaVkW2pB9y1UjdLBdYLwfG14tIXg0=
+github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191125133122-c2bab4ca5537 h1:nQoFsJGlszdzIZllK6z6Di4E5XIHzcVpfaEoURiyoZw=
 github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191125133122-c2bab4ca5537/go.mod h1:FEqNvtMX+3ZRAk6EVBS5xSdC2Bkm4CmHb4umlysr1KM=
 github.com/mysteriumnetwork/go-openvpn v0.0.20 h1:jHPu7tk2zUsi6oeqZ1UQEfbxwUpf1PFsEf1ffE1SgsI=

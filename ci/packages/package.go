@@ -27,6 +27,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/storage"
@@ -106,6 +107,11 @@ func PackageLinuxDebianArm64() error {
 
 // PackageOsxAmd64 builds and stores OSX amd64 package
 func PackageOsxAmd64() error {
+	job.Precondition(func() bool {
+		pr, _ := env.IsPR()
+		fullBuild, _ := env.IsFullBuild()
+		return !pr || fullBuild
+	})
 	logconfig.Bootstrap()
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
 		return err
@@ -124,9 +130,14 @@ func PackageWindowsAmd64() error {
 
 // PackageIOS builds and stores iOS package
 func PackageIOS() error {
+	job.Precondition(func() bool {
+		pr, _ := env.IsPR()
+		fullBuild, _ := env.IsFullBuild()
+		return !pr || fullBuild
+	})
+	logconfig.Bootstrap()
 	mg.Deps(vendordModules)
 
-	logconfig.Bootstrap()
 	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
 		return err
 	}
@@ -135,9 +146,14 @@ func PackageIOS() error {
 
 // PackageAndroid builds and stores Android package
 func PackageAndroid() error {
+	job.Precondition(func() bool {
+		pr, _ := env.IsPR()
+		fullBuild, _ := env.IsFullBuild()
+		return !pr || fullBuild
+	})
+	logconfig.Bootstrap()
 	mg.Deps(vendordModules)
 
-	logconfig.Bootstrap()
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
-	github.com/mysteriumnetwork/go-ci v0.0.0-20190917134659-78a29f230467
+	github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.0-20191125133122-c2bab4ca5537
 	github.com/mysteriumnetwork/go-openvpn v0.0.20
 	github.com/mysteriumnetwork/go-wondershaper v1.0.0
