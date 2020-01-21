@@ -10,6 +10,7 @@ require (
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm v2.1.2+incompatible
 	github.com/aws/aws-sdk-go-v2 v0.15.0
+	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
