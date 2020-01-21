@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/mholt/archiver"
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/ci/util/device"
@@ -43,7 +44,13 @@ const (
 
 // PackageLinuxRaspberryImage builds and stores raspberry image
 func PackageLinuxRaspberryImage() error {
+	job.Precondition(func() bool {
+		pr, _ := env.IsPR()
+		fullBuild, _ := env.IsFullBuild()
+		return !pr || fullBuild
+	})
 	logconfig.Bootstrap()
+
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
