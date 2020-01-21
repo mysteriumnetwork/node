@@ -6,6 +6,8 @@ set -o errtrace
 set -o errexit
 set -o pipefail
 
+export DEBIAN_FRONTEND="noninteractive"
+
 # Install latest release of myst for debian/ubuntu/raspbian
 #
 # Variables:
@@ -32,9 +34,9 @@ get_linux_distribution() {
     local result
 
     if [[ -f "/etc/os-release" ]]; then
-        local id=$(awk -F= '$1=="ID_LIKE" { print $2 ;}' /etc/os-release)
+        local id=$(awk -F= '$1=="ID" { print $2 ;}' /etc/os-release)
         if [[ -z "$id" ]]; then
-            id=$(awk -F= '$1=="ID" { print $2 ;}' /etc/os-release)
+            id=$(awk -F= '$1=="ID_LIKE" { print $2 ;}' /etc/os-release)
         fi
         result="$id"
     else
@@ -87,7 +89,7 @@ download_latest_package() {
 
     if [[ "$distro" == "debian" ]] && [[ "$arch" == "amd64" ]]; then
         package_file="myst_linux_amd64.deb"
-    elif [[ "$distro" == "debian" ]] && [[ "$arch" == "armhf" ]]; then
+    elif [[ "$distro" == "debian" || "$distro" == "raspbian" ]] && [[ "$arch" == "armhf" ]]; then
         package_file="myst_linux_armhf.deb"
     elif [[ "$distro" == "debian" ]] && [[ "$arch" == "arm64" ]]; then
         package_file="myst_linux_arm64.deb"
@@ -130,6 +132,7 @@ install_script_dependencies() {
 
 install_dependencies() {
     readonly local version_codename=$1
+    readonly local distr=$2
 
     if [[ "$version_codename" == "xenial" ]]; then
         curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add -
@@ -142,13 +145,20 @@ install_dependencies() {
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
     apt-get update
     apt-get install -y wireguard
-    apt-get install -y libmnl-dev libelf-dev linux-headers-$(uname -r) build-essential pkg-config
+    apt-get install -y libmnl-dev libelf-dev build-essential pkg-config
+    if [[ "$distr" == "debian" ]]; then
+        apt-get install -y linux-headers-$(dpkg --print-architecture)
+    elif [[ "$distr" == "raspbian" ]]; then
+        apt-get install -y raspberrypi-kernel-headers
+    else
+        apt-get install -y linux-headers-$(uname -r)
+    fi
     dpkg-reconfigure wireguard-dkms
 }
 
 install_myst() {
     readonly local package_file=$1
-    apt install -y --allow-downgrades "/tmp/$package_file"
+    yes | dpkg -i "/tmp/$package_file"
     service mysterium-node restart
 }
 
@@ -170,7 +180,7 @@ download_latest_package PACKAGE_FILE $OS $ARCH $DISTRO
 echo "### Downloading latest package - done: $PACKAGE_FILE"
 
 echo "### Installing myst dependencies"
-install_dependencies $VERSION_CODENAME
+install_dependencies $VERSION_CODENAME $DISTRO
 echo "### Installing myst dependencies - done"
 
 echo "### Installing myst & restarting service"
