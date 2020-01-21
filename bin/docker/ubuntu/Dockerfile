@@ -1,4 +1,4 @@
-FROM anjmao/mysterium-node-builder AS builder
+FROM mysteriumnetwork/mysterium-node-builder:1.13 AS builder
 
 ARG BUILD_BRANCH=$BUILD_BRANCH
 ARG BUILD_COMMIT=$BUILD_COMMIT
