@@ -37,8 +37,9 @@ func NewRepository(api *mysterium.MysteriumAPI) *apiRepository {
 // Proposal returns proposal by ID.
 func (a *apiRepository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
 	proposals, err := a.discoveryAPI.QueryProposals(mysterium.ProposalsQuery{
-		NodeKey:     id.ProviderID,
-		ServiceType: id.ServiceType,
+		NodeKey:         id.ProviderID,
+		ServiceType:     id.ServiceType,
+		AccessPolicyAll: true,
 	})
 	if err != nil {
 		return nil, err
