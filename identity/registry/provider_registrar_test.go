@@ -19,7 +19,6 @@ package registry
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
@@ -121,8 +120,6 @@ func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	}()
 
 	registrar.consumeServiceEvent(mockEvent.event)
-	time.Sleep(time.Millisecond * 2)
-	registrar.stop()
 	<-done
 }
 
