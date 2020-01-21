@@ -210,6 +210,7 @@ func (cbt *ConsumerBalanceTracker) updateBalanceFromAccountant(id identity.Ident
 			diff = safeSub(cb.Balance, v.BCBalance)
 		}
 
+		before := cbt.balances[id].CurrentEstimate
 		if isIncreased {
 			cbt.balances[id] = Balance{
 				BCBalance:       v.BCBalance + diff,
@@ -221,11 +222,13 @@ func (cbt *ConsumerBalanceTracker) updateBalanceFromAccountant(id identity.Ident
 				CurrentEstimate: safeSub(v.CurrentEstimate, diff),
 			}
 		}
+		go cbt.publishChangeEvent(id, before, cbt.balances[id].CurrentEstimate)
 	} else {
 		cbt.balances[id] = Balance{
 			BCBalance:       cb.Balance,
 			CurrentEstimate: cb.Balance,
 		}
+		go cbt.publishChangeEvent(id, 0, cb.Balance)
 	}
 }
 
