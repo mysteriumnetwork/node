@@ -41,7 +41,7 @@ const DefaultAccountantFailureCount uint64 = 10
 
 // DefaultPaymentInfo represents the default payment info for the alpha release
 var DefaultPaymentInfo = dto.PaymentRate{
-	Price:    money.NewMoney(1000000, money.CurrencyMyst),
+	Price:    money.NewMoney(50000, money.CurrencyMyst),
 	Duration: 1 * time.Minute,
 }
 
