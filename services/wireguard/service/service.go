@@ -20,8 +20,8 @@ package service
 import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 )
 
 // GetProposal returns the proposal for wireguard service
@@ -44,7 +44,7 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		},
 		PaymentMethodType: wg.PaymentMethod,
 		PaymentMethod: wg.Payment{
-			Price: money.NewMoney(1000000, money.CurrencyMyst),
+			Price: pingpong.DefaultPaymentInfo.Price,
 		},
 	}
 }

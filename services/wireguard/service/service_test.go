@@ -26,9 +26,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,10 +52,7 @@ func Test_GetProposal(t *testing.T) {
 			},
 			PaymentMethodType: "WG",
 			PaymentMethod: wg.Payment{
-				Price: money.Money{
-					Amount:   1000000,
-					Currency: money.Currency("MYST"),
-				},
+				Price: pingpong.DefaultPaymentInfo.Price,
 			},
 		},
 		GetProposal(location.Location{Country: country}),

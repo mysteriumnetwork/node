@@ -35,12 +35,6 @@ type PaymentRate struct {
 	Duration time.Duration `json:"duration"`
 }
 
-// DefaultPaymentInfo represents the default payment rate
-var DefaultPaymentInfo = PaymentRate{
-	Price:    money.NewMoney(1000000, money.CurrencyMyst),
-	Duration: time.Minute,
-}
-
 // GetPrice returns price of payment per time
 func (method PaymentRate) GetPrice() money.Money {
 	return method.Price
