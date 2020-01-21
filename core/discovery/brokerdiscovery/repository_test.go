@@ -97,15 +97,28 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
 
 	proposalPing(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
 	time.Sleep(1 * time.Millisecond)
 
-	assert.Len(t, subscriber.storage.Proposals(), 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, subscriber.storage.Proposals())
+	timeout := time.After(time.Millisecond * 20)
+	for {
+		select {
+		case <-time.After(time.Millisecond):
+			if len(subscriber.storage.Proposals()) == 1 {
+				assert.Len(t, subscriber.storage.Proposals(), 1)
+				assert.Exactly(t, []market.ServiceProposal{proposalFirst}, subscriber.storage.Proposals())
+				return
+			}
+		case <-timeout:
+			assert.Fail(t, "did not get expected proposals before timeout")
+			return
+		}
+	}
+
 }
 
 func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
