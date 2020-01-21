@@ -18,8 +18,11 @@
 package pingpong
 
 import (
+	"context"
 	"sync"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -144,7 +147,33 @@ func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.RegistrationEventPayload) {
 	switch event.Status {
 	case registry.RegisteredConsumer, registry.RegisteredProvider:
-		cbt.updateBalanceFromAccountant(event.ID)
+		var boff backoff.BackOff
+		eback := backoff.NewExponentialBackOff()
+		eback.MaxElapsedTime = time.Minute
+		eback.InitialInterval = time.Second * 2
+
+		boff = backoff.WithMaxRetries(eback, 10)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			// Since we want to cancel the request if cbt.Stop is called, we're adding the defer and the select here
+			defer cancel()
+			select {
+			case <-cbt.stop:
+			case <-ctx.Done():
+			}
+		}()
+
+		boff = backoff.WithContext(boff, ctx)
+		toRetry := func() error {
+			return cbt.updateBalanceFromAccountant(event.ID)
+		}
+
+		err := backoff.Retry(toRetry, boff)
+		if err != nil {
+			log.Error().Err(err).Msg("could not update balance from accountant")
+		}
 	}
 }
 
@@ -190,11 +219,11 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 	}
 }
 
-func (cbt *ConsumerBalanceTracker) updateBalanceFromAccountant(id identity.Identity) {
+func (cbt *ConsumerBalanceTracker) updateBalanceFromAccountant(id identity.Identity) error {
 	cb, err := cbt.accountantBalanceFetcher(id.Address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get accountant balance")
-		return
+		return err
 	}
 
 	cbt.balancesLock.Lock()
@@ -230,6 +259,8 @@ func (cbt *ConsumerBalanceTracker) updateBalanceFromAccountant(id identity.Ident
 		}
 		go cbt.publishChangeEvent(id, 0, cb.Balance)
 	}
+
+	return nil
 }
 
 func safeSub(a, b uint64) uint64 {
