@@ -18,8 +18,11 @@
 package test
 
 import (
+	"fmt"
+
 	"github.com/mysteriumnetwork/node/e2e"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/rs/zerolog/log"
 )
 
 // TestE2EBasic runs end-to-end tests
@@ -33,7 +36,7 @@ func TestE2EBasic() error {
 	if err := runner.Init(); err != nil {
 		return err
 	}
-	return runner.Test()
+	return runner.Test("myst-provider", "myst-consumer")
 }
 
 // TestE2ENAT runs end-to-end tests in NAT environment
@@ -47,5 +50,34 @@ func TestE2ENAT() error {
 	if err := runner.Init(); err != nil {
 		return err
 	}
-	return runner.Test()
+	return runner.Test("myst-provider", "myst-consumer")
+}
+
+// TestE2ECompatibility runs end-to-end tests with older node version to make check compatibility
+func TestE2ECompatibility() error {
+	logconfig.Bootstrap()
+	composeFiles := []string{
+		"./docker-compose.e2e-compatibility.yml",
+	}
+	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_compatibility", "openvpn,noop,wireguard")
+	defer cleanup()
+	if err := runner.Init(); err != nil {
+		return err
+	}
+
+	tests := []struct {
+		provider, consumer string
+	}{
+		{provider: "myst-provider", consumer: "myst-consumer-local"},
+		{provider: "myst-provider-local", consumer: "myst-consumer"},
+	}
+
+	for _, test := range tests {
+		log.Info().Msgf("Testing compatibility for %s and %s", test.provider, test.consumer)
+
+		if err := runner.Test(test.provider, test.consumer); err != nil {
+			return fmt.Errorf("compatibility test failed for %s and %s", test.provider, test.consumer)
+		}
+	}
+	return nil
 }

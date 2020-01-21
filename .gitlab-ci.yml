@@ -66,6 +66,11 @@ test-e2e-nat:
   tags: [go]
   script: go run mage.go -v TestE2ENAT
 
+test-e2e-compatibility:
+  stage: test
+  tags: [go]
+  script: go run mage.go -v TestE2ECompatibility
+
 create-bucket:
   stage: pre-release
   tags: [go]
