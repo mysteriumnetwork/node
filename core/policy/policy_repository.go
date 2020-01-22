@@ -37,7 +37,7 @@ type PolicyRepository struct {
 	policyRules map[market.AccessPolicy]market.AccessPolicyRuleSet
 
 	fetchInterval time.Duration
-	fetchShutdown chan bool
+	fetchShutdown chan struct{}
 }
 
 // NewPolicyRepository create instance of policy repository
@@ -47,18 +47,19 @@ func NewPolicyRepository(client *requests.HTTPClient, policyURL string, interval
 		policyURL:     policyURL,
 		policyRules:   make(map[market.AccessPolicy]market.AccessPolicyRuleSet),
 		fetchInterval: interval,
+		fetchShutdown: make(chan struct{}),
 	}
 }
 
 // Start begins fetching proposals to repository
 func (pr *PolicyRepository) Start() {
-	pr.fetchShutdown = make(chan bool, 1)
+	pr.fetchShutdown = make(chan struct{})
 	go pr.fetchLoop()
 }
 
 // Stop ends fetching proposals to repository
 func (pr *PolicyRepository) Stop() {
-	pr.fetchShutdown <- true
+	pr.fetchShutdown <- struct{}{}
 }
 
 // Policy converts given value to valid policy rule
@@ -136,7 +137,7 @@ func (pr *PolicyRepository) fetchPolicyRules(policy market.AccessPolicy) (market
 		return policyRules, errors.Wrap(err, "failed to create policy request")
 	}
 
-	err = pr.client.DoRequestAndParseResponse(req, &policy)
+	err = pr.client.DoRequestAndParseResponse(req, &policyRules)
 	if err != nil {
 		return policyRules, errors.Wrapf(err, "failed fetch policy rule %s", policy)
 	}
