@@ -39,12 +39,6 @@ var (
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	}
-	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
-	FlagAccessPolicyAddress = cli.StringFlag{
-		Name:  "access-policy-address",
-		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
-		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
-	}
 	// FlagBrokerAddress message broker URI.
 	FlagBrokerAddress = cli.StringFlag{
 		Name:  "broker-address",
@@ -82,7 +76,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
 		&FlagQualityOracleAddress,
-		&FlagAccessPolicyAddress,
 	)
 }
 
@@ -91,7 +84,6 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagTestnet)
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
-	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseStringFlag(ctx, FlagQualityOracleAddress)

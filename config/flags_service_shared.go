@@ -18,13 +18,18 @@
 package config
 
 import (
+	"time"
+
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
 
-// Options describes options shared among multiple services
-type Options struct {
-	AccessPolicies []string
-	ShaperEnabled  bool
+// ServicesOptions describes options shared among multiple services
+type ServicesOptions struct {
+	AccessPolicyAddress       string
+	AccessPolicyList          []string
+	AccessPolicyFetchInterval time.Duration
+	ShaperEnabled             bool
 }
 
 var (
@@ -45,11 +50,23 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
-	// FlagAccessPolicies a comma-separated list of access policies that determines allowed identities to use the service.
-	FlagAccessPolicies = cli.StringFlag{
+	// FlagAccessPolicyAddress Policy oracle URL for retrieving access policies.
+	FlagAccessPolicyAddress = cli.StringFlag{
+		Name:  "access-policy.address",
+		Usage: "URL of policy oracle endpoint for retrieving lists of access policies",
+		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
+	}
+	// FlagAccessPolicyList a comma-separated list of access policies that determines allowed identities to use the service.
+	FlagAccessPolicyList = cli.StringFlag{
 		Name:  "access-policy.list",
-		Usage: "Comma separated list that determines the allowed identities on our service.",
+		Usage: "Comma separated list that determines the access policies applied to provide service.",
 		Value: "",
+	}
+	// FlagAccessPolicyFetchInterval policy list fetch interval.
+	FlagAccessPolicyFetchInterval = cli.DurationFlag{
+		Name:  "access-policy.fetch",
+		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
+		Value: 10 * time.Minute,
 	}
 	// FlagShaperEnabled enables bandwidth limitation.
 	FlagShaperEnabled = cli.BoolFlag{
@@ -64,7 +81,9 @@ func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 		&FlagIdentity,
 		&FlagIdentityPassphrase,
 		&FlagAgreedTermsConditions,
-		&FlagAccessPolicies,
+		&FlagAccessPolicyAddress,
+		&FlagAccessPolicyList,
+		&FlagAccessPolicyFetchInterval,
 		&FlagShaperEnabled,
 	)
 }
@@ -74,6 +93,8 @@ func ParseFlagsServiceShared(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIdentity)
 	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
-	Current.ParseStringFlag(ctx, FlagAccessPolicies)
+	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
+	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
+	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 }

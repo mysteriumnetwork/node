@@ -66,7 +66,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: quit,
 				ap: client.AccessPoliciesRequest{
-					IDs: services.SharedConfiguredOptions().AccessPolicies,
+					IDs: services.SharedConfiguredOptions().AccessPolicyList,
 				},
 			}
 

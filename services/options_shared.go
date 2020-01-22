@@ -24,16 +24,18 @@ import (
 )
 
 // SharedConfiguredOptions returns effective shared service options
-func SharedConfiguredOptions() config.Options {
-	policiesStr := config.GetString(config.FlagAccessPolicies)
+func SharedConfiguredOptions() config.ServicesOptions {
+	policiesStr := config.GetString(config.FlagAccessPolicyList)
 	var policies []string
 	if len(policiesStr) > 0 {
 		policies = strings.Split(policiesStr, ",")
 	} else {
 		policies = []string{}
 	}
-	return config.Options{
-		AccessPolicies: policies,
-		ShaperEnabled:  config.GetBool(config.FlagShaperEnabled),
+	return config.ServicesOptions{
+		AccessPolicyAddress:       config.GetString(config.FlagAccessPolicyAddress),
+		AccessPolicyList:          policies,
+		AccessPolicyFetchInterval: config.GetDuration(config.FlagAccessPolicyFetchInterval),
+		ShaperEnabled:             config.GetBool(config.FlagShaperEnabled),
 	}
 }

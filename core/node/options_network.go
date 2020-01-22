@@ -24,9 +24,8 @@ type OptionsNetwork struct {
 
 	ExperimentNATPunching bool
 
-	MysteriumAPIAddress         string
-	AccessPolicyEndpointAddress string
-	BrokerAddress               string
+	MysteriumAPIAddress string
+	BrokerAddress       string
 
 	EtherClientRPC string
 

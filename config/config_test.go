@@ -126,7 +126,7 @@ func TestConfig_ParseStringSliceFlag(t *testing.T) {
 			// given
 			sliceFlag := cli.StringSliceFlag{
 				Name:  "discovery.type",
-				Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
+				Usage: `Proposal discovery adapter(s) separated by comma. Options: { "api", "broker", "api,broker" }`,
 				Value: tc.defaults,
 			}
 			cfg := NewConfig()

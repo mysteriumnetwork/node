@@ -283,7 +283,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
-			Ids: services.SharedConfiguredOptions().AccessPolicies,
+			Ids: services.SharedConfiguredOptions().AccessPolicyList,
 		},
 	}
 	decoder := json.NewDecoder(req.Body)

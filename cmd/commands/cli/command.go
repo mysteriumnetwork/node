@@ -241,7 +241,7 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 	}
 
 	ap := tequilapi_client.AccessPoliciesRequest{
-		IDs: sharedOpts.AccessPolicies,
+		IDs: sharedOpts.AccessPolicyList,
 	}
 
 	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap)
@@ -665,7 +665,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, config.Options, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, error) {
 	var flags []cli.Flag
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
@@ -677,7 +677,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, config.Options{}, err
+		return nil, config.ServicesOptions{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
@@ -694,5 +694,5 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	}
 
-	return nil, config.Options{}, errors.New("service type not found")
+	return nil, config.ServicesOptions{}, errors.New("service type not found")
 }
