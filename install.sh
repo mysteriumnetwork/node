@@ -81,22 +81,14 @@ download_latest_package() {
     local __resultvar=$1
     local result
 
-    readonly local os=$2
-    readonly local arch=$3
-    readonly local distro=$4
+    readonly local arch=$2
 
     local package_file
 
-    if [[ "$distro" == "debian" ]] && [[ "$arch" == "amd64" ]]; then
-        package_file="myst_linux_amd64.deb"
-    elif [[ "$distro" == "debian" || "$distro" == "raspbian" ]] && [[ "$arch" == "armhf" ]]; then
-        package_file="myst_linux_armhf.deb"
-    elif [[ "$distro" == "debian" ]] && [[ "$arch" == "arm64" ]]; then
-        package_file="myst_linux_arm64.deb"
-    fi
+    package_file="myst_linux_${arch}.deb"
 
-    if [[ -z "$package_file" ]]; then
-        echo "Error: could not determine package to download, aborting"
+    if [[ -z "$arch" ]]; then
+        echo "Error: could not determine architecture to download, aborting"
         exit 1
     fi
 
@@ -176,7 +168,7 @@ echo "OS: $OS | architecture: $ARCH | distribution: $DISTRO | version: $VERSION_
 echo "### Detecting platform - done"
 
 echo "### Downloading latest package"
-download_latest_package PACKAGE_FILE $OS $ARCH $DISTRO
+download_latest_package PACKAGE_FILE $ARCH
 echo "### Downloading latest package - done: $PACKAGE_FILE"
 
 echo "### Installing myst dependencies"
