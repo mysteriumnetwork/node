@@ -67,26 +67,6 @@ func (proposal *ServiceProposal) UniqueID() ProposalID {
 	}
 }
 
-// AccessPolicy represents the access controls for proposal
-type AccessPolicy struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-}
-
-// AccessPolicyRuleSet represents named list with rules specifying whether access is allowed
-type AccessPolicyRuleSet struct {
-	ID          string       `json:"id"`
-	Title       string       `json:"title"`
-	Description string       `json:"description"`
-	Allow       []AccessRule `json:"allow"`
-}
-
-// AccessRule represents rule specifying whether connection should be allowed
-type AccessRule struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
 // UnmarshalJSON is custom json unmarshaler to dynamically fill in ServiceProposal values
 func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	var jsonData struct {

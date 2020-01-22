@@ -36,7 +36,7 @@ func ValidateAllowedIdentity(repository *PolicyRepository, policies *[]market.Ac
 
 		for _, policyRules := range policiesRules {
 			for _, rule := range policyRules.Allow {
-				if rule.Type == "identity" && rule.Value == peerID.Address {
+				if rule.Type == market.AccessPolicyTypeIdentity && rule.Value == peerID.Address {
 					return nil
 				}
 			}
