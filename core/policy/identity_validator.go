@@ -23,9 +23,13 @@ import (
 )
 
 // ValidateAllowedIdentity checks if given identity is allowed by given policies
-func ValidateAllowedIdentity(repository *PolicyRepository, policies []market.AccessPolicy) func(identity.Identity) error {
+func ValidateAllowedIdentity(repository *PolicyRepository, policies *[]market.AccessPolicy) func(identity.Identity) error {
 	return func(peerID identity.Identity) error {
-		policiesRules, err := repository.RulesForPolicies(policies)
+		if policies == nil {
+			return nil
+		}
+
+		policiesRules, err := repository.RulesForPolicies(*policies)
 		if err != nil {
 			return err
 		}

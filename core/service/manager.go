@@ -47,7 +47,7 @@ type Service interface {
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
-type DialogWaiterFactory func(providerID identity.Identity, serviceType string, policies []market.AccessPolicy) (communication.DialogWaiter, error)
+type DialogWaiterFactory func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error)
@@ -107,11 +107,14 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	policies := manager.policyRepo.Policies(policyIDs)
-	if err = manager.policyRepo.AddPolicies(policies); err != nil {
-		return id, ErrUnsupportedAccessPolicy
+	var policies *[]market.AccessPolicy = nil
+	if len(policyIDs) > 0 {
+		policies := manager.policyRepo.Policies(policyIDs)
+		if err = manager.policyRepo.AddPolicies(policies); err != nil {
+			return id, ErrUnsupportedAccessPolicy
+		}
 	}
-	proposal.SetAccessPolicies(&policies)
+	proposal.SetAccessPolicies(policies)
 
 	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, policies)
 	if err != nil {

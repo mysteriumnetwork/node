@@ -248,7 +248,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		return errors.Wrap(err, "could not subscribe policy repository to node events")
 	}
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies []market.AccessPolicy) (communication.DialogWaiter, error) {
+	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error) {
 		return nats_dialog.NewDialogWaiter(
 			di.BrokerConnection,
 			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
