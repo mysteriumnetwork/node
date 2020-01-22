@@ -31,7 +31,6 @@ docker run --rm \
     -v "$PWD"/$DIR_TEMP:/build \
     -v "$GOPATH"/xgo-cache:/deps-cache:ro \
     -v "$PWD":/source \
-    -e PACK=./cmd/mysterium_node \
     -e OUT=myst \
     -e FLAG_V=false \
     -e FLAG_X=false \
@@ -39,7 +38,7 @@ docker run --rm \
     -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
     -e FLAG_BUILDMODE=default \
     -e TARGETS="$XGO_TARGETS" \
-    anjmao/xgo:go-1.13.1
+    mysteriumnetwork/xgo:1.13.6 ./cmd/mysterium_node
 
 # Remove version from binary name:
 #  - myst-darwin-10.6-amd64 -> myst_darwin_amd64
