@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
@@ -42,14 +41,14 @@ var (
 type Service interface {
 	Serve(providerID identity.Identity) error
 	Stop() error
-	ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error)
+	ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
-type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator, string) (communication.DialogHandler, error)
+type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error)
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
 type DiscoveryFactory func() Discovery

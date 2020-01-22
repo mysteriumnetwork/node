@@ -66,6 +66,8 @@ func isKernelSpaceSupported() bool {
 		log.Warn().Err(err).Msg("Failed to create wireguard network interface")
 	}
 
-	_ = cmdutil.SudoExec("ip", "link", "del", "iswgsupported")
+	if err := cmdutil.SudoExec("ip", "link", "del", "iswgsupported"); err != nil {
+		log.Warn().Err(err).Msg("Failed to delete iswgsupported wireguard network interface")
+	}
 	return err == nil
 }

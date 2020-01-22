@@ -20,13 +20,15 @@ package mysterium
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
@@ -36,7 +38,7 @@ import (
 )
 
 const (
-	//taken from android-wireguard project
+	// Taken from android-wireguard project
 	androidTunMtu = 1280
 )
 
@@ -56,6 +58,8 @@ type WireguardTunnelSetup interface {
 // WireguardConnectionFactory is the connection factory for wireguard
 type WireguardConnectionFactory struct {
 	tunnelSetup WireguardTunnelSetup
+	ipResolver  ip.Resolver
+	natPinger   natPinger
 }
 
 // Create creates a new wireguard connection
@@ -65,62 +69,23 @@ func (wcf *WireguardConnectionFactory) Create(stateChannel connection.StateChann
 		return nil, err
 	}
 
-	deviceFactory := func(options connection.ConnectOptions) (*device.Device, error) {
-		var config wireguard.ServiceConfig
-		err := json.Unmarshal(options.SessionConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-
-		config.Consumer.PrivateKey = privateKey
-
-		wcf.tunnelSetup.NewTunnel()
-		wcf.tunnelSetup.SetSessionName("wg-tun-session")
-		//TODO fetch from user connection options
-		wcf.tunnelSetup.AddDNS("8.8.8.8")
-
-		//TODO this heavy linfting might go to doInit
-		tunDevice, err := newTunnDevice(wcf.tunnelSetup, &config)
-		if err != nil {
-			return nil, err
-		}
-
-		devApi := device.NewDevice(tunDevice, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
-		err = setupWireguardDevice(devApi, &config)
-		if err != nil {
-			devApi.Close()
-			return nil, err
-		}
-		devApi.Up()
-		socket, err := peekLookAtSocketFd4(devApi)
-		if err != nil {
-			devApi.Close()
-			return nil, err
-		}
-		err = wcf.tunnelSetup.Protect(socket)
-		if err != nil {
-			devApi.Close()
-			return nil, err
-		}
-		return devApi, nil
-	}
-
 	return &wireguardConnection{
-		deviceFactory:     deviceFactory,
-		privKey:           privateKey,
-		stopChannel:       make(chan struct{}),
+		statsCheckerStop:  make(chan struct{}),
+		done:              make(chan struct{}),
+		pingerStop:        make(chan struct{}),
+		privateKey:        privateKey,
+		tunnelSetup:       wcf.tunnelSetup,
 		stateChannel:      stateChannel,
 		statisticsChannel: statisticsChannel,
-		stopCompleted:     &sync.WaitGroup{},
+		ipResolver:        wcf.ipResolver,
+		natPinger:         wcf.natPinger,
 	}, nil
 }
 
-type deviceFactory func(options connection.ConnectOptions) (*device.Device, error)
-
-func setupWireguardDevice(devApi *device.Device, config *wireguard.ServiceConfig) error {
+func setupWireguardDevice(devApi *device.Device, privateKey string, config wireguard.ServiceConfig) error {
 	deviceConfig := wireguard.DeviceConfig{
-		PrivateKey: config.Consumer.PrivateKey,
-		ListenPort: 0,
+		PrivateKey: privateKey,
+		ListenPort: config.LocalPort,
 	}
 
 	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(deviceConfig.Encode()))); err != nil {
@@ -128,10 +93,10 @@ func setupWireguardDevice(devApi *device.Device, config *wireguard.ServiceConfig
 	}
 
 	peer := wireguard.Peer{
-		PublicKey:       config.Provider.PublicKey,
-		Endpoint:        &config.Provider.Endpoint,
-		KeepAlivePeriod: 20,
-		//all traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
+		Endpoint:               &config.Provider.Endpoint,
+		PublicKey:              config.Provider.PublicKey,
+		KeepAlivePeriodSeconds: 18,
+		// All traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
 		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
 	}
 	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(peer.Encode()))); err != nil {
@@ -140,14 +105,25 @@ func setupWireguardDevice(devApi *device.Device, config *wireguard.ServiceConfig
 	return nil
 }
 
-func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.Device, error) {
+func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config wireguard.ServiceConfig) (tun.Device, error) {
 	consumerIP := config.Consumer.IPAddress
 	prefixLen, _ := consumerIP.Mask.Size()
+	wgTunnSetup.NewTunnel()
+	wgTunnSetup.SetSessionName("wg-tun-session")
 	wgTunnSetup.AddTunnelAddress(consumerIP.IP.String(), prefixLen)
 	wgTunnSetup.SetMTU(androidTunMtu)
 	wgTunnSetup.SetBlocking(true)
 
-	//route all traffic through tunnel
+	autoDNS := connection.DNSOptionAuto
+	dnsIPs, err := autoDNS.ResolveIPs(config.Consumer.DNSIPs)
+	if err != nil {
+		return nil, err
+	}
+	for _, dnsIP := range dnsIPs {
+		wgTunnSetup.AddDNS(dnsIP)
+	}
+
+	// Route all traffic through tunnel
 	wgTunnSetup.AddRoute("0.0.0.0", 1)
 	wgTunnSetup.AddRoute("128.0.0.0", 1)
 
@@ -157,143 +133,208 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
 	}
 
+	// Wait for local port to become available since it will be used as WireGuard listen port
+	// when provider is behind NAT.
+	if config.LocalPort > 0 {
+		log.Info().Msgf("Waiting for port %d to become available", config.LocalPort)
+		if err := waitUDPPortReadyFor(config.LocalPort, 10*time.Second); err != nil {
+			return nil, errors.Wrap(err, "failed to wait for UDP port")
+		}
+	}
+
 	fd, err := wgTunnSetup.Establish()
 	if err != nil {
 		return nil, err
 	}
 	log.Info().Msgf("Tun value is: %d", fd)
-	tun, err := newDeviceFromFd(fd)
+	tunDevice, err := newDeviceFromFd(fd)
 	if err == nil {
 		//non-fatal
-		name, nameErr := tun.Name()
+		name, nameErr := tunDevice.Name()
 		log.Info().Err(nameErr).Msg("Name value: " + name)
 	}
 
-	return tun, err
+	return tunDevice, err
+}
+
+func waitUDPPortReadyFor(port int, timeout time.Duration) error {
+	timeoutChan := time.After(timeout)
+	for {
+		select {
+		case <-time.After(500 * time.Millisecond):
+			p, err := net.ListenPacket("udp", fmt.Sprintf(":%d", port))
+			if err != nil {
+				log.Err(err).Msgf("Port %d is in use. Trying to check again...", port)
+			} else {
+				p.Close()
+				return nil
+			}
+		case <-timeoutChan:
+			return fmt.Errorf("timeout waiting for UDP port %d", port)
+		}
+	}
 }
 
 type wireguardConnection struct {
-	privKey           string
-	deviceFactory     deviceFactory
+	done       chan struct{}
+	pingerStop chan struct{}
+
+	privateKey        string
+	tunnelSetup       WireguardTunnelSetup
 	device            *device.Device
-	stopChannel       chan struct{}
+	statsCheckerStop  chan struct{}
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
-	stopCompleted     *sync.WaitGroup
+	ipResolver        ip.Resolver
+	natPinger         natPinger
 }
 
-func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
-	log.Debug().Msg("Creating device")
-	device, err := wg.deviceFactory(options)
+// TODO:(anjmao): Rewrite error handling and cleanup. Currently cleanup assumed to work only if
+// int is done correctly but if it fails in any other step user will see broken state.
+// See https://github.com/mysteriumnetwork/node/issues/1499.
+func (c *wireguardConnection) Start(options connection.ConnectOptions) (err error) {
+	var config wireguard.ServiceConfig
+	err = json.Unmarshal(options.SessionConfig, &config)
 	if err != nil {
-		return errors.Wrap(err, "failed to start wireguard connection")
+		return errors.Wrap(err, "could not parse wireguard session config")
 	}
 
-	wg.device = device
-	wg.stateChannel <- connection.Connecting
-
-	if err := wg.doInit(); err != nil {
-		return errors.Wrap(err, "failed to start wireguard connection")
+	if config.LocalPort > 0 {
+		err = c.natPinger.PingProvider(
+			config.Provider.Endpoint.IP.String(),
+			config.RemotePort,
+			config.LocalPort,
+			c.pingerStop,
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not ping provider")
+		}
 	}
 
-	log.Debug().Msg("Emitting connected event")
-	wg.stateChannel <- connection.Connected
+	log.Debug().Msg("Creating tunnel device")
+	tunDevice, err := newTunnDevice(c.tunnelSetup, config)
+	if err != nil {
+		return errors.Wrap(err, "could not create tunnel device")
+	}
+
+	devApi := device.NewDevice(tunDevice, device.NewLogger(device.LogLevelDebug, "[userspace-wg]"))
+	defer func() {
+		if err != nil && devApi != nil {
+			devApi.Close()
+		}
+	}()
+
+	err = setupWireguardDevice(devApi, c.privateKey, config)
+	if err != nil {
+		return errors.Wrap(err, "could not setup device")
+	}
+	devApi.Up()
+	socket, err := peekLookAtSocketFd4(devApi)
+	if err != nil {
+		return errors.Wrap(err, "could not get socket")
+	}
+	err = c.tunnelSetup.Protect(socket)
+	if err != nil {
+		return errors.Wrap(err, "could not protect socket")
+	}
+
+	c.device = devApi
+	c.stateChannel <- connection.Connecting
+
+	go c.updateStatsPeriodically(time.Second)
+
+	if err := wireguard.WaitHandshake(c.getDeviceStats, c.done); err != nil {
+		return errors.Wrap(err, "failed to handshake")
+	}
+
+	log.Debug().Msg("Connected successfully")
+	c.stateChannel <- connection.Connected
 	return nil
 }
 
-func (wg *wireguardConnection) doInit() error {
-	log.Debug().Msg("Starting doInit()")
-	wg.stopCompleted.Add(1)
-	go wg.runPeriodically(time.Second)
-
-	return wg.waitHandshake()
-}
-
-func (wg *wireguardConnection) Wait() error {
-	wg.stopCompleted.Wait()
+func (c *wireguardConnection) Wait() error {
+	<-c.done
 	return nil
 }
 
-func (wg *wireguardConnection) Stop() {
-	wg.stateChannel <- connection.Disconnecting
-	wg.updateStatistics()
-	close(wg.stopChannel)
+func (c *wireguardConnection) Stop() {
+	c.stateChannel <- connection.Disconnecting
+	c.updateStatistics()
+	if c.device != nil {
+		c.device.Close()
+		c.device.Wait()
+	}
+	c.stateChannel <- connection.NotConnected
+
+	close(c.done)
+	close(c.statsCheckerStop)
+	close(c.pingerStop)
+	close(c.stateChannel)
+	close(c.statisticsChannel)
 }
 
-func (wg *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
-	publicKey, err := key.PrivateKeyToPublicKey(wg.privKey)
-	if err != nil {
-		return nil, err
+func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
+	if c.privateKey == "" {
+		return nil, errors.New("private key is missing")
 	}
+	publicKey, err := key.PrivateKeyToPublicKey(c.privateKey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get public key from private key")
+	}
+
+	var publicIP string
+	if !c.isNoopPinger() {
+		var err error
+		publicIP, err = c.ipResolver.GetPublicIP()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get consumer public IP")
+		}
+	}
+
 	return wireguard.ConsumerConfig{
 		PublicKey: publicKey,
+		IP:        publicIP,
 	}, nil
 }
 
-var _ connection.Connection = &wireguardConnection{}
+func (c *wireguardConnection) isNoopPinger() bool {
+	_, ok := c.natPinger.(*traversal.NoopPinger)
+	return ok
+}
 
-func (wg *wireguardConnection) updateStatistics() {
-	stats, err := wg.getDeviceStats()
+func (c *wireguardConnection) updateStatistics() {
+	stats, err := c.getDeviceStats()
 	if err != nil {
 		log.Error().Err(err).Msg("Error updating statistics")
 		return
 	}
 
-	wg.statisticsChannel <- consumer.SessionStatistics{
+	c.statisticsChannel <- consumer.SessionStatistics{
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
 	}
 }
 
-func (wg *wireguardConnection) getDeviceStats() (*wireguard.Stats, error) {
-	deviceState, err := wireguard.ParseUserspaceDevice(wg.device.IpcGetOperation)
+func (c *wireguardConnection) getDeviceStats() (*wireguard.Stats, error) {
+	deviceState, err := wireguard.ParseUserspaceDevice(c.device.IpcGetOperation)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not parse userspace wg device state")
 	}
 	stats, err := wireguard.ParseDevicePeerStats(deviceState)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get userspace wg peer stats")
 	}
 	return stats, nil
 }
 
-func (wg *wireguardConnection) doCleanup() {
-	wg.device.Close()
-	wg.device.Wait()
-	wg.stateChannel <- connection.NotConnected
-	close(wg.stateChannel)
-	wg.stopCompleted.Done()
-}
-
-func (wg *wireguardConnection) runPeriodically(duration time.Duration) {
+func (c *wireguardConnection) updateStatsPeriodically(duration time.Duration) {
 	for {
 		select {
 		case <-time.After(duration):
-			wg.updateStatistics()
+			c.updateStatistics()
 
-		case <-wg.stopChannel:
-			wg.doCleanup()
+		case <-c.statsCheckerStop:
 			return
-		}
-	}
-}
-
-func (wg *wireguardConnection) waitHandshake() error {
-	// We need to send any packet to initialize handshake process
-	_, _ = net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
-	for {
-		select {
-		case <-time.After(20 * time.Millisecond):
-			stats, err := wg.getDeviceStats()
-			if err != nil {
-				return err
-			}
-			if !stats.LastHandshake.IsZero() {
-				return nil
-			}
-		case <-wg.stopChannel:
-			wg.doCleanup()
-			return errors.New("stop received")
 		}
 	}
 }

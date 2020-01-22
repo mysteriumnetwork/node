@@ -18,13 +18,10 @@
 package service
 
 import (
-	"encoding/json"
 	"testing"
 
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 func TestManager_StopNotPanic(t *testing.T) {
@@ -35,18 +32,18 @@ func TestManager_StopNotPanic(t *testing.T) {
 
 func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
-	_, err := m.ProvideConfig([]byte(""), nil)
+	_, err := m.ProvideConfig([]byte(""))
 	assert.NoError(t, err)
 }
 
 func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
-	_, err := m.ProvideConfig(nil, nil)
+	_, err := m.ProvideConfig(nil)
 	assert.NoError(t, err)
 }
 
 type mockConfigProvider struct{}
 
-func (cp *mockConfigProvider) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
-	return &session.ConfigParams{SessionServiceConfig: traversalParams}, nil
+func (cp *mockConfigProvider) ProvideVPNConfig() *openvpn_service.VPNConfig {
+	return &openvpn_service.VPNConfig{}
 }

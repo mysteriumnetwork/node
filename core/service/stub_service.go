@@ -54,8 +54,8 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
-	return &session.ConfigParams{TraversalParams: traversalParams}, nil
+func (service *serviceFake) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+	return &session.ConfigParams{TraversalParams: &traversal.Params{}}, nil
 }
 
 type mockDialogWaiter struct {
@@ -89,7 +89,7 @@ func (mdh *mockDialogHandler) Handle(communication.Dialog) error {
 }
 
 // MockDialogHandlerFactory creates a new mock dialog handler
-func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigNegotiator, string) (communication.DialogHandler, error) {
+func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error) {
 	return &mockDialogHandler{}, nil
 }
 

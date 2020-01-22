@@ -64,8 +64,8 @@ func (method Payment) GetPrice() money.Money {
 // ConnectionEndpoint represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
-	Start(config *ServiceConfig) error
-	AddPeer(iface string, peer AddPeerOptions) error
+	Start(config StartConfig) error
+	AddPeer(iface string, peer Peer) error
 	PeerStats() (*Stats, error)
 	ConfigureRoutes(ip net.IP) error
 	Config() (ServiceConfig, error)
@@ -73,24 +73,37 @@ type ConnectionEndpoint interface {
 	Stop() error
 }
 
-// ConsumerConfig is used for sending the public key from consumer to provider
-type ConsumerConfig struct {
-	PublicKey string
+// StartConfig is configuration for endpoint startup. If Consumer is nil
+// it runs as a provider.
+type StartConfig struct {
+	Consumer *StartConsumerConfig
 }
 
-// ConsumerPrivateKey represents the private part of the consumer key
-type ConsumerPrivateKey struct {
+// StartConsumerConfig is consumer endpoint startup configuration.
+type StartConsumerConfig struct {
 	PrivateKey string
+	IPAddress  net.IPNet
+	ListenPort int
+}
+
+// ConsumerConfig is used for sending the public key and IP from consumer to provider
+type ConsumerConfig struct {
+	PublicKey string `json:"PublicKey"`
+	// IP is needed when provider is behind NAT. In such case provider parses this IP and tries to ping consumer.
+	IP string `json:"IP,omitempty"`
 }
 
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {
+	// LocalPort and RemotePort are needed for NAT hole punching only.
+	LocalPort  int `json:"-"`
+	RemotePort int `json:"-"`
+
 	Provider struct {
 		PublicKey string
 		Endpoint  net.UDPAddr
 	}
 	Consumer struct {
-		PrivateKey   string `json:"-"`
 		IPAddress    net.IPNet
 		DNSIPs       string
 		ConnectDelay int
@@ -104,21 +117,24 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 		Endpoint  string `json:"endpoint"`
 	}
 	type consumer struct {
-		PrivateKey   string `json:"private_key"`
 		IPAddress    string `json:"ip_address"`
 		DNSIPs       string `json:"dns_ips"`
 		ConnectDelay int    `json:"connect_delay"`
 	}
 
 	return json.Marshal(&struct {
-		Provider provider `json:"provider"`
-		Consumer consumer `json:"consumer"`
+		LocalPort  int      `json:"local_port"`
+		RemotePort int      `json:"remote_port"`
+		Provider   provider `json:"provider"`
+		Consumer   consumer `json:"consumer"`
 	}{
-		provider{
-			s.Provider.PublicKey,
-			s.Provider.Endpoint.String(),
+		LocalPort:  s.LocalPort,
+		RemotePort: s.RemotePort,
+		Provider: provider{
+			PublicKey: s.Provider.PublicKey,
+			Endpoint:  s.Provider.Endpoint.String(),
 		},
-		consumer{
+		Consumer: consumer{
 			IPAddress:    s.Consumer.IPAddress.String(),
 			ConnectDelay: s.Consumer.ConnectDelay,
 			DNSIPs:       s.Consumer.DNSIPs,
@@ -133,14 +149,15 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 		Endpoint  string `json:"endpoint"`
 	}
 	type consumer struct {
-		PrivateKey   string `json:"private_key"`
 		IPAddress    string `json:"ip_address"`
 		DNSIPs       string `json:"dns_ips"`
 		ConnectDelay int    `json:"connect_delay"`
 	}
 	var config struct {
-		Provider provider `json:"provider"`
-		Consumer consumer `json:"consumer"`
+		LocalPort  int      `json:"local_port"`
+		RemotePort int      `json:"remote_port"`
+		Provider   provider `json:"provider"`
+		Consumer   consumer `json:"consumer"`
 	}
 
 	if err := json.Unmarshal(data, &config); err != nil {
@@ -156,6 +173,8 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	s.LocalPort = config.LocalPort
+	s.RemotePort = config.RemotePort
 	s.Provider.Endpoint = *endpoint
 	s.Provider.PublicKey = config.Provider.PublicKey
 	s.Consumer.DNSIPs = config.Consumer.DNSIPs
@@ -187,18 +206,12 @@ func (dc *DeviceConfig) Encode() string {
 	return res.String()
 }
 
-// AddPeerOptions represents wireguard new peer options.
-type AddPeerOptions struct {
-	Endpoint  *net.UDPAddr
-	PublicKey string
-}
-
 // Peer represents wireguard peer.
 type Peer struct {
-	PublicKey       string
-	Endpoint        *net.UDPAddr
-	AllowedIPs      []string
-	KeepAlivePeriod int
+	PublicKey              string
+	Endpoint               *net.UDPAddr
+	AllowedIPs             []string
+	KeepAlivePeriodSeconds int
 }
 
 // Encode encodes device peer config into string representation which is used for
@@ -212,7 +225,7 @@ func (p *Peer) Encode() string {
 	}
 	hexKey := hex.EncodeToString(keyBytes)
 	res.WriteString(fmt.Sprintf("public_key=%s\n", hexKey))
-	res.WriteString(fmt.Sprintf("persistent_keepalive_interval=%d\n", p.KeepAlivePeriod))
+	res.WriteString(fmt.Sprintf("persistent_keepalive_interval=%d\n", p.KeepAlivePeriodSeconds))
 	if p.Endpoint != nil {
 		res.WriteString(fmt.Sprintf("endpoint=%s\n", p.Endpoint.String()))
 	}

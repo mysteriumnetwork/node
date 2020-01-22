@@ -18,7 +18,6 @@
 package traversal
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"sync"
@@ -26,7 +25,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/services"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/ipv4"
@@ -42,6 +40,18 @@ var (
 	errNATPunchAttemptTimedOut = errors.New("NAT punch attempt timed out")
 )
 
+// NATPinger is responsible for pinging nat holes
+type NATPinger interface {
+	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
+	PingTarget(*Params)
+	BindServicePort(key string, port int)
+	Start()
+	Stop()
+	SetProtectSocketCallback(SocketProtect func(socket int) bool)
+	StopNATProxy()
+	Valid() bool
+}
+
 // Pinger represents NAT pinger structure
 type Pinger struct {
 	pingTarget     chan *Params
@@ -49,21 +59,15 @@ type Pinger struct {
 	stop           chan struct{}
 	stopNATProxy   chan struct{}
 	once           sync.Once
-	natEventWaiter NatEventWaiter
-	configParser   ConfigParser
-	natProxy       natProxy
+	natEventWaiter NATEventWaiter
+	natProxy       *NATProxy
 	previousStage  string
 	eventPublisher Publisher
 }
 
-// NatEventWaiter is responsible for waiting for nat events
-type NatEventWaiter interface {
+// NATEventWaiter is responsible for waiting for nat events
+type NATEventWaiter interface {
 	WaitForEvent() event.Event
-}
-
-// ConfigParser is able to parse a config from given raw json
-type ConfigParser interface {
-	Parse(config json.RawMessage) (ip string, port int, serviceType services.ServiceType, err error)
 }
 
 // PortSupplier provides port needed to run a service on
@@ -77,7 +81,7 @@ type Publisher interface {
 }
 
 // NewPinger returns Pinger instance
-func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, previousStage string, publisher Publisher) *Pinger {
+func NewPinger(waiter NATEventWaiter, proxy *NATProxy, previousStage string, publisher Publisher) NATPinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
@@ -88,27 +92,19 @@ func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, previ
 		stop:           stop,
 		stopNATProxy:   stopNATProxy,
 		natEventWaiter: waiter,
-		configParser:   parser,
 		natProxy:       proxy,
 		previousStage:  previousStage,
 		eventPublisher: publisher,
 	}
 }
 
-type natProxy interface {
-	handOff(serviceType services.ServiceType, conn *net.UDPConn)
-	registerServicePort(serviceType services.ServiceType, port int)
-	isAvailable(serviceType services.ServiceType) bool
-	consumerHandOff(consumerAddr string, conn *net.UDPConn) chan struct{}
-	setProtectSocketCallback(socketProtect func(socket int) bool)
-}
-
 // Params contains session parameters needed to NAT ping remote peer
 type Params struct {
-	RequestConfig json.RawMessage
-	ProviderPort  int
-	ConsumerPort  int
-	Cancel        chan struct{}
+	ProviderPort        int
+	ConsumerPort        int
+	ConsumerPublicIP    string
+	ProxyPortMappingKey string
+	Cancel              chan struct{}
 }
 
 // Start starts NAT pinger and waits for PingTarget to ping
@@ -259,8 +255,8 @@ func (p *Pinger) PingTarget(target *Params) {
 }
 
 // BindServicePort register service port to forward connection to
-func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
-	p.natProxy.registerServicePort(serviceType, port)
+func (p *Pinger) BindServicePort(key string, port int) {
+	p.natProxy.registerServicePort(key, port)
 }
 
 func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
@@ -308,20 +304,18 @@ func (p *Pinger) Valid() bool {
 func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 	log.Info().Msgf("Pinging peer with: %v", pingParams)
 
-	// TODO: remove port parsing for consumer config
-	IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
-	if err != nil {
-		log.Warn().Err(err).Msgf("Unable to parse ping message: %v", pingParams)
+	if pingParams.ProxyPortMappingKey == "" {
+		log.Error().Msg("Service proxy connection port mapping key is missing")
 		return
 	}
 
-	log.Info().Msgf("Ping target received: IP: %v, port: %v", IP, pingParams.ConsumerPort)
-	if !p.natProxy.isAvailable(serviceType) {
-		log.Warn().Msgf("NATProxy is not available for this transport protocol %v", serviceType)
+	log.Info().Msgf("Ping target received: IP: %v, port: %v", pingParams.ConsumerPublicIP, pingParams.ConsumerPort)
+	if !p.natProxy.isAvailable(pingParams.ProxyPortMappingKey) {
+		log.Warn().Msgf("NATProxy is not available for this transport protocol key %v", pingParams.ProxyPortMappingKey)
 		return
 	}
 
-	conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
+	conn, err := p.getConnection(pingParams.ConsumerPublicIP, pingParams.ConsumerPort, pingParams.ProviderPort)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get connection")
 		return
@@ -346,5 +340,5 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 
 	log.Info().Msg("Ping received, waiting for a new connection")
 
-	go p.natProxy.handOff(serviceType, conn)
+	go p.natProxy.handOff(pingParams.ProxyPortMappingKey, conn)
 }

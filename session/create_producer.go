@@ -19,10 +19,10 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/pkg/errors"
 )
 
 type createProducer struct {
@@ -65,7 +65,7 @@ func RequestSessionCreate(sender communication.Sender, proposalID int, config in
 
 	response := responsePtr.(*CreateResponse)
 	if !response.Success {
-		err = errors.New("Session create failed. " + response.Message)
+		err = fmt.Errorf("session create failed: %s", response.Message)
 		return
 	}
 
