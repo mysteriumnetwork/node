@@ -8,6 +8,8 @@ ARG PACKAGE_VERSION
 
 # Compile application
 WORKDIR /go/src/github.com/mysteriumnetwork/node
+ADD go.mod go.sum ./
+RUN go mod download
 ADD . .
 
 RUN GOOS=linux GOARCH=amd64 bin/build \
