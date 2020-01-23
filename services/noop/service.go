@@ -81,7 +81,7 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{
-			Price: money.NewMoney(0, money.CurrencyMyst),
+			Price: money.NewMoney(1000000, money.CurrencyMyst),
 		},
 	}
 }

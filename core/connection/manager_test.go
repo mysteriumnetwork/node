@@ -123,7 +123,7 @@ func (tc *testContext) SetupTest() {
 		dialogCreator,
 		func(paymentInfo *promise.PaymentInfo,
 			dialog communication.Dialog,
-			consumer, provider, accountant identity.Identity) (PaymentIssuer, error) {
+			consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (PaymentIssuer, error) {
 			if paymentInfo == nil {
 				paymentInfo = &promise.PaymentInfo{}
 			}

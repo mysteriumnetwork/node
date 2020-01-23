@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -33,6 +34,7 @@ import (
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -50,7 +52,6 @@ func InvoiceFactoryCreator(
 	dialog communication.Dialog,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
-	paymentInfo dto.PaymentRate,
 	accountantCaller accountantCaller,
 	accountantPromiseStorage accountantPromiseStorage,
 	registryAddress string,
@@ -61,6 +62,7 @@ func InvoiceFactoryCreator(
 	blockchainHelper bcHelper,
 	publisher eventbus.Publisher,
 	feeProvider feeProvider,
+	proposal market.ServiceProposal,
 ) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
 	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
@@ -71,6 +73,10 @@ func InvoiceFactoryCreator(
 			return nil, err
 		}
 		timeTracker := session.NewTracker(time.Now)
+		rate, err := ProposalToPaymentRate(proposal)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not parse payment rate")
+		}
 		deps := InvoiceTrackerDeps{
 			Peer:                       dialog.PeerID(),
 			PeerInvoiceSender:          invoiceSender,
@@ -79,7 +85,7 @@ func InvoiceFactoryCreator(
 			ChargePeriod:               balanceSendPeriod,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
-			PaymentInfo:                paymentInfo,
+			PaymentInfo:                rate,
 			ProviderID:                 providerID,
 			AccountantCaller:           accountantCaller,
 			AccountantPromiseStorage:   accountantPromiseStorage,
@@ -108,10 +114,10 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string, publisher eventbus.Publisher) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
+	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
 		dialog communication.Dialog,
-		consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
+		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 		var promiseState promise.PaymentInfo
 		payment := dto.PaymentRate{
 			Price: money.Money{
@@ -139,6 +145,10 @@ func BackwardsCompatibleExchangeFactoryFunc(
 			if err != nil {
 				return nil, err
 			}
+			rate, err := ProposalToPaymentRate(proposal)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not parse payment rate")
+			}
 			timeTracker := session.NewTracker(time.Now)
 			deps := ExchangeMessageTrackerDeps{
 				InvoiceChan:               invoices,
@@ -149,7 +159,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Ks:                        keystore,
 				Identity:                  consumer,
 				Peer:                      dialog.PeerID(),
-				PaymentInfo:               DefaultPaymentInfo,
+				PaymentInfo:               rate,
 				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
 				Publisher:                 publisher,
 			}
