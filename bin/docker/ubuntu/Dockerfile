@@ -1,4 +1,4 @@
-FROM anjmao/mysterium-node-builder AS builder
+FROM mysteriumnetwork/mysterium-node-builder:1.13 AS builder
 
 ARG BUILD_BRANCH=$BUILD_BRANCH
 ARG BUILD_COMMIT=$BUILD_COMMIT
@@ -8,6 +8,8 @@ ARG PACKAGE_VERSION
 
 # Compile application
 WORKDIR /go/src/github.com/mysteriumnetwork/node
+ADD go.mod go.sum ./
+RUN go mod download
 ADD . .
 
 RUN GOOS=linux GOARCH=amd64 bin/build \

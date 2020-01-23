@@ -9,7 +9,7 @@ exec /node/build/myst/myst \
   --tequilapi.address=0.0.0.0 \
   --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665 \
   --ip-detector=http://ipify:3000/?format=json \
-  --localnet \
+  --location.type=manual \
   --broker-address=broker \
   --api.address=http://mysterium-api/v1 \
   --ether.client.rpc=ws://ganache:8545 \
@@ -20,4 +20,5 @@ exec /node/build/myst/myst \
   --accountant.address=http://accountant:8889/api/v1 \
   --transactor.address=http://transactor:8888/api/v1 \
   --quality.address=http://morqa:8085/api/v1 \
+  --quality-oracle.address=http://morqa:8085/api/v1 \
   daemon

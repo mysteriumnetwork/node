@@ -1,5 +1,4 @@
 version: '3.0'
-
 services:
   morqa:
     image: mysteriumnetwork/quality-oracle:latest
@@ -12,12 +11,6 @@ services:
     expose:
       - 8085
       - 8080
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.198
-      public1:
-        ipv4_address: 172.31.0.198
 
   prometheus:
     image: prom/prometheus:v2.10.0
@@ -28,54 +21,20 @@ services:
       - '--storage.tsdb.path=/data'
     expose:
       - 9090
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.199
-      public1:
-        ipv4_address: 172.31.0.199
 
   ipify:
     image: owlab/ipify
     expose:
       - 3000
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.10
-      public1:
-        ipv4_address: 172.31.0.10
 
   broker:
     image: nats:1.0.4
     expose:
       - 4222
       - 8222
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.30
-      public1:
-        ipv4_address: 172.31.0.30
 
   db:
     image: percona:5.7
-    cap_add:
-      - NET_ADMIN
     restart: always
     expose:
       - 3306
@@ -84,62 +43,32 @@ services:
       MYSQL_DATABASE: myst_api
       MYSQL_USER: myst_api
       MYSQL_PASSWORD: myst_api
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.201
-      public1:
-        ipv4_address: 172.31.0.201
 
   mysterium-api:
     image: mysteriumnetwork/mysterium-api:latest
     expose:
-      - 80
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
+      - 8001
     environment:
-      APP_PORT: 80
+      APP_PORT: 8001
       DB_HOST: db
       DB_NAME: myst_api
       DB_USER: myst_api
       DB_PASSWORD: myst_api
-      ETHER_RPC_URL: "http://ganache:8545"
+      ETHER_RPC_URL: "ws://ganache:8545"
       IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
       ETHER_MINING_MODE: "poa"
       DISCOVERY_VERIFY_IDENTITY: "false"
     depends_on:
       - db
       - ganache
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.200
-      public1:
-        ipv4_address: 172.31.0.200
 
-  # private blockchain
+  #private blockchain
   ganache:
-    image: trufflesuite/ganache-cli:v6.6.0-beta.0
+    image: trufflesuite/ganache-cli:v6.8.1-beta.0
     expose:
       - 8545
     command: >
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
-    dns: 172.30.0.254
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    networks:
-      public0:
-        ipv4_address: 172.30.0.202
-      public1:
-        ipv4_address: 172.31.0.202
 
   transactor:
     image: mysteriumnetwork/transactor:latest
@@ -147,11 +76,6 @@ services:
       PORT: 8888
     expose:
       - 8888
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
     command: >
@@ -163,12 +87,6 @@ services:
       -balanceCheckInterval 1s
     volumes:
       - ./e2e/blockchain/keystore:/keystore
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.203
-      public1:
-        ipv4_address: 172.31.0.203
 
   accountant:
     image: mysteriumnetwork/accountant:latest
@@ -187,59 +105,13 @@ services:
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -keystoreDir /keystore
       -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -boltPath /bolt.db
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
-  myst-consumer:
-    build:
-      context: .
-      dockerfile: ./bin/docker/alpine/Dockerfile
-    environment:
-      - DEFAULT_ROUTE=10.100.1.2
-    depends_on:
-      - forwarder
-      - broker
-      - mysterium-api
-      - ipify
-      - transactor
-      - accountant
-      - morqa
-    cap_add:
-      - NET_ADMIN
-    expose:
-      - 4050
-    command: >
-      --discovery.ping=1s
-      --discovery.fetch=1s
-      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      --ip-detector=http://ipify:3000/?format=json
-      --location.type=manual \
-      --log-level=debug
-      --broker-address=broker
-      --api.address=http://mysterium-api/v1
-      --ether.client.rpc=ws://ganache:8545
-      --keystore.lightweight
-      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
-      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
-      --accountant.address=http://accountant:8889/api/v1
-      --transactor.address=http://transactor:8888/api/v1
-      --quality.address=http://morqa:8085/api/v1
-      --quality-oracle.address=http://morqa:8085/api/v1
-      daemon
-    dns: 172.30.0.254
-    networks:
-      priv1:
-        ipv4_address: 10.100.1.101
-
   myst-provider:
-    build:
-      context: .
-      dockerfile: ./bin/docker/alpine/Dockerfile
-    environment:
-      - DEFAULT_ROUTE=10.100.0.2
+    image: mysteriumnetwork/myst:0.19.1-alpine
     depends_on:
-      - forwarder2
       - broker
       - mysterium-api
       - ipify
@@ -260,9 +132,9 @@ services:
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
       --location.country=e2e-land
-      --broker-address=broker
       --firewall.protected.networks=""
-      --api.address=http://mysterium-api/v1
+      --broker-address=broker
+      --api.address=http://mysterium-api:8001/v1
       --ether.client.rpc=ws://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -278,12 +150,124 @@ services:
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
       --openvpn.port=3000
-      openvpn,wireguard
-    dns: 172.31.0.254
-    networks:
-      priv0:
-        ipv4_address: 10.100.0.102
+      openvpn,noop,wireguard
 
+  myst-consumer:
+    image: mysteriumnetwork/myst:0.19.1-alpine
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - myst-provider
+      - morqa
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --ip-detector=http://ipify:3000/?format=json
+      --location.type=manual
+      --log-level=debug
+      --broker-address=broker
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --keystore.lightweight
+      --firewall.killSwitch.always
+      --quality.address=http://morqa:8085/api/v1
+      --quality-oracle.address=http://morqa:8085/api/v1
+      daemon
+
+  myst-provider-local:
+    build:
+      context: .
+      dockerfile: ./bin/docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - morqa
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 1194
+      - 4050
+    volumes:
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --ip-detector=http://ipify:3000/?format=json
+      --location.type=manual
+      --location.country=e2e-land
+      --firewall.protected.networks=""
+      --broker-address=broker
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --keystore.lightweight
+      --log-level=debug
+      --quality.address=http://morqa:8085/api/v1
+      service
+      --agreed-terms-and-conditions
+      --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+      --identity.passphrase=localprovider
+      --openvpn.port=3000
+      openvpn,noop,wireguard
+
+  myst-consumer-local:
+    build:
+      context: .
+      dockerfile: ./bin/docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - myst-provider
+      - morqa
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --ip-detector=http://ipify:3000/?format=json
+      --location.type=manual
+      --log-level=debug
+      --broker-address=broker
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --keystore.lightweight
+      --firewall.killSwitch.always
+      --quality.address=http://morqa:8085/api/v1
+      daemon
+
+  #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
   go-runner:
     build:
       context: .
@@ -292,83 +276,3 @@ services:
       - ./:/node
       - $GOPATH/pkg/mod:/go/pkg/mod
     working_dir: /node
-    dns: 172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.222
-      public1:
-        ipv4_address: 172.31.0.222
-      priv0:
-        ipv4_address: 10.100.0.222
-      priv1:
-        ipv4_address: 10.100.1.222
-
-  router:
-    build:
-      context: .
-      dockerfile: ./e2e/forwarder/Dockerfile
-    cap_add:
-      - NET_ADMIN
-    environment:
-      - EXT_NAT=172.30.0.1
-    networks:
-      public0:
-        ipv4_address: 172.30.0.254
-      public1:
-        ipv4_address: 172.31.0.254
-
-  forwarder:
-    build:
-      context: .
-      dockerfile: ./e2e/forwarder/Dockerfile
-    cap_add:
-      - NET_ADMIN
-    depends_on:
-      - router
-    environment:
-      - GATEWAY=172.30.0.254
-    networks:
-      public0:
-        ipv4_address: 172.30.0.2
-      priv1:
-        ipv4_address: 10.100.1.2
-
-  forwarder2:
-    build:
-      context: .
-      dockerfile: ./e2e/forwarder/Dockerfile
-    cap_add:
-      - NET_ADMIN
-    depends_on:
-      - router
-    environment:
-      - GATEWAY=172.31.0.254
-    dns: 172.31.0.254
-    networks:
-      public1:
-        ipv4_address: 172.31.0.2
-      priv0:
-        ipv4_address: 10.100.0.2
-
-networks:
-  public0:
-    driver: "bridge"
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.30.0.0/24
-  public1:
-    driver: "bridge"
-    ipam:
-      config:
-        - subnet: 172.31.0.0/24
-  priv0:
-    driver: "bridge"
-    ipam:
-      config:
-        - subnet: 10.100.0.0/24
-  priv1:
-    driver: "bridge"
-    ipam:
-      config:
-        - subnet: 10.100.1.0/24

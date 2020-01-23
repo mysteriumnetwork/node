@@ -11,6 +11,8 @@ ARG BUILD_VERSION=$BUILD_VERSION
 
 # Compile application
 WORKDIR /go/src/github.com/mysteriumnetwork/node
+ADD go.mod go.sum ./
+RUN go mod download
 ADD . .
 RUN bin/build
 
