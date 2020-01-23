@@ -28,7 +28,6 @@ import (
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -195,12 +194,12 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			location, err := di.LocationResolver.DetectLocation()
+			loc, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
 
-			return service_noop.NewManager(), service_noop.GetProposal(location), nil
+			return service_noop.NewManager(), service_noop.GetProposal(loc), nil
 		},
 	)
 }
@@ -242,18 +241,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 	di.ServiceSessionStorage = storage
 
-	policyRepo := policy.NewPolicyRepository(di.HTTPClient, nodeOptions.AccessPolicyEndpointAddress, 10*time.Minute)
-	policyRepo.Start()
-	if err := di.EventBus.SubscribeAsync(string(event.StatusStopped), policyRepo.Stop); err != nil {
-		return errors.Wrap(err, "could not subscribe policy repository to node events")
-	}
+	di.PolicyRepository = policy.NewPolicyRepository(di.HTTPClient, nodeOptions.AccessPolicyEndpointAddress, 10*time.Minute)
+	di.PolicyRepository.Start()
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error) {
 		return nats_dialog.NewDialogWaiter(
 			di.BrokerConnection,
 			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
-			policy.ValidateAllowedIdentity(policyRepo, policies),
+			policy.ValidateAllowedIdentity(di.PolicyRepository, policies),
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
@@ -288,7 +284,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		newDialogHandler,
 		di.DiscoveryFactory,
 		di.EventBus,
-		policyRepo,
+		di.PolicyRepository,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}

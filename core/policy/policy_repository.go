@@ -59,7 +59,7 @@ func (pr *PolicyRepository) Start() {
 
 // Stop ends fetching proposals to repository
 func (pr *PolicyRepository) Stop() {
-	pr.fetchShutdown <- struct{}{}
+	close(pr.fetchShutdown)
 }
 
 // Policy converts given value to valid policy rule
@@ -148,7 +148,7 @@ func (pr *PolicyRepository) fetchLoop() {
 	for {
 		select {
 		case <-pr.fetchShutdown:
-			break
+			return
 		case <-time.After(pr.fetchInterval):
 			pr.policyLock.Lock()
 			policyRulesActive := pr.policyRules

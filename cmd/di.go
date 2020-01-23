@@ -42,6 +42,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
@@ -123,6 +124,8 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
+
+	PolicyRepository *policy.PolicyRepository
 
 	StatisticsTracker                *statistics.SessionStatisticsTracker
 	StatisticsReporter               *statistics.SessionStatisticsReporter
@@ -335,6 +338,10 @@ func (di *Dependencies) Shutdown() (err error) {
 		if err := di.ServicesManager.Kill(); err != nil {
 			errs = append(errs, err)
 		}
+	}
+
+	if di.PolicyRepository != nil {
+		di.PolicyRepository.Stop()
 	}
 
 	if di.NATService != nil {
