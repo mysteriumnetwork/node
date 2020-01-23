@@ -19,6 +19,7 @@ package policy
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,13 +29,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type policyMetadata struct {
+	policy market.AccessPolicy
+	rules  market.AccessPolicyRuleSet
+}
+
 // PolicyRepository represents async policy fetcher from TrustOracle
 type PolicyRepository struct {
 	client *requests.HTTPClient
 
-	policyURL   string
-	policyLock  sync.Mutex
-	policyRules map[market.AccessPolicy]market.AccessPolicyRuleSet
+	policyURL  string
+	policyLock sync.Mutex
+	policyList []policyMetadata
 
 	fetchInterval time.Duration
 	fetchShutdown chan struct{}
@@ -45,7 +51,7 @@ func NewPolicyRepository(client *requests.HTTPClient, policyURL string, interval
 	return &PolicyRepository{
 		client:        client,
 		policyURL:     policyURL,
-		policyRules:   make(map[market.AccessPolicy]market.AccessPolicyRuleSet),
+		policyList:    make([]policyMetadata, 0),
 		fetchInterval: interval,
 		fetchShutdown: make(chan struct{}),
 	}
@@ -64,9 +70,13 @@ func (pr *PolicyRepository) Stop() {
 
 // Policy converts given value to valid policy rule
 func (pr *PolicyRepository) Policy(policyID string) market.AccessPolicy {
+	policyURL := pr.policyURL
+	if !strings.HasSuffix(policyURL, "/") {
+		policyURL += "/"
+	}
 	return market.AccessPolicy{
 		ID:     policyID,
-		Source: fmt.Sprintf("%v%v", pr.policyURL, policyID),
+		Source: fmt.Sprintf("%v%v", policyURL, policyID),
 	}
 }
 
@@ -82,20 +92,25 @@ func (pr *PolicyRepository) Policies(policyIDs []string) []market.AccessPolicy {
 // AddPolicies adds given policy to repository. Also syncs policy rules from TrustOracle
 func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 	pr.policyLock.Lock()
-	policyRulesNew := pr.policyRules
+	policyListNew := pr.policyList
 	pr.policyLock.Unlock()
 
 	for _, policy := range policies {
-		policyRules, err := pr.fetchPolicyRules(policy)
+		index, exist := pr.getPolicyIndex(policyListNew, policy)
+		if !exist {
+			index = len(policyListNew)
+			policyListNew = append(policyListNew, policyMetadata{policy: policy})
+		}
+
+		var err error
+		policyListNew[index].rules, err = pr.fetchPolicyRules(policy)
 		if err != nil {
 			return errors.Wrap(err, "initial fetch failed")
 		}
-
-		policyRulesNew[policy] = policyRules
 	}
 
 	pr.policyLock.Lock()
-	pr.policyRules = policyRulesNew
+	pr.policyList = policyListNew
 	pr.policyLock.Unlock()
 
 	return nil
@@ -106,11 +121,12 @@ func (pr *PolicyRepository) RulesForPolicy(policy market.AccessPolicy) (market.A
 	pr.policyLock.Lock()
 	defer pr.policyLock.Unlock()
 
-	policyRules, exist := pr.policyRules[policy]
+	index, exist := pr.getPolicyIndex(pr.policyList, policy)
 	if !exist {
-		return policyRules, fmt.Errorf("unknown policy: %s", policy)
+		return market.AccessPolicyRuleSet{}, fmt.Errorf("unknown policy: %s", policy)
 	}
-	return policyRules, nil
+
+	return pr.policyList[index].rules, nil
 }
 
 // RulesForPolicies gives list of rules of given policies
@@ -120,13 +136,23 @@ func (pr *PolicyRepository) RulesForPolicies(policies []market.AccessPolicy) ([]
 
 	policiesRules := make([]market.AccessPolicyRuleSet, len(policies))
 	for i, policy := range policies {
-		policyRules, exist := pr.policyRules[policy]
+		index, exist := pr.getPolicyIndex(pr.policyList, policy)
 		if !exist {
-			return policiesRules, fmt.Errorf("unknown policy: %s", policy)
+			return []market.AccessPolicyRuleSet{}, fmt.Errorf("unknown policy: %s", policy)
 		}
-		policiesRules[i] = policyRules
+		policiesRules[i] = pr.policyList[index].rules
 	}
 	return policiesRules, nil
+}
+
+func (pr *PolicyRepository) getPolicyIndex(policyList []policyMetadata, policy market.AccessPolicy) (int, bool) {
+	for index, policyMeta := range policyList {
+		if policyMeta.policy == policy {
+			return index, true
+		}
+	}
+
+	return 0, false
 }
 
 func (pr *PolicyRepository) fetchPolicyRules(policy market.AccessPolicy) (market.AccessPolicyRuleSet, error) {
@@ -151,17 +177,18 @@ func (pr *PolicyRepository) fetchLoop() {
 			return
 		case <-time.After(pr.fetchInterval):
 			pr.policyLock.Lock()
-			policyRulesActive := pr.policyRules
+			policyListActive := pr.policyList
 			pr.policyLock.Unlock()
 
-			for policy := range policyRulesActive {
-				policyRules, err := pr.fetchPolicyRules(policy)
+			for index, policyMeta := range policyListActive {
+				var err error
+				policyListActive[index].rules, err = pr.fetchPolicyRules(policyMeta.policy)
 				if err != nil {
 					log.Warn().Err(err).Msg("synchronise fetch failed")
 				}
 
 				pr.policyLock.Lock()
-				pr.policyRules[policy] = policyRules
+				pr.policyList[index] = policyMeta
 				pr.policyLock.Unlock()
 			}
 		}
