@@ -19,6 +19,7 @@ package policy
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +32,7 @@ import (
 
 type policyMetadata struct {
 	policy market.AccessPolicy
+	eTag   string
 	rules  market.AccessPolicyRuleSet
 }
 
@@ -103,7 +105,7 @@ func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 		}
 
 		var err error
-		policyListNew[index].rules, err = pr.fetchPolicyRules(policy)
+		err = pr.fetchPolicyRules(&policyListNew[index])
 		if err != nil {
 			return errors.Wrap(err, "initial fetch failed")
 		}
@@ -155,19 +157,33 @@ func (pr *PolicyRepository) getPolicyIndex(policyList []policyMetadata, policy m
 	return 0, false
 }
 
-func (pr *PolicyRepository) fetchPolicyRules(policy market.AccessPolicy) (market.AccessPolicyRuleSet, error) {
-	var policyRules market.AccessPolicyRuleSet
-
-	req, err := requests.NewGetRequest(policy.Source, "", nil)
+func (pr *PolicyRepository) fetchPolicyRules(policyMeta *policyMetadata) error {
+	req, err := requests.NewGetRequest(policyMeta.policy.Source, "", nil)
 	if err != nil {
-		return policyRules, errors.Wrap(err, "failed to create policy request")
+		return errors.Wrap(err, "failed to create policy request")
+	}
+	req.Header.Add("If-None-Match", policyMeta.eTag)
+
+	res, err := pr.client.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "failed fetch policy rule %s", policyMeta.policy)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil
+	}
+	if err := requests.ParseResponseError(res); err != nil {
+		return errors.Wrap(err, "cannot parse proposals response")
 	}
 
-	err = pr.client.DoRequestAndParseResponse(req, &policyRules)
+	policyMeta.rules = market.AccessPolicyRuleSet{}
+	err = pr.client.DoRequestAndParseResponse(req, &policyMeta.rules)
 	if err != nil {
-		return policyRules, errors.Wrapf(err, "failed fetch policy rule %s", policy)
+		return errors.Wrapf(err, "failed fetch policy rule %s", policyMeta.policy)
 	}
-	return policyRules, nil
+	policyMeta.eTag = res.Header.Get("ETag")
+	return nil
 }
 
 func (pr *PolicyRepository) fetchLoop() {
@@ -180,15 +196,15 @@ func (pr *PolicyRepository) fetchLoop() {
 			policyListActive := pr.policyList
 			pr.policyLock.Unlock()
 
-			for index, policyMeta := range policyListActive {
+			for index := range policyListActive {
 				var err error
-				policyListActive[index].rules, err = pr.fetchPolicyRules(policyMeta.policy)
+				pr.fetchPolicyRules(&policyListActive[index])
 				if err != nil {
 					log.Warn().Err(err).Msg("synchronise fetch failed")
 				}
 
 				pr.policyLock.Lock()
-				pr.policyList[index] = policyMeta
+				pr.policyList[index] = policyListActive[index]
 				pr.policyLock.Unlock()
 			}
 		}
