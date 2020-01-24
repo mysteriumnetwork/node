@@ -37,6 +37,14 @@ var (
 			{Type: market.AccessPolicyTypeIdentity, Value: "0x1"},
 		},
 	}
+	policyOneRulesUpdated = market.AccessPolicyRuleSet{
+		ID:    "1",
+		Title: "One (updated)",
+		Allow: []market.AccessRule{
+			{Type: market.AccessPolicyTypeIdentity, Value: "0x1"},
+		},
+	}
+
 	policyTwoRules = market.AccessPolicyRuleSet{
 		ID:    "2",
 		Title: "Two",
@@ -44,9 +52,17 @@ var (
 			{Type: market.AccessPolicyTypeDNSHostname, Value: "ipinfo.io"},
 		},
 	}
-	policyThreeRules = market.AccessPolicyRuleSet{
+	policyTwoRulesUpdated = market.AccessPolicyRuleSet{
+		ID:    "2",
+		Title: "Two (updated)",
+		Allow: []market.AccessRule{
+			{Type: market.AccessPolicyTypeDNSHostname, Value: "ipinfo.io"},
+		},
+	}
+
+	policyThreeRulesUpdated = market.AccessPolicyRuleSet{
 		ID:    "3",
-		Title: "Three",
+		Title: "Three (updated)",
 		Allow: []market.AccessRule{
 			{Type: market.AccessPolicyTypeDNSZone, Value: "ipinfo.io"},
 		},
@@ -96,7 +112,7 @@ func Test_PolicyRepository_RulesForPolicy(t *testing.T) {
 	assert.EqualError(t, err, "unknown policy: {1 http://policy.localhost/1}")
 	assert.Equal(t, market.AccessPolicyRuleSet{}, policyRules)
 
-	repo = createFullRepo("http://policy.localhost")
+	repo = createFullRepo("http://policy.localhost", time.Minute)
 	policyRules, err = repo.RulesForPolicy(repo.Policy("1"))
 	assert.NoError(t, err)
 	assert.Equal(t, policyOneRules, policyRules)
@@ -111,7 +127,7 @@ func Test_PolicyRepository_RulesForPolicies(t *testing.T) {
 	assert.EqualError(t, err, "unknown policy: {1 http://policy.localhost/1}")
 	assert.Equal(t, []market.AccessPolicyRuleSet{}, policiesRules)
 
-	repo = createFullRepo("http://policy.localhost")
+	repo = createFullRepo("http://policy.localhost", time.Minute)
 	policiesRules, err = repo.RulesForPolicies([]market.AccessPolicy{
 		repo.Policy("1"),
 		repo.Policy("2"),
@@ -134,37 +150,13 @@ func Test_PolicyRepository_AddPolicies_WhenEndpointFails(t *testing.T) {
 	assert.EqualError(
 		t,
 		err,
-		fmt.Sprintf("initial fetch failed: failed fetch policy rule {1 %s/1}: server response invalid: 500 Internal Server Error (%s/1)", server.URL, server.URL),
+		fmt.Sprintf("initial fetch failed: failed to fetch policy rule {1 %s/1}: server response invalid: 500 Internal Server Error (%s/1)", server.URL, server.URL),
 	)
 	assert.Equal(t, []policyMetadata{}, repo.policyList)
 }
 
 func Test_PolicyRepository_AddPolicies_WhenEndpointSucceeds(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/1" {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "1",
-				"title": "One",
-				"description": "",
-				"allow": [
-					{"type": "identity", "value": "0x1"}
-				]
-			}`))
-		} else if r.URL.Path == "/3" {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "3",
-				"title": "Three",
-				"description": "",
-				"allow": [
-					{"type": "dns_zone", "value": "ipinfo.io"}
-				]
-			}`))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
+	server := mockPolicyServer()
 	defer server.Close()
 
 	repo := createEmptyRepo(server.URL)
@@ -176,13 +168,13 @@ func Test_PolicyRepository_AddPolicies_WhenEndpointSucceeds(t *testing.T) {
 	assert.Equal(
 		t,
 		[]policyMetadata{
-			{policy: repo.Policy("1"), rules: policyOneRules},
-			{policy: repo.Policy("3"), rules: policyThreeRules},
+			{policy: repo.Policy("1"), rules: policyOneRulesUpdated},
+			{policy: repo.Policy("3"), rules: policyThreeRulesUpdated},
 		},
 		repo.policyList,
 	)
 
-	repo = createFullRepo(server.URL)
+	repo = createFullRepo(server.URL, time.Minute)
 	err = repo.AddPolicies([]market.AccessPolicy{
 		repo.Policy("1"),
 		repo.Policy("3"),
@@ -191,29 +183,114 @@ func Test_PolicyRepository_AddPolicies_WhenEndpointSucceeds(t *testing.T) {
 	assert.Equal(
 		t,
 		[]policyMetadata{
-			{policy: repo.Policy("1"), rules: policyOneRules},
+			{policy: repo.Policy("1"), rules: policyOneRulesUpdated},
 			{policy: repo.Policy("2"), rules: policyTwoRules},
-			{policy: repo.Policy("3"), rules: policyThreeRules},
+			{policy: repo.Policy("3"), rules: policyThreeRulesUpdated},
 		},
 		repo.policyList,
 	)
 }
 
-func createEmptyRepo(mockServerURL string) *PolicyRepository {
-	return &PolicyRepository{
-		client:     requests.NewHTTPClient("0.0.0.0", time.Second),
-		policyURL:  mockServerURL + "/",
-		policyList: []policyMetadata{},
-	}
+func Test_PolicyRepository_StartSyncsPolicies(t *testing.T) {
+	server := mockPolicyServer()
+	defer server.Close()
+
+	repo := createFullRepo(server.URL, 1*time.Millisecond)
+	repo.Start()
+	defer repo.Stop()
+
+	time.Sleep(10 * time.Millisecond)
+	policiesRules, err := repo.RulesForPolicies([]market.AccessPolicy{
+		repo.Policy("1"),
+		repo.Policy("2"),
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRulesUpdated, policyTwoRulesUpdated}, policiesRules)
 }
 
-func createFullRepo(mockServerURL string) *PolicyRepository {
-	repo := &PolicyRepository{
-		client:     requests.NewHTTPClient("0.0.0.0", time.Second),
-		policyURL:  mockServerURL + "/",
-		policyList: make([]policyMetadata, 2),
-	}
-	repo.policyList[0] = policyMetadata{policy: repo.Policy("1"), rules: policyOneRules}
-	repo.policyList[1] = policyMetadata{policy: repo.Policy("2"), rules: policyTwoRules}
+func Test_PolicyRepository_StartMultipleTimes(t *testing.T) {
+	repo := NewPolicyRepository(requests.NewHTTPClient("0.0.0.0", time.Second), "http://policy.localhost", time.Minute)
+	repo.Start()
+	repo.Stop()
+
+	repo.Start()
+	repo.Stop()
+}
+
+func createEmptyRepo(mockServerURL string) *PolicyRepository {
+	return NewPolicyRepository(
+		requests.NewHTTPClient("0.0.0.0", 100*time.Millisecond),
+		mockServerURL+"/",
+		time.Minute,
+	)
+}
+
+func createFullRepo(mockServerURL string, interval time.Duration) *PolicyRepository {
+	repo := NewPolicyRepository(
+		requests.NewHTTPClient("0.0.0.0", time.Second),
+		mockServerURL+"/",
+		interval,
+	)
+	repo.policyList = append(
+		repo.policyList,
+		policyMetadata{
+			policy: repo.Policy("1"),
+			rules: market.AccessPolicyRuleSet{
+				ID:    "1",
+				Title: "One",
+				Allow: []market.AccessRule{
+					{Type: market.AccessPolicyTypeIdentity, Value: "0x1"},
+				},
+			},
+		},
+		policyMetadata{
+			policy: repo.Policy("2"),
+			rules: market.AccessPolicyRuleSet{
+				ID:    "2",
+				Title: "Two",
+				Allow: []market.AccessRule{
+					{Type: market.AccessPolicyTypeDNSHostname, Value: "ipinfo.io"},
+				},
+			},
+		},
+	)
 	return repo
+}
+
+func mockPolicyServer() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/1" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"id": "1",
+				"title": "One (updated)",
+				"description": "",
+				"allow": [
+					{"type": "identity", "value": "0x1"}
+				]
+			}`))
+		} else if r.URL.Path == "/2" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"id": "2",
+				"title": "Two (updated)",
+				"description": "",
+				"allow": [
+					{"type": "dns_hostname", "value": "ipinfo.io"}
+				]
+			}`))
+		} else if r.URL.Path == "/3" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"id": "3",
+				"title": "Three (updated)",
+				"description": "",
+				"allow": [
+					{"type": "dns_zone", "value": "ipinfo.io"}
+				]
+			}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
 }

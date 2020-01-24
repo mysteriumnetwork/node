@@ -50,10 +50,10 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
-	// FlagAccessPolicyAddress Policy oracle URL for retrieving access policies.
+	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
 	FlagAccessPolicyAddress = cli.StringFlag{
 		Name:  "access-policy.address",
-		Usage: "URL of policy oracle endpoint for retrieving lists of access policies",
+		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
 	}
 	// FlagAccessPolicyList a comma-separated list of access policies that determines allowed identities to use the service.

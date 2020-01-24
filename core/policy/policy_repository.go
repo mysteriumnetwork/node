@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
@@ -59,15 +60,14 @@ func NewPolicyRepository(client *requests.HTTPClient, policyURL string, interval
 	}
 }
 
-// Start begins fetching proposals to repository
+// Start begins fetching policies to repository
 func (pr *PolicyRepository) Start() {
-	pr.fetchShutdown = make(chan struct{})
 	go pr.fetchLoop()
 }
 
-// Stop ends fetching proposals to repository
+// Stop ends fetching policies to repository
 func (pr *PolicyRepository) Stop() {
-	close(pr.fetchShutdown)
+	pr.fetchShutdown <- struct{}{}
 }
 
 // Policy converts given value to valid policy rule
@@ -94,7 +94,8 @@ func (pr *PolicyRepository) Policies(policyIDs []string) []market.AccessPolicy {
 // AddPolicies adds given policy to repository. Also syncs policy rules from TrustOracle
 func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 	pr.policyLock.Lock()
-	policyListNew := pr.policyList
+	policyListNew := make([]policyMetadata, len(pr.policyList))
+	copy(policyListNew, pr.policyList)
 	pr.policyLock.Unlock()
 
 	for _, policy := range policies {
@@ -105,8 +106,7 @@ func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 		}
 
 		var err error
-		err = pr.fetchPolicyRules(&policyListNew[index])
-		if err != nil {
+		if err = pr.fetchPolicyRules(&policyListNew[index]); err != nil {
 			return errors.Wrap(err, "initial fetch failed")
 		}
 	}
@@ -170,17 +170,19 @@ func (pr *PolicyRepository) fetchPolicyRules(policyMeta *policyMetadata) error {
 	}
 	defer res.Body.Close()
 
+	httptrace.TraceRequestResponse(req, res)
+
 	if res.StatusCode == http.StatusNotModified {
 		return nil
 	}
 	if err := requests.ParseResponseError(res); err != nil {
-		return errors.Wrap(err, "cannot parse proposals response")
+		return errors.Wrapf(err, "failed to fetch policy rule %s", policyMeta.policy)
 	}
 
 	policyMeta.rules = market.AccessPolicyRuleSet{}
-	err = pr.client.DoRequestAndParseResponse(req, &policyMeta.rules)
+	err = requests.ParseResponseJSON(res, &policyMeta.rules)
 	if err != nil {
-		return errors.Wrapf(err, "failed fetch policy rule %s", policyMeta.policy)
+		return errors.Wrapf(err, "failed to parse policy rule %s", policyMeta.policy)
 	}
 	policyMeta.eTag = res.Header.Get("ETag")
 	return nil
@@ -193,13 +195,13 @@ func (pr *PolicyRepository) fetchLoop() {
 			return
 		case <-time.After(pr.fetchInterval):
 			pr.policyLock.Lock()
-			policyListActive := pr.policyList
+			policyListActive := make([]policyMetadata, len(pr.policyList))
+			copy(policyListActive, pr.policyList)
 			pr.policyLock.Unlock()
 
 			for index := range policyListActive {
 				var err error
-				pr.fetchPolicyRules(&policyListActive[index])
-				if err != nil {
+				if err = pr.fetchPolicyRules(&policyListActive[index]); err != nil {
 					log.Warn().Err(err).Msg("synchronise fetch failed")
 				}
 
