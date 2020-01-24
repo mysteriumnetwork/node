@@ -270,9 +270,11 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			emt := &ExchangeMessageTracker{
-				timeTracker: tt.fields.timeTracker,
-				paymentInfo: tt.fields.paymentInfo,
-				peer:        tt.fields.peer,
+				deps: ExchangeMessageTrackerDeps{
+					TimeTracker: tt.fields.timeTracker,
+					PaymentInfo: tt.fields.paymentInfo,
+					Peer:        tt.fields.peer,
+				},
 			}
 			if err := emt.isInvoiceOK(tt.invoice); (err != nil) != tt.wantErr {
 				t.Errorf("ExchangeMessageTracker.isInvoiceOK() error = %v, wantErr %v", err, tt.wantErr)
@@ -324,7 +326,9 @@ func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			emt := &ExchangeMessageTracker{
-				consumerTotalsStorage: tt.fields.consumerTotalsStorage,
+				deps: ExchangeMessageTrackerDeps{
+					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
+				},
 			}
 			got, err := emt.getGrandTotalPromised()
 			if (err != nil) != tt.wantErr {
@@ -391,7 +395,9 @@ func TestExchangeMessageTracker_incrementGrandTotalPromised(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			emt := &ExchangeMessageTracker{
-				consumerTotalsStorage: tt.fields.consumerTotalsStorage,
+				deps: ExchangeMessageTrackerDeps{
+					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
+				},
 			}
 			if err := emt.incrementGrandTotalPromised(tt.args.amount); (err != nil) != tt.wantErr {
 				t.Errorf("ExchangeMessageTracker.incrementGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
@@ -486,9 +492,11 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			emt := &ExchangeMessageTracker{
-				peer:                   tt.fields.peer,
-				consumerInvoiceStorage: tt.fields.consumerInvoiceStorage,
-				consumerTotalsStorage:  tt.fields.consumerTotalsStorage,
+				deps: ExchangeMessageTrackerDeps{
+					ConsumerTotalsStorage:  tt.fields.consumerTotalsStorage,
+					Peer:                   tt.fields.peer,
+					ConsumerInvoiceStorage: tt.fields.consumerInvoiceStorage,
+				},
 			}
 			gotToPromise, gotDiff, err := emt.calculateAmountToPromise(tt.invoice)
 			if (err != nil) != tt.wantErr {
@@ -605,13 +613,15 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			emt := &ExchangeMessageTracker{
-				peerExchangeMessageSender: tt.fields.peerExchangeMessageSender,
-				keystore:                  tt.fields.keystore,
-				identity:                  tt.fields.identity,
-				peer:                      tt.fields.peer,
-				consumerInvoiceStorage:    tt.fields.consumerInvoiceStorage,
-				consumerTotalsStorage:     tt.fields.consumerTotalsStorage,
-				publisher:                 &mockPublisher{},
+				deps: ExchangeMessageTrackerDeps{
+					PeerExchangeMessageSender: tt.fields.peerExchangeMessageSender,
+					ConsumerTotalsStorage:     tt.fields.consumerTotalsStorage,
+					Peer:                      tt.fields.peer,
+					ConsumerInvoiceStorage:    tt.fields.consumerInvoiceStorage,
+					Ks:                        tt.fields.keystore,
+					Identity:                  tt.fields.identity,
+					Publisher:                 &mockPublisher{},
+				},
 			}
 			if err := emt.issueExchangeMessage(tt.args.invoice); (err != nil) != tt.wantErr {
 				t.Errorf("ExchangeMessageTracker.issueExchangeMessage() error = %v, wantErr %v", err, tt.wantErr)
