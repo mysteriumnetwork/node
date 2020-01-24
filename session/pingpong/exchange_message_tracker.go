@@ -178,7 +178,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		ticksPassed = float64(emt.deps.TimeTracker.Elapsed()) / float64(emt.deps.PaymentInfo.Duration)
 	}
 
-	shouldBe := uint64(math.Trunc(ticksPassed * float64(emt.deps.PaymentInfo.GetPrice().Amount)))
+	shouldBe := uint64(math.Round(ticksPassed * float64(emt.deps.PaymentInfo.GetPrice().Amount)))
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
 	if !emt.receivedFirst {

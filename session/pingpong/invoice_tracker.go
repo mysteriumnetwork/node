@@ -409,7 +409,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 		ticksPassed = float64(it.deps.TimeTracker.Elapsed()) / float64(it.deps.PaymentInfo.Duration)
 	}
 
-	shouldBe := uint64(math.Trunc(ticksPassed * float64(it.deps.PaymentInfo.GetPrice().Amount)))
+	shouldBe := uint64(math.Round(ticksPassed * float64(it.deps.PaymentInfo.GetPrice().Amount)))
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
 	// This is due to the fact that both payment providers start at different times.
