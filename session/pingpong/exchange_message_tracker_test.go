@@ -159,6 +159,73 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 	<-testDone
 }
 
+func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
+	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+
+	err = ks.Unlock(acc, "")
+	assert.Nil(t, err)
+
+	mockSender := &MockPeerExchangeMessageSender{
+		chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
+	}
+
+	invoiceChan := make(chan crypto.Invoice)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
+	totalsStorage := NewConsumerTotalsStorage(bolt)
+	deps := ExchangeMessageTrackerDeps{
+		InvoiceChan:               invoiceChan,
+		PeerExchangeMessageSender: mockSender,
+		ConsumerInvoiceStorage:    invoiceStorage,
+		ConsumerTotalsStorage:     totalsStorage,
+		TimeTracker:               &tracker,
+		Publisher:                 &mockPublisher{},
+		Ks:                        ks,
+		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		Identity:                  identity.FromAddress(acc.Address.Hex()),
+		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
+	}
+	exchangeMessageTracker := NewExchangeMessageTracker(deps)
+
+	mockInvoice := crypto.Invoice{
+		AgreementID:    1,
+		AgreementTotal: 0,
+		TransactorFee:  0,
+		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
+		Provider:       deps.Peer.Address,
+	}
+
+	testDone := make(chan struct{}, 0)
+
+	defer exchangeMessageTracker.Stop()
+	go func() {
+		err := exchangeMessageTracker.Start()
+		assert.Nil(t, err)
+		testDone <- struct{}{}
+	}()
+
+	invoiceChan <- mockInvoice
+
+	exchangeMessage := <-mockSender.chanToWriteTo
+	exchangeMessageTracker.Stop()
+	addr, err := exchangeMessage.RecoverConsumerIdentity()
+	assert.Nil(t, err)
+
+	assert.Equal(t, acc.Address.Hex(), addr.Hex())
+
+	<-testDone
+}
+
 func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
 	assert.Nil(t, err)

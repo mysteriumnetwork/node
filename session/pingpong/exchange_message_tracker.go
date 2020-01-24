@@ -163,12 +163,21 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 	return emt.deps.ConsumerTotalsStorage.Store(k, res+amount)
 }
 
+func (emt *ExchangeMessageTracker) isServiceFree() bool {
+	return emt.deps.PaymentInfo.Duration == 0 || emt.deps.PaymentInfo.Price.Amount == 0
+}
+
 func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.deps.Peer.Address) {
 		return ErrWrongProvider
 	}
 
-	ticksPassed := float64(emt.deps.TimeTracker.Elapsed()) / float64(emt.deps.PaymentInfo.Duration)
+	var ticksPassed float64
+	// avoid division by zero on free service
+	if !emt.isServiceFree() {
+		ticksPassed = float64(emt.deps.TimeTracker.Elapsed()) / float64(emt.deps.PaymentInfo.Duration)
+	}
+
 	shouldBe := uint64(math.Trunc(ticksPassed * float64(emt.deps.PaymentInfo.GetPrice().Amount)))
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
