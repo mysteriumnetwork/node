@@ -394,8 +394,8 @@ func (it *InvoiceTracker) sendInvoice() error {
 		return ErrExchangeWaitTimeout
 	}
 
-	// TODO: this should be calculated according to the passed in payment period
-	shouldBe := uint64(math.Trunc(it.deps.TimeTracker.Elapsed().Minutes() * float64(it.deps.PaymentInfo.GetPrice().Amount)))
+	ticksPassed := float64(it.deps.TimeTracker.Elapsed()) / float64(it.deps.PaymentInfo.Duration)
+	shouldBe := uint64(math.Trunc(ticksPassed * float64(it.deps.PaymentInfo.GetPrice().Amount)))
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
 	// This is due to the fact that both payment providers start at different times.

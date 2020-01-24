@@ -188,8 +188,8 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
-	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
+	ticksPassed := float64(emt.timeTracker.Elapsed()) / float64(emt.paymentInfo.Duration)
+	shouldBe := uint64(math.Trunc(ticksPassed * float64(emt.paymentInfo.GetPrice().Amount)))
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
 	if !emt.receivedFirst {
