@@ -207,6 +207,11 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 	it.markInvoicePaid(pm.Promise.Hashlock)
 	it.resetNotReceivedExchangeMessageCount()
 
+	// incase of zero payment, we'll just skip going to the accountant
+	if it.isServiceFree() {
+		return nil
+	}
+
 	err = it.revealPromise()
 	switch err {
 	case errHandled:
@@ -389,12 +394,21 @@ func (it *InvoiceTracker) generateR() []byte {
 	return r
 }
 
+func (it *InvoiceTracker) isServiceFree() bool {
+	return it.deps.PaymentInfo.Duration == 0 || it.deps.PaymentInfo.Price.Amount == 0
+}
+
 func (it *InvoiceTracker) sendInvoice() error {
 	if it.getNotReceivedExchangeMessageCount() >= it.maxNotReceivedExchangeMessages {
 		return ErrExchangeWaitTimeout
 	}
 
-	ticksPassed := float64(it.deps.TimeTracker.Elapsed()) / float64(it.deps.PaymentInfo.Duration)
+	var ticksPassed float64
+	// avoid division by zero on free service
+	if !it.isServiceFree() {
+		ticksPassed = float64(it.deps.TimeTracker.Elapsed()) / float64(it.deps.PaymentInfo.Duration)
+	}
+
 	shouldBe := uint64(math.Trunc(ticksPassed * float64(it.deps.PaymentInfo.GetPrice().Amount)))
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
