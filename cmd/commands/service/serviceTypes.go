@@ -23,13 +23,15 @@ import (
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/socks5"
+	socks5_service "github.com/mysteriumnetwork/node/services/socks5/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/urfave/cli/v2"
 )
 
 var (
-	serviceTypes = []string{"openvpn", "wireguard", "noop"}
+	serviceTypes = []string{"openvpn", "wireguard", "socks5", "noop"}
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
 		noop.ServiceType: noop.ParseFlags,
@@ -40,6 +42,10 @@ var (
 		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
 			config.ParseFlagsServiceWireguard(ctx)
 			return wireguard_service.GetOptions()
+		},
+		socks5.ServiceType: func(ctx *cli.Context) service.Options {
+			config.ParseFlagsServiceSOCKS5(ctx)
+			return socks5_service.GetOptions()
 		},
 	}
 )

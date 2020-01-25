@@ -63,6 +63,19 @@ func Wireguard() error {
 	return sh.RunV(cmdParts[0], cmdParts[1:]...)
 }
 
+// SOCKS5 builds and starts SOCKS5 service with terms accepted
+func SOCKS5() error {
+	if err := sh.RunV("bin/build"); err != nil {
+		return err
+	}
+	cmd := "build/myst/myst service --agreed-terms-and-conditions socks5"
+	if runtime.GOOS == "darwin" {
+		cmd = "sudo " + cmd
+	}
+	cmdParts := strings.Split(cmd, " ")
+	return sh.RunV(cmdParts[0], cmdParts[1:]...)
+}
+
 // CLI builds and runs myst CLI
 func CLI() error {
 	if err := sh.RunV("bin/build"); err != nil {

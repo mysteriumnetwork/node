@@ -37,6 +37,8 @@ import (
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/socks5"
+	socks5_service "github.com/mysteriumnetwork/node/services/socks5/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
@@ -668,6 +670,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
 	config.RegisterFlagsServiceWireguard(&flags)
+	config.RegisterFlagsServiceSOCK5(&flags)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
@@ -690,6 +693,9 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	case openvpn.ServiceType:
 		config.ParseFlagsServiceOpenvpn(ctx)
 		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
+	case socks5.ServiceType:
+		config.ParseFlagsServiceSOCKS5(ctx)
+		return socks5_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	}
 
 	return nil, config.Options{}, errors.New("service type not found")

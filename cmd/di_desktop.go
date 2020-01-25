@@ -39,6 +39,8 @@ import (
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/socks5"
+	socks5_service "github.com/mysteriumnetwork/node/services/socks5/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
@@ -62,6 +64,7 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 	di.bootstrapServiceWireguard(nodeOptions)
+	di.bootstrapServiceSOCKS5(nodeOptions)
 
 	return nil
 }
@@ -186,6 +189,45 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		return manager, proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
+}
+
+func (di *Dependencies) bootstrapServiceSOCKS5(nodeOptions node.Options) {
+	di.ServiceRegistry.Register(
+		socks5.ServiceType,
+		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+			loc, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
+			outIP, err := di.IPResolver.GetOutboundIPAsString()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
+
+			natPort := func(port int) func() {
+				return mapping.GetPortMappingFunc(
+					loc.IP,
+					outIP,
+					"TCP",
+					port,
+					"Myst node SOCKS5 port mapping",
+					di.EventBus)
+			}
+			socks5Options := serviceOptions.(socks5_service.Options)
+			svc := socks5_service.NewManager(
+				socks5Options,
+				location.ServiceLocationInfo{
+					OutIP:   outIP,
+					PubIP:   loc.IP,
+					Country: loc.Country,
+				},
+				natPort,
+				di.NATTracker,
+				di.NATPinger,
+			)
+			return svc, socks5_service.GetProposal(loc), nil
+		},
+	)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {

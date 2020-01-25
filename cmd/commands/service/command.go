@@ -156,6 +156,7 @@ func registerFlags(flags *[]cli.Flag) {
 	config.RegisterFlagsServiceShared(flags)
 	config.RegisterFlagsServiceOpenvpn(flags)
 	config.RegisterFlagsServiceWireguard(flags)
+	config.RegisterFlagsServiceSOCK5(flags)
 }
 
 // parseIdentityFlags function fills in service command options from CLI context
