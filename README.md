@@ -54,7 +54,9 @@ Our docker images can be found in [Docker hub](https://hub.docker.com/r/mysteriu
 To run a node in a docker container you will need [docker](https://www.docker.com/). On Linux, to manage docker as a non-root user (execute commands without `sudo`), follow [postinstall guide](https://docs.docker.com/install/linux/linux-postinstall/).
 You should be able to run a node on any OS that supports docker. We have tested it on these OSes so far:
 - Debian 9
+- Debian 10
 - Ubuntu 16.04
+- Ubuntu 18.04
 - Centos 7
 
 Run node:
@@ -88,14 +90,19 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
 
-## Authors
-* **Valdas Petrulis** - *Lead developer, go evangelist* - [Waldz](https://github.com/Waldz)
+## Contributors
+* **Valdas Petrulis** - *Lead developer, go evangelist, node bootstrapper* - [Waldz](https://github.com/Waldz)
 * **Tadas Valiukas** - *Senior developer, experienced bug maker* - [tadovas](https://github.com/tadovas)
 * **Donatas Kučinskas** - *Senior developer, clean code savvy* - [donce](https://github.com/donce)
 * **Antanas Masevičius** - *Network engineer / developer, net guru* - [zolia](https://github.com/zolia)
-* **Paulius Mozuras** - *Software developer, python lover* - [interro](https://github.com/interro)
+* **Paulius Mozuras** - *Software developer, snakes lover* - [interro](https://github.com/interro)
 * **Ignas Bernotas** - *Senior developer, open source enthusiast* - [ignasbernotas](https://github.com/ignasbernotas)
 * **Andrej Novikov** - *Senior developer, JS enthusiast, UX jazzman* - [shroomist](https://github.com/shroomist)
+* **Dmitry Shihovtsev** - *Senior developer, devops ninja* - [soffokl](https://github.com/soffokl)
+* **Viktoras Kuznecovas** - *Senior developer, supersonic typing specialist* [vkuznecovas](https://github.com/vkuznecovas)
+* **Tadas Krivickas** - *Senior developer, CI boss, refactoring fairy* [tadaskay](https://github.com/tadaskay)
+* **Jaro Šatkevič** - *Senior developer, micro-payments researcher, crypto maniac* [chompomonim](https://github.com/chompomonim)
+* **Andzej Maciusovič** - *Senior developer, disciplined world changer* [anjmao](https://github.com/anjmao)
 
 See also full list of [contributors](https://github.com/mysteriumnetwork/node/contributors) who participated in this project.
 
