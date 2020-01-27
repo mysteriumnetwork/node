@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/dns"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -62,20 +63,25 @@ func NewManager(
 	natService nat.NATService,
 	natPinger NATPinger,
 	natEventGetter NATEventGetter,
-	portMap func(port int) (releasePortMapping func()),
+	eventPublisher eventbus.Publisher,
 	options Options,
 	portSupplier port.ServicePortSupplier,
+	portMapper mapping.PortMapper,
 ) *Manager {
-	resourceAllocator := resources.NewAllocator(portSupplier, options.Subnet)
+	resourcesAllocator := resources.NewAllocator(portSupplier, options.Subnet)
+
 	return &Manager{
-		done:           make(chan struct{}),
-		ipResolver:     ipResolver,
-		natService:     natService,
-		natPinger:      natPinger,
-		natEventGetter: natEventGetter,
-		natPingerPorts: port.NewPool(),
-		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(ipResolver, resourceAllocator, portMap, options.ConnectDelay)
+		done:               make(chan struct{}),
+		resourcesAllocator: resourcesAllocator,
+		ipResolver:         ipResolver,
+		natService:         natService,
+		natPinger:          natPinger,
+		natEventGetter:     natEventGetter,
+		natPingerPorts:     port.NewPool(),
+		publisher:          eventPublisher,
+		portMapper:         portMapper,
+		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
+			return endpoint.NewConnectionEndpoint(ipResolver, resourcesAllocator, options.ConnectDelay)
 		},
 		publicIP:   location.PubIP,
 		outboundIP: location.OutIP,
@@ -86,17 +92,21 @@ func NewManager(
 type Manager struct {
 	done chan struct{}
 
+	resourcesAllocator *resources.Allocator
+
 	natService     nat.NATService
 	natPinger      NATPinger
 	natPingerPorts port.ServicePortSupplier
 	natEventGetter NATEventGetter
+	publisher      eventbus.Publisher
+	portMapper     mapping.PortMapper
 
 	dnsOK      bool
 	dnsPort    int
 	dnsProxy   *dns.Proxy
 	dnsProxyMu sync.Mutex
 
-	connectionEndpointFactory func() (wg.ConnectionEndpoint, error)
+	connEndpointFactory func() (wg.ConnectionEndpoint, error)
 
 	ipResolver ip.Resolver
 	publicIP   string
@@ -105,21 +115,31 @@ type Manager struct {
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
 func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+	log.Info().Msg("Accepting new WireGuard connection")
 	consumerConfig := wg.ConsumerConfig{}
 	err := json.Unmarshal(sessionConfig, &consumerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal wg consumer config")
 	}
 
-	natPingerEnabled := m.natPinger.Valid() && m.isBehindNAT() && m.portMappingFailed()
+	listenPort, err := m.resourcesAllocator.AllocatePort()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not allocate provider listen port")
+	}
+
+	releasePortMapping, portMappingOk := m.tryAddPortMapping(listenPort)
+
+	conn, err := m.startNewConnection(listenPort)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not start new connection")
+	}
+
+	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.isBehindNAT()
+	log.Debug().Msgf("Pinger enable params: isValid=%v, isBehindNAT=%v, portMappingOk=%v", m.natPinger.Valid(), m.isBehindNAT(), portMappingOk)
+
 	traversalParams, err := m.newTraversalParams(natPingerEnabled, consumerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create traversal params")
-	}
-
-	conn, err := m.startNewConnection()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not start new connection")
 	}
 
 	config, err := conn.Config()
@@ -159,9 +179,15 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigP
 	}
 
 	destroy := func() {
+		if releasePortMapping != nil {
+			log.Trace().Msg("Deleting port mapping")
+			releasePortMapping()
+		}
+		log.Trace().Msg("Deleting nat rules")
 		if err := m.natService.Del(natRules); err != nil {
 			log.Error().Err(err).Msg("Failed to delete NAT rules")
 		}
+		log.Trace().Msg("Stopping connection endpoint")
 		if err := conn.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")
 		}
@@ -170,13 +196,26 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigP
 	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: &traversalParams}, nil
 }
 
-func (m *Manager) startNewConnection() (wg.ConnectionEndpoint, error) {
-	connEndpoint, err := m.connectionEndpointFactory()
+func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
+	if !m.isBehindNAT() {
+		return nil, false
+	}
+
+	release, ok = m.portMapper.Map(
+		"UDP",
+		port,
+		"Myst node wireguard(tm) port mapping")
+
+	return release, ok
+}
+
+func (m *Manager) startNewConnection(port int) (wg.ConnectionEndpoint, error) {
+	connEndpoint, err := m.connEndpointFactory()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not run conn endpoint factory")
 	}
 
-	if err := connEndpoint.Start(wg.StartConfig{}); err != nil {
+	if err := connEndpoint.StartProviderMode(wg.ProviderModeConfig{ListenPort: port}); err != nil {
 		return nil, errors.Wrap(err, "could not start provider wg connection endpoint")
 	}
 	return connEndpoint, nil
@@ -284,16 +323,4 @@ func (m *Manager) Stop() error {
 
 func (m *Manager) isBehindNAT() bool {
 	return m.outboundIP != m.publicIP
-}
-
-func (m *Manager) portMappingFailed() bool {
-	lastEvent := m.natEventGetter.LastEvent()
-	if lastEvent == nil {
-		return false
-	}
-
-	if lastEvent.Stage == traversal.StageName {
-		return true
-	}
-	return lastEvent.Stage == mapping.StageName && !lastEvent.Successful
 }
