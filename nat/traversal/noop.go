@@ -43,7 +43,7 @@ func (np *NoopPinger) Start() {}
 func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error {
+func (np *NoopPinger) PingProvider(ip string, port, consumerPort, proxyPort int, stop <-chan struct{}) error {
 	return nil
 }
 

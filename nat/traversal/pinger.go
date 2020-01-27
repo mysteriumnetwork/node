@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -32,42 +33,51 @@ import (
 
 // StageName represents hole-punching stage of NAT traversal
 const StageName = "hole_punching"
-const pingInterval = 200
-const pingTimeout = 10000
 
 var (
 	errNATPunchAttemptStopped  = errors.New("NAT punch attempt stopped")
 	errNATPunchAttemptTimedOut = errors.New("NAT punch attempt timed out")
 )
 
+// NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
+type NATProviderPinger interface {
+	PingProvider(ip string, port, consumerPort, proxyPort int, stop <-chan struct{}) error
+}
+
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
-	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
+	NATProviderPinger
 	PingTarget(*Params)
 	BindServicePort(key string, port int)
 	Start()
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
-	StopNATProxy()
 	Valid() bool
+}
+
+// PingConfig represents NAT pinger config.
+type PingConfig struct {
+	Interval time.Duration
+	Timeout  time.Duration
+}
+
+// DefaultPingConfig returns default NAT pinger config.
+func DefaultPingConfig() *PingConfig {
+	return &PingConfig{
+		Interval: 200 * time.Millisecond,
+		Timeout:  10 * time.Second,
+	}
 }
 
 // Pinger represents NAT pinger structure
 type Pinger struct {
+	pingConfig     *PingConfig
 	pingTarget     chan *Params
-	pingCancelled  chan struct{}
 	stop           chan struct{}
 	stopNATProxy   chan struct{}
 	once           sync.Once
-	natEventWaiter NATEventWaiter
 	natProxy       *NATProxy
-	previousStage  string
-	eventPublisher Publisher
-}
-
-// NATEventWaiter is responsible for waiting for nat events
-type NATEventWaiter interface {
-	WaitForEvent() event.Event
+	eventPublisher eventbus.Publisher
 }
 
 // PortSupplier provides port needed to run a service on
@@ -75,25 +85,14 @@ type PortSupplier interface {
 	Acquire() (port.Port, error)
 }
 
-// Publisher is responsible for publishing given events
-type Publisher interface {
-	Publish(topic string, data interface{})
-}
-
 // NewPinger returns Pinger instance
-func NewPinger(waiter NATEventWaiter, proxy *NATProxy, previousStage string, publisher Publisher) NATPinger {
-	target := make(chan *Params)
-	cancel := make(chan struct{})
-	stop := make(chan struct{})
-	stopNATProxy := make(chan struct{})
+func NewPinger(pingConfig *PingConfig, proxy *NATProxy, publisher eventbus.Publisher) NATPinger {
 	return &Pinger{
-		pingTarget:     target,
-		pingCancelled:  cancel,
-		stop:           stop,
-		stopNATProxy:   stopNATProxy,
-		natEventWaiter: waiter,
+		pingConfig:     pingConfig,
+		pingTarget:     make(chan *Params),
+		stop:           make(chan struct{}),
+		stopNATProxy:   make(chan struct{}),
 		natProxy:       proxy,
-		previousStage:  previousStage,
 		eventPublisher: publisher,
 	}
 }
@@ -114,7 +113,7 @@ func (p *Pinger) Start() {
 	for {
 		select {
 		case <-p.stop:
-			log.Info().Msg("Stop pinger called")
+			log.Info().Msg("NAT pinger is stopped")
 			return
 		case pingParams := <-p.pingTarget:
 			if isPunchingRequired(pingParams) {
@@ -137,7 +136,7 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error {
+func (p *Pinger) PingProvider(ip string, port, consumerPort, proxyPort int, stop <-chan struct{}) error {
 	log.Info().Msg("NAT pinging to provider")
 
 	conn, err := p.getConnection(ip, port, consumerPort)
@@ -145,14 +144,16 @@ func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan
 		return errors.Wrap(err, "failed to get connection")
 	}
 
+	pingStop := make(chan struct{})
+	defer close(pingStop)
 	go func() {
-		err := p.ping(conn)
+		err := p.ping(conn, pingStop)
 		if err != nil {
 			log.Warn().Err(err).Msg("Error while pinging")
 		}
 	}()
 
-	time.Sleep(pingInterval * time.Millisecond)
+	time.Sleep(p.pingConfig.Interval)
 	err = p.pingReceiver(conn, stop)
 	if err != nil {
 		return err
@@ -164,27 +165,30 @@ func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan
 		return errors.Wrap(err, "remote ping failed")
 	}
 
-	p.pingCancelled <- struct{}{}
-
-	if consumerPort > 0 {
-		consumerAddr := fmt.Sprintf("127.0.0.1:%d", consumerPort+1)
+	if proxyPort > 0 {
+		consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
 		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
 		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
+	} else {
+		log.Info().Msg("Closing ping connection")
+		if err := conn.Close(); err != nil {
+			return errors.Wrap(err, "could not close ping conn")
+		}
 	}
 	return nil
 }
 
-func (p *Pinger) ping(conn *net.UDPConn) error {
+func (p *Pinger) ping(conn *net.UDPConn, stop <-chan struct{}) error {
 	// Windows detects that 1 TTL is too low and throws an exception during send
 	ttl := 0
 	i := 0
 
 	for {
 		select {
-		case <-p.pingCancelled:
+		case <-stop:
 			return nil
 
-		case <-time.After(pingInterval * time.Millisecond):
+		case <-time.After(p.pingConfig.Interval):
 			log.Debug().Msg("Pinging... ")
 			// This is the essence of the TTL based udp punching.
 			// We're slowly increasing the TTL so that the packet is held.
@@ -205,7 +209,7 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 
 			i++
 
-			if i*pingInterval > pingTimeout {
+			if time.Duration(i)*p.pingConfig.Interval > p.pingConfig.Timeout {
 				err := errors.New("timeout while waiting for ping ack, trying to continue")
 				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 				return err
@@ -260,28 +264,26 @@ func (p *Pinger) BindServicePort(key string, port int) {
 }
 
 func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
-	timeout := time.After(pingTimeout * time.Millisecond)
+	timeout := time.After(p.pingConfig.Timeout)
 	buf := make([]byte, bufferLen)
+
 	for {
 		select {
 		case <-timeout:
-			p.pingCancelled <- struct{}{}
 			return errNATPunchAttemptTimedOut
 		case <-stop:
-			p.pingCancelled <- struct{}{}
 			return errNATPunchAttemptStopped
 		default:
-		}
+			n, err := conn.Read(buf)
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", conn.RemoteAddr().String())
+				continue
+			}
 
-		n, err := conn.Read(buf)
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", conn.RemoteAddr().String())
-			continue
-		}
-
-		if n > 0 {
-			log.Info().Msgf("Remote peer data received: %s, len: %d", string(buf[:n]), n)
-			return nil
+			if n > 0 {
+				log.Info().Msgf("Remote peer data received: %s, len: %d", string(buf[:n]), n)
+				return nil
+			}
 		}
 	}
 }
@@ -291,18 +293,13 @@ func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
 	p.natProxy.setProtectSocketCallback(socketProtect)
 }
 
-// StopNATProxy stops NATProxy launched by NATPinger
-func (p *Pinger) StopNATProxy() {
-	close(p.stopNATProxy)
-}
-
 // Valid returns that this pinger is a valid pinger
 func (p *Pinger) Valid() bool {
 	return true
 }
 
 func (p *Pinger) pingTargetConsumer(pingParams *Params) {
-	log.Info().Msgf("Pinging peer with: %v", pingParams)
+	log.Info().Msgf("Pinging peer with: %+v", pingParams)
 
 	if pingParams.ProxyPortMappingKey == "" {
 		log.Error().Msg("Service proxy connection port mapping key is missing")
@@ -321,8 +318,10 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 		return
 	}
 
+	pingStop := make(chan struct{})
+	defer close(pingStop)
 	go func() {
-		err := p.ping(conn)
+		err := p.ping(conn, pingStop)
 		if err != nil {
 			log.Warn().Err(err).Msg("Error while pinging")
 		}
@@ -333,8 +332,6 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 		log.Error().Err(err).Msg("Ping receiver error")
 		return
 	}
-
-	p.pingCancelled <- struct{}{}
 
 	p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 
