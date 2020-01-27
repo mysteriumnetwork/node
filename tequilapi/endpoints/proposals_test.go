@@ -18,8 +18,10 @@
 package endpoints
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -33,6 +35,9 @@ type TestServiceDefinition struct{}
 func (service TestServiceDefinition) GetLocation() market.Location {
 	return market.Location{ASN: 123, Country: "Lithuania", City: "Vilnius"}
 }
+
+const upperPriceBound uint64 = 1000000
+const lowerPriceBound uint64 = 0
 
 var serviceProposals = []market.ServiceProposal{
 	{
@@ -64,6 +69,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 
 	query := req.URL.Query()
 	query.Set("providerId", "0xProviderId")
+	setPricingBounds(query)
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
@@ -90,7 +96,13 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	assert.Equal(t, &proposal.Filter{ProviderID: "0xProviderId"}, repository.recordedFilter)
+	upper := upperPriceBound
+	lower := lowerPriceBound
+	assert.EqualValues(t, &proposal.Filter{
+		ProviderID:      "0xProviderId",
+		UpperPriceBound: &upper,
+		LowerPriceBound: &lower,
+	}, repository.recordedFilter)
 }
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
@@ -205,6 +217,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
+
 	handlerFunc := NewProposalsEndpoint(repository, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
@@ -283,4 +296,9 @@ func (m *mockProposalRepository) Proposal(id market.ProposalID) (*market.Service
 func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
 	m.recordedFilter = filter
 	return m.proposals, nil
+}
+
+func setPricingBounds(v url.Values) {
+	v.Add("upperPriceBound", fmt.Sprintf("%v", upperPriceBound))
+	v.Add("lowerPriceBound", fmt.Sprintf("%v", lowerPriceBound))
 }

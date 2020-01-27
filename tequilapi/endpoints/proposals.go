@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -158,12 +159,26 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
+	upperPriceBound, err := parsePriceBound(req, "upperPriceBound")
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+	lowerPriceBound, err := parsePriceBound(req, "lowerPriceBound")
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
 		ProviderID:         req.URL.Query().Get("providerId"),
 		ServiceType:        req.URL.Query().Get("serviceType"),
 		AccessPolicyID:     req.URL.Query().Get("accessPolicyId"),
 		AccessPolicySource: req.URL.Query().Get("accessPolicySource"),
+		UpperPriceBound:    upperPriceBound,
+		LowerPriceBound:    lowerPriceBound,
 	})
+
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -180,6 +195,15 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 	}
 
 	utils.WriteAsJSON(proposalsRes, resp)
+}
+
+func parsePriceBound(req *http.Request, key string) (*uint64, error) {
+	bound := req.URL.Query().Get(key)
+	if bound == "" {
+		return nil, nil
+	}
+	upperPriceBound, err := strconv.ParseUint(req.URL.Query().Get(key), 10, 64)
+	return &upperPriceBound, err
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
