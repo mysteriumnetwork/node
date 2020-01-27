@@ -241,7 +241,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	}
 	di.ServiceSessionStorage = storage
 
-	di.PolicyRepository = policy.NewPolicyRepository(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
+	di.PolicyRepository = policy.NewRepository(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
 	di.PolicyRepository.Start()
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error) {

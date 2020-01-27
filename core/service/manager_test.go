@@ -31,7 +31,7 @@ import (
 
 var (
 	serviceType = "the-very-awesome-test-service-type"
-	mockPolicy  = policy.NewPolicyRepository(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
+	mockPolicy  = policy.NewRepository(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
 )
 
 func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {

@@ -72,7 +72,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
-	policyRepo *policy.PolicyRepository,
+	policyRepo *policy.Repository,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -95,7 +95,7 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
-	policyRepo       *policy.PolicyRepository
+	policyRepo       *policy.Repository
 }
 
 // Start starts an instance of the given service type if knows one in service registry.

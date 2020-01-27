@@ -126,7 +126,7 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
 
-	PolicyRepository *policy.PolicyRepository
+	PolicyRepository *policy.Repository
 
 	StatisticsTracker                *statistics.SessionStatisticsTracker
 	StatisticsReporter               *statistics.SessionStatisticsReporter

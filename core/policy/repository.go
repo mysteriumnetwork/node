@@ -37,21 +37,21 @@ type policyMetadata struct {
 	rules  market.AccessPolicyRuleSet
 }
 
-// PolicyRepository represents async policy fetcher from TrustOracle
-type PolicyRepository struct {
+// Repository represents async policy fetcher from TrustOracle
+type Repository struct {
 	client *requests.HTTPClient
 
 	policyURL  string
-	policyLock sync.Mutex
+	policyLock sync.RWMutex
 	policyList []policyMetadata
 
 	fetchInterval time.Duration
 	fetchShutdown chan struct{}
 }
 
-// NewPolicyRepository create instance of policy repository
-func NewPolicyRepository(client *requests.HTTPClient, policyURL string, interval time.Duration) *PolicyRepository {
-	return &PolicyRepository{
+// NewRepository create instance of policy repository
+func NewRepository(client *requests.HTTPClient, policyURL string, interval time.Duration) *Repository {
+	return &Repository{
 		client:        client,
 		policyURL:     policyURL,
 		policyList:    make([]policyMetadata, 0),
@@ -61,17 +61,17 @@ func NewPolicyRepository(client *requests.HTTPClient, policyURL string, interval
 }
 
 // Start begins fetching policies to repository
-func (pr *PolicyRepository) Start() {
+func (pr *Repository) Start() {
 	go pr.fetchLoop()
 }
 
 // Stop ends fetching policies to repository
-func (pr *PolicyRepository) Stop() {
+func (pr *Repository) Stop() {
 	pr.fetchShutdown <- struct{}{}
 }
 
 // Policy converts given value to valid policy rule
-func (pr *PolicyRepository) Policy(policyID string) market.AccessPolicy {
+func (pr *Repository) Policy(policyID string) market.AccessPolicy {
 	policyURL := pr.policyURL
 	if !strings.HasSuffix(policyURL, "/") {
 		policyURL += "/"
@@ -83,7 +83,7 @@ func (pr *PolicyRepository) Policy(policyID string) market.AccessPolicy {
 }
 
 // Policies converts given values to list of valid policies
-func (pr *PolicyRepository) Policies(policyIDs []string) []market.AccessPolicy {
+func (pr *Repository) Policies(policyIDs []string) []market.AccessPolicy {
 	policies := make([]market.AccessPolicy, len(policyIDs))
 	for i, policyID := range policyIDs {
 		policies[i] = pr.Policy(policyID)
@@ -92,7 +92,7 @@ func (pr *PolicyRepository) Policies(policyIDs []string) []market.AccessPolicy {
 }
 
 // AddPolicies adds given policy to repository. Also syncs policy rules from TrustOracle
-func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
+func (pr *Repository) AddPolicies(policies []market.AccessPolicy) error {
 	pr.policyLock.Lock()
 	defer pr.policyLock.Unlock()
 
@@ -117,9 +117,9 @@ func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 }
 
 // RulesForPolicy gives rules of given policy
-func (pr *PolicyRepository) RulesForPolicy(policy market.AccessPolicy) (market.AccessPolicyRuleSet, error) {
-	pr.policyLock.Lock()
-	defer pr.policyLock.Unlock()
+func (pr *Repository) RulesForPolicy(policy market.AccessPolicy) (market.AccessPolicyRuleSet, error) {
+	pr.policyLock.RLock()
+	defer pr.policyLock.RUnlock()
 
 	index, exist := pr.getPolicyIndex(pr.policyList, policy)
 	if !exist {
@@ -130,9 +130,9 @@ func (pr *PolicyRepository) RulesForPolicy(policy market.AccessPolicy) (market.A
 }
 
 // RulesForPolicies gives list of rules of given policies
-func (pr *PolicyRepository) RulesForPolicies(policies []market.AccessPolicy) ([]market.AccessPolicyRuleSet, error) {
-	pr.policyLock.Lock()
-	defer pr.policyLock.Unlock()
+func (pr *Repository) RulesForPolicies(policies []market.AccessPolicy) ([]market.AccessPolicyRuleSet, error) {
+	pr.policyLock.RLock()
+	defer pr.policyLock.RUnlock()
 
 	policiesRules := make([]market.AccessPolicyRuleSet, len(policies))
 	for i, policy := range policies {
@@ -145,7 +145,7 @@ func (pr *PolicyRepository) RulesForPolicies(policies []market.AccessPolicy) ([]
 	return policiesRules, nil
 }
 
-func (pr *PolicyRepository) getPolicyIndex(policyList []policyMetadata, policy market.AccessPolicy) (int, bool) {
+func (pr *Repository) getPolicyIndex(policyList []policyMetadata, policy market.AccessPolicy) (int, bool) {
 	for index, policyMeta := range policyList {
 		if policyMeta.policy == policy {
 			return index, true
@@ -155,7 +155,7 @@ func (pr *PolicyRepository) getPolicyIndex(policyList []policyMetadata, policy m
 	return 0, false
 }
 
-func (pr *PolicyRepository) fetchPolicyRules(policyMeta *policyMetadata) error {
+func (pr *Repository) fetchPolicyRules(policyMeta *policyMetadata) error {
 	req, err := requests.NewGetRequest(policyMeta.policy.Source, "", nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to create policy request")
@@ -186,7 +186,7 @@ func (pr *PolicyRepository) fetchPolicyRules(policyMeta *policyMetadata) error {
 	return nil
 }
 
-func (pr *PolicyRepository) fetchLoop() {
+func (pr *Repository) fetchLoop() {
 	for {
 		select {
 		case <-pr.fetchShutdown:

@@ -71,14 +71,14 @@ var (
 )
 
 func Test_PolicyRepository_Policy(t *testing.T) {
-	repo := &PolicyRepository{policyURL: "http://policy.localhost"}
+	repo := &Repository{policyURL: "http://policy.localhost"}
 	assert.Equal(
 		t,
 		market.AccessPolicy{ID: "1", Source: "http://policy.localhost/1"},
 		repo.Policy("1"),
 	)
 
-	repo = &PolicyRepository{policyURL: "http://policy.localhost/"}
+	repo = &Repository{policyURL: "http://policy.localhost/"}
 	assert.Equal(
 		t,
 		market.AccessPolicy{ID: "2", Source: "http://policy.localhost/2"},
@@ -87,7 +87,7 @@ func Test_PolicyRepository_Policy(t *testing.T) {
 }
 
 func Test_PolicyRepository_Policies(t *testing.T) {
-	repo := &PolicyRepository{policyURL: "http://policy.localhost"}
+	repo := &Repository{policyURL: "http://policy.localhost"}
 	assert.Equal(
 		t,
 		[]market.AccessPolicy{
@@ -96,7 +96,7 @@ func Test_PolicyRepository_Policies(t *testing.T) {
 		repo.Policies([]string{"1"}),
 	)
 
-	repo = &PolicyRepository{policyURL: "http://policy.localhost/"}
+	repo = &Repository{policyURL: "http://policy.localhost/"}
 	assert.Equal(
 		t,
 		[]market.AccessPolicy{
@@ -243,7 +243,7 @@ func Test_PolicyRepository_StartSyncsPolicies(t *testing.T) {
 }
 
 func Test_PolicyRepository_StartMultipleTimes(t *testing.T) {
-	repo := NewPolicyRepository(requests.NewHTTPClient("0.0.0.0", time.Second), "http://policy.localhost", time.Minute)
+	repo := NewRepository(requests.NewHTTPClient("0.0.0.0", time.Second), "http://policy.localhost", time.Minute)
 	repo.Start()
 	repo.Stop()
 
@@ -251,16 +251,16 @@ func Test_PolicyRepository_StartMultipleTimes(t *testing.T) {
 	repo.Stop()
 }
 
-func createEmptyRepo(mockServerURL string) *PolicyRepository {
-	return NewPolicyRepository(
+func createEmptyRepo(mockServerURL string) *Repository {
+	return NewRepository(
 		requests.NewHTTPClient("0.0.0.0", 100*time.Millisecond),
 		mockServerURL+"/",
 		time.Minute,
 	)
 }
 
-func createFullRepo(mockServerURL string, interval time.Duration) *PolicyRepository {
-	repo := NewPolicyRepository(
+func createFullRepo(mockServerURL string, interval time.Duration) *Repository {
+	repo := NewRepository(
 		requests.NewHTTPClient("0.0.0.0", time.Second),
 		mockServerURL+"/",
 		interval,
