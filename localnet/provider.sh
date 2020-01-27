@@ -7,6 +7,8 @@ exec /node/build/myst/myst \
   --log-dir= --data-dir=/var/lib/mysterium-node \
   --runtime-dir=/var/run/mysterium-node \
   --tequilapi.address=0.0.0.0 \
+  --discovery.ping=10s \
+  --discovery.fetch=10s \
   --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665 \
   --ip-detector=http://ipify:3000/?format=json \
   --location.type=manual \
@@ -27,4 +29,4 @@ exec /node/build/myst/myst \
   --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5 \
   --identity.passphrase=localprovider \
   --openvpn.port=3000 \
-  openvpn,wireguard
+  wireguard
