@@ -85,3 +85,12 @@ func Test_AccessPolicy_FiltersByIDAndSource(t *testing.T) {
 	assert.False(t, match(proposalProvider1Noop))
 	assert.True(t, match(proposalProvider2Streaming))
 }
+
+func Test_Price_FiltersByPrice(t *testing.T) {
+	match := Price(100, 1000000)
+
+	assert.True(t, match(proposalEmpty))
+	assert.False(t, match(proposalExpensive))
+	assert.False(t, match(proposalCheap))
+	assert.True(t, match(proposalExact))
+}

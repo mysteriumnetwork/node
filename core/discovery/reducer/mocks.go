@@ -19,6 +19,7 @@ package reducer
 
 import (
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 var (
@@ -55,7 +56,40 @@ var (
 		ServiceDefinition: mockService{Location: locationResidential},
 		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
+	proposalExpensive = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(9999999999999, money.CurrencyMyst),
+		},
+	}
+	proposalCheap = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(0, money.CurrencyMyst),
+		},
+	}
+	proposalExact = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(1000000, money.CurrencyMyst),
+		},
+	}
 )
+
+type mockPaymentMethod struct {
+	rate        market.PaymentRate
+	paymentType string
+	price       money.Money
+}
+
+func (mpm *mockPaymentMethod) GetPrice() money.Money {
+	return mpm.price
+}
+
+func (mpm *mockPaymentMethod) GetType() string {
+	return mpm.paymentType
+}
+
+func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
+	return mpm.rate
+}
 
 type mockService struct {
 	Location market.Location
