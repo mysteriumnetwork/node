@@ -45,7 +45,7 @@ func TestE2ENAT() error {
 	composeFiles := []string{
 		"./docker-compose.e2e-traversal.yml",
 	}
-	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_nat_test", "openvpn,wireguard")
+	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_nat_test", "wireguard,openvpn")
 	defer cleanup()
 	if err := runner.Init(); err != nil {
 		return err

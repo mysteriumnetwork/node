@@ -85,7 +85,9 @@ func TestPinger_Provider_Consumser_Ping_Flow(t *testing.T) {
 	time.Sleep(5 * pingConfig.Interval)
 
 	// Start pinging provider.
-	err := pinger.PingProvider("127.0.0.1", providerPort, consumerPort, consumerPort+1, make(chan struct{}))
+	stop := make(chan struct{})
+	defer close(stop)
+	err := pinger.PingProvider("127.0.0.1", providerPort, consumerPort, consumerPort+1, stop)
 
 	assert.NoError(t, err)
 	assert.Contains(t, string(proxyBuf), fmt.Sprintf("continuously pinging to 127.0.0.1:%d", providerPort))
@@ -97,23 +99,22 @@ func TestPinger_PingProvider_Timeout(t *testing.T) {
 		Timeout:  5 * time.Millisecond,
 	})
 
-	tests := []struct {
-		ip string
-	}{
-		{ip: "127.0.0.1"},
-		{ip: "129.4.3.1"},
-	}
+	providerPort := 51205
+	consumerPort := 51206
 
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("Test timeout for %s", test.ip), func(t *testing.T) {
-			providerPort := 51205
-			consumerPort := 51206
-			stop := make(chan struct{})
+	go func() {
+		addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", providerPort))
+		conn, err := net.ListenUDP("udp4", addr)
+		assert.NoError(t, err)
+		defer conn.Close()
 
-			err := pinger.PingProvider(test.ip, providerPort, consumerPort, 0, stop)
-			assert.Error(t, errNATPunchAttemptTimedOut, err)
-		})
-	}
+		select {}
+	}()
+
+	stop := make(chan struct{})
+	defer close(stop)
+	err := pinger.PingProvider("127.0.0.1", providerPort, consumerPort, 0, stop)
+	assert.Error(t, errNATPunchAttemptTimedOut, err)
 }
 
 func newPinger(config *PingConfig) NATPinger {

@@ -248,6 +248,8 @@ func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams tr
 		return wg.ServiceConfig{}, errors.Wrap(err, "could not resolve new provider endpoint")
 	}
 	config.Provider.Endpoint = *newProviderEndpoint
+	// There is no need to add any connect delay when port mapping failed.
+	config.Consumer.ConnectDelay = 0
 
 	return config, nil
 }

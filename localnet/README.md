@@ -40,7 +40,7 @@ Run consumer daemon
 Run consumer CLI
 
 ```
-./cli.sh
+./localnet/cli.sh
 ```
 
 5. **Stop localnet docker stack**

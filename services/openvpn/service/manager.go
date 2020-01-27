@@ -75,13 +75,13 @@ type eventListener interface {
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService     nat.NATService
-	mapPort        func(int) (releasePortMapping func())
 	ports          port.ServicePortSupplier
 	natPingerPorts port.ServicePortSupplier
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
 	dnsProxy       *dns.Proxy
 	eventListener  eventListener
+	portMapper     mapping.PortMapper
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 
@@ -122,8 +122,9 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	}
 	m.vpnServerPort = servicePort.Num()
 
-	releasePorts := m.mapPort(m.vpnServerPort)
-	defer releasePorts()
+	if releasePorts, ok := m.tryAddPortMapping(m.vpnServerPort); ok {
+		defer releasePorts()
+	}
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
 	if err != nil {
@@ -183,6 +184,19 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 
 	log.Info().Msg("OpenVPN server waiting")
 	return m.openvpnProcess.Wait()
+}
+
+func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
+	if !m.isBehindNAT() {
+		return nil, false
+	}
+
+	release, ok = m.portMapper.Map(
+		m.serviceOptions.Protocol,
+		port,
+		"Myst node OpenVPN port mapping")
+
+	return release, ok
 }
 
 // Stop stops service

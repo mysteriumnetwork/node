@@ -41,7 +41,7 @@ var (
 
 // NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
 type NATProviderPinger interface {
-	PingProvider(ip string, port, consumerPort, proxyPort int, stop <-chan struct{}) error
+	PingProvider(ip string, providerPort, consumerPort, proxyPort int, stop <-chan struct{}) error
 }
 
 // NATPinger is responsible for pinging nat holes
@@ -136,13 +136,16 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port, consumerPort, proxyPort int, stop <-chan struct{}) error {
+func (p *Pinger) PingProvider(ip string, providerPort, consumerPort, proxyPort int, stop <-chan struct{}) error {
 	log.Info().Msg("NAT pinging to provider")
 
-	conn, err := p.getConnection(ip, port, consumerPort)
+	conn, err := p.getConnection(ip, providerPort, consumerPort)
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
+
+	// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
+	conn.SetReadDeadline(time.Now().Add(p.pingConfig.Timeout * 2))
 
 	pingStop := make(chan struct{})
 	defer close(pingStop)
@@ -168,6 +171,9 @@ func (p *Pinger) PingProvider(ip string, port, consumerPort, proxyPort int, stop
 	if proxyPort > 0 {
 		consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
 		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
+
+		// Set higher read deadline when NAT proxy is used.
+		conn.SetReadDeadline(time.Now().Add(12 * time.Hour))
 		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	} else {
 		log.Info().Msg("Closing ping connection")
