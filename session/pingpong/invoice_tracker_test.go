@@ -427,6 +427,58 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.NoError(t, <-errChan)
 }
 
+func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
+	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+	mockSender := &MockPeerInvoiceSender{
+		chanToWriteTo: make(chan crypto.Invoice, 10),
+	}
+
+	exchangeMessageChan := make(chan crypto.ExchangeMessage)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		FeeProvider:                &mockTransactor{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		Publisher:                  &mockPublisher{},
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+	defer invoiceTracker.Stop()
+
+	errChan := make(chan error)
+	go func() { errChan <- invoiceTracker.Start() }()
+
+	invoice := <-mockSender.chanToWriteTo
+	assert.Equal(t, uint64(0), invoice.AgreementTotal)
+	assert.Len(t, invoice.Hashlock, 64)
+	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
+
+	invoiceTracker.Stop()
+	assert.NoError(t, <-errChan)
+}
+
 func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
 	res := calculateMaxNotReceivedExchangeMessageCount(time.Minute*5, time.Second*240)
 	assert.Equal(t, uint64(1), res)

@@ -20,6 +20,7 @@ package market
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -63,6 +64,16 @@ type mockPaymentMethod struct {
 
 func (method mockPaymentMethod) GetPrice() money.Money {
 	return money.Money{}
+}
+
+func (method mockPaymentMethod) GetType() string {
+	return "mock"
+}
+
+func (method mockPaymentMethod) GetRate() PaymentRate {
+	return PaymentRate{
+		PerTime: time.Minute,
+	}
 }
 
 type mockContact struct{}

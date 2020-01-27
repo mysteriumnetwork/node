@@ -19,6 +19,7 @@ package dto
 
 import (
 	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
 
@@ -36,4 +37,16 @@ type PaymentPerBytes struct {
 // GetPrice returns payment price
 func (method PaymentPerBytes) GetPrice() money.Money {
 	return method.Price
+}
+
+// GetType returns PER_BYTES
+func (method PaymentPerBytes) GetType() string {
+	return PaymentMethodPerBytes
+}
+
+// GetRate returns the payment rate
+func (method PaymentPerBytes) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerByte: 1000000,
+	}
 }

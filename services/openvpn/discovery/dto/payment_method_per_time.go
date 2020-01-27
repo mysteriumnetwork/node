@@ -20,6 +20,7 @@ package dto
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
 
@@ -43,4 +44,16 @@ var DefaultPaymentInfo = PaymentRate{
 // GetPrice returns price of payment per time
 func (method PaymentRate) GetPrice() money.Money {
 	return method.Price
+}
+
+// GetType returns PER_TIME
+func (method PaymentRate) GetType() string {
+	return PaymentMethodPerTime
+}
+
+// GetRate returns the payment rate
+func (method PaymentRate) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerTime: method.Duration,
+	}
 }

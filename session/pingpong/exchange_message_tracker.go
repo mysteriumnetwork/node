@@ -67,22 +67,12 @@ type channelAddressCalculator interface {
 
 // ExchangeMessageTracker keeps track of exchange messages and sends them to the provider.
 type ExchangeMessageTracker struct {
-	stop                      chan struct{}
-	invoiceChan               chan crypto.Invoice
-	peerExchangeMessageSender PeerExchangeMessageSender
-	once                      sync.Once
-	keystore                  *keystore.KeyStore
-	identity                  identity.Identity
-	peer                      identity.Identity
-	channelAddress            identity.Identity
-	receivedFirst             bool
+	stop           chan struct{}
+	once           sync.Once
+	channelAddress identity.Identity
+	receivedFirst  bool
 
-	consumerInvoiceStorage   consumerInvoiceStorage
-	consumerTotalsStorage    consumerTotalsStorage
-	timeTracker              timeTracker
-	paymentInfo              dto.PaymentRate
-	channelAddressCalculator channelAddressCalculator
-	publisher                eventbus.Publisher
+	deps ExchangeMessageTrackerDeps
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
@@ -102,18 +92,8 @@ type ExchangeMessageTrackerDeps struct {
 // NewExchangeMessageTracker returns a new instance of exchange message tracker.
 func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessageTracker {
 	return &ExchangeMessageTracker{
-		stop:                      make(chan struct{}),
-		peerExchangeMessageSender: emtd.PeerExchangeMessageSender,
-		invoiceChan:               emtd.InvoiceChan,
-		keystore:                  emtd.Ks,
-		consumerInvoiceStorage:    emtd.ConsumerInvoiceStorage,
-		consumerTotalsStorage:     emtd.ConsumerTotalsStorage,
-		identity:                  emtd.Identity,
-		timeTracker:               emtd.TimeTracker,
-		peer:                      emtd.Peer,
-		paymentInfo:               emtd.PaymentInfo,
-		channelAddressCalculator:  emtd.ChannelAddressCalculator,
-		publisher:                 emtd.Publisher,
+		stop: make(chan struct{}),
+		deps: emtd,
 	}
 }
 
@@ -123,19 +103,19 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 // Start starts the message exchange tracker. Blocks.
 func (emt *ExchangeMessageTracker) Start() error {
 	log.Debug().Msg("Starting...")
-	addr, err := emt.channelAddressCalculator.GetChannelAddress(emt.identity)
+	addr, err := emt.deps.ChannelAddressCalculator.GetChannelAddress(emt.deps.Identity)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
 	emt.channelAddress = identity.FromAddress(addr.Hex())
 
-	emt.timeTracker.StartTracking()
+	emt.deps.TimeTracker.StartTracking()
 
 	for {
 		select {
 		case <-emt.stop:
 			return nil
-		case invoice := <-emt.invoiceChan:
+		case invoice := <-emt.deps.InvoiceChan:
 			log.Debug().Msgf("Invoice received: %v", invoice)
 			err := emt.isInvoiceOK(invoice)
 			if err != nil {
@@ -147,7 +127,7 @@ func (emt *ExchangeMessageTracker) Start() error {
 				return err
 			}
 
-			err = emt.consumerInvoiceStorage.Store(emt.identity, emt.peer, invoice)
+			err = emt.deps.ConsumerInvoiceStorage.Store(emt.deps.Identity, emt.deps.Peer, invoice)
 			if err != nil {
 				return errors.Wrap(err, "could not store invoice")
 			}
@@ -159,7 +139,7 @@ func (emt *ExchangeMessageTracker) Start() error {
 const grandTotalKey = "consumer_grand_total"
 
 func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
-	res, err := emt.consumerTotalsStorage.Get(fmt.Sprintf("%v_%v", grandTotalKey, emt.identity.Address))
+	res, err := emt.deps.ConsumerTotalsStorage.Get(fmt.Sprintf("%v_%v", grandTotalKey, emt.deps.Identity.Address))
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msgf("No previous invoice grand total, assuming zero")
@@ -171,8 +151,8 @@ func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
 }
 
 func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) error {
-	k := fmt.Sprintf("%v_%v", grandTotalKey, emt.identity.Address)
-	res, err := emt.consumerTotalsStorage.Get(k)
+	k := fmt.Sprintf("%v_%v", grandTotalKey, emt.deps.Identity.Address)
+	res, err := emt.deps.ConsumerTotalsStorage.Get(k)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -180,16 +160,25 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return emt.consumerTotalsStorage.Store(k, res+amount)
+	return emt.deps.ConsumerTotalsStorage.Store(k, res+amount)
+}
+
+func (emt *ExchangeMessageTracker) isServiceFree() bool {
+	return emt.deps.PaymentInfo.Duration == 0 || emt.deps.PaymentInfo.Price.Amount == 0
 }
 
 func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
-	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.peer.Address) {
+	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.deps.Peer.Address) {
 		return ErrWrongProvider
 	}
 
-	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
-	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
+	var ticksPassed float64
+	// avoid division by zero on free service
+	if !emt.isServiceFree() {
+		ticksPassed = float64(emt.deps.TimeTracker.Elapsed()) / float64(emt.deps.PaymentInfo.Duration)
+	}
+
+	shouldBe := uint64(math.Round(ticksPassed * float64(emt.deps.PaymentInfo.GetPrice().Amount)))
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
 	if !emt.receivedFirst {
@@ -208,7 +197,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 }
 
 func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
-	previous, err := emt.consumerInvoiceStorage.Get(emt.identity, emt.peer)
+	previous, err := emt.deps.ConsumerInvoiceStorage.Get(emt.deps.Identity, emt.deps.Peer)
 	if err != nil {
 		if err == ErrNotFound {
 			// do nothing, really
@@ -241,18 +230,18 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, emt.channelAddress.Address, emt.keystore, common.HexToAddress(emt.identity.Address))
+	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, emt.channelAddress.Address, emt.deps.Ks, common.HexToAddress(emt.deps.Identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
 
-	err = emt.peerExchangeMessageSender.Send(*msg)
+	err = emt.deps.PeerExchangeMessageSender.Send(*msg)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	defer emt.publisher.Publish(ExchangeMessageTopic, ExchangeMessageEventPayload{
-		Identity:       emt.identity,
+	defer emt.deps.Publisher.Publish(ExchangeMessageTopic, ExchangeMessageEventPayload{
+		Identity:       emt.deps.Identity,
 		AmountPromised: amountToPromise,
 	})
 
@@ -262,7 +251,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		return errors.Wrap(err, "could not increment grand total")
 	}
 
-	return emt.consumerTotalsStorage.Store(emt.peer.Address, invoice.AgreementTotal)
+	return emt.deps.ConsumerTotalsStorage.Store(emt.deps.Peer.Address, invoice.AgreementTotal)
 }
 
 // Stop stops the message tracker.

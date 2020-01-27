@@ -19,6 +19,7 @@ package market
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -27,6 +28,14 @@ import (
 type PaymentMethod interface {
 	// Service price per unit of metering
 	GetPrice() money.Money
+	GetType() string
+	GetRate() PaymentRate
+}
+
+// PaymentRate represents the payment rate
+type PaymentRate struct {
+	PerTime time.Duration
+	PerByte uint64
 }
 
 // UnsupportedPaymentMethod represents payment method which is unknown to node (i.e. not registered)
@@ -35,6 +44,18 @@ type UnsupportedPaymentMethod struct {
 
 // GetPrice always panics for UnsupportedPaymentMethod and should not be called
 func (UnsupportedPaymentMethod) GetPrice() money.Money {
+	//this should never be called
+	panic("not supported")
+}
+
+// GetType always panics
+func (UnsupportedPaymentMethod) GetType() string {
+	//this should never be called
+	panic("not supported")
+}
+
+// GetRate always panics
+func (UnsupportedPaymentMethod) GetRate() PaymentRate {
 	//this should never be called
 	panic("not supported")
 }

@@ -48,7 +48,7 @@ func Test_GetProposal(t *testing.T) {
 			PaymentMethodType: "NOOP",
 			PaymentMethod: PaymentNoop{
 				Price: money.Money{
-					Amount:   0,
+					Amount:   1000000,
 					Currency: money.Currency("MYST"),
 				},
 			},

@@ -600,7 +600,6 @@ func newSessionManagerFactory(
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			dialog, payment_factory.BalanceSendPeriod,
 			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
-			pingpong.DefaultPaymentInfo,
 			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,
@@ -611,6 +610,7 @@ func newSessionManagerFactory(
 			bcHelper,
 			eventbus,
 			transactor,
+			proposal,
 		)
 		return session.NewManager(
 			proposal,

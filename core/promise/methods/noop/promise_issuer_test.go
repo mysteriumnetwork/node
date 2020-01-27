@@ -20,6 +20,7 @@ package noop
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/promise"
@@ -83,4 +84,14 @@ type fakePaymentMethod struct{}
 
 func (fpm fakePaymentMethod) GetPrice() money.Money {
 	return money.NewMoney(1111111111, money.Currency("FAKE"))
+}
+
+func (fpm fakePaymentMethod) GetType() string {
+	return "PER_TIME"
+}
+
+func (fpm fakePaymentMethod) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerTime: time.Minute,
+	}
 }
