@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -153,6 +154,39 @@ func Test_PolicyRepository_AddPolicies_WhenEndpointFails(t *testing.T) {
 		fmt.Sprintf("initial fetch failed: failed to fetch policy rule {1 %s/1}: server response invalid: 500 Internal Server Error (%s/1)", server.URL, server.URL),
 	)
 	assert.Equal(t, []policyMetadata{}, repo.policyList)
+}
+
+func Test_PolicyRepository_AddPolicies_Race(t *testing.T) {
+	server := mockPolicyServer()
+	defer server.Close()
+	repo := createEmptyRepo(server.URL)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		err := repo.AddPolicies([]market.AccessPolicy{
+			repo.Policy("1"),
+			repo.Policy("3"),
+		})
+		assert.NoError(t, err)
+	}()
+	go func() {
+		defer wg.Done()
+		err := repo.AddPolicies([]market.AccessPolicy{
+			repo.Policy("2"),
+		})
+		assert.NoError(t, err)
+	}()
+	wg.Wait()
+
+	rules, err := repo.RulesForPolicies([]market.AccessPolicy{
+		repo.Policy("1"),
+		repo.Policy("2"),
+		repo.Policy("3"),
+	})
+	assert.NoError(t, err)
+	assert.Len(t, rules, 3)
 }
 
 func Test_PolicyRepository_AddPolicies_WhenEndpointSucceeds(t *testing.T) {
