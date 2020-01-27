@@ -89,7 +89,5 @@ func newManagerStub(servicePort int, publicIP, outboundIP string) *Manager {
 		servicePort: servicePort,
 		publicIP:    publicIP,
 		outboundIP:  outboundIP,
-
-		done: make(chan struct{}),
 	}
 }

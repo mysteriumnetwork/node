@@ -20,7 +20,10 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"sync"
 
+	socks5_lib "github.com/armon/go-socks5"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
@@ -88,8 +91,6 @@ func NewManager(
 		servicePort: options.Port.Num(),
 		publicIP:    location.PubIP,
 		outboundIP:  location.OutIP,
-
-		done: make(chan struct{}),
 	}
 }
 
@@ -104,7 +105,9 @@ type Manager struct {
 	publicIP    string
 	outboundIP  string
 
-	done chan struct{}
+	listener     net.Listener
+	listenerLock sync.Mutex
+	listenerStop chan struct{}
 }
 
 // ProvideConfig provides the config for consumer and handles new SOCKS5 connection.
@@ -147,16 +150,63 @@ func (m *Manager) Serve(providerID identity.Identity) error {
 	releasePorts := m.natPort(m.servicePort)
 	defer releasePorts()
 
+	conf := &socks5_lib.Config{}
+	server, err := socks5_lib.New(conf)
+	if err != nil {
+		return errors.Wrap(err, "could not initiate SOCKS5 proxy server")
+	}
+
 	log.Info().Msg("SOCKS5 service started successfully now")
-	<-m.done
+	err = m.runServer(server, fmt.Sprintf(":%d", m.servicePort))
+	if err != nil && err != errServerStopped {
+		return errors.Wrap(err, "SOCKS5 proxy server stopped")
+	}
+
 	return nil
+}
+
+// errServerStopped is returned by the Server's Start() method after a call to Stop().
+var errServerStopped = errors.New("server stopped")
+
+// runServer listens on the TCP network address and then handles incoming connections.
+// runServer always returns a non-nil error.
+// After Stop(), the returned error is errServerStopped.
+func (m *Manager) runServer(server *socks5_lib.Server, address string) error {
+	var err error
+
+	m.listenerLock.Lock()
+	m.listenerStop = make(chan struct{})
+	m.listener, err = net.Listen("tcp", address)
+	m.listenerLock.Unlock()
+	if err != nil {
+		return errors.Wrap(err, "could not initiate SOCKS5 proxy listener")
+	}
+
+	for {
+		conn, err := m.listener.Accept()
+		if err != nil {
+			select {
+			case <-m.listenerStop:
+				return errServerStopped
+			default:
+				return errors.Wrap(err, "input error from SOCKS5 connection")
+			}
+		}
+		go server.ServeConn(conn)
+	}
 }
 
 // Stop stops service.
 func (m *Manager) Stop() error {
-	close(m.done)
+	log.Info().Msg("SOCKS5 service stopping..")
 
-	log.Info().Msg("SOCKS5 service stopped")
+	m.listenerLock.Lock()
+	close(m.listenerStop)
+	m.listenerLock.Unlock()
+
+	if m.listener != nil {
+		return m.listener.Close()
+	}
 	return nil
 }
 
