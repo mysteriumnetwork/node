@@ -83,7 +83,7 @@ func newProposalsManager(
 	repository proposal.Repository,
 	mysteriumAPI mysteriumAPI,
 	qualityFinder qualityFinder,
-	lowerPriceBound,upperPriceBound uint64,
+	lowerPriceBound, upperPriceBound uint64,
 ) *proposalsManager {
 	return &proposalsManager{
 		repository:      repository,
