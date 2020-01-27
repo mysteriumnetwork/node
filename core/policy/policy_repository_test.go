@@ -180,13 +180,13 @@ func Test_PolicyRepository_AddPolicies_Race(t *testing.T) {
 	}()
 	wg.Wait()
 
-	rules, err := repo.RulesForPolicies([]market.AccessPolicy{
+	policiesRules, err := repo.RulesForPolicies([]market.AccessPolicy{
 		repo.Policy("1"),
 		repo.Policy("2"),
 		repo.Policy("3"),
 	})
 	assert.NoError(t, err)
-	assert.Len(t, rules, 3)
+	assert.Len(t, policiesRules, 3)
 }
 
 func Test_PolicyRepository_AddPolicies_WhenEndpointSucceeds(t *testing.T) {

@@ -94,9 +94,10 @@ func (pr *PolicyRepository) Policies(policyIDs []string) []market.AccessPolicy {
 // AddPolicies adds given policy to repository. Also syncs policy rules from TrustOracle
 func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 	pr.policyLock.Lock()
+	defer pr.policyLock.Unlock()
+
 	policyListNew := make([]policyMetadata, len(pr.policyList))
 	copy(policyListNew, pr.policyList)
-	pr.policyLock.Unlock()
 
 	for _, policy := range policies {
 		index, exist := pr.getPolicyIndex(policyListNew, policy)
@@ -111,10 +112,7 @@ func (pr *PolicyRepository) AddPolicies(policies []market.AccessPolicy) error {
 		}
 	}
 
-	pr.policyLock.Lock()
 	pr.policyList = policyListNew
-	pr.policyLock.Unlock()
-
 	return nil
 }
 
