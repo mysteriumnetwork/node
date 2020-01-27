@@ -48,6 +48,11 @@ type PaymentNoop struct {
 
 // GetPrice returns price of payment per time
 func (method PaymentNoop) GetPrice() money.Money {
+	// for backwards compatibility adding a default value for price in case it's missing in proposal
+	if method.Price.Amount == 0 {
+		method.Price.Amount = 1000000
+	}
+
 	return method.Price
 }
 
