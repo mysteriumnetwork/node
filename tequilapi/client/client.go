@@ -296,7 +296,16 @@ func (client *Client) OriginLocation() (location LocationDTO, err error) {
 func (client *Client) ProposalsByType(serviceType string) ([]ProposalDTO, error) {
 	queryParams := url.Values{}
 	queryParams.Add("serviceType", serviceType)
-	response, err := client.http.Get("proposals", queryParams)
+	return client.proposals(queryParams)
+}
+
+// Proposals returns all available proposals for services
+func (client *Client) Proposals() ([]ProposalDTO, error) {
+	return client.proposals(url.Values{})
+}
+
+func (client *Client) proposals(query url.Values) ([]ProposalDTO, error) {
+	response, err := client.http.Get("proposals", query)
 	if err != nil {
 		return []ProposalDTO{}, err
 	}
@@ -307,17 +316,12 @@ func (client *Client) ProposalsByType(serviceType string) ([]ProposalDTO, error)
 	return proposals.Proposals, err
 }
 
-// Proposals returns all available proposals for services
-func (client *Client) Proposals() ([]ProposalDTO, error) {
-	response, err := client.http.Get("proposals", url.Values{})
-	if err != nil {
-		return []ProposalDTO{}, err
-	}
-	defer response.Body.Close()
-
-	var proposals ProposalList
-	err = parseResponseJSON(response, &proposals)
-	return proposals.Proposals, err
+// ProposalsByPrice returns all available proposals within the given price range
+func (client *Client) ProposalsByPrice(lower, upper uint64) ([]ProposalDTO, error) {
+	values := url.Values{}
+	values.Add("upperPriceBound", fmt.Sprintf("%v", upper))
+	values.Add("lowerPriceBound", fmt.Sprintf("%v", lower))
+	return client.proposals(values)
 }
 
 // Unlock allows using identity in following commands
