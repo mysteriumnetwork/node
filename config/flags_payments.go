@@ -65,6 +65,18 @@ var (
 		Name:  "payments.disable",
 		Usage: "Disables payments and moves to a backwards compatible legacy mode",
 	}
+	// FlagPaymentsConsumerUpperPriceBound sets the upper price bound to a set value.
+	FlagPaymentsConsumerUpperPriceBound = cli.Uint64Flag{
+		Name:  "payments.consumer.price.upper.bound",
+		Usage: "Sets the maximum price of the service. All proposals with a price above this bound will be filtered out and not visible.",
+		Value: 1000000,
+	}
+	// FlagPaymentsConsumerLowerPriceBound sets the lower price bound to a set value.
+	FlagPaymentsConsumerLowerPriceBound = cli.Uint64Flag{
+		Name:  "payments.consumer.price.lower.bound",
+		Usage: "Sets the minimum price of the service. All proposals with a below above this bound will be filtered out and not visible.",
+		Value: 0,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -78,6 +90,8 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsMystSCAddress,
 		&FlagPaymentsMaxRRecovery,
 		&FlagPaymentsDisable,
+		&FlagPaymentsConsumerUpperPriceBound,
+		&FlagPaymentsConsumerLowerPriceBound,
 	)
 }
 
@@ -90,4 +104,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsMaxRRecovery)
 	Current.ParseBoolFlag(ctx, FlagPaymentsDisable)
+	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerUpperPriceBound)
+	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerLowerPriceBound)
 }
