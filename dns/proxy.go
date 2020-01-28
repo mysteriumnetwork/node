@@ -18,28 +18,42 @@
 package dns
 
 import (
+	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/miekg/dns"
+	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 // Proxy defines DNS server with all handler attached to it.
 type Proxy struct {
+	server         *dns.Server
+	trafficBlocker firewall.IncomingTrafficBlocker
+	policies       *policy.Repository
+
 	proxyAddrs []string
-	server     *dns.Server
 }
 
 // NewProxy returns new instance of API server.
-func NewProxy(lhost string, lport int) *Proxy {
+func NewProxy(
+	lhost string,
+	lport int,
+	trafficBlocker firewall.IncomingTrafficBlocker,
+	policies *policy.Repository,
+) *Proxy {
 	return &Proxy{
 		server: &dns.Server{
 			Addr:      net.JoinHostPort(lhost, strconv.Itoa(lport)),
 			Net:       "udp",
 			ReusePort: true,
 		},
+		trafficBlocker: trafficBlocker,
+		policies:       policies,
 	}
 }
 
@@ -86,16 +100,48 @@ func (p *Proxy) proxyHandler() dns.Handler {
 
 	return dns.HandlerFunc(func(writer dns.ResponseWriter, req *dns.Msg) {
 		for _, addr := range p.proxyAddrs {
-			if resp, _, err := client.Exchange(req, addr); err != nil {
+			resp, _, err := client.Exchange(req, addr)
+			if err != nil {
 				log.Error().Err(err).Msg("Error proxying DNS query to " + addr)
-			} else {
-				writer.WriteMsg(resp)
-				return
+				continue
 			}
+
+			writer.WriteMsg(resp)
+
+			if err := p.whitelistByAnswer(resp); err != nil {
+				log.Warn().Err(err).Msgf("Error updating firewall by DNS query: %s", resp.String())
+			}
+			return
 		}
 
 		resp := &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeServerFailure)
 		writer.WriteMsg(resp)
 	})
+}
+
+func (p *Proxy) whitelistByAnswer(response *dns.Msg) error {
+	for _, record := range response.Answer {
+		switch recordValue := record.(type) {
+		case *dns.A:
+			if err := p.whitelistByARecord(recordValue); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown record type: %s", dns.Type(record.Header().Rrtype))
+		}
+	}
+	return nil
+}
+
+func (p *Proxy) whitelistByARecord(record *dns.A) error {
+	host := strings.TrimRight(record.Hdr.Name, ".")
+	ip := record.A
+
+	if p.policies.IsHostAllowed(host) {
+		_, err := p.trafficBlocker.AllowIPAccess(ip)
+		return err
+	}
+
+	return nil
 }

@@ -19,6 +19,7 @@ package policy
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/market"
@@ -130,6 +131,35 @@ func (r *Repository) HasDNSRules() bool {
 		}
 	}
 
+	return false
+}
+
+// IsHostAllowed return flag is given FQDN host should be allowed by rules
+func (r *Repository) IsHostAllowed(host string) bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	hasDNSRules := false
+	for _, item := range r.items {
+		for _, rule := range item.rules.Allow {
+			if rule.Type == market.AccessPolicyTypeDNSZone {
+				hasDNSRules = true
+				if strings.HasSuffix(host, rule.Value) {
+					return true
+				}
+			}
+			if rule.Type == market.AccessPolicyTypeDNSHostname {
+				hasDNSRules = true
+				if host == rule.Value {
+					return true
+				}
+			}
+		}
+	}
+
+	if !hasDNSRules {
+		return true
+	}
 	return false
 }
 
