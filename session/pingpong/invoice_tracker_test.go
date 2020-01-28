@@ -654,6 +654,20 @@ func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck co
 	return mbh.isRegistered, mbh.isRegisteredError
 }
 
-type mockPublisher struct{}
+type event struct {
+	name  string
+	value interface{}
+}
 
-func (mp *mockPublisher) Publish(_ string, _ interface{}) {}
+type mockPublisher struct {
+	publicationChan chan event
+}
+
+func (mp *mockPublisher) Publish(topic string, payload interface{}) {
+	if mp.publicationChan != nil {
+		mp.publicationChan <- event{
+			name:  topic,
+			value: payload,
+		}
+	}
+}

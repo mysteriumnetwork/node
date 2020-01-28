@@ -242,7 +242,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 
 	defer emt.deps.Publisher.Publish(ExchangeMessageTopic, ExchangeMessageEventPayload{
 		Identity:       emt.deps.Identity,
-		AmountPromised: amountToPromise,
+		AmountPromised: diff,
 	})
 
 	// TODO: we'd probably want to check if we have enough balance here
