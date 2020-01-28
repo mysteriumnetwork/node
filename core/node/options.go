@@ -137,6 +137,8 @@ func GetOptions() *Options {
 			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
 			MaxRRecoveryLength:                 config.GetUInt64(config.FlagPaymentsMaxRRecovery),
 			PaymentsDisabled:                   config.GetBool(config.FlagPaymentsDisable),
+			ConsumerUpperPriceBound:            config.GetUInt64(config.FlagPaymentsConsumerUpperPriceBound),
+			ConsumerLowerPriceBound:            config.GetUInt64(config.FlagPaymentsConsumerLowerPriceBound),
 		},
 		Accountant: OptionsAccountant{
 			AccountantID:              config.GetString(config.FlagAccountantID),

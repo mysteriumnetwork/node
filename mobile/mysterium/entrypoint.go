@@ -151,6 +151,8 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			AccountantPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:                  time.Hour * 2,
 			MystSCAddress:                      "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+			ConsumerUpperPriceBound:            1000000,
+			ConsumerLowerPriceBound:            0,
 		},
 	}
 
@@ -182,6 +184,8 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
+			options.Payments.ConsumerLowerPriceBound,
+			options.Payments.ConsumerUpperPriceBound,
 		),
 	}
 	return mobileNode, nil

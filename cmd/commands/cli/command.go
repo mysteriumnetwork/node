@@ -523,7 +523,9 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
-	proposals, err := c.tequilapi.Proposals()
+	upperBound := config.GetUInt64(config.FlagPaymentsConsumerUpperPriceBound)
+	lowerBound := config.GetUInt64(config.FlagPaymentsConsumerLowerPriceBound)
+	proposals, err := c.tequilapi.ProposalsByPrice(lowerBound, upperBound)
 	if err != nil {
 		warn(err)
 		return []tequilapi_client.ProposalDTO{}

@@ -30,6 +30,8 @@ type Filter struct {
 	LocationType       string
 	AccessPolicyID     string
 	AccessPolicySource string
+	UpperPriceBound    *uint64
+	LowerPriceBound    *uint64
 }
 
 // Matches return flag if filter matches given proposal
@@ -47,6 +49,11 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 	if filter.AccessPolicyID != "" || filter.AccessPolicySource != "" {
 		conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicyID, filter.AccessPolicySource))
 	}
+
+	if filter.UpperPriceBound != nil && filter.LowerPriceBound != nil {
+		conditions = append(conditions, reducer.Price(*filter.LowerPriceBound, *filter.UpperPriceBound))
+	}
+
 	if len(conditions) > 0 {
 		return reducer.And(conditions...)(proposal)
 	}

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,6 +58,21 @@ var (
 		ServiceType:       serviceTypeStreaming,
 		ServiceDefinition: mockService{Location: locationResidential},
 		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
+	}
+	proposalExpensive = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(9999999999999, money.CurrencyMyst),
+		},
+	}
+	proposalCheap = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(0, money.CurrencyMyst),
+		},
+	}
+	proposalExact = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(1000000, money.CurrencyMyst),
+		},
 	}
 )
 
@@ -147,4 +163,47 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
 	assert.False(t, filter.Matches(proposalProvider1Noop))
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
+}
+
+func Test_ProposalFilter_Filters_ByBounds(t *testing.T) {
+	var upper uint64 = 1000000
+	var lower uint64 = 100
+	filter := &Filter{
+		UpperPriceBound: &upper,
+		LowerPriceBound: &lower,
+	}
+
+	assert.True(t, filter.Matches(proposalEmpty))
+	assert.False(t, filter.Matches(proposalExpensive))
+	assert.False(t, filter.Matches(proposalCheap))
+	assert.True(t, filter.Matches(proposalExact))
+
+	lower = 0
+	filter = &Filter{
+		UpperPriceBound: &upper,
+		LowerPriceBound: &lower,
+	}
+
+	assert.True(t, filter.Matches(proposalEmpty))
+	assert.False(t, filter.Matches(proposalExpensive))
+	assert.True(t, filter.Matches(proposalCheap))
+	assert.True(t, filter.Matches(proposalExact))
+}
+
+type mockPaymentMethod struct {
+	rate        market.PaymentRate
+	paymentType string
+	price       money.Money
+}
+
+func (mpm *mockPaymentMethod) GetPrice() money.Money {
+	return mpm.price
+}
+
+func (mpm *mockPaymentMethod) GetType() string {
+	return mpm.paymentType
+}
+
+func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
+	return mpm.rate
 }
