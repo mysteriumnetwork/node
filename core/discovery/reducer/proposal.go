@@ -63,6 +63,18 @@ func LocationType(proposal market.ServiceProposal) interface{} {
 	return service.GetLocation().NodeType
 }
 
+// Price checks if the price is below the given value
+func Price(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+	return func(proposal market.ServiceProposal) bool {
+		if proposal.PaymentMethod != nil {
+			price := proposal.PaymentMethod.GetPrice().Amount
+			return price >= lowerBound && price <= upperBound
+		}
+
+		return true
+	}
+}
+
 // AccessPolicy returns a matcher for checking if proposal allows given access policy
 func AccessPolicy(id, source string) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
