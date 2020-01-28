@@ -120,7 +120,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	var dnsOK bool
 	var dnsIP net.IP
 	var dnsPort = 11153
-	m.dnsProxy = dns.NewProxy("", dnsPort)
+	m.dnsProxy = dns.NewProxy("", dnsPort, m.trafficBlocker, instance.Policies())
 	if err := m.dnsProxy.Run(); err != nil {
 		log.Warn().Err(err).Msg("Provider DNS will not be available")
 	} else {

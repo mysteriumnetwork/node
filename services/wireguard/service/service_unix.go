@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
@@ -68,6 +69,7 @@ func NewManager(
 	options Options,
 	portSupplier port.ServicePortSupplier,
 	portMapper mapping.PortMapper,
+	trafficBlocker firewall.IncomingTrafficBlocker,
 ) *Manager {
 	resourcesAllocator := resources.NewAllocator(portSupplier, options.Subnet)
 
@@ -81,6 +83,8 @@ func NewManager(
 		natPingerPorts:     port.NewPool(),
 		publisher:          eventPublisher,
 		portMapper:         portMapper,
+		trafficBlocker:     trafficBlocker,
+
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(&location, resourcesAllocator, options.ConnectDelay)
 		},
@@ -102,6 +106,7 @@ type Manager struct {
 	natEventGetter NATEventGetter
 	publisher      eventbus.Publisher
 	portMapper     mapping.PortMapper
+	trafficBlocker firewall.IncomingTrafficBlocker
 
 	dnsOK    bool
 	dnsPort  int
@@ -309,7 +314,7 @@ func (m *Manager) Serve(instance *service.Instance) error {
 	// Start DNS proxy.
 	m.dnsPort = 11253
 	m.dnsOK = false
-	m.dnsProxy = dns.NewProxy("", m.dnsPort)
+	m.dnsProxy = dns.NewProxy("", m.dnsPort, m.trafficBlocker, instance.Policies())
 	if err := m.dnsProxy.Run(); err != nil {
 		log.Warn().Err(err).Msg("Provider DNS will not be available")
 	} else {
