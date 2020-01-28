@@ -139,7 +139,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			ChannelImplementation:           metadata.TestnetDefinition.ChannelImplAddress,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
-			ProviderRegistrationStake:       125000000000,
+			ProviderRegistrationStake:       6200000000,
 		},
 		Accountant: node.OptionsAccountant{
 			AccountantEndpointAddress: metadata.TestnetDefinition.AccountantAddress,

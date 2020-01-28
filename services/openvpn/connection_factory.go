@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -41,7 +42,7 @@ type ProcessBasedConnectionFactory struct {
 	runtimeDirectory string
 	signerFactory    identity.SignerFactory
 	ipResolver       ip.Resolver
-	natPinger        NATPinger
+	natPinger        traversal.NATProviderPinger
 }
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
@@ -49,7 +50,7 @@ func NewProcessBasedConnectionFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	resolver ip.Resolver,
-	natPinger NATPinger,
+	natPinger traversal.NATProviderPinger,
 ) *ProcessBasedConnectionFactory {
 	return &ProcessBasedConnectionFactory{
 		openvpnBinary:    openvpnBinary,

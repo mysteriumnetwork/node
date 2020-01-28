@@ -83,16 +83,6 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			wgOptions := serviceOptions.(wireguard_service.Options)
 
-			mapPort := func(port int) func() {
-				return mapping.GetPortMappingFunc(
-					loc.IP,
-					outIP,
-					"UDP",
-					port,
-					"Myst node wireguard(tm) port mapping",
-					di.EventBus)
-			}
-
 			var portPool port.ServicePortSupplier
 			if wgOptions.Ports.IsSpecified() {
 				log.Info().Msgf("Fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
@@ -107,15 +97,19 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				Country: loc.Country,
 			}
 
+			portmapConfig := mapping.DefaultConfig()
+			portMapper := mapping.NewPortMapper(portmapConfig, di.EventBus)
+
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				locationInfo,
 				di.NATService,
 				di.NATPinger,
 				di.NATTracker,
-				mapPort,
+				di.EventBus,
 				wgOptions,
-				portPool)
+				portPool,
+				portMapper)
 			return svc, wireguard_service.GetProposal(loc), nil
 		},
 	)
@@ -148,16 +142,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
-		mapPort := func(port int) func() {
-			return mapping.GetPortMappingFunc(
-				loc.IP,
-				outIP,
-				transportOptions.Protocol,
-				port,
-				"Myst node OpenVPN port mapping",
-				di.EventBus)
-		}
-
 		locationInfo := location.ServiceLocationInfo{
 			OutIP:   outIP,
 			PubIP:   loc.IP,
@@ -173,6 +157,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			portPool = port.NewPool()
 		}
 
+		portMapper := mapping.NewPortMapper(mapping.DefaultConfig(), di.EventBus)
+
 		manager := openvpn_service.NewManager(
 			nodeOptions,
 			transportOptions,
@@ -180,10 +166,10 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.ServiceSessionStorage,
 			di.NATService,
 			di.NATPinger,
-			mapPort,
 			di.NATTracker,
 			portPool,
 			di.EventBus,
+			portMapper,
 		)
 		return manager, proposal, nil
 	}

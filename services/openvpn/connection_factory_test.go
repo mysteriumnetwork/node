@@ -57,9 +57,6 @@ func TestConnectionFactory_CreatesConnection(t *testing.T) {
 type MockNATPinger struct{}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ string, port int, consumerPort int, _ <-chan struct{}) error {
+func (mnp *MockNATPinger) PingProvider(_ string, port, consumerPort, proxyPort int, _ <-chan struct{}) error {
 	return nil
 }
-
-// Stop does nothing
-func (mnp *MockNATPinger) Stop() {}

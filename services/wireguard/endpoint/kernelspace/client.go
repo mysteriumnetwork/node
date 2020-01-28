@@ -46,7 +46,7 @@ func NewWireguardClient() (*client, error) {
 	return &client{wgClient: wgClient}, nil
 }
 
-func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr net.IPNet) error {
+func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
 	var deviceConfig wgtypes.Config
 	port := config.ListenPort
 	privateKey, err := stringToKey(config.PrivateKey)
@@ -55,11 +55,11 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr ne
 	}
 	deviceConfig.PrivateKey = &privateKey
 	deviceConfig.ListenPort = &port
-	if err := c.up(iface, ipAddr); err != nil {
+	if err := c.up(config.IfaceName, config.Subnet); err != nil {
 		return err
 	}
-	c.iface = iface
-	return c.wgClient.ConfigureDevice(iface, deviceConfig)
+	c.iface = config.IfaceName
+	return c.wgClient.ConfigureDevice(c.iface, deviceConfig)
 }
 
 func (c *client) AddPeer(iface string, peer wg.Peer) error {

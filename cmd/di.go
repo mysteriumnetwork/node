@@ -813,9 +813,8 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	if options.ExperimentNATPunching {
 		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
-			di.NATTracker,
+			traversal.DefaultPingConfig(),
 			traversal.NewNATProxy(),
-			mapping.StageName,
 			di.EventBus,
 		)
 	} else {

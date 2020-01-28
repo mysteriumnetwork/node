@@ -88,13 +88,14 @@ func waitABit() {
 
 type mockConnectionEndpoint struct{}
 
-func (mce *mockConnectionEndpoint) InterfaceName() string             { return "mce0" }
-func (mce *mockConnectionEndpoint) Stop() error                       { return nil }
-func (mce *mockConnectionEndpoint) Start(_ wg.StartConfig) error      { return nil }
-func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error) { return wg.ServiceConfig{}, nil }
-func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wg.Peer) error { return nil }
-func (mce *mockConnectionEndpoint) RemovePeer(_ string) error         { return nil }
-func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error    { return nil }
+func (mce *mockConnectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) error { return nil }
+func (mce *mockConnectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) error { return nil }
+func (mce *mockConnectionEndpoint) InterfaceName() string                                { return "mce0" }
+func (mce *mockConnectionEndpoint) Stop() error                                          { return nil }
+func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)                    { return wg.ServiceConfig{}, nil }
+func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wg.Peer) error                    { return nil }
+func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                            { return nil }
+func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error                       { return nil }
 func (mce *mockConnectionEndpoint) PeerStats() (*wg.Stats, error) {
 	return &wg.Stats{LastHandshake: time.Now()}, nil
 }
@@ -104,7 +105,7 @@ func newManagerStub(pub, out, country string) *Manager {
 		done:       make(chan struct{}),
 		ipResolver: ip.NewResolverMock("1.2.3.4"),
 		natService: &serviceFake{},
-		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
+		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return connectionEndpointStub, nil
 		},
 	}

@@ -580,6 +580,53 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 	}
 }
 
+func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.T) {
+	dir, err := ioutil.TempDir("", "TestExchangeMessageTracker_issueExchangeMessage_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+
+	err = ks.Unlock(acc, "")
+	assert.Nil(t, err)
+
+	peerID := identity.FromAddress("0x01")
+
+	mp := &mockPublisher{
+		publicationChan: make(chan event, 10),
+	}
+	emt := &ExchangeMessageTracker{
+		deps: ExchangeMessageTrackerDeps{
+			PeerExchangeMessageSender: &MockPeerExchangeMessageSender{
+				chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
+			},
+			ConsumerTotalsStorage: &mockConsumerTotalsStorage{},
+			Peer:                  peerID,
+			ConsumerInvoiceStorage: &mockConsumerInvoiceStorage{
+				res: crypto.Invoice{
+					AgreementTotal: 10,
+				},
+			},
+			Ks:        ks,
+			Identity:  identity.FromAddress(acc.Address.Hex()),
+			Publisher: mp,
+		},
+	}
+	err = emt.issueExchangeMessage(crypto.Invoice{
+		AgreementTotal: 15,
+		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
+	})
+	assert.NoError(t, err)
+	ev := <-mp.publicationChan
+	assert.Equal(t, ExchangeMessageTopic, ev.name)
+	assert.EqualValues(t, ExchangeMessageEventPayload{
+		Identity:       emt.deps.Identity,
+		AmountPromised: 5,
+	}, ev.value)
+}
+
 func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 	dir, err := ioutil.TempDir("", "TestExchangeMessageTracker_issueExchangeMessage_test")
 	assert.Nil(t, err)

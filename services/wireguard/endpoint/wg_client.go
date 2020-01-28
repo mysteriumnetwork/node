@@ -1,7 +1,5 @@
-// +build linux,!android
-
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,38 +18,27 @@
 package endpoint
 
 import (
-	"github.com/mysteriumnetwork/node/core/ip"
+	"net"
+	"runtime"
+
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/rs/zerolog/log"
 )
 
-// NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(
-	ipResolver ip.Resolver,
-	resourceAllocator *resources.Allocator,
-	mapPort func(port int) (releasePortMapping func()),
-	connectDelay int) (wg.ConnectionEndpoint, error) {
-
-	wgClient, err := getWGClient()
-	if err != nil {
-		return nil, err
-	}
-
-	return &connectionEndpoint{
-		wgClient:           wgClient,
-		ipResolver:         ipResolver,
-		resourceAllocator:  resourceAllocator,
-		releasePortMapping: func() {},
-		mapPort:            mapPort,
-		connectDelay:       connectDelay,
-	}, nil
+type wgClient interface {
+	ConfigureDevice(config wg.DeviceConfig) error
+	ConfigureRoutes(iface string, ip net.IP) error
+	DestroyDevice(name string) error
+	AddPeer(iface string, peer wg.Peer) error
+	RemovePeer(name string, publicKey string) error
+	PeerStats() (*wg.Stats, error)
+	Close() error
 }
 
-func getWGClient() (wgClient wgClient, err error) {
+func newWGClient() (wgClient, error) {
 	if isKernelSpaceSupported() {
 		return kernelspace.NewWireguardClient()
 	}
@@ -61,6 +48,10 @@ func getWGClient() (wgClient wgClient, err error) {
 }
 
 func isKernelSpaceSupported() bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+
 	err := cmdutil.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to create wireguard network interface")

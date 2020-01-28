@@ -20,6 +20,7 @@ package connection
 import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
 )
@@ -28,7 +29,7 @@ import (
 type Factory struct {
 	configDir  string
 	ipResolver ip.Resolver
-	natPinger  NATPinger
+	natPinger  traversal.NATProviderPinger
 }
 
 // Create creates a new wireguard connection
@@ -52,7 +53,7 @@ func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel
 }
 
 // NewConnectionCreator creates wireguard connections
-func NewConnectionCreator(configDir string, ipResolver ip.Resolver, natPinger NATPinger) connection.Factory {
+func NewConnectionCreator(configDir string, ipResolver ip.Resolver, natPinger traversal.NATProviderPinger) connection.Factory {
 	return &Factory{
 		configDir:  configDir,
 		ipResolver: ipResolver,

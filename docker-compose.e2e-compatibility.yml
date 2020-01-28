@@ -145,6 +145,7 @@ services:
       --log-level=debug
       --quality.address=http://morqa:8085/api/v1
       --quality-oracle.address=http://morqa:8085/api/v1
+      --transactor.provider.registration-stake=6200000000
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
