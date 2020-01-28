@@ -59,7 +59,7 @@ var (
 	FlagTransactorProviderRegistrationStake = cli.Uint64Flag{
 		Name:  "transactor.provider.registration-stake",
 		Usage: "the stake we'll use when registering provider",
-		Value: 125000000000,
+		Value: 6200000000,
 	}
 )
 
