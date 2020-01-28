@@ -20,8 +20,6 @@ package mysterium
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
-	"net"
 	"strings"
 	"time"
 
@@ -133,15 +131,6 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config wireguard.ServiceCon
 		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
 	}
 
-	// Wait for local port to become available since it will be used as WireGuard listen port
-	// when provider is behind NAT.
-	if config.LocalPort > 0 {
-		log.Info().Msgf("Waiting for port %d to become available", config.LocalPort)
-		if err := waitUDPPortReadyFor(config.LocalPort, 10*time.Second); err != nil {
-			return nil, errors.Wrap(err, "failed to wait for UDP port")
-		}
-	}
-
 	fd, err := wgTunnSetup.Establish()
 	if err != nil {
 		return nil, err
@@ -155,24 +144,6 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config wireguard.ServiceCon
 	}
 
 	return tunDevice, err
-}
-
-func waitUDPPortReadyFor(port int, timeout time.Duration) error {
-	timeoutChan := time.After(timeout)
-	for {
-		select {
-		case <-time.After(500 * time.Millisecond):
-			p, err := net.ListenPacket("udp", fmt.Sprintf(":%d", port))
-			if err != nil {
-				log.Err(err).Msgf("Port %d is in use. Trying to check again...", port)
-			} else {
-				p.Close()
-				return nil
-			}
-		case <-timeoutChan:
-			return fmt.Errorf("timeout waiting for UDP port %d", port)
-		}
-	}
 }
 
 type wireguardConnection struct {
@@ -204,6 +175,7 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 			config.Provider.Endpoint.IP.String(),
 			config.RemotePort,
 			config.LocalPort,
+			0,
 			c.pingerStop,
 		)
 		if err != nil {

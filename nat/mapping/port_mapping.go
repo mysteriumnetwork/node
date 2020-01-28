@@ -21,76 +21,109 @@ import (
 	"time"
 
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/rs/zerolog/log"
-)
-
-const (
-	mapTimeout        = 20 * time.Minute
-	mapUpdateInterval = 15 * time.Minute
 )
 
 // StageName is used to indicate port mapping NAT traversal stage
 const StageName = "port_mapping"
 
-// Publisher is responsible for publishing given events
-type Publisher interface {
-	Publish(topic string, data interface{})
-}
-
-// GetPortMappingFunc returns PortMapping function if service is behind NAT
-func GetPortMappingFunc(pubIP, outIP, protocol string, port int, description string, publisher Publisher) func() {
-	if pubIP != outIP {
-		return PortMapping(protocol, port, description, publisher)
+// DefaultConfig returns default port mapping config.
+func DefaultConfig() *Config {
+	return &Config{
+		MapInterface:      portmap.Any(),
+		MapLifetime:       20 * time.Minute,
+		MapUpdateInterval: 15 * time.Minute,
 	}
-	return func() {}
 }
 
-// PortMapping maps given port of given protocol from external IP on a gateway to local machine internal IP
-// 'name' denotes rule name added on a gateway.
-func PortMapping(protocol string, port int, name string, publisher Publisher) func() {
-	mapperQuit := make(chan struct{})
-	go mapPort(portmap.Any(),
-		mapperQuit,
-		protocol,
-		port,
-		port,
-		name,
-		publisher)
-
-	return func() { close(mapperQuit) }
+// Config represents port mapping config.
+type Config struct {
+	MapInterface      portmap.Interface
+	MapLifetime       time.Duration
+	MapUpdateInterval time.Duration
 }
 
-// mapPort adds a port mapping on m and keeps it alive until c is closed.
-// This function is typically invoked in its own goroutine.
-func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, intPort int, name string, publisher Publisher) {
-	defer func() {
-		log.Debug().Msgf("Deleting port mapping for port: %d", extPort)
+// PortMapper tries to map port using router's uPnP or NAT-PMP depending on given config map interface.
+type PortMapper interface {
+	// Map maps port for given protocol. It returns release func which
+	// must be called when port no longer needed and ok which is true if
+	// port mapping was successful.
+	Map(protocol string, port int, name string) (release func(), ok bool)
+}
 
-		if err := m.DeleteMapping(protocol, extPort, intPort); err != nil {
-			log.Warn().Err(err).Msg("Couldn't delete port mapping")
+// NewPortMapper returns port mapper instance.
+func NewPortMapper(config *Config, publisher eventbus.Publisher) PortMapper {
+	return &portMapper{
+		config:    config,
+		publisher: publisher,
+	}
+}
+
+type portMapper struct {
+	config    *Config
+	publisher eventbus.Publisher
+}
+
+func (p *portMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
+	// Try add mapping first to determine if it is supported and
+	// if permanent lease only is supported.
+	permanent, err := p.addMapping(protocol, port, port, name)
+	p.notify(err)
+	if err != nil {
+		return nil, false
+	}
+
+	// If only permanent lease is supported we don't need to update it in intervals.
+	if permanent {
+		return func() { p.deleteMapping(protocol, port, port) }, true
+	}
+
+	stopUpdate := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stopUpdate:
+				return
+			case <-time.After(p.config.MapUpdateInterval):
+				_, err := p.addMapping(protocol, port, port, name)
+				p.notify(err)
+			}
 		}
 	}()
-	for {
-		addMapping(m, protocol, extPort, intPort, name, publisher)
-		select {
-		case <-c:
-			return
-		case <-time.After(mapUpdateInterval):
-		}
+
+	return func() {
+		p.deleteMapping(protocol, port, port)
+		close(stopUpdate)
+	}, true
+}
+
+func (p *portMapper) notify(err error) {
+	if err != nil {
+		p.publisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
+	} else {
+		p.publisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 	}
 }
 
-func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) {
-	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
+func (p *portMapper) addMapping(protocol string, extPort, intPort int, name string) (permanent bool, err error) {
+	if err := p.config.MapInterface.AddMapping(protocol, extPort, intPort, name, p.config.MapLifetime); err != nil {
 		log.Warn().Err(err).Msgf("Couldn't add port mapping for port %d: retrying with permanent lease", extPort)
-		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
+		if err := p.config.MapInterface.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
-			publisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 			log.Warn().Err(err).Msgf("Couldn't add port mapping for port %d", extPort)
-			return
+			return false, err
 		}
+		return true, nil
 	}
-	publisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 	log.Info().Msgf("Mapped network port: %d", extPort)
+	return false, nil
+}
+
+func (p *portMapper) deleteMapping(protocol string, extPort, intPort int) {
+	log.Debug().Msgf("Deleting port mapping for port: %d", extPort)
+	if err := p.config.MapInterface.DeleteMapping(protocol, extPort, intPort); err != nil {
+		log.Warn().Err(err).Msg("Couldn't delete port mapping")
+	}
 }

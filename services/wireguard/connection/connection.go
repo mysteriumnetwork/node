@@ -34,12 +34,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// NATPinger tries to punch a hole in NAT
-type NATPinger interface {
-	Stop()
-	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
-}
-
 // Connection which does wireguard tunneling.
 type Connection struct {
 	done             chan struct{}
@@ -53,7 +47,7 @@ type Connection struct {
 	connectionEndpoint  wg.ConnectionEndpoint
 	removeAllowedIPRule func()
 	configDir           string
-	natPinger           NATPinger
+	natPinger           traversal.NATProviderPinger
 }
 
 // Start establish wireguard connection to the service provider.
@@ -84,6 +78,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 			config.Provider.Endpoint.IP.String(),
 			config.RemotePort,
 			config.LocalPort,
+			0,
 			c.pingerStop,
 		)
 		if err != nil {
@@ -94,7 +89,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.stateChannel <- connection.Connecting
 
 	log.Info().Msg("Starting new connection")
-	conn, err := c.startConn(wg.StartConsumerConfig{
+	conn, err := c.startConn(wg.ConsumerModeConfig{
 		PrivateKey: c.privateKey,
 		IPAddress:  config.Consumer.IPAddress,
 		ListenPort: config.LocalPort,
@@ -129,28 +124,21 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return errors.Wrap(err, "failed to configure DNS")
 	}
 
-	go c.runPeriodically(time.Second)
+	go c.updateStatsPeriodically(time.Second)
 
 	c.stateChannel <- connection.Connected
 	return nil
 }
 
-func (c *Connection) startConn(conf wg.StartConsumerConfig) (wg.ConnectionEndpoint, error) {
-	// We do not need port mapping for consumer, since it initiates the session
-	fakePortMapper := func(port int) (releasePortMapping func()) {
-		return func() {}
-	}
-
+func (c *Connection) startConn(conf wg.ConsumerModeConfig) (wg.ConnectionEndpoint, error) {
 	resourceAllocator := connectionResourceAllocator()
-	conn, err := endpoint.NewConnectionEndpoint(nil, resourceAllocator, fakePortMapper, 0)
+	conn, err := endpoint.NewConnectionEndpoint(nil, resourceAllocator, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create new connection endpoint")
 	}
 
 	log.Info().Msg("Starting connection endpoint")
-	if err := conn.Start(wg.StartConfig{
-		Consumer: &conf,
-	}); err != nil {
+	if err := conn.StartConsumerMode(conf); err != nil {
 		return nil, errors.Wrap(err, "failed to start connection endpoint")
 	}
 
@@ -201,6 +189,7 @@ func (c *Connection) isNoopPinger() bool {
 
 // Stop stops wireguard connection and closes connection endpoint.
 func (c *Connection) Stop() {
+	log.Info().Msg("Stopping WireGuard connection")
 	c.stateChannel <- connection.Disconnecting
 	c.sendStats()
 
@@ -225,12 +214,11 @@ func (c *Connection) Stop() {
 	close(c.statisticsChannel)
 }
 
-func (c *Connection) runPeriodically(duration time.Duration) {
+func (c *Connection) updateStatsPeriodically(duration time.Duration) {
 	for {
 		select {
 		case <-time.After(duration):
 			c.sendStats()
-
 		case <-c.statsCheckerStop:
 			return
 		}

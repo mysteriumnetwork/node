@@ -35,18 +35,12 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
 
-// NATPinger tries to punch a hole in NAT
-type NATPinger interface {
-	Stop()
-	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
-}
-
 // Client takes in the openvpn process and works with it
 type Client struct {
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
-	natPinger           NATPinger
+	natPinger           traversal.NATProviderPinger
 	pingerStop          chan struct{}
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
@@ -73,6 +67,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 			clientConfig.VpnConfig.OriginalRemoteIP,
 			clientConfig.VpnConfig.OriginalRemotePort,
 			clientConfig.LocalPort,
+			clientConfig.LocalPort+1,
 			c.pingerStop,
 		)
 		if err != nil {

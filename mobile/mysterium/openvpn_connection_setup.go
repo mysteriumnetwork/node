@@ -34,8 +34,7 @@ import (
 )
 
 type natPinger interface {
-	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
-	StopNATProxy()
+	traversal.NATProviderPinger
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
@@ -64,6 +63,7 @@ func (wrapper *openvpnConnection) Start(options connection.ConnectOptions) error
 			clientConfig.VpnConfig.OriginalRemoteIP,
 			clientConfig.VpnConfig.OriginalRemotePort,
 			clientConfig.LocalPort,
+			clientConfig.LocalPort+1,
 			wrapper.pingerStop,
 		)
 		if err != nil {

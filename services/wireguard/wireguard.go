@@ -76,7 +76,8 @@ func (method Payment) GetRate() market.PaymentRate {
 // ConnectionEndpoint represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
-	Start(config StartConfig) error
+	StartConsumerMode(config ConsumerModeConfig) error
+	StartProviderMode(config ProviderModeConfig) error
 	AddPeer(iface string, peer Peer) error
 	PeerStats() (*Stats, error)
 	ConfigureRoutes(ip net.IP) error
@@ -85,16 +86,15 @@ type ConnectionEndpoint interface {
 	Stop() error
 }
 
-// StartConfig is configuration for endpoint startup. If Consumer is nil
-// it runs as a provider.
-type StartConfig struct {
-	Consumer *StartConsumerConfig
-}
-
-// StartConsumerConfig is consumer endpoint startup configuration.
-type StartConsumerConfig struct {
+// ConsumerModeConfig is consumer endpoint startup configuration.
+type ConsumerModeConfig struct {
 	PrivateKey string
 	IPAddress  net.IPNet
+	ListenPort int
+}
+
+// ProviderModeConfig is provider endpoint startup configuration.
+type ProviderModeConfig struct {
 	ListenPort int
 }
 
@@ -199,6 +199,9 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 
 // DeviceConfig describes wireguard device configuration.
 type DeviceConfig struct {
+	IfaceName string
+	Subnet    net.IPNet
+
 	PrivateKey string
 	ListenPort int
 }

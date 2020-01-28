@@ -35,6 +35,13 @@ type NATProxy struct {
 	socketProtect func(socket int) bool
 }
 
+// NewNATProxy constructs an instance of NATProxy
+func NewNATProxy() *NATProxy {
+	return &NATProxy{
+		servicePorts: make(map[string]int),
+	}
+}
+
 func (np *NATProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {
 	time.Sleep(400 * time.Millisecond)
 	stop := make(chan struct{})
@@ -51,8 +58,6 @@ func (np *NATProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn
 // Read from listener socket and write to remoteConn
 // Read from remoteConn and write to listener socket
 func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, stop chan struct{}) {
-	log.Info().Msg("Inside consumer NATProxy")
-
 	laddr, err := net.ResolveUDPAddr("udp4", consumerAddr)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get local address for consumer NATProxy")
@@ -154,13 +159,6 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 			}
 			i += written
 		}
-	}
-}
-
-// NewNATProxy constructs an instance of NATProxy
-func NewNATProxy() *NATProxy {
-	return &NATProxy{
-		servicePorts: make(map[string]int),
 	}
 }
 
