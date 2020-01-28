@@ -193,20 +193,19 @@ func (pr *Repository) fetchLoop() {
 			return
 		case <-time.After(pr.fetchInterval):
 			pr.policyLock.Lock()
+
 			policyListActive := make([]policyMetadata, len(pr.policyList))
 			copy(policyListActive, pr.policyList)
-			pr.policyLock.Unlock()
 
 			for index := range policyListActive {
 				var err error
 				if err = pr.fetchPolicyRules(&policyListActive[index]); err != nil {
 					log.Warn().Err(err).Msg("synchronise fetch failed")
 				}
-
-				pr.policyLock.Lock()
-				pr.policyList[index] = policyListActive[index]
-				pr.policyLock.Unlock()
 			}
+			pr.policyList = policyListActive
+
+			pr.policyLock.Unlock()
 		}
 	}
 }
