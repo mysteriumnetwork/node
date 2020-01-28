@@ -24,9 +24,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -81,7 +81,7 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{
-			Price: money.NewMoney(1000000, money.CurrencyMyst),
+			Price: pingpong.DefaultPaymentInfo.Price,
 		},
 	}
 }
