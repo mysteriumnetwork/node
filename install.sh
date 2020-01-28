@@ -131,17 +131,24 @@ install_ubuntu() {
     fi
     apt update
     apt install -y resolvconf openvpn
-    # wg
+
+    # add-apt-repository may not be available in Ubuntu server out of the box
     apt install -y software-properties-common
-    add-apt-repository ppa:wireguard/wireguard
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
+
+    # Wireguard
+    # If kernel module installs successfully, the following commands should give no errors:
+    # ip link add dev wg0 type wireguard
+    # ip link delete wg0
+    if [[ "$container" != "docker" ]]; then
+        apt install -y "linux-headers-$(uname -r)"
+    fi
+    add-apt-repository -y ppa:wireguard/wireguard
     apt update
     apt install -y wireguard
-    apt install -y "linux-headers-$(uname -r)" libmnl-dev libelf-dev build-essential pkg-config
     dpkg-reconfigure wireguard-dkms
+
     # myst
-    add-apt-repository "$PPA"
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
+    add-apt-repository -y "$PPA"
     apt update
     apt install -y myst
     service mysterium-node restart
