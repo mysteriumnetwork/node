@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,38 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package policy
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/requests"
-	"github.com/pkg/errors"
 )
 
-func fetchAllowedIDs(client *requests.HTTPClient, ap *[]market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
-	if ap == nil {
-		return nil, nil
-	}
-
-	var ruleSet market.AccessPolicyRuleSet
-	for _, p := range *ap {
-		req, err := requests.NewGetRequest(p.Source, "", nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create request")
+// ValidateAllowedIdentity checks if given identity is allowed by given policies
+func ValidateAllowedIdentity(repository *Repository, policies *[]market.AccessPolicy) func(identity.Identity) error {
+	return func(peerID identity.Identity) error {
+		if policies == nil {
+			return nil
 		}
 
-		err = client.DoRequestAndParseResponse(req, &ruleSet)
+		policiesRules, err := repository.RulesForPolicies(*policies)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to execute request")
+			return err
 		}
 
-		for _, rule := range ruleSet.Allow {
-			if rule.Type == "identity" {
-				allowedIDs = append(allowedIDs, identity.FromAddress(rule.Value))
+		for _, policyRules := range policiesRules {
+			for _, rule := range policyRules.Allow {
+				if rule.Type == market.AccessPolicyTypeIdentity && rule.Value == peerID.Address {
+					return nil
+				}
 			}
 		}
-	}
 
-	return allowedIDs, nil
+		return nil
+	}
 }

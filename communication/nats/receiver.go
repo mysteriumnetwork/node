@@ -85,12 +85,18 @@ func (receiver *receiverNATS) ReceiveUnsubscribe(endpoint communication.MessageE
 	defer receiver.mu.Unlock()
 
 	messageTopic := receiver.messageTopic + string(endpoint)
-	if subscription, found := receiver.subs[messageTopic]; found {
-		if err := subscription.Unsubscribe(); err != nil {
-			log.Error().Err(err).Msg("Failed to unsubscribe from topic: " + messageTopic)
-		}
-		log.Info().Msg("Unsubscribed from " + messageTopic)
+	subscription, found := receiver.subs[messageTopic]
+	if !found {
+		log.Error().Msg("Unknown topic to unsubscribe: " + messageTopic)
+		return
 	}
+
+	if err := subscription.Unsubscribe(); err != nil {
+		log.Error().Err(err).Msg("Failed to unsubscribe from topic: " + messageTopic)
+		return
+	}
+
+	log.Info().Msg("Unsubscribed from " + messageTopic)
 }
 
 func (receiver *receiverNATS) Unsubscribe() {
@@ -100,6 +106,7 @@ func (receiver *receiverNATS) Unsubscribe() {
 	for topic, s := range receiver.subs {
 		if err := s.Unsubscribe(); err != nil {
 			log.Error().Err(err).Msg("Failed to unsubscribe from topic: " + topic)
+			return
 		}
 		log.Info().Msg("Unsubscribed from " + topic)
 	}

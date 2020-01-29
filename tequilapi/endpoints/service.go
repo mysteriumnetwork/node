@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -90,9 +89,8 @@ type serviceInfo struct {
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
-	serviceManager          ServiceManager
-	accessPolicyEndpointURL string
-	optionsParser           map[string]ServiceOptionsParser
+	serviceManager ServiceManager
+	optionsParser  map[string]ServiceOptionsParser
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -106,11 +104,10 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
 	return &ServiceEndpoint{
-		serviceManager:          serviceManager,
-		optionsParser:           optionsParser,
-		accessPolicyEndpointURL: accessPolicyEndpointURL,
+		serviceManager: serviceManager,
+		optionsParser:  optionsParser,
 	}
 }
 
@@ -209,9 +206,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	}
 
 	log.Info().Msgf("Service start options: %+v", sr)
-	ap := getAccessPolicyData(sr, se.accessPolicyEndpointURL)
-
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.AccessPolicies.Ids, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -225,22 +220,6 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	resp.WriteHeader(http.StatusCreated)
 	statusResponse := toServiceInfoResponse(id, instance)
 	utils.WriteAsJSON(statusResponse, resp)
-}
-
-func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy {
-	if len(sr.AccessPolicies.Ids) == 0 {
-		return nil
-	}
-
-	result := make([]market.AccessPolicy, len(sr.AccessPolicies.Ids))
-	for i := range result {
-		result[i] = market.AccessPolicy{
-			ID:     sr.AccessPolicies.Ids[i],
-			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicies.Ids[i]),
-		}
-	}
-
-	return &result
 }
 
 // ServiceStop stops service on the node.
@@ -287,8 +266,8 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, accessPolicyEndpointURL)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)
@@ -304,7 +283,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
-			Ids: services.SharedConfiguredOptions().AccessPolicies,
+			Ids: services.SharedConfiguredOptions().AccessPolicyList,
 		},
 	}
 	decoder := json.NewDecoder(req.Body)
@@ -388,7 +367,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that is used for services management.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, policies []string, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error
