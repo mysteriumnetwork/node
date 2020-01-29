@@ -177,13 +177,17 @@ install_debian() {
     # openvpn, etc.
     apt update
     apt install -y resolvconf openvpn
-    # wg
+
+    # Wireguard
     echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
     printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
     apt update
+    if [[ "$container" != "docker" ]]; then
+        apt install -y "linux-headers-$(uname -r)"
+    fi
     apt install -y wireguard
-    apt install -y "linux-headers-$(dpkg --print-architecture)" libmnl-dev libelf-dev build-essential pkg-config
     dpkg-reconfigure wireguard-dkms
+
     # myst
     echo "deb $PPA_URL $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/mysterium.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
