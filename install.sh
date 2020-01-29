@@ -150,6 +150,7 @@ install_ubuntu() {
     # myst
     add-apt-repository -y "$PPA"
     apt update
+    apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
 }
@@ -176,6 +177,7 @@ install_raspbian() {
     echo "deb $PPA_URL $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/mysterium.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
     apt update
+    apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
 }
@@ -199,6 +201,7 @@ install_debian() {
     echo "deb $PPA_URL $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/mysterium.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
     apt update
+    apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
 }
