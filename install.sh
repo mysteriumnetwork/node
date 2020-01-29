@@ -158,13 +158,20 @@ install_raspbian() {
     # openvpn, etc.
     apt update
     apt install -y resolvconf openvpn
-    # wg
+
+    # Wireguard
+    apt install -y git bc bison flex libssl-dev libncurses5-dev # For rpi-source
+    wget https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source -O /usr/local/bin/rpi-source \
+        && chmod +x /usr/local/bin/rpi-source \
+        && rpi-source -q --tag-update
+    rpi-source --default-config || true
+
     echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/wireguard.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
     apt update
     apt install -y wireguard
-    apt install -y raspberrypi-kernel-headers libmnl-dev libelf-dev build-essential pkg-config
     dpkg-reconfigure wireguard-dkms
+
     # myst
     echo "deb $PPA_URL $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/mysterium.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
