@@ -131,18 +131,26 @@ install_ubuntu() {
     fi
     apt update
     apt install -y resolvconf openvpn
-    # wg
+
+    # add-apt-repository may not be available in Ubuntu server out of the box
     apt install -y software-properties-common
-    add-apt-repository ppa:wireguard/wireguard
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
+
+    # Wireguard
+    # If kernel module installs successfully, the following commands should give no errors:
+    # ip link add dev wg0 type wireguard
+    # ip link delete wg0
+    if [[ "$container" != "docker" ]]; then
+        apt install -y "linux-headers-$(uname -r)"
+    fi
+    add-apt-repository -y ppa:wireguard/wireguard
     apt update
     apt install -y wireguard
-    apt install -y "linux-headers-$(uname -r)" libmnl-dev libelf-dev build-essential pkg-config
     dpkg-reconfigure wireguard-dkms
+
     # myst
-    add-apt-repository "$PPA"
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
+    add-apt-repository -y "$PPA"
     apt update
+    apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
 }
@@ -151,17 +159,25 @@ install_raspbian() {
     # openvpn, etc.
     apt update
     apt install -y resolvconf openvpn
-    # wg
+
+    # Wireguard
+    apt install -y git bc bison flex libssl-dev libncurses5-dev # For rpi-source
+    wget https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source -O /usr/local/bin/rpi-source \
+        && chmod +x /usr/local/bin/rpi-source \
+        && rpi-source -q --tag-update
+    rpi-source --default-config || true
+
     echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/wireguard.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
     apt update
     apt install -y wireguard
-    apt install -y raspberrypi-kernel-headers libmnl-dev libelf-dev build-essential pkg-config
     dpkg-reconfigure wireguard-dkms
+
     # myst
     echo "deb $PPA_URL $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/mysterium.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
     apt update
+    apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
 }
@@ -170,17 +186,22 @@ install_debian() {
     # openvpn, etc.
     apt update
     apt install -y resolvconf openvpn
-    # wg
+
+    # Wireguard
     echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
     printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
     apt update
+    if [[ "$container" != "docker" ]]; then
+        apt install -y "linux-headers-$(uname -r)"
+    fi
     apt install -y wireguard
-    apt install -y "linux-headers-$(dpkg --print-architecture)" libmnl-dev libelf-dev build-essential pkg-config
     dpkg-reconfigure wireguard-dkms
+
     # myst
     echo "deb $PPA_URL $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/mysterium.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys "$PPA_FINGER"
     apt update
+    apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
 }
