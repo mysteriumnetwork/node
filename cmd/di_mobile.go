@@ -20,12 +20,13 @@
 package cmd
 
 import (
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/ui/noop"
 )
 
 // bootstrapServices loads all the components required for running services
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
 	// Running services on mobile is not supported, nothing to bootstrap.
 	return nil
 }
