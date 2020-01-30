@@ -1,5 +1,7 @@
+//+build !linux
+
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +17,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package vnd
+package firewall
 
-import (
-	"github.com/mysteriumnetwork/node/firewall"
-)
-
-func SetupVendor() (firewall.Vendor, error) {
-	return firewall.NoopVendor{}, nil
+// NewTrackingBlocker create instance of traffic blocker
+func NewTrackingBlocker() *noopTrafficBlocker {
+	return &noopTrafficBlocker{}
 }

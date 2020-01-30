@@ -30,7 +30,7 @@ type Rule struct {
 func AppendTo(chainName string) Rule {
 	return Rule{
 		chainName: chainName,
-		action:    []string{appendRule, chainName},
+		action:    []string{"-A", chainName},
 	}
 }
 
@@ -38,7 +38,7 @@ func AppendTo(chainName string) Rule {
 func InsertAt(chainName string, line int) Rule {
 	return Rule{
 		chainName: chainName,
-		action:    []string{insertRule, chainName, strconv.Itoa(line)},
+		action:    []string{"-I", chainName, strconv.Itoa(line)},
 	}
 }
 
@@ -55,7 +55,7 @@ func (r Rule) ApplyArgs() []string {
 
 // RemoveArgs returns an argument list to be passed to the iptables executable to REMOVE the rule.
 func (r Rule) RemoveArgs() []string {
-	return append([]string{removeRule, r.chainName}, r.ruleSpec...)
+	return append([]string{"-D", r.chainName}, r.ruleSpec...)
 }
 
 // Equals checks if two Rules are equal.

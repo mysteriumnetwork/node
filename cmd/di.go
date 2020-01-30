@@ -52,7 +52,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/firewall/vnd"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
@@ -825,13 +824,21 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
-	fwVendor, err := vnd.SetupVendor()
-	if err != nil {
+	firewall.DefaultTrackingBlocker = firewall.NewTrackingBlocker()
+	if err := firewall.DefaultTrackingBlocker.Setup(); err != nil {
 		return err
 	}
-	firewall.Configure(fwVendor)
+
 	if options.BlockAlways {
-		_, err := firewall.BlockNonTunnelTraffic(firewall.Global)
+		bindAddress := "0.0.0.0"
+		httpClient := requests.NewHTTPClient(bindAddress, requests.DefaultTimeout)
+		resolver := ip.NewResolver(httpClient, bindAddress, "")
+		outboundIP, err := resolver.GetOutboundIPAsString()
+		if err != nil {
+			return err
+		}
+
+		_, err = firewall.BlockNonTunnelTraffic(firewall.Global, outboundIP)
 		return err
 	}
 	return nil
