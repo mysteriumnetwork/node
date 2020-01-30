@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/dns"
@@ -92,10 +93,8 @@ type Manager struct {
 	processLauncher          *processLauncher
 	openvpnProcess           openvpn.Process
 
-	publicIP        string
-	outboundIP      string
-	currentLocation string
-	serviceOptions  Options
+	location       location.ServiceLocationInfo
+	serviceOptions Options
 }
 
 // Serve starts service - does block
@@ -126,12 +125,12 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		defer releasePorts()
 	}
 
-	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
+	primitives, err := primitiveFactory(m.location.Country, providerID.Address)
 	if err != nil {
 		return
 	}
 
-	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.outboundIP, m.publicIP, m.vpnServerPort)
+	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.location.OutIP, m.location.PubIP, m.vpnServerPort)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	stateChannel := make(chan openvpn.State, 10)
@@ -167,7 +166,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 
 	if _, err := m.natService.Setup(nat.Options{
 		VPNNetwork:        m.vpnNetwork,
-		ProviderExtIP:     net.ParseIP(m.outboundIP),
+		ProviderExtIP:     net.ParseIP(m.location.OutIP),
 		EnableDNSRedirect: dnsOK,
 		DNSIP:             dnsIP,
 		DNSPort:           dnsPort,
@@ -187,7 +186,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 }
 
 func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
-	if !m.isBehindNAT() {
+	if !m.location.BehindNAT() {
 		return nil, false
 	}
 
@@ -237,7 +236,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigP
 			return nil, errors.Wrap(err, "could not parse consumer config")
 		}
 
-		if m.isBehindNAT() && m.portMappingFailed() {
+		if m.location.BehindNAT() && m.portMappingFailed() {
 			pp, err := m.natPingerPorts.Acquire()
 			if err != nil {
 				return nil, err
@@ -294,10 +293,6 @@ func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.
 
 	log.Info().Msg("OpenVPN service started successfully")
 	return nil
-}
-
-func (m *Manager) isBehindNAT() bool {
-	return m.outboundIP != m.publicIP
 }
 
 func (m *Manager) portMappingFailed() bool {

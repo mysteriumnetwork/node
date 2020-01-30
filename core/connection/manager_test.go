@@ -88,8 +88,7 @@ func (tc *testContext) SetupTest() {
 	tc.fakeConnectionFactory = &connectionFactoryFake{
 		mockError: nil,
 		mockConnection: &connectionMock{
-			nil,
-			[]fakeState{
+			onStartReportStates: []fakeState{
 				processStarted,
 				connectingState,
 				waitState,
@@ -98,15 +97,11 @@ func (tc *testContext) SetupTest() {
 				assignIPState,
 				connectedState,
 			},
-			[]fakeState{
+			onStopReportStates: []fakeState{
 				exitingState,
 				processExited,
 			},
-			nil,
-			tc.mockStatistics,
-			sync.WaitGroup{},
-			nil,
-			sync.RWMutex{},
+			onStartReportStats: tc.mockStatistics,
 		},
 	}
 
@@ -237,7 +232,6 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
-
 }
 
 func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {

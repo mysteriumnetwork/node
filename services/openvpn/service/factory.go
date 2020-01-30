@@ -72,9 +72,6 @@ func NewManager(nodeOptions node.Options,
 	}
 
 	return &Manager{
-		publicIP:                       location.PubIP,
-		outboundIP:                     location.OutIP,
-		currentLocation:                location.Country,
 		natService:                     natService,
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
@@ -86,6 +83,7 @@ func NewManager(nodeOptions node.Options,
 		ports:                          portPool,
 		eventListener:                  bus,
 		portMapper:                     portMapper,
+		location:                       location,
 	}
 }
 

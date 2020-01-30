@@ -18,9 +18,7 @@
 package connection
 
 // Factory represents a connection constructor
-type Factory interface {
-	Create(stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
-}
+type Factory func() (Connection, error)
 
 // Registry holds of all plugable connections
 type Registry struct {
@@ -40,11 +38,11 @@ func (registry *Registry) Register(serviceType string, creator Factory) {
 }
 
 // CreateConnection create plugable connection
-func (registry *Registry) CreateConnection(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
+func (registry *Registry) CreateConnection(serviceType string) (Connection, error) {
 	factory, exists := registry.creators[serviceType]
 	if !exists {
 		return nil, ErrUnsupportedServiceType
 	}
 
-	return factory.Create(stateChannel, statisticsChannel)
+	return factory()
 }

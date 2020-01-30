@@ -34,20 +34,54 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// NewConnection returns new WireGuard connection.
+func NewConnection(configDir string, ipResolver ip.Resolver, natPinger traversal.NATProviderPinger) (connection.Connection, error) {
+	privateKey, err := key.GeneratePrivateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate private key")
+	}
+
+	return &Connection{
+		done:             make(chan struct{}),
+		statsCheckerStop: make(chan struct{}),
+		pingerStop:       make(chan struct{}),
+		stateCh:          make(chan connection.State, 100),
+		statisticsCh:     make(chan consumer.SessionStatistics, 100),
+		privateKey:       privateKey,
+		configDir:        configDir,
+		ipResolver:       ipResolver,
+		natPinger:        natPinger,
+		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
+			return endpoint.NewConnectionEndpoint(nil, connectionResourceAllocator(), 0)
+		},
+	}, nil
+}
+
 // Connection which does wireguard tunneling.
 type Connection struct {
 	done             chan struct{}
 	statsCheckerStop chan struct{}
 	pingerStop       chan struct{}
+	stateCh          chan connection.State
+	statisticsCh     chan consumer.SessionStatistics
 
 	privateKey          string
 	ipResolver          ip.Resolver
-	stateChannel        connection.StateChannel
-	statisticsChannel   connection.StatisticsChannel
 	connectionEndpoint  wg.ConnectionEndpoint
 	removeAllowedIPRule func()
 	configDir           string
 	natPinger           traversal.NATProviderPinger
+	connEndpointFactory func() (wg.ConnectionEndpoint, error)
+}
+
+// State returns connection state channel.
+func (c *Connection) State() <-chan connection.State {
+	return c.stateCh
+}
+
+// Statistics returns connection statistics channel.
+func (c *Connection) Statistics() <-chan consumer.SessionStatistics {
+	return c.statisticsCh
 }
 
 // Start establish wireguard connection to the service provider.
@@ -66,7 +100,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	// TODO: Fix conn cleanups https://github.com/mysteriumnetwork/node/issues/1499
 	defer func() {
 		if err != nil {
-			c.stateChannel <- connection.NotConnected
+			c.stateCh <- connection.NotConnected
 			close(c.done)
 			removeAllowedIPRule()
 		}
@@ -86,7 +120,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		}
 	}
 
-	c.stateChannel <- connection.Connecting
+	c.stateCh <- connection.Connecting
 
 	log.Info().Msg("Starting new connection")
 	conn, err := c.startConn(wg.ConsumerModeConfig{
@@ -126,7 +160,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	go c.updateStatsPeriodically(time.Second)
 
-	c.stateChannel <- connection.Connected
+	c.stateCh <- connection.Connected
 	return nil
 }
 
@@ -190,7 +224,7 @@ func (c *Connection) isNoopPinger() bool {
 // Stop stops wireguard connection and closes connection endpoint.
 func (c *Connection) Stop() {
 	log.Info().Msg("Stopping WireGuard connection")
-	c.stateChannel <- connection.Disconnecting
+	c.stateCh <- connection.Disconnecting
 	c.sendStats()
 
 	if c.connectionEndpoint != nil {
@@ -206,12 +240,12 @@ func (c *Connection) Stop() {
 		c.removeAllowedIPRule()
 	}
 
-	c.stateChannel <- connection.NotConnected
+	c.stateCh <- connection.NotConnected
 	close(c.done)
 	close(c.statsCheckerStop)
 	close(c.pingerStop)
-	close(c.stateChannel)
-	close(c.statisticsChannel)
+	close(c.stateCh)
+	close(c.statisticsCh)
 }
 
 func (c *Connection) updateStatsPeriodically(duration time.Duration) {
@@ -231,7 +265,7 @@ func (c *Connection) sendStats() {
 		log.Error().Err(err).Msg("Failed to receive peer stats")
 		return
 	}
-	c.statisticsChannel <- consumer.SessionStatistics{
+	c.statisticsCh <- consumer.SessionStatistics{
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
 	}

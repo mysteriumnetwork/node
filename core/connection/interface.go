@@ -36,6 +36,8 @@ type Connection interface {
 	Wait() error
 	Stop()
 	GetConfig() (ConsumerConfig, error)
+	State() <-chan State
+	Statistics() <-chan consumer.SessionStatistics
 }
 
 // StateChannel is the channel we receive state change events on
