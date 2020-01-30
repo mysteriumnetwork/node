@@ -346,6 +346,9 @@ func (it *InvoiceTracker) Start() error {
 		emErrors <- it.listenForExchangeMessages()
 	}()
 
+	// on session close, try and reveal the promise before exiting
+	defer it.revealPromise()
+
 	// give the consumer a second to start up his payments before sending the first request
 	firstSend := time.After(time.Second)
 	for {
