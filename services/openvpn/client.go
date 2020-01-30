@@ -18,13 +18,24 @@
 package openvpn
 
 import (
+	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
+	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
+	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -35,8 +46,66 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
 
+// NewClient creates a new openvpn connection
+func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
+	signerFactory identity.SignerFactory,
+	ipResolver ip.Resolver,
+	natPinger traversal.NATProviderPinger,
+) (connection.Connection, error) {
+
+	stateCh := make(chan connection.State, 100)
+	statisticsCh := make(chan consumer.SessionStatistics, 100)
+
+	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
+		sessionConfig := &VPNConfig{}
+		err := json.Unmarshal(options.SessionConfig, sessionConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// override vpnClientConfig params with proxy local IP and pinger port
+		// do this only if connecting to natted provider
+		if sessionConfig.LocalPort > 0 {
+			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
+			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
+		}
+
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, configDirectory, runtimeDirectory, options.DNS)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		signer := signerFactory(options.ConsumerID)
+
+		stateMiddleware := newStateMiddleware(stateCh)
+		authMiddleware := newAuthMiddleware(options.SessionID, signer)
+		byteCountMiddleware := newBytecountMiddleware(statisticsCh)
+		proc := openvpn.CreateNewProcess(openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
+		return proc, vpnClientConfig, nil
+	}
+
+	return &Client{
+		configDirectory:     configDirectory,
+		runtimeDirectory:    runtimeDirectory,
+		signerFactory:       signerFactory,
+		stateCh:             stateCh,
+		statisticsCh:        statisticsCh,
+		processFactory:      procFactory,
+		ipResolver:          ipResolver,
+		natPinger:           natPinger,
+		pingerStop:          make(chan struct{}),
+		removeAllowedIPRule: func() {},
+	}, nil
+}
+
 // Client takes in the openvpn process and works with it
 type Client struct {
+	openvpnBinary       string
+	configDirectory     string
+	runtimeDirectory    string
+	signerFactory       identity.SignerFactory
+	stateCh             chan connection.State
+	statisticsCh        chan consumer.SessionStatistics
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
@@ -44,6 +113,16 @@ type Client struct {
 	pingerStop          chan struct{}
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
+}
+
+// State returns connection state channel.
+func (c *Client) State() <-chan connection.State {
+	return c.stateCh
+}
+
+// Statistics returns connection statistics channel.
+func (c *Client) Statistics() <-chan consumer.SessionStatistics {
+	return c.statisticsCh
 }
 
 // Start starts the connection
@@ -132,4 +211,49 @@ type VPNConfig struct {
 	RemoteProtocol  string `json:"protocol"`
 	TLSPresharedKey string `json:"TLSPresharedKey"`
 	CACertificate   string `json:"CACertificate"`
+}
+
+func newAuthMiddleware(sessionID session.ID, signer identity.Signer) management.Middleware {
+	credentialsProvider := openvpn_session.SignatureCredentialsProvider(sessionID, signer)
+	return auth.NewMiddleware(credentialsProvider)
+}
+
+func newBytecountMiddleware(statisticsChannel connection.StatisticsChannel) management.Middleware {
+	statsSaver := bytescount.NewSessionStatsSaver(statisticsChannel)
+	return openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second)
+}
+
+func newStateMiddleware(stateChannel connection.StateChannel) management.Middleware {
+	stateCallback := getStateCallback(stateChannel)
+	return state.NewMiddleware(stateCallback)
+}
+
+// getStateCallback returns the callback for working with openvpn state
+func getStateCallback(stateChannel connection.StateChannel) func(openvpnState openvpn.State) {
+	return func(openvpnState openvpn.State) {
+		connectionState := openVpnStateCallbackToConnectionState(openvpnState)
+		if connectionState != connection.Unknown {
+			stateChannel <- connectionState
+		}
+
+		//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+		if openvpnState == openvpn.ProcessExited {
+			close(stateChannel)
+		}
+	}
+}
+
+// openvpnStateMap maps openvpn states to connection state
+var openvpnStateMap = map[openvpn.State]connection.State{
+	openvpn.ConnectedState:    connection.Connected,
+	openvpn.ExitingState:      connection.Disconnecting,
+	openvpn.ReconnectingState: connection.Reconnecting,
+}
+
+// openVpnStateCallbackToConnectionState maps openvpn.State to connection.State. Returns a pointer to connection.state, or nil
+func openVpnStateCallbackToConnectionState(input openvpn.State) connection.State {
+	if val, ok := openvpnStateMap[input]; ok {
+		return val
+	}
+	return connection.Unknown
 }

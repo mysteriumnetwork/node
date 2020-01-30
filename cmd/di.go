@@ -295,21 +295,23 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 	service_openvpn.Bootstrap()
-	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
-		// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
-		nodeOptions.Openvpn.BinaryPath(),
-		nodeOptions.Directories.Config,
-		nodeOptions.Directories.Runtime,
-		di.SignerFactory,
-		di.IPResolver,
-		di.NATPinger,
-	)
+	connectionFactory := func() (connection.Connection, error) {
+		return service_openvpn.NewClient(
+			// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
+			nodeOptions.Openvpn.BinaryPath(),
+			nodeOptions.Directories.Config,
+			nodeOptions.Directories.Runtime,
+			di.SignerFactory,
+			di.IPResolver,
+			di.NATPinger,
+		)
+	}
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory)
 }
 
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
-	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
+	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnection)
 }
 
 // bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies

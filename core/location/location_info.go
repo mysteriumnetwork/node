@@ -23,3 +23,8 @@ type ServiceLocationInfo struct {
 	PubIP   string
 	Country string
 }
+
+// BehindNAT checks if service is behind NAT network.
+func (loc ServiceLocationInfo) BehindNAT() bool {
+	return loc.OutIP != loc.PubIP
+}

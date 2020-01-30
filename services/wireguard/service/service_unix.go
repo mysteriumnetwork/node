@@ -81,10 +81,9 @@ func NewManager(
 		publisher:          eventPublisher,
 		portMapper:         portMapper,
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(ipResolver, resourcesAllocator, options.ConnectDelay)
+			return endpoint.NewConnectionEndpoint(&location, resourcesAllocator, options.ConnectDelay)
 		},
-		publicIP:   location.PubIP,
-		outboundIP: location.OutIP,
+		location: location,
 	}
 }
 
@@ -109,8 +108,7 @@ type Manager struct {
 	connEndpointFactory func() (wg.ConnectionEndpoint, error)
 
 	ipResolver ip.Resolver
-	publicIP   string
-	outboundIP string
+	location   location.ServiceLocationInfo
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
@@ -134,8 +132,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigP
 		return nil, errors.Wrap(err, "could not start new connection")
 	}
 
-	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.isBehindNAT()
-	log.Debug().Msgf("Pinger enable params: isValid=%v, isBehindNAT=%v, portMappingOk=%v", m.natPinger.Valid(), m.isBehindNAT(), portMappingOk)
+	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.location.BehindNAT()
 
 	traversalParams, err := m.newTraversalParams(natPingerEnabled, consumerConfig)
 	if err != nil {
@@ -170,7 +167,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigP
 	natRules, err := m.natService.Setup(nat.Options{
 		VPNNetwork:        config.Consumer.IPAddress,
 		DNSIP:             dnsIP,
-		ProviderExtIP:     net.ParseIP(m.outboundIP),
+		ProviderExtIP:     net.ParseIP(m.location.OutIP),
 		EnableDNSRedirect: m.dnsOK,
 		DNSPort:           m.dnsPort,
 	})
@@ -197,7 +194,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigP
 }
 
 func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
-	if !m.isBehindNAT() {
+	if !m.location.BehindNAT() {
 		return nil, false
 	}
 
@@ -321,8 +318,4 @@ func (m *Manager) Stop() error {
 
 	log.Info().Msg("Wireguard service stopped")
 	return nil
-}
-
-func (m *Manager) isBehindNAT() bool {
-	return m.outboundIP != m.publicIP
 }

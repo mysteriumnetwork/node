@@ -29,14 +29,14 @@ import (
 
 func TestGetStateCallbackReturnsCorrectState(t *testing.T) {
 	channel := make(chan connection.State, 1)
-	callback := GetStateCallback(channel)
+	callback := getStateCallback(channel)
 	callback(openvpn.ConnectedState)
 	assert.Equal(t, connection.Connected, <-channel)
 }
 
 func TestGetStateCallbackClosesChannelOnProcessExit(t *testing.T) {
 	channel := make(chan connection.State, 1)
-	callback := GetStateCallback(channel)
+	callback := getStateCallback(channel)
 	callback(openvpn.ExitingState)
 	res, ok := <-channel
 	assert.Equal(t, connection.Disconnecting, res)
@@ -83,7 +83,7 @@ func TestOpenVpnStateCallbackToConnectionState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := OpenVpnStateCallbackToConnectionState(tt.args.input); !reflect.DeepEqual(got, tt.want) {
+			if got := openVpnStateCallbackToConnectionState(tt.args.input); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("OpenVpnStateCallbackToConnectionState() = %v, want %v", got, tt.want)
 			}
 		})
