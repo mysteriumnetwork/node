@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -289,7 +290,10 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator(nodeOptions.Directories.Config, di.IPResolver, di.NATPinger))
+	connFactory := func() (connection.Connection, error) {
+		return wireguard_connection.NewConnection(nodeOptions.Directories.Config, di.IPResolver, di.NATPinger)
+	}
+	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }
 
 func (di *Dependencies) bootstrapUIServer(options node.Options) {

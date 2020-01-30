@@ -499,12 +499,14 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 	openvpn.Bootstrap()
 
 	st := &sessionTracker{}
-	factory := &OpenvpnConnectionFactory{
-		sessionTracker: st,
-		signerFactory:  mb.signerFactory,
-		tunnelSetup:    tunnelSetup,
-		natPinger:      mb.natPinger,
-		ipResolver:     mb.ipResolver,
+	factory := func() (connection.Connection, error) {
+		return NewOpenVPNConnection(
+			st,
+			mb.signerFactory,
+			tunnelSetup,
+			mb.natPinger,
+			mb.ipResolver,
+		)
 	}
 	_ = mb.eventBus.Subscribe(connection.StateEventTopic, st.handleState)
 	mb.connectionRegistry.Register("openvpn", factory)
@@ -514,10 +516,12 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
-	factory := &WireguardConnectionFactory{
-		tunnelSetup: wgTunnelSetup,
-		ipResolver:  mb.ipResolver,
-		natPinger:   mb.natPinger,
+	factory := func() (connection.Connection, error) {
+		return NewWireGuardConnection(
+			wgTunnelSetup,
+			mb.ipResolver,
+			mb.natPinger,
+		)
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
 }

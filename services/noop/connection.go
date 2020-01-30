@@ -21,14 +21,34 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
+
+// NewConnection creates a new noop connnection
+func NewConnection() (connection.Connection, error) {
+	return &Connection{
+		stateCh: make(chan connection.State, 100),
+		statsCh: make(chan consumer.SessionStatistics, 100),
+	}, nil
+}
 
 // Connection which does no real tunneling
 type Connection struct {
 	isRunning      bool
 	noopConnection sync.WaitGroup
-	stateChannel   connection.StateChannel
+	stateCh        chan connection.State
+	statsCh        chan consumer.SessionStatistics
+}
+
+// State returns connection state channel.
+func (c *Connection) State() <-chan connection.State {
+	return c.stateCh
+}
+
+// Statistics returns connection statistics channel.
+func (c *Connection) Statistics() <-chan consumer.SessionStatistics {
+	return c.statsCh
 }
 
 // Start implements the connection.Connection interface
@@ -36,10 +56,10 @@ func (c *Connection) Start(params connection.ConnectOptions) error {
 	c.noopConnection.Add(1)
 	c.isRunning = true
 
-	c.stateChannel <- connection.Connecting
+	c.stateCh <- connection.Connecting
 
 	time.Sleep(5 * time.Second)
-	c.stateChannel <- connection.Connected
+	c.stateCh <- connection.Connected
 	return nil
 }
 
@@ -58,11 +78,11 @@ func (c *Connection) Stop() {
 	}
 
 	c.isRunning = false
-	c.stateChannel <- connection.Disconnecting
+	c.stateCh <- connection.Disconnecting
 	time.Sleep(2 * time.Second)
-	c.stateChannel <- connection.NotConnected
+	c.stateCh <- connection.NotConnected
 	c.noopConnection.Done()
-	close(c.stateChannel)
+	close(c.stateCh)
 }
 
 // GetConfig returns the consumer configuration for session creation

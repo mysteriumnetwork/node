@@ -93,45 +93,52 @@ type connectionFactoryFake struct {
 	mockConnection *connectionMock
 }
 
-func (cff *connectionFactoryFake) CreateConnection(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
+func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection, error) {
 	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
-	if cff.mockError != nil {
-		return nil, cff.mockError
+	if c.mockError != nil {
+		return nil, c.mockError
 	}
+
+	c.mockConnection.stateChannel = make(chan State, 100)
+	c.mockConnection.statisticsChannel = make(chan consumer.SessionStatistics, 100)
 
 	stateCallback := func(state fakeState) {
 		if state == connectedState {
-			stateChannel <- Connected
-			statisticsChannel <- cff.mockConnection.onStartReportStats
+			c.mockConnection.stateChannel <- Connected
+			c.mockConnection.statisticsChannel <- c.mockConnection.onStartReportStats
 		}
 		if state == exitingState {
-			stateChannel <- Disconnecting
+			c.mockConnection.stateChannel <- Disconnecting
 		}
 		if state == reconnectingState {
-			stateChannel <- Reconnecting
+			c.mockConnection.stateChannel <- Reconnecting
 		}
 		//this is the last state - close channel (according to best practices of go - channel writer controls channel)
 		if state == processExited {
-			close(stateChannel)
+			close(c.mockConnection.stateChannel)
 		}
 	}
-	cff.mockConnection.StateCallback(stateCallback)
+	c.mockConnection.StateCallback(stateCallback)
 
 	// we copy the values over, so that the factory always returns a new instance of connection
 	copy := connectionMock{
-		onStartReportStates: cff.mockConnection.onStartReportStates,
-		onStartReturnError:  cff.mockConnection.onStartReturnError,
-		onStopReportStates:  cff.mockConnection.onStopReportStates,
-		stateCallback:       cff.mockConnection.stateCallback,
-		onStartReportStats:  cff.mockConnection.onStartReportStats,
+		stateChannel:        c.mockConnection.stateChannel,
+		statisticsChannel:   c.mockConnection.statisticsChannel,
+		onStartReportStates: c.mockConnection.onStartReportStates,
+		onStartReturnError:  c.mockConnection.onStartReturnError,
+		onStopReportStates:  c.mockConnection.onStopReportStates,
+		stateCallback:       c.mockConnection.stateCallback,
+		onStartReportStats:  c.mockConnection.onStartReportStats,
 		fakeProcess:         sync.WaitGroup{},
-		stopBlock:           cff.mockConnection.stopBlock,
+		stopBlock:           c.mockConnection.stopBlock,
 	}
 
 	return &copy, nil
 }
 
 type connectionMock struct {
+	stateChannel        chan State
+	statisticsChannel   chan consumer.SessionStatistics
 	onStartReturnError  error
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
@@ -140,6 +147,14 @@ type connectionMock struct {
 	fakeProcess         sync.WaitGroup
 	stopBlock           chan struct{}
 	sync.RWMutex
+}
+
+func (foc *connectionMock) State() <-chan State {
+	return foc.stateChannel
+}
+
+func (foc *connectionMock) Statistics() <-chan consumer.SessionStatistics {
+	return foc.statisticsChannel
 }
 
 func (foc *connectionMock) GetConfig() (ConsumerConfig, error) {

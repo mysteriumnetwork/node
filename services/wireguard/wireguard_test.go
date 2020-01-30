@@ -229,3 +229,72 @@ func TestParsePeerStats(t *testing.T) {
 		})
 	}
 }
+
+func TestServiceConfig_MarshalJSON(t *testing.T) {
+	endpoint, _ := net.ResolveUDPAddr("udp4", "127.0.0.1:51001")
+	config := ServiceConfig{
+		LocalPort:  51000,
+		RemotePort: 51001,
+		Provider: struct {
+			PublicKey string
+			Endpoint  net.UDPAddr
+		}{
+			PublicKey: "wg1",
+			Endpoint:  *endpoint,
+		},
+		Consumer: struct {
+			IPAddress    net.IPNet
+			DNSIPs       string
+			ConnectDelay int
+		}{
+			IPAddress: net.IPNet{
+				IP:   net.IPv4(127, 0, 0, 1),
+				Mask: net.IPv4Mask(255, 255, 255, 128),
+			},
+			DNSIPs:       "128.0.0.1",
+			ConnectDelay: 3000,
+		},
+	}
+
+	configBytes, err := json.Marshal(config)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		`{"local_port":51000,"remote_port":51001,"provider":{"public_key":"wg1","endpoint":"127.0.0.1:51001"},"consumer":{"ip_address":"127.0.0.1/25","dns_ips":"128.0.0.1","connect_delay":3000}}`,
+		string(configBytes),
+	)
+}
+
+func TestServiceConfig_UnmarshalJSON(t *testing.T) {
+	configJSON := json.RawMessage(`{"local_port":51000,"remote_port":51001,"provider":{"public_key":"wg1","endpoint":"127.0.0.1:51001"},"consumer":{"ip_address":"127.0.0.1/25","dns_ips":"128.0.0.1","connect_delay":3000}}`)
+
+	endpoint, _ := net.ResolveUDPAddr("udp4", "127.0.0.1:51001")
+	expecteConfig := ServiceConfig{
+		LocalPort:  51000,
+		RemotePort: 51001,
+		Provider: struct {
+			PublicKey string
+			Endpoint  net.UDPAddr
+		}{
+			PublicKey: "wg1",
+			Endpoint:  *endpoint,
+		},
+		Consumer: struct {
+			IPAddress    net.IPNet
+			DNSIPs       string
+			ConnectDelay int
+		}{
+			IPAddress: net.IPNet{
+				IP:   net.IPv4(127, 0, 0, 1),
+				Mask: net.IPv4Mask(255, 255, 255, 128),
+			},
+			DNSIPs:       "128.0.0.1",
+			ConnectDelay: 3000,
+		},
+	}
+
+	var actualConfig ServiceConfig
+	err := json.Unmarshal(configJSON, &actualConfig)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expecteConfig, actualConfig)
+}

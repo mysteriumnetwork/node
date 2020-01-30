@@ -20,35 +20,26 @@ package openvpn
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
-var _ connection.Factory = &ProcessBasedConnectionFactory{}
-
 func fakeSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 
-func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
-	channel := make(chan connection.State)
-	statisticsChannel := make(chan consumer.SessionStatistics)
+func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
+	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	connectionOptions := connection.ConnectOptions{}
-	conn, err := factory.Create(channel, statisticsChannel)
 	assert.Nil(t, err)
 	err = conn.Start(connectionOptions)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 }
 
-func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
-	channel := make(chan connection.State)
-	statisticsChannel := make(chan consumer.SessionStatistics)
-	conn, err := factory.Create(channel, statisticsChannel)
+func TestConnection_CreatesConnection(t *testing.T) {
+	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
 }

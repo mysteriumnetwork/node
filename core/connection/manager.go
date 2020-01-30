@@ -65,7 +65,7 @@ func DefaultIPCheckParams() IPCheckParams {
 }
 
 // Creator creates new connection by given options and uses state channel to report state changes
-type Creator func(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
+type Creator func(serviceType string) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -165,10 +165,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	stateChannel := make(chan State, 10)
-	statisticsChannel := make(chan consumer.SessionStatistics, 10)
-
-	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel)
+	connection, err := manager.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
 	}
@@ -187,7 +184,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, stateChannel, statisticsChannel)
+	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -376,13 +373,11 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 }
 
 func (manager *connectionManager) startConnection(
-	connection Connection,
+	conn Connection,
 	consumerID identity.Identity,
 	proposal market.ServiceProposal,
 	params ConnectParams,
-	sessionDTO session.SessionDto,
-	stateChannel chan State,
-	statisticsChannel <-chan consumer.SessionStatistics) (err error) {
+	sessionDTO session.SessionDto) (err error) {
 	defer func() {
 		if err != nil {
 			log.Info().Err(err).Msg("Cancelling connection initiation: ")
@@ -399,17 +394,17 @@ func (manager *connectionManager) startConnection(
 		Proposal:      proposal,
 	}
 
-	if err = connection.Start(connectOptions); err != nil {
+	if err = conn.Start(connectOptions); err != nil {
 		return err
 	}
 
 	// Consume statistics right after start - openvpn3 will publish them even before connected state.
-	unsubscribeStats := manager.consumeStats(statisticsChannel)
+	unsubscribeStats := manager.consumeStats(conn.Statistics())
 	manager.cleanup = append(manager.cleanup, unsubscribeStats)
 	manager.cleanup = append(manager.cleanup, func() error {
 		log.Trace().Msg("Cleaning: stopping connection")
 		defer log.Trace().Msg("Cleaning: stopping connection DONE")
-		connection.Stop()
+		conn.Stop()
 		return nil
 	})
 
@@ -418,13 +413,13 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
+	err = manager.waitForConnectedState(conn.State(), sessionDTO.ID)
 	if err != nil {
 		return err
 	}
 
-	go manager.consumeConnectionStates(stateChannel)
-	go manager.connectionWaiter(connection)
+	go manager.consumeConnectionStates(conn.State())
+	go manager.connectionWaiter(conn)
 	return nil
 }
 
