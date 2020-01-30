@@ -39,20 +39,11 @@ type releaseGithubOpts struct {
 
 // release releases build/package files to github
 func releaseGithub(opts *releaseGithubOpts) error {
-	releaser, err := github.NewReleaser(opts.owner, opts.repository, opts.token)
-	if err != nil {
-		return err
-	}
 	if err := storage.DownloadArtifacts(); err != nil {
 		return err
 	}
 
-	var release *github.Release
-	if opts.createTag {
-		release, err = releaser.Create(opts.version)
-	} else {
-		release, err = releaser.Find(opts.version)
-	}
+	release, err := tagReleaseGithub(opts)
 	if err != nil {
 		return err
 	}
@@ -61,6 +52,7 @@ func releaseGithub(opts *releaseGithubOpts) error {
 	if err != nil {
 		return err
 	}
+
 	for _, f := range artifactFilenames {
 		p := path.Join("build/package", f.Name())
 		err := release.UploadAsset(p)
@@ -71,6 +63,19 @@ func releaseGithub(opts *releaseGithubOpts) error {
 
 	log.Info().Msg("Artifacts uploaded successfully")
 	return nil
+}
+
+func tagReleaseGithub(opts *releaseGithubOpts) (*github.Release, error) {
+	releaser, err := github.NewReleaser(opts.owner, opts.repository, opts.token)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.createTag {
+		return releaser.Create(opts.version)
+	}
+
+	return releaser.Find(opts.version)
 }
 
 // ReleaseGithubSnapshot releases snapshot to github
@@ -120,11 +125,23 @@ func ReleaseGithubTag() error {
 		return nil
 	}
 
-	return releaseGithub(&releaseGithubOpts{
+	err = releaseGithub(&releaseGithubOpts{
 		owner:      env.Str(env.GithubOwner),
 		repository: env.Str(env.GithubRepository),
 		version:    env.Str(env.BuildVersion),
 		token:      env.Str(env.GithubAPIToken),
 		createTag:  false, // Tag is already created manually - which is release process trigger
 	})
+	if err != nil {
+		return err
+	}
+
+	_, err = tagReleaseGithub(&releaseGithubOpts{
+		owner:      env.Str(env.GithubOwner),
+		repository: env.Str("mysterium-client-npm-package"),
+		version:    env.Str(env.BuildVersion),
+		token:      env.Str(env.GithubAPIToken),
+		createTag:  true, // Tag the related project to release artifacts in another repo
+	})
+	return err
 }
