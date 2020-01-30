@@ -42,9 +42,11 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		case node.DiscoveryTypeBroker:
 			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
 
-			brokerRepository, err := di.bootstrapDiscoveryBroker(options)
-			if err != nil {
-				return errors.Wrap(err, "failed to bootstrap broker discovery")
+			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
+			if options.FetchEnabled {
+				if err := discoverySyncStart(brokerRepository, di.EventBus); err != nil {
+					return errors.Wrap(err, "failed to enable broker discovery")
+				}
 			}
 			proposalRepository.Add(brokerRepository)
 		default:
@@ -59,23 +61,19 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	return nil
 }
 
-func (di *Dependencies) bootstrapDiscoveryBroker(options node.OptionsDiscovery) (*brokerdiscovery.Repository, error) {
-	repository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
-
-	if err := discoverySyncsInConsumerMode(repository, di.EventBus); err != nil {
-		return repository, err
-	}
-	if err := discoveryStopsOnShutdown(repository, di.EventBus); err != nil {
-		return repository, err
-	}
-	return repository, discoverySyncStart(repository)
-}
-
-func discoverySyncStart(repository *brokerdiscovery.Repository) error {
+func discoverySyncStart(repository *brokerdiscovery.Repository, eventBus eventbus.EventBus) error {
 	err := repository.Start()
 	if err != nil {
 		log.Error().Err(err).Msg("Broker discovery start failed")
 	}
+
+	if err := discoverySyncsInConsumerMode(repository, eventBus); err != nil {
+		return err
+	}
+	if err := discoveryStopsOnShutdown(repository, eventBus); err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -85,7 +83,7 @@ func discoverySyncsInConsumerMode(repository *brokerdiscovery.Repository, eventB
 		case service.Running:
 			repository.Stop()
 		case service.NotRunning:
-			discoverySyncStart(repository)
+			discoverySyncStart(repository, eventBus)
 		}
 	})
 	if err != nil {
