@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity/registry"
+	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -517,10 +518,16 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
 	factory := func() (connection.Connection, error) {
+		opts := wireGuardOptions{
+			statsUpdateInterval: 1 * time.Second,
+			handshakeTimeout:    1 * time.Minute,
+		}
 		return NewWireGuardConnection(
-			wgTunnelSetup,
+			opts,
+			newWireguardDevice(wgTunnelSetup),
 			mb.ipResolver,
 			mb.natPinger,
+			wireguard_connection.NewHandshakeWaiter(),
 		)
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)

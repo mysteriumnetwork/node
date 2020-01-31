@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
@@ -44,6 +45,8 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -290,8 +293,19 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	wireguard.Bootstrap()
+	dnsManager := wireguard_connection.NewDNSManager()
+	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
+	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
+		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
+		return endpoint.NewConnectionEndpoint(nil, resourceAllocator, 0)
+	}
 	connFactory := func() (connection.Connection, error) {
-		return wireguard_connection.NewConnection(nodeOptions.Directories.Config, di.IPResolver, di.NATPinger)
+		opts := wireguard_connection.Options{
+			DNSConfigDir:        nodeOptions.Directories.Config,
+			StatsUpdateInterval: 1 * time.Second,
+			HandshakeTimeout:    1 * time.Minute,
+		}
+		return wireguard_connection.NewConnection(opts, di.IPResolver, di.NATPinger, endpointFactory, dnsManager, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }

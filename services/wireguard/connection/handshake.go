@@ -15,24 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package connection
 
 import (
 	"errors"
 	"net"
 	"time"
+
+	"github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-const handshakeTimeout = 2 * time.Minute
+// HandshakeWaiter waits for handshake.
+type HandshakeWaiter interface {
+	// Wait waits until WireGuard does initial handshake.
+	Wait(statsFetch func() (*wireguard.Stats, error), timeout time.Duration, stop <-chan struct{}) error
+}
 
-// WaitHandshake waits until WireGuard does initial handshake.
-func WaitHandshake(statsFetch func() (*Stats, error), stop chan struct{}) error {
+// NewHandshakeWaiter returns handshake waiter instance.
+func NewHandshakeWaiter() HandshakeWaiter {
+	return &handshakeWaiter{}
+}
+
+type handshakeWaiter struct {
+}
+
+func (h *handshakeWaiter) Wait(statsFetch func() (*wireguard.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
 	// We need to send any packet to initialize handshake process.
 	handshakePingConn, err := net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
 	if err == nil {
 		defer handshakePingConn.Close()
 	}
-	timeout := time.After(handshakeTimeout)
+	timeoutCh := time.After(timeout)
 	for {
 		select {
 		case <-time.After(100 * time.Millisecond):
@@ -43,7 +56,7 @@ func WaitHandshake(statsFetch func() (*Stats, error), stop chan struct{}) error 
 			if !stats.LastHandshake.IsZero() {
 				return nil
 			}
-		case <-timeout:
+		case <-timeoutCh:
 			return errors.New("failed to receive initial handshake")
 		case <-stop:
 			return errors.New("stop received")
