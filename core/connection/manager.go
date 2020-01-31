@@ -555,7 +555,12 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 		return nil
 	}
 
-	removeRule, err := firewall.BlockNonTunnelTraffic(firewall.Session)
+	outboundIP, err := manager.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return err
+	}
+
+	removeRule, err := firewall.BlockNonTunnelTraffic(firewall.Session, outboundIP)
 	if err != nil {
 		return err
 	}

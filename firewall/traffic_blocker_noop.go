@@ -21,18 +21,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// NoopVendor is a Vendor implementation which only logs allow requests with no effects
+// noopTrafficBlocker is a Vendor implementation which only logs allow requests with no effects
 // used by default
-type NoopVendor struct {
+type noopTrafficBlocker struct{}
+
+// Setup noop setup (just log call)
+func (ntb *noopTrafficBlocker) Setup() error {
+	return nil
 }
 
-// Reset noop vendor (just log call)
-func (nb NoopVendor) Reset() {
+// Teardown noop cleanup (just log call)
+func (ntb *noopTrafficBlocker) Teardown() {
 	log.Info().Msg("Rules reset was requested")
 }
 
 // BlockOutgoingTraffic just logs the call
-func (nb NoopVendor) BlockOutgoingTraffic() (RemoveRule, error) {
+func (ntb *noopTrafficBlocker) BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
 	log.Info().Msg("Outgoing traffic block requested")
 	return func() {
 		log.Info().Msg("Outgoing traffic block removed")
@@ -40,11 +44,23 @@ func (nb NoopVendor) BlockOutgoingTraffic() (RemoveRule, error) {
 }
 
 // AllowIPAccess logs IP for which access was requested
-func (nb NoopVendor) AllowIPAccess(ip string) (RemoveRule, error) {
-	log.Info().Msgf("Allow %s access", ip)
+func (ntb *noopTrafficBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
+	log.Info().Msgf("Allow IP %s access", ip)
 	return func() {
 		log.Info().Msgf("Rule for IP: %s removed", ip)
 	}, nil
 }
 
-var _ Vendor = NoopVendor{}
+// AllowIPAccess logs URL for which access was requested
+func (ntb *noopTrafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
+	for _, rawURL := range rawURLs {
+		log.Info().Msgf("Allow URL %s access", rawURL)
+	}
+	return func() {
+		for _, rawURL := range rawURLs {
+			log.Info().Msgf("Rule for URL: %s removed", rawURL)
+		}
+	}, nil
+}
+
+var _ TrafficBlocker = &noopTrafficBlocker{}

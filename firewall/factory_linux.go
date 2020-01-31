@@ -1,7 +1,5 @@
-//+build !linux
-
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package vnd
+package firewall
 
-import (
-	"github.com/mysteriumnetwork/node/firewall"
-)
-
-// SetupVendor initializes default vendor or OSes which do not support it
-func SetupVendor() (firewall.Vendor, error) {
-	return firewall.NoopVendor{}, nil
+// NewTrackingBlocker create instance of traffic blocker
+func NewTrackingBlocker() *iptablesTrafficBlocker {
+	return &iptablesTrafficBlocker{
+		referenceTracker: make(map[string]refCount),
+		trafficLockScope: none,
+	}
 }
