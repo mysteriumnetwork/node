@@ -19,9 +19,9 @@
 
 package firewall
 
-// NewTrackingBlocker create instance of traffic blocker
-func NewTrackingBlocker() *iptablesTrafficBlocker {
-	return &iptablesTrafficBlocker{
+// NewOutgoingTrafficBlocker create instance of traffic blocker
+func NewOutgoingTrafficBlocker() *outgoingBlockerIptables {
+	return &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 		trafficLockScope: none,
 	}

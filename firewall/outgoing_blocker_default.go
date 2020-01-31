@@ -27,10 +27,10 @@ const (
 )
 
 // DefaultTrackingBlocker traffic blocker bootstrapped for global calls
-var DefaultTrackingBlocker TrafficBlocker = &noopTrafficBlocker{}
+var DefaultTrackingBlocker OutgoingTrafficBlocker = &outgoingBlockerNoop{}
 
-// TrafficBlocker interface neededs to be satisfied by any implementations which provide firewall capabilities, like iptables
-type TrafficBlocker interface {
+// OutgoingTrafficBlocker interface neededs to be satisfied by any implementations which provide firewall capabilities, like iptables
+type OutgoingTrafficBlocker interface {
 	Setup() error
 	Teardown()
 	BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error)

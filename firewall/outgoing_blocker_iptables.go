@@ -33,14 +33,14 @@ type refCount struct {
 	f     func()
 }
 
-type iptablesTrafficBlocker struct {
+type outgoingBlockerIptables struct {
 	lock             sync.Mutex
 	trafficLockScope Scope
 	referenceTracker map[string]refCount
 }
 
 // Setup tries to setup all changes made by setup and leave system in the state before setup
-func (itb *iptablesTrafficBlocker) Setup() error {
+func (obi *outgoingBlockerIptables) Setup() error {
 	if err := checkVersion(); err != nil {
 		return err
 	}
@@ -51,20 +51,20 @@ func (itb *iptablesTrafficBlocker) Setup() error {
 }
 
 // Teardown tries to cleanup all changes made by setup and leave system in the state before setup
-func (itb *iptablesTrafficBlocker) Teardown() {
+func (obi *outgoingBlockerIptables) Teardown() {
 	if err := cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
 }
 
 // BlockOutgoingTraffic effectively disallows any outgoing traffic from consumer node with specified scope
-func (itb *iptablesTrafficBlocker) BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
-	if itb.trafficLockScope == Global {
+func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
+	if obi.trafficLockScope == Global {
 		// nothing can override global lock
 		return func() {}, nil
 	}
-	itb.trafficLockScope = scope
-	return itb.trackingReferenceCall("block-traffic", func() (RemoveRule, error) {
+	obi.trafficLockScope = scope
+	return obi.trackingReferenceCall("block-traffic", func() (RemoveRule, error) {
 		return iptables.AddRuleWithRemoval(
 			iptables.AppendTo("OUTPUT").RuleSpec("-s", outboundIP, "-j", killswitchChain),
 		)
@@ -72,8 +72,8 @@ func (itb *iptablesTrafficBlocker) BlockOutgoingTraffic(scope Scope, outboundIP 
 }
 
 // AllowIPAccess adds exception to blocked traffic for specified URL (host part is usually taken)
-func (itb *iptablesTrafficBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
-	return itb.trackingReferenceCall("allow:"+ip, func() (rule RemoveRule, e error) {
+func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (RemoveRule, error) {
+	return obi.trackingReferenceCall("allow:"+ip, func() (rule RemoveRule, e error) {
 		return iptables.AddRuleWithRemoval(
 			iptables.InsertAt(killswitchChain, 1).RuleSpec("-d", ip, "-j", "ACCEPT"),
 		)
@@ -81,7 +81,7 @@ func (itb *iptablesTrafficBlocker) AllowIPAccess(ip string) (RemoveRule, error) 
 }
 
 // AllowURLAccess adds URL based exception to underlying blocker implementation
-func (itb *iptablesTrafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
+func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
 	var ruleRemovers []func()
 	removeAll := func() {
 		for _, ruleRemover := range ruleRemovers {
@@ -95,7 +95,7 @@ func (itb *iptablesTrafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule
 			return nil, err
 		}
 
-		remover, err := itb.AllowIPAccess(parsed.Hostname())
+		remover, err := obi.AllowIPAccess(parsed.Hostname())
 		if err != nil {
 			removeAll()
 			return nil, err
@@ -172,11 +172,11 @@ func cleanupStaleRules() error {
 	return err
 }
 
-func (itb *iptablesTrafficBlocker) trackingReferenceCall(ref string, actualCall func() (RemoveRule, error)) (RemoveRule, error) {
-	itb.lock.Lock()
-	defer itb.lock.Unlock()
+func (obi *outgoingBlockerIptables) trackingReferenceCall(ref string, actualCall func() (RemoveRule, error)) (RemoveRule, error) {
+	obi.lock.Lock()
+	defer obi.lock.Unlock()
 
-	refCount := itb.referenceTracker[ref]
+	refCount := obi.referenceTracker[ref]
 	if refCount.count == 0 {
 		removeRule, err := actualCall()
 		if err != nil {
@@ -185,25 +185,25 @@ func (itb *iptablesTrafficBlocker) trackingReferenceCall(ref string, actualCall 
 		refCount.f = removeRule
 
 		refCount.count++
-		itb.referenceTracker[ref] = refCount
+		obi.referenceTracker[ref] = refCount
 	}
 
-	return itb.decreaseRefCall(ref), nil
+	return obi.decreaseRefCall(ref), nil
 }
 
-func (itb *iptablesTrafficBlocker) decreaseRefCall(ref string) RemoveRule {
+func (obi *outgoingBlockerIptables) decreaseRefCall(ref string) RemoveRule {
 	return func() {
-		itb.lock.Lock()
-		defer itb.lock.Unlock()
+		obi.lock.Lock()
+		defer obi.lock.Unlock()
 
-		refCount := itb.referenceTracker[ref]
+		refCount := obi.referenceTracker[ref]
 		if refCount.count == 1 {
 			refCount.f()
 
 			refCount.count--
-			itb.referenceTracker[ref] = refCount
+			obi.referenceTracker[ref] = refCount
 		}
 	}
 }
 
-var _ TrafficBlocker = &iptablesTrafficBlocker{}
+var _ OutgoingTrafficBlocker = &outgoingBlockerIptables{}

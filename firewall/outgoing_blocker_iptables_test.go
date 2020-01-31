@@ -31,7 +31,7 @@ func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -49,7 +49,7 @@ func TestSessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -69,7 +69,7 @@ func TestSessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
 }
 
 func TestAllowIPAccessIsAddedAndRemoved(t *testing.T) {
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -80,7 +80,7 @@ func TestAllowIPAccessIsAddedAndRemoved(t *testing.T) {
 }
 
 func TestHostsFromMultipleURLsAreAllowed(t *testing.T) {
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -93,7 +93,7 @@ func TestHostsFromMultipleURLsAreAllowed(t *testing.T) {
 }
 
 func TestRuleIsRemovedOnlyAfterLastRemovalCall(t *testing.T) {
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -125,7 +125,7 @@ func TestBlockerSetupIsSuccessful(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 	assert.NoError(t, blocker.Setup())
@@ -158,7 +158,7 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 	assert.NoError(t, blocker.Setup())
@@ -194,7 +194,7 @@ func TestBlockerResetIsSuccessful(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 	blocker.Teardown()
@@ -209,7 +209,7 @@ func TestBlockerAddsAllowedIP(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 

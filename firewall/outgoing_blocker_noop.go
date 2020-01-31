@@ -21,22 +21,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// noopTrafficBlocker is a Vendor implementation which only logs allow requests with no effects
+// outgoingBlockerNoop is a Vendor implementation which only logs allow requests with no effects
 // used by default
-type noopTrafficBlocker struct{}
+type outgoingBlockerNoop struct{}
 
 // Setup noop setup (just log call)
-func (ntb *noopTrafficBlocker) Setup() error {
+func (obn *outgoingBlockerNoop) Setup() error {
 	return nil
 }
 
 // Teardown noop cleanup (just log call)
-func (ntb *noopTrafficBlocker) Teardown() {
+func (obn *outgoingBlockerNoop) Teardown() {
 	log.Info().Msg("Rules reset was requested")
 }
 
 // BlockOutgoingTraffic just logs the call
-func (ntb *noopTrafficBlocker) BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
+func (obn *outgoingBlockerNoop) BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
 	log.Info().Msg("Outgoing traffic block requested")
 	return func() {
 		log.Info().Msg("Outgoing traffic block removed")
@@ -44,7 +44,7 @@ func (ntb *noopTrafficBlocker) BlockOutgoingTraffic(scope Scope, outboundIP stri
 }
 
 // AllowIPAccess logs IP for which access was requested
-func (ntb *noopTrafficBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
+func (obn *outgoingBlockerNoop) AllowIPAccess(ip string) (RemoveRule, error) {
 	log.Info().Msgf("Allow IP %s access", ip)
 	return func() {
 		log.Info().Msgf("Rule for IP: %s removed", ip)
@@ -52,7 +52,7 @@ func (ntb *noopTrafficBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
 }
 
 // AllowIPAccess logs URL for which access was requested
-func (ntb *noopTrafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
+func (obn *outgoingBlockerNoop) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
 	for _, rawURL := range rawURLs {
 		log.Info().Msgf("Allow URL %s access", rawURL)
 	}
@@ -63,4 +63,4 @@ func (ntb *noopTrafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule, er
 	}, nil
 }
 
-var _ TrafficBlocker = &noopTrafficBlocker{}
+var _ OutgoingTrafficBlocker = &outgoingBlockerNoop{}

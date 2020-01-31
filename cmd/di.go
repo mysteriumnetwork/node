@@ -797,7 +797,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
-	firewall.DefaultTrackingBlocker = firewall.NewTrackingBlocker()
+	firewall.DefaultTrackingBlocker = firewall.NewOutgoingTrafficBlocker()
 	if err := firewall.DefaultTrackingBlocker.Setup(); err != nil {
 		return err
 	}
