@@ -31,9 +31,9 @@ const (
 
 // OptionsDiscovery describes possible parameters of discovery configuration
 type OptionsDiscovery struct {
-	Types                  []DiscoveryType
-	Address                string
-	ProposalFetcherEnabled bool
-	PingInterval           time.Duration
-	FetchInterval          time.Duration
+	Types         []DiscoveryType
+	Address       string
+	PingInterval  time.Duration
+	FetchEnabled  bool
+	FetchInterval time.Duration
 }

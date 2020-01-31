@@ -161,7 +161,6 @@ type Dependencies struct {
 	Reporter     *feedback.Reporter
 
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
-	ConsumerInvoiceStorage   *pingpong.ConsumerInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
@@ -386,7 +385,6 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
-	di.ConsumerInvoiceStorage = pingpong.NewConsumerInvoiceStorage(invoiceStorage)
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	return nil
@@ -511,7 +509,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.Keystore,
 			nodeOptions,
 			di.SignerFactory,
-			di.ConsumerInvoiceStorage,
 			di.ConsumerTotalsStorage,
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,

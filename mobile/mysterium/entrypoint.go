@@ -124,9 +124,9 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			Address: "https://quality.mysterium.network/api/v1",
 		},
 		Discovery: node.OptionsDiscovery{
-			Types:                  []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker},
-			Address:                network.MysteriumAPIAddress,
-			ProposalFetcherEnabled: false,
+			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker},
+			Address:      network.MysteriumAPIAddress,
+			FetchEnabled: false,
 		},
 		Location: node.OptionsLocation{
 			IPDetectorURL: "https://api.ipify.org/?format=json",
