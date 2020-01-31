@@ -18,49 +18,47 @@
 package firewall
 
 import (
+	"net"
+
 	"github.com/rs/zerolog/log"
 )
 
-// outgoingBlockerNoop is a Vendor implementation which only logs allow requests with no effects
+// NewIncomingTrafficBlockerNoop creates instance of noop traffic blocker
+func NewIncomingTrafficBlockerNoop() IncomingTrafficBlocker {
+	return &incomingBlockerNoop{}
+}
+
+// incomingBlockerNoop is a implementation which only logs allow requests with no effects
 // used by default
-type outgoingBlockerNoop struct{}
+type incomingBlockerNoop struct{}
 
 // Setup noop setup (just log call)
-func (obn *outgoingBlockerNoop) Setup() error {
+func (ibn *incomingBlockerNoop) Setup() error {
+	log.Info().Msg("Rules bootstrap was requested")
 	return nil
 }
 
 // Teardown noop cleanup (just log call)
-func (obn *outgoingBlockerNoop) Teardown() {
+func (ibn *incomingBlockerNoop) Teardown() {
 	log.Info().Msg("Rules reset was requested")
 }
 
 // BlockOutgoingTraffic just logs the call
-func (obn *outgoingBlockerNoop) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
-	log.Info().Msg("Outgoing traffic block requested")
-	return func() {
-		log.Info().Msg("Outgoing traffic block removed")
+func (ibn *incomingBlockerNoop) BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error) {
+	log.Info().Msg("Incoming traffic block requested")
+	return func() error {
+		log.Info().Msg("Incoming traffic block removed")
+		return nil
 	}, nil
 }
 
 // AllowIPAccess logs IP for which access was requested
-func (obn *outgoingBlockerNoop) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
+func (ibn *incomingBlockerNoop) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
 	log.Info().Msgf("Allow IP %s access", ip)
-	return func() {
+	return func() error {
 		log.Info().Msgf("Rule for IP: %s removed", ip)
+		return nil
 	}, nil
 }
 
-// AllowIPAccess logs URL for which access was requested
-func (obn *outgoingBlockerNoop) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
-	for _, rawURL := range rawURLs {
-		log.Info().Msgf("Allow URL %s access", rawURL)
-	}
-	return func() {
-		for _, rawURL := range rawURLs {
-			log.Info().Msgf("Rule for URL: %s removed", rawURL)
-		}
-	}, nil
-}
-
-var _ OutgoingTrafficBlocker = &outgoingBlockerNoop{}
+var _ IncomingTrafficBlocker = &incomingBlockerNoop{}

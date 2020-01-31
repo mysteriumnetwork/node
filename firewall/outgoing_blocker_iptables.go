@@ -41,30 +41,31 @@ type outgoingBlockerIptables struct {
 
 // Setup tries to setup all changes made by setup and leave system in the state before setup
 func (obi *outgoingBlockerIptables) Setup() error {
-	if err := checkVersion(); err != nil {
+	if err := obi.checkIptablesVersion(); err != nil {
 		return err
 	}
-	if err := cleanupStaleRules(); err != nil {
+	if err := obi.cleanupStaleRules(); err != nil {
 		return err
 	}
-	return setupKillSwitchChain()
+	return obi.setupKillSwitchChain()
 }
 
 // Teardown tries to cleanup all changes made by setup and leave system in the state before setup
 func (obi *outgoingBlockerIptables) Teardown() {
-	if err := cleanupStaleRules(); err != nil {
+	if err := obi.cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
 }
 
 // BlockOutgoingTraffic effectively disallows any outgoing traffic from consumer node with specified scope
-func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
+func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
 	if obi.trafficLockScope == Global {
 		// nothing can override global lock
 		return func() {}, nil
 	}
 	obi.trafficLockScope = scope
-	return obi.trackingReferenceCall("block-traffic", func() (RemoveRule, error) {
+	return obi.trackingReferenceCall("block-traffic", func() (OutgoingRuleRemove, error) {
+		// Take custom chain into effect for packets in OUTPUT
 		return iptables.AddRuleWithRemoval(
 			iptables.AppendTo("OUTPUT").RuleSpec("-s", outboundIP, "-j", killswitchChain),
 		)
@@ -72,8 +73,8 @@ func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP
 }
 
 // AllowIPAccess adds exception to blocked traffic for specified URL (host part is usually taken)
-func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (RemoveRule, error) {
-	return obi.trackingReferenceCall("allow:"+ip, func() (rule RemoveRule, e error) {
+func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
+	return obi.trackingReferenceCall("allow:"+ip, func() (rule OutgoingRuleRemove, e error) {
 		return iptables.AddRuleWithRemoval(
 			iptables.InsertAt(killswitchChain, 1).RuleSpec("-d", ip, "-j", "ACCEPT"),
 		)
@@ -81,7 +82,7 @@ func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (RemoveRule, error)
 }
 
 // AllowURLAccess adds URL based exception to underlying blocker implementation
-func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
+func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
 	var ruleRemovers []func()
 	removeAll := func() {
 		for _, ruleRemover := range ruleRemovers {
@@ -105,7 +106,7 @@ func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (RemoveRul
 	return removeAll, nil
 }
 
-func checkVersion() error {
+func (obi *outgoingBlockerIptables) checkIptablesVersion() error {
 	output, err := iptables.Exec("--version")
 	if err != nil {
 		return err
@@ -116,7 +117,7 @@ func checkVersion() error {
 	return nil
 }
 
-func setupKillSwitchChain() error {
+func (obi *outgoingBlockerIptables) setupKillSwitchChain() error {
 	// Add chain
 	if _, err := iptables.Exec("-N", killswitchChain); err != nil {
 		return err
@@ -138,14 +139,14 @@ func setupKillSwitchChain() error {
 	return nil
 }
 
-func cleanupStaleRules() error {
+func (obi *outgoingBlockerIptables) cleanupStaleRules() error {
 	// List rules
 	rules, err := iptables.Exec("-S", "OUTPUT")
 	if err != nil {
 		return err
 	}
 	for _, rule := range rules {
-		//detect if any references exist in OUTPUT chain like -j CONSUMER_KILL_SWITCH
+		// detect if any references exist in OUTPUT chain like -j CONSUMER_KILL_SWITCH
 		if strings.HasSuffix(rule, killswitchChain) {
 			deleteRule := strings.Replace(rule, "-A", "-D", 1)
 			deleteRuleArgs := strings.Split(deleteRule, " ")
@@ -157,7 +158,7 @@ func cleanupStaleRules() error {
 
 	// List chain rules
 	if _, err := iptables.Exec("-L", killswitchChain); err != nil {
-		//error means no such chain - log error just in case and bail out
+		// error means no such chain - log error just in case and bail out
 		log.Info().Err(err).Msg("[setup] Got error while listing kill switch chain rules. Probably nothing to worry about")
 		return nil
 	}
@@ -172,7 +173,7 @@ func cleanupStaleRules() error {
 	return err
 }
 
-func (obi *outgoingBlockerIptables) trackingReferenceCall(ref string, actualCall func() (RemoveRule, error)) (RemoveRule, error) {
+func (obi *outgoingBlockerIptables) trackingReferenceCall(ref string, actualCall func() (OutgoingRuleRemove, error)) (OutgoingRuleRemove, error) {
 	obi.lock.Lock()
 	defer obi.lock.Unlock()
 
@@ -191,7 +192,7 @@ func (obi *outgoingBlockerIptables) trackingReferenceCall(ref string, actualCall
 	return obi.decreaseRefCall(ref), nil
 }
 
-func (obi *outgoingBlockerIptables) decreaseRefCall(ref string) RemoveRule {
+func (obi *outgoingBlockerIptables) decreaseRefCall(ref string) OutgoingRuleRemove {
 	return func() {
 		obi.lock.Lock()
 		defer obi.lock.Unlock()

@@ -33,29 +33,29 @@ var DefaultTrackingBlocker OutgoingTrafficBlocker = &outgoingBlockerNoop{}
 type OutgoingTrafficBlocker interface {
 	Setup() error
 	Teardown()
-	BlockOutgoingTraffic(scope Scope, outboundIP string) (RemoveRule, error)
-	AllowIPAccess(ip string) (RemoveRule, error)
-	AllowURLAccess(rawURLs ...string) (RemoveRule, error)
+	BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error)
+	AllowIPAccess(ip string) (OutgoingRuleRemove, error)
+	AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error)
 }
 
 // Scope type represents scope of blocking consumer traffic
 type Scope string
 
-// RemoveRule type defines function for removal of created rule
-type RemoveRule func()
+// OutgoingRuleRemove type defines function for removal of created rule
+type OutgoingRuleRemove func()
 
 // BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope
-func BlockNonTunnelTraffic(scope Scope, outboundIP string) (RemoveRule, error) {
+func BlockNonTunnelTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
 	return DefaultTrackingBlocker.BlockOutgoingTraffic(scope, outboundIP)
 }
 
 // AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
-func AllowURLAccess(urls ...string) (RemoveRule, error) {
+func AllowURLAccess(urls ...string) (OutgoingRuleRemove, error) {
 	return DefaultTrackingBlocker.AllowURLAccess(urls...)
 }
 
 // AllowIPAccess adds IP based exception to underlying blocker implementation
-func AllowIPAccess(ip string) (RemoveRule, error) {
+func AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
 	return DefaultTrackingBlocker.AllowIPAccess(ip)
 }
 

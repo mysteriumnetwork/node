@@ -18,7 +18,6 @@
 package firewall
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/firewall/iptables"
@@ -26,8 +25,8 @@ import (
 )
 
 func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{},
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
@@ -44,8 +43,8 @@ func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
 }
 
 func TestSessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{},
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
@@ -111,8 +110,8 @@ func TestRuleIsRemovedOnlyAfterLastRemovalCall(t *testing.T) {
 }
 
 func TestBlockerSetupIsSuccessful(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{
 			"--version": {
 				output: []string{"iptables v1.6.0"},
 			},
@@ -134,8 +133,8 @@ func TestBlockerSetupIsSuccessful(t *testing.T) {
 }
 
 func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{
 			"--version": {
 				output: []string{"iptables v1.6.0"},
 			},
@@ -171,8 +170,8 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 }
 
 func TestBlockerResetIsSuccessful(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{
 			"-S OUTPUT": {
 				output: []string{
 					"-P OUTPUT ACCEPT",
@@ -204,8 +203,8 @@ func TestBlockerResetIsSuccessful(t *testing.T) {
 }
 
 func TestBlockerAddsAllowedIP(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{},
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
@@ -220,31 +219,4 @@ func TestBlockerAddsAllowedIP(t *testing.T) {
 	removeRuleFunc()
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-D", killswitchChain, "-d", "2.2.2.2", "-j", "ACCEPT"))
 
-}
-
-type cmdExecResult struct {
-	called bool
-	output []string
-	err    error
-}
-
-type mockedCmdExec struct {
-	mocks map[string]cmdExecResult
-}
-
-func (mce *mockedCmdExec) Exec(args ...string) ([]string, error) {
-	key := argsToKey(args...)
-	res := mce.mocks[key]
-	res.called = true
-	mce.mocks[key] = res
-	return res.output, res.err
-}
-
-func (mce *mockedCmdExec) VerifyCalledWithArgs(args ...string) bool {
-	key := argsToKey(args...)
-	return mce.mocks[key].called
-}
-
-func argsToKey(args ...string) string {
-	return strings.Join(args, " ")
 }
