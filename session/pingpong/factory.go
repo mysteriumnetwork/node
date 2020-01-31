@@ -109,7 +109,6 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	keystore *keystore.KeyStore,
 	options node.Options,
 	signer identity.SignerFactory,
-	invoiceStorage consumerInvoiceStorage,
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,
 	registryAddress string, publisher eventbus.Publisher) func(paymentInfo *promise.PaymentInfo,
@@ -153,7 +152,6 @@ func BackwardsCompatibleExchangeFactoryFunc(
 			deps := ExchangeMessageTrackerDeps{
 				InvoiceChan:               invoices,
 				PeerExchangeMessageSender: NewExchangeSender(dialog),
-				ConsumerInvoiceStorage:    invoiceStorage,
 				ConsumerTotalsStorage:     totalStorage,
 				TimeTracker:               &timeTracker,
 				Ks:                        keystore,

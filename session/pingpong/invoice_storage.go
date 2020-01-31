@@ -33,7 +33,6 @@ type bucketName string
 
 const receivedInvoices bucketName = "received_invoices"
 const sentInvoices bucketName = "sent_invoices"
-const agreementIDCounter bucketName = "agreement_id_counter"
 const agreementRBucket bucketName = "agreement_r"
 
 type genericInvoiceStorage interface {
@@ -43,31 +42,8 @@ type genericInvoiceStorage interface {
 
 type providerSpecificInvoiceStorage interface {
 	genericInvoiceStorage
-	GetNewAgreementID(identity.Identity) (uint64, error)
 	StoreR(providerID identity.Identity, agreementID uint64, r string) error
 	GetR(providerID identity.Identity, agreementID uint64) (string, error)
-}
-
-// ConsumerInvoiceStorage allows the consumer to store received invoices.
-type ConsumerInvoiceStorage struct {
-	gis genericInvoiceStorage
-}
-
-// NewConsumerInvoiceStorage allows the consumer to store invoices.
-func NewConsumerInvoiceStorage(gis genericInvoiceStorage) *ConsumerInvoiceStorage {
-	return &ConsumerInvoiceStorage{
-		gis: gis,
-	}
-}
-
-// Store stores the given invoice
-func (cis *ConsumerInvoiceStorage) Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error {
-	return cis.gis.StoreInvoice(string(receivedInvoices), consumerIdentity.Address+providerIdentity.Address, invoice)
-}
-
-// Get returns the stored invoice
-func (cis *ConsumerInvoiceStorage) Get(consumerIdentity, providerIdentity identity.Identity) (crypto.Invoice, error) {
-	return cis.gis.GetInvoice(string(receivedInvoices), consumerIdentity.Address+providerIdentity.Address)
 }
 
 // ProviderInvoiceStorage allows the provider to store sent invoices.
@@ -90,11 +66,6 @@ func (pis *ProviderInvoiceStorage) Store(providerIdentity, consumerIdentity iden
 // Get returns the stored invoice.
 func (pis *ProviderInvoiceStorage) Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error) {
 	return pis.gis.GetInvoice(string(sentInvoices), providerIdentity.Address+consumerIdentity.Address)
-}
-
-// GetNewAgreementID returns a new agreement id for the provider.
-func (pis *ProviderInvoiceStorage) GetNewAgreementID(providerID identity.Identity) (uint64, error) {
-	return pis.gis.GetNewAgreementID(providerID)
 }
 
 // StoreR stores the given R.
@@ -132,25 +103,6 @@ func (is *InvoiceStorage) StoreInvoice(bucket string, key string, invoice crypto
 	is.lock.Lock()
 	defer is.lock.Unlock()
 	return errors.Wrap(is.bolt.SetValue(bucket, key, invoice), "could not save invoice")
-}
-
-// GetNewAgreementID generates a new agreement id.
-func (is *InvoiceStorage) GetNewAgreementID(providerID identity.Identity) (uint64, error) {
-	is.lock.Lock()
-	defer is.lock.Unlock()
-
-	var res uint64 = 1
-	err := is.bolt.GetValue(string(agreementIDCounter), providerID.Address, &res)
-	if err != nil {
-		if err.Error() != errBoltNotFound {
-			return res, errors.Wrap(err, "could not get agreement id")
-		}
-	}
-	err = is.bolt.SetValue(string(agreementIDCounter), providerID.Address, res+1)
-	if err != nil {
-		err = errors.Wrap(err, "could not set agreement id")
-	}
-	return res, err
 }
 
 func (is *InvoiceStorage) getRKey(providerID identity.Identity, agreementID uint64) string {
