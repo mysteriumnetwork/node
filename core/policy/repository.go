@@ -114,6 +114,25 @@ func (r *Repository) Rules() []market.AccessPolicyRuleSet {
 	return policiesRules
 }
 
+// HasDNSRules returns flag if any DNS rules are applied
+func (r *Repository) HasDNSRules() bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	for _, item := range r.items {
+		for _, rule := range item.rules.Allow {
+			if rule.Type == market.AccessPolicyTypeDNSZone {
+				return true
+			}
+			if rule.Type == market.AccessPolicyTypeDNSHostname {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func (r *Repository) findItemFor(policy market.AccessPolicy) (*listItem, error) {
 	for _, item := range r.items {
 		if item.policy == policy {
