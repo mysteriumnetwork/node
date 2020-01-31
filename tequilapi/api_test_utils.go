@@ -21,18 +21,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 type testClient struct {
-	t       *testing.T
+	t       assert.TestingT
 	baseURL string
 }
 
 // NewTestClient returns client for making test requests
-func NewTestClient(t *testing.T, address string) *testClient {
+func NewTestClient(t assert.TestingT, address string) *testClient {
 	return &testClient{
 		t,
 		fmt.Sprintf("http://%s", address),
@@ -47,12 +46,12 @@ func (tc *testClient) Get(path string) *http.Response {
 	return resp
 }
 
-func expectJSONStatus200(t *testing.T, resp *http.Response, httpStatus int) {
+func expectJSONStatus200(t assert.TestingT, resp *http.Response, httpStatus int) {
 	assert.Equal(t, "application/json; charset=utf-8", resp.Header.Get("Content-type"))
 	assert.Equal(t, httpStatus, resp.StatusCode)
 }
 
-func parseResponseAsJSON(t *testing.T, resp *http.Response, v interface{}) {
+func parseResponseAsJSON(t assert.TestingT, resp *http.Response, v interface{}) {
 	err := json.NewDecoder(resp.Body).Decode(v)
 	assert.Nil(t, err)
 }

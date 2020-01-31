@@ -37,6 +37,8 @@ import (
 	_ "github.com/mysteriumnetwork/node/ci/util/docker"
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/localnet"
+	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/test/testinstall"
 )
 
 // GenerateEnvFile generates env file for further stages

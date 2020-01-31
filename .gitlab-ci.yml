@@ -71,6 +71,13 @@ test-e2e-compatibility:
   tags: [go]
   script: go run mage.go -v TestE2ECompatibility
 
+test-install-script:
+  stage: test
+  tags: [go,high_performance]
+  script: go run mage.go -v TestInstallScript
+  only:
+    - master
+
 create-bucket:
   stage: pre-release
   tags: [go]
