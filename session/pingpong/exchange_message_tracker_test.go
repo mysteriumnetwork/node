@@ -65,12 +65,10 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(time.Now)
-	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
-		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		Ks:                        ks,
@@ -113,12 +111,10 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(time.Now)
-	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
-		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		Publisher:                 &mockPublisher{},
@@ -181,12 +177,10 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(time.Now)
-	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
-		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		Publisher:                 &mockPublisher{},
@@ -245,13 +239,11 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(time.Now)
-	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
 		Publisher:                 &mockPublisher{},
 		PeerExchangeMessageSender: mockSender,
-		ConsumerInvoiceStorage:    invoiceStorage,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		Ks:                        ks,
@@ -479,9 +471,9 @@ func TestExchangeMessageTracker_incrementGrandTotalPromised(t *testing.T) {
 
 func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 	type fields struct {
-		peer                   identity.Identity
-		consumerInvoiceStorage *mockConsumerInvoiceStorage
-		consumerTotalsStorage  *mockConsumerTotalsStorage
+		peer                  identity.Identity
+		lastInvoice           crypto.Invoice
+		consumerTotalsStorage *mockConsumerTotalsStorage
 	}
 	tests := []struct {
 		name          string
@@ -492,19 +484,8 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name: "bubbles invoice storage errors",
-			fields: fields{
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{
-					err: errors.New("explosions everywhere"),
-				},
-			},
-			invoice: crypto.Invoice{},
-			wantErr: true,
-		},
-		{
 			name: "bubbles totals storage errors",
 			fields: fields{
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					err: errors.New("explosions everywhere"),
 				},
@@ -513,11 +494,8 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "ignores bolt not found errors",
+			name: "assumes zero",
 			fields: fields{
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{
-					err: ErrNotFound,
-				},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{},
 			},
 			invoice:       crypto.Invoice{AgreementTotal: 10},
@@ -528,9 +506,6 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 		{
 			name: "calculates correctly with different grand total",
 			fields: fields{
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{
-					err: ErrNotFound,
-				},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					res: 100,
 				},
@@ -543,9 +518,7 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 		{
 			name: "calculates correctly with previous invoice",
 			fields: fields{
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{
-					res: crypto.Invoice{AgreementID: 111, AgreementTotal: 111},
-				},
+				lastInvoice: crypto.Invoice{AgreementID: 111, AgreementTotal: 111},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					res: 100,
 				},
@@ -560,11 +533,11 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			emt := &ExchangeMessageTracker{
 				deps: ExchangeMessageTrackerDeps{
-					ConsumerTotalsStorage:  tt.fields.consumerTotalsStorage,
-					Peer:                   tt.fields.peer,
-					ConsumerInvoiceStorage: tt.fields.consumerInvoiceStorage,
+					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
+					Peer:                  tt.fields.peer,
 				},
 			}
+			emt.lastInvoice = tt.fields.lastInvoice
 			gotToPromise, gotDiff, err := emt.calculateAmountToPromise(tt.invoice)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExchangeMessageTracker.calculateAmountToPromise() error = %v, wantErr %v", err, tt.wantErr)
@@ -604,15 +577,13 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 			},
 			ConsumerTotalsStorage: &mockConsumerTotalsStorage{},
 			Peer:                  peerID,
-			ConsumerInvoiceStorage: &mockConsumerInvoiceStorage{
-				res: crypto.Invoice{
-					AgreementTotal: 10,
-				},
-			},
-			Ks:        ks,
-			Identity:  identity.FromAddress(acc.Address.Hex()),
-			Publisher: mp,
+			Ks:                    ks,
+			Identity:              identity.FromAddress(acc.Address.Hex()),
+			Publisher:             mp,
 		},
+	}
+	emt.lastInvoice = crypto.Invoice{
+		AgreementTotal: 10,
 	}
 	err = emt.issueExchangeMessage(crypto.Invoice{
 		AgreementTotal: 15,
@@ -646,7 +617,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 		keystore                  *keystore.KeyStore
 		identity                  identity.Identity
 		peer                      identity.Identity
-		consumerInvoiceStorage    *mockConsumerInvoiceStorage
+		lastInvoice               crypto.Invoice
 		consumerTotalsStorage     *mockConsumerTotalsStorage
 	}
 	type args struct {
@@ -660,21 +631,6 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 		wantMsg *crypto.ExchangeMessage
 	}{
 		{
-			name: "bubbles calculation errors",
-			fields: fields{
-				identity: identity.FromAddress(acc.Address.Hex()),
-				peer:     peerID,
-				keystore: ks,
-				peerExchangeMessageSender: &MockPeerExchangeMessageSender{
-					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
-				},
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{
-					err: errors.New("explosions everywhere"),
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "bubbles exchange message creation errors",
 			fields: fields{
 				identity: identity.FromAddress(""),
@@ -683,8 +639,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 				peerExchangeMessageSender: &MockPeerExchangeMessageSender{
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 				},
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{},
-				consumerTotalsStorage:  &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{},
 			},
 			wantErr: true,
 		},
@@ -698,8 +653,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 					mockError:     errors.New("explosions everywhere"),
 				},
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{},
-				consumerTotalsStorage:  &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{},
 			},
 			wantErr: false,
 		},
@@ -712,8 +666,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 				peerExchangeMessageSender: &MockPeerExchangeMessageSender{
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 				},
-				consumerInvoiceStorage: &mockConsumerInvoiceStorage{},
-				consumerTotalsStorage:  &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{},
 			},
 			args: args{
 				invoice: crypto.Invoice{
@@ -731,12 +684,12 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 					PeerExchangeMessageSender: tt.fields.peerExchangeMessageSender,
 					ConsumerTotalsStorage:     tt.fields.consumerTotalsStorage,
 					Peer:                      tt.fields.peer,
-					ConsumerInvoiceStorage:    tt.fields.consumerInvoiceStorage,
 					Ks:                        tt.fields.keystore,
 					Identity:                  tt.fields.identity,
 					Publisher:                 &mockPublisher{},
 				},
 			}
+			emt.lastInvoice = tt.fields.lastInvoice
 			if err := emt.issueExchangeMessage(tt.args.invoice); (err != nil) != tt.wantErr {
 				t.Errorf("ExchangeMessageTracker.issueExchangeMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}

@@ -47,65 +47,6 @@ var invoiceTwo = crypto.Invoice{
 	Provider:       identityTwo.Address,
 }
 
-func TestConsumerInvoiceStorage(t *testing.T) {
-	consumerID := identity.FromAddress("0xconsumer")
-	dir, err := ioutil.TempDir("", "consumerInvoiceTest")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	bolt, err := boltdb.NewStorage(dir)
-	assert.NoError(t, err)
-	defer bolt.Close()
-
-	genericStorage := NewInvoiceStorage(bolt)
-
-	consumerStorage := NewConsumerInvoiceStorage(genericStorage)
-
-	// check if errors are wrapped correctly
-	_, err = consumerStorage.Get(consumerID, identityOne)
-	assert.Equal(t, ErrNotFound, err)
-
-	// store and check that invoice is stored correctly
-	err = consumerStorage.Store(consumerID, identityOne, invoiceOne)
-	assert.NoError(t, err)
-
-	invoice, err := consumerStorage.Get(consumerID, identityOne)
-	assert.NoError(t, err)
-	assert.EqualValues(t, invoiceOne, invoice)
-
-	// overwrite the invoice, check if it is overwritten
-	err = consumerStorage.Store(consumerID, identityOne, invoiceTwo)
-	assert.NoError(t, err)
-
-	invoice, err = consumerStorage.Get(consumerID, identityOne)
-	assert.NoError(t, err)
-	assert.EqualValues(t, invoiceTwo, invoice)
-
-	// store two invoices, check if both are gotten correctly
-	err = consumerStorage.Store(consumerID, identityTwo, invoiceOne)
-	assert.NoError(t, err)
-
-	invoice, err = consumerStorage.Get(consumerID, identityOne)
-	assert.NoError(t, err)
-	assert.EqualValues(t, invoiceTwo, invoice)
-
-	invoice, err = consumerStorage.Get(consumerID, identityTwo)
-	assert.NoError(t, err)
-	assert.EqualValues(t, invoiceOne, invoice)
-
-	// check for possibility for multiple consumers to store invoices
-	consumerTwo := identity.FromAddress("0xconsumerTwo")
-	_, err = consumerStorage.Get(consumerTwo, identityTwo)
-	assert.Equal(t, ErrNotFound, err)
-
-	err = consumerStorage.Store(consumerTwo, identityTwo, invoiceOne)
-	assert.NoError(t, err)
-
-	invoice, err = consumerStorage.Get(consumerTwo, identityTwo)
-	assert.NoError(t, err)
-	assert.EqualValues(t, invoiceOne, invoice)
-}
-
 func TestProviderInvoiceStorage(t *testing.T) {
 	providerID := identity.FromAddress("0xprovider")
 	dir, err := ioutil.TempDir("", "providerInvoiceTest")
