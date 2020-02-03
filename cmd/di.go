@@ -576,6 +576,7 @@ func newSessionManagerFactory(
 	bcHelper *pingpong.BlockchainWithRetries,
 	transactor *registry.Transactor,
 	paymentsDisabled bool,
+	settler *pingpong.AccountantPromiseSettler,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
@@ -617,6 +618,7 @@ func newSessionManagerFactory(
 			eventbus,
 			transactor,
 			proposal,
+			settler.ForceSettle,
 		)
 		return session.NewManager(
 			proposal,
