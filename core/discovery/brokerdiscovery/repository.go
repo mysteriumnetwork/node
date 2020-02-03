@@ -34,9 +34,7 @@ type Repository struct {
 	receiver        communication.Receiver
 	timeoutInterval time.Duration
 
-	stopOnce sync.Once
-	stopChan chan bool
-
+	watchdogStop chan struct{}
 	watchdogStep time.Duration
 	watchdogLock sync.Mutex
 	watchdogSeen map[market.ProposalID]time.Time
@@ -54,6 +52,7 @@ func NewRepository(
 		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
 		timeoutInterval: proposalTimeoutInterval,
 
+		watchdogStop: make(chan struct{}),
 		watchdogStep: proposalCheckInterval,
 		watchdogSeen: make(map[market.ProposalID]time.Time),
 	}
@@ -86,8 +85,6 @@ func (s *Repository) Start() error {
 		return err
 	}
 
-	s.stopOnce = sync.Once{}
-	s.stopChan = make(chan bool)
 	go s.proposalWatchdog()
 
 	return nil
@@ -95,9 +92,7 @@ func (s *Repository) Start() error {
 
 // Stop ends proposals synchronization to storage
 func (s *Repository) Stop() {
-	s.stopOnce.Do(func() {
-		close(s.stopChan)
-	})
+	s.watchdogStop <- struct{}{}
 
 	s.receiver.ReceiveUnsubscribe(pingEndpoint)
 	s.receiver.ReceiveUnsubscribe(unregisterEndpoint)
@@ -137,7 +132,7 @@ func (s *Repository) proposalPingMessage(message pingMessage) error {
 func (s *Repository) proposalWatchdog() {
 	for {
 		select {
-		case <-s.stopChan:
+		case <-s.watchdogStop:
 			return
 		case <-time.After(s.watchdogStep):
 			s.watchdogLock.Lock()
