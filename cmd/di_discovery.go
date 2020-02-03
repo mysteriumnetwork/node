@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/apidiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/pkg/errors"
@@ -49,6 +48,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 				}
 			}
 			proposalRepository.Add(brokerRepository)
+			di.DiscoveryWorker = brokerRepository
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
@@ -70,9 +70,6 @@ func discoverySyncStart(repository *brokerdiscovery.Repository, eventBus eventbu
 	if err := discoverySyncsInConsumerMode(repository, eventBus); err != nil {
 		return err
 	}
-	if err := discoveryStopsOnShutdown(repository, eventBus); err != nil {
-		return err
-	}
 
 	return err
 }
@@ -88,14 +85,6 @@ func discoverySyncsInConsumerMode(repository *brokerdiscovery.Repository, eventB
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe broker discovery to service events")
-	}
-	return nil
-}
-
-func discoveryStopsOnShutdown(repository *brokerdiscovery.Repository, eventBus eventbus.EventBus) error {
-	err := eventBus.SubscribeAsync(string(event.StatusStopped), repository.Stop)
-	if err != nil {
-		return errors.Wrap(err, "could not subscribe broker discovery to node events")
 	}
 	return nil
 }
