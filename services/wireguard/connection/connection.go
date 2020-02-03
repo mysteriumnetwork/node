@@ -20,6 +20,7 @@ package connection
 import (
 	"encoding/json"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer"
@@ -28,37 +29,44 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
+// Options represents connection options.
+type Options struct {
+	DNSConfigDir        string
+	StatsUpdateInterval time.Duration
+	HandshakeTimeout    time.Duration
+}
+
 // NewConnection returns new WireGuard connection.
-func NewConnection(configDir string, ipResolver ip.Resolver, natPinger traversal.NATProviderPinger) (connection.Connection, error) {
+func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NATProviderPinger, endpointFactory wg.EndpointFactory, dnsManager DNSManager, handshakeWaiter HandshakeWaiter) (connection.Connection, error) {
 	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate private key")
 	}
 
 	return &Connection{
-		done:             make(chan struct{}),
-		statsCheckerStop: make(chan struct{}),
-		pingerStop:       make(chan struct{}),
-		stateCh:          make(chan connection.State, 100),
-		statisticsCh:     make(chan consumer.SessionStatistics, 100),
-		privateKey:       privateKey,
-		configDir:        configDir,
-		ipResolver:       ipResolver,
-		natPinger:        natPinger,
-		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(nil, connectionResourceAllocator(), 0)
-		},
+		done:                make(chan struct{}),
+		statsCheckerStop:    make(chan struct{}),
+		pingerStop:          make(chan struct{}),
+		stateCh:             make(chan connection.State, 100),
+		statisticsCh:        make(chan consumer.SessionStatistics, 100),
+		privateKey:          privateKey,
+		opts:                opts,
+		ipResolver:          ipResolver,
+		natPinger:           natPinger,
+		connEndpointFactory: endpointFactory,
+		dnsManager:          dnsManager,
+		handshakeWaiter:     handshakeWaiter,
 	}, nil
 }
 
 // Connection which does wireguard tunneling.
 type Connection struct {
+	stopOnce         sync.Once
 	done             chan struct{}
 	statsCheckerStop chan struct{}
 	pingerStop       chan struct{}
@@ -69,9 +77,11 @@ type Connection struct {
 	ipResolver          ip.Resolver
 	connectionEndpoint  wg.ConnectionEndpoint
 	removeAllowedIPRule func()
-	configDir           string
+	opts                Options
 	natPinger           traversal.NATProviderPinger
-	connEndpointFactory func() (wg.ConnectionEndpoint, error)
+	connEndpointFactory wg.EndpointFactory
+	dnsManager          DNSManager
+	handshakeWaiter     HandshakeWaiter
 }
 
 // State returns connection state channel.
@@ -97,17 +107,15 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 	c.removeAllowedIPRule = removeAllowedIPRule
 
-	// TODO: Fix conn cleanups https://github.com/mysteriumnetwork/node/issues/1499
 	defer func() {
 		if err != nil {
-			c.stateCh <- connection.NotConnected
-			close(c.done)
-			removeAllowedIPRule()
+			c.Stop()
 		}
 	}()
 
-	natPunchingEnabled := config.LocalPort > 0
-	if natPunchingEnabled {
+	c.stateCh <- connection.Connecting
+
+	if config.LocalPort > 0 {
 		err = c.natPinger.PingProvider(
 			config.Provider.Endpoint.IP.String(),
 			config.RemotePort,
@@ -119,8 +127,6 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 			return errors.Wrap(err, "could not ping provider")
 		}
 	}
-
-	c.stateCh <- connection.Connecting
 
 	log.Info().Msg("Starting new connection")
 	conn, err := c.startConn(wg.ConsumerModeConfig{
@@ -145,7 +151,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 
 	log.Info().Msg("Waiting for initial handshake")
-	if err := wg.WaitHandshake(conn.PeerStats, c.done); err != nil {
+	if err := c.handshakeWaiter.Wait(conn.PeerStats, c.opts.HandshakeTimeout, c.done); err != nil {
 		return errors.Wrap(err, "failed while waiting for a peer handshake")
 	}
 
@@ -154,19 +160,18 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return errors.Wrap(err, "could not resolve DNS IPs")
 	}
 	config.Consumer.DNSIPs = dnsIPs[0]
-	if err := setDNS(c.configDir, conn.InterfaceName(), config.Consumer.DNSIPs); err != nil {
+	if err := c.dnsManager.Set(c.opts.DNSConfigDir, conn.InterfaceName(), config.Consumer.DNSIPs); err != nil {
 		return errors.Wrap(err, "failed to configure DNS")
 	}
 
-	go c.updateStatsPeriodically(time.Second)
+	go c.updateStatsPeriodically(c.opts.StatsUpdateInterval)
 
 	c.stateCh <- connection.Connected
 	return nil
 }
 
 func (c *Connection) startConn(conf wg.ConsumerModeConfig) (wg.ConnectionEndpoint, error) {
-	resourceAllocator := connectionResourceAllocator()
-	conn, err := endpoint.NewConnectionEndpoint(nil, resourceAllocator, 0)
+	conn, err := c.connEndpointFactory()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create new connection endpoint")
 	}
@@ -223,29 +228,32 @@ func (c *Connection) isNoopPinger() bool {
 
 // Stop stops wireguard connection and closes connection endpoint.
 func (c *Connection) Stop() {
-	log.Info().Msg("Stopping WireGuard connection")
-	c.stateCh <- connection.Disconnecting
-	c.sendStats()
+	c.stopOnce.Do(func() {
+		log.Info().Msg("Stopping WireGuard connection")
+		c.stateCh <- connection.Disconnecting
 
-	if c.connectionEndpoint != nil {
-		if err := cleanDNS(c.configDir, c.connectionEndpoint.InterfaceName()); err != nil {
-			log.Error().Err(err).Msg("Failed to clear DNS")
+		if c.connectionEndpoint != nil {
+			c.sendStats()
+
+			if err := c.dnsManager.Clean(c.opts.DNSConfigDir, c.connectionEndpoint.InterfaceName()); err != nil {
+				log.Error().Err(err).Msg("Failed to clear DNS")
+			}
+			if err := c.connectionEndpoint.Stop(); err != nil {
+				log.Error().Err(err).Msg("Failed to close wireguard connection")
+			}
 		}
-		if err := c.connectionEndpoint.Stop(); err != nil {
-			log.Error().Err(err).Msg("Failed to close wireguard connection")
+
+		if c.removeAllowedIPRule != nil {
+			c.removeAllowedIPRule()
 		}
-	}
 
-	if c.removeAllowedIPRule != nil {
-		c.removeAllowedIPRule()
-	}
+		c.stateCh <- connection.NotConnected
 
-	c.stateCh <- connection.NotConnected
-	close(c.done)
-	close(c.statsCheckerStop)
-	close(c.pingerStop)
-	close(c.stateCh)
-	close(c.statisticsCh)
+		close(c.statsCheckerStop)
+		close(c.pingerStop)
+		close(c.stateCh)
+		close(c.done)
+	})
 }
 
 func (c *Connection) updateStatsPeriodically(duration time.Duration) {
@@ -254,6 +262,7 @@ func (c *Connection) updateStatsPeriodically(duration time.Duration) {
 		case <-time.After(duration):
 			c.sendStats()
 		case <-c.statsCheckerStop:
+			close(c.statisticsCh)
 			return
 		}
 	}

@@ -73,6 +73,9 @@ func (method Payment) GetRate() market.PaymentRate {
 	}
 }
 
+// EndpointFactory creates new connection endpoint.
+type EndpointFactory func() (ConnectionEndpoint, error)
+
 // ConnectionEndpoint represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
