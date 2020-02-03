@@ -72,6 +72,9 @@ get_matching_ubuntu_codename() {
 
     if [[ "$mdistro" == "debian" || "$mdistro" == "raspbian" ]]; then
         case "$mvcodename" in
+        eoan)
+            result="eoan"
+            ;;
         buster)
             result="bionic"
             ;;
