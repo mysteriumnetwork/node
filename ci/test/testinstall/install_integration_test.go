@@ -45,8 +45,11 @@ func TestInstall(t *testing.T) {
 	images := []string{
 		"debian-buster",
 		"debian-stretch",
-		"ubuntu-bionic",
 		"ubuntu-xenial",
+		"ubuntu-bionic",
+		// "ubuntu-eoan",
+		// TODO enable it once we will have this version published. Now it fails with the following error:
+		// E: The repository 'http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu eoan Release' does not have a Release file
 	}
 	for _, img := range images {
 		t.Run(img, func(t *testing.T) {
