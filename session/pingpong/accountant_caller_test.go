@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,6 +84,10 @@ func TestAccountantCaller_RevealR_Error(t *testing.T) {
 func TestAccountantCaller_RevealR_OK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{
+			"message": "R succesfully revealed"
+		  }`))
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -101,6 +107,26 @@ func TestAccountantGetConsumerData_Error(t *testing.T) {
 	caller := NewAccountantCaller(c, server.URL)
 	_, err := caller.GetConsumerData("something")
 	assert.NotNil(t, err)
+}
+
+func TestAccountantCaller_UnmarshalsErrors(t *testing.T) {
+	for k, v := range accountantCauseToError {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, err := w.Write([]byte(fmt.Sprintf(`{
+				"cause": %q,
+				"message": "some message"
+			  }`, k)))
+			assert.NoError(t, err)
+		}))
+		defer server.Close()
+
+		c := requests.NewHTTPClient("0.0.0.0", time.Second)
+		caller := NewAccountantCaller(c, server.URL)
+		err := caller.RevealR("r", "provider", 1)
+		assert.Equal(t, v, errors.Cause(err))
+		server.Close()
+	}
 }
 
 func TestAccountantGetConsumerData_OK(t *testing.T) {

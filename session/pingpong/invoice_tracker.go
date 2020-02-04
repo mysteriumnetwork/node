@@ -86,6 +86,8 @@ type accountantCaller interface {
 	RevealR(r string, provider string, agreementID uint64) error
 }
 
+type settler func(providerID, accountantID identity.Identity) error
+
 const chargePeriodLeeway = time.Hour * 2
 
 type sentInvoice struct {
@@ -134,6 +136,7 @@ type InvoiceTrackerDeps struct {
 	Publisher                  eventbus.Publisher
 	FeeProvider                feeProvider
 	ChannelAddressCalculator   channelAddressCalculator
+	Settler                    settler
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -213,7 +216,7 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 	}
 
 	err = it.revealPromise()
-	switch err {
+	switch errors.Cause(err) {
 	case errHandled:
 		return nil
 	case nil:
@@ -228,7 +231,7 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 	}
 
 	err = it.requestPromise(invoice.r, pm)
-	switch err {
+	switch errors.Cause(err) {
 	case errHandled:
 		return nil
 	default:
@@ -240,17 +243,10 @@ var errHandled = errors.New("error handled, please skip")
 
 func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) error {
 	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not call accountant")
-		// TODO: handle separate errors better
-		it.incrementAccountantFailureCount()
-		if it.getAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
-			return errors.Wrap(err, "could not call accountant")
-		}
-		log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
-		return errHandled
+	handledErr := it.handleAccountantError(err)
+	if handledErr != nil {
+		return errors.Wrap(handledErr, "could not request promise")
 	}
-	it.resetAccountantFailureCount()
 
 	ap := AccountantPromise{
 		Promise:     promise,
@@ -289,17 +285,11 @@ func (it *InvoiceTracker) revealPromise() error {
 	}
 
 	err = it.deps.AccountantCaller.RevealR(accountantPromise.R, it.deps.ProviderID.Address, accountantPromise.AgreementID)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not reveal R")
-		it.incrementAccountantFailureCount()
-		if it.getAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
-			return errors.Wrap(err, "max failure count calling accountant reached")
-		}
-		log.Warn().Msg("Ignoring accountant error, we haven't reached the error threshold yet")
-		return errHandled
+	handledErr := it.handleAccountantError(err)
+	if handledErr != nil {
+		return errors.Wrap(handledErr, "could not reveal R")
 	}
 
-	it.resetAccountantFailureCount()
 	accountantPromise.Revealed = true
 	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, accountantPromise)
 	if err != nil {
@@ -461,22 +451,66 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
-func (it *InvoiceTracker) incrementAccountantFailureCount() {
+func (it *InvoiceTracker) handleAccountantError(err error) error {
+	if err == nil {
+		it.resetAccountantFailureCount()
+		return nil
+	}
+
+	switch errors.Cause(err) {
+	case ErrAccountantHashlockMissmatch, ErrAccountantPreviousRNotRevealed:
+		// These need to trigger some sort of R recovery.
+		// The mechanism should be implemented under https://github.com/mysteriumnetwork/node/issues/1585
+		// For now though, handle as ignorable.
+		fallthrough
+	case
+		ErrAccountantInternal,
+		ErrAccountantNotFound,
+		ErrAccountantNoPreviousPromise,
+		ErrAccountantMalformedJSON:
+		// these are ignorable, we'll eventually fail
+		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
+			return err
+		}
+		log.Warn().Err(err).Msg("accountant error, will retry")
+		return errHandled
+	case ErrAccountantProviderBalanceExhausted:
+		go func() {
+			settleErr := it.deps.Settler(it.deps.ProviderID, it.deps.AccountantID)
+			if settleErr != nil {
+				log.Err(settleErr).Msgf("settling failed")
+			}
+		}()
+		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
+			return err
+		}
+		log.Warn().Err(err).Msg("out of balance, will try settling")
+		return errHandled
+	case
+		ErrAccountantInvalidSignature,
+		ErrAccountantPaymentValueTooLow,
+		ErrAccountantPromiseValueTooLow,
+		ErrAccountantOverspend:
+		// these are critical, return and cancel session
+		return err
+	default:
+		log.Err(err).Msgf("unknown accountant error encountered")
+		return err
+	}
+}
+
+func (it *InvoiceTracker) incrementAccountantFailureCount() uint64 {
 	it.accountantFailureCountLock.Lock()
 	defer it.accountantFailureCountLock.Unlock()
 	it.accountantFailureCount++
+	log.Trace().Msgf("accountant error count %v/%v", it.accountantFailureCount, it.deps.MaxAccountantFailureCount)
+	return it.accountantFailureCount
 }
 
 func (it *InvoiceTracker) resetAccountantFailureCount() {
 	it.accountantFailureCountLock.Lock()
 	defer it.accountantFailureCountLock.Unlock()
 	it.accountantFailureCount = 0
-}
-
-func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
-	it.accountantFailureCountLock.Lock()
-	defer it.accountantFailureCountLock.Unlock()
-	return it.accountantFailureCount
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {

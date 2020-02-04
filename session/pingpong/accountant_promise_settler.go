@@ -289,6 +289,10 @@ func (aps *AccountantPromiseSettler) ForceSettle(providerID, accountantID identi
 var ErrSettleTimeout = errors.New("settle timeout")
 
 func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
+	if aps.isSettling(p.provider) {
+		return errors.New("provider already has settlement in progress")
+	}
+
 	aps.setSettling(p.provider, true)
 	log.Info().Msgf("Marked provider %v as requesting setlement", p.provider)
 	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
@@ -339,6 +343,17 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
 	}
 
 	return <-errCh
+}
+
+func (aps *AccountantPromiseSettler) isSettling(id identity.Identity) bool {
+	aps.lock.Lock()
+	defer aps.lock.Unlock()
+	v, ok := aps.currentState[id]
+	if !ok {
+		return false
+	}
+
+	return v.settleInProgress
 }
 
 func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling bool) {

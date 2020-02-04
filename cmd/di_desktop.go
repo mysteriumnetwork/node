@@ -257,6 +257,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.BCHelper,
 			di.Transactor,
 			nodeOptions.Payments.PaymentsDisabled,
+			di.AccountantPromiseSettler,
 		)
 
 		return session.NewDialogHandler(

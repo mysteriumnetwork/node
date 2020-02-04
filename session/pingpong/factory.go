@@ -63,6 +63,7 @@ func InvoiceFactoryCreator(
 	publisher eventbus.Publisher,
 	feeProvider feeProvider,
 	proposal market.ServiceProposal,
+	settler settler,
 ) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
 	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
@@ -97,6 +98,7 @@ func InvoiceFactoryCreator(
 			Publisher:                  publisher,
 			FeeProvider:                feeProvider,
 			MaxRRecoveryLength:         maxRRecovery,
+			Settler:                    settler,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)
