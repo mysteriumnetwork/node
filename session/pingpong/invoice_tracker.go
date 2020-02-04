@@ -108,7 +108,7 @@ type InvoiceTracker struct {
 	once                           sync.Once
 	agreementID                    uint64
 	lastExchangeMessage            crypto.ExchangeMessage
-	transactorFee                  uint64
+	transactorFee                  registry.FeesResponse
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
@@ -241,7 +241,21 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 
 var errHandled = errors.New("error handled, please skip")
 
+func (it *InvoiceTracker) updateFee() {
+	fees, err := it.deps.FeeProvider.FetchSettleFees()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not fetch fees, ignoring")
+		return
+	}
+
+	it.transactorFee = fees
+}
+
 func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) error {
+	if !it.transactorFee.IsValid() {
+		it.updateFee()
+	}
+
 	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
 	handledErr := it.handleAccountantError(err)
 	if handledErr != nil {
@@ -317,7 +331,7 @@ func (it *InvoiceTracker) Start() error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch settlement fees")
 	}
-	it.transactorFee = fees.Fee
+	it.transactorFee = fees
 
 	fee, err := it.deps.BlockchainHelper.GetAccountantFee(common.HexToAddress(it.deps.AccountantID.Address))
 	if err != nil {

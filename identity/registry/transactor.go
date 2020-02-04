@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -63,7 +64,13 @@ func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAdd
 
 // FeesResponse represents fees applied by Transactor
 type FeesResponse struct {
-	Fee uint64 `json:"fee"`
+	Fee        uint64    `json:"fee"`
+	ValidUntil time.Time `json:"valid_until"`
+}
+
+// IsValid returns false if the fee has already expired and should be re-requested
+func (fr FeesResponse) IsValid() bool {
+	return time.Now().After(fr.ValidUntil)
 }
 
 // IdentityRegistrationRequestDTO represents the identity registration user input parameters
