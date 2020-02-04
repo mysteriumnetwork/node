@@ -138,7 +138,7 @@ func ReleaseGithubTag() error {
 
 	_, err = tagReleaseGithub(&releaseGithubOpts{
 		owner:      env.Str(env.GithubOwner),
-		repository: env.Str("mysterium-client-npm-package"),
+		repository: "mysterium-client-npm-package",
 		version:    env.Str(env.BuildVersion),
 		token:      env.Str(env.GithubAPIToken),
 		createTag:  true, // Tag the related project to release artifacts in another repo
