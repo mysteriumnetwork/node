@@ -414,7 +414,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 	}
 
 	r := it.generateR()
-	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, it.transactorFee, r)
+	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, 0, r)
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
