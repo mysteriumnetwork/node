@@ -34,10 +34,12 @@ type Repository struct {
 	receiver        communication.Receiver
 	timeoutInterval time.Duration
 
-	watchdogStop chan struct{}
-	watchdogStep time.Duration
-	watchdogLock sync.Mutex
-	watchdogSeen map[market.ProposalID]time.Time
+	stopOnce sync.Once
+	stopChan chan struct{}
+
+	timeoutCheckStep  time.Duration
+	watchdogLock      sync.Mutex
+	timeoutCheckSeens map[market.ProposalID]time.Time
 }
 
 // NewRepository constructs a new proposal repository (backed by the broker).
@@ -52,97 +54,99 @@ func NewRepository(
 		receiver:        nats.NewReceiver(connection, communication.NewCodecJSON(), "*"),
 		timeoutInterval: proposalTimeoutInterval,
 
-		watchdogStop: make(chan struct{}),
-		watchdogStep: proposalCheckInterval,
-		watchdogSeen: make(map[market.ProposalID]time.Time),
+		stopChan:          make(chan struct{}),
+		timeoutCheckStep:  proposalCheckInterval,
+		timeoutCheckSeens: make(map[market.ProposalID]time.Time),
 	}
 }
 
 // Proposal returns a single proposal by its ID.
-func (s *Repository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	return s.storage.GetProposal(id)
+func (r *Repository) Proposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	return r.storage.GetProposal(id)
 }
 
 // Proposals returns proposals matching the filter.
-func (s *Repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
-	return s.storage.FindProposals(*filter)
+func (r *Repository) Proposals(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+	return r.storage.FindProposals(*filter)
 }
 
 // Start begins proposals synchronization to storage
-func (s *Repository) Start() error {
-	err := s.receiver.Receive(&registerConsumer{Callback: s.proposalRegisterMessage})
+func (r *Repository) Start() error {
+	err := r.receiver.Receive(&registerConsumer{Callback: r.proposalRegisterMessage})
 	if err != nil {
 		return err
 	}
 
-	err = s.receiver.Receive(&unregisterConsumer{Callback: s.proposalUnregisterMessage})
+	err = r.receiver.Receive(&unregisterConsumer{Callback: r.proposalUnregisterMessage})
 	if err != nil {
 		return err
 	}
 
-	err = s.receiver.Receive(&pingConsumer{Callback: s.proposalPingMessage})
+	err = r.receiver.Receive(&pingConsumer{Callback: r.proposalPingMessage})
 	if err != nil {
 		return err
 	}
 
-	go s.proposalWatchdog()
+	go r.timeoutCheckLoop()
 
 	return nil
 }
 
 // Stop ends proposals synchronization to storage
-func (s *Repository) Stop() {
-	s.watchdogStop <- struct{}{}
+func (r *Repository) Stop() {
+	r.stopOnce.Do(func() {
+		close(r.stopChan)
 
-	s.receiver.ReceiveUnsubscribe(pingEndpoint)
-	s.receiver.ReceiveUnsubscribe(unregisterEndpoint)
-	s.receiver.ReceiveUnsubscribe(registerEndpoint)
+		r.receiver.ReceiveUnsubscribe(pingEndpoint)
+		r.receiver.ReceiveUnsubscribe(unregisterEndpoint)
+		r.receiver.ReceiveUnsubscribe(registerEndpoint)
+	})
 }
 
-func (s *Repository) proposalRegisterMessage(message registerMessage) error {
-	s.storage.AddProposal(message.Proposal)
+func (r *Repository) proposalRegisterMessage(message registerMessage) error {
+	r.storage.AddProposal(message.Proposal)
 
-	s.watchdogLock.Lock()
-	defer s.watchdogLock.Unlock()
-	s.watchdogSeen[message.Proposal.UniqueID()] = time.Now().UTC()
+	r.watchdogLock.Lock()
+	defer r.watchdogLock.Unlock()
+	r.timeoutCheckSeens[message.Proposal.UniqueID()] = time.Now().UTC()
 
 	return nil
 }
 
-func (s *Repository) proposalUnregisterMessage(message unregisterMessage) error {
-	s.storage.RemoveProposal(message.Proposal.UniqueID())
+func (r *Repository) proposalUnregisterMessage(message unregisterMessage) error {
+	r.storage.RemoveProposal(message.Proposal.UniqueID())
 
-	s.watchdogLock.Lock()
-	defer s.watchdogLock.Unlock()
-	delete(s.watchdogSeen, message.Proposal.UniqueID())
-
-	return nil
-}
-
-func (s *Repository) proposalPingMessage(message pingMessage) error {
-	s.storage.AddProposal(message.Proposal)
-
-	s.watchdogLock.Lock()
-	defer s.watchdogLock.Unlock()
-	s.watchdogSeen[message.Proposal.UniqueID()] = time.Now()
+	r.watchdogLock.Lock()
+	defer r.watchdogLock.Unlock()
+	delete(r.timeoutCheckSeens, message.Proposal.UniqueID())
 
 	return nil
 }
 
-func (s *Repository) proposalWatchdog() {
+func (r *Repository) proposalPingMessage(message pingMessage) error {
+	r.storage.AddProposal(message.Proposal)
+
+	r.watchdogLock.Lock()
+	defer r.watchdogLock.Unlock()
+	r.timeoutCheckSeens[message.Proposal.UniqueID()] = time.Now()
+
+	return nil
+}
+
+func (r *Repository) timeoutCheckLoop() {
 	for {
 		select {
-		case <-s.watchdogStop:
+		case <-r.stopChan:
 			return
-		case <-time.After(s.watchdogStep):
-			s.watchdogLock.Lock()
-			for proposalID, proposalSeen := range s.watchdogSeen {
-				if time.Now().After(proposalSeen.Add(s.timeoutInterval)) {
-					s.storage.RemoveProposal(proposalID)
-					delete(s.watchdogSeen, proposalID)
+		case <-time.After(r.timeoutCheckStep):
+			r.watchdogLock.Lock()
+			for proposalID, proposalSeen := range r.timeoutCheckSeens {
+				if time.Now().After(proposalSeen.Add(r.timeoutInterval)) {
+					r.storage.RemoveProposal(proposalID)
+					delete(r.timeoutCheckSeens, proposalID)
 				}
 			}
-			s.watchdogLock.Unlock()
+			r.watchdogLock.Unlock()
 		}
 	}
 }
