@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -670,4 +671,112 @@ func (mp *mockPublisher) Publish(topic string, payload interface{}) {
 			value: payload,
 		}
 	}
+}
+
+func TestInvoiceTracker_TestInvoiceTracker_handleAccountantError_settles(t *testing.T) {
+	ms := &mockSettler{}
+	accountant := identity.FromAddress("0x1")
+	provider := identity.FromAddress("0x2")
+	it := &InvoiceTracker{
+		deps: InvoiceTrackerDeps{
+			Settler:      ms.settle,
+			AccountantID: accountant,
+			ProviderID:   provider,
+		},
+	}
+	err := it.handleAccountantError(ErrAccountantProviderBalanceExhausted)
+	assert.Equal(t, errors.Cause(err), ErrAccountantProviderBalanceExhausted)
+
+	assert.Eventually(t, func() bool {
+		p, a := ms.getCalledWith()
+		return provider.Address == p.Address && accountant.Address == a.Address
+	}, time.Millisecond*100, time.Millisecond)
+}
+
+func TestInvoiceTracker_handleAccountantError(t *testing.T) {
+	tests := []struct {
+		name                      string
+		maxAccountantFailureCount uint64
+		err                       error
+		wantErr                   error
+	}{
+		{
+			name:    "ignores nil errors",
+			wantErr: nil,
+			err:     nil,
+		},
+		{
+			name:    "handles wrapped errors",
+			wantErr: ErrAccountantInternal,
+			err:     errors.Wrap(ErrAccountantInternal, "pita bread"),
+		},
+		{
+			name:    "bubbles internal on failure exceeded",
+			wantErr: ErrAccountantInternal,
+			err:     ErrAccountantInternal,
+		},
+		{
+			name:                      "returns handled on internal not exceeding limit",
+			wantErr:                   errHandled,
+			maxAccountantFailureCount: 1,
+			err:                       ErrAccountantInternal,
+		},
+		{
+			name:    "bubbles hashlock missmatch on failure exceeded",
+			wantErr: ErrAccountantHashlockMissmatch,
+			err:     ErrAccountantHashlockMissmatch,
+		},
+		{
+			name:                      "returns handled on hashlock missmatch not exceeding limit",
+			wantErr:                   errHandled,
+			maxAccountantFailureCount: 1,
+			err:                       ErrAccountantHashlockMissmatch,
+		},
+		{
+			name:                      "returns unknown error",
+			wantErr:                   errors.New("unknown error"),
+			maxAccountantFailureCount: 100,
+			err:                       errors.New("unknown error"),
+		},
+		{
+			name:                      "returns overspend",
+			maxAccountantFailureCount: 100,
+			wantErr:                   ErrAccountantOverspend,
+			err:                       ErrAccountantOverspend,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			it := &InvoiceTracker{
+				deps: InvoiceTrackerDeps{
+					MaxAccountantFailureCount: tt.maxAccountantFailureCount,
+				},
+			}
+			err := it.handleAccountantError(tt.err)
+			if tt.wantErr == nil {
+				assert.NoError(t, err, tt.name)
+			} else {
+				assert.EqualError(t, errors.Cause(err), tt.wantErr.Error(), tt.name)
+			}
+		})
+	}
+}
+
+type mockSettler struct {
+	lock                                     sync.Mutex
+	calledWithAccountant, calledWithProvider identity.Identity
+}
+
+func (ms *mockSettler) getCalledWith() (identity.Identity, identity.Identity) {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+	return ms.calledWithProvider, ms.calledWithAccountant
+}
+
+func (ms *mockSettler) settle(providerID, accountantID identity.Identity) error {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+	ms.calledWithAccountant = accountantID
+	ms.calledWithProvider = providerID
+	return nil
 }
