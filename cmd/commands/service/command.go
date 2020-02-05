@@ -53,6 +53,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 			quit := make(chan error)
 			config.ParseFlagsNode(ctx)
+			config.ParseFlagsServiceShared(ctx)
 			nodeOptions := node.GetOptions()
 			if err := di.Bootstrap(*nodeOptions); err != nil {
 				return err
@@ -61,7 +62,6 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 			cmd.RegisterSignalCallback(func() { quit <- nil })
 
-			config.ParseFlagsServiceShared(ctx)
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: quit,
