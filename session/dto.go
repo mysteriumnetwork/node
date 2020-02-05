@@ -34,7 +34,7 @@ type PaymentEngine interface {
 
 // DataTransfered represents the data transfered on each session
 type DataTransfered struct {
-	Up, Down int64
+	Up, Down uint64
 }
 
 // Session structure holds all required information about current session between service consumer and provider

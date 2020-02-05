@@ -69,9 +69,9 @@ type ServiceSession struct {
 	// example: 2019-06-06T11:04:43.910035Z
 	CreatedAt time.Time `json:"createdAt"`
 	// example: 12345
-	BytesOut int64 `json:"bytesOut"`
+	BytesOut uint64 `json:"bytesOut"`
 	// example: 23451
-	BytesIn int64 `json:"bytesIn"`
+	BytesIn uint64 `json:"bytesIn"`
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	ServiceID string `json:"serviceId"`
 }

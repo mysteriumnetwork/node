@@ -63,8 +63,8 @@ func NewManager(nodeOptions node.Options,
 		if len(sessions) == 1 {
 			bus.Publish(event.DataTransfered, event.DataTransferEventPayload{
 				ID:   string(sessions[0]),
-				Up:   int64(sbc.BytesOut),
-				Down: int64(sbc.BytesIn),
+				Up:   sbc.BytesOut,
+				Down: sbc.BytesIn,
 			})
 		} else {
 			log.Warn().Msgf("Could not map sessions - expected a single session to exist for a user, got %v sessions instead", len(sessions))

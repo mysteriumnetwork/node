@@ -77,7 +77,7 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 }
 
 // UpdateDataTransfer updates the data transfer info on the session
-func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down int64) {
+func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down uint64) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 	if instance, found := storage.sessions[id]; found {
