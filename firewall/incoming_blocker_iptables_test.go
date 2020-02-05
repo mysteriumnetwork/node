@@ -51,9 +51,9 @@ func Test_iptablesDNSFirewall_Setup(t *testing.T) {
 	err := firewall.Setup()
 	assert.NoError(t, err)
 	assert.True(t, mockedIpset.VerifyCalledWithArgs("version"))
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("create dns-firewall-whitelist hash:ip --netmask 24 --hashsize 64"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("create myst-provider-dst-whitelist hash:ip"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-N PROVIDER_DNS_FIREWALL"))
-	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A PROVIDER_DNS_FIREWALL -m set --match-set dns-firewall-whitelist dst -j ACCEPT"))
+	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A PROVIDER_DNS_FIREWALL -m set --match-set myst-provider-dst-whitelist dst -j ACCEPT"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A PROVIDER_DNS_FIREWALL -j REJECT"))
 }
 
@@ -76,7 +76,7 @@ func Test_iptablesDNSFirewall_Teardown(t *testing.T) {
 
 	firewall := &incomingBlockerIptables{}
 	firewall.Teardown()
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("destroy dns-firewall-whitelist"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("destroy myst-provider-dst-whitelist"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-F PROVIDER_DNS_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-X PROVIDER_DNS_FIREWALL"))
 }
@@ -92,16 +92,16 @@ func Test_iptablesDNSFirewall_TeardownIfPreviousCleanupFailed(t *testing.T) {
 			"-S FORWARD": {
 				output: []string{
 					"-P FORWARD ACCEPT",
-					// leftover - dns direwall is still enabled
+					// leftover - DNS direwall is still enabled
 					"-A FORWARD -s 10.8.0.1/24 -j PROVIDER_DNS_FIREWALL",
 				},
 			},
-			// dns firewall chain still exists
+			// DNS firewall chain still exists
 			"-S PROVIDER_DNS_FIREWALL": {
 				output: []string{
 					// with some allowed ips
 					"-N PROVIDER_DNS_FIREWALL",
-					"-A PROVIDER_DNS_FIREWALL -m set --match-set dns-firewall-whitelist dst -j ACCEPT",
+					"-A PROVIDER_DNS_FIREWALL -m set --match-set myst-provider-dst-whitelist dst -j ACCEPT",
 					"-A PROVIDER_DNS_FIREWALL -j REJECT --reject-with icmp-port-unreachable",
 				},
 			},
@@ -111,7 +111,7 @@ func Test_iptablesDNSFirewall_TeardownIfPreviousCleanupFailed(t *testing.T) {
 
 	firewall := &incomingBlockerIptables{}
 	firewall.Teardown()
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("destroy dns-firewall-whitelist"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("destroy myst-provider-dst-whitelist"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-D FORWARD -s 10.8.0.1/24 -j PROVIDER_DNS_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-F PROVIDER_DNS_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-X PROVIDER_DNS_FIREWALL"))
@@ -144,9 +144,9 @@ func Test_iptablesDNSFirewall_AllowIPAccess(t *testing.T) {
 
 	removeRule, err := firewall.AllowIPAccess(net.IP{1, 2, 3, 4})
 	assert.NoError(t, err)
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("add dns-firewall-whitelist 1.2.3.4"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("add myst-provider-dst-whitelist 1.2.3.4"))
 
 	err = removeRule()
 	assert.NoError(t, err)
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("del dns-firewall-whitelist 1.2.3.4"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("del myst-provider-dst-whitelist 1.2.3.4"))
 }

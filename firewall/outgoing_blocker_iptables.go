@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var killswitchChain = "CONSUMER_KILL_SWITCH"
+const killswitchChain = "CONSUMER_KILL_SWITCH"
 
 type refCount struct {
 	count int

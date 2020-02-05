@@ -26,9 +26,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
+const (
 	dnsFirewallChain = "PROVIDER_DNS_FIREWALL"
-	dnsFirewallIpset = "dns-firewall-whitelist"
+	dnsFirewallIpset = "myst-provider-dst-whitelist"
 )
 
 // NewIncomingTrafficBlockerIptables creates instance iptables based traffic blocker
@@ -48,9 +48,9 @@ func (ibi *incomingBlockerIptables) Setup() error {
 	if err := ibi.cleanupStaleRules(); err != nil {
 		return err
 	}
-	ipset.Exec(ipset.OpSetDelete(dnsFirewallIpset))
+	ipset.Exec(ipset.OpDelete(dnsFirewallIpset))
 
-	op := ipset.OpSetCreate(dnsFirewallIpset, ipset.SetTypeHashIP, net.CIDRMask(24, 32), 64)
+	op := ipset.OpCreate(dnsFirewallIpset, ipset.SetTypeHashIP, nil, 0)
 	if _, err := ipset.Exec(op); err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (ibi *incomingBlockerIptables) Teardown() {
 	if err := ibi.cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
-	if errOutput, err := ipset.Exec(ipset.OpSetDelete(dnsFirewallIpset)); err != nil {
+	if errOutput, err := ipset.Exec(ipset.OpDelete(dnsFirewallIpset)); err != nil {
 		log.Warn().Err(err).Msgf("Error deleting ipset table. %s", strings.Join(errOutput, ""))
 	}
 }
@@ -80,11 +80,11 @@ func (ibi *incomingBlockerIptables) BlockIncomingTraffic(network net.IPNet) (Inc
 }
 
 func (ibi *incomingBlockerIptables) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
-	if _, err := ipset.Exec(ipset.OpSetIPAdd(dnsFirewallIpset, ip)); err != nil {
+	if _, err := ipset.Exec(ipset.OpIPAdd(dnsFirewallIpset, ip)); err != nil {
 		return nil, err
 	}
 	return func() error {
-		_, err := ipset.Exec(ipset.OpSetIPRemove(dnsFirewallIpset, ip))
+		_, err := ipset.Exec(ipset.OpIPRemove(dnsFirewallIpset, ip))
 		return err
 	}, nil
 }
@@ -106,12 +106,12 @@ func (ibi *incomingBlockerIptables) setupDNSFirewallChain() error {
 		return err
 	}
 
-	// Append rule - by default all packets going to dns firewall chain are rejected
+	// Append rule - packets going to DNS firewall with these destination IPs are whitelisted
 	if _, err := iptables.Exec("-A", dnsFirewallChain, "-m", "set", "--match-set", dnsFirewallIpset, "dst", "-j", "ACCEPT"); err != nil {
 		return err
 	}
 
-	// Append rule - by default all packets going to dns firewall chain are rejected
+	// Append rule - by default all packets going to DNS firewall chain are rejected
 	if _, err := iptables.Exec("-A", dnsFirewallChain, "-j", "REJECT"); err != nil {
 		return err
 	}

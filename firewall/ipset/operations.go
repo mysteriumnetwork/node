@@ -35,8 +35,8 @@ func OpVersion() []string {
 	return []string{"version"}
 }
 
-// OpSetCreate is an operation which creates a new set.
-func OpSetCreate(setName string, setType SetType, netMask net.IPMask, hashSize int) []string {
+// OpCreate is an operation which creates a new set.
+func OpCreate(setName string, setType SetType, netMask net.IPMask, hashSize int) []string {
 	args := []string{"create", setName, string(setType)}
 	if netMask != nil {
 		ones, _ := netMask.Size()
@@ -48,17 +48,17 @@ func OpSetCreate(setName string, setType SetType, netMask net.IPMask, hashSize i
 	return args
 }
 
-// OpSetDelete is an operation which destroys a named set.
-func OpSetDelete(setName string) []string {
+// OpDelete is an operation which destroys a named set.
+func OpDelete(setName string) []string {
 	return []string{"destroy", setName}
 }
 
-// OpSetIPAdd is an operation which adds IP entry to the named set.
-func OpSetIPAdd(setName string, ip net.IP) []string {
+// OpIPAdd is an operation which adds IP entry to the named set.
+func OpIPAdd(setName string, ip net.IP) []string {
 	return []string{"add", setName, ip.String()}
 }
 
-// OpSetIPRemove is an operation which deletes IP entry from the named set.
-func OpSetIPRemove(setName string, ip net.IP) []string {
+// OpIPRemove is an operation which deletes IP entry from the named set.
+func OpIPRemove(setName string, ip net.IP) []string {
 	return []string{"del", setName, ip.String()}
 }

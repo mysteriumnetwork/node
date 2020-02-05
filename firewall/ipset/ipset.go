@@ -27,7 +27,9 @@ import (
 )
 
 // Exec activates given args
-var Exec = func(args []string) ([]string, error) {
+var Exec = execCommand
+
+func execCommand(args []string) ([]string, error) {
 	args = append([]string{"sudo", "/usr/sbin/ipset"}, args...)
 
 	log.Debug().Msgf("[cmd] %v", args)
