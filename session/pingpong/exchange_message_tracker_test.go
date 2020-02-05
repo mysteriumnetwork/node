@@ -123,6 +123,9 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		ConsumerInfoGetter: func(string) (ConsumerData, error) {
+			return ConsumerData{}, nil
+		},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -188,6 +191,9 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
+		ConsumerInfoGetter: func(string) (ConsumerData, error) {
+			return ConsumerData{}, nil
+		},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -345,6 +351,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
 	type fields struct {
 		consumerTotalsStorage consumerTotalsStorage
+		consumerInfoGetter    func(string) (ConsumerData, error)
 	}
 	tests := []struct {
 		name    string
@@ -372,14 +379,49 @@ func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "returns zero if not found",
+			name: "returns recovered if not found",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					err: ErrNotFound,
 				},
+				consumerInfoGetter: func(string) (ConsumerData, error) {
+					return ConsumerData{
+						LatestPromise: LatestPromise{
+							Amount: 10,
+						},
+					}, nil
+				},
 			},
 			wantErr: false,
-			want:    0,
+			want:    10,
+		},
+		{
+			name: "returns error if recovery fails",
+			fields: fields{
+				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					err: ErrNotFound,
+				},
+				consumerInfoGetter: func(string) (ConsumerData, error) {
+					return ConsumerData{
+						LatestPromise: LatestPromise{
+							Amount: 10,
+						},
+					}, errors.New("explosions")
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns 0 if recovery returns 404",
+			fields: fields{
+				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					err: ErrNotFound,
+				},
+				consumerInfoGetter: func(string) (ConsumerData, error) {
+					return ConsumerData{}, ErrAccountantNotFound
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -387,6 +429,7 @@ func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
 			emt := &ExchangeMessageTracker{
 				deps: ExchangeMessageTrackerDeps{
 					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
+					ConsumerInfoGetter:    tt.fields.consumerInfoGetter,
 				},
 			}
 			got, err := emt.getGrandTotalPromised()
@@ -713,12 +756,12 @@ type mockConsumerTotalsStorage struct {
 	calledWith uint64
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(providerAddress string, amount uint64) error {
+func (mcts *mockConsumerTotalsStorage) Store(providerAddress, accountantAddress string, amount uint64) error {
 	mcts.calledWith = amount
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(providerAddress string) (uint64, error) {
+func (mcts *mockConsumerTotalsStorage) Get(providerAddress, accountantAddress string) (uint64, error) {
 	return mcts.res, mcts.err
 }
 

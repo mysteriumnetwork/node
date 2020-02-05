@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"fmt"
 	"math"
 	"strings"
 	"sync"
@@ -51,9 +50,11 @@ type consumerInvoiceStorage interface {
 	Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error
 }
 
+type getConsumerInfo func(id string) (ConsumerData, error)
+
 type consumerTotalsStorage interface {
-	Store(providerAddress string, amount uint64) error
-	Get(providerAddress string) (uint64, error)
+	Store(consumerAddress, accountantAddress string, amount uint64) error
+	Get(providerAddress, accountantAddress string) (uint64, error)
 }
 
 type timeTracker interface {
@@ -87,6 +88,8 @@ type ExchangeMessageTrackerDeps struct {
 	PaymentInfo               dto.PaymentRate
 	ChannelAddressCalculator  channelAddressCalculator
 	Publisher                 eventbus.Publisher
+	AccountantAddress         identity.Identity
+	ConsumerInfoGetter        getConsumerInfo
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker.
@@ -136,20 +139,34 @@ func (emt *ExchangeMessageTracker) Start() error {
 const grandTotalKey = "consumer_grand_total"
 
 func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
-	res, err := emt.deps.ConsumerTotalsStorage.Get(fmt.Sprintf("%v_%v", grandTotalKey, emt.deps.Identity.Address))
-	if err != nil {
-		if err == ErrNotFound {
-			log.Debug().Msgf("No previous invoice grand total, assuming zero")
-			return 0, nil
+	res, err := emt.deps.ConsumerTotalsStorage.Get(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address)
+	if err == ErrNotFound {
+		res, recoveryError := emt.recoverGrandTotalPromised()
+		if recoveryError != nil {
+			return 0, recoveryError
 		}
+		incrementErr := emt.incrementGrandTotalPromised(res)
+		return res, incrementErr
+	} else if err != nil {
 		return 0, errors.Wrap(err, "could not get previous grand total")
 	}
 	return res, nil
 }
 
+func (emt *ExchangeMessageTracker) recoverGrandTotalPromised() (uint64, error) {
+	data, err := emt.deps.ConsumerInfoGetter(emt.deps.Identity.Address)
+	if err != nil {
+		if err != ErrAccountantNotFound {
+			return 0, err
+		}
+		log.Debug().Msgf("No previous invoice grand total, assuming zero")
+		return 0, nil
+	}
+	return data.LatestPromise.Amount, nil
+}
+
 func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) error {
-	k := fmt.Sprintf("%v_%v", grandTotalKey, emt.deps.Identity.Address)
-	res, err := emt.deps.ConsumerTotalsStorage.Get(k)
+	res, err := emt.deps.ConsumerTotalsStorage.Get(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -157,7 +174,7 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return emt.deps.ConsumerTotalsStorage.Store(k, res+amount)
+	return emt.deps.ConsumerTotalsStorage.Store(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address, res+amount)
 }
 
 func (emt *ExchangeMessageTracker) isServiceFree() bool {

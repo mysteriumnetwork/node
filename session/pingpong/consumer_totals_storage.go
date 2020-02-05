@@ -39,18 +39,18 @@ func NewConsumerTotalsStorage(bolt persistentStorage) *ConsumerTotalsStorage {
 }
 
 // Store stores the given amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Store(providerAddress string, amount uint64) error {
+func (cts *ConsumerTotalsStorage) Store(consumerAddress, accountantAddress string, amount uint64) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
-	return cts.bolt.SetValue(consumerTotalStorageBucketName, providerAddress, amount)
+	return cts.bolt.SetValue(consumerTotalStorageBucketName, consumerAddress+accountantAddress, amount)
 }
 
 // Get fetches the amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Get(providerAddress string) (uint64, error) {
+func (cts *ConsumerTotalsStorage) Get(consumerAddress, accountantAddress string) (uint64, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 	var res uint64
-	err := cts.bolt.GetValue(consumerTotalStorageBucketName, providerAddress, &res)
+	err := cts.bolt.GetValue(consumerTotalStorageBucketName, consumerAddress+accountantAddress, &res)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {
