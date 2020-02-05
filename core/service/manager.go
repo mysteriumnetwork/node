@@ -109,8 +109,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	var policies *[]market.AccessPolicy = nil
 	if len(policyIDs) > 0 {
-		policies := manager.policyRepo.Policies(policyIDs)
-		if err = manager.policyRepo.AddPolicies(policies); err != nil {
+		policies = manager.policyRepo.Policies(policyIDs)
+		if err = manager.policyRepo.AddPolicies(*policies); err != nil {
 			return id, ErrUnsupportedAccessPolicy
 		}
 	}

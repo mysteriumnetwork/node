@@ -18,6 +18,8 @@
 package policy
 
 import (
+	"errors"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -42,6 +44,6 @@ func ValidateAllowedIdentity(repository *Repository, policies *[]market.AccessPo
 			}
 		}
 
-		return nil
+		return errors.New("identity is not allowed")
 	}
 }
