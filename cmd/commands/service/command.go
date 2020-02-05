@@ -55,6 +55,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			config.ParseFlagsNode(ctx)
 			config.ParseFlagsServiceShared(ctx)
 			nodeOptions := node.GetOptions()
+			nodeOptions.Discovery.FetchEnabled = false
 			if err := di.Bootstrap(*nodeOptions); err != nil {
 				return err
 			}

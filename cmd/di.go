@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -118,6 +119,7 @@ type Dependencies struct {
 
 	DiscoveryFactory   service.DiscoveryFactory
 	ProposalRepository proposal.Repository
+	DiscoveryWorker    brokerdiscovery.Worker
 
 	QualityMetricsSender *quality.Sender
 	QualityClient        *quality.MysteriumMORQA
@@ -349,6 +351,9 @@ func (di *Dependencies) Shutdown() (err error) {
 		if err := di.NATService.Disable(); err != nil {
 			errs = append(errs, err)
 		}
+	}
+	if di.DiscoveryWorker != nil {
+		di.DiscoveryWorker.Stop()
 	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
