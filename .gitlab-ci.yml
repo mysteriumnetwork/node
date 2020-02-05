@@ -58,17 +58,17 @@ test:
 
 test-e2e-basic:
   stage: test
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v TestE2EBasic
 
 test-e2e-nat:
   stage: test
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v TestE2ENAT
 
 test-e2e-compatibility:
   stage: test
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v TestE2ECompatibility
 
 test-install-script:
