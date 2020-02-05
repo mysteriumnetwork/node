@@ -83,12 +83,12 @@ func (pr *Repository) Policy(policyID string) market.AccessPolicy {
 }
 
 // Policies converts given values to list of valid policies
-func (pr *Repository) Policies(policyIDs []string) []market.AccessPolicy {
+func (pr *Repository) Policies(policyIDs []string) *[]market.AccessPolicy {
 	policies := make([]market.AccessPolicy, len(policyIDs))
 	for i, policyID := range policyIDs {
 		policies[i] = pr.Policy(policyID)
 	}
-	return policies
+	return &policies
 }
 
 // AddPolicies adds given policy to repository. Also syncs policy rules from TrustOracle

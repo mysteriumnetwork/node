@@ -90,7 +90,7 @@ func Test_PolicyRepository_Policies(t *testing.T) {
 	repo := &Repository{policyURL: "http://policy.localhost"}
 	assert.Equal(
 		t,
-		[]market.AccessPolicy{
+		&[]market.AccessPolicy{
 			{ID: "1", Source: "http://policy.localhost/1"},
 		},
 		repo.Policies([]string{"1"}),
@@ -99,7 +99,7 @@ func Test_PolicyRepository_Policies(t *testing.T) {
 	repo = &Repository{policyURL: "http://policy.localhost/"}
 	assert.Equal(
 		t,
-		[]market.AccessPolicy{
+		&[]market.AccessPolicy{
 			{ID: "2", Source: "http://policy.localhost/2"},
 			{ID: "3", Source: "http://policy.localhost/3"},
 		},
