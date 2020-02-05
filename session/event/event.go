@@ -26,7 +26,7 @@ const DataTransfered = "Session data transfered"
 // DataTransferEventPayload represents the data transfer event
 type DataTransferEventPayload struct {
 	ID       string
-	Up, Down int64
+	Up, Down uint64
 }
 
 // Action represents the different actions that might happen on a session

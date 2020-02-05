@@ -25,7 +25,7 @@ import (
 // NewSessionStatsSaver returns stats handler, which saves stats stats keeper
 func NewSessionStatsSaver(statisticsChannel chan consumer.SessionStatistics) bytescount.SessionStatsHandler {
 	return func(bc bytescount.Bytecount) error {
-		statisticsChannel <- consumer.SessionStatistics{BytesSent: uint64(bc.BytesOut), BytesReceived: uint64(bc.BytesIn)}
+		statisticsChannel <- consumer.SessionStatistics{BytesSent: bc.BytesOut, BytesReceived: bc.BytesIn}
 		return nil
 	}
 }

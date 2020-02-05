@@ -27,7 +27,7 @@ type eventPublisher interface {
 type storage interface {
 	Add(sessionInstance Session)
 	GetAll() []Session
-	UpdateDataTransfer(id ID, up, down int64)
+	UpdateDataTransfer(id ID, up, down uint64)
 	Find(id ID) (Session, bool)
 	Remove(id ID)
 	RemoveForService(serviceID string)
@@ -69,7 +69,7 @@ func (ebs *EventBasedStorage) consumeDataTransferedEvent(e event.DataTransferEve
 }
 
 // UpdateDataTransfer updates the data transfer for a session
-func (ebs *EventBasedStorage) UpdateDataTransfer(id ID, up, down int64) {
+func (ebs *EventBasedStorage) UpdateDataTransfer(id ID, up, down uint64) {
 	ebs.storage.UpdateDataTransfer(id, up, down)
 	go ebs.bus.Publish(event.Topic, event.Payload{
 		ID:     string(id),

@@ -81,8 +81,8 @@ type Event struct {
 
 // Statistics mock
 type Statistics struct {
-	BytesIn  int
-	BytesOut int
+	BytesIn  uint64
+	BytesOut uint64
 }
 
 // TunnelSetup mock

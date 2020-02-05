@@ -220,8 +220,8 @@ func (channelToCallbacksAdapter) Log(text string) {
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
 	sessionStats := consumer.SessionStatistics{
-		BytesSent:     uint64(openvpnStats.BytesOut),
-		BytesReceived: uint64(openvpnStats.BytesIn),
+		BytesSent:     openvpnStats.BytesOut,
+		BytesReceived: openvpnStats.BytesIn,
 	}
 	select {
 	case adapter.statisticsChannel <- sessionStats:
