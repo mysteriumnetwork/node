@@ -24,11 +24,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/apidiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
@@ -44,7 +41,8 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 
 			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
 			if options.FetchEnabled {
-				if err := discoverySyncStart(brokerRepository, di.EventBus); err != nil {
+				di.DiscoveryWorker = brokerRepository
+				if err := di.DiscoveryWorker.Start(); err != nil {
 					return errors.Wrap(err, "failed to enable broker discovery")
 				}
 			}
@@ -57,45 +55,6 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	di.ProposalRepository = proposalRepository
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
-	}
-	return nil
-}
-
-func discoverySyncStart(repository *brokerdiscovery.Repository, eventBus eventbus.EventBus) error {
-	err := repository.Start()
-	if err != nil {
-		log.Error().Err(err).Msg("Broker discovery start failed")
-	}
-
-	if err := discoverySyncsInConsumerMode(repository, eventBus); err != nil {
-		return err
-	}
-	if err := discoveryStopsOnShutdown(repository, eventBus); err != nil {
-		return err
-	}
-
-	return err
-}
-
-func discoverySyncsInConsumerMode(repository *brokerdiscovery.Repository, eventBus eventbus.EventBus) error {
-	err := eventBus.Subscribe(service.StatusTopic, func(event service.EventPayload) {
-		switch service.State(event.Status) {
-		case service.Running:
-			repository.Stop()
-		case service.NotRunning:
-			discoverySyncStart(repository, eventBus)
-		}
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not subscribe broker discovery to service events")
-	}
-	return nil
-}
-
-func discoveryStopsOnShutdown(repository *brokerdiscovery.Repository, eventBus eventbus.EventBus) error {
-	err := eventBus.SubscribeAsync(string(event.StatusStopped), repository.Stop)
-	if err != nil {
-		return errors.Wrap(err, "could not subscribe broker discovery to node events")
 	}
 	return nil
 }
