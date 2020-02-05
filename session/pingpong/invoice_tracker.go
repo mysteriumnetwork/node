@@ -82,7 +82,7 @@ type accountantPromiseStorage interface {
 }
 
 type accountantCaller interface {
-	RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error)
+	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID uint64) error
 }
 
@@ -256,11 +256,18 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 		it.updateFee()
 	}
 
-	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
+	request := RequestPromise{
+		ExchangeMessage: pm,
+		TransactorFee:   it.transactorFee.Fee,
+	}
+
+	promise, err := it.deps.AccountantCaller.RequestPromise(request)
 	handledErr := it.handleAccountantError(err)
 	if handledErr != nil {
 		return errors.Wrap(handledErr, "could not request promise")
 	}
+
+	it.resetAccountantFailureCount()
 
 	ap := AccountantPromise{
 		Promise:     promise,

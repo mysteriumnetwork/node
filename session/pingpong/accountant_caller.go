@@ -49,9 +49,15 @@ func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI strin
 	}
 }
 
+// RequestPromise represents the request for a new accountant promise
+type RequestPromise struct {
+	ExchangeMessage crypto.ExchangeMessage `json:"exchange_message"`
+	TransactorFee   uint64                 `json:"transactor_fee"`
+}
+
 // RequestPromise requests a promise from accountant.
-func (ac *AccountantCaller) RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error) {
-	req, err := requests.NewPostRequest(ac.accountantBaseURI, "request_promise", em)
+func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
+	req, err := requests.NewPostRequest(ac.accountantBaseURI, "request_promise", rp)
 	if err != nil {
 		return crypto.Promise{}, errors.Wrap(err, "could not form request_promise request")
 	}
