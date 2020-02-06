@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
@@ -159,6 +160,7 @@ type Instance struct {
 	options        Options
 	service        RunnableService
 	proposal       market.ServiceProposal
+	policies       *policy.Repository
 	dialogWaiter   communication.DialogWaiter
 	discovery      Discovery
 	eventPublisher Publisher
@@ -174,6 +176,11 @@ func (i *Instance) Options() Options {
 // Proposal returns service proposal of the running service instance.
 func (i *Instance) Proposal() market.ServiceProposal {
 	return i.proposal
+}
+
+// Policies returns service policies of the running service instance.
+func (i *Instance) Policies() *policy.Repository {
+	return i.policies
 }
 
 // State returns the service instance state.

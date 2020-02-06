@@ -66,7 +66,7 @@ func Test_Manager_ProvideConfig(t *testing.T) {
 func Test_Manager_Serve_Stop(t *testing.T) {
 	manager := NewManager()
 	go func() {
-		err := manager.Serve(providerID)
+		err := manager.Serve(&service.Instance{})
 		assert.NoError(t, err)
 	}()
 

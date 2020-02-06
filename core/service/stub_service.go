@@ -36,7 +36,7 @@ type serviceFake struct {
 	onStartReturnError error
 }
 
-func (service *serviceFake) Serve(identity.Identity) error {
+func (service *serviceFake) Serve(instance *Instance) error {
 	if service.mockProcess != nil {
 		for range service.mockProcess {
 		}

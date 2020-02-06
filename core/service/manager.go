@@ -41,7 +41,7 @@ var (
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Serve(providerID identity.Identity) error
+	Serve(instance *Instance) error
 	Stop() error
 	ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error)
 }
@@ -108,16 +108,16 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 
 	proposal.SetAccessPolicies(nil)
-	policiesRules := policy.NewRepository()
+	policyRules := policy.NewRepository()
 	if len(policyIDs) > 0 {
 		policies := manager.policyOracle.Policies(policyIDs)
-		if err = manager.policyOracle.SubscribePolicies(policies, policiesRules); err != nil {
+		if err = manager.policyOracle.SubscribePolicies(policies, policyRules); err != nil {
 			return id, ErrUnsupportedAccessPolicy
 		}
 		proposal.SetAccessPolicies(&policies)
 	}
 
-	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, proposal.AccessPolicies, policiesRules)
+	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, proposal.AccessPolicies, policyRules)
 	if err != nil {
 		return id, err
 	}
@@ -138,23 +138,24 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery := manager.discoveryFactory()
 	discovery.Start(providerID, proposal)
 
-	instance := Instance{
+	instance := &Instance{
 		id:             id,
 		state:          Starting,
 		options:        options,
 		service:        service,
 		proposal:       proposal,
+		policies:       policyRules,
 		dialogWaiter:   dialogWaiter,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
 	}
 
-	manager.servicePool.Add(&instance)
+	manager.servicePool.Add(instance)
 
 	go func() {
 		instance.setState(Running)
 
-		serveErr := service.Serve(providerID)
+		serveErr := service.Serve(instance)
 		if serveErr != nil {
 			log.Error().Err(serveErr).Msg("Service serve failed")
 		}
