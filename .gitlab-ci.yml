@@ -26,6 +26,7 @@ before_script:
   - source build/env.sh
 
 after_script:
+  - go run mage.go -v DockerSystemPrune
   # docker based jobs leave files owned by root
   - sudo chown -R gitlab-runner:gitlab-runner $GOPATH
 
@@ -190,9 +191,3 @@ remove-bucket:
   stage: post-release
   tags: [go]
   script: go run mage.go -v RemoveBucket
-
-docker-prune:
-  stage: post-release
-  tags: [go]
-  script: go run mage.go -v RemoveDanglingData
-  when: always
