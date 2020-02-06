@@ -39,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -88,11 +89,14 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 			wgOptions := serviceOptions.(wireguard_service.Options)
 
 			var portPool port.ServicePortSupplier
+			var natPinger traversal.NATPinger
 			if wgOptions.Ports.IsSpecified() {
 				log.Info().Msgf("Fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
+				natPinger = traversal.NewNoopPinger()
 			} else {
 				portPool = port.NewPool()
+				natPinger = di.NATPinger
 			}
 
 			locationInfo := location.ServiceLocationInfo{
@@ -108,7 +112,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				di.IPResolver,
 				locationInfo,
 				di.NATService,
-				di.NATPinger,
+				natPinger,
 				di.NATTracker,
 				di.EventBus,
 				wgOptions,
@@ -155,10 +159,13 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 
 		var portPool port.ServicePortSupplier
+		var natPinger traversal.NATPinger
 		if transportOptions.Port != 0 {
 			portPool = port.NewPoolFixed(port.Port(transportOptions.Port))
+			natPinger = traversal.NewNoopPinger()
 		} else {
 			portPool = port.NewPool()
+			natPinger = di.NATPinger
 		}
 
 		portMapper := mapping.NewPortMapper(mapping.DefaultConfig(), di.EventBus)
@@ -169,7 +176,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			locationInfo,
 			di.ServiceSessionStorage,
 			di.NATService,
-			di.NATPinger,
+			natPinger,
 			di.NATTracker,
 			portPool,
 			di.EventBus,
