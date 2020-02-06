@@ -611,7 +611,7 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 	peerID := identity.FromAddress("0x01")
 
 	mp := &mockPublisher{
-		publicationChan: make(chan event, 10),
+		publicationChan: make(chan testEvent, 10),
 	}
 	emt := &ExchangeMessageTracker{
 		deps: ExchangeMessageTrackerDeps{

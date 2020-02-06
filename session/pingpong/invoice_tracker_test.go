@@ -655,18 +655,18 @@ func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck co
 	return mbh.isRegistered, mbh.isRegisteredError
 }
 
-type event struct {
+type testEvent struct {
 	name  string
 	value interface{}
 }
 
 type mockPublisher struct {
-	publicationChan chan event
+	publicationChan chan testEvent
 }
 
 func (mp *mockPublisher) Publish(topic string, payload interface{}) {
 	if mp.publicationChan != nil {
-		mp.publicationChan <- event{
+		mp.publicationChan <- testEvent{
 			name:  topic,
 			value: payload,
 		}

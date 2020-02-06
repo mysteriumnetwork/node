@@ -17,16 +17,27 @@
 
 package event
 
-// AppTopicSession represents the session change topic
-const AppTopicSession = "Session change"
+import "github.com/mysteriumnetwork/node/identity"
 
-// AppTopicDataTransfered represents the data transfer topic
-const AppTopicDataTransfered = "Session data transfered"
+const (
+	// AppTopicSession represents the session change topic.
+	AppTopicSession = "Session change"
+	// AppTopicDataTransfered represents the data transfer topic.
+	AppTopicDataTransfered = "Session data transfered"
+	// AppTopicSessionTokensEarned is a topic for publish events about tokens earned as a provider.
+	AppTopicSessionTokensEarned = "SessionTokensEarned"
+)
 
 // DataTransferEventPayload represents the data transfer event
 type DataTransferEventPayload struct {
 	ID       string
 	Up, Down uint64
+}
+
+// AppEventSessionTokensEarned is an update on tokens earned during current session
+type AppEventSessionTokensEarned struct {
+	Consumer identity.Identity
+	Total    uint64
 }
 
 // Action represents the different actions that might happen on a session

@@ -45,6 +45,7 @@ type Session struct {
 	ServiceID      string
 	CreatedAt      time.Time
 	DataTransfered DataTransfered
+	TokensEarned   uint64
 	Last           bool
 	done           chan struct{}
 }

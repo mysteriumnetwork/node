@@ -200,12 +200,13 @@ func (k *Keeper) updateSessionState(e interface{}) {
 	result := make([]stateEvent.ServiceSession, len(sessions))
 	for i := range sessions {
 		result[i] = stateEvent.ServiceSession{
-			ID:         string(sessions[i].ID),
-			ConsumerID: sessions[i].ConsumerID.Address,
-			CreatedAt:  sessions[i].CreatedAt,
-			BytesOut:   sessions[i].DataTransfered.Up,
-			BytesIn:    sessions[i].DataTransfered.Down,
-			ServiceID:  sessions[i].ServiceID,
+			ID:           string(sessions[i].ID),
+			ConsumerID:   sessions[i].ConsumerID.Address,
+			CreatedAt:    sessions[i].CreatedAt,
+			BytesOut:     sessions[i].DataTransfered.Up,
+			BytesIn:      sessions[i].DataTransfered.Down,
+			TokensEarned: sessions[i].TokensEarned,
+			ServiceID:    sessions[i].ServiceID,
 		}
 
 		// each new session counts as an additional attempt, mark them for further use

@@ -74,4 +74,6 @@ type ServiceSession struct {
 	BytesIn uint64 `json:"bytesIn"`
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	ServiceID string `json:"serviceId"`
+	// example: 500000
+	TokensEarned uint64 `json:"tokensEarned"`
 }

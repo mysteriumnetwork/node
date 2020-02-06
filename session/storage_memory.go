@@ -19,6 +19,8 @@ package session
 
 import (
 	"sync"
+
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // NewStorageMemory initiates new session storage
@@ -85,6 +87,28 @@ func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down uint64) {
 		instance.DataTransfered.Up = up
 		storage.sessions[id] = instance
 	}
+}
+
+// UpdateEarnings updates total tokens earned during the session.
+func (storage *StorageMemory) UpdateEarnings(id ID, total uint64) {
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+	if session, found := storage.sessions[id]; found {
+		session.TokensEarned = total
+		storage.sessions[id] = session
+	}
+}
+
+// FindByPeer returns a session given a peer ID.
+func (storage *StorageMemory) FindByPeer(peer identity.Identity) (ID, bool) {
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+	for id, session := range storage.sessions {
+		if session.ConsumerID == peer {
+			return id, true
+		}
+	}
+	return "", false
 }
 
 // Remove removes given session from underlying storage

@@ -22,13 +22,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	sessionExisting = Session{
-		ID:   ID("mocked-id"),
-		Last: true,
+		ID:         ID("mocked-id"),
+		Last:       true,
+		ConsumerID: identity.FromAddress("deadbeef"),
 	}
 )
 
@@ -61,6 +63,29 @@ func TestStorage_Add(t *testing.T) {
 		map[ID]Session{sessionExisting.ID: sessionExisting, sessionNew.ID: sessionNew},
 		storage.sessions,
 	)
+}
+
+func TestStorageMemory_UpdateEarnings(t *testing.T) {
+	// given
+	storage := mockStorage(sessionExisting)
+	session, ok := storage.Find(sessionExisting.ID)
+	assert.True(t, ok)
+	assert.Zero(t, session.TokensEarned)
+
+	// when
+	storage.UpdateEarnings(sessionExisting.ID, 420)
+
+	// then
+	session, ok = storage.Find(sessionExisting.ID)
+	assert.True(t, ok)
+	assert.EqualValues(t, 420, session.TokensEarned)
+}
+
+func TestStorageMemory_FindByPeer(t *testing.T) {
+	storage := mockStorage(sessionExisting)
+	id, ok := storage.FindByPeer(sessionExisting.ConsumerID)
+	assert.True(t, ok)
+	assert.Equal(t, sessionExisting.ID, id)
 }
 
 func TestStorage_GetAll(t *testing.T) {

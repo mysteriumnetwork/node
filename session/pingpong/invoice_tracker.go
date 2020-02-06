@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -285,6 +286,10 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
+	})
+	it.deps.Publisher.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
+		Consumer: it.deps.Peer,
+		Total:    it.lastExchangeMessage.AgreementTotal,
 	})
 	return nil
 }
