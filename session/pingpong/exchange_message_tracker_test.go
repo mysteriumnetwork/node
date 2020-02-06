@@ -634,7 +634,7 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 	})
 	assert.NoError(t, err)
 	ev := <-mp.publicationChan
-	assert.Equal(t, ExchangeMessageTopic, ev.name)
+	assert.Equal(t, AppTopicExchangeMessage, ev.name)
 	assert.EqualValues(t, ExchangeMessageEventPayload{
 		Identity:       emt.deps.Identity,
 		AmountPromised: 5,

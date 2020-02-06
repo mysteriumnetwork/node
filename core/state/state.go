@@ -93,7 +93,7 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 func (k *Keeper) announceState(_ interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	k.publisher.Publish(stateEvent.Topic, *k.state)
+	k.publisher.Publish(stateEvent.AppTopicState, *k.state)
 }
 
 func (k *Keeper) updateServiceState(_ interface{}) {

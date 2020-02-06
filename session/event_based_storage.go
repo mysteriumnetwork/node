@@ -50,7 +50,7 @@ func NewEventBasedStorage(bus eventPublisher, storage storage) *EventBasedStorag
 // Add adds a session and publishes a creation event
 func (ebs *EventBasedStorage) Add(sessionInstance Session) {
 	ebs.storage.Add(sessionInstance)
-	go ebs.bus.Publish(event.Topic, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
 		ID:     string(sessionInstance.ID),
 		Action: event.Created,
 	})
@@ -71,7 +71,7 @@ func (ebs *EventBasedStorage) consumeDataTransferedEvent(e event.DataTransferEve
 // UpdateDataTransfer updates the data transfer for a session
 func (ebs *EventBasedStorage) UpdateDataTransfer(id ID, up, down uint64) {
 	ebs.storage.UpdateDataTransfer(id, up, down)
-	go ebs.bus.Publish(event.Topic, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
 		ID:     string(id),
 		Action: event.Updated,
 	})
@@ -85,7 +85,7 @@ func (ebs *EventBasedStorage) Find(id ID) (Session, bool) {
 // Remove removes the session and publishes a removal event
 func (ebs *EventBasedStorage) Remove(id ID) {
 	ebs.storage.Remove(id)
-	go ebs.bus.Publish(event.Topic, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
 		ID:     string(id),
 		Action: event.Removed,
 	})
@@ -94,7 +94,7 @@ func (ebs *EventBasedStorage) Remove(id ID) {
 // RemoveForService removes all the sessions for a service and publishes a delete event
 func (ebs *EventBasedStorage) RemoveForService(serviceID string) {
 	ebs.storage.RemoveForService(serviceID)
-	go ebs.bus.Publish(event.Topic, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
 		ID:     "",
 		Action: event.Removed,
 	})
@@ -102,5 +102,5 @@ func (ebs *EventBasedStorage) RemoveForService(serviceID string) {
 
 // Subscribe subscribes the ebs to relevant events
 func (ebs *EventBasedStorage) Subscribe() error {
-	return ebs.bus.SubscribeAsync(event.DataTransfered, ebs.consumeDataTransferedEvent)
+	return ebs.bus.SubscribeAsync(event.AppTopicDataTransfered, ebs.consumeDataTransferedEvent)
 }

@@ -282,15 +282,15 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 
 	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
 
-	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.StateKeeper.ConsumeServiceStateEvent)
+	err := di.EventBus.SubscribeAsync(service.AppTopicServiceStatus, di.StateKeeper.ConsumeServiceStateEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(sessionevent.Topic, di.StateKeeper.ConsumeSessionStateEvent)
+	err = di.EventBus.SubscribeAsync(sessionevent.AppTopicSession, di.StateKeeper.ConsumeSessionStateEvent)
 	if err != nil {
 		return err
 	}
-	return di.EventBus.SubscribeAsync(event.Topic, di.StateKeeper.ConsumeNATEvent)
+	return di.EventBus.SubscribeAsync(event.AppTopicTraversal, di.StateKeeper.ConsumeNATEvent)
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -317,11 +317,11 @@ func (di *Dependencies) registerNoopConnection() {
 // bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
 func (di *Dependencies) bootstrapSSEHandler() error {
 	di.SSEHandler = sse.NewHandler(di.StateKeeper)
-	err := di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
+	err := di.EventBus.Subscribe(nodevent.AppTopicNode, di.SSEHandler.ConsumeNodeEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(statevent.Topic, di.SSEHandler.ConsumeStateEvent)
+	err = di.EventBus.Subscribe(statevent.AppTopicState, di.SSEHandler.ConsumeStateEvent)
 	return err
 }
 
@@ -397,49 +397,49 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 func (di *Dependencies) subscribeEventConsumers() error {
 	// state events
-	err := di.EventBus.Subscribe(connection.SessionEventTopic, di.StatisticsTracker.ConsumeSessionEvent)
+	err := di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsTracker.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.SessionEventTopic, di.StatisticsReporter.ConsumeSessionEvent)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.SessionEventTopic, di.SessionStorage.ConsumeSessionEvent)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.SessionStorage.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
 
 	// statistics events
-	err = di.EventBus.Subscribe(connection.StatisticsEventTopic, di.StatisticsTracker.ConsumeStatisticsEvent)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
 	if err != nil {
 		return err
 	}
 
 	// NAT events
-	err = di.EventBus.Subscribe(event.Topic, di.NATEventSender.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.AppTopicTraversal, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.AppTopicTraversal, di.NATTracker.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
 
 	// Quality metrics
-	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendConnStateEvent)
+	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, di.QualityMetricsSender.SendConnStateEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerSession, di.QualityMetricsSender.SendSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.QualityMetricsSender.SendSessionData)
+	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, di.QualityMetricsSender.SendSessionData)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(discovery.EventTopicProposalAnnounce, di.QualityMetricsSender.SendProposalEvent)
+	err = di.EventBus.SubscribeAsync(discovery.AppTopicProposalAnnounce, di.QualityMetricsSender.SendProposalEvent)
 	if err != nil {
 		return err
 	}
@@ -449,7 +449,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 
-	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
+	return di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
@@ -783,12 +783,12 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 
-	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
+	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, di.LocationResolver.HandleConnectionEvent)
 	if err != nil {
 		return err
 	}
 
-	err = di.EventBus.SubscribeAsync(nodevent.Topic, di.LocationResolver.HandleNodeEvent)
+	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.LocationResolver.HandleNodeEvent)
 	if err != nil {
 		return err
 	}
@@ -809,12 +809,12 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 
 func (di *Dependencies) bootstrapBandwidthTracker() error {
 	di.BandwidthTracker = &bandwidth.Tracker{}
-	err := di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.BandwidthTracker.ConsumeSessionEvent)
+	err := di.EventBus.SubscribeAsync(connection.AppTopicConsumerSession, di.BandwidthTracker.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
 
-	return di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.BandwidthTracker.ConsumeStatisticsEvent)
+	return di.EventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, di.BandwidthTracker.ConsumeStatisticsEvent)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
@@ -858,7 +858,7 @@ func (di *Dependencies) handleHTTPClientConnections() error {
 	}
 
 	latestState := connection.NotConnected
-	return di.EventBus.Subscribe(connection.StateEventTopic, func(e connection.StateEvent) {
+	return di.EventBus.Subscribe(connection.AppTopicConsumerConnectionState, func(e connection.StateEvent) {
 		// Here we care only about connected and disconnected events.
 		if e.State != connection.Connected && e.State != connection.NotConnected {
 			return

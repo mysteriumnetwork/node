@@ -69,7 +69,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
-	d.eventBus.Publish(identityregistry.RegistrationEventTopic, identityregistry.RegistrationEventPayload{
+	d.eventBus.Publish(identityregistry.AppTopicRegistration, identityregistry.RegistrationEventPayload{
 		ID:     providerID,
 		Status: identityregistry.RegisteredProvider,
 	})
@@ -89,7 +89,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
-	d.eventBus.Publish(identityregistry.RegistrationEventTopic, identityregistry.RegistrationEventPayload{
+	d.eventBus.Publish(identityregistry.AppTopicRegistration, identityregistry.RegistrationEventPayload{
 		ID:     providerID,
 		Status: identityregistry.RegistrationError,
 	})

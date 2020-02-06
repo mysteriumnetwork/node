@@ -22,27 +22,27 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// AccountantPromiseTopic represents a topic to which we send accountant promise events.
-const AccountantPromiseTopic = "accountant_promise_received"
+// AppTopicAccountantPromise represents a topic to which we send accountant promise events.
+const AppTopicAccountantPromise = "accountant_promise_received"
 
-// AccountantPromiseEventPayload represents the payload that is sent on the AccountantPromiseTopic.
+// AccountantPromiseEventPayload represents the payload that is sent on the AppTopicAccountantPromise.
 type AccountantPromiseEventPayload struct {
 	Promise      crypto.Promise
 	AccountantID identity.Identity
 	ProviderID   identity.Identity
 }
 
-// ExchangeMessageTopic represents a topic where exchange messages are sent.
-const ExchangeMessageTopic = "exchange_message_topic"
+// AppTopicExchangeMessage represents a topic where exchange messages are sent.
+const AppTopicExchangeMessage = "exchange_message_topic"
 
-// ExchangeMessageEventPayload represents the messages that are sent on the ExchangeMessageTopic.
+// ExchangeMessageEventPayload represents the messages that are sent on the AppTopicExchangeMessage.
 type ExchangeMessageEventPayload struct {
 	Identity       identity.Identity
 	AmountPromised uint64
 }
 
-// BalanceChangedTopic represents the balance change topic
-const BalanceChangedTopic = "balance_change"
+// AppTopicBalanceChanged represents the balance change topic
+const AppTopicBalanceChanged = "balance_change"
 
 // BalanceChangedEvent represents a balance change event
 type BalanceChangedEvent struct {

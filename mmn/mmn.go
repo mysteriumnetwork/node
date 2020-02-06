@@ -43,7 +43,7 @@ func NewMMN(collector *Collector, client *client) *MMN {
 // Subscribe subscribes to node events and reports them to MMN
 func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	err := eventBus.SubscribeAsync(
-		identity.IdentityUnlockTopic,
+		identity.AppTopicIdentityUnlock,
 		m.handleRegistration,
 	)
 	if err != nil {
@@ -51,7 +51,7 @@ func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	}
 
 	err = eventBus.SubscribeAsync(
-		service.StatusTopic,
+		service.AppTopicServiceStatus,
 		m.handleProvider,
 	)
 	if err != nil {
@@ -59,7 +59,7 @@ func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	}
 
 	err = eventBus.SubscribeAsync(
-		connection.SessionEventTopic,
+		connection.AppTopicConsumerSession,
 		m.handleClient,
 	)
 	if err != nil {

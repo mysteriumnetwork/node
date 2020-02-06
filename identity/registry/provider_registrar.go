@@ -79,11 +79,11 @@ func NewProviderRegistrar(transactor txer, registrationStatusChecker registratio
 
 // Subscribe subscribes the provider registrar to service state change events
 func (pr *ProviderRegistrar) Subscribe(eb eventbus.EventBus) error {
-	err := eb.SubscribeAsync(event.Topic, pr.handleNodeStartupEvents)
+	err := eb.SubscribeAsync(event.AppTopicNode, pr.handleNodeStartupEvents)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to node events")
 	}
-	return eb.SubscribeAsync(service.StatusTopic, pr.consumeServiceEvent)
+	return eb.SubscribeAsync(service.AppTopicServiceStatus, pr.consumeServiceEvent)
 }
 
 func (pr *ProviderRegistrar) handleNodeStartupEvents(e event.Payload) {

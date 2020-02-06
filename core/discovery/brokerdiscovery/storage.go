@@ -88,14 +88,14 @@ func (s *ProposalStorage) Set(proposals []market.ServiceProposal) {
 	for _, p := range proposals {
 		index, exist := s.getProposalIndex(proposalsOld, p.UniqueID())
 		if exist {
-			go s.eventPublisher.Publish(discovery.EventTopicProposalUpdated, p)
+			go s.eventPublisher.Publish(discovery.AppTopicProposalUpdated, p)
 			proposalsOld = append(proposalsOld[:index], proposalsOld[index+1:]...)
 		} else {
-			go s.eventPublisher.Publish(discovery.EventTopicProposalAdded, p)
+			go s.eventPublisher.Publish(discovery.AppTopicProposalAdded, p)
 		}
 	}
 	for _, p := range proposalsOld {
-		go s.eventPublisher.Publish(discovery.EventTopicProposalRemoved, p)
+		go s.eventPublisher.Publish(discovery.AppTopicProposalRemoved, p)
 	}
 	s.proposals = proposals
 }
@@ -128,10 +128,10 @@ func (s *ProposalStorage) AddProposal(proposals ...market.ServiceProposal) {
 
 	for _, p := range proposals {
 		if index, exist := s.getProposalIndex(s.proposals, p.UniqueID()); !exist {
-			s.eventPublisher.Publish(discovery.EventTopicProposalAdded, p)
+			s.eventPublisher.Publish(discovery.AppTopicProposalAdded, p)
 			s.proposals = append(s.proposals, p)
 		} else {
-			s.eventPublisher.Publish(discovery.EventTopicProposalUpdated, p)
+			s.eventPublisher.Publish(discovery.AppTopicProposalUpdated, p)
 			s.proposals[index] = p
 		}
 	}
@@ -143,7 +143,7 @@ func (s *ProposalStorage) RemoveProposal(id market.ProposalID) {
 	defer s.mutex.Unlock()
 
 	if index, exist := s.getProposalIndex(s.proposals, id); exist {
-		go s.eventPublisher.Publish(discovery.EventTopicProposalRemoved, s.proposals[index])
+		go s.eventPublisher.Publish(discovery.AppTopicProposalRemoved, s.proposals[index])
 		s.proposals = append(s.proposals[:index], s.proposals[index+1:]...)
 	}
 }

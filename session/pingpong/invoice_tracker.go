@@ -260,7 +260,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	}
 
 	promise.R = r
-	it.deps.Publisher.Publish(AccountantPromiseTopic, AccountantPromiseEventPayload{
+	it.deps.Publisher.Publish(AppTopicAccountantPromise, AccountantPromiseEventPayload{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,

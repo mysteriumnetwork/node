@@ -23,8 +23,8 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// Topic is the topic that we use to announce state changes to via the event bus
-const Topic = "State change"
+// AppTopicState is the topic that we use to announce state changes to via the event bus
+const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {

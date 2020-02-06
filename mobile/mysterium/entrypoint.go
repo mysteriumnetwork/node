@@ -218,7 +218,7 @@ type ProposalChangeCallback interface {
 
 // RegisterProposalAddedCallback registers callback which is called on newly announced proposals
 func (mb *MobileNode) RegisterProposalAddedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalAdded, func(proposal market.ServiceProposal) {
+	_ = mb.eventBus.SubscribeAsync(discovery.AppTopicProposalAdded, func(proposal market.ServiceProposal) {
 		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
 		log.Error().Err(err).Msg("Proposal mapping failed")
 		cb.OnChange(proposalPayload)
@@ -227,7 +227,7 @@ func (mb *MobileNode) RegisterProposalAddedCallback(cb ProposalChangeCallback) {
 
 // RegisterProposalUpdatedCallback registers callback which is called on re-announced proposals
 func (mb *MobileNode) RegisterProposalUpdatedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalUpdated, func(proposal market.ServiceProposal) {
+	_ = mb.eventBus.SubscribeAsync(discovery.AppTopicProposalUpdated, func(proposal market.ServiceProposal) {
 		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
 		log.Error().Err(err).Msg("Proposal mapping failed")
 		cb.OnChange(proposalPayload)
@@ -236,7 +236,7 @@ func (mb *MobileNode) RegisterProposalUpdatedCallback(cb ProposalChangeCallback)
 
 // RegisterProposalRemovedCallback registers callback which is called on de-announced proposals
 func (mb *MobileNode) RegisterProposalRemovedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.EventTopicProposalRemoved, func(proposal market.ServiceProposal) {
+	_ = mb.eventBus.SubscribeAsync(discovery.AppTopicProposalRemoved, func(proposal market.ServiceProposal) {
 		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
 		log.Error().Err(err).Msg("Proposal mapping failed")
 		cb.OnChange(proposalPayload)
@@ -287,7 +287,7 @@ type StatisticsChangeCallback interface {
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.StatisticsEventTopic, func(e connection.SessionStatsEvent) {
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, func(e connection.SessionStatsEvent) {
 		duration := mb.statisticsTracker.GetSessionDuration()
 		cb.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
 	})
@@ -301,7 +301,7 @@ type ConnectionStatusChangeCallback interface {
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.StateEventTopic, func(e connection.StateEvent) {
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, func(e connection.StateEvent) {
 		cb.OnChange(string(e.State))
 	})
 }
@@ -313,7 +313,7 @@ type BalanceChangeCallback interface {
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(pingpong.BalanceChangedTopic, func(e pingpong.BalanceChangedEvent) {
+	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.BalanceChangedEvent) {
 		cb.OnChange(e.Identity.Address, int64(e.Current))
 	})
 }
@@ -325,7 +325,7 @@ type IdentityRegistrationChangeCallback interface {
 
 // RegisterIdentityRegistrationChangeCallback registers callback which is called on identity registration status change.
 func (mb *MobileNode) RegisterIdentityRegistrationChangeCallback(cb IdentityRegistrationChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(registry.RegistrationEventTopic, func(e registry.RegistrationEventPayload) {
+	_ = mb.eventBus.SubscribeAsync(registry.AppTopicRegistration, func(e registry.RegistrationEventPayload) {
 		cb.OnChange(e.ID.Address, e.Status.String())
 	})
 }
@@ -509,7 +509,7 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 			mb.ipResolver,
 		)
 	}
-	_ = mb.eventBus.Subscribe(connection.StateEventTopic, st.handleState)
+	_ = mb.eventBus.Subscribe(connection.AppTopicConsumerConnectionState, st.handleState)
 	mb.connectionRegistry.Register("openvpn", factory)
 	return st
 }

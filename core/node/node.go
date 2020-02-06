@@ -78,7 +78,7 @@ func (node *Node) Start() error {
 		}
 	}()
 
-	node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStarted})
+	node.publisher.Publish(event.AppTopicNode, event.Payload{Status: event.StatusStarted})
 
 	go node.natPinger.Start()
 
@@ -87,7 +87,7 @@ func (node *Node) Start() error {
 
 // Wait blocks until Mysterium node is stopped
 func (node *Node) Wait() error {
-	defer node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStopped})
+	defer node.publisher.Publish(event.AppTopicNode, event.Payload{Status: event.StatusStopped})
 	return node.httpAPIServer.Wait()
 }
 

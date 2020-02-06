@@ -184,7 +184,7 @@ func (d *Discovery) handleRegistrationEvent(rep registry.RegistrationEventPayloa
 
 func (d *Discovery) registerIdentity() {
 	log.Info().Msg("Waiting for registration success event")
-	d.eventBus.Subscribe(registry.RegistrationEventTopic, d.handleRegistrationEvent)
+	d.eventBus.Subscribe(registry.AppTopicRegistration, d.handleRegistrationEvent)
 	d.changeStatus(WaitingForRegistration)
 }
 
@@ -196,7 +196,7 @@ func (d *Discovery) registerProposal() {
 		d.changeStatus(RegisterProposal)
 		return
 	}
-	d.eventBus.Publish(EventTopicProposalAnnounce, d.proposal)
+	d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
 	d.changeStatus(PingProposal)
 }
 
@@ -206,7 +206,7 @@ func (d *Discovery) pingProposal() {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping proposal")
 	}
-	d.eventBus.Publish(EventTopicProposalAnnounce, d.proposal)
+	d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
 	d.changeStatus(PingProposal)
 }
 

@@ -23,8 +23,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Topic the topic that traversal events are published on
-const Topic = "Traversal"
+// AppTopicTraversal the topic that traversal events are published on
+const AppTopicTraversal = "Traversal"
 
 // Tracker is able to track NAT traversal events
 type Tracker struct {

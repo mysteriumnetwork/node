@@ -69,8 +69,8 @@ func (srs StoredRegistrationStatus) FromEvent(status RegistrationStatus, ev Iden
 	}
 }
 
-// RegistrationEventTopic represents the registration event topic
-const RegistrationEventTopic = "registration_event_topic"
+// AppTopicRegistration represents the registration event topic
+const AppTopicRegistration = "registration_event_topic"
 
 // RegistrationEventPayload represents the registration event payload
 type RegistrationEventPayload struct {
