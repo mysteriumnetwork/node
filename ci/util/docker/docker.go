@@ -19,7 +19,7 @@ package docker
 
 import "github.com/mysteriumnetwork/go-ci/shell"
 
-// RemoveDanglingData removes dangling docker data: containers stopped, volumes without containers, images without containers
-func RemoveDanglingData() error {
+// DockerSystemPrune removes dangling docker data: containers stopped, volumes without containers, images without containers
+func DockerSystemPrune() error {
 	return shell.NewCmd("docker system prune -f").Run()
 }
