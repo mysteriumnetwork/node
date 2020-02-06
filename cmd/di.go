@@ -678,6 +678,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
+		options.Accountant.AccountantEndpointAddress,
 	); err != nil {
 		return err
 	}
