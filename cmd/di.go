@@ -490,6 +490,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
+	consumerDataGetter := pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
@@ -499,7 +500,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 		),
-		pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData,
+		consumerDataGetter,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -517,7 +518,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.ConsumerTotalsStorage,
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
-			di.EventBus),
+			di.EventBus,
+			consumerDataGetter,
+		),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		connectivity.NewStatusSender(),
@@ -675,6 +678,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
+		options.Accountant.AccountantEndpointAddress,
 	); err != nil {
 		return err
 	}

@@ -113,7 +113,9 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,
-	registryAddress string, publisher eventbus.Publisher) func(paymentInfo *promise.PaymentInfo,
+	registryAddress string,
+	publisher eventbus.Publisher,
+	getConsumerInfo getConsumerInfo) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
@@ -162,6 +164,8 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				PaymentInfo:               rate,
 				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
 				Publisher:                 publisher,
+				AccountantAddress:         accountant,
+				ConsumerInfoGetter:        getConsumerInfo,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {
