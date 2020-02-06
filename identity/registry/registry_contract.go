@@ -97,12 +97,12 @@ func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryA
 
 // Subscribe subscribes the contract registry to relevant events
 func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
-	err := eb.SubscribeAsync(event.Topic, registry.handleNodeEvent)
+	err := eb.SubscribeAsync(event.AppTopicNode, registry.handleNodeEvent)
 	if err != nil {
 		return err
 	}
 
-	return eb.Subscribe(TransactorRegistrationTopic, registry.handleRegistrationEvent)
+	return eb.Subscribe(AppTopicTransactorRegistration, registry.handleRegistrationEvent)
 }
 
 // GetRegistrationStatus returns the registration status of the provided identity
@@ -199,7 +199,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 		subscription, err := registry.filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
 		if err != nil {
-			registry.publisher.Publish(RegistrationEventTopic, RegistrationEventPayload{
+			registry.publisher.Publish(AppTopicRegistration, RegistrationEventPayload{
 				ID:     identity,
 				Status: RegistrationError,
 			})
@@ -231,7 +231,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			}
 
 			log.Debug().Msgf("Sending registration success event for %v", identity)
-			registry.publisher.Publish(RegistrationEventTopic, RegistrationEventPayload{
+			registry.publisher.Publish(AppTopicRegistration, RegistrationEventPayload{
 				ID:     identity,
 				Status: status,
 			})
@@ -244,7 +244,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 				log.Error().Err(err).Msg("Could not store registration status")
 			}
 		case err := <-subscription.Err():
-			registry.publisher.Publish(RegistrationEventTopic, RegistrationEventPayload{
+			registry.publisher.Publish(AppTopicRegistration, RegistrationEventPayload{
 				ID:     identity,
 				Status: RegistrationError,
 			})

@@ -31,11 +31,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TransactorRegistrationTopic represents the registration topic to which events regarding registration attempts on transactor will occur
-const TransactorRegistrationTopic = "transactor_identity_registration"
+// AppTopicTransactorRegistration represents the registration topic to which events regarding registration attempts on transactor will occur
+const AppTopicTransactorRegistration = "transactor_identity_registration"
 
-// TransactorTopUpTopic represents the top up topic to which events regarding top up attempts are sent.
-const TransactorTopUpTopic = "transactor_top_up"
+// AppTopicTransactorTopUp represents the top up topic to which events regarding top up attempts are sent.
+const AppTopicTransactorTopUp = "transactor_top_up"
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
@@ -154,7 +154,7 @@ func (t *Transactor) TopUp(id string) error {
 	}
 
 	// This is left as a synchronous call on purpose.
-	t.publisher.Publish(TransactorTopUpTopic, id)
+	t.publisher.Publish(AppTopicTransactorTopUp, id)
 
 	return t.httpClient.DoRequest(req)
 }
@@ -196,7 +196,7 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 
 	// This is left as a synchronous call on purpose.
 	// We need to notify registry before returning.
-	t.publisher.Publish(TransactorRegistrationTopic, regReq)
+	t.publisher.Publish(AppTopicTransactorRegistration, regReq)
 
 	return t.httpClient.DoRequest(req)
 }

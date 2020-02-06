@@ -101,9 +101,9 @@ func (p *portMapper) Map(protocol string, port int, name string) (release func()
 
 func (p *portMapper) notify(err error) {
 	if err != nil {
-		p.publisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
+		p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
 	} else {
-		p.publisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
+		p.publisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
 	}
 }
 

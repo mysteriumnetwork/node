@@ -124,7 +124,7 @@ func (cfg *Config) SetDefault(key string, value interface{}) {
 // SetUser sets user configuration value for key.
 func (cfg *Config) SetUser(key string, value interface{}) {
 	if cfg.eventBus != nil {
-		cfg.eventBus.Publish(Topic(key), value)
+		cfg.eventBus.Publish(AppTopicConfig(key), value)
 	}
 	cfg.set(&cfg.user, key, value)
 }
@@ -334,7 +334,7 @@ func GetFloat64(flag cli.Float64Flag) float64 {
 	return Current.GetFloat64(flag.Name)
 }
 
-// Topic returns event bus topic for the given config key to listen for its updates.
-func Topic(configKey string) string {
+// AppTopicConfig returns event bus topic for the given config key to listen for its updates.
+func AppTopicConfig(configKey string) string {
 	return "config:" + configKey
 }

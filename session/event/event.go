@@ -17,11 +17,11 @@
 
 package event
 
-// Topic represents the session change topic
-const Topic = "Session change"
+// AppTopicSession represents the session change topic
+const AppTopicSession = "Session change"
 
-// DataTransfered represents the data transfer topic
-const DataTransfered = "Session data transfered"
+// AppTopicDataTransfered represents the data transfer topic
+const AppTopicDataTransfered = "Session data transfered"
 
 // DataTransferEventPayload represents the data transfer event
 type DataTransferEventPayload struct {

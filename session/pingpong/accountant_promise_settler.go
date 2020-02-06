@@ -143,22 +143,22 @@ func (aps *AccountantPromiseSettler) resyncState(addr identity.Identity) error {
 
 // Subscribe subscribes the accountant promise settler to the appropriate events
 func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
-	err := sub.SubscribeAsync(nodevent.Topic, aps.handleNodeEvent)
+	err := sub.SubscribeAsync(nodevent.AppTopicNode, aps.handleNodeEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to node status event")
 	}
 
-	err = sub.SubscribeAsync(registry.RegistrationEventTopic, aps.handleRegistrationEvent)
+	err = sub.SubscribeAsync(registry.AppTopicRegistration, aps.handleRegistrationEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to registration event")
 	}
 
-	err = sub.SubscribeAsync(service.StatusTopic, aps.handleServiceEvent)
+	err = sub.SubscribeAsync(service.AppTopicServiceStatus, aps.handleServiceEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to service status event")
 	}
 
-	err = sub.SubscribeAsync(AccountantPromiseTopic, aps.handleAccountantPromiseReceived)
+	err = sub.SubscribeAsync(AppTopicAccountantPromise, aps.handleAccountantPromiseReceived)
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 

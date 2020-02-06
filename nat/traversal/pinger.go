@@ -209,7 +209,7 @@ func (p *Pinger) ping(conn *net.UDPConn, stop <-chan struct{}) error {
 
 			err := p.sendPingRequest(conn, ttl)
 			if err != nil {
-				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
+				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
 				return err
 			}
 
@@ -217,7 +217,7 @@ func (p *Pinger) ping(conn *net.UDPConn, stop <-chan struct{}) error {
 
 			if time.Duration(i)*p.pingConfig.Interval > p.pingConfig.Timeout {
 				err := errors.New("timeout while waiting for ping ack, trying to continue")
-				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
+				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
 				return err
 			}
 		}
@@ -339,7 +339,7 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 		return
 	}
 
-	p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
+	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
 
 	log.Info().Msg("Ping received, waiting for a new connection")
 

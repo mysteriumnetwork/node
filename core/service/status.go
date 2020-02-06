@@ -17,8 +17,8 @@
 
 package service
 
-// StatusTopic is used in event bus to announce the service status
-const StatusTopic = "Service status"
+// AppTopicServiceStatus is used in event bus to announce the service status
+const AppTopicServiceStatus = "Service status"
 
 // EventPayload represents the service event related information
 type EventPayload struct {

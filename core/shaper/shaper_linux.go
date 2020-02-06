@@ -39,7 +39,7 @@ func create(listener eventListener) *linuxShaper {
 	return &linuxShaper{
 		ws:          ws,
 		listener:    listener,
-		listenTopic: config.Topic(config.FlagShaperEnabled.Name),
+		listenTopic: config.AppTopicConfig(config.FlagShaperEnabled.Name),
 	}
 }
 

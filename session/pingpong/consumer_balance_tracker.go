@@ -75,11 +75,11 @@ type Balance struct {
 
 // Subscribe subscribes the consumer balance tracker to relevant events
 func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
-	err := bus.SubscribeAsync(registry.RegistrationEventTopic, cbt.handleRegistrationEvent)
+	err := bus.SubscribeAsync(registry.AppTopicRegistration, cbt.handleRegistrationEvent)
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(registry.TransactorTopUpTopic, cbt.handleTopUpEvent)
+	err = bus.SubscribeAsync(registry.AppTopicTransactorTopUp, cbt.handleTopUpEvent)
 	if err != nil {
 		return err
 	}
@@ -87,11 +87,11 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(ExchangeMessageTopic, cbt.handleExchangeMessageEvent)
+	err = bus.SubscribeAsync(AppTopicExchangeMessage, cbt.handleExchangeMessageEvent)
 	if err != nil {
 		return err
 	}
-	return bus.SubscribeAsync(identity.IdentityUnlockTopic, cbt.handleUnlockEvent)
+	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, cbt.handleUnlockEvent)
 }
 
 // GetBalance gets the current balance for given identity
@@ -109,7 +109,7 @@ func (cbt *ConsumerBalanceTracker) handleExchangeMessageEvent(event ExchangeMess
 }
 
 func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after uint64) {
-	cbt.publisher.Publish(BalanceChangedTopic, BalanceChangedEvent{
+	cbt.publisher.Publish(AppTopicBalanceChanged, BalanceChangedEvent{
 		Identity: id,
 		Previous: before,
 		Current:  after,

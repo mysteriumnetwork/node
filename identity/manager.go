@@ -31,8 +31,8 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
-// IdentityUnlockTopic is the channel name for identity unlock event
-const IdentityUnlockTopic = "identity-unlocked"
+// AppTopicIdentityUnlock is the channel name for identity unlock event
+const AppTopicIdentityUnlock = "identity-unlocked"
 
 type identityManager struct {
 	keystoreManager Keystore
@@ -120,7 +120,7 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	log.Debug().Msgf("Caching unlocked address: %s", address)
 	idm.unlocked[address] = true
 
-	go idm.eventBus.Publish(IdentityUnlockTopic, address)
+	go idm.eventBus.Publish(AppTopicIdentityUnlock, address)
 
 	return nil
 }

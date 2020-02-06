@@ -188,7 +188,7 @@ func (i *Instance) setState(newState State) {
 	defer i.stateLock.Unlock()
 	i.state = newState
 
-	i.eventPublisher.Publish(StatusTopic, i.toEvent())
+	i.eventPublisher.Publish(AppTopicServiceStatus, i.toEvent())
 }
 
 // toEvent returns an event representation of the instance

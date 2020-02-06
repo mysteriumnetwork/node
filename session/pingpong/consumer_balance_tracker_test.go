@@ -56,11 +56,11 @@ func TestConsumerBalanceTracker(t *testing.T) {
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
 
-	bus.Publish(registry.RegistrationEventTopic, registry.RegistrationEventPayload{
+	bus.Publish(registry.AppTopicRegistration, registry.RegistrationEventPayload{
 		ID:     id1,
 		Status: registry.RegisteredProvider,
 	})
-	bus.Publish(registry.RegistrationEventTopic, registry.RegistrationEventPayload{
+	bus.Publish(registry.AppTopicRegistration, registry.RegistrationEventPayload{
 		ID:     id2,
 		Status: registry.RegistrationError,
 	})
@@ -71,13 +71,13 @@ func TestConsumerBalanceTracker(t *testing.T) {
 	err = waitForBalance(cbt, id2, 0)
 	assert.Nil(t, err)
 
-	bus.Publish(identity.IdentityUnlockTopic, id2.Address)
+	bus.Publish(identity.AppTopicIdentityUnlock, id2.Address)
 
 	err = waitForBalance(cbt, id2, initialBalance)
 	assert.Nil(t, err)
 
 	var promised uint64 = 100
-	bus.Publish(ExchangeMessageTopic, ExchangeMessageEventPayload{
+	bus.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
 		Identity:       id1,
 		AmountPromised: promised,
 	})

@@ -21,12 +21,12 @@ import "github.com/mysteriumnetwork/node/consumer"
 
 // Topic represents the different topics a consumer can subscribe to
 const (
-	// StateEventTopic represents the connection state change topic
-	StateEventTopic = "State"
-	// StatisticsEventTopic represents the connection stats topic
-	StatisticsEventTopic = "Statistics"
-	// SessionEventTopic represents the session event
-	SessionEventTopic = "Session"
+	// AppTopicConsumerConnectionState represents the connection state change topic
+	AppTopicConsumerConnectionState = "State"
+	// AppTopicConsumerStatistics represents the connection stats topic
+	AppTopicConsumerStatistics = "Statistics"
+	// AppTopicConsumerSession represents the session event
+	AppTopicConsumerSession = "Session"
 )
 
 // StateEvent is the struct we'll emit on a StateEvent topic event

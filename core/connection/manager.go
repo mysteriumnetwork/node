@@ -354,7 +354,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	}
 	manager.setCurrentSession(sessionInfo)
 
-	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
+	manager.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
 		Status:      SessionCreatedStatus,
 		SessionInfo: manager.getCurrentSession(),
 	})
@@ -362,7 +362,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	manager.cleanup = append(manager.cleanup, func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
+		manager.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
 			Status:      SessionEndedStatus,
 			SessionInfo: manager.getCurrentSession(),
 		})
@@ -524,7 +524,7 @@ func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer
 		for {
 			select {
 			case stats := <-statisticsChannel:
-				manager.eventPublisher.Publish(StatisticsEventTopic, SessionStatsEvent{
+				manager.eventPublisher.Publish(AppTopicConsumerStatistics, SessionStatsEvent{
 					Stats:       stats,
 					SessionInfo: manager.getCurrentSession(),
 				})
@@ -574,7 +574,7 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 }
 
 func (manager *connectionManager) publishStateEvent(state State) {
-	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
+	manager.eventPublisher.Publish(AppTopicConsumerConnectionState, StateEvent{
 		State:       state,
 		SessionInfo: manager.getCurrentSession(),
 	})

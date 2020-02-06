@@ -279,7 +279,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
-	if err := di.EventBus.Subscribe(service.StatusTopic, serviceCleaner.HandleServiceStatus); err != nil {
+	if err := di.EventBus.Subscribe(service.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
 		log.Error().Msg("Failed to subscribe service cleaner")
 	}
 

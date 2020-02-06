@@ -18,8 +18,8 @@
 package event
 
 const (
-	// Topic represents the topic we're gonna be publishing and subscribing on
-	Topic = "Node"
+	// AppTopicNode represents the topic we're gonna be publishing and subscribing on
+	AppTopicNode = "Node"
 	// StatusStarted is published once node is started
 	StatusStarted Status = "Started"
 	// StatusStopped is published once node is stopped

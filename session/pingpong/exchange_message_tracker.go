@@ -244,7 +244,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	defer emt.deps.Publisher.Publish(ExchangeMessageTopic, ExchangeMessageEventPayload{
+	defer emt.deps.Publisher.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
 		Identity:       emt.deps.Identity,
 		AmountPromised: diff,
 	})

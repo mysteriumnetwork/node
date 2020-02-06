@@ -19,12 +19,12 @@ package discovery
 
 // Topic represents the different topics a consumer can subscribe to
 const (
-	// EventTopicProposalAdded represents newly announced proposal
-	EventTopicProposalAdded = "ProposalAdded"
-	// EventTopicProposalUpdated represents re-announced proposal
-	EventTopicProposalUpdated = "ProposalUpdated"
-	// EventTopicProposalRemoved represents newly de-announced proposal
-	EventTopicProposalRemoved = "ProposalRemoved"
-	// EventTopicProposalAnnounce represent proposal events topic.
-	EventTopicProposalAnnounce = "proposalEvent"
+	// AppTopicProposalAdded represents newly announced proposal
+	AppTopicProposalAdded = "ProposalAdded"
+	// AppTopicProposalUpdated represents re-announced proposal
+	AppTopicProposalUpdated = "ProposalUpdated"
+	// AppTopicProposalRemoved represents newly de-announced proposal
+	AppTopicProposalRemoved = "ProposalRemoved"
+	// AppTopicProposalAnnounce represent proposal events topic.
+	AppTopicProposalAnnounce = "proposalEvent"
 )
