@@ -82,7 +82,7 @@ type accountantPromiseStorage interface {
 }
 
 type accountantCaller interface {
-	RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error)
+	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID uint64) error
 }
 
@@ -108,7 +108,7 @@ type InvoiceTracker struct {
 	once                           sync.Once
 	agreementID                    uint64
 	lastExchangeMessage            crypto.ExchangeMessage
-	transactorFee                  uint64
+	transactorFee                  registry.FeesResponse
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
@@ -241,12 +241,33 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 
 var errHandled = errors.New("error handled, please skip")
 
+func (it *InvoiceTracker) updateFee() {
+	fees, err := it.deps.FeeProvider.FetchSettleFees()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not fetch fees, ignoring")
+		return
+	}
+
+	it.transactorFee = fees
+}
+
 func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) error {
-	promise, err := it.deps.AccountantCaller.RequestPromise(pm)
+	if !it.transactorFee.IsValid() {
+		it.updateFee()
+	}
+
+	request := RequestPromise{
+		ExchangeMessage: pm,
+		TransactorFee:   it.transactorFee.Fee,
+	}
+
+	promise, err := it.deps.AccountantCaller.RequestPromise(request)
 	handledErr := it.handleAccountantError(err)
 	if handledErr != nil {
 		return errors.Wrap(handledErr, "could not request promise")
 	}
+
+	it.resetAccountantFailureCount()
 
 	ap := AccountantPromise{
 		Promise:     promise,
@@ -317,7 +338,7 @@ func (it *InvoiceTracker) Start() error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch settlement fees")
 	}
-	it.transactorFee = fees.Fee
+	it.transactorFee = fees
 
 	fee, err := it.deps.BlockchainHelper.GetAccountantFee(common.HexToAddress(it.deps.AccountantID.Address))
 	if err != nil {
@@ -414,7 +435,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 	}
 
 	r := it.generateR()
-	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, it.transactorFee, r)
+	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, 0, r)
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {

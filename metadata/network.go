@@ -43,7 +43,7 @@ var TestnetDefinition = NetworkDefinition{
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
 	ChannelImplAddress:        "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
 	AccountantID:              "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
-	AccountantAddress:         "https://testnet-accountant.mysterium.network/api/v1",
+	AccountantAddress:         "https://testnet-accountant.mysterium.network/api/v2",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }
 

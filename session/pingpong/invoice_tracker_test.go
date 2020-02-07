@@ -56,7 +56,7 @@ func (mpis *MockPeerInvoiceSender) Send(invoice crypto.Invoice) error {
 
 type mockAccountantCaller struct{}
 
-func (mac *mockAccountantCaller) RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error) {
+func (mac *mockAccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
 	return crypto.Promise{}, nil
 }
 

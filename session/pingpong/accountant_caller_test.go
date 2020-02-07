@@ -51,7 +51,7 @@ func TestAccountantCaller_RequestPromise_OK(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewAccountantCaller(c, server.URL)
-	p, err := caller.RequestPromise(crypto.ExchangeMessage{})
+	p, err := caller.RequestPromise(RequestPromise{})
 	assert.Nil(t, err)
 
 	assert.EqualValues(t, promise, p)
@@ -65,7 +65,7 @@ func TestAccountantCaller_RequestPromise_Error(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewAccountantCaller(c, server.URL)
-	_, err := caller.RequestPromise(crypto.ExchangeMessage{})
+	_, err := caller.RequestPromise(RequestPromise{})
 	assert.NotNil(t, err)
 }
 
