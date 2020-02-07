@@ -89,6 +89,9 @@ fi
 # Add defaults file, if it doesn't exist
 if [[ ! -f $DAEMON_DEFAULT ]]; then
     cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
+else
+    # TODO remove this hack when all nodes updated to both services.
+    sed -i -e 's/SERVICE_OPTS="openvpn"/SERVICE_OPTS="openvpn,wireguard"/g' /etc/default/mysterium-node
 fi
 
 # Cleanup old log files (before log file rolling has been fixed)
