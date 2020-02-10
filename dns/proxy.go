@@ -83,17 +83,19 @@ func (p *Proxy) configure() (err error) {
 // proxyHandler creates proxying DNS handler.
 func (p *Proxy) proxyHandler() dns.Handler {
 	client := &dns.Client{}
+
 	return dns.HandlerFunc(func(writer dns.ResponseWriter, req *dns.Msg) {
+		for _, addr := range p.proxyAddrs {
+			if resp, _, err := client.Exchange(req, addr); err != nil {
+				log.Error().Err(err).Msg("Error proxying DNS query to " + addr)
+			} else {
+				writer.WriteMsg(resp)
+				return
+			}
+		}
+
 		resp := &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeServerFailure)
-		for _, addr := range p.proxyAddrs {
-			var err error
-			resp, _, err = client.Exchange(req, addr)
-			if err == nil {
-				break
-			}
-			log.Error().Err(err).Msg("Error proxying DNS query to " + addr)
-		}
 		writer.WriteMsg(resp)
 	})
 }
