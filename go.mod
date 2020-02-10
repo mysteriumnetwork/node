@@ -24,8 +24,6 @@ require (
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/protobuf v1.3.2
-	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
-	github.com/hashicorp/go-retryablehttp v0.5.4
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/gateway v1.0.5
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect

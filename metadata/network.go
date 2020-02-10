@@ -23,7 +23,6 @@ type NetworkDefinition struct {
 	AccessPolicyOracleAddress string
 	BrokerAddress             string
 	EtherClientRPC            string
-	QualityOracle             string
 	TransactorAddress         string
 	AccountantAddress         string
 	RegistryAddress           string
@@ -38,7 +37,6 @@ var TestnetDefinition = NetworkDefinition{
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddress:             "nats://testnet-broker.mysterium.network",
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
-	QualityOracle:             "https://testnet-morqa.mysterium.network/api/v1",
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
 	ChannelImplAddress:        "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
@@ -54,7 +52,6 @@ var LocalnetDefinition = NetworkDefinition{
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddress:             "localhost",
 	EtherClientRPC:            "http://localhost:8545",
-	QualityOracle:             "http://localhost:8085",
 	MMNAddress:                "http://localhost/api/v1",
 }
 

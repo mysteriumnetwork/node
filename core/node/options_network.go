@@ -28,6 +28,4 @@ type OptionsNetwork struct {
 	BrokerAddress       string
 
 	EtherClientRPC string
-
-	QualityOracle string
 }

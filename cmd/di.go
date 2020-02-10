@@ -364,6 +364,10 @@ func (di *Dependencies) Shutdown() (err error) {
 		di.BrokerConnection.Close()
 	}
 
+	if di.QualityClient != nil {
+		di.QualityClient.Stop()
+	}
+
 	firewall.Reset()
 
 	if di.Node != nil {
@@ -660,10 +664,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
 	}
 
-	if optionsNetwork.QualityOracle != metadata.DefaultNetwork.QualityOracle {
-		network.QualityOracle = optionsNetwork.QualityOracle
-	}
-
 	if optionsNetwork.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
 		network.BrokerAddress = optionsNetwork.BrokerAddress
 	}
@@ -725,10 +725,12 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options node.OptionsQuality) (err error) {
-	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
+	if _, err := firewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
+
 	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, 20*time.Second)
+	go di.QualityClient.Start()
 
 	var transport quality.Transport
 	switch options.Type {

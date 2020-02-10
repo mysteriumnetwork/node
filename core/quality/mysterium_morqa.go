@@ -27,52 +27,121 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/rs/zerolog/log"
-
-	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 )
 
 const (
 	mysteriumMorqaAgentName = "goclient-v0.1"
+
+	maxBatchMetricsToKeep = 100
+	maxBatchMetricsToWait = 30 * time.Second
 )
 
-// MysteriumMORQA HTTP client for Mysterium QualityOracle - MORQA
+// MysteriumMORQA HTTP client for Mysterium Quality Oracle - MORQA
 type MysteriumMORQA struct {
 	// http    HTTPClient
 	baseURL string
 
-	client        *retryablehttp.Client
+	client        *http.Client
 	clientMu      sync.Mutex
-	clientFactory func() *retryablehttp.Client
+	clientFactory func() *http.Client
+
+	batch    metrics.Batch
+	eventsMu sync.Mutex
+	events   chan *metrics.Event
+	stop     chan struct{}
+	once     sync.Once
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
 func NewMorqaClient(srcIP, baseURL string, timeout time.Duration) *MysteriumMORQA {
-	traceLog := &httptrace.HTTPTraceLog{}
 	morqa := &MysteriumMORQA{
 		baseURL: baseURL,
-		clientFactory: func() *retryablehttp.Client {
-			return &retryablehttp.Client{
-				HTTPClient: &http.Client{
-					Timeout:   timeout,
-					Transport: requests.GetDefaultTransport(srcIP),
-				},
-				Logger:          traceLog,
-				RequestLogHook:  traceLog.LogRequest,
-				ResponseLogHook: traceLog.LogResponse,
-				RetryWaitMin:    timeout,
-				RetryWaitMax:    10 * timeout,
-				RetryMax:        10,
-				CheckRetry:      retryablehttp.DefaultRetryPolicy,
-				Backoff:         retryablehttp.DefaultBackoff,
+		events:  make(chan *metrics.Event, maxBatchMetricsToKeep),
+		stop:    make(chan struct{}),
+		clientFactory: func() *http.Client {
+			return &http.Client{
+				Timeout:   timeout,
+				Transport: requests.GetDefaultTransport(srcIP),
 			}
 		},
 	}
 	morqa.client = morqa.clientFactory()
+
 	return morqa
+}
+
+// Start starts sending batch metrics to the Morqa server.
+func (m *MysteriumMORQA) Start() {
+	trigger := time.After(maxBatchMetricsToWait)
+
+	for {
+		select {
+		case event := <-m.events:
+			m.addMetric(event)
+
+			if len(m.batch.Events) < maxBatchMetricsToKeep {
+				continue
+			}
+		case <-trigger:
+		case <-m.stop:
+			return
+		}
+
+		if err := m.sendMetrics(); err != nil {
+			log.Error().Err(err).Msg("Failed to sent batch metrics request")
+		}
+
+		trigger = time.After(maxBatchMetricsToWait)
+	}
+}
+
+func (m *MysteriumMORQA) Stop() {
+	close(m.stop)
+
+	if err := m.sendMetrics(); err != nil {
+		log.Error().Err(err).Msg("Failed to sent batch metrics request on close")
+	}
+}
+
+func (m *MysteriumMORQA) addMetric(event *metrics.Event) {
+	m.eventsMu.Lock()
+	defer m.eventsMu.Unlock()
+
+	m.batch.Events = append(m.batch.Events, event)
+}
+
+func (m *MysteriumMORQA) sendMetrics() error {
+	m.eventsMu.Lock()
+	defer m.eventsMu.Unlock()
+
+	if len(m.batch.Events) == 0 {
+		return nil
+	}
+
+	request, err := m.newRequestBinary(http.MethodPost, "batch", &m.batch)
+	if err != nil {
+		return err
+	}
+
+	request.Close = true
+
+	response, err := m.client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	defer response.Body.Close()
+
+	if err := parseResponseError(response); err != nil {
+		return err
+	}
+
+	m.batch = metrics.Batch{}
+
+	return nil
 }
 
 // ProposalsMetrics returns a list of proposals connection metrics
@@ -101,31 +170,19 @@ func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
 
 // SendMetric submits new metric
 func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
-	request, err := m.newRequestBinary(http.MethodPost, "metrics", event)
-	if err != nil {
-		return err
-	}
-
-	request.Close = true
-
-	response, err := m.client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	return parseResponseError(response)
+	m.events <- event
+	return nil
 }
 
-// Reconnect creates new instance of underlying retryable HTTP client.
+// Reconnect creates new instance of underlying HTTP client.
 func (m *MysteriumMORQA) Reconnect() {
 	m.clientMu.Lock()
 	defer m.clientMu.Unlock()
-	m.client.HTTPClient.CloseIdleConnections()
+	m.client.CloseIdleConnections()
 	m.client = m.clientFactory()
 }
 
-func (m *MysteriumMORQA) resolveClient() *retryablehttp.Client {
+func (m *MysteriumMORQA) resolveClient() *http.Client {
 	m.clientMu.Lock()
 	defer m.clientMu.Unlock()
 	if m.client != nil {
@@ -135,19 +192,19 @@ func (m *MysteriumMORQA) resolveClient() *retryablehttp.Client {
 	return m.client
 }
 
-func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*retryablehttp.Request, error) {
+func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*http.Request, error) {
 	url := m.baseURL
 	if len(path) > 0 {
 		url = fmt.Sprintf("%v/%v", url, path)
 	}
 
-	request, err := retryablehttp.NewRequest(method, url, bytes.NewBuffer(body))
+	request, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	request.Header.Set("User-Agent", mysteriumMorqaAgentName)
 	request.Header.Set("Accept", "application/json")
 	return request, err
 }
 
-func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}) (*retryablehttp.Request, error) {
+func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}) (*http.Request, error) {
 	payloadBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -158,7 +215,7 @@ func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}
 	return req, err
 }
 
-func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Message) (*retryablehttp.Request, error) {
+func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Message) (*http.Request, error) {
 	payloadBody, err := proto.Marshal(payload)
 	if err != nil {
 		return nil, err
