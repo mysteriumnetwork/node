@@ -82,7 +82,11 @@ func (m *MysteriumMORQA) Start() {
 		case event := <-m.events:
 			m.addMetric(event)
 
-			if len(m.batch.Events) < maxBatchMetricsToKeep {
+			m.eventsMu.Lock()
+			size := len(m.batch.Events)
+			m.eventsMu.Unlock()
+
+			if size < maxBatchMetricsToKeep {
 				continue
 			}
 		case <-trigger:
