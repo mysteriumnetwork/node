@@ -126,8 +126,9 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 
 	// when
 	sessionStore.consumeTokensEarnedEvent(sessionEvent.AppEventSessionTokensEarned{
-		Consumer: consumerID,
-		Total:    500,
+		Consumer:    consumerID,
+		ServiceType: session.ServiceType,
+		Total:       500,
 	})
 	// then
 	storedSession, ok = sessionStore.Find(session.ID)

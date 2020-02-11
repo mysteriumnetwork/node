@@ -99,14 +99,24 @@ func (storage *StorageMemory) UpdateEarnings(id ID, total uint64) {
 	}
 }
 
-// FindByPeer returns a session given a peer ID.
-func (storage *StorageMemory) FindByPeer(peer identity.Identity) (ID, bool) {
+// FindOpts provides fields to search sessions.
+type FindOpts struct {
+	Peer        *identity.Identity
+	ServiceType string
+}
+
+// FindBy returns a session by find options.
+func (storage *StorageMemory) FindBy(opts FindOpts) (ID, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 	for id, session := range storage.sessions {
-		if session.ConsumerID == peer {
-			return id, true
+		if opts.Peer != nil && *opts.Peer != session.ConsumerID {
+			continue
 		}
+		if opts.ServiceType != "" && opts.ServiceType != session.ServiceType {
+			continue
+		}
+		return id, true
 	}
 	return "", false
 }

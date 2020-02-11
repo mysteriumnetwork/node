@@ -83,7 +83,7 @@ func TestStorageMemory_UpdateEarnings(t *testing.T) {
 
 func TestStorageMemory_FindByPeer(t *testing.T) {
 	storage := mockStorage(sessionExisting)
-	id, ok := storage.FindByPeer(sessionExisting.ConsumerID)
+	id, ok := storage.FindBy(FindOpts{&sessionExisting.ConsumerID, ""})
 	assert.True(t, ok)
 	assert.Equal(t, sessionExisting.ID, id)
 }

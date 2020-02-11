@@ -36,8 +36,9 @@ type DataTransferEventPayload struct {
 
 // AppEventSessionTokensEarned is an update on tokens earned during current session
 type AppEventSessionTokensEarned struct {
-	Consumer identity.Identity
-	Total    uint64
+	Consumer    identity.Identity
+	ServiceType string
+	Total       uint64
 }
 
 // Action represents the different actions that might happen on a session

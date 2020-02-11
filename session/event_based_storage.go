@@ -18,7 +18,6 @@
 package session
 
 import (
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +33,7 @@ type storage interface {
 	UpdateDataTransfer(id ID, up, down uint64)
 	UpdateEarnings(id ID, total uint64)
 	Find(id ID) (Session, bool)
-	FindByPeer(peer identity.Identity) (ID, bool)
+	FindBy(opts FindOpts) (ID, bool)
 	Remove(id ID)
 	RemoveForService(serviceID string)
 }
@@ -75,7 +74,10 @@ func (ebs *EventBasedStorage) consumeDataTransferedEvent(e event.DataTransferEve
 }
 
 func (ebs *EventBasedStorage) consumeTokensEarnedEvent(e event.AppEventSessionTokensEarned) {
-	sessionID, ok := ebs.storage.FindByPeer(e.Consumer)
+	sessionID, ok := ebs.storage.FindBy(FindOpts{
+		Peer:        &e.Consumer,
+		ServiceType: e.ServiceType,
+	})
 	if !ok {
 		log.Warn().Msgf("Could not update tokens earned because session was not found: %+v", e)
 		return

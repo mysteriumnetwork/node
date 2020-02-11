@@ -79,6 +79,7 @@ func InvoiceFactoryCreator(
 			return nil, errors.Wrap(err, "could not parse payment rate")
 		}
 		deps := InvoiceTrackerDeps{
+			Proposal:                   proposal,
 			Peer:                       dialog.PeerID(),
 			PeerInvoiceSender:          invoiceSender,
 			InvoiceStorage:             invoiceStorage,

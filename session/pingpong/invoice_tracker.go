@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -117,6 +118,7 @@ type InvoiceTracker struct {
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
 type InvoiceTrackerDeps struct {
+	Proposal                   market.ServiceProposal
 	Peer                       identity.Identity
 	PeerInvoiceSender          PeerInvoiceSender
 	InvoiceStorage             providerInvoiceStorage
@@ -288,8 +290,9 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 		ProviderID:   it.deps.ProviderID,
 	})
 	it.deps.Publisher.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
-		Consumer: it.deps.Peer,
-		Total:    it.lastExchangeMessage.AgreementTotal,
+		Consumer:    it.deps.Peer,
+		ServiceType: it.deps.Proposal.ServiceType,
+		Total:       it.lastExchangeMessage.AgreementTotal,
 	})
 	return nil
 }

@@ -207,6 +207,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 			BytesIn:      sessions[i].DataTransfered.Down,
 			TokensEarned: sessions[i].TokensEarned,
 			ServiceID:    sessions[i].ServiceID,
+			ServiceType:  sessions[i].ServiceType,
 		}
 
 		// each new session counts as an additional attempt, mark them for further use
