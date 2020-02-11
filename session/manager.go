@@ -145,6 +145,7 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	if err != nil {
 		return
 	}
+	sessionInstance.ServiceType = manager.currentProposal.ServiceType
 	sessionInstance.ServiceID = manager.serviceId
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.done = make(chan struct{})

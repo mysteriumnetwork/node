@@ -39,8 +39,9 @@ var (
 
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
-		ID:         expectedID,
-		ConsumerID: consumerID,
+		ID:          expectedID,
+		ConsumerID:  consumerID,
+		ServiceType: "wireguard",
 	}
 )
 

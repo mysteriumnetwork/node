@@ -43,8 +43,10 @@ type Session struct {
 	ConsumerID     identity.Identity
 	Config         ServiceConfiguration
 	ServiceID      string
+	ServiceType    string
 	CreatedAt      time.Time
 	DataTransfered DataTransfered
+	TokensEarned   uint64
 	Last           bool
 	done           chan struct{}
 }

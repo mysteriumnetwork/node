@@ -17,7 +17,10 @@
 
 package session
 
-import "github.com/mysteriumnetwork/node/session/event"
+import (
+	"github.com/mysteriumnetwork/node/session/event"
+	"github.com/rs/zerolog/log"
+)
 
 type eventPublisher interface {
 	Publish(topic string, data interface{})
@@ -28,7 +31,9 @@ type storage interface {
 	Add(sessionInstance Session)
 	GetAll() []Session
 	UpdateDataTransfer(id ID, up, down uint64)
+	UpdateEarnings(id ID, total uint64)
 	Find(id ID) (Session, bool)
+	FindBy(opts FindOpts) (ID, bool)
 	Remove(id ID)
 	RemoveForService(serviceID string)
 }
@@ -68,6 +73,22 @@ func (ebs *EventBasedStorage) consumeDataTransferedEvent(e event.DataTransferEve
 	ebs.UpdateDataTransfer(ID(e.ID), e.Down, e.Up)
 }
 
+func (ebs *EventBasedStorage) consumeTokensEarnedEvent(e event.AppEventSessionTokensEarned) {
+	sessionID, ok := ebs.storage.FindBy(FindOpts{
+		Peer:        &e.Consumer,
+		ServiceType: e.ServiceType,
+	})
+	if !ok {
+		log.Warn().Msgf("Could not update tokens earned because session was not found: %+v", e)
+		return
+	}
+	ebs.storage.UpdateEarnings(sessionID, e.Total)
+	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
+		ID:     string(sessionID),
+		Action: event.Updated,
+	})
+}
+
 // UpdateDataTransfer updates the data transfer for a session
 func (ebs *EventBasedStorage) UpdateDataTransfer(id ID, up, down uint64) {
 	ebs.storage.UpdateDataTransfer(id, up, down)
@@ -102,5 +123,11 @@ func (ebs *EventBasedStorage) RemoveForService(serviceID string) {
 
 // Subscribe subscribes the ebs to relevant events
 func (ebs *EventBasedStorage) Subscribe() error {
-	return ebs.bus.SubscribeAsync(event.AppTopicDataTransfered, ebs.consumeDataTransferedEvent)
+	if err := ebs.bus.SubscribeAsync(event.AppTopicDataTransfered, ebs.consumeDataTransferedEvent); err != nil {
+		return err
+	}
+	if err := ebs.bus.SubscribeAsync(event.AppTopicSessionTokensEarned, ebs.consumeTokensEarnedEvent); err != nil {
+		return err
+	}
+	return nil
 }

@@ -113,6 +113,33 @@ func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
 	}, mp.published)
 }
 
+func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
+	// given
+	session := expectedSession
+	mp := &mockPublisher{}
+	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
+	sessionStore.Add(session)
+
+	storedSession, ok := sessionStore.Find(session.ID)
+	assert.True(t, ok)
+	assert.Zero(t, storedSession.TokensEarned)
+
+	// when
+	sessionStore.consumeTokensEarnedEvent(sessionEvent.AppEventSessionTokensEarned{
+		Consumer:    consumerID,
+		ServiceType: session.ServiceType,
+		Total:       500,
+	})
+	// then
+	storedSession, ok = sessionStore.Find(session.ID)
+	assert.True(t, ok)
+	assert.EqualValues(t, 500, storedSession.TokensEarned)
+	assert.Eventually(t, func() bool {
+		evt := mp.getLast()
+		return evt.ID == string(session.ID) && evt.Action == sessionEvent.Updated
+	}, 1*time.Second, 5*time.Millisecond)
+}
+
 func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
 	instance := expectedSession
 	mp := &mockPublisher{}
