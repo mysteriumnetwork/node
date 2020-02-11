@@ -51,12 +51,6 @@ var (
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
-	// FlagQualityOracleAddress Quality oracle URL.
-	FlagQualityOracleAddress = cli.StringFlag{
-		Name:  "quality-oracle.address",
-		Usage: "Address of the quality oracle service",
-		Value: metadata.DefaultNetwork.QualityOracle,
-	}
 	// FlagNATPunching enables NAT hole punching.
 	FlagNATPunching = cli.BoolFlag{
 		Name:  "experiment-natpunching",
@@ -75,7 +69,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
-		&FlagQualityOracleAddress,
 	)
 }
 
@@ -86,6 +79,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
-	Current.ParseStringFlag(ctx, FlagQualityOracleAddress)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
 }

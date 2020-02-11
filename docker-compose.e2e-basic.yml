@@ -145,7 +145,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality-oracle.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v1
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -187,7 +187,6 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v1
-      --quality-oracle.address=http://morqa:8085/api/v1
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
@@ -199,4 +198,3 @@ services:
       - ./:/node
       - $GOPATH/pkg/mod:/go/pkg/mod
     working_dir: /node
-

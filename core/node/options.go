@@ -101,7 +101,6 @@ func GetOptions() *Options {
 			MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 			BrokerAddress:         config.GetString(config.FlagBrokerAddress),
 			EtherClientRPC:        config.GetString(config.FlagEtherRPC),
-			QualityOracle:         config.GetString(config.FlagQualityOracleAddress),
 		},
 		Discovery: *GetDiscoveryOptions(),
 		MMN: OptionsMMN{
