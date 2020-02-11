@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 type feedbackAPI struct {
@@ -95,13 +94,11 @@ func (api *feedbackAPI) ReportIssue(httpRes http.ResponseWriter, httpReq *http.R
 
 	result, err := api.reporter.NewIssue(req)
 	if err != nil {
-		log.Error().Err(err).Stack().Msg("Could not create an issue for feedback")
 		utils.SendError(httpRes, err, http.StatusInternalServerError)
 		return
 	}
 
 	if !result.Success {
-		log.Error().Err(err).Stack().Msg("Submitting an issue failed")
 		utils.SendErrorBody(httpRes, result.Errors, result.HTTPResponse.StatusCode)
 		return
 	}
