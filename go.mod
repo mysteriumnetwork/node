@@ -29,7 +29,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
-	github.com/klauspost/compress v1.9.8 // indirect
+	github.com/klauspost/compress v1.10.0 // indirect
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magefile/mage v1.9.0
@@ -37,7 +37,7 @@ require (
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.31
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.33
 	github.com/mysteriumnetwork/go-openvpn v0.0.21
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
@@ -64,7 +64,7 @@ require (
 	github.com/stretchr/testify v1.4.1-0.20200130210847-518a1491c713
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
+	golang.org/x/crypto v0.0.0-20200210222208-86ce3cb69678
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
 	golang.zx2c4.com/wireguard v0.0.20191012
