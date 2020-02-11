@@ -233,12 +233,15 @@ func Test_PolicyRepository_StartSyncsPolicies(t *testing.T) {
 	repo.Start()
 	defer repo.Stop()
 
-	time.Sleep(10 * time.Millisecond)
-	policiesRules, err := repo.RulesForPolicies([]market.AccessPolicy{
-		repo.Policy("1"),
-		repo.Policy("2"),
-	})
-	assert.NoError(t, err)
+	var policiesRules []market.AccessPolicyRuleSet
+	assert.Eventually(t, func() bool {
+		var err error
+		policiesRules, err = repo.RulesForPolicies([]market.AccessPolicy{
+			repo.Policy("1"),
+			repo.Policy("2"),
+		})
+		return err == nil && len(policiesRules) == 2
+	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRulesUpdated, policyTwoRulesUpdated}, policiesRules)
 }
 

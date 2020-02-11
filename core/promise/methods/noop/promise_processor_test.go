@@ -47,7 +47,7 @@ func TestPromiseProcessor_Start_SendsBalanceMessages(t *testing.T) {
 	defer processor.Stop()
 
 	assert.NoError(t, err)
-	waitForBalanceState(t, processor, balanceNotifying)
+	assert.Eventually(t, balanceStateMatches(processor, balanceNotifying), 1*time.Second, 1*time.Millisecond)
 
 	lastMessage, err := dialog.waitSendMessage()
 	assert.NoError(t, err)
@@ -68,19 +68,15 @@ func TestPromiseProcessor_Stop_StopsBalanceMessages(t *testing.T) {
 	}
 	err := processor.Start(proposal)
 	assert.NoError(t, err)
-	waitForBalanceState(t, processor, balanceNotifying)
+	assert.Eventually(t, balanceStateMatches(processor, balanceNotifying), 1*time.Second, 1*time.Millisecond)
 
 	err = processor.Stop()
 	assert.NoError(t, err)
-	waitForBalanceState(t, processor, balanceStopped)
+	assert.Eventually(t, balanceStateMatches(processor, balanceStopped), 1*time.Second, 1*time.Millisecond)
 }
 
-func waitForBalanceState(t *testing.T, processor *PromiseProcessor, expectedState balanceState) {
-	for i := 0; i < 10; i++ {
-		if processor.getBalanceState() == expectedState {
-			return
-		}
-		time.Sleep(time.Millisecond)
+func balanceStateMatches(processor *PromiseProcessor, expected balanceState) func() bool {
+	return func() bool {
+		return processor.getBalanceState() == expected
 	}
-	assert.Fail(t, "State expected to be ", string(expectedState))
 }

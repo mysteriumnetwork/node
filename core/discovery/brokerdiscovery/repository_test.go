@@ -46,98 +46,78 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
-	err := subscriber.Start()
-	defer subscriber.Stop()
+	repo := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
+	err := repo.Start()
+	defer repo.Stop()
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	time.Sleep(5 * time.Millisecond)
 
-	assert.Len(t, subscriber.storage.Proposals(), 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, subscriber.storage.Proposals())
+	assert.Eventually(t, proposalCountEquals(repo, 1), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
 
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x2"}
 	}`)
-	time.Sleep(1 * time.Millisecond)
 
-	assert.Len(t, subscriber.storage.Proposals(), 2)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, subscriber.storage.Proposals())
+	assert.Eventually(t, proposalCountEquals(repo, 2), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, repo.storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
-	err := subscriber.Start()
-	defer subscriber.Stop()
+	repo := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
+	err := repo.Start()
+	defer repo.Stop()
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	time.Sleep(15 * time.Millisecond)
-
-	assert.Empty(t, subscriber.storage.Proposals())
+	assert.Eventually(t, proposalCountEquals(repo, 0), 100*time.Millisecond, 1*time.Millisecond)
 }
 
 func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
-	err := subscriber.Start()
-	defer subscriber.Stop()
+	repo := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
+	err := repo.Start()
+	defer repo.Stop()
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	time.Sleep(5 * time.Millisecond)
 
 	proposalPing(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	time.Sleep(1 * time.Millisecond)
 
-	timeout := time.After(time.Millisecond * 20)
-	for {
-		select {
-		case <-time.After(time.Millisecond):
-			if len(subscriber.storage.Proposals()) == 1 {
-				assert.Len(t, subscriber.storage.Proposals(), 1)
-				assert.Exactly(t, []market.ServiceProposal{proposalFirst}, subscriber.storage.Proposals())
-				return
-			}
-		case <-timeout:
-			assert.Fail(t, "did not get expected proposals before timeout")
-			return
-		}
-	}
-
+	assert.Eventually(t, proposalCountEquals(repo, 1), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	subscriber := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
-	subscriber.storage.AddProposal(proposalFirst, proposalSecond)
-	err := subscriber.Start()
-	defer subscriber.Stop()
+	repo := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
+	repo.storage.AddProposal(proposalFirst, proposalSecond)
+	err := repo.Start()
+	defer repo.Stop()
 	assert.NoError(t, err)
 
 	proposalUnregister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	time.Sleep(1 * time.Millisecond)
 
-	assert.Len(t, subscriber.storage.Proposals(), 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, subscriber.storage.Proposals())
+	assert.Eventually(t, proposalCountEquals(repo, 1), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, repo.storage.Proposals())
 }
 
 func proposalRegister(connection nats.Connection, payload string) {
@@ -158,5 +138,11 @@ func proposalPing(connection nats.Connection, payload string) {
 	err := connection.Publish("*.proposal-ping", []byte(payload))
 	if err != nil {
 		panic(err)
+	}
+}
+
+func proposalCountEquals(subscriber *Repository, count int) func() bool {
+	return func() bool {
+		return len(subscriber.storage.Proposals()) == count
 	}
 }

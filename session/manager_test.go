@@ -101,16 +101,16 @@ func TestManager_Create_StoresSession(t *testing.T) {
 		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
-	expectedResult.done = sessionInstance.done
+	session, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.NoError(t, err)
+	expectedResult.done = session.done
 
-	assert.Equal(t, expectedResult.Config, sessionInstance.Config)
-	assert.Equal(t, expectedResult.Last, sessionInstance.Last)
-	assert.Equal(t, expectedResult.done, sessionInstance.done)
-	assert.Equal(t, expectedResult.ConsumerID, sessionInstance.ConsumerID)
-	assert.Equal(t, expectedResult.ID, sessionInstance.ID)
-	assert.False(t, sessionInstance.CreatedAt.IsZero())
+	assert.Equal(t, expectedResult.Config, session.Config)
+	assert.Equal(t, expectedResult.Last, session.Last)
+	assert.Equal(t, expectedResult.done, session.done)
+	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
+	assert.Equal(t, expectedResult.ID, session.ID)
+	assert.False(t, session.CreatedAt.IsZero())
 }
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
@@ -173,17 +173,5 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	err = manager.Acknowledge(consumerID, string(sessionInstance.ID))
 	assert.Nil(t, err)
 
-	attempts := 0
-	for range time.After(time.Millisecond) {
-		p := mp.getLast()
-		if p.Action == sessionEvent.Acknowledged {
-			assert.Equal(t, string(sessionInstance.ID), p.ID)
-			return
-		}
-		attempts++
-		if attempts > 50 {
-			assert.Fail(t, "no event published")
-			return
-		}
-	}
+	assert.Eventually(t, lastEventMatches(mp, sessionInstance.ID, sessionEvent.Acknowledged), 100*time.Millisecond, 1*time.Millisecond)
 }
