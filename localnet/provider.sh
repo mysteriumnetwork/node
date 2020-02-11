@@ -23,7 +23,6 @@ exec /node/build/myst/myst \
   --accountant.address=http://accountant:8889/api/v2 \
   --transactor.address=http://transactor:8888/api/v1 \
   --quality.address=http://morqa:8085/api/v1 \
-  --quality-oracle.address=http://morqa:8085/api/v1 \
   --keystore.lightweight service \
   --agreed-terms-and-conditions \
   --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5 \

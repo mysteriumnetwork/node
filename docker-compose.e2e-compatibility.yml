@@ -144,7 +144,6 @@ services:
       --keystore.lightweight
       --log-level=debug
       --quality.address=http://morqa:8085/api/v1
-      --quality-oracle.address=http://morqa:8085/api/v1
       --transactor.provider.registration-stake=6200000000
       service
       --agreed-terms-and-conditions
@@ -185,7 +184,6 @@ services:
       --keystore.lightweight
       --firewall.killSwitch.always
       --quality.address=http://morqa:8085/api/v1
-      --quality-oracle.address=http://morqa:8085/api/v1
       daemon
 
   myst-provider-local:
