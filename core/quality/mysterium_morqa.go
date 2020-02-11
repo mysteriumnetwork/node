@@ -102,6 +102,7 @@ func (m *MysteriumMORQA) Start() {
 	}
 }
 
+// Stop sends the final metrics to the MORQA and stops the sending process.
 func (m *MysteriumMORQA) Stop() {
 	close(m.stop)
 
