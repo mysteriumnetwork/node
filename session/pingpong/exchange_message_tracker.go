@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/market"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -59,7 +59,7 @@ type consumerTotalsStorage interface {
 
 type timeTracker interface {
 	StartTracking()
-	 Elapsed() time.Duration
+	Elapsed() time.Duration
 }
 
 type channelAddressCalculator interface {
@@ -75,6 +75,9 @@ type ExchangeMessageTracker struct {
 
 	lastInvoice crypto.Invoice
 	deps        ExchangeMessageTrackerDeps
+
+	dataTransfered     dataTransfered
+	dataTransferedLock sync.Mutex
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
@@ -85,9 +88,10 @@ type ExchangeMessageTrackerDeps struct {
 	TimeTracker               timeTracker
 	Ks                        *keystore.KeyStore
 	Identity, Peer            identity.Identity
-	PaymentInfo               dto.PaymentRate
+	Proposal                  market.ServiceProposal
+	SessionID                 string
 	ChannelAddressCalculator  channelAddressCalculator
-	Publisher                 eventbus.Publisher
+	EventBus                  ebus
 	AccountantAddress         identity.Identity
 	ConsumerInfoGetter        getConsumerInfo
 }
@@ -114,6 +118,11 @@ func (emt *ExchangeMessageTracker) Start() error {
 	emt.channelAddress = identity.FromAddress(addr.Hex())
 
 	emt.deps.TimeTracker.StartTracking()
+
+	err = emt.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, emt.consumeDataTransferedEvent)
+	if err != nil {
+		return errors.Wrap(err, "could not subscribe to data transfer events")
+	}
 
 	for {
 		select {
@@ -177,22 +186,12 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 	return emt.deps.ConsumerTotalsStorage.Store(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address, res+amount)
 }
 
-func (emt *ExchangeMessageTracker) isServiceFree() bool {
-	return emt.deps.PaymentInfo.Duration == 0 || emt.deps.PaymentInfo.Price.Amount == 0
-}
-
 func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.deps.Peer.Address) {
 		return ErrWrongProvider
 	}
 
-	var ticksPassed float64
-	// avoid division by zero on free service
-	if !emt.isServiceFree() {
-		ticksPassed = float64(emt.deps.TimeTracker.Elapsed()) / float64(emt.deps.PaymentInfo.Duration)
-	}
-
-	shouldBe := uint64(math.Round(ticksPassed * float64(emt.deps.PaymentInfo.GetPrice().Amount)))
+	shouldBe := calculatePaymentAmount(emt.deps.TimeTracker.Elapsed(), emt.getDataTransfered(), emt.deps.Proposal.PaymentMethod)
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
 	if !emt.receivedFirst {
@@ -244,7 +243,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	defer emt.deps.Publisher.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
+	defer emt.deps.EventBus.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
 		Identity:       emt.deps.Identity,
 		AmountPromised: diff,
 	})
@@ -258,6 +257,36 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 func (emt *ExchangeMessageTracker) Stop() {
 	emt.once.Do(func() {
 		log.Debug().Msg("Stopping...")
+		_ = emt.deps.EventBus.Unsubscribe(connection.AppTopicConsumerStatistics, emt.consumeDataTransferedEvent)
 		close(emt.stop)
 	})
+}
+
+func (emt *ExchangeMessageTracker) consumeDataTransferedEvent(e connection.SessionStatsEvent) {
+	// skip irrelevant sessions
+	if strings.ToLower(string(e.SessionInfo.SessionID)) != strings.ToLower(emt.deps.SessionID) {
+		return
+	}
+
+	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
+	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
+	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
+	emt.updateDataTransfer(e.Stats.BytesSent, e.Stats.BytesReceived)
+}
+
+func (emt *ExchangeMessageTracker) updateDataTransfer(up, down uint64) {
+	emt.dataTransferedLock.Lock()
+	defer emt.dataTransferedLock.Unlock()
+
+	emt.dataTransfered = dataTransfered{
+		up:   up,
+		down: down,
+	}
+}
+
+func (emt *ExchangeMessageTracker) getDataTransfered() dataTransfered {
+	emt.dataTransferedLock.Lock()
+	defer emt.dataTransferedLock.Unlock()
+
+	return emt.dataTransfered
 }

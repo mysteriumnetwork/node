@@ -94,7 +94,7 @@ type PaymentIssuer interface {
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (PaymentIssuer, error)
+	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -176,7 +176,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID, accountantID, proposal)
+	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
 	if err != nil {
 		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
@@ -258,8 +258,8 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal) error {
-	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID, proposal)
+func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
 	}

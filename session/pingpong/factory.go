@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -34,7 +33,6 @@ import (
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -111,13 +109,13 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,
 	registryAddress string,
-	publisher eventbus.Publisher,
+	eventBus ebus,
 	getConsumerInfo getConsumerInfo) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
 		dialog communication.Dialog,
-		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 		var promiseState promise.PaymentInfo
 		payment := dto.PaymentRate{
 			Price: money.Money{
@@ -145,10 +143,6 @@ func BackwardsCompatibleExchangeFactoryFunc(
 			if err != nil {
 				return nil, err
 			}
-			rate, err := ProposalToPaymentRate(proposal)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not parse payment rate")
-			}
 			timeTracker := session.NewTracker(time.Now)
 			deps := ExchangeMessageTrackerDeps{
 				InvoiceChan:               invoices,
@@ -158,11 +152,12 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				Ks:                        keystore,
 				Identity:                  consumer,
 				Peer:                      dialog.PeerID(),
-				PaymentInfo:               rate,
+				Proposal:                  proposal,
 				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
-				Publisher:                 publisher,
+				EventBus:                  eventBus,
 				AccountantAddress:         accountant,
 				ConsumerInfoGetter:        getConsumerInfo,
+				SessionID:                 sessionID,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {

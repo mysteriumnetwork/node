@@ -592,6 +592,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msg("Stopping...")
+		_ = it.deps.EventBus.Unsubscribe(event.AppTopicDataTransfered, it.consumeDataTransferedEvent)
 		close(it.stop)
 	})
 }

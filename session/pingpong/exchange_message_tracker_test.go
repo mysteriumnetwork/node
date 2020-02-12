@@ -26,9 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -76,8 +76,13 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Publisher:                 mocks.NewEventBus(),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		EventBus:                  mocks.NewEventBus(),
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
@@ -118,12 +123,17 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		Publisher:                 mocks.NewEventBus(),
+		EventBus:                  mocks.NewEventBus(),
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		ConsumerInfoGetter: func(string) (ConsumerData, error) {
 			return ConsumerData{}, nil
 		},
@@ -187,7 +197,7 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		Publisher:                 mocks.NewEventBus(),
+		EventBus:                  mocks.NewEventBus(),
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -249,7 +259,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
-		Publisher:                 mocks.NewEventBus(),
+		EventBus:                  mocks.NewEventBus(),
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
@@ -257,7 +267,12 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 	defer exchangeMessageTracker.Stop()
@@ -274,7 +289,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 	type fields struct {
 		peer        identity.Identity
 		timeTracker timeTracker
-		paymentInfo dto.PaymentRate
+		proposal    market.ServiceProposal
 	}
 	tests := []struct {
 		name    string
@@ -299,9 +314,11 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentRate{
-					Duration: time.Minute,
-					Price:    money.NewMoney(100000, money.CurrencyMyst),
+				proposal: market.ServiceProposal{
+					PaymentMethod: &mockPaymentMethod{
+						price: money.NewMoney(100000, money.CurrencyMyst),
+						rate:  market.PaymentRate{PerTime: time.Minute},
+					},
 				},
 			},
 			invoice: crypto.Invoice{
@@ -319,9 +336,11 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentRate{
-					Duration: time.Minute,
-					Price:    money.NewMoney(100000, money.CurrencyMyst),
+				proposal: market.ServiceProposal{
+					PaymentMethod: &mockPaymentMethod{
+						price: money.NewMoney(100000, money.CurrencyMyst),
+						rate:  market.PaymentRate{PerTime: time.Minute},
+					},
 				},
 			},
 			invoice: crypto.Invoice{
@@ -338,7 +357,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 			emt := &ExchangeMessageTracker{
 				deps: ExchangeMessageTrackerDeps{
 					TimeTracker: tt.fields.timeTracker,
-					PaymentInfo: tt.fields.paymentInfo,
+					Proposal:    tt.fields.proposal,
 					Peer:        tt.fields.peer,
 				},
 			}
@@ -623,7 +642,7 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 			Peer:                  peerID,
 			Ks:                    ks,
 			Identity:              identity.FromAddress(acc.Address.Hex()),
-			Publisher:             mp,
+			EventBus:              mp,
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -730,7 +749,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 					Peer:                      tt.fields.peer,
 					Ks:                        tt.fields.keystore,
 					Identity:                  tt.fields.identity,
-					Publisher:                 mocks.NewEventBus(),
+					EventBus:                  mocks.NewEventBus(),
 				},
 			}
 			emt.lastInvoice = tt.fields.lastInvoice
