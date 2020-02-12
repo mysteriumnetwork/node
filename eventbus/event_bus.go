@@ -37,10 +37,15 @@ type Publisher interface {
 type Subscriber interface {
 	Subscribe(topic string, fn interface{}) error
 	SubscribeAsync(topic string, fn interface{}) error
+	Unsubscribe(topic string, fn interface{}) error
 }
 
 type simplifiedEventBus struct {
 	bus asaskevichEventBus.Bus
+}
+
+func (simplifiedBus simplifiedEventBus) Unsubscribe(topic string, fn interface{}) error {
+	return simplifiedBus.bus.Unsubscribe(topic, fn)
 }
 
 func (simplifiedBus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {

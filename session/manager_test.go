@@ -61,7 +61,7 @@ func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (Pa
 	return &mockBalanceTracker{}, nil
 }
 
-func mockPaymentEngineFactory(providerID, accountant identity.Identity) (PaymentEngine, error) {
+func mockPaymentEngineFactory(providerID, accountant identity.Identity, sessionID string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
 

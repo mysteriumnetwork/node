@@ -60,12 +60,12 @@ func InvoiceFactoryCreator(
 	maxAllowedAccountantFee uint16,
 	maxRRecovery uint64,
 	blockchainHelper bcHelper,
-	publisher eventbus.Publisher,
+	eventBus ebus,
 	feeProvider feeProvider,
 	proposal market.ServiceProposal,
 	settler settler,
-) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
-	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, string) (session.PaymentEngine, error) {
+	return func(providerID identity.Identity, accountantID identity.Identity, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
 		listener := NewExchangeListener(exchangeChan)
 		invoiceSender := NewInvoiceSender(dialog)
@@ -74,10 +74,6 @@ func InvoiceFactoryCreator(
 			return nil, err
 		}
 		timeTracker := session.NewTracker(time.Now)
-		rate, err := ProposalToPaymentRate(proposal)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not parse payment rate")
-		}
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
 			Peer:                       dialog.PeerID(),
@@ -87,7 +83,6 @@ func InvoiceFactoryCreator(
 			ChargePeriod:               balanceSendPeriod,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
-			PaymentInfo:                rate,
 			ProviderID:                 providerID,
 			AccountantCaller:           accountantCaller,
 			AccountantPromiseStorage:   accountantPromiseStorage,
@@ -96,10 +91,11 @@ func InvoiceFactoryCreator(
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
 			BlockchainHelper:           blockchainHelper,
-			Publisher:                  publisher,
+			EventBus:                   eventBus,
 			FeeProvider:                feeProvider,
 			MaxRRecoveryLength:         maxRRecovery,
 			Settler:                    settler,
+			SessionID:                  sessionID,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)

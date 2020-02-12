@@ -59,7 +59,7 @@ type consumerTotalsStorage interface {
 
 type timeTracker interface {
 	StartTracking()
-	Elapsed() time.Duration
+	 Elapsed() time.Duration
 }
 
 type channelAddressCalculator interface {

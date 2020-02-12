@@ -81,7 +81,7 @@ type Storage interface {
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (PaymentEngine, error)
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, accountantID identity.Identity) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, accountantID identity.Identity, sessionID string) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -150,7 +150,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	var paymentEngine PaymentEngine
 	if consumerInfo.PaymentVersion == PaymentVersionV3 && !manager.paymentsDisabled {
 		log.Info().Msg("Using new payments")
-		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID)
+		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID, string(session.ID))
 		if err != nil {
 			return err
 		}
