@@ -20,26 +20,22 @@ package ipset
 import (
 	"bufio"
 	"bytes"
-	"os/exec"
 
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // Exec activates given args
-var Exec = execCommand
+var Exec = defaultExec
 
-func execCommand(args []string) ([]string, error) {
+func defaultExec(args []string) ([]string, error) {
 	args = append([]string{"sudo", "/usr/sbin/ipset"}, args...)
-
-	log.Debug().Msgf("[cmd] %v", args)
-	output, err := exec.Command("sudo", args...).CombinedOutput()
+	output, err := cmdutil.ExecOutput(args...)
 	if err != nil {
-		log.Debug().Err(err).Msgf("[cmd error] %v output: %v", args, string(output))
 		return nil, errors.Wrap(err, "ipset cmd error")
 	}
 
-	outputScanner := bufio.NewScanner(bytes.NewBuffer(output))
+	outputScanner := bufio.NewScanner(bytes.NewBufferString(output))
 	var lines []string
 	for outputScanner.Scan() {
 		lines = append(lines, outputScanner.Text())

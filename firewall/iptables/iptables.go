@@ -20,22 +20,23 @@ package iptables
 import (
 	"bufio"
 	"bytes"
-	"os/exec"
 
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 // Exec actives given args
-var Exec = func(args ...string) ([]string, error) {
-	args = append([]string{"/sbin/iptables"}, args...)
-	log.Debug().Msgf("[cmd] %v", args)
-	output, err := exec.Command("sudo", args...).CombinedOutput()
+var Exec = defaultExec
+
+func defaultExec(args ...string) ([]string, error) {
+	args = append([]string{"sudo", "/sbin/iptables"}, args...)
+	output, err := cmdutil.ExecOutput(args...)
 	if err != nil {
-		log.Debug().Err(err).Msgf("[cmd error] %v output: %v", args, string(output))
 		return nil, errors.Wrap(err, "iptables cmd error")
 	}
-	outputScanner := bufio.NewScanner(bytes.NewBuffer(output))
+
+	outputScanner := bufio.NewScanner(bytes.NewBufferString(output))
 	var lines []string
 	for outputScanner.Scan() {
 		lines = append(lines, outputScanner.Text())
