@@ -28,10 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -63,7 +61,7 @@ var (
 		ServiceDefinition: &fakeServiceDefinition{},
 	}
 	establishedSessionID = session.ID("session-100")
-	paymentInfo          *promise.PaymentInfo
+	paymentInfo          session.PaymentInfo
 )
 
 func (tc *testContext) SetupTest() {
@@ -116,15 +114,12 @@ func (tc *testContext) SetupTest() {
 
 	tc.connManager = NewManager(
 		dialogCreator,
-		func(paymentInfo *promise.PaymentInfo,
+		func(paymentInfo session.PaymentInfo,
 			dialog communication.Dialog,
 			consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error) {
-			if paymentInfo == nil {
-				paymentInfo = &promise.PaymentInfo{}
-			}
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
-				initialState:      *paymentInfo,
-				paymentDefinition: dto.PaymentRate{},
+				initialState:      paymentInfo,
+				paymentDefinition: market.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
 			return tc.MockPaymentIssuer, nil
@@ -326,19 +321,10 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 }
 
 func (tc *testContext) Test_ManagerSetsPaymentInfo() {
-	defer func() {
-		paymentInfo = nil
-	}()
-	paymentInfo = &promise.PaymentInfo{
-		LastPromise: promise.LastPromise{
-			SequenceID: 1,
-			Amount:     200,
-		},
-		FreeCredit: 100,
-	}
+	paymentInfo = session.PaymentInfo{}
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Nil(tc.T(), err)
-	assert.Exactly(tc.T(), *paymentInfo, tc.MockPaymentIssuer.initialState)
+	assert.Exactly(tc.T(), paymentInfo, tc.MockPaymentIssuer.initialState)
 }
 
 func (tc *testContext) Test_ManagerPublishesEvents() {
@@ -471,8 +457,8 @@ type fakeServiceDefinition struct{}
 func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
 
 type MockPaymentIssuer struct {
-	initialState      promise.PaymentInfo
-	paymentDefinition dto.PaymentRate
+	initialState      session.PaymentInfo
+	paymentDefinition market.PaymentRate
 	startCalled       bool
 	stopCalled        bool
 	MockError         error

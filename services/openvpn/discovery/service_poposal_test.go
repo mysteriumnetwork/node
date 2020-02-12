@@ -74,16 +74,3 @@ func Test_ServiceProposal_SerializeServiceDefinition(t *testing.T) {
 	}`
 	assert.JSONEq(t, expectedJSON, string(actualJSON))
 }
-
-func Test_ServiceProposal_UnserializePerTimePaymentMethod(t *testing.T) {
-	jsonData := []byte(`{
-		"payment_method_type": "PER_TIME",
-		"payment_method": {}
-	}`)
-
-	var actual market.ServiceProposal
-	err := json.Unmarshal(jsonData, &actual)
-
-	assert.Nil(t, err)
-	assert.Exactly(t, dto_openvpn.PaymentRate{}, actual.PaymentMethod)
-}

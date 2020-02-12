@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,14 +33,17 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 	price := money.NewMoney(50000000, money.CurrencyMyst)
 
 	var tests = []struct {
-		model        Payment
+		model        pingpong.PaymentMethod
 		expectedJSON string
 	}{
 		{
-			Payment{
+			pingpong.PaymentMethod{
 				Price: price,
 			},
 			`{
+				"bytes":0,
+				"duration":0, 
+				"type":"",
 				"price": {
 					"amount": 50000000,
 					"currency": "MYST"
@@ -47,8 +51,11 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 			}`,
 		},
 		{
-			Payment{},
+			pingpong.PaymentMethod{},
 			`{
+				"bytes":0,
+				"duration":0, 
+				"type":"",
 				"price": {}
 			}`,
 		},
@@ -67,18 +74,24 @@ func Test_PaymentMethod_Unserialize(t *testing.T) {
 
 	var tests = []struct {
 		json          string
-		expectedModel Payment
+		expectedModel pingpong.PaymentMethod
 		expectedError error
 	}{
 		{
 			`{
+				"bytes":1,
+				"duration":2, 
+				"type":"test",
 				"price": {
 					"amount": 50000000,
 					"currency": "MYST"
 				}
 			}`,
-			Payment{
-				Price: price,
+			pingpong.PaymentMethod{
+				Price:    price,
+				Bytes:    1,
+				Type:     "test",
+				Duration: 2,
 			},
 			nil,
 		},
@@ -86,18 +99,18 @@ func Test_PaymentMethod_Unserialize(t *testing.T) {
 			`{
 				"price": {}
 			}`,
-			Payment{},
+			pingpong.PaymentMethod{},
 			nil,
 		},
 		{
 			`{}`,
-			Payment{},
+			pingpong.PaymentMethod{},
 			nil,
 		},
 	}
 
 	for _, test := range tests {
-		var model Payment
+		var model pingpong.PaymentMethod
 		err := json.Unmarshal([]byte(test.json), &model)
 
 		assert.Equal(t, test.expectedModel, model)

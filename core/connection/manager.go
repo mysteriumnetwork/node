@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -92,7 +91,7 @@ type PaymentIssuer interface {
 }
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(paymentInfo *promise.PaymentInfo,
+type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
@@ -258,7 +257,7 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
 	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
@@ -312,10 +311,10 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *promise.PaymentInfo, error) {
+func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
-		return session.SessionDto{}, nil, err
+		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
 	paymentVersion := session.PaymentVersionV3
@@ -331,7 +330,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
 	if err != nil {
-		return session.SessionDto{}, nil, err
+		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
 	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {

@@ -36,7 +36,7 @@ func TestProducer_RequestSessionCreate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Exactly(t, successfullSessionID, sessionData.ID)
 	assert.Exactly(t, successfullSessionConfig, sessionData.Config)
-	assert.Nil(t, paymentInfo)
+	assert.Exactly(t, PaymentInfo{}, paymentInfo)
 }
 
 func TestProducer_SessionAcknowledge(t *testing.T) {

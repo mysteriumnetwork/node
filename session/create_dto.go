@@ -22,14 +22,14 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session/promise"
 )
 
 const endpointSessionCreate = communication.RequestEndpoint("session-create")
 
 var (
-	responseInvalidProposal = CreateResponse{Success: false, Message: "Invalid Proposal"}
-	responseInternalError   = CreateResponse{Success: false, Message: "Internal Error"}
+	responseInvalidProposal    = CreateResponse{Success: false, Message: "Invalid Proposal"}
+	responseUnsupportedVersion = CreateResponse{Success: false, Message: "You are running and old version, please update your software"}
+	responseInternalError      = CreateResponse{Success: false, Message: "Internal Error"}
 )
 
 // CreateRequest structure represents message from service consumer to initiate session for given proposal id
@@ -41,11 +41,10 @@ type CreateRequest struct {
 
 // CreateResponse structure represents service provider response to given session request from consumer
 type CreateResponse struct {
-	Success bool       `json:"success"`
-	Message string     `json:"message"`
-	Session SessionDto `json:"session"`
-	// Keeping this as a pointer for maximum backwards compatibility
-	PaymentInfo *promise.PaymentInfo `json:"paymentInfo,omitempty"`
+	Success     bool                `json:"success"`
+	Message     string              `json:"message"`
+	Session     SessionDto          `json:"session"`
+	PaymentInfo PaymentInfo `json:"paymentInfo"`
 }
 
 // SessionDto structure represents session information data within session creation response (session id and configuration options for underlying service type)

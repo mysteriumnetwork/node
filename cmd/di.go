@@ -61,7 +61,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
@@ -71,16 +70,10 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	sessionevent "github.com/mysteriumnetwork/node/session/event"
-	session_payment "github.com/mysteriumnetwork/node/session/payment"
-	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
@@ -111,7 +104,6 @@ type Dependencies struct {
 	NATService       nat.NATService
 	Storage          *boltdb.Bolt
 	Keystore         *keystore.KeyStore
-	PromiseStorage   *promise.Storage
 	IdentityManager  identity.Manager
 	SignerFactory    identity.SignerFactory
 	IdentityRegistry identity_registry.IdentityRegistry
@@ -471,7 +463,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		time.Minute,
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
-	di.PromiseStorage = promise.NewStorage(di.Storage)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	channelImplementation := nodeOptions.Transactor.ChannelImplementation
@@ -515,7 +506,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		pingpong.BackwardsCompatibleExchangeFactoryFunc(
+		pingpong.ExchangeFactoryFunc(
 			di.Keystore,
 			nodeOptions,
 			di.SignerFactory,
@@ -580,7 +571,6 @@ func newSessionManagerFactory(
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
 	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
-	promiseStorage session_payment.PromiseStorage,
 	natPingerChan func(*traversal.Params),
 	natTracker *event.Tracker,
 	serviceID string,
@@ -592,34 +582,9 @@ func newSessionManagerFactory(
 	httpClient *requests.HTTPClient,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
-		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
-			timeTracker := session.NewTracker(time.Now)
-			// TODO: set the time and proper payment info
-			payment := dto.PaymentRate{
-				Price: money.Money{
-					Currency: money.CurrencyMyst,
-					Amount:   uint64(0),
-				},
-				Duration: time.Minute,
-			}
-			amountCalc := session.AmountCalc{PaymentDef: payment}
-			sender := balance.NewBalanceSender(dialog)
-			promiseChan := make(chan promise.Message, 1)
-			listener := promise.NewListener(promiseChan)
-			err := dialog.Receive(listener.GetConsumer())
-			if err != nil {
-				return nil, err
-			}
-
-			// TODO: the ints and times here need to be passed in as well, or defined as constants
-			tracker := balance.NewBalanceTracker(&timeTracker, amountCalc, 0)
-			validator := validators.NewIssuedPromiseValidator(consumerID, receiverID, issuerID)
-			return session_payment.NewSessionBalance(sender, tracker, promiseChan, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout, validator, promiseStorage, consumerID, receiverID, issuerID), nil
-		}
-
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
-			dialog, payment_factory.BalanceSendPeriod,
-			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
+			dialog, pingpong.InvoiceSendPeriod,
+			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
 			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,
@@ -636,7 +601,6 @@ func newSessionManagerFactory(
 		return session.NewManager(
 			proposal,
 			sessionStorage,
-			providerBalanceTrackerFactory,
 			paymentEngineFactory,
 			natPingerChan,
 			natTracker,

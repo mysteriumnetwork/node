@@ -256,7 +256,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
 			di.AccountantPromiseStorage,
-			di.PromiseStorage,
 			di.NATPinger.PingTarget,
 			di.NATTracker,
 			serviceID,
@@ -271,7 +270,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		return session.NewDialogHandler(
 			sessionManagerFactory,
 			configProvider,
-			di.PromiseStorage,
 			identity.FromAddress(proposal.ProviderID),
 			connectivity.NewStatusSubscriber(di.SessionConnectivityStatusStorage),
 		), nil

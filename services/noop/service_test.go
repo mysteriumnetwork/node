@@ -45,10 +45,12 @@ func Test_GetProposal(t *testing.T) {
 			ServiceDefinition: ServiceDefinition{
 				Location: market.Location{Country: country},
 			},
-
 			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-			PaymentMethod: PaymentNoop{
-				Price: money.NewMoney(100, money.CurrencyMyst),
+			PaymentMethod: pingpong.PaymentMethod{
+				Price:    money.NewMoney(100, money.CurrencyMyst),
+				Duration: time.Minute,
+				Type:     pingpong.DefaultPaymentMethod.GetType(),
+				Bytes:    0,
 			},
 		},
 		GetProposal(location.Location{Country: country}),

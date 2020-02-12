@@ -37,16 +37,6 @@ func Bootstrap() {
 	)
 
 	market.RegisterPaymentMethodUnserializer(
-		PaymentMethodNoop,
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method PaymentNoop
-			err := json.Unmarshal(*rawDefinition, &method)
-
-			return method, err
-		},
-	)
-
-	market.RegisterPaymentMethodUnserializer(
 		pingpong.DefaultPaymentMethod.Type,
 		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method pingpong.PaymentMethod
