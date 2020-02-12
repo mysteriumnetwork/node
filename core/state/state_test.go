@@ -33,20 +33,24 @@ import (
 )
 
 type debounceTester struct {
-	timesCalled int
-	lock        sync.Mutex
+	numInteractions int
+	lock            sync.Mutex
+}
+
+type interactionCounter interface {
+	interactions() int
 }
 
 func (dt *debounceTester) do(interface{}) {
 	dt.lock.Lock()
-	dt.timesCalled++
+	dt.numInteractions++
 	dt.lock.Unlock()
 }
 
-func (dt *debounceTester) get() int {
+func (dt *debounceTester) interactions() int {
 	dt.lock.Lock()
 	defer dt.lock.Unlock()
-	return dt.timesCalled
+	return dt.numInteractions
 }
 
 func Test_Debounce_CallsOnceInInterval(t *testing.T) {
@@ -56,9 +60,7 @@ func Test_Debounce_CallsOnceInInterval(t *testing.T) {
 	for i := 1; i < 10; i++ {
 		f(struct{}{})
 	}
-
-	time.Sleep(duration * 2)
-	assert.Equal(t, 1, dt.get())
+	assert.Eventually(t, interacted(dt, 1), 2*time.Second, 10*time.Millisecond)
 }
 
 var mockNATStatus = nat.Status{
@@ -67,22 +69,22 @@ var mockNATStatus = nat.Status{
 }
 
 type natStatusProviderMock struct {
-	statusToReturn nat.Status
-	timesCalled    int
-	lock           sync.Mutex
+	statusToReturn  nat.Status
+	numInteractions int
+	lock            sync.Mutex
 }
 
 func (nspm *natStatusProviderMock) Status() nat.Status {
 	nspm.lock.Lock()
 	defer nspm.lock.Unlock()
-	nspm.timesCalled++
+	nspm.numInteractions++
 	return nspm.statusToReturn
 }
 
-func (nspm *natStatusProviderMock) getTimesCalled() int {
+func (nspm *natStatusProviderMock) interactions() int {
 	nspm.lock.Lock()
 	defer nspm.lock.Unlock()
-	return nspm.timesCalled
+	return nspm.numInteractions
 }
 
 func (nspm *natStatusProviderMock) ConsumeNATEvent(event natEvent.Event) {}
@@ -102,25 +104,25 @@ func (mp *mockPublisher) Publish(topic string, data interface{}) {
 
 type serviceListerMock struct {
 	lock             sync.Mutex
-	timesCalled      int
+	numInteractions  int
 	servicesToReturn map[service.ID]*service.Instance
 }
 
-func (slm *serviceListerMock) getTimesCalled() int {
+func (slm *serviceListerMock) interactions() int {
 	slm.lock.Lock()
 	defer slm.lock.Unlock()
-	return slm.timesCalled
+	return slm.numInteractions
 }
 
 func (slm *serviceListerMock) List() map[service.ID]*service.Instance {
 	slm.lock.Lock()
 	defer slm.lock.Unlock()
-	slm.timesCalled++
+	slm.numInteractions++
 	return slm.servicesToReturn
 }
 
 type serviceSessionStorageMock struct {
-	timesCalled      int
+	numInteractions  int
 	sessionsToReturn []session.Session
 	lock             sync.Mutex
 }
@@ -128,14 +130,14 @@ type serviceSessionStorageMock struct {
 func (sssm *serviceSessionStorageMock) GetAll() []session.Session {
 	sssm.lock.Lock()
 	defer sssm.lock.Unlock()
-	sssm.timesCalled++
+	sssm.numInteractions++
 	return sssm.sessionsToReturn
 }
 
-func (sssm *serviceSessionStorageMock) getTimesCalled() int {
+func (sssm *serviceSessionStorageMock) interactions() int {
 	sssm.lock.Lock()
 	defer sssm.lock.Unlock()
-	return sssm.timesCalled
+	return sssm.numInteractions
 }
 
 func Test_ConsumesNATEvents(t *testing.T) {
@@ -158,8 +160,7 @@ func Test_ConsumesNATEvents(t *testing.T) {
 		})
 	}
 
-	time.Sleep(duration * 3)
-	assert.Equal(t, 1, natProvider.getTimesCalled())
+	assert.Eventually(t, interacted(natProvider, 1), 2*time.Second, 10*time.Millisecond)
 
 	assert.Equal(t, natProvider.statusToReturn.Error.Error(), keeper.GetState().NATStatus.Error)
 	assert.Equal(t, natProvider.statusToReturn.Status, keeper.GetState().NATStatus.Status)
@@ -187,8 +188,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 		keeper.ConsumeSessionStateEvent(sessionEvent.Payload{})
 	}
 
-	time.Sleep(duration * 3)
-	assert.Equal(t, 1, sessionStorage.getTimesCalled())
+	assert.Eventually(t, interacted(sessionStorage, 1), 2*time.Second, 10*time.Millisecond)
 
 	assert.Equal(t, string(expected.ID), keeper.GetState().Sessions[0].ID)
 	assert.Equal(t, expected.ConsumerID.Address, keeper.GetState().Sessions[0].ConsumerID)
@@ -252,10 +252,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 		keeper.ConsumeServiceStateEvent(service.EventPayload{})
 	}
 
-	select {
-	case <-time.After(duration * 3):
-		assert.Equal(t, 1, sl.getTimesCalled())
-	}
+	assert.Eventually(t, interacted(sl, 1), 2*time.Second, 10*time.Millisecond)
 
 	actual := keeper.GetState().Services[0]
 	assert.Equal(t, string(id), actual.ID)
@@ -361,4 +358,10 @@ func Test_incrementConnectionCount(t *testing.T) {
 
 	assert.Equal(t, 1, s.ConnectionStatistics.Successful)
 	assert.Equal(t, 1, s.ConnectionStatistics.Attempted)
+}
+
+func interacted(c interactionCounter, times int) func() bool {
+	return func() bool {
+		return c.interactions() == times
+	}
 }
