@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	dnsFirewallChain = "PROVIDER_DNS_FIREWALL"
+	dnsFirewallChain = "MYST_PROVIDER_FIREWALL"
 	dnsFirewallIpset = "myst-provider-dst-whitelist"
 )
 
@@ -126,7 +126,7 @@ func (ibi *incomingBlockerIptables) cleanupStaleRules() error {
 		return err
 	}
 	for _, rule := range rules {
-		// detect if any references exist in FORWARD chain like -j PROVIDER_DNS_FIREWALL
+		// detect if any references exist in FORWARD chain like -j MYST_PROVIDER_FIREWALL
 		if strings.HasSuffix(rule, dnsFirewallChain) {
 			deleteRule := strings.Replace(rule, "-A", "-D", 1)
 			deleteRuleArgs := strings.Split(deleteRule, " ")

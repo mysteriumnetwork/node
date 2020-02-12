@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const killswitchChain = "CONSUMER_KILL_SWITCH"
+const killswitchChain = "MYST_CONSUMER_KILL_SWITCH"
 
 type refCount struct {
 	count int
@@ -146,7 +146,7 @@ func (obi *outgoingBlockerIptables) cleanupStaleRules() error {
 		return err
 	}
 	for _, rule := range rules {
-		// detect if any references exist in OUTPUT chain like -j CONSUMER_KILL_SWITCH
+		// detect if any references exist in OUTPUT chain like -j MYST_CONSUMER_KILL_SWITCH
 		if strings.HasSuffix(rule, killswitchChain) {
 			deleteRule := strings.Replace(rule, "-A", "-D", 1)
 			deleteRuleArgs := strings.Split(deleteRule, " ")

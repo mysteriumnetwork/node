@@ -142,15 +142,15 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 				output: []string{
 					"-P OUTPUT ACCEPT",
 					// leftover - kill switch is still enabled
-					"-A OUTPUT -s 5.5.5.5 -j CONSUMER_KILL_SWITCH",
+					"-A OUTPUT -s 5.5.5.5 -j MYST_CONSUMER_KILL_SWITCH",
 				},
 			},
 			// kill switch chain still exists
-			"-S CONSUMER_KILL_SWITCH": {
+			"-S MYST_CONSUMER_KILL_SWITCH": {
 				output: []string{
 					// with some allowed ips
-					"-A CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
-					"-A CONSUMER_KILL_SWITCH -j REJECT",
+					"-A MYST_CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
+					"-A MYST_CONSUMER_KILL_SWITCH -j REJECT",
 				},
 			},
 		},
@@ -176,17 +176,17 @@ func TestBlockerResetIsSuccessful(t *testing.T) {
 				output: []string{
 					"-P OUTPUT ACCEPT",
 					// kill switch is enabled
-					"-A OUTPUT -s 1.1.1.1 -j CONSUMER_KILL_SWITCH",
+					"-A OUTPUT -s 1.1.1.1 -j MYST_CONSUMER_KILL_SWITCH",
 				},
 			},
-			"-S CONSUMER_KILL_SWITCH": {
+			"-S MYST_CONSUMER_KILL_SWITCH": {
 				output: []string{
 					//first allowed address
-					"-A CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
+					"-A MYST_CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
 					//second allowed address
-					"-A CONSUMER_KILL_SWITCH -d 3.3.3.3 -j ACCEPT",
+					"-A MYST_CONSUMER_KILL_SWITCH -d 3.3.3.3 -j ACCEPT",
 					//drop everything else
-					"-A CONSUMER_KILL_SWITCH -j REJECT",
+					"-A MYST_CONSUMER_KILL_SWITCH -j REJECT",
 				},
 			},
 		},
