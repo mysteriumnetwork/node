@@ -89,7 +89,7 @@ func (h *Handler) Sub(resp http.ResponseWriter, req *http.Request, params httpro
 	}
 
 	resp.Header().Set("Content-Type", "text/event-stream")
-	resp.Header().Set("Cache-Control", "no-cache")
+	resp.Header().Set("Cache-Control", "no-cache,no-transform")
 	resp.Header().Set("Connection", "keep-alive")
 
 	messageChan := make(chan string, 1)
