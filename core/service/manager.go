@@ -41,13 +41,13 @@ var (
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Serve(providerID identity.Identity) error
+	Serve(instance *Instance) error
 	Stop() error
 	ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
-type DialogWaiterFactory func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error)
+type DialogWaiterFactory func(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error)
@@ -72,7 +72,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
-	policyRepo *policy.Repository,
+	policyOracle *policy.Oracle,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -81,7 +81,7 @@ func NewManager(
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
-		policyRepo:           policyRepo,
+		policyOracle:         policyOracle,
 	}
 }
 
@@ -95,7 +95,7 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
-	policyRepo       *policy.Repository
+	policyOracle     *policy.Oracle
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -107,16 +107,17 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	var policies *[]market.AccessPolicy = nil
+	proposal.SetAccessPolicies(nil)
+	policyRules := policy.NewRepository()
 	if len(policyIDs) > 0 {
-		policies = manager.policyRepo.Policies(policyIDs)
-		if err = manager.policyRepo.AddPolicies(*policies); err != nil {
+		policies := manager.policyOracle.Policies(policyIDs)
+		if err = manager.policyOracle.SubscribePolicies(policies, policyRules); err != nil {
 			return id, ErrUnsupportedAccessPolicy
 		}
+		proposal.SetAccessPolicies(&policies)
 	}
-	proposal.SetAccessPolicies(policies)
 
-	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, policies)
+	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, policyRules)
 	if err != nil {
 		return id, err
 	}
@@ -137,23 +138,24 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery := manager.discoveryFactory()
 	discovery.Start(providerID, proposal)
 
-	instance := Instance{
+	instance := &Instance{
 		id:             id,
 		state:          Starting,
 		options:        options,
 		service:        service,
 		proposal:       proposal,
+		policies:       policyRules,
 		dialogWaiter:   dialogWaiter,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
 	}
 
-	manager.servicePool.Add(&instance)
+	manager.servicePool.Add(instance)
 
 	go func() {
 		instance.setState(Running)
 
-		serveErr := service.Serve(providerID)
+		serveErr := service.Serve(instance)
 		if serveErr != nil {
 			log.Error().Err(serveErr).Msg("Service serve failed")
 		}

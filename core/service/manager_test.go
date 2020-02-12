@@ -30,8 +30,8 @@ import (
 )
 
 var (
-	serviceType = "the-very-awesome-test-service-type"
-	mockPolicy  = policy.NewRepository(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
+	serviceType      = "the-very-awesome-test-service-type"
+	mockPolicyOracle = policy.NewOracle(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
 )
 
 func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
@@ -50,7 +50,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
-		mockPolicy,
+		mockPolicyOracle,
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -75,7 +75,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
-		mockPolicy,
+		mockPolicyOracle,
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -102,7 +102,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		eventBus,
-		mockPolicy,
+		mockPolicyOracle,
 	)
 
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})

@@ -127,7 +127,7 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
 
-	PolicyRepository *policy.Repository
+	PolicyOracle *policy.Oracle
 
 	StatisticsTracker                *statistics.SessionStatisticsTracker
 	StatisticsReporter               *statistics.SessionStatisticsReporter
@@ -343,8 +343,8 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}
 
-	if di.PolicyRepository != nil {
-		di.PolicyRepository.Stop()
+	if di.PolicyOracle != nil {
+		di.PolicyOracle.Stop()
 	}
 
 	if di.NATService != nil {

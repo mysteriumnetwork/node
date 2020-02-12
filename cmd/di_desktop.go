@@ -238,15 +238,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	}
 	di.ServiceSessionStorage = storage
 
-	di.PolicyRepository = policy.NewRepository(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
-	di.PolicyRepository.Start()
+	di.PolicyOracle = policy.NewOracle(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
+	go di.PolicyOracle.Start()
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error) {
+	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
 		return nats_dialog.NewDialogWaiter(
 			di.BrokerConnection,
 			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
-			policy.ValidateAllowedIdentity(di.PolicyRepository, policies),
+			policy.ValidateAllowedIdentity(policies),
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
@@ -282,7 +282,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		newDialogHandler,
 		di.DiscoveryFactory,
 		di.EventBus,
-		di.PolicyRepository,
+		di.PolicyOracle,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}

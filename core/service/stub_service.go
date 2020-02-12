@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -35,7 +36,7 @@ type serviceFake struct {
 	onStartReturnError error
 }
 
-func (service *serviceFake) Serve(identity.Identity) error {
+func (service *serviceFake) Serve(instance *Instance) error {
 	if service.mockProcess != nil {
 		for range service.mockProcess {
 		}
@@ -77,7 +78,7 @@ func (mdw *mockDialogWaiter) Start(_ communication.DialogHandler) error {
 }
 
 // MockDialogWaiterFactory returns a new instance of communication dialog waiter.
-func MockDialogWaiterFactory(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy) (communication.DialogWaiter, error) {
+func MockDialogWaiterFactory(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
 	return &mockDialogWaiter{}, nil
 }
 

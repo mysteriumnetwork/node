@@ -25,25 +25,26 @@ import (
 )
 
 // ValidateAllowedIdentity checks if given identity is allowed by given policies
-func ValidateAllowedIdentity(repository *Repository, policies *[]market.AccessPolicy) func(identity.Identity) error {
+func ValidateAllowedIdentity(policies *Repository) func(identity.Identity) error {
 	return func(peerID identity.Identity) error {
-		if policies == nil {
-			return nil
-		}
+		hasIdentityRules := false
 
-		policiesRules, err := repository.RulesForPolicies(*policies)
-		if err != nil {
-			return err
-		}
-
-		for _, policyRules := range policiesRules {
+		for _, policyRules := range policies.Rules() {
 			for _, rule := range policyRules.Allow {
-				if rule.Type == market.AccessPolicyTypeIdentity && rule.Value == peerID.Address {
+				if rule.Type != market.AccessPolicyTypeIdentity {
+					continue
+				}
+
+				hasIdentityRules = true
+				if rule.Value == peerID.Address {
 					return nil
 				}
 			}
 		}
 
+		if !hasIdentityRules {
+			return nil
+		}
 		return errors.New("identity is not allowed")
 	}
 }

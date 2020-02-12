@@ -28,9 +28,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
@@ -283,7 +283,7 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumserConfig wg.C
 }
 
 // Serve starts service - does block
-func (m *Manager) Serve(providerID identity.Identity) error {
+func (m *Manager) Serve(instance *service.Instance) error {
 	log.Info().Msg("Wireguard service started successfully now")
 
 	// Start DNS proxy.
