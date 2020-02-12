@@ -81,23 +81,30 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
+	if err != nil {
+		return createErrorResponse(err), nil
+	}
+
+	if sessionConfigParams.SessionDestroyCallback != nil {
+		go func() {
+			<-sessionInstance.done
+			sessionConfigParams.SessionDestroyCallback()
+		}()
+	}
+
+	return createResponse(sessionInstance, sessionConfigParams.SessionServiceConfig, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID), indicateNewVersion), nil
+}
+
+func createErrorResponse(err error) CreateResponse {
 	switch err {
-	case nil:
-		if sessionConfigParams.SessionDestroyCallback != nil {
-			go func() {
-				<-sessionInstance.done
-				sessionConfigParams.SessionDestroyCallback()
-			}()
-		}
-		return responseWithSession(sessionInstance, sessionConfigParams.SessionServiceConfig, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID), indicateNewVersion), nil
 	case ErrorInvalidProposal:
-		return responseInvalidProposal, nil
+		return responseInvalidProposal
 	default:
-		return responseInternalError, nil
+		return responseInternalError
 	}
 }
 
-func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo, indicateNewVersion bool) CreateResponse {
+func createResponse(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo, indicateNewVersion bool) CreateResponse {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session
