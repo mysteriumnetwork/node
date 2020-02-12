@@ -51,10 +51,8 @@ func Test_GetProposal(t *testing.T) {
 				Location:          market.Location{Country: country},
 				LocationOriginate: market.Location{Country: country},
 			},
-			PaymentMethodType: "WG",
-			PaymentMethod: wg.Payment{
-				Price: pingpong.DefaultPaymentInfo.Price,
-			},
+			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
+			PaymentMethod:     pingpong.DefaultPaymentMethod,
 		},
 		GetProposal(location.Location{Country: country}),
 	)

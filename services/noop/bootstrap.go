@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 )
 
 // Bootstrap is called on program initialization time and registers various deserializers related to noop service
@@ -39,6 +40,16 @@ func Bootstrap() {
 		PaymentMethodNoop,
 		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method PaymentNoop
+			err := json.Unmarshal(*rawDefinition, &method)
+
+			return method, err
+		},
+	)
+
+	market.RegisterPaymentMethodUnserializer(
+		pingpong.DefaultPaymentMethod.Type,
+		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
+			var method pingpong.PaymentMethod
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err

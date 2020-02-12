@@ -39,10 +39,30 @@ import (
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
 const DefaultAccountantFailureCount uint64 = 10
 
-// DefaultPaymentInfo represents the default payment info for the alpha release
-var DefaultPaymentInfo = dto.PaymentRate{
+var DefaultPaymentMethod = PaymentMethod{
 	Price:    money.NewMoney(50000, money.CurrencyMyst),
-	Duration: 1 * time.Minute,
+	Duration: time.Minute,
+	Type:     "BYTES_TRANSFERED_WITH_TIME",
+	Bytes:    7142857,
+}
+
+type PaymentMethod struct {
+	Price    money.Money   `json:"price"`
+	Duration time.Duration `json:"duration"`
+	Bytes    uint64        `json:"bytes"`
+	Type     string
+}
+
+func (pm PaymentMethod) GetPrice() money.Money {
+	return pm.Price
+}
+
+func (pm PaymentMethod) GetType() string {
+	return pm.Type
+}
+
+func (pm PaymentMethod) GetRate() market.PaymentRate {
+	return market.PaymentRate{PerByte: pm.Bytes, PerTime: pm.Duration}
 }
 
 // InvoiceFactoryCreator returns a payment engine factory.

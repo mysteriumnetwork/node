@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 )
 
 // ServiceType indicates "wireguard" service type
@@ -46,31 +45,6 @@ type ServiceDefinition struct {
 // GetLocation returns geographic location of service definition provider
 func (service ServiceDefinition) GetLocation() market.Location {
 	return service.Location
-}
-
-// PaymentMethod indicates payment method for Wireguard service
-const PaymentMethod = "WG"
-
-// Payment structure describes price for Wireguard service payment
-type Payment struct {
-	Price money.Money `json:"price"`
-}
-
-// GetPrice returns price of payment per time
-func (method Payment) GetPrice() money.Money {
-	return method.Price
-}
-
-// GetType returns PER_BYTES
-func (method Payment) GetType() string {
-	return PaymentMethod
-}
-
-// GetRate returns the payment rate
-func (method Payment) GetRate() market.PaymentRate {
-	return market.PaymentRate{
-		PerTime: time.Minute,
-	}
 }
 
 // EndpointFactory creates new connection endpoint.

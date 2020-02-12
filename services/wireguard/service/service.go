@@ -42,9 +42,7 @@ func GetProposal(location location.Location) market.ServiceProposal {
 			Location:          marketLocation,
 			LocationOriginate: marketLocation,
 		},
-		PaymentMethodType: wg.PaymentMethod,
-		PaymentMethod: wg.Payment{
-			Price: pingpong.DefaultPaymentInfo.Price,
-		},
+		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
+		PaymentMethod:     pingpong.DefaultPaymentMethod,
 	}
 }

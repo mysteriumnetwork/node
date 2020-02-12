@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/market"
 	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 )
 
 // ServiceType indicates "openvpn" service type
@@ -40,19 +41,9 @@ func Bootstrap() {
 	)
 
 	market.RegisterPaymentMethodUnserializer(
-		dto_openvpn.PaymentMethodPerTime,
+		pingpong.DefaultPaymentMethod.Type,
 		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method dto_openvpn.PaymentRate
-			err := json.Unmarshal(*rawDefinition, &method)
-
-			return method, err
-		},
-	)
-
-	market.RegisterPaymentMethodUnserializer(
-		dto_openvpn.PaymentMethodPerBytes,
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method dto_openvpn.PaymentPerBytes
+			var method pingpong.PaymentMethod
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err

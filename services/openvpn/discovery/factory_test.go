@@ -19,7 +19,6 @@ package discovery
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -54,11 +53,8 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 				Protocol:          "tcp",
 			},
 
-			PaymentMethodType: "PER_TIME",
-			PaymentMethod: dto.PaymentRate{
-				Price:    pingpong.DefaultPaymentInfo.Price,
-				Duration: time.Minute,
-			},
+			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
+			PaymentMethod:     pingpong.DefaultPaymentMethod,
 		},
 		proposal,
 	)

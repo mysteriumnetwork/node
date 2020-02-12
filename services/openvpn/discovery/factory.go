@@ -38,7 +38,7 @@ func NewServiceProposalWithLocation(
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
 			Protocol:          protocol,
 		},
-		PaymentMethodType: dto.PaymentMethodPerTime,
-		PaymentMethod:     pingpong.DefaultPaymentInfo,
+		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
+		PaymentMethod:     pingpong.DefaultPaymentMethod,
 	}
 }

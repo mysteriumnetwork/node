@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 )
 
 // Bootstrap is called on program initialization time and registers various deserializers related to wireguard service
@@ -35,11 +36,10 @@ func Bootstrap() {
 		},
 	)
 
-	// TODO per time or per bytes payment methods should be defined here
 	market.RegisterPaymentMethodUnserializer(
-		PaymentMethod,
+		pingpong.DefaultPaymentMethod.Type,
 		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method Payment
+			var method pingpong.PaymentMethod
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err

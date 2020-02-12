@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,9 +46,9 @@ func Test_GetProposal(t *testing.T) {
 				Location: market.Location{Country: country},
 			},
 
-			PaymentMethodType: "NOOP",
+			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
 			PaymentMethod: PaymentNoop{
-				Price: pingpong.DefaultPaymentInfo.Price,
+				Price: money.NewMoney(100, money.CurrencyMyst),
 			},
 		},
 		GetProposal(location.Location{Country: country}),
