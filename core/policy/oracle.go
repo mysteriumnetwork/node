@@ -60,9 +60,28 @@ func NewOracle(client *requests.HTTPClient, policyURL string, interval time.Dura
 	}
 }
 
-// Start begins fetching policies to to subscribers
+// Start begins fetching policies to subscribers
 func (pr *Oracle) Start() {
-	go pr.fetchLoop()
+	for {
+		select {
+		case <-pr.fetchShutdown:
+			return
+		case <-time.After(pr.fetchInterval):
+			pr.fetchLock.Lock()
+
+			subscriptionsActive := make([]policySubscription, len(pr.fetchSubscriptions))
+			copy(subscriptionsActive, pr.fetchSubscriptions)
+
+			for index := range subscriptionsActive {
+				if err := pr.fetchPolicyRules(&subscriptionsActive[index]); err != nil {
+					log.Warn().Err(err).Msg("synchronise fetch failed")
+				}
+			}
+			pr.fetchSubscriptions = subscriptionsActive
+
+			pr.fetchLock.Unlock()
+		}
+	}
 }
 
 // Stop ends fetching policies to subscribers
@@ -111,8 +130,7 @@ func (pr *Oracle) SubscribePolicies(policies []market.AccessPolicy, repository *
 			})
 		}
 
-		var err error
-		if err = pr.fetchPolicyRules(&subscriptionsNew[index]); err != nil {
+		if err := pr.fetchPolicyRules(&subscriptionsNew[index]); err != nil {
 			return errors.Wrap(err, "initial fetch failed")
 		}
 	}
@@ -165,28 +183,4 @@ func (pr *Oracle) fetchPolicyRules(subscription *policySubscription) error {
 	}
 
 	return nil
-}
-
-func (pr *Oracle) fetchLoop() {
-	for {
-		select {
-		case <-pr.fetchShutdown:
-			return
-		case <-time.After(pr.fetchInterval):
-			pr.fetchLock.Lock()
-
-			subscriptionsActive := make([]policySubscription, len(pr.fetchSubscriptions))
-			copy(subscriptionsActive, pr.fetchSubscriptions)
-
-			for index := range subscriptionsActive {
-				var err error
-				if err = pr.fetchPolicyRules(&subscriptionsActive[index]); err != nil {
-					log.Warn().Err(err).Msg("synchronise fetch failed")
-				}
-			}
-			pr.fetchSubscriptions = subscriptionsActive
-
-			pr.fetchLock.Unlock()
-		}
-	}
 }

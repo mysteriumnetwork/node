@@ -166,7 +166,7 @@ func Test_Oracle_StartSyncsPolicies(t *testing.T) {
 	defer server.Close()
 
 	oracle := createFilledOracle(server.URL, 1*time.Millisecond, repo)
-	oracle.Start()
+	go oracle.Start()
 	defer oracle.Stop()
 
 	var policiesRules []market.AccessPolicyRuleSet
@@ -183,10 +183,10 @@ func Test_Oracle_StartSyncsPolicies(t *testing.T) {
 
 func Test_PolicyRepository_StartMultipleTimes(t *testing.T) {
 	oracle := NewOracle(requests.NewHTTPClient("0.0.0.0", time.Second), "http://policy.localhost", time.Minute)
-	oracle.Start()
+	go oracle.Start()
 	oracle.Stop()
 
-	oracle.Start()
+	go oracle.Start()
 	oracle.Stop()
 }
 
@@ -213,7 +213,8 @@ func createFilledOracle(mockServerURL string, interval time.Duration, repo *Repo
 
 func mockPolicyServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/1" {
+		switch r.URL.Path {
+		case "/1":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
 				"id": "1",
@@ -223,7 +224,7 @@ func mockPolicyServer() *httptest.Server {
 					{"type": "identity", "value": "0x1"}
 				]
 			}`))
-		} else if r.URL.Path == "/2" {
+		case "/2":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
 				"id": "2",
@@ -233,7 +234,7 @@ func mockPolicyServer() *httptest.Server {
 					{"type": "dns_hostname", "value": "ipinfo.io"}
 				]
 			}`))
-		} else if r.URL.Path == "/3" {
+		case "/3":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
 				"id": "3",
@@ -243,7 +244,7 @@ func mockPolicyServer() *httptest.Server {
 					{"type": "dns_zone", "value": "ipinfo.io"}
 				]
 			}`))
-		} else {
+		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))

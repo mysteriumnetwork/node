@@ -239,7 +239,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	di.ServiceSessionStorage = storage
 
 	di.PolicyOracle = policy.NewOracle(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
-	di.PolicyOracle.Start()
+	go di.PolicyOracle.Start()
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy, policiesRules *policy.Repository) (communication.DialogWaiter, error) {
 		return nats_dialog.NewDialogWaiter(
