@@ -47,7 +47,7 @@ func Test_GetProposal(t *testing.T) {
 			},
 			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
 			PaymentMethod: pingpong.PaymentMethod{
-				Price:    money.NewMoney(100, money.CurrencyMyst),
+				Price:    money.NewMoney(10000, money.CurrencyMyst),
 				Duration: time.Minute,
 				Type:     pingpong.DefaultPaymentMethod.GetType(),
 				Bytes:    0,

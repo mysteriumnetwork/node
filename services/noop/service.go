@@ -84,7 +84,7 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
 		PaymentMethod: pingpong.PaymentMethod{
 			Type:     pingpong.DefaultPaymentMethod.GetType(),
-			Price:    money.NewMoney(100, money.CurrencyMyst),
+			Price:    money.NewMoney(10000, money.CurrencyMyst),
 			Bytes:    0,
 			Duration: time.Minute,
 		},
