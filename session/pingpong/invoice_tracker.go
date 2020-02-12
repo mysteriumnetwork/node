@@ -613,9 +613,19 @@ func (it *InvoiceTracker) updateDataTransfer(up, down uint64) {
 	it.dataTransferedLock.Lock()
 	defer it.dataTransferedLock.Unlock()
 
+	newUp := it.dataTransfered.up
+	if up > it.dataTransfered.up {
+		newUp = up
+	}
+
+	newDown := it.dataTransfered.down
+	if down > it.dataTransfered.down {
+		newDown = down
+	}
+
 	it.dataTransfered = dataTransfered{
-		up:   up,
-		down: down,
+		up:   newUp,
+		down: newDown,
 	}
 }
 

@@ -278,9 +278,19 @@ func (emt *ExchangeMessageTracker) updateDataTransfer(up, down uint64) {
 	emt.dataTransferedLock.Lock()
 	defer emt.dataTransferedLock.Unlock()
 
+	newUp := emt.dataTransfered.up
+	if up > emt.dataTransfered.up {
+		newUp = up
+	}
+
+	newDown := emt.dataTransfered.down
+	if down > emt.dataTransfered.down {
+		newDown = down
+	}
+
 	emt.dataTransfered = dataTransfered{
-		up:   up,
-		down: down,
+		up:   newUp,
+		down: newDown,
 	}
 }
 
