@@ -66,7 +66,7 @@ func (ebs *EventBasedStorage) GetAll() []Session {
 	return ebs.storage.GetAll()
 }
 
-func (ebs *EventBasedStorage) consumeDataTransferedEvent(e event.DataTransferEventPayload) {
+func (ebs *EventBasedStorage) consumeDataTransferredEvent(e event.DataTransferEventPayload) {
 	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
 	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
 	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
@@ -123,7 +123,7 @@ func (ebs *EventBasedStorage) RemoveForService(serviceID string) {
 
 // Subscribe subscribes the ebs to relevant events
 func (ebs *EventBasedStorage) Subscribe() error {
-	if err := ebs.bus.SubscribeAsync(event.AppTopicDataTransfered, ebs.consumeDataTransferedEvent); err != nil {
+	if err := ebs.bus.SubscribeAsync(event.AppTopicDataTransfered, ebs.consumeDataTransferredEvent); err != nil {
 		return err
 	}
 	if err := ebs.bus.SubscribeAsync(event.AppTopicSessionTokensEarned, ebs.consumeTokensEarnedEvent); err != nil {

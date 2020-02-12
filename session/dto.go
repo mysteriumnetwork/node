@@ -23,34 +23,34 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-// ID represents session id type
+// ID represents session id type.
 type ID string
 
-// PaymentEngine is responsible for interacting with the consumer in regards to payments
+// PaymentEngine is responsible for interacting with the consumer in regard to payments.
 type PaymentEngine interface {
 	Start() error
 	Stop()
 }
 
-// DataTransfered represents the data transfered on each session
-type DataTransfered struct {
+// DataTransferred represents the data transferred on each session.
+type DataTransferred struct {
 	Up, Down uint64
 }
 
-// Session structure holds all required information about current session between service consumer and provider
+// Session structure holds all required information about current session between service consumer and provider.
 type Session struct {
-	ID             ID
-	ConsumerID     identity.Identity
-	Config         ServiceConfiguration
-	ServiceID      string
-	ServiceType    string
-	CreatedAt      time.Time
-	DataTransfered DataTransfered
-	TokensEarned   uint64
-	Last           bool
-	done           chan struct{}
+	ID              ID
+	ConsumerID      identity.Identity
+	Config          ServiceConfiguration
+	ServiceID       string
+	ServiceType     string
+	CreatedAt       time.Time
+	DataTransferred DataTransferred
+	TokensEarned    uint64
+	Last            bool
+	done            chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
-// should be serializable to json format
+// should be serializable to json format.
 type ServiceConfiguration interface{}

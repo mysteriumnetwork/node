@@ -193,7 +193,7 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	return sessionInstance, nil
 }
 
-// Acknowledge marks the session as successfuly established as far as the consumer is concerned.
+// Acknowledge marks the session as successfully established as far as the consumer is concerned.
 func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()

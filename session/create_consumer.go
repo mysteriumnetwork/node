@@ -43,7 +43,7 @@ type createConsumer struct {
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerPrams *traversal.Params) (Session, error)
+	Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages

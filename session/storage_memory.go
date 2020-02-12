@@ -83,8 +83,8 @@ func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down uint64) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 	if instance, found := storage.sessions[id]; found {
-		instance.DataTransfered.Down = down
-		instance.DataTransfered.Up = up
+		instance.DataTransferred.Down = down
+		instance.DataTransferred.Up = up
 		storage.sessions[id] = instance
 	}
 }
