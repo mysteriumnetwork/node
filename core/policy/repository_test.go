@@ -97,25 +97,39 @@ func Test_Repository_RulesForPolicies(t *testing.T) {
 	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRules, policyTwoRules}, policiesRules)
 }
 
+func Test_Repository_Rules(t *testing.T) {
+	repo := createEmptyRepo()
+	assert.Equal(t, []market.AccessPolicyRuleSet{}, repo.Rules())
+
+	repo = createFullRepo()
+	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRules, policyTwoRules}, repo.Rules())
+}
+
 func createEmptyRepo() *Repository {
 	return NewRepository()
 }
 
 func createFullRepo() *Repository {
 	repo := NewRepository()
-	repo.rulesByPolicy[policyOne] = market.AccessPolicyRuleSet{
-		ID:    "1",
-		Title: "One",
-		Allow: []market.AccessRule{
-			{Type: market.AccessPolicyTypeIdentity, Value: "0x1"},
+	repo.SetPolicyRules(
+		policyOne,
+		market.AccessPolicyRuleSet{
+			ID:    "1",
+			Title: "One",
+			Allow: []market.AccessRule{
+				{Type: market.AccessPolicyTypeIdentity, Value: "0x1"},
+			},
 		},
-	}
-	repo.rulesByPolicy[policyTwo] = market.AccessPolicyRuleSet{
-		ID:    "2",
-		Title: "Two",
-		Allow: []market.AccessRule{
-			{Type: market.AccessPolicyTypeDNSHostname, Value: "ipinfo.io"},
+	)
+	repo.SetPolicyRules(
+		policyTwo,
+		market.AccessPolicyRuleSet{
+			ID:    "2",
+			Title: "Two",
+			Allow: []market.AccessRule{
+				{Type: market.AccessPolicyTypeDNSHostname, Value: "ipinfo.io"},
+			},
 		},
-	}
+	)
 	return repo
 }

@@ -78,7 +78,7 @@ func (mdw *mockDialogWaiter) Start(_ communication.DialogHandler) error {
 }
 
 // MockDialogWaiterFactory returns a new instance of communication dialog waiter.
-func MockDialogWaiterFactory(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy, policiesRules *policy.Repository) (communication.DialogWaiter, error) {
+func MockDialogWaiterFactory(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
 	return &mockDialogWaiter{}, nil
 }
 

@@ -24,68 +24,101 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
+type listItem struct {
+	policy market.AccessPolicy
+	rules  market.AccessPolicyRuleSet
+}
+
 // Repository represents async policy fetcher from TrustOracle
 type Repository struct {
-	lock          sync.RWMutex
-	rulesByPolicy map[market.AccessPolicy]market.AccessPolicyRuleSet
+	lock  sync.RWMutex
+	items []listItem
 }
 
 // NewRepository create instance of policy repository
 func NewRepository() *Repository {
 	return &Repository{
-		rulesByPolicy: make(map[market.AccessPolicy]market.AccessPolicyRuleSet),
+		items: make([]listItem, 0),
 	}
 }
 
-// SetPolicyRules set policy ant it's rules to repository
-func (pr *Repository) SetPolicyRules(policy market.AccessPolicy, policyRules market.AccessPolicyRuleSet) {
-	pr.lock.Lock()
-	defer pr.lock.Unlock()
+// SetPolicyRules set policy ant it's items to repository
+func (r *Repository) SetPolicyRules(policy market.AccessPolicy, policyRules market.AccessPolicyRuleSet) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 
-	pr.rulesByPolicy[policy] = policyRules
+	item, err := r.findItemFor(policy)
+	if err != nil {
+		r.items = append(r.items, listItem{
+			policy: policy,
+			rules:  policyRules,
+		})
+	} else {
+		item.rules = policyRules
+	}
 }
 
 // Policies list policies in repository
-func (pr *Repository) Policies() []market.AccessPolicy {
-	pr.lock.RLock()
-	defer pr.lock.RUnlock()
+func (r *Repository) Policies() []market.AccessPolicy {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 
-	policies := make([]market.AccessPolicy, len(pr.rulesByPolicy))
-	i := 0
-	for policy := range pr.rulesByPolicy {
-		policies[i] = policy
-		i++
+	policies := make([]market.AccessPolicy, 0)
+	for _, item := range r.items {
+		policies = append(policies, item.policy)
 	}
 
 	return policies
 }
 
-// RulesForPolicy gives rules of given policy
-func (pr *Repository) RulesForPolicy(policy market.AccessPolicy) (market.AccessPolicyRuleSet, error) {
-	pr.lock.RLock()
-	defer pr.lock.RUnlock()
+// RulesForPolicy gives items of given polic
+func (r *Repository) RulesForPolicy(policy market.AccessPolicy) (market.AccessPolicyRuleSet, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 
-	policyRules, exist := pr.rulesByPolicy[policy]
-	if !exist {
-		return market.AccessPolicyRuleSet{}, fmt.Errorf("unknown policy: %s", policy)
+	item, err := r.findItemFor(policy)
+	if err != nil {
+		return market.AccessPolicyRuleSet{}, err
 	}
 
-	return policyRules, nil
+	return item.rules, nil
 }
 
-// RulesForPolicies gives list of rules of given policies
-func (pr *Repository) RulesForPolicies(policies []market.AccessPolicy) ([]market.AccessPolicyRuleSet, error) {
-	pr.lock.RLock()
-	defer pr.lock.RUnlock()
+// RulesForPolicies gives list of items of given policies
+func (r *Repository) RulesForPolicies(policies []market.AccessPolicy) ([]market.AccessPolicyRuleSet, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 
 	policiesRules := make([]market.AccessPolicyRuleSet, len(policies))
 	for i, policy := range policies {
-		var exist bool
-		policiesRules[i], exist = pr.rulesByPolicy[policy]
-		if !exist {
+		item, err := r.findItemFor(policy)
+		if err != nil {
 			return []market.AccessPolicyRuleSet{}, fmt.Errorf("unknown policy: %s", policy)
 		}
+		policiesRules[i] = item.rules
 	}
 
 	return policiesRules, nil
+}
+
+// Rules gives list of items all policies
+func (r *Repository) Rules() []market.AccessPolicyRuleSet {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	policiesRules := make([]market.AccessPolicyRuleSet, 0)
+	for _, item := range r.items {
+		policiesRules = append(policiesRules, item.rules)
+	}
+
+	return policiesRules
+}
+
+func (r *Repository) findItemFor(policy market.AccessPolicy) (*listItem, error) {
+	for _, item := range r.items {
+		if item.policy == policy {
+			return &item, nil
+		}
+	}
+	return nil, fmt.Errorf("unknown policy: %s", policy)
 }

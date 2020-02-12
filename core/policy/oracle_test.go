@@ -110,13 +110,7 @@ func Test_Oracle_SubscribePolicies_Race(t *testing.T) {
 	}()
 	wg.Wait()
 
-	policiesRules, err := repo.RulesForPolicies([]market.AccessPolicy{
-		oracle.Policy("1"),
-		oracle.Policy("2"),
-		oracle.Policy("3"),
-	})
-	assert.NoError(t, err)
-	assert.Len(t, policiesRules, 3)
+	assert.Len(t, repo.Rules(), 3)
 }
 
 func Test_Oracle_SubscribePolicies_WhenEndpointSucceeds(t *testing.T) {
@@ -130,15 +124,10 @@ func Test_Oracle_SubscribePolicies_WhenEndpointSucceeds(t *testing.T) {
 		repo,
 	)
 	assert.NoError(t, err)
-	policiesRules, err := repo.RulesForPolicies([]market.AccessPolicy{
-		oracle.Policy("1"),
-		oracle.Policy("3"),
-	})
-	assert.NoError(t, err)
 	assert.Equal(
 		t,
 		[]market.AccessPolicyRuleSet{policyOneRulesUpdated, policyThreeRulesUpdated},
-		policiesRules,
+		repo.Rules(),
 	)
 
 	oracle = createFilledOracle(server.URL, time.Minute, repo)
@@ -148,15 +137,10 @@ func Test_Oracle_SubscribePolicies_WhenEndpointSucceeds(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	policiesRules, err = repo.RulesForPolicies([]market.AccessPolicy{
-		oracle.Policy("1"),
-		oracle.Policy("3"),
-	})
-	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		[]market.AccessPolicyRuleSet{policyOneRulesUpdated, policyThreeRulesUpdated},
-		policiesRules,
+		[]market.AccessPolicyRuleSet{policyOneRulesUpdated, policyThreeRulesUpdated, policyTwoRulesUpdated},
+		repo.Rules(),
 	)
 }
 
@@ -171,12 +155,8 @@ func Test_Oracle_StartSyncsPolicies(t *testing.T) {
 
 	var policiesRules []market.AccessPolicyRuleSet
 	assert.Eventually(t, func() bool {
-		var err error
-		policiesRules, err = repo.RulesForPolicies([]market.AccessPolicy{
-			oracle.Policy("1"),
-			oracle.Policy("2"),
-		})
-		return err == nil && len(policiesRules) == 2
+		policiesRules = repo.Rules()
+		return len(policiesRules) == 2
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRulesUpdated, policyTwoRulesUpdated}, policiesRules)
 }

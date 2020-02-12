@@ -112,7 +112,7 @@ func (pr *Oracle) Policies(policyIDs []string) []market.AccessPolicy {
 	return policies
 }
 
-// SubscribePolicies adds given policies to repository and syncs changes of it's rules from TrustOracle
+// SubscribePolicies adds given policies to repository and syncs changes of it's items from TrustOracle
 func (pr *Oracle) SubscribePolicies(policies []market.AccessPolicy, repository *Repository) error {
 	pr.fetchLock.Lock()
 	defer pr.fetchLock.Unlock()

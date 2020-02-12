@@ -241,12 +241,12 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	di.PolicyOracle = policy.NewOracle(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
 	go di.PolicyOracle.Start()
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *[]market.AccessPolicy, policiesRules *policy.Repository) (communication.DialogWaiter, error) {
+	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
 		return nats_dialog.NewDialogWaiter(
 			di.BrokerConnection,
 			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
 			di.SignerFactory(providerID),
-			policy.ValidateAllowedIdentity(policiesRules, policies),
+			policy.ValidateAllowedIdentity(policies),
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
