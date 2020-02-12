@@ -55,14 +55,14 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1"}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 1), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
 
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x2"}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 2), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 2), 2*time.Second, 1*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, repo.storage.Proposals())
 }
 
@@ -78,7 +78,7 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	assert.Eventually(t, proposalCountEquals(repo, 0), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 0), 2*time.Second, 1*time.Millisecond)
 }
 
 func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
@@ -98,7 +98,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1"}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 1), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
 }
 
@@ -116,7 +116,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1"}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 1), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, repo.storage.Proposals())
 }
 

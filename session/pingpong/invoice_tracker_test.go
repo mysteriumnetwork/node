@@ -690,7 +690,7 @@ func TestInvoiceTracker_TestInvoiceTracker_handleAccountantError_settles(t *test
 	assert.Eventually(t, func() bool {
 		p, a := ms.getCalledWith()
 		return provider.Address == p.Address && accountant.Address == a.Address
-	}, time.Millisecond*100, time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func TestInvoiceTracker_handleAccountantError(t *testing.T) {

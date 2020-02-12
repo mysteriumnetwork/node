@@ -32,7 +32,7 @@ func TestEventBasedStorage_PublishesEventsOnCreate(t *testing.T) {
 
 	sessionStore.Add(session)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
@@ -45,7 +45,7 @@ func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
 
 	sessionStore.Remove(session.ID)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Removed), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Removed), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
@@ -58,7 +58,7 @@ func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
 
 	sessionStore.UpdateDataTransfer(session.ID, 1, 2)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Updated), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Updated), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
@@ -82,7 +82,7 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 	storedSession, ok = sessionStore.Find(session.ID)
 	assert.True(t, ok)
 	assert.EqualValues(t, 500, storedSession.TokensEarned)
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Updated), 1*time.Second, 5*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Updated), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
@@ -95,7 +95,7 @@ func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
 
 	sessionStore.RemoveForService("whatever")
 
-	assert.Eventually(t, lastEventMatches(mp, "", sessionEvent.Removed), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, "", sessionEvent.Removed), 2*time.Second, 10*time.Millisecond)
 }
 
 func lastEventMatches(mp *mockPublisher, id ID, action sessionEvent.Action) func() bool {

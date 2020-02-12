@@ -173,5 +173,5 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	err = manager.Acknowledge(consumerID, string(sessionInstance.ID))
 	assert.Nil(t, err)
 
-	assert.Eventually(t, lastEventMatches(mp, sessionInstance.ID, sessionEvent.Acknowledged), 100*time.Millisecond, 1*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, sessionInstance.ID, sessionEvent.Acknowledged), 2*time.Second, 10*time.Millisecond)
 }
