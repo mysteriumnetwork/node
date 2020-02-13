@@ -40,8 +40,7 @@ func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
 	mp := &mockPublisher{}
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
-
-	time.Sleep(time.Millisecond * 5)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
 
 	sessionStore.Remove(session.ID)
 
@@ -54,7 +53,7 @@ func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 
-	time.Sleep(time.Millisecond * 5)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
 
 	sessionStore.UpdateDataTransfer(session.ID, 1, 2)
 
@@ -67,6 +66,8 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 	mp := &mockPublisher{}
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
+
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
 
 	storedSession, ok := sessionStore.Find(session.ID)
 	assert.True(t, ok)
@@ -90,8 +91,7 @@ func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
 	mp := &mockPublisher{}
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
-
-	time.Sleep(time.Millisecond * 5)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
 
 	sessionStore.RemoveForService("whatever")
 
