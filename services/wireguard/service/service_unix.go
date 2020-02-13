@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -32,7 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/event"
+	natevent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -53,7 +54,7 @@ type NATPinger interface {
 
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
-	LastEvent() *event.Event
+	LastEvent() *natevent.Event
 }
 
 // NewManager creates new instance of Wireguard service
@@ -83,13 +84,15 @@ func NewManager(
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(&location, resourcesAllocator, options.ConnectDelay)
 		},
-		location: location,
+		location:       location,
+		sessionCleanup: map[string]func(){},
 	}
 }
 
 // Manager represents an instance of Wireguard service
 type Manager struct {
-	done chan struct{}
+	done        chan struct{}
+	startStopMu sync.Mutex
 
 	resourcesAllocator *resources.Allocator
 
@@ -100,15 +103,17 @@ type Manager struct {
 	publisher      eventbus.Publisher
 	portMapper     mapping.PortMapper
 
-	dnsOK      bool
-	dnsPort    int
-	dnsProxy   *dns.Proxy
-	dnsProxyMu sync.Mutex
+	dnsOK    bool
+	dnsPort  int
+	dnsProxy *dns.Proxy
 
 	connEndpointFactory func() (wg.ConnectionEndpoint, error)
 
 	ipResolver ip.Resolver
 	location   location.ServiceLocationInfo
+
+	sessionCleanup   map[string]func()
+	sessionCleanupMu sync.Mutex
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
@@ -179,6 +184,11 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	go statsPublisher.start(sessionID, conn)
 
 	destroy := func() {
+		log.Info().Msgf("Cleaning up session %s", sessionID)
+		m.sessionCleanupMu.Lock()
+		delete(m.sessionCleanup, sessionID)
+		m.sessionCleanupMu.Unlock()
+
 		statsPublisher.stop()
 
 		if releasePortMapping != nil {
@@ -194,6 +204,10 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")
 		}
 	}
+
+	m.sessionCleanupMu.Lock()
+	m.sessionCleanup[sessionID] = destroy
+	m.sessionCleanupMu.Unlock()
 
 	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: &traversalParams}, nil
 }
@@ -289,13 +303,12 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumserConfig wg.C
 
 // Serve starts service - does block
 func (m *Manager) Serve(instance *service.Instance) error {
-	log.Info().Msg("Wireguard service started successfully now")
+	log.Info().Msg("Wireguard: starting")
+	m.startStopMu.Lock()
 
 	// Start DNS proxy.
 	m.dnsPort = 11253
 	m.dnsOK = false
-	m.dnsProxyMu.Lock()
-	defer m.dnsProxyMu.Unlock()
 	m.dnsProxy = dns.NewProxy("", m.dnsPort)
 	if err := m.dnsProxy.Run(); err != nil {
 		log.Warn().Err(err).Msg("Provider DNS will not be available")
@@ -304,23 +317,36 @@ func (m *Manager) Serve(instance *service.Instance) error {
 		m.dnsOK = true
 	}
 
+	m.startStopMu.Unlock()
+	log.Info().Msg("Wireguard: started")
 	<-m.done
 	return nil
 }
 
 // Stop stops service.
 func (m *Manager) Stop() error {
-	close(m.done)
+	log.Info().Msg("Wireguard: stopping")
+	m.startStopMu.Lock()
+
+	cleanupWg := sync.WaitGroup{}
+	for k, v := range m.sessionCleanup {
+		cleanupWg.Add(1)
+		go func(sessionID string, cleanup func()) {
+			defer cleanupWg.Done()
+			cleanup()
+		}(k, v)
+	}
+	cleanupWg.Wait()
 
 	// Stop DNS proxy.
-	m.dnsProxyMu.Lock()
-	defer m.dnsProxyMu.Unlock()
 	if m.dnsProxy != nil {
 		if err := m.dnsProxy.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop DNS server")
 		}
 	}
 
-	log.Info().Msg("Wireguard service stopped")
+	m.startStopMu.Unlock()
+	close(m.done)
+	log.Info().Msg("Wireguard: stopped")
 	return nil
 }
