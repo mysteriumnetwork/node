@@ -67,10 +67,11 @@ test-e2e-nat:
   tags: [go,high_performance]
   script: go run mage.go -v TestE2ENAT
 
-test-e2e-compatibility:
-  stage: test
-  tags: [go,high_performance]
-  script: go run mage.go -v TestE2ECompatibility
+# with the new payments, we're making a breaking change, so no compatibility for now
+# test-e2e-compatibility:
+#   stage: test
+#   tags: [go,high_performance]
+#   script: go run mage.go -v TestE2ECompatibility
 
 test-install-script:
   stage: test
