@@ -47,7 +47,7 @@ var (
 
 type mockPublisher struct {
 	published sessionEvent.Payload
-	lock      sync.Mutex
+	lock      sync.RWMutex
 }
 
 func (mp *mockPublisher) Publish(topic string, data interface{}) {
@@ -61,8 +61,8 @@ func (mp *mockPublisher) SubscribeAsync(topic string, f interface{}) error {
 }
 
 func (mp *mockPublisher) getLast() sessionEvent.Payload {
-	mp.lock.Lock()
-	defer mp.lock.Unlock()
+	mp.lock.RLock()
+	defer mp.lock.RUnlock()
 	return mp.published
 }
 
