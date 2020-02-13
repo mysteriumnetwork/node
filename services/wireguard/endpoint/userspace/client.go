@@ -51,7 +51,7 @@ func (c *client) ConfigureDevice(config wg.DeviceConfig) (err error) {
 	return nil
 }
 
-func (c *client) AddPeer(iface string, peer wg.Peer) error {
+func (c *client) AddPeer(_ string, peer wg.Peer) error {
 	if err := c.setDeviceConfig(peer.Encode()); err != nil {
 		return errors.Wrap(err, "failed to add device peer")
 	}

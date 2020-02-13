@@ -22,6 +22,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,14 +48,14 @@ func (mr *mockService) Stop() error {
 }
 
 func Test_Pool_NewPool(t *testing.T) {
-	pool := NewPool(&mockPublisher{})
+	pool := NewPool(mocks.NewEventBus())
 	assert.Len(t, pool.instances, 0)
 }
 
 func Test_Pool_Add(t *testing.T) {
 	instance := &Instance{}
 
-	pool := NewPool(&mockPublisher{})
+	pool := NewPool(mocks.NewEventBus())
 	pool.Add(instance)
 
 	assert.Len(t, pool.instances, 1)
@@ -63,10 +64,10 @@ func Test_Pool_Add(t *testing.T) {
 func Test_Pool_StopAllSuccess(t *testing.T) {
 	instance := &Instance{
 		service:        &mockService{},
-		eventPublisher: &mockPublisher{},
+		eventPublisher: mocks.NewEventBus(),
 	}
 
-	pool := NewPool(&mockPublisher{})
+	pool := NewPool(mocks.NewEventBus())
 	pool.Add(instance)
 
 	err := pool.StopAll()
@@ -75,9 +76,9 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 
 func Test_Pool_StopDoesNotStop(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service, eventPublisher: &mockPublisher{}}
+	instance := &Instance{id: "test id", service: service, eventPublisher: mocks.NewEventBus()}
 
-	pool := NewPool(&mockPublisher{})
+	pool := NewPool(mocks.NewEventBus())
 	pool.Add(instance)
 
 	err := pool.Stop("test id")
@@ -85,16 +86,16 @@ func Test_Pool_StopDoesNotStop(t *testing.T) {
 }
 
 func Test_Pool_StopReturnsErrIfInstanceDoesNotExist(t *testing.T) {
-	pool := NewPool(&mockPublisher{})
+	pool := NewPool(mocks.NewEventBus())
 	err := pool.Stop("something")
 	assert.Equal(t, ErrNoSuchInstance, err)
 }
 
 func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service, eventPublisher: &mockPublisher{}}
+	instance := &Instance{id: "test id", service: service, eventPublisher: mocks.NewEventBus()}
 
-	pool := NewPool(&mockPublisher{})
+	pool := NewPool(mocks.NewEventBus())
 	pool.Add(instance)
 
 	err := pool.StopAll()

@@ -21,13 +21,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/mocks"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEventBasedStorage_PublishesEventsOnCreate(t *testing.T) {
 	session := expectedSession
-	mp := &mockPublisher{}
+	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 
 	sessionStore.Add(session)
@@ -37,7 +38,7 @@ func TestEventBasedStorage_PublishesEventsOnCreate(t *testing.T) {
 
 func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
 	session := expectedSession
-	mp := &mockPublisher{}
+	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
@@ -49,7 +50,7 @@ func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
 
 func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
 	session := expectedSession
-	mp := &mockPublisher{}
+	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 
@@ -63,7 +64,7 @@ func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
 func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 	// given
 	session := expectedSession
-	mp := &mockPublisher{}
+	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 
@@ -88,7 +89,7 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 
 func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
 	session := expectedSession
-	mp := &mockPublisher{}
+	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
@@ -98,9 +99,13 @@ func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
 	assert.Eventually(t, lastEventMatches(mp, "", sessionEvent.Removed), 2*time.Second, 10*time.Millisecond)
 }
 
-func lastEventMatches(mp *mockPublisher, id ID, action sessionEvent.Action) func() bool {
+func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Action) func() bool {
 	return func() bool {
-		evt := mp.getLast()
+		last := mp.Pop()
+		evt, ok := last.(sessionEvent.Payload)
+		if !ok {
+			return false
+		}
 		return evt.ID == string(id) && evt.Action == action
 	}
 }

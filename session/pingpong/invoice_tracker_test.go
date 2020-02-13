@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -88,7 +89,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
@@ -142,7 +143,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 		ExchangeMessageWaitTimeout: time.Second,
 		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -191,7 +192,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
@@ -249,7 +250,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		FeeProvider:                &mockTransactor{},
 		MaxAllowedAccountantFee:    1500,
@@ -301,7 +302,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
@@ -353,7 +354,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -411,7 +412,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -463,7 +464,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
-		Publisher:                  &mockPublisher{},
+		Publisher:                  mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -610,7 +611,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				AccountantID:               tt.fields.accountantID,
 				AccountantCaller:           tt.fields.accountantCaller,
 				Registry:                   tt.fields.registryAddress,
-				Publisher:                  &mockPublisher{},
+				Publisher:                  mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
 				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
 			}
