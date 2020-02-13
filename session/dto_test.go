@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import (
 )
 
 func TestSessionIdLength(t *testing.T) {
-	sid, err := GenerateUUID()
+	session, err := newSession()
 	assert.Nil(t, err)
-	assert.Len(t, sid, 36)
+	assert.Len(t, session.ID, 36)
 }

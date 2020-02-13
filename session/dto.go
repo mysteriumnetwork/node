@@ -20,6 +20,7 @@ package session
 import (
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
@@ -49,6 +50,15 @@ type Session struct {
 	TokensEarned    uint64
 	Last            bool
 	done            chan struct{}
+}
+
+// newSession creates a blank new session with an ID.
+func newSession() (*Session, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+	return &Session{ID: ID(uid.String())}, nil
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party

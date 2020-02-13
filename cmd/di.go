@@ -634,7 +634,6 @@ func newSessionManagerFactory(
 		)
 		return session.NewManager(
 			proposal,
-			session.GenerateUUID,
 			sessionStorage,
 			providerBalanceTrackerFactory,
 			paymentEngineFactory,

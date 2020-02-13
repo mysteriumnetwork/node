@@ -32,13 +32,13 @@ func TestManager_StopNotPanic(t *testing.T) {
 
 func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
-	_, err := m.ProvideConfig([]byte(""))
+	_, err := m.ProvideConfig("", []byte(""))
 	assert.NoError(t, err)
 }
 
 func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
-	_, err := m.ProvideConfig(nil)
+	_, err := m.ProvideConfig("", nil)
 	assert.NoError(t, err)
 }
 

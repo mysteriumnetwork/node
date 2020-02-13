@@ -76,7 +76,7 @@ func Test_Manager_Stop(t *testing.T) {
 func Test_Manager_ProviderConfig_FailsWhenSessionConfigIsInvalid(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
 
-	params, err := manager.ProvideConfig(nil)
+	params, err := manager.ProvideConfig("", nil)
 
 	assert.Nil(t, params)
 	assert.Error(t, err)

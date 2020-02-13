@@ -35,13 +35,13 @@ var (
 
 func TestConsumer_Success(t *testing.T) {
 	mockManager := &managerFake{
-		returnSession: Session{
+		fakeSession: Session{
 			ID:         "new-id",
 			ConsumerID: identity.FromAddress("123"),
 		},
 	}
 	consumer := createConsumer{
-		sessionCreator:         mockManager,
+		sessionStarter:         mockManager,
 		peerID:                 identity.FromAddress("peer-id"),
 		providerConfigProvider: mockConfigProvider{},
 		promiseLoader:          mpl,
@@ -72,7 +72,7 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 		returnError: ErrorInvalidProposal,
 	}
 	consumer := createConsumer{
-		sessionCreator:         mockManager,
+		sessionStarter:         mockManager,
 		providerConfigProvider: mockConfigProvider{},
 		promiseLoader:          mpl,
 	}
@@ -89,7 +89,7 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 		returnError: errors.New("fatality"),
 	}
 	consumer := createConsumer{
-		sessionCreator:         mockManager,
+		sessionStarter:         mockManager,
 		providerConfigProvider: mockConfigProvider{},
 		promiseLoader:          mpl,
 	}
@@ -103,13 +103,13 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 
 func TestConsumer_UsesIssuerID(t *testing.T) {
 	mockManager := &managerFake{
-		returnSession: Session{
+		fakeSession: Session{
 			ID:         "new-id",
 			ConsumerID: identity.FromAddress("123"),
 		},
 	}
 	consumer := createConsumer{
-		sessionCreator:         mockManager,
+		sessionStarter:         mockManager,
 		peerID:                 identity.FromAddress("peer-id"),
 		providerConfigProvider: mockConfigProvider{},
 		promiseLoader:          mpl,
@@ -130,7 +130,7 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 type mockConfigProvider struct {
 }
 
-func (mockConfigProvider) ProvideConfig(sessionConfig json.RawMessage) (*ConfigParams, error) {
+func (mockConfigProvider) ProvideConfig(_ string, _ json.RawMessage) (*ConfigParams, error) {
 	return &ConfigParams{SessionServiceConfig: config, TraversalParams: &traversal.Params{}}, nil
 }
 
@@ -139,16 +139,18 @@ type managerFake struct {
 	lastConsumerID identity.Identity
 	lastIssuerID   identity.Identity
 	lastProposalID int
-	returnSession  Session
+	fakeSession    Session
 	returnError    error
 }
 
-// Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingParams *traversal.Params) (Session, error) {
+// Start function creates and returns fake session
+func (manager *managerFake) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) error {
+	session.ID = manager.fakeSession.ID
+	session.ConsumerID = manager.fakeSession.ConsumerID
 	manager.lastConsumerID = consumerID
 	manager.lastIssuerID = consumerInfo.IssuerID
 	manager.lastProposalID = proposalID
-	return manager.returnSession, manager.returnError
+	return manager.returnError
 }
 
 // Destroy fake destroy function

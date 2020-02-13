@@ -112,7 +112,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
-func (m *Manager) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
 	log.Info().Msg("Accepting new WireGuard connection")
 	consumerConfig := wg.ConsumerConfig{}
 	err := json.Unmarshal(sessionConfig, &consumerConfig)

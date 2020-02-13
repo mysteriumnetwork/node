@@ -55,7 +55,7 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage) (*session.ConfigParams, error) {
 	return &session.ConfigParams{TraversalParams: &traversal.Params{}}, nil
 }
 
