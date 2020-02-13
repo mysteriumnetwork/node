@@ -18,6 +18,8 @@
 package reducer
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -56,19 +58,76 @@ var (
 		ServiceDefinition: mockService{Location: locationResidential},
 		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
-	proposalExpensive = market.ServiceProposal{
+	proposalTimeExpensive = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(9999999999999, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Minute,
+			},
 		},
 	}
-	proposalCheap = market.ServiceProposal{
+	proposalTimeCheap = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(0, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Minute,
+			},
 		},
 	}
-	proposalExact = market.ServiceProposal{
+	proposalTimeExact = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(1000000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Minute,
+			},
+		},
+	}
+	proposalTimeExactSeconds = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(1000000/60, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Second,
+			},
+		},
+	}
+	proposalTimeExpensiveSeconds = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(17000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Second,
+			},
+		},
+	}
+	proposalBytesExpensive = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(7000001, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: bytesInGigabyte,
+			},
+		},
+	}
+	proposalBytesCheap = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(0, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: bytesInGigabyte,
+			},
+		},
+	}
+	proposalBytesExact = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(7000000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: bytesInGigabyte,
+			},
+		},
+	}
+	proposalBytesExactInParts = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(50000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: 7142857,
+			},
 		},
 	}
 )

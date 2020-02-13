@@ -523,9 +523,11 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
-	upperBound := config.GetUInt64(config.FlagPaymentsConsumerUpperPriceBound)
-	lowerBound := config.GetUInt64(config.FlagPaymentsConsumerLowerPriceBound)
-	proposals, err := c.tequilapi.ProposalsByPrice(lowerBound, upperBound)
+	upperTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		warn(err)
 		return []tequilapi_client.ProposalDTO{}

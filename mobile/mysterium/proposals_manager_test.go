@@ -47,7 +47,8 @@ func (s *proposalManagerTestSuite) SetupTest() {
 		s.repository,
 		s.mysteriumAPI,
 		s.qualityFinder,
-		0, 1000000,
+		0, 50000,
+		0, 7000000,
 	)
 }
 

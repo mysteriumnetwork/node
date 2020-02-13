@@ -42,6 +42,8 @@ const InvoiceSendPeriod = time.Second * 60
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
 const DefaultAccountantFailureCount uint64 = 10
 
+// DefaultPaymentMethod represents the the default payment method of time + bytes.
+// The rate is frozen at 0.07MYSTT per GB of data transfered and 0.0005MYSTT/minute.
 var DefaultPaymentMethod = PaymentMethod{
 	Price:    money.NewMoney(50000, money.CurrencyMyst),
 	Duration: time.Minute,
@@ -49,6 +51,7 @@ var DefaultPaymentMethod = PaymentMethod{
 	Bytes:    7142857,
 }
 
+// PaymentMethod represents a payment method
 type PaymentMethod struct {
 	Price    money.Money   `json:"price"`
 	Duration time.Duration `json:"duration"`
@@ -56,14 +59,17 @@ type PaymentMethod struct {
 	Type     string        `json:"type"`
 }
 
+// GetPrice returns the payment methods price
 func (pm PaymentMethod) GetPrice() money.Money {
 	return pm.Price
 }
 
+// GetType gets the payment methods type
 func (pm PaymentMethod) GetType() string {
 	return pm.Type
 }
 
+// GetRate returns the payment rate for the method
 func (pm PaymentMethod) GetRate() market.PaymentRate {
 	return market.PaymentRate{PerByte: pm.Bytes, PerTime: pm.Duration}
 }

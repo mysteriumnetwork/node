@@ -28,6 +28,8 @@ type OptionsPayments struct {
 	MystSCAddress                      string
 	MaxRRecoveryLength                 uint64
 	PaymentsDisabled                   bool
-	ConsumerUpperPriceBound            uint64
-	ConsumerLowerPriceBound            uint64
+	ConsumerUpperGBPriceBound          uint64
+	ConsumerLowerGBPriceBound          uint64
+	ConsumerUpperMinutePriceBound      uint64
+	ConsumerLowerMinutePriceBound      uint64
 }

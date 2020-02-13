@@ -126,6 +126,20 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			want: 60 * 50000,
 		},
 		{
+			name: "calculates time only with seconds",
+			args: args{
+				timePassed: time.Hour,
+				bytesTransfered: dataTransfered{
+					up: 100, down: 100,
+				},
+				method: &mockPaymentMethod{
+					price: money.NewMoney(50000, money.CurrencyMyst),
+					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Second},
+				},
+			},
+			want: 60 * 60 * 50000,
+		},
+		{
 			name: "calculates bytes only",
 			args: args{
 				timePassed: time.Hour,

@@ -25,13 +25,15 @@ import (
 
 // Filter defines all flags for proposal filtering in discovery of Mysterium Network
 type Filter struct {
-	ProviderID         string
-	ServiceType        string
-	LocationType       string
-	AccessPolicyID     string
-	AccessPolicySource string
-	UpperPriceBound    *uint64
-	LowerPriceBound    *uint64
+	ProviderID          string
+	ServiceType         string
+	LocationType        string
+	AccessPolicyID      string
+	AccessPolicySource  string
+	UpperTimePriceBound *uint64
+	LowerTimePriceBound *uint64
+	UpperGBPriceBound   *uint64
+	LowerGBPriceBound   *uint64
 }
 
 // Matches return flag if filter matches given proposal
@@ -50,8 +52,12 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 		conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicyID, filter.AccessPolicySource))
 	}
 
-	if filter.UpperPriceBound != nil && filter.LowerPriceBound != nil {
-		conditions = append(conditions, reducer.Price(*filter.LowerPriceBound, *filter.UpperPriceBound))
+	if filter.UpperTimePriceBound != nil && filter.LowerTimePriceBound != nil {
+		conditions = append(conditions, reducer.PriceMinute(*filter.LowerTimePriceBound, *filter.UpperTimePriceBound))
+	}
+
+	if filter.UpperGBPriceBound != nil && filter.LowerGBPriceBound != nil {
+		conditions = append(conditions, reducer.PriceGB(*filter.LowerGBPriceBound, *filter.UpperGBPriceBound))
 	}
 
 	if len(conditions) > 0 {

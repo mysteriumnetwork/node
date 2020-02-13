@@ -41,9 +41,9 @@ type CreateRequest struct {
 
 // CreateResponse structure represents service provider response to given session request from consumer
 type CreateResponse struct {
-	Success     bool                `json:"success"`
-	Message     string              `json:"message"`
-	Session     SessionDto          `json:"session"`
+	Success     bool        `json:"success"`
+	Message     string      `json:"message"`
+	Session     SessionDto  `json:"session"`
 	PaymentInfo PaymentInfo `json:"paymentInfo"`
 }
 

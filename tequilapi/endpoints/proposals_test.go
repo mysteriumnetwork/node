@@ -36,8 +36,10 @@ func (service TestServiceDefinition) GetLocation() market.Location {
 	return market.Location{ASN: 123, Country: "Lithuania", City: "Vilnius"}
 }
 
-const upperPriceBound uint64 = 1000000
-const lowerPriceBound uint64 = 0
+const upperTimePriceBound uint64 = 50000
+const lowerTimePriceBound uint64 = 0
+const upperGBPriceBound uint64 = 7000000
+const lowerGBPriceBound uint64 = 0
 
 var serviceProposals = []market.ServiceProposal{
 	{
@@ -96,12 +98,18 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	upper := upperPriceBound
-	lower := lowerPriceBound
+
+	upperTime := upperTimePriceBound
+	lowerTime := lowerTimePriceBound
+	upperGB := upperGBPriceBound
+	lowerGB := lowerGBPriceBound
+
 	assert.EqualValues(t, &proposal.Filter{
-		ProviderID:      "0xProviderId",
-		UpperPriceBound: &upper,
-		LowerPriceBound: &lower,
+		ProviderID:          "0xProviderId",
+		UpperTimePriceBound: &upperTime,
+		LowerTimePriceBound: &lowerTime,
+		UpperGBPriceBound:   &upperGB,
+		LowerGBPriceBound:   &lowerGB,
 	}, repository.recordedFilter)
 }
 
@@ -299,6 +307,8 @@ func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.Se
 }
 
 func setPricingBounds(v url.Values) {
-	v.Add("upperPriceBound", fmt.Sprintf("%v", upperPriceBound))
-	v.Add("lowerPriceBound", fmt.Sprintf("%v", lowerPriceBound))
+	v.Add("upperTimePriceBound", fmt.Sprintf("%v", upperTimePriceBound))
+	v.Add("lowerTimePriceBound", fmt.Sprintf("%v", lowerTimePriceBound))
+	v.Add("upperGBPriceBound", fmt.Sprintf("%v", upperGBPriceBound))
+	v.Add("lowerGBPriceBound", fmt.Sprintf("%v", lowerGBPriceBound))
 }
