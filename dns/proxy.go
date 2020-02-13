@@ -18,10 +18,8 @@
 package dns
 
 import (
-	"fmt"
 	"net"
 	"strconv"
-	"strings"
 
 	"github.com/miekg/dns"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -35,36 +33,22 @@ type Proxy struct {
 	server         *dns.Server
 	trafficBlocker firewall.IncomingTrafficBlocker
 	policies       *policy.Repository
-
-	proxyAddrs []string
 }
 
 // NewProxy returns new instance of API server.
-func NewProxy(
-	lhost string,
-	lport int,
-	trafficBlocker firewall.IncomingTrafficBlocker,
-	policies *policy.Repository,
-) *Proxy {
+func NewProxy(lhost string, lport int, handler dns.Handler) *Proxy {
 	return &Proxy{
 		server: &dns.Server{
 			Addr:      net.JoinHostPort(lhost, strconv.Itoa(lport)),
 			Net:       "udp",
 			ReusePort: true,
+			Handler:   handler,
 		},
-		trafficBlocker: trafficBlocker,
-		policies:       policies,
 	}
 }
 
 // Run starts DNS proxy server and waits for the startup to complete.
 func (p *Proxy) Run() (err error) {
-	err = p.configure()
-	if err != nil {
-		return err
-	}
-	p.server.Handler = p.proxyHandler()
-
 	dnsProxyCh := make(chan error)
 	p.server.NotifyStartedFunc = func() { dnsProxyCh <- nil }
 	go func() {
@@ -80,68 +64,4 @@ func (p *Proxy) Run() (err error) {
 // Stop shutdowns DNS proxy server.
 func (p *Proxy) Stop() error {
 	return p.server.Shutdown()
-}
-
-// configure configures proxy to use system DNS servers.
-func (p *Proxy) configure() (err error) {
-	cfg, err := configuration()
-	if err != nil {
-		return err
-	}
-	for _, server := range cfg.Servers {
-		p.proxyAddrs = append(p.proxyAddrs, net.JoinHostPort(server, cfg.Port))
-	}
-	return nil
-}
-
-// proxyHandler creates proxying DNS handler.
-func (p *Proxy) proxyHandler() dns.Handler {
-	client := &dns.Client{}
-
-	return dns.HandlerFunc(func(writer dns.ResponseWriter, req *dns.Msg) {
-		for _, addr := range p.proxyAddrs {
-			resp, _, err := client.Exchange(req, addr)
-			if err != nil {
-				log.Error().Err(err).Msg("Error proxying DNS query to " + addr)
-				continue
-			}
-
-			writer.WriteMsg(resp)
-
-			if err := p.whitelistByAnswer(resp); err != nil {
-				log.Warn().Err(err).Msgf("Error updating firewall by DNS query: %s", resp.String())
-			}
-			return
-		}
-
-		resp := &dns.Msg{}
-		resp.SetRcode(req, dns.RcodeServerFailure)
-		writer.WriteMsg(resp)
-	})
-}
-
-func (p *Proxy) whitelistByAnswer(response *dns.Msg) error {
-	for _, record := range response.Answer {
-		switch recordValue := record.(type) {
-		case *dns.A:
-			if err := p.whitelistByARecord(recordValue); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("unknown record type: %s", dns.Type(record.Header().Rrtype))
-		}
-	}
-	return nil
-}
-
-func (p *Proxy) whitelistByARecord(record *dns.A) error {
-	host := strings.TrimRight(record.Hdr.Name, ".")
-	ip := record.A
-
-	if p.policies.IsHostAllowed(host) {
-		_, err := p.trafficBlocker.AllowIPAccess(ip)
-		return err
-	}
-
-	return nil
 }

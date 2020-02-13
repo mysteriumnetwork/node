@@ -117,9 +117,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				di.EventBus,
 				wgOptions,
 				portPool,
-				portMapper,
-				di.ServiceFirewall,
-			)
+				portMapper)
 			return svc, wireguard_service.GetProposal(loc), nil
 		},
 	)

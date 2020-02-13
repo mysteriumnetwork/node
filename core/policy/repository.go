@@ -134,7 +134,7 @@ func (r *Repository) HasDNSRules() bool {
 	return false
 }
 
-// IsHostAllowed return flag is given FQDN host should be allowed by rules
+// IsHostAllowed returns flag if given FQDN host should be allowed by rules
 func (r *Repository) IsHostAllowed(host string) bool {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
