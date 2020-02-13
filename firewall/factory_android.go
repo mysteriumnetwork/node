@@ -1,4 +1,4 @@
-//+build linux,!android
+//+build android
 
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
@@ -20,9 +20,6 @@
 package firewall
 
 // NewTrackingBlocker create instance of traffic blocker
-func NewTrackingBlocker() *iptablesTrafficBlocker {
-	return &iptablesTrafficBlocker{
-		referenceTracker: make(map[string]refCount),
-		trafficLockScope: none,
-	}
+func NewTrackingBlocker() *noopTrafficBlocker {
+	return &noopTrafficBlocker{}
 }
