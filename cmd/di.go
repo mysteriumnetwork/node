@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/config"
 	appconfig "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
@@ -296,6 +297,7 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 			di.SignerFactory,
 			di.IPResolver,
 			di.NATPinger,
+			config.GetDuration(config.FlagOpenvpnStatisticsReportInterval),
 		)
 	}
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory)

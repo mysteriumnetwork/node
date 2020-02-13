@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/rs/zerolog/log"
 )
 
 func isServiceFree(method market.PaymentMethod) bool {
@@ -61,6 +62,7 @@ func calculatePaymentAmount(timePassed time.Duration, bytesTransfered dataTransf
 	}
 
 	byteComponent := uint64(math.Round(chunksTransfered * float64(price)))
-
-	return timeComponent + byteComponent
+	total := timeComponent + byteComponent
+	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v ", total, timeComponent, byteComponent)
+	return total
 }

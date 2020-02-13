@@ -309,7 +309,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	connFactory := func() (connection.Connection, error) {
 		opts := wireguard_connection.Options{
 			DNSConfigDir:        nodeOptions.Directories.Config,
-			StatsUpdateInterval: 1 * time.Second,
+			StatsUpdateInterval: config.GetDuration(config.FlagWireguardStatInterval),
 			HandshakeTimeout:    1 * time.Minute,
 		}
 		return wireguard_connection.NewConnection(opts, di.IPResolver, di.NATPinger, endpointFactory, dnsManager, handshakeWaiter)
