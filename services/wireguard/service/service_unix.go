@@ -175,7 +175,12 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 		return nil, errors.Wrap(err, "failed to setup NAT/firewall rules")
 	}
 
+	statsPublisher := newStatsPublisher(m.publisher, 3*time.Second)
+	go statsPublisher.start(sessionID, conn)
+
 	destroy := func() {
+		statsPublisher.stop()
+
 		if releasePortMapping != nil {
 			log.Trace().Msg("Deleting port mapping")
 			releasePortMapping()
