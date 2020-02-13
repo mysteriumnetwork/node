@@ -105,27 +105,33 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		Mask: net.IPMask(net.ParseIP(m.serviceOptions.Netmask).To4()),
 	}
 
-	if instance.Policies().HasDNSRules() {
-		removeRule, err := m.trafficBlocker.BlockIncomingTraffic(m.vpnNetwork)
-		if err != nil {
-			return errors.Wrap(err, "failed to enable traffic blocking")
-		}
-		defer func() {
-			if err := removeRule(); err != nil {
-				log.Warn().Err(err).Msg("failed to disable traffic blocking")
-			}
-		}()
-	}
-
 	var dnsOK bool
 	var dnsIP net.IP
 	var dnsPort = 11153
-	m.dnsProxy = dns.NewProxy("", dnsPort, m.trafficBlocker, instance.Policies())
-	if err := m.dnsProxy.Run(); err != nil {
-		log.Warn().Err(err).Msg("Provider DNS will not be available")
+	dnsHandler, err := dns.ResolveViaSystem()
+	if err == nil {
+		if instance.Policies().HasDNSRules() {
+			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficBlocker, instance.Policies())
+			removeRule, err := m.trafficBlocker.BlockIncomingTraffic(m.vpnNetwork)
+			if err != nil {
+				return errors.Wrap(err, "failed to enable traffic blocking")
+			}
+			defer func() {
+				if err := removeRule(); err != nil {
+					log.Warn().Err(err).Msg("failed to disable traffic blocking")
+				}
+			}()
+		}
+
+		m.dnsProxy = dns.NewProxy("", dnsPort, dnsHandler)
+		if err := m.dnsProxy.Run(); err != nil {
+			log.Warn().Err(err).Msg("Provider DNS will not be available")
+		} else {
+			dnsOK = true
+			dnsIP = netutil.FirstIP(m.vpnNetwork)
+		}
 	} else {
-		dnsOK = true
-		dnsIP = netutil.FirstIP(m.vpnNetwork)
+		log.Warn().Err(err).Msg("Provider DNS will not be available")
 	}
 
 	servicePort, err := m.ports.Acquire()

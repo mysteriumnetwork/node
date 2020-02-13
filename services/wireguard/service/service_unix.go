@@ -69,7 +69,6 @@ func NewManager(
 	options Options,
 	portSupplier port.ServicePortSupplier,
 	portMapper mapping.PortMapper,
-	trafficBlocker firewall.IncomingTrafficBlocker,
 ) *Manager {
 	resourcesAllocator := resources.NewAllocator(portSupplier, options.Subnet)
 
@@ -83,7 +82,6 @@ func NewManager(
 		natPingerPorts:     port.NewPool(),
 		publisher:          eventPublisher,
 		portMapper:         portMapper,
-		trafficBlocker:     trafficBlocker,
 
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(&location, resourcesAllocator, options.ConnectDelay)
@@ -314,12 +312,17 @@ func (m *Manager) Serve(instance *service.Instance) error {
 	// Start DNS proxy.
 	m.dnsPort = 11253
 	m.dnsOK = false
-	m.dnsProxy = dns.NewProxy("", m.dnsPort, m.trafficBlocker, instance.Policies())
-	if err := m.dnsProxy.Run(); err != nil {
-		log.Warn().Err(err).Msg("Provider DNS will not be available")
+	dnsHandler, err := dns.ResolveViaSystem()
+	if err == nil {
+		m.dnsProxy = dns.NewProxy("", m.dnsPort, dnsHandler)
+		if err := m.dnsProxy.Run(); err != nil {
+			log.Warn().Err(err).Msg("Provider DNS will not be available")
+		} else {
+			// m.dnsProxy = dnsProxy
+			m.dnsOK = true
+		}
 	} else {
-		// m.dnsProxy = dnsProxy
-		m.dnsOK = true
+		log.Warn().Err(err).Msg("Provider DNS will not be available")
 	}
 
 	m.startStopMu.Unlock()
