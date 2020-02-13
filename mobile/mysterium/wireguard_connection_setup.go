@@ -160,10 +160,10 @@ func (c *wireguardConnection) Stop() {
 		c.device.Stop()
 		c.stateCh <- connection.NotConnected
 
-		close(c.done)
 		close(c.statsCheckerStop)
 		close(c.pingerStop)
 		close(c.stateCh)
+		close(c.done)
 	})
 }
 

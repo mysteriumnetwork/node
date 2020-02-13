@@ -95,7 +95,7 @@ func newConn(t *testing.T) *Connection {
 	}
 	opts := Options{
 		DNSConfigDir:        "/dns/dir",
-		StatsUpdateInterval: 1 * time.Microsecond,
+		StatsUpdateInterval: 1 * time.Millisecond,
 	}
 	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), traversal.NewNoopPinger(), endpointFactory, &mockDnsManager{}, &mockHandshakeWaiter{})
 	assert.NoError(t, err)

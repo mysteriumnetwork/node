@@ -91,7 +91,7 @@ func TestConnectionStopOnceAfterHandshakeErrorAndStopCall(t *testing.T) {
 
 func newConn(t *testing.T) *wireguardConnection {
 	opts := wireGuardOptions{
-		statsUpdateInterval: 1 * time.Microsecond,
+		statsUpdateInterval: 1 * time.Millisecond,
 	}
 	conn, err := NewWireGuardConnection(opts, &mockWireGuardDevice{}, ip.NewResolverMock("172.44.1.12"), traversal.NewNoopPinger(), &mockHandshakeWaiter{})
 	assert.NoError(t, err)
