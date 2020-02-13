@@ -28,21 +28,21 @@ import (
 
 const bufferLen = 2048 * 1024
 
-// NATProxy provides traffic proxying functionality for registered services
-type NATProxy struct {
+// natProxy provides traffic proxying functionality for registered services
+type natProxy struct {
 	servicePorts  map[string]int
 	addrLast      *net.UDPAddr
 	socketProtect func(socket int) bool
 }
 
 // NewNATProxy constructs an instance of NATProxy
-func NewNATProxy() *NATProxy {
-	return &NATProxy{
+func newNATProxy() *natProxy {
+	return &natProxy{
 		servicePorts: make(map[string]int),
 	}
 }
 
-func (np *NATProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {
+func (np *natProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {
 	time.Sleep(400 * time.Millisecond)
 	stop := make(chan struct{})
 	if np.socketProtect == nil {
@@ -57,7 +57,7 @@ func (np *NATProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn
 // consumerProxy launches listener on pinger port and wait for openvpn connect
 // Read from listener socket and write to remoteConn
 // Read from remoteConn and write to listener socket
-func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, stop chan struct{}) {
+func (np *natProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, stop chan struct{}) {
 	laddr, err := net.ResolveUDPAddr("udp4", consumerAddr)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get local address for consumer NATProxy")
@@ -104,7 +104,7 @@ func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, 
 	}
 }
 
-func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
+func (np *natProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
 	log.Info().Msg("Start copying stream from consumer NATProxy to remote remoteConn")
 	buf := make([]byte, bufferLen)
 	for {
@@ -133,7 +133,7 @@ func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, s
 	}
 }
 
-func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, addr *net.UDPAddr, stop chan struct{}) {
+func (np *natProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, addr *net.UDPAddr, stop chan struct{}) {
 	buf := make([]byte, bufferLen)
 	for {
 		select {
@@ -163,7 +163,7 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 }
 
 // handOff traffic incoming through NATPinger punched hole should be handed off to NATPoxy
-func (np *NATProxy) handOff(key string, incomingConn *net.UDPConn) {
+func (np *natProxy) handOff(key string, incomingConn *net.UDPConn) {
 	proxyConn, err := np.getConnection(key)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to connect to NATProxy")
@@ -189,12 +189,12 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 		totalBytes)
 }
 
-func (np *NATProxy) registerServicePort(key string, port int) {
+func (np *natProxy) registerServicePort(key string, port int) {
 	log.Info().Msgf("Registering service %s for port %d to NATProxy", key, port)
 	np.servicePorts[key] = port
 }
 
-func (np *NATProxy) getConnection(key string) (*net.UDPConn, error) {
+func (np *natProxy) getConnection(key string) (*net.UDPConn, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", np.servicePorts[key]))
 	if err != nil {
 		return nil, err
@@ -202,10 +202,10 @@ func (np *NATProxy) getConnection(key string) (*net.UDPConn, error) {
 	return net.DialUDP("udp", nil, udpAddr)
 }
 
-func (np *NATProxy) isAvailable(key string) bool {
+func (np *natProxy) isAvailable(key string) bool {
 	return np.servicePorts[key] > 0
 }
 
-func (np *NATProxy) setProtectSocketCallback(socketProtect func(socket int) bool) {
+func (np *natProxy) setProtectSocketCallback(socketProtect func(socket int) bool) {
 	np.socketProtect = socketProtect
 }

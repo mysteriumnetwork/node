@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -119,6 +118,11 @@ func TestPinger_PingProvider_Timeout(t *testing.T) {
 }
 
 func newPinger(config *PingConfig) NATPinger {
-	proxy := NewNATProxy()
-	return NewPinger(config, proxy, mocks.NewEventBus())
+	return NewPinger(config, &mockPublisher{})
+}
+
+type mockPublisher struct {
+}
+
+func (p mockPublisher) Publish(topic string, data interface{}) {
 }

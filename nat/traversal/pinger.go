@@ -76,7 +76,7 @@ type Pinger struct {
 	stop           chan struct{}
 	stopNATProxy   chan struct{}
 	once           sync.Once
-	natProxy       *NATProxy
+	natProxy       *natProxy
 	eventPublisher eventbus.Publisher
 }
 
@@ -86,13 +86,13 @@ type PortSupplier interface {
 }
 
 // NewPinger returns Pinger instance
-func NewPinger(pingConfig *PingConfig, proxy *NATProxy, publisher eventbus.Publisher) NATPinger {
+func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 	return &Pinger{
 		pingConfig:     pingConfig,
 		pingTarget:     make(chan *Params),
 		stop:           make(chan struct{}),
 		stopNATProxy:   make(chan struct{}),
-		natProxy:       proxy,
+		natProxy:       newNATProxy(),
 		eventPublisher: publisher,
 	}
 }
