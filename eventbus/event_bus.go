@@ -17,7 +17,10 @@
 
 package eventbus
 
-import asaskevichEventBus "github.com/asaskevich/EventBus"
+import (
+	asaskevichEventBus "github.com/asaskevich/EventBus"
+	"github.com/rs/zerolog/log"
+)
 
 // EventBus allows subscribing and publishing data by topic
 type EventBus interface {
@@ -49,6 +52,7 @@ func (simplifiedBus simplifiedEventBus) SubscribeAsync(topic string, fn interfac
 }
 
 func (simplifiedBus simplifiedEventBus) Publish(topic string, data interface{}) {
+	log.Trace().Msgf("Published topic=%q event=%+v", topic, data)
 	simplifiedBus.bus.Publish(topic, data)
 }
 
