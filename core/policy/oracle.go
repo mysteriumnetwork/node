@@ -121,14 +121,11 @@ func (pr *Oracle) SubscribePolicies(policies []market.AccessPolicy, repository *
 	copy(subscriptionsNew, pr.fetchSubscriptions)
 
 	for _, policy := range policies {
-		index, exist := pr.getPolicyIndex(subscriptionsNew, policy)
-		if !exist {
-			index = len(subscriptionsNew)
-			subscriptionsNew = append(subscriptionsNew, policySubscription{
-				policy:      policy,
-				subscribers: []*Repository{repository},
-			})
-		}
+		index := len(subscriptionsNew)
+		subscriptionsNew = append(subscriptionsNew, policySubscription{
+			policy:      policy,
+			subscribers: []*Repository{repository},
+		})
 
 		if err := pr.fetchPolicyRules(&subscriptionsNew[index]); err != nil {
 			return errors.Wrap(err, "initial fetch failed")
@@ -137,16 +134,6 @@ func (pr *Oracle) SubscribePolicies(policies []market.AccessPolicy, repository *
 
 	pr.fetchSubscriptions = subscriptionsNew
 	return nil
-}
-
-func (pr *Oracle) getPolicyIndex(policyList []policySubscription, policy market.AccessPolicy) (int, bool) {
-	for index, policyMeta := range policyList {
-		if policyMeta.policy == policy {
-			return index, true
-		}
-	}
-
-	return 0, false
 }
 
 func (pr *Oracle) fetchPolicyRules(subscription *policySubscription) error {

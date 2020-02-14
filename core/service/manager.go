@@ -112,6 +112,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	if len(policyIDs) > 0 {
 		policies := manager.policyOracle.Policies(policyIDs)
 		if err = manager.policyOracle.SubscribePolicies(policies, policyRules); err != nil {
+			log.Warn().Err(err).Msg("Can't find given access policies")
 			return id, ErrUnsupportedAccessPolicy
 		}
 		proposal.SetAccessPolicies(&policies)
