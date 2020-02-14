@@ -523,7 +523,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		connectivity.NewStatusSender(),
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
-		nodeOptions.Payments.PaymentsDisabled,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -579,7 +578,6 @@ func newSessionManagerFactory(
 	eventbus eventbus.EventBus,
 	bcHelper *pingpong.BlockchainWithRetries,
 	transactor *registry.Transactor,
-	paymentsDisabled bool,
 	settler *pingpong.AccountantPromiseSettler,
 	httpClient *requests.HTTPClient,
 ) session.ManagerFactory {
@@ -608,7 +606,6 @@ func newSessionManagerFactory(
 			natTracker,
 			serviceID,
 			eventbus,
-			paymentsDisabled,
 		)
 	}
 }

@@ -69,7 +69,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := &traversal.Params{}
 	session, err := newSession()
@@ -90,7 +90,7 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := &traversal.Params{}
 	session, err := newSession()
@@ -112,7 +112,7 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
 }
@@ -122,7 +122,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := &traversal.Params{}
 	session, err := newSession()
@@ -139,7 +139,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 
 	mp := mocks.NewEventBus()
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", mp, false)
+		&MockNatEventTracker{}, "test service id", mp)
 
 	pingerParams := &traversal.Params{}
 	session, err := newSession()

@@ -110,7 +110,6 @@ type connectionManager struct {
 	status                 Status
 	statusLock             sync.RWMutex
 	sessionInfo            SessionInfo
-	disablePayments        bool
 	sessionInfoMu          sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
@@ -128,7 +127,6 @@ func NewManager(
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
 	ipCheckParams IPCheckParams,
-	disablePayments bool,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -140,7 +138,6 @@ func NewManager(
 		cleanup:                  make([]func() error, 0),
 		ipResolver:               ipResolver,
 		ipCheckParams:            ipCheckParams,
-		disablePayments:          disablePayments,
 	}
 }
 
@@ -317,15 +314,10 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
-	paymentVersion := session.PaymentVersionV3
-	if manager.disablePayments {
-		paymentVersion = "legacy"
-	}
 	consumerInfo := session.ConsumerInfo{
-		// TODO: once we're supporting payments from another identity make the changes accordingly
 		IssuerID:       consumerID,
 		AccountantID:   accountantID,
-		PaymentVersion: paymentVersion,
+		PaymentVersion: session.PaymentVersionV3,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)

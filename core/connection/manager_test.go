@@ -129,7 +129,6 @@ func (tc *testContext) SetupTest() {
 		tc.statusSender,
 		tc.fakeResolver,
 		tc.ipCheckParams,
-		false,
 	)
 }
 

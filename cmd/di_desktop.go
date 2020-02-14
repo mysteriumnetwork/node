@@ -262,7 +262,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.EventBus,
 			di.BCHelper,
 			di.Transactor,
-			nodeOptions.Payments.PaymentsDisabled,
 			di.AccountantPromiseSettler,
 			di.HTTPClient,
 		)

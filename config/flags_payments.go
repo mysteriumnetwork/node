@@ -60,11 +60,6 @@ var (
 		Value: 150,
 		Usage: "The max number of invoices we'll go through and reveal R's in case of a dispute with the accountant",
 	}
-	// FlagPaymentsDisable disables the payment system
-	FlagPaymentsDisable = cli.BoolFlag{
-		Name:  "payments.disable",
-		Usage: "Disables payments and moves to a backwards compatible legacy mode",
-	}
 	// FlagPaymentsConsumerPricePerMinuteUpperBound sets the upper price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.Uint64Flag{
 		Name:  "payments.consumer.price.perminute.upper.bound",
@@ -101,7 +96,6 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsAccountantPromiseSettleTimeout,
 		&FlagPaymentsMystSCAddress,
 		&FlagPaymentsMaxRRecovery,
-		&FlagPaymentsDisable,
 		&FlagPaymentsConsumerPricePerMinuteUpperBound,
 		&FlagPaymentsConsumerPricePerMinuteLowerBound,
 		&FlagPaymentsConsumerPricePerGBUpperBound,
@@ -117,7 +111,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsAccountantPromiseSettleTimeout)
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsMaxRRecovery)
-	Current.ParseBoolFlag(ctx, FlagPaymentsDisable)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)

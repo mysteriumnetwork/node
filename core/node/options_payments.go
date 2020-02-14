@@ -27,7 +27,6 @@ type OptionsPayments struct {
 	SettlementTimeout                  time.Duration
 	MystSCAddress                      string
 	MaxRRecoveryLength                 uint64
-	PaymentsDisabled                   bool
 	ConsumerUpperGBPriceBound          uint64
 	ConsumerLowerGBPriceBound          uint64
 	ConsumerUpperMinutePriceBound      uint64

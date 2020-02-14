@@ -134,7 +134,6 @@ func GetOptions() *Options {
 			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
 			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
 			MaxRRecoveryLength:                 config.GetUInt64(config.FlagPaymentsMaxRRecovery),
-			PaymentsDisabled:                   config.GetBool(config.FlagPaymentsDisable),
 			ConsumerUpperGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound),
 			ConsumerLowerGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound),
 			ConsumerUpperMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound),

@@ -94,7 +94,6 @@ func NewManager(
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
-	paymentsDisabled bool,
 ) *Manager {
 	return &Manager{
 		currentProposal:      currentProposal,
@@ -105,7 +104,6 @@ func NewManager(
 		publisher:            publisher,
 		paymentEngineFactory: paymentEngineFactory,
 		creationLock:         sync.Mutex{},
-		paymentsDisabled:     paymentsDisabled,
 	}
 }
 
@@ -118,7 +116,6 @@ type Manager struct {
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher
-	paymentsDisabled     bool
 	creationLock         sync.Mutex
 }
 
