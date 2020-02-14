@@ -34,16 +34,16 @@ type PromiseLoader interface {
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
-	sessionCreator         Creator
+	sessionStarter         Starter
 	receiverID             identity.Identity
 	peerID                 identity.Identity
 	providerConfigProvider ConfigProvider
 	promiseLoader          PromiseLoader
 }
 
-// Creator defines method for session creation
-type Creator interface {
-	Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerPrams *traversal.Params) (Session, error)
+// Starter starts the session.
+type Starter interface {
+	Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) error
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
@@ -61,8 +61,13 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
+	session, err := newSession()
+	if err != nil {
+		return responseInternalError, errors.Wrap(err, "could not initialize new session")
+	}
+
 	// Pass given consumer config to provider's service config provider.
-	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(request.Config)
+	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(string(session.ID), request.Config)
 	if err != nil {
 		return responseInternalError, errors.Wrap(err, "could not get provider session config")
 	}
@@ -80,24 +85,31 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		}
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
+	err = consumer.sessionStarter.Start(session, consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
+	if err != nil {
+		return createErrorResponse(err), nil
+	}
+
+	if sessionConfigParams.SessionDestroyCallback != nil {
+		go func() {
+			<-session.done
+			sessionConfigParams.SessionDestroyCallback()
+		}()
+	}
+
+	return createResponse(*session, sessionConfigParams.SessionServiceConfig, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID), indicateNewVersion), nil
+}
+
+func createErrorResponse(err error) CreateResponse {
 	switch err {
-	case nil:
-		if sessionConfigParams.SessionDestroyCallback != nil {
-			go func() {
-				<-sessionInstance.done
-				sessionConfigParams.SessionDestroyCallback()
-			}()
-		}
-		return responseWithSession(sessionInstance, sessionConfigParams.SessionServiceConfig, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID), indicateNewVersion), nil
 	case ErrorInvalidProposal:
-		return responseInvalidProposal, nil
+		return responseInvalidProposal
 	default:
-		return responseInternalError, nil
+		return responseInternalError
 	}
 }
 
-func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo, indicateNewVersion bool) CreateResponse {
+func createResponse(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo, indicateNewVersion bool) CreateResponse {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session

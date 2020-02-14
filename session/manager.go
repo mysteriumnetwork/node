@@ -56,7 +56,7 @@ type publisher interface {
 
 // ConfigProvider is able to handle config negotiations
 type ConfigProvider interface {
-	ProvideConfig(sessionConfig json.RawMessage) (*ConfigParams, error)
+	ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*ConfigParams, error)
 }
 
 // DestroyCallback cleanups session
@@ -91,7 +91,6 @@ type NATEventGetter interface {
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
-	idGenerator IDGenerator,
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
 	paymentEngineFactory PaymentEngineFactory,
@@ -103,7 +102,6 @@ func NewManager(
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
-		generateID:            idGenerator,
 		sessionStorage:        sessionStorage,
 		balanceTrackerFactory: balanceTrackerFactory,
 		natPingerChan:         natPingerChan,
@@ -119,7 +117,6 @@ func NewManager(
 // Manager knows how to start and provision session
 type Manager struct {
 	currentProposal       market.ServiceProposal
-	generateID            IDGenerator
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
 	paymentEngineFactory  PaymentEngineFactory
@@ -131,8 +128,9 @@ type Manager struct {
 	creationLock          sync.Mutex
 }
 
-// Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (sessionInstance Session, err error) {
+// Start starts a session on the provider side for the given consumer.
+// Multiple sessions per peerID is possible in case different services are used
+func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -141,16 +139,12 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 		return
 	}
 
-	sessionInstance.ID, err = manager.generateID()
-	if err != nil {
-		return
-	}
-	sessionInstance.ServiceType = manager.currentProposal.ServiceType
-	sessionInstance.ServiceID = manager.serviceId
-	sessionInstance.ConsumerID = consumerID
-	sessionInstance.done = make(chan struct{})
-	sessionInstance.Config = config
-	sessionInstance.CreatedAt = time.Now().UTC()
+	session.ServiceType = manager.currentProposal.ServiceType
+	session.ServiceID = manager.serviceId
+	session.ConsumerID = consumerID
+	session.done = make(chan struct{})
+	session.Config = config
+	session.CreatedAt = time.Now().UTC()
 
 	// TODO: this whole block needs to go when we deprecate the old payment pingpong
 	var paymentEngine PaymentEngine
@@ -158,21 +152,21 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 		log.Info().Msg("Using new payments")
 		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID)
 		if err != nil {
-			return sessionInstance, err
+			return err
 		}
 		paymentEngine = engine
 	} else {
 		log.Info().Msg("Using legacy payments")
 		balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.IssuerID)
 		if err != nil {
-			return sessionInstance, err
+			return err
 		}
 		paymentEngine = balanceTracker
 	}
 
 	// stop the balance tracker once the session is finished
 	go func() {
-		<-sessionInstance.done
+		<-session.done
 		close(pingerParams.Cancel)
 		paymentEngine.Stop()
 	}()
@@ -181,7 +175,7 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 		err := paymentEngine.Start()
 		if err != nil {
 			log.Error().Err(err).Msg("Payment engine error")
-			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
+			destroyErr := manager.Destroy(consumerID, string(session.ID))
 			if destroyErr != nil {
 				log.Error().Err(err).Msg("Session cleanup failed")
 			}
@@ -189,21 +183,21 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	}()
 
 	manager.natPingerChan(pingerParams)
-	manager.sessionStorage.Add(sessionInstance)
-	return sessionInstance, nil
+	manager.sessionStorage.Add(*session)
+	return nil
 }
 
-// Acknowledge marks the session as successfuly established as far as the consumer is concerned.
+// Acknowledge marks the session as successfully established as far as the consumer is concerned.
 func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
-	sessionInstance, found := manager.sessionStorage.Find(ID(sessionID))
+	session, found := manager.sessionStorage.Find(ID(sessionID))
 
 	if !found {
 		return ErrorSessionNotExists
 	}
 
-	if sessionInstance.ConsumerID != consumerID {
+	if session.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
 	}
 
@@ -220,18 +214,18 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
-	sessionInstance, found := manager.sessionStorage.Find(ID(sessionID))
+	session, found := manager.sessionStorage.Find(ID(sessionID))
 
 	if !found {
 		return ErrorSessionNotExists
 	}
 
-	if sessionInstance.ConsumerID != consumerID {
+	if session.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))
-	close(sessionInstance.done)
+	close(session.done)
 
 	return nil
 }

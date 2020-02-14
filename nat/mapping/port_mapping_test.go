@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +35,7 @@ func TestMap_uPnP_Enabled(t *testing.T) {
 		MapUpdateInterval: 5 * time.Millisecond,
 		MapLifetime:       10 * time.Millisecond,
 	}
-	portMapper := NewPortMapper(config, &mockPublisher{})
+	portMapper := NewPortMapper(config, mocks.NewEventBus())
 
 	release, ok := portMapper.Map("UDP", 51334, "Test")
 	time.Sleep(config.MapUpdateInterval * 3)
@@ -57,7 +58,7 @@ func TestMap_uPnP_Enabled_With_Permanent_Lease(t *testing.T) {
 		MapUpdateInterval: 5 * time.Millisecond,
 		MapLifetime:       10 * time.Millisecond,
 	}
-	portMapper := NewPortMapper(config, &mockPublisher{})
+	portMapper := NewPortMapper(config, mocks.NewEventBus())
 
 	release, ok := portMapper.Map("UDP", 51334, "Test")
 	time.Sleep(config.MapUpdateInterval * 3)
@@ -78,7 +79,7 @@ func TestMap_uPnP_Disabled(t *testing.T) {
 	config := &Config{
 		MapInterface: router,
 	}
-	portMapper := NewPortMapper(config, &mockPublisher{})
+	portMapper := NewPortMapper(config, mocks.NewEventBus())
 
 	release, ok := portMapper.Map("UDP", 51334, "Test port mapping")
 
@@ -139,10 +140,4 @@ func (m *mockRouter) ExternalIP() (net.IP, error) {
 
 func (m *mockRouter) String() string {
 	return ""
-}
-
-type mockPublisher struct {
-}
-
-func (p mockPublisher) Publish(topic string, data interface{}) {
 }

@@ -18,12 +18,12 @@
 package session
 
 import (
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
@@ -45,31 +45,6 @@ var (
 	}
 )
 
-type mockPublisher struct {
-	published sessionEvent.Payload
-	lock      sync.RWMutex
-}
-
-func (mp *mockPublisher) Publish(topic string, data interface{}) {
-	mp.lock.Lock()
-	defer mp.lock.Unlock()
-	mp.published = data.(sessionEvent.Payload)
-}
-
-func (mp *mockPublisher) SubscribeAsync(topic string, f interface{}) error {
-	return nil
-}
-
-func (mp *mockPublisher) getLast() sessionEvent.Payload {
-	mp.lock.RLock()
-	defer mp.lock.RUnlock()
-	return mp.published
-}
-
-func generateSessionID() (ID, error) {
-	return expectedID, nil
-}
-
 type mockBalanceTracker struct {
 	errorToReturn error
 }
@@ -90,18 +65,20 @@ func mockPaymentEngineFactory(providerID, accountant identity.Identity) (Payment
 	return &mockBalanceTracker{}, nil
 }
 
-func TestManager_Create_StoresSession(t *testing.T) {
+func TestManager_Start_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
 
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
+	manager := NewManager(currentProposal, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
 
 	pingerParams := &traversal.Params{}
-	session, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
+	session, err := newSession()
+	assert.NoError(t, err)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.NoError(t, err)
 	expectedResult.done = session.done
 
@@ -109,21 +86,22 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	assert.Equal(t, expectedResult.Last, session.Last)
 	assert.Equal(t, expectedResult.done, session.done)
 	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
-	assert.Equal(t, expectedResult.ID, session.ID)
 	assert.False(t, session.CreatedAt.IsZero())
 }
 
-func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
+func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
+	manager := NewManager(currentProposal, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
+	session, err := newSession()
+	assert.NoError(t, err)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
 	assert.Exactly(t, err, ErrorInvalidProposal)
-	assert.Exactly(t, Session{}, sessionInstance)
+	assert.Empty(t, session.CreatedAt)
 }
 
 type MockNatEventTracker struct {
@@ -137,8 +115,8 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
+	manager := NewManager(currentProposal, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
 }
@@ -147,31 +125,34 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
-		&MockNatEventTracker{}, "test service id", &mockPublisher{}, false)
+	manager := NewManager(currentProposal, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), false)
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
+	session, err := newSession()
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)
 
-	err = manager.Acknowledge(identity.FromAddress("some other id"), string(sessionInstance.ID))
-	assert.Exactly(t, err, ErrorWrongSessionOwner)
+	err = manager.Acknowledge(identity.FromAddress("some other id"), string(session.ID))
+	assert.Exactly(t, ErrorWrongSessionOwner, err)
 }
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	mp := &mockPublisher{}
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
+	mp := mocks.NewEventBus()
+	manager := NewManager(currentProposal, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
 		&MockNatEventTracker{}, "test service id", mp, false)
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
+	session, err := newSession()
+	assert.NoError(t, err)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)
 
-	err = manager.Acknowledge(consumerID, string(sessionInstance.ID))
+	err = manager.Acknowledge(consumerID, string(session.ID))
 	assert.Nil(t, err)
 
-	assert.Eventually(t, lastEventMatches(mp, sessionInstance.ID, sessionEvent.Acknowledged), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Acknowledged), 2*time.Second, 10*time.Millisecond)
 }

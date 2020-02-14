@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -75,7 +76,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Publisher:                 &mockPublisher{},
+		Publisher:                 mocks.NewEventBus(),
 		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
@@ -117,7 +118,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		Publisher:                 &mockPublisher{},
+		Publisher:                 mocks.NewEventBus(),
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -186,7 +187,7 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		Publisher:                 &mockPublisher{},
+		Publisher:                 mocks.NewEventBus(),
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -248,7 +249,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := ExchangeMessageTrackerDeps{
 		InvoiceChan:               invoiceChan,
-		Publisher:                 &mockPublisher{},
+		Publisher:                 mocks.NewEventBus(),
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
@@ -729,7 +730,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 					Peer:                      tt.fields.peer,
 					Ks:                        tt.fields.keystore,
 					Identity:                  tt.fields.identity,
-					Publisher:                 &mockPublisher{},
+					Publisher:                 mocks.NewEventBus(),
 				},
 			}
 			emt.lastInvoice = tt.fields.lastInvoice

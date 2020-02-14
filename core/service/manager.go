@@ -43,7 +43,7 @@ var (
 type Service interface {
 	Serve(instance *Instance) error
 	Stop() error
-	ProvideConfig(sessionConfig json.RawMessage) (*session.ConfigParams, error)
+	ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs

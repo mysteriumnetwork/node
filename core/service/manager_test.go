@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,7 +50,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogWaiterFactory,
 		MockDialogHandlerFactory,
 		discoveryFactory,
-		&mockPublisher{},
+		mocks.NewEventBus(),
 		mockPolicyOracle,
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
@@ -74,7 +75,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogWaiterFactory,
 		MockDialogHandlerFactory,
 		discoveryFactory,
-		&mockPublisher{},
+		mocks.NewEventBus(),
 		mockPolicyOracle,
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
