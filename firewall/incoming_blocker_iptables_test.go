@@ -144,7 +144,7 @@ func Test_iptablesDNSFirewall_AllowIPAccess(t *testing.T) {
 
 	removeRule, err := firewall.AllowIPAccess(net.IP{1, 2, 3, 4})
 	assert.NoError(t, err)
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("add myst-provider-dst-whitelist 1.2.3.4"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("add myst-provider-dst-whitelist 1.2.3.4 --exist"))
 
 	err = removeRule()
 	assert.NoError(t, err)

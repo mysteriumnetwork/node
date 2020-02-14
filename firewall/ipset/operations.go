@@ -54,8 +54,12 @@ func OpDelete(setName string) []string {
 }
 
 // OpIPAdd is an operation which adds IP entry to the named set.
-func OpIPAdd(setName string, ip net.IP) []string {
-	return []string{"add", setName, ip.String()}
+func OpIPAdd(setName string, ip net.IP, ignoreExisting bool) []string {
+	args := []string{"add", setName, ip.String()}
+	if ignoreExisting {
+		args = append(args, "--exist")
+	}
+	return args
 }
 
 // OpIPRemove is an operation which deletes IP entry from the named set.

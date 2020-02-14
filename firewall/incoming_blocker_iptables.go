@@ -80,7 +80,7 @@ func (ibi *incomingBlockerIptables) BlockIncomingTraffic(network net.IPNet) (Inc
 }
 
 func (ibi *incomingBlockerIptables) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
-	if _, err := ipset.Exec(ipset.OpIPAdd(dnsFirewallIpset, ip)); err != nil {
+	if _, err := ipset.Exec(ipset.OpIPAdd(dnsFirewallIpset, ip, true)); err != nil {
 		return nil, err
 	}
 	return func() error {
