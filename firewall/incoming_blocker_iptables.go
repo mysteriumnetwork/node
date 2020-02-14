@@ -20,6 +20,7 @@ package firewall
 import (
 	"net"
 	"strings"
+	"time"
 
 	"github.com/mysteriumnetwork/node/firewall/ipset"
 	"github.com/mysteriumnetwork/node/firewall/iptables"
@@ -50,7 +51,7 @@ func (ibi *incomingBlockerIptables) Setup() error {
 	}
 	ipset.Exec(ipset.OpDelete(dnsFirewallIpset))
 
-	op := ipset.OpCreate(dnsFirewallIpset, ipset.SetTypeHashIP, nil, 0)
+	op := ipset.OpCreate(dnsFirewallIpset, ipset.SetTypeHashIP, 24*time.Hour, nil, 0)
 	if _, err := ipset.Exec(op); err != nil {
 		return err
 	}
