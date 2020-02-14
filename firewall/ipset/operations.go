@@ -20,6 +20,7 @@ package ipset
 import (
 	"net"
 	"strconv"
+	"time"
 )
 
 // SetType defines type of IP set.
@@ -36,8 +37,11 @@ func OpVersion() []string {
 }
 
 // OpCreate is an operation which creates a new set.
-func OpCreate(setName string, setType SetType, netMask net.IPMask, hashSize int) []string {
+func OpCreate(setName string, setType SetType, timeout time.Duration, netMask net.IPMask, hashSize int) []string {
 	args := []string{"create", setName, string(setType)}
+	if timeout != 0 {
+		args = append(args, "--timeout", strconv.Itoa(int(timeout.Seconds())))
+	}
 	if netMask != nil {
 		ones, _ := netMask.Size()
 		args = append(args, "--netmask", strconv.Itoa(ones))

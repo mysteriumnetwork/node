@@ -51,7 +51,7 @@ func Test_iptablesDNSFirewall_Setup(t *testing.T) {
 	err := firewall.Setup()
 	assert.NoError(t, err)
 	assert.True(t, mockedIpset.VerifyCalledWithArgs("version"))
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("create myst-provider-dst-whitelist hash:ip"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("create myst-provider-dst-whitelist hash:ip --timeout 86400"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-N MYST_PROVIDER_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A MYST_PROVIDER_FIREWALL -m set --match-set myst-provider-dst-whitelist dst -j ACCEPT"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A MYST_PROVIDER_FIREWALL -j REJECT"))
