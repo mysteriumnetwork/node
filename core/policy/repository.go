@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -115,6 +116,26 @@ func (r *Repository) Rules() []market.AccessPolicyRuleSet {
 	return policiesRules
 }
 
+// IsIdentityAllowed returns flag if given identity should be allowed by rules
+func (r *Repository) IsIdentityAllowed(identity identity.Identity) bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	isAllowedByDefault := true
+	for _, item := range r.items {
+		for _, rule := range item.rules.Allow {
+			if rule.Type == market.AccessPolicyTypeIdentity {
+				isAllowedByDefault = false
+				if identity.Address == rule.Value {
+					return true
+				}
+			}
+		}
+	}
+
+	return isAllowedByDefault
+}
+
 // HasDNSRules returns flag if any DNS rules are applied
 func (r *Repository) HasDNSRules() bool {
 	r.lock.RLock()
@@ -139,17 +160,17 @@ func (r *Repository) IsHostAllowed(host string) bool {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	hasDNSRules := false
+	isAllowedByDefault := true
 	for _, item := range r.items {
 		for _, rule := range item.rules.Allow {
 			if rule.Type == market.AccessPolicyTypeDNSZone {
-				hasDNSRules = true
+				isAllowedByDefault = false
 				if strings.HasSuffix(host, rule.Value) {
 					return true
 				}
 			}
 			if rule.Type == market.AccessPolicyTypeDNSHostname {
-				hasDNSRules = true
+				isAllowedByDefault = false
 				if host == rule.Value {
 					return true
 				}
@@ -157,10 +178,7 @@ func (r *Repository) IsHostAllowed(host string) bool {
 		}
 	}
 
-	if !hasDNSRules {
-		return true
-	}
-	return false
+	return isAllowedByDefault
 }
 
 func (r *Repository) findItemFor(policy market.AccessPolicy) (*listItem, error) {
