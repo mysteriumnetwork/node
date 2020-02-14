@@ -71,7 +71,7 @@ func PriceMinute(lowerBound, upperBound uint64) func(market.ServiceProposal) boo
 	return pricePerTime(lowerBound, upperBound, time.Minute)
 }
 
-const bytesInGigabyte = 1000000000
+const bytesInGigabyte = 1_000_000_000
 
 // PriceGB checks if the price per GB is below the given value
 func PriceGB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {

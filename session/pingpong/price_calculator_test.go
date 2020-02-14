@@ -166,7 +166,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 				},
 			},
 			// 7000000 is the price per gigabyte
-			// 50000 is the time per minute, 60 is the amount of minutes
+			// 50000 is the price per minute, 60 is the number of minutes
 			want: 7000000 + 60*50000,
 		},
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -91,7 +92,7 @@ func InvoiceFactoryCreator(
 	maxAllowedAccountantFee uint16,
 	maxRRecovery uint64,
 	blockchainHelper bcHelper,
-	eventBus ebus,
+	eventBus eventbus.EventBus,
 	feeProvider feeProvider,
 	proposal market.ServiceProposal,
 	settler settler,
@@ -142,7 +143,7 @@ func ExchangeFactoryFunc(
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,
 	registryAddress string,
-	eventBus ebus,
+	eventBus eventbus.EventBus,
 	getConsumerInfo getConsumerInfo) func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
@@ -163,7 +164,7 @@ func ExchangeFactoryFunc(
 			return nil, err
 		}
 		timeTracker := session.NewTracker(time.Now)
-		deps := ExchangeMessageTrackerDeps{
+		deps := InvoicePayerDeps{
 			InvoiceChan:               invoices,
 			PeerExchangeMessageSender: NewExchangeSender(dialog),
 			ConsumerTotalsStorage:     totalStorage,
@@ -178,6 +179,6 @@ func ExchangeFactoryFunc(
 			ConsumerInfoGetter:        getConsumerInfo,
 			SessionID:                 sessionID,
 		}
-		return NewExchangeMessageTracker(deps), nil
+		return NewInvoicePayer(deps), nil
 	}
 }

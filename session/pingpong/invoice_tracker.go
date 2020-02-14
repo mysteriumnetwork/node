@@ -56,6 +56,8 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
+const providerFirstInvoiceTolerance = 0.8
+
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
@@ -85,11 +87,6 @@ type accountantPromiseStorage interface {
 type accountantCaller interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID uint64) error
-}
-
-type ebus interface {
-	eventbus.Publisher
-	eventbus.Subscriber
 }
 
 type settler func(providerID, accountantID identity.Identity) error
@@ -150,7 +147,7 @@ type InvoiceTrackerDeps struct {
 	MaxRRecoveryLength         uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
-	EventBus                   ebus
+	EventBus                   eventbus.EventBus
 	FeeProvider                feeProvider
 	ChannelAddressCalculator   channelAddressCalculator
 	Settler                    settler
@@ -447,7 +444,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
 	// Over the long run, this becomes redundant as the difference should become miniscule.
 	if it.lastExchangeMessage.AgreementTotal == 0 {
-		shouldBe = uint64(math.Trunc(float64(shouldBe) * 0.8))
+		shouldBe = uint64(math.Trunc(float64(shouldBe) * providerFirstInvoiceTolerance))
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
@@ -599,7 +596,7 @@ func (it *InvoiceTracker) Stop() {
 
 func (it *InvoiceTracker) consumeDataTransferedEvent(e event.DataTransferEventPayload) {
 	// skip irrelevant sessions
-	if strings.ToLower(e.ID) != strings.ToLower(it.deps.SessionID) {
+	if !strings.EqualFold(e.ID, it.deps.SessionID) {
 		return
 	}
 
