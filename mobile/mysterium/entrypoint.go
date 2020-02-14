@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -187,10 +188,13 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
-			options.Payments.ConsumerLowerMinutePriceBound,
-			options.Payments.ConsumerUpperMinutePriceBound,
-			options.Payments.ConsumerLowerGBPriceBound,
-			options.Payments.ConsumerUpperGBPriceBound,
+			&proposal.Filter{
+				UpperTimePriceBound: &options.Payments.ConsumerUpperMinutePriceBound,
+				LowerTimePriceBound: &options.Payments.ConsumerLowerMinutePriceBound,
+				UpperGBPriceBound:   &options.Payments.ConsumerUpperGBPriceBound,
+				LowerGBPriceBound:   &options.Payments.ConsumerLowerGBPriceBound,
+				ExcludeUnsupported:  true,
+			},
 		),
 	}
 	return mobileNode, nil

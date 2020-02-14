@@ -43,12 +43,21 @@ func (s *proposalManagerTestSuite) SetupTest() {
 	s.mysteriumAPI = &mockMysteriumAPI{}
 	s.qualityFinder = &mockQualityFinder{}
 
+	var lowerTime uint64
+	var upperTime uint64 = 50000
+	var upperGB uint64 = 7000000
+	filter := &proposal.Filter{
+		UpperTimePriceBound: &upperTime,
+		LowerTimePriceBound: &lowerTime,
+		UpperGBPriceBound:   &upperGB,
+		LowerGBPriceBound:   &lowerTime,
+		ExcludeUnsupported:  true,
+	}
 	s.proposalsManager = newProposalsManager(
 		s.repository,
 		s.mysteriumAPI,
 		s.qualityFinder,
-		0, 50000,
-		0, 7000000,
+		filter,
 	)
 }
 

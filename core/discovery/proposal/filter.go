@@ -34,11 +34,17 @@ type Filter struct {
 	LowerTimePriceBound *uint64
 	UpperGBPriceBound   *uint64
 	LowerGBPriceBound   *uint64
+	ExcludeUnsupported  bool
 }
 
 // Matches return flag if filter matches given proposal
 func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 	conditions := make([]reducer.AndCondition, 0)
+
+	if filter.ExcludeUnsupported {
+		conditions = append(conditions, reducer.Unsupported())
+	}
+
 	if filter.ProviderID != "" {
 		conditions = append(conditions, reducer.Equal(reducer.ProviderID, filter.ProviderID))
 	}

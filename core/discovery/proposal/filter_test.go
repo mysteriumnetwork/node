@@ -118,6 +118,16 @@ var (
 			},
 		},
 	}
+	proposalSupported = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(50000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: 7142857,
+			},
+		},
+		ServiceDefinition: &mockServiceDefinition{},
+		ProviderContacts:  market.ContactList{market.Contact{}},
+	}
 )
 
 type mockService struct {
@@ -234,6 +244,14 @@ func Test_ProposalFilter_Filters_ByTimeBounds(t *testing.T) {
 	assert.True(t, filter.Matches(proposalTimeExact))
 }
 
+func Test_ProposalFilter_Filters_Unsupported(t *testing.T) {
+	filter := &Filter{
+		ExcludeUnsupported: true,
+	}
+	assert.False(t, filter.Matches(proposalEmpty))
+	assert.True(t, filter.Matches(proposalSupported))
+}
+
 func Test_ProposalFilter_Filters_ByByteBounds(t *testing.T) {
 	var upper uint64 = 7000000
 	var lower uint64 = 100
@@ -277,4 +295,10 @@ func (mpm *mockPaymentMethod) GetType() string {
 
 func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 	return mpm.rate
+}
+
+type mockServiceDefinition struct{}
+
+func (msd *mockServiceDefinition) GetLocation() market.Location {
+	return market.Location{}
 }

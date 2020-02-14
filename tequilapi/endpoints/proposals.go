@@ -190,6 +190,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		UpperGBPriceBound:   upperGBPriceBound,
 		LowerTimePriceBound: lowerTimePriceBound,
 		UpperTimePriceBound: upperTimePriceBound,
+		ExcludeUnsupported:  true,
 	})
 
 	if err != nil {

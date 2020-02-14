@@ -83,30 +83,22 @@ func newProposalsManager(
 	repository proposal.Repository,
 	mysteriumAPI mysteriumAPI,
 	qualityFinder qualityFinder,
-	lowerTimePriceBound, upperTimePriceBound uint64,
-	lowerGBPriceBound, upperGBPriceBound uint64,
-
+	filter *proposal.Filter,
 ) *proposalsManager {
 	return &proposalsManager{
-		repository:          repository,
-		mysteriumAPI:        mysteriumAPI,
-		qualityFinder:       qualityFinder,
-		upperTimePriceBound: upperTimePriceBound,
-		lowerTimePriceBound: lowerTimePriceBound,
-		lowerGBPriceBound:   lowerGBPriceBound,
-		upperGBPriceBound:   upperGBPriceBound,
+		repository:    repository,
+		mysteriumAPI:  mysteriumAPI,
+		qualityFinder: qualityFinder,
+		filter:        filter,
 	}
 }
 
 type proposalsManager struct {
-	repository          proposal.Repository
-	cache               []market.ServiceProposal
-	mysteriumAPI        mysteriumAPI
-	qualityFinder       qualityFinder
-	upperTimePriceBound uint64
-	lowerTimePriceBound uint64
-	lowerGBPriceBound   uint64
-	upperGBPriceBound   uint64
+	repository    proposal.Repository
+	cache         []market.ServiceProposal
+	mysteriumAPI  mysteriumAPI
+	qualityFinder qualityFinder
+	filter        *proposal.Filter
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error) {
@@ -147,12 +139,7 @@ func (m *proposalsManager) getFromCache() []market.ServiceProposal {
 }
 
 func (m *proposalsManager) getFromRepository() ([]market.ServiceProposal, error) {
-	allProposals, err := m.repository.Proposals(&proposal.Filter{
-		LowerGBPriceBound:   &m.lowerGBPriceBound,
-		LowerTimePriceBound: &m.lowerTimePriceBound,
-		UpperGBPriceBound:   &m.upperGBPriceBound,
-		UpperTimePriceBound: &m.upperTimePriceBound,
-	})
+	allProposals, err := m.repository.Proposals(m.filter)
 	if err != nil {
 		return nil, err
 	}

@@ -110,6 +110,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 		LowerTimePriceBound: &lowerTime,
 		UpperGBPriceBound:   &upperGB,
 		LowerGBPriceBound:   &lowerGB,
+		ExcludeUnsupported:  true,
 	}, repository.recordedFilter)
 }
 
@@ -158,6 +159,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 		&proposal.Filter{
 			AccessPolicyID:     "accessPolicyId",
 			AccessPolicySource: "accessPolicySource",
+			ExcludeUnsupported: true,
 		},
 		repository.recordedFilter,
 	)

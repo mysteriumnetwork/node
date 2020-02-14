@@ -73,7 +73,7 @@ func PriceMinute(lowerBound, upperBound uint64) func(market.ServiceProposal) boo
 
 const bytesInGigabyte = 1000000000
 
-// PriceGB checks if the price per GV is below the given value
+// PriceGB checks if the price per GB is below the given value
 func PriceGB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
 	return pricePerDataTransfer(lowerBound, upperBound, bytesInGigabyte)
 }
@@ -130,5 +130,12 @@ func AccessPolicy(id, source string) func(market.ServiceProposal) bool {
 			}
 		}
 		return match
+	}
+}
+
+// Unsupported filters out unsupported proposals
+func Unsupported() func(market.ServiceProposal) bool {
+	return func(proposal market.ServiceProposal) bool {
+		return proposal.IsSupported()
 	}
 }
