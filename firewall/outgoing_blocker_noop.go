@@ -21,21 +21,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// outgoingBlockerNoop is a Vendor implementation which only logs allow requests with no effects
-// used by default
+// outgoingBlockerNoop is a Vendor implementation which only logs allow requests with no effects.
+// Used by default.
 type outgoingBlockerNoop struct{}
 
-// Setup noop setup (just log call)
+// Setup noop setup (just log call).
 func (obn *outgoingBlockerNoop) Setup() error {
 	return nil
 }
 
-// Teardown noop cleanup (just log call)
+// Teardown noop cleanup (just log call).
 func (obn *outgoingBlockerNoop) Teardown() {
 	log.Info().Msg("Rules reset was requested")
 }
 
-// BlockOutgoingTraffic just logs the call
+// BlockOutgoingTraffic just logs the call.
 func (obn *outgoingBlockerNoop) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
 	log.Info().Msg("Outgoing traffic block requested")
 	return func() {
@@ -43,7 +43,7 @@ func (obn *outgoingBlockerNoop) BlockOutgoingTraffic(scope Scope, outboundIP str
 	}, nil
 }
 
-// AllowIPAccess logs IP for which access was requested
+// AllowIPAccess logs IP for which access was requested.
 func (obn *outgoingBlockerNoop) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
 	log.Info().Msgf("Allow IP %s access", ip)
 	return func() {
@@ -51,7 +51,7 @@ func (obn *outgoingBlockerNoop) AllowIPAccess(ip string) (OutgoingRuleRemove, er
 	}, nil
 }
 
-// AllowIPAccess logs URL for which access was requested
+// AllowIPAccess logs URL for which access was requested.
 func (obn *outgoingBlockerNoop) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
 	for _, rawURL := range rawURLs {
 		log.Info().Msgf("Allow URL %s access", rawURL)

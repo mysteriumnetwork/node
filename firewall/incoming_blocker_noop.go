@@ -23,27 +23,27 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// NewIncomingTrafficBlockerNoop creates instance of noop traffic blocker
+// NewIncomingTrafficBlockerNoop creates instance of noop traffic blocker.
 func NewIncomingTrafficBlockerNoop() IncomingTrafficBlocker {
 	return &incomingBlockerNoop{}
 }
 
-// incomingBlockerNoop is a implementation which only logs allow requests with no effects
-// used by default
+// incomingBlockerNoop is a implementation which only logs allow requests with no effects.
+// Used by default.
 type incomingBlockerNoop struct{}
 
-// Setup noop setup (just log call)
+// Setup noop setup (just log call).
 func (ibn *incomingBlockerNoop) Setup() error {
 	log.Info().Msg("Rules bootstrap was requested")
 	return nil
 }
 
-// Teardown noop cleanup (just log call)
+// Teardown noop cleanup (just log call).
 func (ibn *incomingBlockerNoop) Teardown() {
 	log.Info().Msg("Rules reset was requested")
 }
 
-// BlockOutgoingTraffic just logs the call
+// BlockOutgoingTraffic just logs the call.
 func (ibn *incomingBlockerNoop) BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error) {
 	log.Info().Msg("Incoming traffic block requested")
 	return func() error {
@@ -52,7 +52,7 @@ func (ibn *incomingBlockerNoop) BlockIncomingTraffic(network net.IPNet) (Incomin
 	}, nil
 }
 
-// AllowIPAccess logs IP for which access was requested
+// AllowIPAccess logs IP for which access was requested.
 func (ibn *incomingBlockerNoop) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
 	log.Info().Msgf("Allow IP %s access", ip)
 	return func() error {

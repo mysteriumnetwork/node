@@ -31,17 +31,17 @@ type iptablesExecMock struct {
 	mocks map[string]iptablesExecResult
 }
 
-func (mce *iptablesExecMock) Exec(args ...string) ([]string, error) {
+func (iem *iptablesExecMock) Exec(args ...string) ([]string, error) {
 	key := argsToKey(args...)
-	res := mce.mocks[key]
+	res := iem.mocks[key]
 	res.called = true
-	mce.mocks[key] = res
+	iem.mocks[key] = res
 	return res.output, res.err
 }
 
-func (mce *iptablesExecMock) VerifyCalledWithArgs(args ...string) bool {
+func (iem *iptablesExecMock) VerifyCalledWithArgs(args ...string) bool {
 	key := argsToKey(args...)
-	return mce.mocks[key].called
+	return iem.mocks[key].called
 }
 
 func argsToKey(args ...string) string {

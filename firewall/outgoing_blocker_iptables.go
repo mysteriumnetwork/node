@@ -39,7 +39,7 @@ type outgoingBlockerIptables struct {
 	referenceTracker map[string]refCount
 }
 
-// Setup tries to setup all changes made by setup and leave system in the state before setup
+// Setup tries to setup all changes made by setup and leave system in the state before setup.
 func (obi *outgoingBlockerIptables) Setup() error {
 	if err := obi.checkIptablesVersion(); err != nil {
 		return err
@@ -50,14 +50,14 @@ func (obi *outgoingBlockerIptables) Setup() error {
 	return obi.setupKillSwitchChain()
 }
 
-// Teardown tries to cleanup all changes made by setup and leave system in the state before setup
+// Teardown tries to cleanup all changes made by setup and leave system in the state before setup.
 func (obi *outgoingBlockerIptables) Teardown() {
 	if err := obi.cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
 }
 
-// BlockOutgoingTraffic effectively disallows any outgoing traffic from consumer node with specified scope
+// BlockOutgoingTraffic effectively disallows any outgoing traffic from consumer node with specified scope.
 func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
 	if obi.trafficLockScope == Global {
 		// nothing can override global lock
@@ -72,7 +72,7 @@ func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP
 	})
 }
 
-// AllowIPAccess adds exception to blocked traffic for specified URL (host part is usually taken)
+// AllowIPAccess adds exception to blocked traffic for specified URL (host part is usually taken).
 func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
 	return obi.trackingReferenceCall("allow:"+ip, func() (rule OutgoingRuleRemove, e error) {
 		return iptables.AddRuleWithRemoval(
@@ -81,7 +81,7 @@ func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (OutgoingRuleRemove
 	})
 }
 
-// AllowURLAccess adds URL based exception to underlying blocker implementation
+// AllowURLAccess adds URL based exception to underlying blocker implementation.
 func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
 	var ruleRemovers []func()
 	removeAll := func() {

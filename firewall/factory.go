@@ -19,12 +19,12 @@
 
 package firewall
 
-// NewOutgoingTrafficBlocker creates instance of traffic blocker
+// NewOutgoingTrafficBlocker creates instance of traffic blocker.
 func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
 	return &outgoingBlockerNoop{}
 }
 
-// NewIncomingTrafficBlocker creates instance of traffic blocker
+// NewIncomingTrafficBlocker creates instance of traffic blocker.
 func NewIncomingTrafficBlocker() IncomingTrafficBlocker {
 	return NewIncomingTrafficBlockerNoop()
 }

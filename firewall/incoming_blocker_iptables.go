@@ -31,12 +31,12 @@ const (
 	dnsFirewallIpset = "myst-provider-dst-whitelist"
 )
 
-// NewIncomingTrafficBlockerIptables creates instance iptables based traffic blocker
+// NewIncomingTrafficBlockerIptables creates instance iptables based traffic blocker.
 func NewIncomingTrafficBlockerIptables() IncomingTrafficBlocker {
 	return &incomingBlockerIptables{}
 }
 
-// incomingBlockerIptables allows incoming traffic blocking in IP granularity
+// incomingBlockerIptables allows incoming traffic blocking in IP granularity.
 type incomingBlockerIptables struct{}
 
 func (ibi *incomingBlockerIptables) Setup() error {

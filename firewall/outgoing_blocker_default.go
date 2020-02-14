@@ -29,7 +29,9 @@ const (
 // DefaultTrackingBlocker traffic blocker bootstrapped for global calls
 var DefaultTrackingBlocker OutgoingTrafficBlocker = &outgoingBlockerNoop{}
 
-// OutgoingTrafficBlocker interface neededs to be satisfied by any implementations which provide firewall capabilities, like iptables
+// OutgoingTrafficBlocker defines consumer side firewall a.k.a. kill switch.
+// Purpose is to detect traffic which leaves machine and reject it,
+// because during established VPN connection it is expected to leave through tunnel device only.
 type OutgoingTrafficBlocker interface {
 	Setup() error
 	Teardown()
@@ -38,28 +40,28 @@ type OutgoingTrafficBlocker interface {
 	AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error)
 }
 
-// Scope type represents scope of blocking consumer traffic
+// Scope type represents scope of blocking consumer traffic.
 type Scope string
 
-// OutgoingRuleRemove type defines function for removal of created rule
+// OutgoingRuleRemove type defines function for removal of created rule.
 type OutgoingRuleRemove func()
 
-// BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope
+// BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope.
 func BlockNonTunnelTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
 	return DefaultTrackingBlocker.BlockOutgoingTraffic(scope, outboundIP)
 }
 
-// AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
+// AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken).
 func AllowURLAccess(urls ...string) (OutgoingRuleRemove, error) {
 	return DefaultTrackingBlocker.AllowURLAccess(urls...)
 }
 
-// AllowIPAccess adds IP based exception to underlying blocker implementation
+// AllowIPAccess adds IP based exception to underlying blocker implementation.
 func AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
 	return DefaultTrackingBlocker.AllowIPAccess(ip)
 }
 
-// Reset firewall state - usually called when cleanup is needed (during shutdown)
+// Reset firewall state - usually called when cleanup is needed (during shutdown).
 func Reset() {
 	DefaultTrackingBlocker.Teardown()
 }

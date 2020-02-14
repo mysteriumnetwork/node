@@ -19,7 +19,7 @@
 
 package firewall
 
-// NewOutgoingTrafficBlocker creates instance of traffic blocker
+// NewOutgoingTrafficBlocker creates instance of traffic blocker.
 func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
 	return &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
@@ -27,7 +27,7 @@ func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
 	}
 }
 
-// NewIncomingTrafficBlocker creates instance of traffic blocker
+// NewIncomingTrafficBlocker creates instance of traffic blocker.
 func NewIncomingTrafficBlocker() IncomingTrafficBlocker {
 	return NewIncomingTrafficBlockerIptables()
 }

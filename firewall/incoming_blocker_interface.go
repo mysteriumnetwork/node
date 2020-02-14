@@ -21,7 +21,7 @@ import (
 	"net"
 )
 
-// IncomingTrafficBlocker interface neededs to be satisfied by any implementations which provide firewall capabilities, like iptables
+// IncomingTrafficBlocker defines provider side firewall, to control which traffic is enabled to pass and which not.
 type IncomingTrafficBlocker interface {
 	Setup() error
 	Teardown()
@@ -29,5 +29,5 @@ type IncomingTrafficBlocker interface {
 	AllowIPAccess(ip net.IP) (IncomingRuleRemove, error)
 }
 
-// IncomingRuleRemove type defines function for removal of created rule
+// IncomingRuleRemove type defines function for removal of created rule.
 type IncomingRuleRemove func() error
