@@ -157,6 +157,9 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
 	assert.Equal(t, "New", se.Status)
 
+	// Wait some time for session to collect stats.
+	time.Sleep(2 * time.Second)
+
 	err = tequilapi.ConnectionDestroy()
 	assert.NoError(t, err)
 
@@ -182,17 +185,19 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 type sessionAsserter func(t *testing.T, session tequilapi_client.ConnectionSessionDTO)
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
-	"openvpn":   assertStatsNotZero,
-	"noop":      assertStatsZero,
-	"wireguard": assertStatsNotZero,
-}
-
-func assertStatsNotZero(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
-	assert.NotEqual(t, uint64(0), session.BytesSent)
-	assert.NotEqual(t, uint64(0), session.BytesReceived)
-}
-
-func assertStatsZero(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
-	assert.Equal(t, uint64(0), session.BytesSent)
-	assert.Equal(t, uint64(0), session.BytesReceived)
+	"openvpn": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
+		assert.NotEqual(t, uint64(0), session.Duration)
+		assert.NotEqual(t, uint64(0), session.BytesSent)
+		assert.NotEqual(t, uint64(0), session.BytesReceived)
+	},
+	"noop": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
+		assert.NotEqual(t, uint64(0), session.Duration)
+		assert.Equal(t, uint64(0), session.BytesSent)
+		assert.Equal(t, uint64(0), session.BytesReceived)
+	},
+	"wireguard": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
+		assert.NotEqual(t, uint64(0), session.Duration)
+		assert.NotEqual(t, uint64(0), session.BytesSent)
+		assert.NotEqual(t, uint64(0), session.BytesReceived)
+	},
 }

@@ -494,7 +494,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	consumerDataGetter := pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData
+	consumerDataGetter := pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
@@ -589,6 +589,7 @@ func newSessionManagerFactory(
 	transactor *registry.Transactor,
 	paymentsDisabled bool,
 	settler *pingpong.AccountantPromiseSettler,
+	httpClient *requests.HTTPClient,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
@@ -619,7 +620,7 @@ func newSessionManagerFactory(
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			dialog, payment_factory.BalanceSendPeriod,
 			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
-			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
+			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
@@ -840,8 +841,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 
 	if options.BlockAlways {
 		bindAddress := "0.0.0.0"
-		httpClient := requests.NewHTTPClient(bindAddress, requests.DefaultTimeout)
-		resolver := ip.NewResolver(httpClient, bindAddress, "")
+		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "")
 		outboundIP, err := resolver.GetOutboundIPAsString()
 		if err != nil {
 			return err
