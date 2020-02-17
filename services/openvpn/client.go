@@ -19,6 +19,9 @@ package openvpn
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -29,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -42,7 +46,7 @@ import (
 var ErrProcessNotStarted = errors.New("process not started yet")
 
 // processFactory creates a new openvpn process
-type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
+type processFactory func(options connection.ConnectOptions, sessionConfig *VPNConfig) (openvpn.Process, *ClientConfig, error)
 
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
@@ -63,12 +67,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 		removeAllowedIPRule: func() {},
 	}
 
-	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
-		sessionConfig := &VPNConfig{}
-		err := json.Unmarshal(options.SessionConfig, sessionConfig)
-		if err != nil {
-			return nil, nil, err
-		}
+	procFactory := func(options connection.ConnectOptions, sessionConfig *VPNConfig) (openvpn.Process, *ClientConfig, error) {
 
 		// override vpnClientConfig params with proxy local IP and pinger port
 		// do this only if connecting to natted provider
@@ -108,7 +107,7 @@ type Client struct {
 	processFactory      processFactory
 	ipResolver          ip.Resolver
 	natPinger           traversal.NATProviderPinger
-	pingerStop          chan struct{}
+	ports               []int
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
 }
@@ -130,7 +129,43 @@ func (c *Client) Statistics() (connection.Statistics, error) {
 // Start starts the connection
 func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Info().Msg("Starting connection")
-	proc, clientConfig, err := c.processFactory(options)
+
+	sessionConfig := &VPNConfig{}
+	err := json.Unmarshal(options.SessionConfig, sessionConfig)
+	if err != nil {
+		return err
+	}
+
+	if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
+		c.ports = []int{sessionConfig.LocalPort}
+		sessionConfig.Ports = []int{sessionConfig.RemotePort}
+	}
+
+	conn, err := c.natPinger.PingProvider(
+		sessionConfig.RemoteIP,
+		c.ports,
+		sessionConfig.Ports,
+		sessionConfig.LocalPort,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
+	if err != nil {
+		return err
+	}
+
+	_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
+	if err != nil {
+		return err
+	}
+
+	sessionConfig.LocalPort, _ = strconv.Atoi(lPort)
+	sessionConfig.RemotePort, _ = strconv.Atoi(rPort)
+
+	proc, clientConfig, err := c.processFactory(options, sessionConfig)
+	log.Info().Msg(fmt.Sprint(clientConfig.VpnConfig))
 	if err != nil {
 		log.Info().Err(err).Msg("Client config factory error")
 		return err
@@ -143,19 +178,6 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	}
 	c.removeAllowedIPRule = removeAllowedIPRule
 
-	if clientConfig.VpnConfig.LocalPort > 0 {
-		err = c.natPinger.PingProvider(
-			clientConfig.VpnConfig.OriginalRemoteIP,
-			clientConfig.VpnConfig.OriginalRemotePort,
-			clientConfig.LocalPort,
-			clientConfig.LocalPort+1,
-			c.pingerStop,
-		)
-		if err != nil {
-			removeAllowedIPRule()
-			return err
-		}
-	}
 	err = c.process.Start()
 	if err != nil {
 		removeAllowedIPRule()
@@ -178,7 +200,6 @@ func (c *Client) Stop() {
 			c.process.Stop()
 		}
 		c.removeAllowedIPRule()
-		close(c.pingerStop)
 	})
 }
 
@@ -205,8 +226,20 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
+	pool := port.NewPool()
+
+	for i := 0; i < 10; i++ {
+		cp, err := pool.Acquire()
+		if err != nil {
+			return nil, err
+		}
+
+		c.ports = append(c.ports, cp.Num())
+	}
+
 	return &ConsumerConfig{
-		IP: publicIP,
+		IP:    publicIP,
+		Ports: c.ports,
 	}, nil
 }
 
@@ -220,6 +253,7 @@ type VPNConfig struct {
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
 	LocalPort       int    `json:"lport"`
+	Ports           []int  `json:"ports"`
 	RemoteProtocol  string `json:"protocol"`
 	TLSPresharedKey string `json:"TLSPresharedKey"`
 	CACertificate   string `json:"CACertificate"`

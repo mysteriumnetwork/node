@@ -27,7 +27,6 @@ import (
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
-	LocalPort int
 	VpnConfig *VPNConfig
 }
 
@@ -42,7 +41,6 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort, localPort int)
 	c.SetFlag("float")
 	// more on this: https://www.v13.gr/blog/?p=386
 	c.SetParam("remote-cert-ku", "84")
-	c.LocalPort = localPort
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
 }

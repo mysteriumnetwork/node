@@ -41,7 +41,7 @@ var (
 
 // NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
 type NATProviderPinger interface {
-	PingProvider(ip string, providerPort, consumerPort, proxyPort int, stop <-chan struct{}) error
+	PingProvider(ip string, cPorts, pPorts []int, proxyPort int) (*net.UDPConn, error)
 }
 
 // NATPinger is responsible for pinging nat holes
@@ -99,11 +99,10 @@ func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 
 // Params contains session parameters needed to NAT ping remote peer
 type Params struct {
-	ProviderPort        int
-	ConsumerPort        int
-	ConsumerPublicIP    string
+	ProviderPorts       []int
+	ConsumerPorts       []int
+	IP                  string
 	ProxyPortMappingKey string
-	Cancel              chan struct{}
 }
 
 // Start starts NAT pinger and waits for PingTarget to ping
@@ -124,7 +123,7 @@ func (p *Pinger) Start() {
 }
 
 func isPunchingRequired(params *Params) bool {
-	return params.ConsumerPort > 0
+	return true
 }
 
 // Stop stops pinger loop
@@ -136,58 +135,34 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, providerPort, consumerPort, proxyPort int, stop <-chan struct{}) error {
+func (p *Pinger) PingProvider(ip string, cPorts, pPorts []int, proxyPort int) (*net.UDPConn, error) {
 	log.Info().Msg("NAT pinging to provider")
 
-	conn, err := p.getConnection(ip, providerPort, consumerPort)
+	stop := make(chan struct{})
+	defer close(stop)
+
+	conn, err := p.multiPing(ip, cPorts, pPorts, 128, stop)
 	if err != nil {
-		return errors.Wrap(err, "failed to get connection")
+		log.Err(err).Msg("Failed to ping remote peer")
+		return nil, err
 	}
 
-	// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
-	conn.SetReadDeadline(time.Now().Add(p.pingConfig.Timeout * 2))
+	consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
+	log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
 
-	pingStop := make(chan struct{})
-	defer close(pingStop)
-	go func() {
-		err := p.ping(conn, pingStop)
-		if err != nil {
-			log.Warn().Err(err).Msg("Error while pinging")
-		}
-	}()
+	p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 
-	time.Sleep(p.pingConfig.Interval)
-	err = p.pingReceiver(conn, stop)
-	if err != nil {
-		return err
-	}
-
-	// send one last ping request to end hole punching procedure gracefully
-	err = p.sendPingRequest(conn, 128)
-	if err != nil {
-		return errors.Wrap(err, "remote ping failed")
-	}
-
-	if proxyPort > 0 {
-		consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
-		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
-
-		// Set higher read deadline when NAT proxy is used.
-		conn.SetReadDeadline(time.Now().Add(12 * time.Hour))
-		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
-	} else {
-		log.Info().Msg("Closing ping connection")
-		if err := conn.Close(); err != nil {
-			return errors.Wrap(err, "could not close ping conn")
-		}
-	}
-	return nil
+	return conn, err
 }
 
-func (p *Pinger) ping(conn *net.UDPConn, stop <-chan struct{}) error {
+func (p *Pinger) ping(conn *net.UDPConn, ttl int, stop <-chan struct{}) error {
 	// Windows detects that 1 TTL is too low and throws an exception during send
-	ttl := 0
 	i := 0
+
+	err := ipv4.NewConn(conn).SetTTL(ttl)
+	if err != nil {
+		return errors.Wrap(err, "pinger setting ttl failed")
+	}
 
 	for {
 		select {
@@ -195,22 +170,12 @@ func (p *Pinger) ping(conn *net.UDPConn, stop <-chan struct{}) error {
 			return nil
 
 		case <-time.After(p.pingConfig.Interval):
-			log.Debug().Msg("Pinging... ")
-			// This is the essence of the TTL based udp punching.
-			// We're slowly increasing the TTL so that the packet is held.
-			// After a few attempts we're setting the value to 128 and assuming we're through.
-			// We could stop sending ping to Consumer beyond 4 hops to prevent from possible Consumer's router's
-			//  DOS block, but we plan, that Consumer at the same time will be Provider too in near future.
-			ttl++
+			log.Debug().Msgf("Pinging %s from %s...", conn.RemoteAddr().String(), conn.LocalAddr().String())
 
-			if ttl > 4 {
-				ttl = 128
-			}
-
-			err := p.sendPingRequest(conn, ttl)
+			_, err := conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
 			if err != nil {
 				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
-				return err
+				return errors.Wrap(err, "pinging request failed")
 			}
 
 			i++
@@ -224,25 +189,15 @@ func (p *Pinger) ping(conn *net.UDPConn, stop <-chan struct{}) error {
 	}
 }
 
-func (p *Pinger) sendPingRequest(conn *net.UDPConn, ttl int) error {
-	err := ipv4.NewConn(conn).SetTTL(ttl)
-	if err != nil {
-		return errors.Wrap(err, "pinger setting ttl failed")
-	}
-
-	_, err = conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
-	return errors.Wrap(err, "pinging request failed")
-}
-
-func (p *Pinger) getConnection(ip string, port int, pingerPort int) (*net.UDPConn, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
+func (p *Pinger) getConnection(ip string, remotePort int, localPort int) (*net.UDPConn, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, remotePort))
 	if err != nil {
 		return nil, err
 	}
 
 	log.Info().Msg("Remote socket: " + udpAddr.String())
 
-	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: pingerPort}, udpAddr)
+	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: localPort}, udpAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -280,16 +235,18 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		case <-stop:
 			return errNATPunchAttemptStopped
 		default:
+			// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
+			conn.SetReadDeadline(time.Now().Add(p.pingConfig.Timeout * 2))
 			n, err := conn.Read(buf)
-			if err != nil {
+			// Set higher read deadline when NAT proxy is used.
+			conn.SetReadDeadline(time.Now().Add(12 * time.Hour))
+			if err != nil || n == 0 {
 				log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", conn.RemoteAddr().String())
 				continue
 			}
 
-			if n > 0 {
-				log.Info().Msgf("Remote peer data received: %s, len: %d", string(buf[:n]), n)
-				return nil
-			}
+			log.Info().Msgf("Remote peer data received: %s, len: %d", string(buf[:n]), n)
+			return nil
 		}
 	}
 }
@@ -312,36 +269,66 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 		return
 	}
 
-	log.Info().Msgf("Ping target received: IP: %v, port: %v", pingParams.ConsumerPublicIP, pingParams.ConsumerPort)
-	if !p.natProxy.isAvailable(pingParams.ProxyPortMappingKey) {
-		log.Warn().Msgf("NATProxy is not available for this transport protocol key %v", pingParams.ProxyPortMappingKey)
-		return
-	}
+	stop := make(chan struct{})
+	defer close(stop)
 
-	conn, err := p.getConnection(pingParams.ConsumerPublicIP, pingParams.ConsumerPort, pingParams.ProviderPort)
+	conn, err := p.multiPing(pingParams.IP, pingParams.ProviderPorts, pingParams.ConsumerPorts, 2, stop)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get connection")
+		log.Err(err).Msg("Failed to ping remote peer")
 		return
 	}
 
-	pingStop := make(chan struct{})
-	defer close(pingStop)
+	err = ipv4.NewConn(conn).SetTTL(128)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to set connection TTL")
+		return
+	}
+
+	conn.Write([]byte("Using this connection"))
+
+	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
+	log.Info().Msg("Ping received, waiting for a new connection")
+
+	go p.natProxy.handOff(pingParams.ProxyPortMappingKey, conn)
+}
+
+func (p *Pinger) multiPing(remoteIP string, localPorts, remotePorts []int, initialTTL int, stop <-chan struct{}) (*net.UDPConn, error) {
+	if len(localPorts) != len(remotePorts) {
+		return nil, errors.New("number of local and remote ports does not match")
+	}
+
+	type res struct {
+		conn *net.UDPConn
+		err  error
+	}
+
+	ch := make(chan res, len(localPorts))
+
+	for i := range localPorts {
+		go func(i int) {
+			conn, err := p.singlePing(remoteIP, localPorts[i], remotePorts[i], initialTTL+i, stop)
+			ch <- res{conn, err}
+		}(i)
+	}
+
+	// First responce wins. Other are not important.
+	r := <-ch
+	return r.conn, r.err
+}
+
+func (p *Pinger) singlePing(remoteIP string, localPort, remotePort, ttl int, stop <-chan struct{}) (*net.UDPConn, error) {
+	conn, err := p.getConnection(remoteIP, remotePort, localPort)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get connection")
+	}
+
 	go func() {
-		err := p.ping(conn, pingStop)
+		err := p.ping(conn, ttl, stop)
 		if err != nil {
 			log.Warn().Err(err).Msg("Error while pinging")
 		}
 	}()
 
-	err = p.pingReceiver(conn, pingParams.Cancel)
-	if err != nil {
-		log.Error().Err(err).Msg("Ping receiver error")
-		return
-	}
-
-	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
-
-	log.Info().Msg("Ping received, waiting for a new connection")
-
-	go p.natProxy.handOff(pingParams.ProxyPortMappingKey, conn)
+	err = p.pingReceiver(conn, stop)
+	return conn, errors.Wrap(err, "ping receiver error")
 }

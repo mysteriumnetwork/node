@@ -244,10 +244,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 		return nil, errors.New("Service port not initialized")
 	}
 
-	traversalParams := &traversal.Params{
-		Cancel:       make(chan struct{}),
-		ProviderPort: m.vpnServerPort,
-	}
+	traversalParams := &traversal.Params{}
 
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
@@ -265,6 +262,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 	if m.dnsOK {
 		vpnConfig.DNSIPs = m.dnsIP.String()
 	}
+	vpnConfig.Ports = []int{} // TODO This line will not be required once we will have unique VPN config for every connection.
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
@@ -274,27 +272,25 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 			return nil, errors.Wrap(err, "could not parse consumer config")
 		}
 
-		if m.behindNAT(publicIP) && m.portMappingFailed() {
-			pp, err := m.natPingerPorts.Acquire()
-			if err != nil {
-				return nil, err
+		if m.location.BehindNAT() && m.portMappingFailed() {
+			for range consumerConfig.Ports {
+				pp, err := m.natPingerPorts.Acquire()
+				if err != nil {
+					return nil, err
+				}
+
+				vpnConfig.Ports = append(vpnConfig.Ports, pp.Num())
 			}
 
-			cp, err := m.natPingerPorts.Acquire()
-			if err != nil {
-				return nil, err
-			}
-
-			traversalParams.ProviderPort = pp.Num()
-			traversalParams.ConsumerPort = cp.Num()
 			// For OpenVPN only one running NAT proxy required.
-			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
-			vpnConfig.LocalPort = traversalParams.ConsumerPort
-			vpnConfig.RemotePort = traversalParams.ProviderPort
 			if consumerConfig.IP == "" {
 				return nil, errors.New("remote party does not support NAT Hole punching, public IP is missing")
 			}
-			traversalParams.ConsumerPublicIP = consumerConfig.IP
+
+			traversalParams.IP = consumerConfig.IP
+			traversalParams.ProviderPorts = vpnConfig.Ports
+			traversalParams.ConsumerPorts = consumerConfig.Ports
+			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
 		}
 	}
 

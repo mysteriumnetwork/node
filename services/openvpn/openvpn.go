@@ -19,5 +19,6 @@ package openvpn
 
 // ConsumerConfig is used for sending some configuration from consumer to provider
 type ConsumerConfig struct {
-	IP string `json:"Ip,omitempty"`
+	IP    string `json:"Ip,omitempty"`
+	Ports []int  `json:"Ports",omitempty"`
 }
