@@ -102,7 +102,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(7000001, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGigabyte,
+				PerByte: bytesInGibibyte,
 			},
 		},
 	}
@@ -110,7 +110,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(0, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGigabyte,
+				PerByte: bytesInGibibyte,
 			},
 		},
 	}
@@ -118,7 +118,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(7000000, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGigabyte,
+				PerByte: bytesInGibibyte,
 			},
 		},
 	}
@@ -126,7 +126,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(50000, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: 7142857,
+				PerByte: 7669584,
 			},
 		},
 	}

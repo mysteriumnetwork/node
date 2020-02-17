@@ -21,6 +21,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -71,11 +72,11 @@ func PriceMinute(lowerBound, upperBound uint64) func(market.ServiceProposal) boo
 	return pricePerTime(lowerBound, upperBound, time.Minute)
 }
 
-const bytesInGigabyte = 1_000_000_000
+var bytesInGibibyte = datasize.GB.Bits() / datasize.Byte.Bits()
 
-// PriceGB checks if the price per GB is below the given value
-func PriceGB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
-	return pricePerDataTransfer(lowerBound, upperBound, bytesInGigabyte)
+// PriceGiB checks if the price per GiB is below the given value
+func PriceGiB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+	return pricePerDataTransfer(lowerBound, upperBound, bytesInGibibyte)
 }
 
 func pricePerTime(lowerBound, upperBound uint64, duration time.Duration) func(market.ServiceProposal) bool {

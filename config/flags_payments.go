@@ -72,15 +72,15 @@ var (
 		Usage: "Sets the minimum price of the service per minute. All proposals with a below above this bound will be filtered out and not visible.",
 		Value: 0,
 	}
-	// FlagPaymentsConsumerPricePerGBUpperBound sets the upper price bound per gb to a set value.
+	// FlagPaymentsConsumerPricePerGBUpperBound sets the upper price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBUpperBound = cli.Uint64Flag{
-		Name:  "payments.consumer.price-pergb-max",
+		Name:  "payments.consumer.price-pergib-max",
 		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
 		Value: 7000000,
 	}
-	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per gb to a set value.
+	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBLowerBound = cli.Uint64Flag{
-		Name:  "payments.consumer.price-pergb-min",
+		Name:  "payments.consumer.price-pergib-min",
 		Usage: "Sets the minimum price of the service per gb. All proposals with a below above this bound will be filtered out and not visible.",
 		Value: 0,
 	}

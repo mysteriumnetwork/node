@@ -51,7 +51,7 @@ var (
 	// FlagOpenvpnStatisticsReportInterval changes the reporting interval.
 	FlagOpenvpnStatisticsReportInterval = cli.DurationFlag{
 		Name:  "openvpn.stats.interval",
-		Usage: "openvpn statistics reporting interval",
+		Usage: "Sets the frequency of statistics reporting",
 		Value: time.Second * 2,
 	}
 )

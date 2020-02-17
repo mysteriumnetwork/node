@@ -45,7 +45,7 @@ var (
 	// FlagWireguardStatInterval sets the statistic interval
 	FlagWireguardStatInterval = cli.DurationFlag{
 		Name:  "wireguard.stats.interval",
-		Usage: "Sets the frequency in seconds of statistics reporting",
+		Usage: "Sets the frequency of statistics reporting",
 		Value: time.Second * 2,
 	}
 )

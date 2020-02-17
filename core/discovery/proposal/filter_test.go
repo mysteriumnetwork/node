@@ -21,12 +21,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
-const bytesInGigabyte = 1000000000
+var bytesInGibibyte = datasize.GB.Bits() / datasize.Byte.Bits()
 
 var (
 	provider1            = "0x1"
@@ -90,7 +91,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(7000001, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGigabyte,
+				PerByte: bytesInGibibyte,
 			},
 		},
 	}
@@ -98,7 +99,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(0, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGigabyte,
+				PerByte: bytesInGibibyte,
 			},
 		},
 	}
@@ -106,7 +107,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(7000000, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGigabyte,
+				PerByte: bytesInGibibyte,
 			},
 		},
 	}
@@ -114,7 +115,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(50000, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: 7142857,
+				PerByte: 7669584,
 			},
 		},
 	}
@@ -122,7 +123,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(50000, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: 7142857,
+				PerByte: 7669584,
 			},
 		},
 		ServiceDefinition: &mockServiceDefinition{},

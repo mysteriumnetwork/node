@@ -63,7 +63,7 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 	}
 
 	if filter.UpperGBPriceBound != nil && filter.LowerGBPriceBound != nil {
-		conditions = append(conditions, reducer.PriceGB(*filter.LowerGBPriceBound, *filter.UpperGBPriceBound))
+		conditions = append(conditions, reducer.PriceGiB(*filter.LowerGBPriceBound, *filter.UpperGBPriceBound))
 	}
 
 	if len(conditions) > 0 {

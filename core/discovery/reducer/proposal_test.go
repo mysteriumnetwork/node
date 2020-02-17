@@ -100,8 +100,8 @@ func Test_PriceMinute_FiltersByPrice(t *testing.T) {
 	assert.True(t, match(proposalTimeCheap))
 }
 
-func Test_PriceGB_FiltersByPrice(t *testing.T) {
-	match := PriceGB(100, 7000000)
+func Test_PriceGiB_FiltersByPrice(t *testing.T) {
+	match := PriceGiB(100, 7000000)
 
 	assert.True(t, match(proposalEmpty))
 	assert.False(t, match(proposalBytesExpensive))
@@ -109,6 +109,6 @@ func Test_PriceGB_FiltersByPrice(t *testing.T) {
 	assert.True(t, match(proposalBytesExact))
 	assert.True(t, match(proposalBytesExactInParts))
 
-	match = PriceGB(0, 7000000)
+	match = PriceGiB(0, 7000000)
 	assert.True(t, match(proposalBytesCheap))
 }
