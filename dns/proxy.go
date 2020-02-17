@@ -31,7 +31,7 @@ import (
 // Proxy defines DNS server with all handler attached to it.
 type Proxy struct {
 	server         *dns.Server
-	trafficBlocker firewall.IncomingTrafficBlocker
+	trafficBlocker firewall.IncomingTrafficFirewall
 	policies       *policy.Repository
 }
 

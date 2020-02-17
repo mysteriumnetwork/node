@@ -19,15 +19,15 @@
 
 package firewall
 
-// NewOutgoingTrafficBlocker creates instance of traffic blocker.
-func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
-	return &outgoingBlockerIptables{
+// NewOutgoingTrafficFirewall creates firewall instance for outgoing traffic.
+func NewOutgoingTrafficFirewall() OutgoingTrafficFirewall {
+	return &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 		trafficLockScope: none,
 	}
 }
 
-// NewIncomingTrafficBlocker creates instance of traffic blocker.
-func NewIncomingTrafficBlocker() IncomingTrafficBlocker {
-	return NewIncomingTrafficBlockerIptables()
+// NewIncomingTrafficFirewall creates firewall instance for incoming traffic.
+func NewIncomingTrafficFirewall() IncomingTrafficFirewall {
+	return &incomingFirewallIptables{}
 }

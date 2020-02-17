@@ -19,7 +19,12 @@
 
 package firewall
 
-// NewTrackingBlocker create instance of traffic blocker.
-func NewTrackingBlocker() *noopTrafficBlocker {
-	return &noopTrafficBlocker{}
+// NewOutgoingTrafficFirewall creates firewall instance for outgoing traffic.
+func NewOutgoingTrafficFirewall() OutgoingTrafficFirewall {
+	return &outgoingFirewallNoop{}
+}
+
+// NewIncomingTrafficFirewall creates firewall instance for incoming traffic.
+func NewIncomingTrafficFirewall() IncomingTrafficFirewall {
+	return &incomingFirewallNoop{}
 }

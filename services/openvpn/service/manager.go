@@ -83,7 +83,7 @@ type Manager struct {
 	dnsProxy       *dns.Proxy
 	eventListener  eventListener
 	portMapper     mapping.PortMapper
-	trafficBlocker firewall.IncomingTrafficBlocker
+	trafficBlocker firewall.IncomingTrafficFirewall
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 

@@ -24,17 +24,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
+func Test_outgoingFirewallIptables_BlocksAllOutgoingTraffic(t *testing.T) {
 	mockedExec := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &outgoingBlockerIptables{
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
-	removeRuleFunc, err := blocker.BlockOutgoingTraffic("test-scope", "1.1.1.1")
+	removeRuleFunc, err := fw.BlockOutgoingTraffic("test-scope", "1.1.1.1")
 	assert.NoError(t, err)
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-A", "OUTPUT", "-s", "1.1.1.1", "-j", killswitchChain))
 
@@ -42,74 +42,74 @@ func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-D", "OUTPUT", "-s", "1.1.1.1", "-j", killswitchChain))
 }
 
-func TestSessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
+func Test_outgoingFirewallIptables_SessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
 	mockedExec := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &outgoingBlockerIptables{
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
-	removeGlobalBlock, err := blocker.BlockOutgoingTraffic(Global, "1.1.1.1")
+	removeGlobalBlock, err := fw.BlockOutgoingTraffic(Global, "1.1.1.1")
 	assert.NoError(t, err)
-	assert.Equal(t, 1, blocker.referenceTracker["block-traffic"].count)
+	assert.Equal(t, 1, fw.referenceTracker["block-traffic"].count)
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-A", "OUTPUT", "-s", "1.1.1.1", "-j", killswitchChain))
 
-	removeSessionRule, _ := blocker.BlockOutgoingTraffic(Session, "1.1.1.1")
-	assert.Equal(t, 1, blocker.referenceTracker["block-traffic"].count)
+	removeSessionRule, _ := fw.BlockOutgoingTraffic(Session, "1.1.1.1")
+	assert.Equal(t, 1, fw.referenceTracker["block-traffic"].count)
 
 	removeSessionRule()
-	assert.Equal(t, 1, blocker.referenceTracker["block-traffic"].count)
+	assert.Equal(t, 1, fw.referenceTracker["block-traffic"].count)
 
 	removeGlobalBlock()
-	assert.Equal(t, 0, blocker.referenceTracker["block-traffic"].count)
+	assert.Equal(t, 0, fw.referenceTracker["block-traffic"].count)
 }
 
-func TestAllowIPAccessIsAddedAndRemoved(t *testing.T) {
-	blocker := &outgoingBlockerIptables{
+func Test_outgoingFirewallIptables_AllowIPAccessIsAddedAndRemoved(t *testing.T) {
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
-	removeRule, _ := blocker.AllowIPAccess("test-ip")
-	assert.Equal(t, 1, blocker.referenceTracker["allow:test-ip"].count)
+	removeRule, _ := fw.AllowIPAccess("test-ip")
+	assert.Equal(t, 1, fw.referenceTracker["allow:test-ip"].count)
 	removeRule()
-	assert.Equal(t, 0, blocker.referenceTracker["allow:test-ip"].count)
+	assert.Equal(t, 0, fw.referenceTracker["allow:test-ip"].count)
 }
 
-func TestHostsFromMultipleURLsAreAllowed(t *testing.T) {
-	blocker := &outgoingBlockerIptables{
+func Test_outgoingFirewallIptables_HostsFromMultipleURLsAreAllowed(t *testing.T) {
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
-	removeRules, _ := blocker.AllowURLAccess("http://url1", "my-schema://url2:500/ignoredpath?ignoredQuery=true")
-	assert.Equal(t, 1, blocker.referenceTracker["allow:url1"].count)
-	assert.Equal(t, 1, blocker.referenceTracker["allow:url2"].count)
+	removeRules, _ := fw.AllowURLAccess("http://url1", "my-schema://url2:500/ignoredpath?ignoredQuery=true")
+	assert.Equal(t, 1, fw.referenceTracker["allow:url1"].count)
+	assert.Equal(t, 1, fw.referenceTracker["allow:url2"].count)
 	removeRules()
-	assert.Equal(t, 0, blocker.referenceTracker["allow:url1"].count)
-	assert.Equal(t, 0, blocker.referenceTracker["allow:url2"].count)
+	assert.Equal(t, 0, fw.referenceTracker["allow:url1"].count)
+	assert.Equal(t, 0, fw.referenceTracker["allow:url2"].count)
 }
 
-func TestRuleIsRemovedOnlyAfterLastRemovalCall(t *testing.T) {
-	blocker := &outgoingBlockerIptables{
+func Test_outgoingFirewallIptables_RuleIsRemovedOnlyAfterLastRemovalCall(t *testing.T) {
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
 	//two independent allow requests for the same service
-	removalRequest1, _ := blocker.AllowIPAccess("service")
-	removalRequest2, _ := blocker.AllowIPAccess("service")
+	removalRequest1, _ := fw.AllowIPAccess("service")
+	removalRequest2, _ := fw.AllowIPAccess("service")
 	//make sure allow ip was called once
-	assert.Equal(t, 1, blocker.referenceTracker["allow:service"].count)
+	assert.Equal(t, 1, fw.referenceTracker["allow:service"].count)
 	//first removal should have no effect
 	removalRequest1()
-	assert.Equal(t, 0, blocker.referenceTracker["allow:service"].count)
+	assert.Equal(t, 0, fw.referenceTracker["allow:service"].count)
 	//second removal removes added rule
 	removalRequest2()
-	assert.Equal(t, 0, blocker.referenceTracker["allow:service"].count)
+	assert.Equal(t, 0, fw.referenceTracker["allow:service"].count)
 }
 
-func TestBlockerSetupIsSuccessful(t *testing.T) {
+func Test_outgoingFirewallIptables_SetupIsSuccessful(t *testing.T) {
 	mockedExec := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{
 			"--version": {
@@ -124,15 +124,15 @@ func TestBlockerSetupIsSuccessful(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &outgoingBlockerIptables{
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
-	assert.NoError(t, blocker.Setup())
+	assert.NoError(t, fw.Setup())
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-N", killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-A", killswitchChain, "-m", "conntrack", "--ctstate", "NEW", "-j", "REJECT"))
 }
 
-func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
+func Test_outgoingFirewallIptables_SetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 	mockedExec := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{
 			"--version": {
@@ -157,10 +157,10 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &outgoingBlockerIptables{
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
-	assert.NoError(t, blocker.Setup())
+	assert.NoError(t, fw.Setup())
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-D", "OUTPUT", "-s", "5.5.5.5", "-j", killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-F", killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-X", killswitchChain))
@@ -169,7 +169,7 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 
 }
 
-func TestBlockerResetIsSuccessful(t *testing.T) {
+func Test_outgoingFirewallIptables_ResetIsSuccessful(t *testing.T) {
 	mockedExec := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{
 			"-S OUTPUT": {
@@ -193,26 +193,26 @@ func TestBlockerResetIsSuccessful(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &outgoingBlockerIptables{
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
-	blocker.Teardown()
+	fw.Teardown()
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-D", "OUTPUT", "-s", "1.1.1.1", "-j", killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-F", killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-X", killswitchChain))
 }
 
-func TestBlockerAddsAllowedIP(t *testing.T) {
+func Test_outgoingFirewallIptables_AddsAllowedIP(t *testing.T) {
 	mockedExec := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &outgoingBlockerIptables{
+	fw := &outgoingFirewallIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
-	removeRuleFunc, err := blocker.AllowIPAccess("2.2.2.2")
+	removeRuleFunc, err := fw.AllowIPAccess("2.2.2.2")
 	assert.NoError(t, err)
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-I", killswitchChain, "1", "-d", "2.2.2.2", "-j", "ACCEPT"))
 

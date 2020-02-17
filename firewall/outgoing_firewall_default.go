@@ -18,21 +18,21 @@
 package firewall
 
 const (
-	// Global scope overrides session scope and is not affected by session scope calls
+	// Global scope overrides session scope and is not affected by session scope calls.
 	Global Scope = "global"
-	// Session scope block is applied before connection session begins and is removed when session ends
+	// Session scope block is applied before connection session begins and is removed when session ends.
 	Session Scope = "session"
-	// internal state to mark that no blocks are in effect
+	// internal state to mark that no blocks are in effect.
 	none Scope = ""
 )
 
-// DefaultTrackingBlocker traffic blocker bootstrapped for global calls
-var DefaultTrackingBlocker OutgoingTrafficBlocker = &outgoingBlockerNoop{}
+// DefaultOutgoingFirewall outgoing traffic firewall bootstrapped for global calls.
+var DefaultOutgoingFirewall OutgoingTrafficFirewall = &outgoingFirewallNoop{}
 
-// OutgoingTrafficBlocker defines consumer side firewall a.k.a. kill switch.
+// OutgoingTrafficFirewall defines consumer side firewall a.k.a. kill switch.
 // Purpose is to detect traffic which leaves machine and reject it,
 // because during established VPN connection it is expected to leave through tunnel device only.
-type OutgoingTrafficBlocker interface {
+type OutgoingTrafficFirewall interface {
 	Setup() error
 	Teardown()
 	BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error)
@@ -48,20 +48,20 @@ type OutgoingRuleRemove func()
 
 // BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope.
 func BlockNonTunnelTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
-	return DefaultTrackingBlocker.BlockOutgoingTraffic(scope, outboundIP)
+	return DefaultOutgoingFirewall.BlockOutgoingTraffic(scope, outboundIP)
 }
 
 // AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken).
 func AllowURLAccess(urls ...string) (OutgoingRuleRemove, error) {
-	return DefaultTrackingBlocker.AllowURLAccess(urls...)
+	return DefaultOutgoingFirewall.AllowURLAccess(urls...)
 }
 
-// AllowIPAccess adds IP based exception to underlying blocker implementation.
+// AllowIPAccess adds IP based exception.
 func AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
-	return DefaultTrackingBlocker.AllowIPAccess(ip)
+	return DefaultOutgoingFirewall.AllowIPAccess(ip)
 }
 
 // Reset firewall state - usually called when cleanup is needed (during shutdown).
 func Reset() {
-	DefaultTrackingBlocker.Teardown()
+	DefaultOutgoingFirewall.Teardown()
 }

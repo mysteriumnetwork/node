@@ -33,14 +33,14 @@ type refCount struct {
 	f     func()
 }
 
-type outgoingBlockerIptables struct {
+type outgoingFirewallIptables struct {
 	lock             sync.Mutex
 	trafficLockScope Scope
 	referenceTracker map[string]refCount
 }
 
 // Setup tries to setup all changes made by setup and leave system in the state before setup.
-func (obi *outgoingBlockerIptables) Setup() error {
+func (obi *outgoingFirewallIptables) Setup() error {
 	if err := obi.checkIptablesVersion(); err != nil {
 		return err
 	}
@@ -51,14 +51,14 @@ func (obi *outgoingBlockerIptables) Setup() error {
 }
 
 // Teardown tries to cleanup all changes made by setup and leave system in the state before setup.
-func (obi *outgoingBlockerIptables) Teardown() {
+func (obi *outgoingFirewallIptables) Teardown() {
 	if err := obi.cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
 }
 
 // BlockOutgoingTraffic effectively disallows any outgoing traffic from consumer node with specified scope.
-func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
+func (obi *outgoingFirewallIptables) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
 	if obi.trafficLockScope == Global {
 		// nothing can override global lock
 		return func() {}, nil
@@ -73,7 +73,7 @@ func (obi *outgoingBlockerIptables) BlockOutgoingTraffic(scope Scope, outboundIP
 }
 
 // AllowIPAccess adds exception to blocked traffic for specified URL (host part is usually taken).
-func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
+func (obi *outgoingFirewallIptables) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
 	return obi.trackingReferenceCall("allow:"+ip, func() (rule OutgoingRuleRemove, e error) {
 		return iptables.AddRuleWithRemoval(
 			iptables.InsertAt(killswitchChain, 1).RuleSpec("-d", ip, "-j", "ACCEPT"),
@@ -81,8 +81,8 @@ func (obi *outgoingBlockerIptables) AllowIPAccess(ip string) (OutgoingRuleRemove
 	})
 }
 
-// AllowURLAccess adds URL based exception to underlying blocker implementation.
-func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
+// AllowURLAccess adds URL based exception.
+func (obi *outgoingFirewallIptables) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
 	var ruleRemovers []func()
 	removeAll := func() {
 		for _, ruleRemover := range ruleRemovers {
@@ -106,7 +106,7 @@ func (obi *outgoingBlockerIptables) AllowURLAccess(rawURLs ...string) (OutgoingR
 	return removeAll, nil
 }
 
-func (obi *outgoingBlockerIptables) checkIptablesVersion() error {
+func (obi *outgoingFirewallIptables) checkIptablesVersion() error {
 	output, err := iptables.Exec("--version")
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (obi *outgoingBlockerIptables) checkIptablesVersion() error {
 	return nil
 }
 
-func (obi *outgoingBlockerIptables) setupKillSwitchChain() error {
+func (obi *outgoingFirewallIptables) setupKillSwitchChain() error {
 	// Add chain
 	if _, err := iptables.Exec("-N", killswitchChain); err != nil {
 		return err
@@ -139,7 +139,7 @@ func (obi *outgoingBlockerIptables) setupKillSwitchChain() error {
 	return nil
 }
 
-func (obi *outgoingBlockerIptables) cleanupStaleRules() error {
+func (obi *outgoingFirewallIptables) cleanupStaleRules() error {
 	// List rules
 	rules, err := iptables.Exec("-S", "OUTPUT")
 	if err != nil {
@@ -173,7 +173,7 @@ func (obi *outgoingBlockerIptables) cleanupStaleRules() error {
 	return err
 }
 
-func (obi *outgoingBlockerIptables) trackingReferenceCall(ref string, actualCall func() (OutgoingRuleRemove, error)) (OutgoingRuleRemove, error) {
+func (obi *outgoingFirewallIptables) trackingReferenceCall(ref string, actualCall func() (OutgoingRuleRemove, error)) (OutgoingRuleRemove, error) {
 	obi.lock.Lock()
 	defer obi.lock.Unlock()
 
@@ -192,7 +192,7 @@ func (obi *outgoingBlockerIptables) trackingReferenceCall(ref string, actualCall
 	return obi.decreaseRefCall(ref), nil
 }
 
-func (obi *outgoingBlockerIptables) decreaseRefCall(ref string) OutgoingRuleRemove {
+func (obi *outgoingFirewallIptables) decreaseRefCall(ref string) OutgoingRuleRemove {
 	return func() {
 		obi.lock.Lock()
 		defer obi.lock.Unlock()
@@ -207,4 +207,4 @@ func (obi *outgoingBlockerIptables) decreaseRefCall(ref string) OutgoingRuleRemo
 	}
 }
 
-var _ OutgoingTrafficBlocker = &outgoingBlockerIptables{}
+var _ OutgoingTrafficFirewall = &outgoingFirewallIptables{}

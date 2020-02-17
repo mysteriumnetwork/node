@@ -21,8 +21,8 @@ import (
 	"net"
 )
 
-// IncomingTrafficBlocker defines provider side firewall, to control which traffic is enabled to pass and which not.
-type IncomingTrafficBlocker interface {
+// IncomingTrafficFirewall defines provider side firewall, to control which traffic is enabled to pass and which not.
+type IncomingTrafficFirewall interface {
 	Setup() error
 	Teardown()
 	BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error)

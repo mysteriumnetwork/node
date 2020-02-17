@@ -135,7 +135,7 @@ type Dependencies struct {
 	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.EventBasedStorage
-	ServiceFirewall       firewall.IncomingTrafficBlocker
+	ServiceFirewall       firewall.IncomingTrafficFirewall
 
 	NATPinger      traversal.NATPinger
 	NATTracker     *event.Tracker
@@ -801,12 +801,12 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
-	firewall.DefaultTrackingBlocker = firewall.NewOutgoingTrafficBlocker()
-	if err := firewall.DefaultTrackingBlocker.Setup(); err != nil {
+	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall()
+	if err := firewall.DefaultOutgoingFirewall.Setup(); err != nil {
 		return err
 	}
 
-	di.ServiceFirewall = firewall.NewIncomingTrafficBlocker()
+	di.ServiceFirewall = firewall.NewIncomingTrafficFirewall()
 	if err := di.ServiceFirewall.Setup(); err != nil {
 		return err
 	}

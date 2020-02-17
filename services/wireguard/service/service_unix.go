@@ -104,7 +104,7 @@ type Manager struct {
 	natEventGetter NATEventGetter
 	publisher      eventbus.Publisher
 	portMapper     mapping.PortMapper
-	trafficBlocker firewall.IncomingTrafficBlocker
+	trafficBlocker firewall.IncomingTrafficFirewall
 
 	dnsOK    bool
 	dnsPort  int
