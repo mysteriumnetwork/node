@@ -80,8 +80,8 @@ type InvoicePayer struct {
 	lastInvoice crypto.Invoice
 	deps        InvoicePayerDeps
 
-	dataTransfered     dataTransfered
-	dataTransferedLock sync.Mutex
+	dataTransferred     dataTransferred
+	dataTransferredLock sync.Mutex
 }
 
 // InvoicePayerDeps contains all the dependencies for the exchange message tracker.
@@ -123,7 +123,7 @@ func (ip *InvoicePayer) Start() error {
 
 	ip.deps.TimeTracker.StartTracking()
 
-	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferedEvent)
+	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to data transfer events")
 	}
@@ -195,7 +195,7 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), ip.getDataTransfered(), ip.deps.Proposal.PaymentMethod)
+	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), ip.getDataTransferred(), ip.deps.Proposal.PaymentMethod)
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * consumerInvoiceTolerance))
 	if !ip.receivedFirst {
@@ -261,12 +261,12 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 func (ip *InvoicePayer) Stop() {
 	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferedEvent)
+		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
 		close(ip.stop)
 	})
 }
 
-func (ip *InvoicePayer) consumeDataTransferedEvent(e connection.SessionStatsEvent) {
+func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.SessionStatsEvent) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(string(e.SessionInfo.SessionID), ip.deps.SessionID) {
 		return
@@ -279,28 +279,28 @@ func (ip *InvoicePayer) consumeDataTransferedEvent(e connection.SessionStatsEven
 }
 
 func (ip *InvoicePayer) updateDataTransfer(up, down uint64) {
-	ip.dataTransferedLock.Lock()
-	defer ip.dataTransferedLock.Unlock()
+	ip.dataTransferredLock.Lock()
+	defer ip.dataTransferredLock.Unlock()
 
-	newUp := ip.dataTransfered.up
-	if up > ip.dataTransfered.up {
+	newUp := ip.dataTransferred.up
+	if up > ip.dataTransferred.up {
 		newUp = up
 	}
 
-	newDown := ip.dataTransfered.down
-	if down > ip.dataTransfered.down {
+	newDown := ip.dataTransferred.down
+	if down > ip.dataTransferred.down {
 		newDown = down
 	}
 
-	ip.dataTransfered = dataTransfered{
+	ip.dataTransferred = dataTransferred{
 		up:   newUp,
 		down: newDown,
 	}
 }
 
-func (ip *InvoicePayer) getDataTransfered() dataTransfered {
-	ip.dataTransferedLock.Lock()
-	defer ip.dataTransferedLock.Unlock()
+func (ip *InvoicePayer) getDataTransferred() dataTransferred {
+	ip.dataTransferredLock.Lock()
+	defer ip.dataTransferredLock.Unlock()
 
-	return ip.dataTransfered
+	return ip.dataTransferred
 }

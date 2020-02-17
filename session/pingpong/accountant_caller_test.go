@@ -85,7 +85,7 @@ func TestAccountantCaller_RevealR_OK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte(`{
-			"message": "R succesfully revealed"
+			"message": "R successfully revealed"
 		  }`))
 		assert.NoError(t, err)
 	}))

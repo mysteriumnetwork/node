@@ -44,15 +44,15 @@ const InvoiceSendPeriod = time.Second * 60
 const DefaultAccountantFailureCount uint64 = 10
 
 // DefaultPaymentMethod represents the the default payment method of time + bytes.
-// The rate is frozen at 0.07MYSTT per GiB of data transfered and 0.0005MYSTT/minute.
+// The rate is frozen at 0.07MYSTT per GiB of data transferred and 0.0005MYSTT/minute.
 // Since the price is calculated based on the rate and price, for 1 GiB we need:
 // 0.07 * 100 000 000 / 50 000 = 140 chunks.
 // 1024 * 1024 * 1024(or 1 GiB)  / 140 ~= 7669584.
-// Therefore, for reach 7669584 bytes transfered, we'll pay 0.0005 MYSTT.
+// Therefore, for reach 7669584 bytes transferred, we'll pay 0.0005 MYSTT.
 var DefaultPaymentMethod = PaymentMethod{
 	Price:    money.NewMoney(50000, money.CurrencyMyst),
 	Duration: time.Minute,
-	Type:     "BYTES_TRANSFERED_WITH_TIME",
+	Type:     "BYTES_TRANSFERRED_WITH_TIME",
 	Bytes:    7669584,
 }
 
