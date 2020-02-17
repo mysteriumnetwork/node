@@ -146,7 +146,6 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	// stop the balance tracker once the session is finished
 	go func() {
 		<-session.done
-		close(pingerParams.Cancel)
 		engine.Stop()
 	}()
 

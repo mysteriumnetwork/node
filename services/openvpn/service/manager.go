@@ -272,6 +272,16 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 			return nil, errors.Wrap(err, "could not parse consumer config")
 		}
 
+		if len(consumerConfig.Ports) == 0 {
+			cp, err := m.natPingerPorts.Acquire()
+			if err != nil {
+				return nil, err
+			}
+
+			consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
+			vpnConfig.LocalPort = cp.Num()
+		}
+
 		if m.location.BehindNAT() && m.portMappingFailed() {
 			for range consumerConfig.Ports {
 				pp, err := m.natPingerPorts.Acquire()
@@ -280,6 +290,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 				}
 
 				vpnConfig.Ports = append(vpnConfig.Ports, pp.Num())
+				vpnConfig.RemotePort = pp.Num()
 			}
 
 			// For OpenVPN only one running NAT proxy required.

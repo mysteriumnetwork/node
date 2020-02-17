@@ -136,33 +136,35 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 		return err
 	}
 
-	if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
-		c.ports = []int{sessionConfig.LocalPort}
-		sessionConfig.Ports = []int{sessionConfig.RemotePort}
-	}
+	if sessionConfig.LocalPort == 0 && len(sessionConfig.Ports) > 0 {
+		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
+			c.ports = []int{sessionConfig.LocalPort}
+			sessionConfig.Ports = []int{sessionConfig.RemotePort}
+		}
 
-	conn, err := c.natPinger.PingProvider(
-		sessionConfig.RemoteIP,
-		c.ports,
-		sessionConfig.Ports,
-		sessionConfig.LocalPort,
-	)
-	if err != nil {
-		return err
-	}
+		conn, err := c.natPinger.PingProvider(
+			sessionConfig.RemoteIP,
+			c.ports,
+			sessionConfig.Ports,
+			sessionConfig.LocalPort,
+		)
+		if err != nil {
+			return err
+		}
 
-	_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
-	if err != nil {
-		return err
-	}
+		_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
+		if err != nil {
+			return err
+		}
 
-	_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
-	if err != nil {
-		return err
-	}
+		_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
+		if err != nil {
+			return err
+		}
 
-	sessionConfig.LocalPort, _ = strconv.Atoi(lPort)
-	sessionConfig.RemotePort, _ = strconv.Atoi(rPort)
+		sessionConfig.LocalPort, _ = strconv.Atoi(lPort)
+		sessionConfig.RemotePort, _ = strconv.Atoi(rPort)
+	}
 
 	proc, clientConfig, err := c.processFactory(options, sessionConfig)
 	log.Info().Msg(fmt.Sprint(clientConfig.VpnConfig))
