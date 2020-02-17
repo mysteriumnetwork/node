@@ -36,8 +36,8 @@ func TestBandwidthSerialize(t *testing.T) {
 		{Bandwidth(0.5 * datasize.Byte), "4"},
 		{Bandwidth(0.51 * datasize.Byte), "4"},
 		{Bandwidth(0 * datasize.Bit), "0"},
-		{Bandwidth(1 * datasize.Terabyte), "8796093022208"},
-		{Bandwidth(2 * datasize.Terabyte), "17592186044416"},
+		{Bandwidth(1 * datasize.Tebibyte), "8796093022208"},
+		{Bandwidth(2 * datasize.Tebibyte), "17592186044416"},
 	}
 
 	for _, test := range tests {
@@ -57,8 +57,8 @@ func TestBandwidthUnserialize(t *testing.T) {
 		{"1", Bandwidth(1 * datasize.Bit), ""},
 		{"8", Bandwidth(1 * datasize.Byte), ""},
 		{"4", Bandwidth(0.5 * datasize.Byte), ""},
-		{"8796093022208", Bandwidth(1 * datasize.Terabyte), ""},
-		{"17592186044416", Bandwidth(2 * datasize.Terabyte), ""},
+		{"8796093022208", Bandwidth(1 * datasize.Tebibyte), ""},
+		{"17592186044416", Bandwidth(2 * datasize.Tebibyte), ""},
 		{
 			"-1",
 			Bandwidth(0),

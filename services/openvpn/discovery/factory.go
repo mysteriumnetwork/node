@@ -35,7 +35,7 @@ func NewServiceProposalWithLocation(
 		ServiceDefinition: dto.ServiceDefinition{
 			Location:          serviceLocation,
 			LocationOriginate: serviceLocation,
-			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
+			SessionBandwidth:  dto.Bandwidth(10 * datasize.MiB),
 			Protocol:          protocol,
 		},
 		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),

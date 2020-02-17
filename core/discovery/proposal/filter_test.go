@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var bytesInGibibyte = datasize.GB.Bits() / datasize.Byte.Bits()
+var bytesInGibibyte = uint64(datasize.GiB.Bytes())
 
 var (
 	provider1            = "0x1"
