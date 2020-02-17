@@ -49,6 +49,11 @@ func (mp *EventBus) Subscribe(topic string, fn interface{}) error {
 	return nil
 }
 
+// Unsubscribe fakes unsubscribe.
+func (mp *EventBus) Unsubscribe(topic string, fn interface{}) error {
+	return nil
+}
+
 // Pop pops the last event for assertions.
 func (mp *EventBus) Pop() interface{} {
 	mp.lock.Lock()

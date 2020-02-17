@@ -19,11 +19,15 @@ package proposal
 
 import (
 	"testing"
+	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
+
+var bytesInGibibyte = datasize.GB.Bits() / datasize.Byte.Bits()
 
 var (
 	provider1            = "0x1"
@@ -59,20 +63,71 @@ var (
 		ServiceDefinition: mockService{Location: locationResidential},
 		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
-	proposalExpensive = market.ServiceProposal{
+	proposalTimeExpensive = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(9999999999999, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Minute,
+			},
 		},
 	}
-	proposalCheap = market.ServiceProposal{
+	proposalTimeCheap = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(0, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Minute,
+			},
 		},
 	}
-	proposalExact = market.ServiceProposal{
+	proposalTimeExact = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(1000000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerTime: time.Minute,
+			},
 		},
+	}
+	proposalBytesExpensive = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(7000001, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: bytesInGibibyte,
+			},
+		},
+	}
+	proposalBytesCheap = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(0, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: bytesInGibibyte,
+			},
+		},
+	}
+	proposalBytesExact = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(7000000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: bytesInGibibyte,
+			},
+		},
+	}
+	proposalBytesExactInParts = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(50000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: 7669584,
+			},
+		},
+	}
+	proposalSupported = market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{
+			price: money.NewMoney(50000, money.CurrencyMyst),
+			rate: market.PaymentRate{
+				PerByte: 7669584,
+			},
+		},
+		ServiceDefinition: &mockServiceDefinition{},
+		ProviderContacts:  market.ContactList{market.Contact{}},
 	}
 )
 
@@ -165,29 +220,64 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 }
 
-func Test_ProposalFilter_Filters_ByBounds(t *testing.T) {
+func Test_ProposalFilter_Filters_ByTimeBounds(t *testing.T) {
 	var upper uint64 = 1000000
 	var lower uint64 = 100
 	filter := &Filter{
-		UpperPriceBound: &upper,
-		LowerPriceBound: &lower,
+		UpperTimePriceBound: &upper,
+		LowerTimePriceBound: &lower,
 	}
 
 	assert.True(t, filter.Matches(proposalEmpty))
-	assert.False(t, filter.Matches(proposalExpensive))
-	assert.False(t, filter.Matches(proposalCheap))
-	assert.True(t, filter.Matches(proposalExact))
+	assert.False(t, filter.Matches(proposalTimeExpensive))
+	assert.False(t, filter.Matches(proposalTimeCheap))
+	assert.True(t, filter.Matches(proposalTimeExact))
 
 	lower = 0
 	filter = &Filter{
-		UpperPriceBound: &upper,
-		LowerPriceBound: &lower,
+		UpperTimePriceBound: &upper,
+		LowerTimePriceBound: &lower,
 	}
 
 	assert.True(t, filter.Matches(proposalEmpty))
-	assert.False(t, filter.Matches(proposalExpensive))
-	assert.True(t, filter.Matches(proposalCheap))
-	assert.True(t, filter.Matches(proposalExact))
+	assert.False(t, filter.Matches(proposalTimeExpensive))
+	assert.True(t, filter.Matches(proposalTimeCheap))
+	assert.True(t, filter.Matches(proposalTimeExact))
+}
+
+func Test_ProposalFilter_Filters_Unsupported(t *testing.T) {
+	filter := &Filter{
+		ExcludeUnsupported: true,
+	}
+	assert.False(t, filter.Matches(proposalEmpty))
+	assert.True(t, filter.Matches(proposalSupported))
+}
+
+func Test_ProposalFilter_Filters_ByByteBounds(t *testing.T) {
+	var upper uint64 = 7000000
+	var lower uint64 = 100
+	filter := &Filter{
+		UpperGBPriceBound: &upper,
+		LowerGBPriceBound: &lower,
+	}
+
+	assert.True(t, filter.Matches(proposalEmpty))
+	assert.False(t, filter.Matches(proposalBytesExpensive))
+	assert.False(t, filter.Matches(proposalBytesCheap))
+	assert.True(t, filter.Matches(proposalBytesExact))
+	assert.True(t, filter.Matches(proposalBytesExactInParts))
+
+	lower = 0
+	filter = &Filter{
+		UpperGBPriceBound: &upper,
+		LowerGBPriceBound: &lower,
+	}
+
+	assert.True(t, filter.Matches(proposalEmpty))
+	assert.False(t, filter.Matches(proposalBytesExpensive))
+	assert.True(t, filter.Matches(proposalBytesCheap))
+	assert.True(t, filter.Matches(proposalBytesExact))
+	assert.True(t, filter.Matches(proposalBytesExactInParts))
 }
 
 type mockPaymentMethod struct {
@@ -206,4 +296,10 @@ func (mpm *mockPaymentMethod) GetType() string {
 
 func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 	return mpm.rate
+}
+
+type mockServiceDefinition struct{}
+
+func (msd *mockServiceDefinition) GetLocation() market.Location {
+	return market.Location{}
 }

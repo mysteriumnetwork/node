@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -152,8 +153,10 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			AccountantPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:                  time.Hour * 2,
 			MystSCAddress:                      "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
-			ConsumerUpperPriceBound:            1000000,
-			ConsumerLowerPriceBound:            0,
+			ConsumerLowerMinutePriceBound:      0,
+			ConsumerUpperMinutePriceBound:      50000,
+			ConsumerLowerGBPriceBound:          0,
+			ConsumerUpperGBPriceBound:          7000000,
 		},
 	}
 
@@ -185,8 +188,13 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
-			options.Payments.ConsumerLowerPriceBound,
-			options.Payments.ConsumerUpperPriceBound,
+			&proposal.Filter{
+				UpperTimePriceBound: &options.Payments.ConsumerUpperMinutePriceBound,
+				LowerTimePriceBound: &options.Payments.ConsumerLowerMinutePriceBound,
+				UpperGBPriceBound:   &options.Payments.ConsumerUpperGBPriceBound,
+				LowerGBPriceBound:   &options.Payments.ConsumerLowerGBPriceBound,
+				ExcludeUnsupported:  true,
+			},
 		),
 	}
 	return mobileNode, nil

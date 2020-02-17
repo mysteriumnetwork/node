@@ -18,6 +18,10 @@
 package reducer
 
 import (
+	"math"
+	"time"
+
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -63,14 +67,49 @@ func LocationType(proposal market.ServiceProposal) interface{} {
 	return service.GetLocation().NodeType
 }
 
-// Price checks if the price is below the given value
-func Price(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+// PriceMinute checks if the price per minute is below the given value
+func PriceMinute(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+	return pricePerTime(lowerBound, upperBound, time.Minute)
+}
+
+var bytesInGibibyte = datasize.GB.Bits() / datasize.Byte.Bits()
+
+// PriceGiB checks if the price per GiB is below the given value
+func PriceGiB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+	return pricePerDataTransfer(lowerBound, upperBound, bytesInGibibyte)
+}
+
+func pricePerTime(lowerBound, upperBound uint64, duration time.Duration) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		if proposal.PaymentMethod != nil {
 			price := proposal.PaymentMethod.GetPrice().Amount
-			return price >= lowerBound && price <= upperBound
-		}
+			rate := proposal.PaymentMethod.GetRate().PerTime
+			if rate == 0 {
+				return lowerBound == 0
+			}
 
+			chunks := float64(duration) / float64(rate)
+			totalPrice := uint64(math.Round(chunks * float64(price)))
+			return totalPrice >= lowerBound && totalPrice <= upperBound
+		}
+		return true
+	}
+}
+
+func pricePerDataTransfer(lowerBound, upperBound uint64, chunk uint64) func(market.ServiceProposal) bool {
+	return func(proposal market.ServiceProposal) bool {
+		if proposal.PaymentMethod != nil {
+			price := proposal.PaymentMethod.GetPrice().Amount
+			rate := proposal.PaymentMethod.GetRate().PerByte
+			if rate == 0 {
+				return lowerBound == 0
+			}
+
+			chunks := float64(chunk) / float64(rate)
+			totalPrice := uint64(math.Round(chunks * float64(price)))
+
+			return totalPrice >= lowerBound && totalPrice <= upperBound
+		}
 		return true
 	}
 }
@@ -92,5 +131,12 @@ func AccessPolicy(id, source string) func(market.ServiceProposal) bool {
 			}
 		}
 		return match
+	}
+}
+
+// Unsupported filters out unsupported proposals
+func Unsupported() func(market.ServiceProposal) bool {
+	return func(proposal market.ServiceProposal) bool {
+		return proposal.IsSupported()
 	}
 }

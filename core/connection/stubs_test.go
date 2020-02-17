@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/rs/zerolog/log"
 )
 
@@ -208,7 +207,7 @@ func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
 type mockDialog struct {
 	peerID      identity.Identity
 	sessionID   session.ID
-	paymentInfo *promise.PaymentInfo
+	paymentInfo session.PaymentInfo
 	closed      bool
 	sync.RWMutex
 }

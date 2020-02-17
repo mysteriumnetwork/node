@@ -159,24 +159,38 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
-	upperPriceBound, err := parsePriceBound(req, "upperPriceBound")
+	upperTimePriceBound, err := parsePriceBound(req, "upperTimePriceBound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
-	lowerPriceBound, err := parsePriceBound(req, "lowerPriceBound")
+	lowerTimePriceBound, err := parsePriceBound(req, "lowerTimePriceBound")
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	upperGBPriceBound, err := parsePriceBound(req, "upperGBPriceBound")
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+	lowerGBPriceBound, err := parsePriceBound(req, "lowerGBPriceBound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
-		ProviderID:         req.URL.Query().Get("providerId"),
-		ServiceType:        req.URL.Query().Get("serviceType"),
-		AccessPolicyID:     req.URL.Query().Get("accessPolicyId"),
-		AccessPolicySource: req.URL.Query().Get("accessPolicySource"),
-		UpperPriceBound:    upperPriceBound,
-		LowerPriceBound:    lowerPriceBound,
+		ProviderID:          req.URL.Query().Get("providerId"),
+		ServiceType:         req.URL.Query().Get("serviceType"),
+		AccessPolicyID:      req.URL.Query().Get("accessPolicyId"),
+		AccessPolicySource:  req.URL.Query().Get("accessPolicySource"),
+		LowerGBPriceBound:   lowerGBPriceBound,
+		UpperGBPriceBound:   upperGBPriceBound,
+		LowerTimePriceBound: lowerTimePriceBound,
+		UpperTimePriceBound: upperTimePriceBound,
+		ExcludeUnsupported:  true,
 	})
 
 	if err != nil {

@@ -51,6 +51,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
 	natPinger traversal.NATProviderPinger,
+	statInterval time.Duration,
 ) (connection.Connection, error) {
 
 	stateCh := make(chan connection.State, 100)
@@ -79,7 +80,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 
 		stateMiddleware := newStateMiddleware(stateCh)
 		authMiddleware := newAuthMiddleware(options.SessionID, signer)
-		byteCountMiddleware := newBytecountMiddleware(statisticsCh)
+		byteCountMiddleware := newBytecountMiddleware(statisticsCh, statInterval)
 		proc := openvpn.CreateNewProcess(openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
 		return proc, vpnClientConfig, nil
 	}
@@ -218,9 +219,9 @@ func newAuthMiddleware(sessionID session.ID, signer identity.Signer) management.
 	return auth.NewMiddleware(credentialsProvider)
 }
 
-func newBytecountMiddleware(statisticsChannel connection.StatisticsChannel) management.Middleware {
+func newBytecountMiddleware(statisticsChannel connection.StatisticsChannel, interval time.Duration) management.Middleware {
 	statsSaver := bytescount.NewSessionStatsSaver(statisticsChannel)
-	return openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second)
+	return openvpn_bytescount.NewMiddleware(statsSaver, interval)
 }
 
 func newStateMiddleware(stateChannel connection.StateChannel) management.Middleware {

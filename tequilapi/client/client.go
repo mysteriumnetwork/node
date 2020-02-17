@@ -317,10 +317,12 @@ func (client *Client) proposals(query url.Values) ([]ProposalDTO, error) {
 }
 
 // ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(lower, upper uint64) ([]ProposalDTO, error) {
+func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]ProposalDTO, error) {
 	values := url.Values{}
-	values.Add("upperPriceBound", fmt.Sprintf("%v", upper))
-	values.Add("lowerPriceBound", fmt.Sprintf("%v", lower))
+	values.Add("upperTimePriceBound", fmt.Sprintf("%v", upperTime))
+	values.Add("lowerTimePriceBound", fmt.Sprintf("%v", lowerTime))
+	values.Add("upperGBPriceBound", fmt.Sprintf("%v", upperGB))
+	values.Add("lowerGBPriceBound", fmt.Sprintf("%v", lowerGB))
 	return client.proposals(values)
 }
 

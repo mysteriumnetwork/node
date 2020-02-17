@@ -18,6 +18,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,6 +42,12 @@ var (
 		Usage: "Subnet to be used by the wireguard service",
 		Value: "10.182.0.0/16",
 	}
+	// FlagWireguardStatInterval sets the statistic interval
+	FlagWireguardStatInterval = cli.DurationFlag{
+		Name:  "wireguard.stats.interval",
+		Usage: "Sets the frequency of statistics reporting",
+		Value: time.Second * 2,
+	}
 )
 
 // RegisterFlagsServiceWireguard function register Wireguard flags to flag list
@@ -48,6 +56,7 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 		&FlagWireguardConnectDelay,
 		&FlagWireguardListenPorts,
 		&FlagWireguardListenSubnet,
+		&FlagWireguardStatInterval,
 	)
 }
 
@@ -56,4 +65,5 @@ func ParseFlagsServiceWireguard(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagWireguardConnectDelay)
 	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
 	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
+	Current.ParseDurationFlag(ctx, FlagWireguardStatInterval)
 }

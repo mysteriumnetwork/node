@@ -64,3 +64,8 @@ func newSession() (*Session, error) {
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
 // should be serializable to json format.
 type ServiceConfiguration interface{}
+
+// PaymentInfo represents the payment version information
+type PaymentInfo struct {
+	Supports string `json:"supported"`
+}

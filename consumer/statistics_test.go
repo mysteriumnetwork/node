@@ -93,3 +93,44 @@ func TestAddUpStatistics(t *testing.T) {
 		})
 	}
 }
+
+func Test_bitCountDecimal(t *testing.T) {
+	tests := []struct {
+		name  string
+		input uint64
+		want  string
+	}{
+		{
+			name:  "tests",
+			input: 1000,
+			want:  "1.0 kBps",
+		},
+		{
+			name:  "tests",
+			input: 1500,
+			want:  "1.5 kBps",
+		},
+		{
+			name:  "tests",
+			input: 100 * 0.5,
+			want:  "50 Bps",
+		},
+		{
+			name:  "tests",
+			input: 1000 * 1000,
+			want:  "1.0 MBps",
+		},
+		{
+			name:  "tests",
+			input: 1000 * 1000 * 1000,
+			want:  "1.0 GBps",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := BitCountDecimal(tt.input, "Bps"); got != tt.want {
+				t.Errorf("bitCountDecimal() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

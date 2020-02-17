@@ -23,14 +23,8 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
 )
-
-// PromiseLoader loads the last known promise info for the given consumer
-type PromiseLoader interface {
-	LoadPaymentInfo(consumerID, receiverID, issuerID identity.Identity) *promise.PaymentInfo
-}
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
@@ -38,7 +32,6 @@ type createConsumer struct {
 	receiverID             identity.Identity
 	peerID                 identity.Identity
 	providerConfigProvider ConfigProvider
-	promiseLoader          PromiseLoader
 }
 
 // Starter starts the session.
@@ -72,17 +65,8 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		return responseInternalError, errors.Wrap(err, "could not get provider session config")
 	}
 
-	var indicateNewVersion bool
-	issuerID := consumer.peerID
-	if request.ConsumerInfo != nil {
-		issuerID = request.ConsumerInfo.IssuerID
-		if request.ConsumerInfo.PaymentVersion == PaymentVersionV3 {
-			indicateNewVersion = true
-		}
-	} else {
-		request.ConsumerInfo = &ConsumerInfo{
-			IssuerID: issuerID,
-		}
+	if request.ConsumerInfo == nil {
+		return responseUnsupportedVersion, nil
 	}
 
 	err = consumer.sessionStarter.Start(session, consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
@@ -97,7 +81,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		}()
 	}
 
-	return createResponse(*session, sessionConfigParams.SessionServiceConfig, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID), indicateNewVersion), nil
+	return createResponse(*session, sessionConfigParams.SessionServiceConfig), nil
 }
 
 func createErrorResponse(err error) CreateResponse {
@@ -109,7 +93,7 @@ func createErrorResponse(err error) CreateResponse {
 	}
 }
 
-func createResponse(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo, indicateNewVersion bool) CreateResponse {
+func createResponse(sessionInstance Session, config ServiceConfiguration) CreateResponse {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session
@@ -117,9 +101,8 @@ func createResponse(sessionInstance Session, config ServiceConfiguration, pi *pr
 		return responseInternalError
 	}
 
-	// let the consumer know we'll support the new payments
-	if indicateNewVersion {
-		pi.Supports = string(PaymentVersionV3)
+	pi := PaymentInfo{
+		Supports: string(PaymentVersionV3),
 	}
 
 	return CreateResponse{

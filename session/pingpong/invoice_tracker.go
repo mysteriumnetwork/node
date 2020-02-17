@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -56,6 +55,8 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
+
+const providerFirstInvoiceTolerance = 0.8
 
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
@@ -97,6 +98,14 @@ type sentInvoice struct {
 	r       []byte
 }
 
+type dataTransfered struct {
+	up, down uint64
+}
+
+func (dt dataTransfered) sum() uint64 {
+	return dt.up + dt.down
+}
+
 // InvoiceTracker keeps tab of invoices and sends them to the consumer.
 type InvoiceTracker struct {
 	stop                       chan struct{}
@@ -114,6 +123,9 @@ type InvoiceTracker struct {
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
+
+	dataTransfered     dataTransfered
+	dataTransferedLock sync.Mutex
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -126,7 +138,6 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
-	PaymentInfo                dto.PaymentRate
 	ProviderID                 identity.Identity
 	AccountantID               identity.Identity
 	AccountantCaller           accountantCaller
@@ -136,10 +147,11 @@ type InvoiceTrackerDeps struct {
 	MaxRRecoveryLength         uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
-	Publisher                  eventbus.Publisher
+	EventBus                   eventbus.EventBus
 	FeeProvider                feeProvider
 	ChannelAddressCalculator   channelAddressCalculator
 	Settler                    settler
+	SessionID                  string
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -214,7 +226,7 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 	it.resetNotReceivedExchangeMessageCount()
 
 	// incase of zero payment, we'll just skip going to the accountant
-	if it.isServiceFree() {
+	if isServiceFree(it.deps.Proposal.PaymentMethod) {
 		return nil
 	}
 
@@ -284,12 +296,12 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	}
 
 	promise.R = r
-	it.deps.Publisher.Publish(AppTopicAccountantPromise, AccountantPromiseEventPayload{
+	it.deps.EventBus.Publish(AppTopicAccountantPromise, AccountantPromiseEventPayload{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
 	})
-	it.deps.Publisher.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
+	it.deps.EventBus.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
 		Consumer:    it.deps.Peer,
 		ServiceType: it.deps.Proposal.ServiceType,
 		Total:       it.lastExchangeMessage.AgreementTotal,
@@ -332,6 +344,10 @@ func (it *InvoiceTracker) revealPromise() error {
 func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
 	it.deps.TimeTracker.StartTracking()
+
+	if err := it.deps.EventBus.SubscribeAsync(event.AppTopicDataTransfered, it.consumeDataTransferedEvent); err != nil {
+		return err
+	}
 
 	isConsumerRegistered, err := it.deps.BlockchainHelper.IsRegistered(common.HexToAddress(it.deps.Registry), it.deps.Peer.ToCommonAddress())
 	if err != nil {
@@ -416,29 +432,19 @@ func (it *InvoiceTracker) generateR() []byte {
 	return r
 }
 
-func (it *InvoiceTracker) isServiceFree() bool {
-	return it.deps.PaymentInfo.Duration == 0 || it.deps.PaymentInfo.Price.Amount == 0
-}
-
 func (it *InvoiceTracker) sendInvoice() error {
 	if it.getNotReceivedExchangeMessageCount() >= it.maxNotReceivedExchangeMessages {
 		return ErrExchangeWaitTimeout
 	}
 
-	var ticksPassed float64
-	// avoid division by zero on free service
-	if !it.isServiceFree() {
-		ticksPassed = float64(it.deps.TimeTracker.Elapsed()) / float64(it.deps.PaymentInfo.Duration)
-	}
-
-	shouldBe := uint64(math.Round(ticksPassed * float64(it.deps.PaymentInfo.GetPrice().Amount)))
+	shouldBe := calculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransfered(), it.deps.Proposal.PaymentMethod)
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
 	// This is due to the fact that both payment providers start at different times.
 	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
 	// Over the long run, this becomes redundant as the difference should become miniscule.
 	if it.lastExchangeMessage.AgreementTotal == 0 {
-		shouldBe = uint64(math.Trunc(float64(shouldBe) * 0.8))
+		shouldBe = uint64(math.Trunc(float64(shouldBe) * providerFirstInvoiceTolerance))
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
@@ -583,6 +589,46 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msg("Stopping...")
+		_ = it.deps.EventBus.Unsubscribe(event.AppTopicDataTransfered, it.consumeDataTransferedEvent)
 		close(it.stop)
 	})
+}
+
+func (it *InvoiceTracker) consumeDataTransferedEvent(e event.DataTransferEventPayload) {
+	// skip irrelevant sessions
+	if !strings.EqualFold(e.ID, it.deps.SessionID) {
+		return
+	}
+
+	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
+	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
+	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
+	it.updateDataTransfer(e.Down, e.Up)
+}
+
+func (it *InvoiceTracker) updateDataTransfer(up, down uint64) {
+	it.dataTransferedLock.Lock()
+	defer it.dataTransferedLock.Unlock()
+
+	newUp := it.dataTransfered.up
+	if up > it.dataTransfered.up {
+		newUp = up
+	}
+
+	newDown := it.dataTransfered.down
+	if down > it.dataTransfered.down {
+		newDown = down
+	}
+
+	it.dataTransfered = dataTransfered{
+		up:   newUp,
+		down: newDown,
+	}
+}
+
+func (it *InvoiceTracker) getDataTransfered() dataTransfered {
+	it.dataTransferedLock.Lock()
+	defer it.dataTransferedLock.Unlock()
+
+	return it.dataTransfered
 }

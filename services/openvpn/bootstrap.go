@@ -38,24 +38,4 @@ func Bootstrap() {
 			return definition, err
 		},
 	)
-
-	market.RegisterPaymentMethodUnserializer(
-		dto_openvpn.PaymentMethodPerTime,
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method dto_openvpn.PaymentRate
-			err := json.Unmarshal(*rawDefinition, &method)
-
-			return method, err
-		},
-	)
-
-	market.RegisterPaymentMethodUnserializer(
-		dto_openvpn.PaymentMethodPerBytes,
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method dto_openvpn.PaymentPerBytes
-			err := json.Unmarshal(*rawDefinition, &method)
-
-			return method, err
-		},
-	)
 }

@@ -24,13 +24,11 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	config = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
-	mpl    = &mockPromiseLoader{}
 )
 
 func TestConsumer_Success(t *testing.T) {
@@ -44,11 +42,13 @@ func TestConsumer_Success(t *testing.T) {
 		sessionStarter:         mockManager,
 		peerID:                 identity.FromAddress("peer-id"),
 		providerConfigProvider: mockConfigProvider{},
-		promiseLoader:          mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalID = 101
+	request.ConsumerInfo = &ConsumerInfo{
+		PaymentVersion: PaymentVersionV3,
+	}
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
@@ -62,6 +62,9 @@ func TestConsumer_Success(t *testing.T) {
 				ID:     "new-id",
 				Config: config,
 			},
+			PaymentInfo: PaymentInfo{
+				Supports: string(PaymentVersionV3),
+			},
 		},
 		sessionResponse,
 	)
@@ -74,10 +77,12 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 	consumer := createConsumer{
 		sessionStarter:         mockManager,
 		providerConfigProvider: mockConfigProvider{},
-		promiseLoader:          mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
+	request.ConsumerInfo = &ConsumerInfo{
+		PaymentVersion: PaymentVersionV3,
+	}
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
@@ -91,10 +96,12 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	consumer := createConsumer{
 		sessionStarter:         mockManager,
 		providerConfigProvider: mockConfigProvider{},
-		promiseLoader:          mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
+	request.ConsumerInfo = &ConsumerInfo{
+		PaymentVersion: PaymentVersionV3,
+	}
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
@@ -112,14 +119,14 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 		sessionStarter:         mockManager,
 		peerID:                 identity.FromAddress("peer-id"),
 		providerConfigProvider: mockConfigProvider{},
-		promiseLoader:          mpl,
 	}
 
 	issuerID := identity.FromAddress("some-peer-id")
 	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalID = 101
 	request.ConsumerInfo = &ConsumerInfo{
-		IssuerID: issuerID,
+		IssuerID:       issuerID,
+		PaymentVersion: PaymentVersionV3,
 	}
 
 	_, err := consumer.Consume(request)
@@ -156,12 +163,4 @@ func (manager *managerFake) Start(session *Session, consumerID identity.Identity
 // Destroy fake destroy function
 func (manager *managerFake) Destroy(consumerID identity.Identity, sessionID string) error {
 	return nil
-}
-
-type mockPromiseLoader struct {
-	paymentInfoToReturn *promise.PaymentInfo
-}
-
-func (mpl *mockPromiseLoader) LoadPaymentInfo(consumerID, receiverID, issuerID identity.Identity) *promise.PaymentInfo {
-	return mpl.paymentInfoToReturn
 }

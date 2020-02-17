@@ -30,9 +30,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -87,15 +87,20 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
@@ -137,15 +142,20 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
@@ -188,15 +198,20 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
@@ -238,6 +253,12 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -245,12 +266,11 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		FeeProvider:                &mockTransactor{},
 		MaxAllowedAccountantFee:    1500,
@@ -290,6 +310,12 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -297,12 +323,11 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
@@ -340,6 +365,12 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -347,14 +378,13 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		ChargePeriod:               time.Millisecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		FeeProvider:                &mockTransactor{},
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -397,6 +427,12 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
 		InvoiceStorage:             invoiceStorage,
@@ -404,7 +440,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
-		PaymentInfo:                dto.PaymentRate{Price: money.NewMoney(1000000000000, money.CurrencyMyst), Duration: time.Minute},
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
@@ -412,7 +447,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -464,7 +499,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
-		Publisher:                  mocks.NewEventBus(),
+		EventBus:                   mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -611,7 +646,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				AccountantID:               tt.fields.accountantID,
 				AccountantCaller:           tt.fields.accountantCaller,
 				Registry:                   tt.fields.registryAddress,
-				Publisher:                  mocks.NewEventBus(),
+				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
 				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
 			}
@@ -672,6 +707,17 @@ func (mp *mockPublisher) Publish(topic string, payload interface{}) {
 			value: payload,
 		}
 	}
+}
+
+func (mp *mockPublisher) Subscribe(topic string, fn interface{}) error {
+	return nil
+}
+func (mp *mockPublisher) SubscribeAsync(topic string, fn interface{}) error {
+	return nil
+}
+
+func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
+	return nil
 }
 
 func TestInvoiceTracker_TestInvoiceTracker_handleAccountantError_settles(t *testing.T) {
@@ -780,4 +826,23 @@ func (ms *mockSettler) settle(providerID, accountantID identity.Identity) error 
 	ms.calledWithAccountant = accountantID
 	ms.calledWithProvider = providerID
 	return nil
+}
+
+type mockPaymentMethod struct {
+	price money.Money
+	t     string
+	rate  market.PaymentRate
+}
+
+// Service price per unit of metering
+func (mpm *mockPaymentMethod) GetPrice() money.Money {
+	return mpm.price
+}
+
+func (mpm *mockPaymentMethod) GetType() string {
+	return mpm.t
+}
+
+func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
+	return mpm.rate
 }

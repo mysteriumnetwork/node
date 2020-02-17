@@ -28,23 +28,55 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/balance"
-	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
+// PromiseWaitTimeout is the time that the provider waits for the promise to arrive
+const PromiseWaitTimeout = time.Second * 50
+
+// InvoiceSendPeriod is how often the provider will send invoice messages to the consumer
+const InvoiceSendPeriod = time.Second * 60
+
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
 const DefaultAccountantFailureCount uint64 = 10
 
-// DefaultPaymentInfo represents the default payment info for the alpha release
-var DefaultPaymentInfo = dto.PaymentRate{
+// DefaultPaymentMethod represents the the default payment method of time + bytes.
+// The rate is frozen at 0.07MYSTT per GiB of data transfered and 0.0005MYSTT/minute.
+// Since the price is calculated based on the rate and price, for 1 GiB we need:
+// 0.07 * 100 000 000 / 50 000 = 140 chunks.
+// 1024 * 1024 * 1024(or 1 GiB)  / 140 ~= 7669584.
+// Therefore, for reach 7669584 bytes transfered, we'll pay 0.0005 MYSTT.
+var DefaultPaymentMethod = PaymentMethod{
 	Price:    money.NewMoney(50000, money.CurrencyMyst),
-	Duration: 1 * time.Minute,
+	Duration: time.Minute,
+	Type:     "BYTES_TRANSFERED_WITH_TIME",
+	Bytes:    7669584,
+}
+
+// PaymentMethod represents a payment method
+type PaymentMethod struct {
+	Price    money.Money   `json:"price"`
+	Duration time.Duration `json:"duration"`
+	Bytes    uint64        `json:"bytes"`
+	Type     string        `json:"type"`
+}
+
+// GetPrice returns the payment methods price
+func (pm PaymentMethod) GetPrice() money.Money {
+	return pm.Price
+}
+
+// GetType gets the payment methods type
+func (pm PaymentMethod) GetType() string {
+	return pm.Type
+}
+
+// GetRate returns the payment rate for the method
+func (pm PaymentMethod) GetRate() market.PaymentRate {
+	return market.PaymentRate{PerByte: pm.Bytes, PerTime: pm.Duration}
 }
 
 // InvoiceFactoryCreator returns a payment engine factory.
@@ -60,12 +92,12 @@ func InvoiceFactoryCreator(
 	maxAllowedAccountantFee uint16,
 	maxRRecovery uint64,
 	blockchainHelper bcHelper,
-	publisher eventbus.Publisher,
+	eventBus eventbus.EventBus,
 	feeProvider feeProvider,
 	proposal market.ServiceProposal,
 	settler settler,
-) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
-	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, string) (session.PaymentEngine, error) {
+	return func(providerID identity.Identity, accountantID identity.Identity, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
 		listener := NewExchangeListener(exchangeChan)
 		invoiceSender := NewInvoiceSender(dialog)
@@ -74,10 +106,6 @@ func InvoiceFactoryCreator(
 			return nil, err
 		}
 		timeTracker := session.NewTracker(time.Now)
-		rate, err := ProposalToPaymentRate(proposal)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not parse payment rate")
-		}
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
 			Peer:                       dialog.PeerID(),
@@ -87,7 +115,6 @@ func InvoiceFactoryCreator(
 			ChargePeriod:               balanceSendPeriod,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
-			PaymentInfo:                rate,
 			ProviderID:                 providerID,
 			AccountantCaller:           accountantCaller,
 			AccountantPromiseStorage:   accountantPromiseStorage,
@@ -96,10 +123,11 @@ func InvoiceFactoryCreator(
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
 			BlockchainHelper:           blockchainHelper,
-			Publisher:                  publisher,
+			EventBus:                   eventBus,
 			FeeProvider:                feeProvider,
 			MaxRRecoveryLength:         maxRRecovery,
 			Settler:                    settler,
+			SessionID:                  sessionID,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)
@@ -107,78 +135,50 @@ func InvoiceFactoryCreator(
 	}
 }
 
-// BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
-func BackwardsCompatibleExchangeFactoryFunc(
+// ExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
+func ExchangeFactoryFunc(
 	keystore *keystore.KeyStore,
 	options node.Options,
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,
 	registryAddress string,
-	publisher eventbus.Publisher,
-	getConsumerInfo getConsumerInfo) func(paymentInfo *promise.PaymentInfo,
+	eventBus eventbus.EventBus,
+	getConsumerInfo getConsumerInfo) func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
-	return func(paymentInfo *promise.PaymentInfo,
+	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
+	return func(paymentInfo session.PaymentInfo,
 		dialog communication.Dialog,
-		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
-		var promiseState promise.PaymentInfo
-		payment := dto.PaymentRate{
-			Price: money.Money{
-				Currency: money.CurrencyMyst,
-				Amount:   uint64(0),
-			},
-			Duration: time.Minute,
-		}
-		var useNewPayments bool
-		if paymentInfo != nil {
-			promiseState.FreeCredit = paymentInfo.FreeCredit
-			promiseState.LastPromise = paymentInfo.LastPromise
+		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 
-			// if the server indicates that it will launch the new payments, so should we
-			if paymentInfo.Supports == string(session.PaymentVersionV3) {
-				useNewPayments = true
-			}
+		if paymentInfo.Supports != string(session.PaymentVersionV3) {
+			log.Info().Msg("provider requested old payments")
+			return nil, errors.New("provider requested old payments")
 		}
-		var payments connection.PaymentIssuer
-		if useNewPayments {
-			log.Info().Msg("Using new payments")
-			invoices := make(chan crypto.Invoice)
-			listener := NewInvoiceListener(invoices)
-			err := dialog.Receive(listener.GetConsumer())
-			if err != nil {
-				return nil, err
-			}
-			rate, err := ProposalToPaymentRate(proposal)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not parse payment rate")
-			}
-			timeTracker := session.NewTracker(time.Now)
-			deps := ExchangeMessageTrackerDeps{
-				InvoiceChan:               invoices,
-				PeerExchangeMessageSender: NewExchangeSender(dialog),
-				ConsumerTotalsStorage:     totalStorage,
-				TimeTracker:               &timeTracker,
-				Ks:                        keystore,
-				Identity:                  consumer,
-				Peer:                      dialog.PeerID(),
-				PaymentInfo:               rate,
-				ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
-				Publisher:                 publisher,
-				AccountantAddress:         accountant,
-				ConsumerInfoGetter:        getConsumerInfo,
-			}
-			payments = NewExchangeMessageTracker(deps)
-		} else {
-			log.Info().Msg("Using old payments")
-			messageChan := make(chan balance.Message, 1)
-			pFunc := payment_factory.PaymentIssuerFactoryFunc(options, signer)
-			p, err := pFunc(promiseState, payment, messageChan, dialog, consumer, provider)
-			if err != nil {
-				return nil, err
-			}
-			payments = p
+
+		log.Info().Msg("Using new payments")
+		invoices := make(chan crypto.Invoice)
+		listener := NewInvoiceListener(invoices)
+		err := dialog.Receive(listener.GetConsumer())
+		if err != nil {
+			return nil, err
 		}
-		return payments, nil
+		timeTracker := session.NewTracker(time.Now)
+		deps := InvoicePayerDeps{
+			InvoiceChan:               invoices,
+			PeerExchangeMessageSender: NewExchangeSender(dialog),
+			ConsumerTotalsStorage:     totalStorage,
+			TimeTracker:               &timeTracker,
+			Ks:                        keystore,
+			Identity:                  consumer,
+			Peer:                      dialog.PeerID(),
+			Proposal:                  proposal,
+			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
+			EventBus:                  eventBus,
+			AccountantAddress:         accountant,
+			ConsumerInfoGetter:        getConsumerInfo,
+			SessionID:                 sessionID,
+		}
+		return NewInvoicePayer(deps), nil
 	}
 }

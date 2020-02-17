@@ -42,22 +42,19 @@ type PaymentRate struct {
 type UnsupportedPaymentMethod struct {
 }
 
-// GetPrice always panics for UnsupportedPaymentMethod and should not be called
+// GetPrice returns a zero price
 func (UnsupportedPaymentMethod) GetPrice() money.Money {
-	//this should never be called
-	panic("not supported")
+	return money.Money{}
 }
 
-// GetType always panics
+// GetType returns unsupported
 func (UnsupportedPaymentMethod) GetType() string {
-	//this should never be called
-	panic("not supported")
+	return "UNSUPPORTED"
 }
 
-// GetRate always panics
+// GetRate returns zero payment rate
 func (UnsupportedPaymentMethod) GetRate() PaymentRate {
-	//this should never be called
-	panic("not supported")
+	return PaymentRate{}
 }
 
 var _ PaymentMethod = UnsupportedPaymentMethod{}

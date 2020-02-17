@@ -86,11 +86,29 @@ func Test_AccessPolicy_FiltersByIDAndSource(t *testing.T) {
 	assert.True(t, match(proposalProvider2Streaming))
 }
 
-func Test_Price_FiltersByPrice(t *testing.T) {
-	match := Price(100, 1000000)
+func Test_PriceMinute_FiltersByPrice(t *testing.T) {
+	match := PriceMinute(100, 1000000)
 
 	assert.True(t, match(proposalEmpty))
-	assert.False(t, match(proposalExpensive))
-	assert.False(t, match(proposalCheap))
-	assert.True(t, match(proposalExact))
+	assert.False(t, match(proposalTimeExpensive))
+	assert.False(t, match(proposalTimeCheap))
+	assert.True(t, match(proposalTimeExact))
+	assert.True(t, match(proposalTimeExactSeconds))
+	assert.False(t, match(proposalTimeExpensiveSeconds))
+
+	match = PriceMinute(0, 1000000)
+	assert.True(t, match(proposalTimeCheap))
+}
+
+func Test_PriceGiB_FiltersByPrice(t *testing.T) {
+	match := PriceGiB(100, 7000000)
+
+	assert.True(t, match(proposalEmpty))
+	assert.False(t, match(proposalBytesExpensive))
+	assert.False(t, match(proposalBytesCheap))
+	assert.True(t, match(proposalBytesExact))
+	assert.True(t, match(proposalBytesExactInParts))
+
+	match = PriceGiB(0, 7000000)
+	assert.True(t, match(proposalBytesCheap))
 }

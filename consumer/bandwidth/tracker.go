@@ -18,7 +18,6 @@
 package bandwidth
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -36,7 +35,7 @@ type Throughput struct {
 
 // String returns human readable form of the throughput
 func (t Throughput) String() string {
-	return bitCountDecimal(int64(t.BitsPerSecond))
+	return consumer.BitCountDecimal(uint64(t.BitsPerSecond), "Bps")
 }
 
 // CurrentSpeed represents the current(moment) download and upload speeds in bits per second
@@ -98,19 +97,4 @@ func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 		t.previousTime = time.Time{}
 		t.currentSpeed = CurrentSpeed{}
 	}
-}
-
-// bitCountDecimal returns a human readable representation of speed in bits per second
-// Taken from: https://programming.guide/go/formatting-byte-size-to-human-readable-format.html
-func bitCountDecimal(b int64) string {
-	const unit = 1000
-	if b < unit {
-		return fmt.Sprintf("%d bps", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cbps", float64(b)/float64(div), "kMGTPE"[exp])
 }

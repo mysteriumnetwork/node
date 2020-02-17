@@ -26,9 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -47,7 +47,7 @@ func (mpems *MockPeerExchangeMessageSender) Send(em crypto.ExchangeMessage) erro
 	return mpems.mockError
 }
 
-func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
+func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -67,7 +67,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 
 	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
-	deps := ExchangeMessageTrackerDeps{
+	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
@@ -76,21 +76,26 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		Publisher:                 mocks.NewEventBus(),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		EventBus:                  mocks.NewEventBus(),
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 	}
-	exchangeMessageTracker := NewExchangeMessageTracker(deps)
+	InvoicePayer := NewInvoicePayer(deps)
 
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
-		exchangeMessageTracker.Stop()
+		InvoicePayer.Stop()
 	}()
 
-	err = exchangeMessageTracker.Start()
+	err = InvoicePayer.Start()
 	assert.Nil(t, err)
 }
 
-func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
+func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -113,22 +118,27 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 
 	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
-	deps := ExchangeMessageTrackerDeps{
+	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		Publisher:                 mocks.NewEventBus(),
+		EventBus:                  mocks.NewEventBus(),
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 		ConsumerInfoGetter: func(string) (ConsumerData, error) {
 			return ConsumerData{}, nil
 		},
 	}
-	exchangeMessageTracker := NewExchangeMessageTracker(deps)
+	InvoicePayer := NewInvoicePayer(deps)
 
 	mockInvoice := crypto.Invoice{
 		AgreementID:    1,
@@ -140,9 +150,9 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 
 	testDone := make(chan struct{}, 0)
 
-	defer exchangeMessageTracker.Stop()
+	defer InvoicePayer.Stop()
 	go func() {
-		err := exchangeMessageTracker.Start()
+		err := InvoicePayer.Start()
 		assert.Nil(t, err)
 		testDone <- struct{}{}
 	}()
@@ -150,7 +160,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 	invoiceChan <- mockInvoice
 
 	exchangeMessage := <-mockSender.chanToWriteTo
-	exchangeMessageTracker.Stop()
+	InvoicePayer.Stop()
 	addr, err := exchangeMessage.RecoverConsumerIdentity()
 	assert.Nil(t, err)
 
@@ -159,7 +169,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 	<-testDone
 }
 
-func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
+func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -182,12 +192,12 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 
 	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
-	deps := ExchangeMessageTrackerDeps{
+	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
-		Publisher:                 mocks.NewEventBus(),
+		EventBus:                  mocks.NewEventBus(),
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -196,7 +206,7 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 			return ConsumerData{}, nil
 		},
 	}
-	exchangeMessageTracker := NewExchangeMessageTracker(deps)
+	InvoicePayer := NewInvoicePayer(deps)
 
 	mockInvoice := crypto.Invoice{
 		AgreementID:    1,
@@ -208,9 +218,9 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 
 	testDone := make(chan struct{}, 0)
 
-	defer exchangeMessageTracker.Stop()
+	defer InvoicePayer.Stop()
 	go func() {
-		err := exchangeMessageTracker.Start()
+		err := InvoicePayer.Start()
 		assert.Nil(t, err)
 		testDone <- struct{}{}
 	}()
@@ -218,7 +228,7 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 	invoiceChan <- mockInvoice
 
 	exchangeMessage := <-mockSender.chanToWriteTo
-	exchangeMessageTracker.Stop()
+	InvoicePayer.Stop()
 	addr, err := exchangeMessage.RecoverConsumerIdentity()
 	assert.Nil(t, err)
 
@@ -227,7 +237,7 @@ func Test_ExchangeMessageTracker_SendsMessage_OnFreeService(t *testing.T) {
 	<-testDone
 }
 
-func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
+func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	dir, err := ioutil.TempDir("", "exchange_message_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -247,9 +257,9 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 
 	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
-	deps := ExchangeMessageTrackerDeps{
+	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
-		Publisher:                 mocks.NewEventBus(),
+		EventBus:                  mocks.NewEventBus(),
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
@@ -257,12 +267,17 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		PaymentInfo:               dto.PaymentRate{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
 	}
-	exchangeMessageTracker := NewExchangeMessageTracker(deps)
-	defer exchangeMessageTracker.Stop()
+	InvoicePayer := NewInvoicePayer(deps)
+	defer InvoicePayer.Stop()
 	errChan := make(chan error)
-	go func() { errChan <- exchangeMessageTracker.Start() }()
+	go func() { errChan <- InvoicePayer.Start() }()
 
 	invoiceChan <- crypto.Invoice{}
 
@@ -270,11 +285,11 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
+func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 	type fields struct {
 		peer        identity.Identity
 		timeTracker timeTracker
-		paymentInfo dto.PaymentRate
+		proposal    market.ServiceProposal
 	}
 	tests := []struct {
 		name    string
@@ -299,9 +314,11 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentRate{
-					Duration: time.Minute,
-					Price:    money.NewMoney(100000, money.CurrencyMyst),
+				proposal: market.ServiceProposal{
+					PaymentMethod: &mockPaymentMethod{
+						price: money.NewMoney(100000, money.CurrencyMyst),
+						rate:  market.PaymentRate{PerTime: time.Minute},
+					},
 				},
 			},
 			invoice: crypto.Invoice{
@@ -319,9 +336,11 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
-				paymentInfo: dto.PaymentRate{
-					Duration: time.Minute,
-					Price:    money.NewMoney(100000, money.CurrencyMyst),
+				proposal: market.ServiceProposal{
+					PaymentMethod: &mockPaymentMethod{
+						price: money.NewMoney(100000, money.CurrencyMyst),
+						rate:  market.PaymentRate{PerTime: time.Minute},
+					},
 				},
 			},
 			invoice: crypto.Invoice{
@@ -335,21 +354,21 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			emt := &ExchangeMessageTracker{
-				deps: ExchangeMessageTrackerDeps{
+			emt := &InvoicePayer{
+				deps: InvoicePayerDeps{
 					TimeTracker: tt.fields.timeTracker,
-					PaymentInfo: tt.fields.paymentInfo,
+					Proposal:    tt.fields.proposal,
 					Peer:        tt.fields.peer,
 				},
 			}
 			if err := emt.isInvoiceOK(tt.invoice); (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.isInvoiceOK() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("InvoicePayer.isInvoiceOK() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
+func TestInvoicePayer_getGrandTotalPromised(t *testing.T) {
 	type fields struct {
 		consumerTotalsStorage consumerTotalsStorage
 		consumerInfoGetter    func(string) (ConsumerData, error)
@@ -427,25 +446,25 @@ func TestExchangeMessageTracker_getGrandTotalPromised(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			emt := &ExchangeMessageTracker{
-				deps: ExchangeMessageTrackerDeps{
+			emt := &InvoicePayer{
+				deps: InvoicePayerDeps{
 					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
 					ConsumerInfoGetter:    tt.fields.consumerInfoGetter,
 				},
 			}
 			got, err := emt.getGrandTotalPromised()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.getGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("InvoicePayer.getGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("ExchangeMessageTracker.getGrandTotalPromised() = %v, want %v", got, tt.want)
+				t.Errorf("InvoicePayer.getGrandTotalPromised() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestExchangeMessageTracker_incrementGrandTotalPromised(t *testing.T) {
+func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 	type fields struct {
 		consumerTotalsStorage *mockConsumerTotalsStorage
 	}
@@ -497,23 +516,23 @@ func TestExchangeMessageTracker_incrementGrandTotalPromised(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			emt := &ExchangeMessageTracker{
-				deps: ExchangeMessageTrackerDeps{
+			emt := &InvoicePayer{
+				deps: InvoicePayerDeps{
 					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
 				},
 			}
 			if err := emt.incrementGrandTotalPromised(tt.args.amount); (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.incrementGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("InvoicePayer.incrementGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			got := tt.fields.consumerTotalsStorage.calledWith
 			if got != tt.want {
-				t.Errorf("ExchangeMessageTracker.incrementGrandTotalPromised() = %v, want %v", got, tt.want)
+				t.Errorf("InvoicePayer.incrementGrandTotalPromised() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
+func TestInvoicePayer_calculateAmountToPromise(t *testing.T) {
 	type fields struct {
 		peer                  identity.Identity
 		lastInvoice           crypto.Invoice
@@ -575,8 +594,8 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			emt := &ExchangeMessageTracker{
-				deps: ExchangeMessageTrackerDeps{
+			emt := &InvoicePayer{
+				deps: InvoicePayerDeps{
 					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
 					Peer:                  tt.fields.peer,
 				},
@@ -584,21 +603,21 @@ func TestExchangeMessageTracker_calculateAmountToPromise(t *testing.T) {
 			emt.lastInvoice = tt.fields.lastInvoice
 			gotToPromise, gotDiff, err := emt.calculateAmountToPromise(tt.invoice)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.calculateAmountToPromise() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("InvoicePayer.calculateAmountToPromise() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if gotToPromise != tt.wantToPromise {
-				t.Errorf("ExchangeMessageTracker.calculateAmountToPromise() gotToPromise = %v, want %v", gotToPromise, tt.wantToPromise)
+				t.Errorf("InvoicePayer.calculateAmountToPromise() gotToPromise = %v, want %v", gotToPromise, tt.wantToPromise)
 			}
 			if gotDiff != tt.wantDiff {
-				t.Errorf("ExchangeMessageTracker.calculateAmountToPromise() gotDiff = %v, want %v", gotDiff, tt.wantDiff)
+				t.Errorf("InvoicePayer.calculateAmountToPromise() gotDiff = %v, want %v", gotDiff, tt.wantDiff)
 			}
 		})
 	}
 }
 
-func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.T) {
-	dir, err := ioutil.TempDir("", "TestExchangeMessageTracker_issueExchangeMessage_test")
+func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
+	dir, err := ioutil.TempDir("", "TestInvoicePayer_issueExchangeMessage_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -614,8 +633,8 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 	mp := &mockPublisher{
 		publicationChan: make(chan testEvent, 10),
 	}
-	emt := &ExchangeMessageTracker{
-		deps: ExchangeMessageTrackerDeps{
+	emt := &InvoicePayer{
+		deps: InvoicePayerDeps{
 			PeerExchangeMessageSender: &MockPeerExchangeMessageSender{
 				chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 			},
@@ -623,7 +642,7 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 			Peer:                  peerID,
 			Ks:                    ks,
 			Identity:              identity.FromAddress(acc.Address.Hex()),
-			Publisher:             mp,
+			EventBus:              mp,
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -642,8 +661,8 @@ func TestExchangeMessageTracker_issueExchangeMessage_publishesEvents(t *testing.
 	}, ev.value)
 }
 
-func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "TestExchangeMessageTracker_issueExchangeMessage_test")
+func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
+	dir, err := ioutil.TempDir("", "TestInvoicePayer_issueExchangeMessage_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
@@ -723,22 +742,22 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			emt := &ExchangeMessageTracker{
-				deps: ExchangeMessageTrackerDeps{
+			emt := &InvoicePayer{
+				deps: InvoicePayerDeps{
 					PeerExchangeMessageSender: tt.fields.peerExchangeMessageSender,
 					ConsumerTotalsStorage:     tt.fields.consumerTotalsStorage,
 					Peer:                      tt.fields.peer,
 					Ks:                        tt.fields.keystore,
 					Identity:                  tt.fields.identity,
-					Publisher:                 mocks.NewEventBus(),
+					EventBus:                  mocks.NewEventBus(),
 				},
 			}
 			emt.lastInvoice = tt.fields.lastInvoice
 			if err := emt.issueExchangeMessage(tt.args.invoice); (err != nil) != tt.wantErr {
-				t.Errorf("ExchangeMessageTracker.issueExchangeMessage() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("InvoicePayer.issueExchangeMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantMsg != nil {
-				errMsg := "ExchangeMessageTracker.issueExchangeMessage() error"
+				errMsg := "InvoicePayer.issueExchangeMessage() error"
 				msg := <-tt.fields.peerExchangeMessageSender.chanToWriteTo
 				assert.True(t, len(msg.Signature) > 0, errMsg)
 				assert.True(t, len(msg.Promise.Signature) > 0, errMsg)

@@ -18,10 +18,7 @@
 package noop
 
 import (
-	"time"
-
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 )
 
 // ServiceType indicates "noop" service type
@@ -36,35 +33,4 @@ type ServiceDefinition struct {
 // GetLocation returns geographic location of service definition provider
 func (service ServiceDefinition) GetLocation() market.Location {
 	return service.Location
-}
-
-// PaymentMethodNoop indicates payment method without payment at all
-const PaymentMethodNoop = "NOOP"
-
-// PaymentNoop structure describes 0 price for Noop payment
-type PaymentNoop struct {
-	Price money.Money `json:"price"`
-}
-
-// GetPrice returns price of payment per time
-func (method PaymentNoop) GetPrice() money.Money {
-	// for backwards compatibility adding a default value for price in case it's missing in proposal
-	if method.Price.Amount == 0 {
-		method.Price.Amount = 1000000
-	}
-
-	return method.Price
-}
-
-// GetType returns NOOP
-func (method PaymentNoop) GetType() string {
-	return PaymentMethodNoop
-}
-
-// GetRate returns the payment rate
-func (method PaymentNoop) GetRate() market.PaymentRate {
-	return market.PaymentRate{
-		PerTime: time.Minute,
-		PerByte: 1000000,
-	}
 }

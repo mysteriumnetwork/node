@@ -77,11 +77,8 @@ type Storage interface {
 	Remove(id ID)
 }
 
-// BalanceTrackerFactory returns a new instance of balance tracker
-type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (PaymentEngine, error)
-
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, accountantID identity.Identity) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, accountantID identity.Identity, sessionID string) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -92,40 +89,34 @@ type NATEventGetter interface {
 func NewManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
-	balanceTrackerFactory BalanceTrackerFactory,
 	paymentEngineFactory PaymentEngineFactory,
 	natPingerChan func(*traversal.Params),
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
-	paymentsDisabled bool,
 ) *Manager {
 	return &Manager{
-		currentProposal:       currentProposal,
-		sessionStorage:        sessionStorage,
-		balanceTrackerFactory: balanceTrackerFactory,
-		natPingerChan:         natPingerChan,
-		natEventGetter:        natEventGetter,
-		serviceId:             serviceId,
-		publisher:             publisher,
-		paymentEngineFactory:  paymentEngineFactory,
-		creationLock:          sync.Mutex{},
-		paymentsDisabled:      paymentsDisabled,
+		currentProposal:      currentProposal,
+		sessionStorage:       sessionStorage,
+		natPingerChan:        natPingerChan,
+		natEventGetter:       natEventGetter,
+		serviceId:            serviceId,
+		publisher:            publisher,
+		paymentEngineFactory: paymentEngineFactory,
+		creationLock:         sync.Mutex{},
 	}
 }
 
 // Manager knows how to start and provision session
 type Manager struct {
-	currentProposal       market.ServiceProposal
-	sessionStorage        Storage
-	balanceTrackerFactory BalanceTrackerFactory
-	paymentEngineFactory  PaymentEngineFactory
-	natPingerChan         func(*traversal.Params)
-	natEventGetter        NATEventGetter
-	serviceId             string
-	publisher             publisher
-	paymentsDisabled      bool
-	creationLock          sync.Mutex
+	currentProposal      market.ServiceProposal
+	sessionStorage       Storage
+	paymentEngineFactory PaymentEngineFactory
+	natPingerChan        func(*traversal.Params)
+	natEventGetter       NATEventGetter
+	serviceId            string
+	publisher            publisher
+	creationLock         sync.Mutex
 }
 
 // Start starts a session on the provider side for the given consumer.
@@ -146,33 +137,21 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.Config = config
 	session.CreatedAt = time.Now().UTC()
 
-	// TODO: this whole block needs to go when we deprecate the old payment pingpong
-	var paymentEngine PaymentEngine
-	if consumerInfo.PaymentVersion == PaymentVersionV3 && !manager.paymentsDisabled {
-		log.Info().Msg("Using new payments")
-		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID)
-		if err != nil {
-			return err
-		}
-		paymentEngine = engine
-	} else {
-		log.Info().Msg("Using legacy payments")
-		balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.IssuerID)
-		if err != nil {
-			return err
-		}
-		paymentEngine = balanceTracker
+	log.Info().Msg("Using new payments")
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID, string(session.ID))
+	if err != nil {
+		return err
 	}
 
 	// stop the balance tracker once the session is finished
 	go func() {
 		<-session.done
 		close(pingerParams.Cancel)
-		paymentEngine.Stop()
+		engine.Stop()
 	}()
 
 	go func() {
-		err := paymentEngine.Start()
+		err := engine.Start()
 		if err != nil {
 			log.Error().Err(err).Msg("Payment engine error")
 			destroyErr := manager.Destroy(consumerID, string(session.ID))

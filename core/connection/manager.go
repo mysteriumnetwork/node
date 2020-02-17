@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -92,9 +91,9 @@ type PaymentIssuer interface {
 }
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(paymentInfo *promise.PaymentInfo,
+type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal) (PaymentIssuer, error)
+	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -111,7 +110,6 @@ type connectionManager struct {
 	status                 Status
 	statusLock             sync.RWMutex
 	sessionInfo            SessionInfo
-	disablePayments        bool
 	sessionInfoMu          sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
@@ -129,7 +127,6 @@ func NewManager(
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
 	ipCheckParams IPCheckParams,
-	disablePayments bool,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -141,7 +138,6 @@ func NewManager(
 		cleanup:                  make([]func() error, 0),
 		ipResolver:               ipResolver,
 		ipCheckParams:            ipCheckParams,
-		disablePayments:          disablePayments,
 	}
 }
 
@@ -176,7 +172,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID, accountantID, proposal)
+	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
 	if err != nil {
 		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
@@ -258,8 +254,8 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal) error {
-	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID, proposal)
+func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
 	}
@@ -312,26 +308,21 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *promise.PaymentInfo, error) {
+func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
-		return session.SessionDto{}, nil, err
+		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
-	paymentVersion := session.PaymentVersionV3
-	if manager.disablePayments {
-		paymentVersion = "legacy"
-	}
 	consumerInfo := session.ConsumerInfo{
-		// TODO: once we're supporting payments from another identity make the changes accordingly
 		IssuerID:       consumerID,
 		AccountantID:   accountantID,
-		PaymentVersion: paymentVersion,
+		PaymentVersion: session.PaymentVersionV3,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
 	if err != nil {
-		return session.SessionDto{}, nil, err
+		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
 	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {

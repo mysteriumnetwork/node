@@ -34,15 +34,4 @@ func Bootstrap() {
 			return definition, err
 		},
 	)
-
-	// TODO per time or per bytes payment methods should be defined here
-	market.RegisterPaymentMethodUnserializer(
-		PaymentMethod,
-		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
-			var method Payment
-			err := json.Unmarshal(*rawDefinition, &method)
-
-			return method, err
-		},
-	)
 }

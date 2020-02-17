@@ -256,14 +256,12 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
 			di.AccountantPromiseStorage,
-			di.PromiseStorage,
 			di.NATPinger.PingTarget,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
 			di.BCHelper,
 			di.Transactor,
-			nodeOptions.Payments.PaymentsDisabled,
 			di.AccountantPromiseSettler,
 			di.HTTPClient,
 		)
@@ -271,7 +269,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		return session.NewDialogHandler(
 			sessionManagerFactory,
 			configProvider,
-			di.PromiseStorage,
 			identity.FromAddress(proposal.ProviderID),
 			connectivity.NewStatusSubscriber(di.SessionConnectivityStatusStorage),
 		), nil
@@ -311,7 +308,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	connFactory := func() (connection.Connection, error) {
 		opts := wireguard_connection.Options{
 			DNSConfigDir:        nodeOptions.Directories.Config,
-			StatsUpdateInterval: 1 * time.Second,
+			StatsUpdateInterval: config.GetDuration(config.FlagWireguardStatInterval),
 			HandshakeTimeout:    1 * time.Minute,
 		}
 		return wireguard_connection.NewConnection(opts, di.IPResolver, di.NATPinger, endpointFactory, dnsManager, handshakeWaiter)

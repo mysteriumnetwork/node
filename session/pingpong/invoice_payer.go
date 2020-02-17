@@ -23,8 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/eventbus"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -39,6 +40,9 @@ var ErrWrongProvider = errors.New("wrong provider supplied")
 
 // ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
+
+const consumerFirstInvoiceTolerance = 1.35
+const consumerInvoiceTolerance = 1.05
 
 // PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
@@ -66,37 +70,41 @@ type channelAddressCalculator interface {
 	GetChannelAddress(id identity.Identity) (common.Address, error)
 }
 
-// ExchangeMessageTracker keeps track of exchange messages and sends them to the provider.
-type ExchangeMessageTracker struct {
+// InvoicePayer keeps track of exchange messages and sends them to the provider.
+type InvoicePayer struct {
 	stop           chan struct{}
 	once           sync.Once
 	channelAddress identity.Identity
 	receivedFirst  bool
 
 	lastInvoice crypto.Invoice
-	deps        ExchangeMessageTrackerDeps
+	deps        InvoicePayerDeps
+
+	dataTransfered     dataTransfered
+	dataTransferedLock sync.Mutex
 }
 
-// ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
-type ExchangeMessageTrackerDeps struct {
+// InvoicePayerDeps contains all the dependencies for the exchange message tracker.
+type InvoicePayerDeps struct {
 	InvoiceChan               chan crypto.Invoice
 	PeerExchangeMessageSender PeerExchangeMessageSender
 	ConsumerTotalsStorage     consumerTotalsStorage
 	TimeTracker               timeTracker
 	Ks                        *keystore.KeyStore
 	Identity, Peer            identity.Identity
-	PaymentInfo               dto.PaymentRate
+	Proposal                  market.ServiceProposal
+	SessionID                 string
 	ChannelAddressCalculator  channelAddressCalculator
-	Publisher                 eventbus.Publisher
+	EventBus                  eventbus.EventBus
 	AccountantAddress         identity.Identity
 	ConsumerInfoGetter        getConsumerInfo
 }
 
-// NewExchangeMessageTracker returns a new instance of exchange message tracker.
-func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessageTracker {
-	return &ExchangeMessageTracker{
+// NewInvoicePayer returns a new instance of exchange message tracker.
+func NewInvoicePayer(ipd InvoicePayerDeps) *InvoicePayer {
+	return &InvoicePayer{
 		stop:        make(chan struct{}),
-		deps:        emtd,
+		deps:        ipd,
 		lastInvoice: crypto.Invoice{},
 	}
 }
@@ -105,47 +113,52 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 
 // Start starts the message exchange tracker. Blocks.
-func (emt *ExchangeMessageTracker) Start() error {
+func (ip *InvoicePayer) Start() error {
 	log.Debug().Msg("Starting...")
-	addr, err := emt.deps.ChannelAddressCalculator.GetChannelAddress(emt.deps.Identity)
+	addr, err := ip.deps.ChannelAddressCalculator.GetChannelAddress(ip.deps.Identity)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
-	emt.channelAddress = identity.FromAddress(addr.Hex())
+	ip.channelAddress = identity.FromAddress(addr.Hex())
 
-	emt.deps.TimeTracker.StartTracking()
+	ip.deps.TimeTracker.StartTracking()
+
+	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferedEvent)
+	if err != nil {
+		return errors.Wrap(err, "could not subscribe to data transfer events")
+	}
 
 	for {
 		select {
-		case <-emt.stop:
+		case <-ip.stop:
 			return nil
-		case invoice := <-emt.deps.InvoiceChan:
+		case invoice := <-ip.deps.InvoiceChan:
 			log.Debug().Msgf("Invoice received: %v", invoice)
-			err := emt.isInvoiceOK(invoice)
+			err := ip.isInvoiceOK(invoice)
 			if err != nil {
 				return errors.Wrap(err, "invoice not valid")
 			}
 
-			err = emt.issueExchangeMessage(invoice)
+			err = ip.issueExchangeMessage(invoice)
 			if err != nil {
 				return err
 			}
 
-			emt.lastInvoice = invoice
+			ip.lastInvoice = invoice
 		}
 	}
 }
 
 const grandTotalKey = "consumer_grand_total"
 
-func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
-	res, err := emt.deps.ConsumerTotalsStorage.Get(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address)
+func (ip *InvoicePayer) getGrandTotalPromised() (uint64, error) {
+	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
 	if err == ErrNotFound {
-		res, recoveryError := emt.recoverGrandTotalPromised()
+		res, recoveryError := ip.recoverGrandTotalPromised()
 		if recoveryError != nil {
 			return 0, recoveryError
 		}
-		incrementErr := emt.incrementGrandTotalPromised(res)
+		incrementErr := ip.incrementGrandTotalPromised(res)
 		return res, incrementErr
 	} else if err != nil {
 		return 0, errors.Wrap(err, "could not get previous grand total")
@@ -153,8 +166,8 @@ func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
 	return res, nil
 }
 
-func (emt *ExchangeMessageTracker) recoverGrandTotalPromised() (uint64, error) {
-	data, err := emt.deps.ConsumerInfoGetter(emt.deps.Identity.Address)
+func (ip *InvoicePayer) recoverGrandTotalPromised() (uint64, error) {
+	data, err := ip.deps.ConsumerInfoGetter(ip.deps.Identity.Address)
 	if err != nil {
 		if err != ErrAccountantNotFound {
 			return 0, err
@@ -165,8 +178,8 @@ func (emt *ExchangeMessageTracker) recoverGrandTotalPromised() (uint64, error) {
 	return data.LatestPromise.Amount, nil
 }
 
-func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) error {
-	res, err := emt.deps.ConsumerTotalsStorage.Get(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address)
+func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
+	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -174,29 +187,19 @@ func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) er
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return emt.deps.ConsumerTotalsStorage.Store(emt.deps.Identity.Address, emt.deps.AccountantAddress.Address, res+amount)
+	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address, res+amount)
 }
 
-func (emt *ExchangeMessageTracker) isServiceFree() bool {
-	return emt.deps.PaymentInfo.Duration == 0 || emt.deps.PaymentInfo.Price.Amount == 0
-}
-
-func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
-	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.deps.Peer.Address) {
+func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
+	if strings.ToLower(invoice.Provider) != strings.ToLower(ip.deps.Peer.Address) {
 		return ErrWrongProvider
 	}
 
-	var ticksPassed float64
-	// avoid division by zero on free service
-	if !emt.isServiceFree() {
-		ticksPassed = float64(emt.deps.TimeTracker.Elapsed()) / float64(emt.deps.PaymentInfo.Duration)
-	}
+	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), ip.getDataTransfered(), ip.deps.Proposal.PaymentMethod)
 
-	shouldBe := uint64(math.Round(ticksPassed * float64(emt.deps.PaymentInfo.GetPrice().Amount)))
-
-	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
-	if !emt.receivedFirst {
-		upperBound = uint64(math.Trunc(float64(shouldBe) * 1.35))
+	upperBound := uint64(math.Trunc(float64(shouldBe) * consumerInvoiceTolerance))
+	if !ip.receivedFirst {
+		upperBound = uint64(math.Trunc(float64(shouldBe) * consumerFirstInvoiceTolerance))
 	}
 
 	log.Debug().Msgf("Upper bound %v", upperBound)
@@ -206,19 +209,19 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrProviderOvercharge
 	}
 
-	emt.receivedFirst = true
+	ip.receivedFirst = true
 	return nil
 }
 
-func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
-	diff = invoice.AgreementTotal - emt.lastInvoice.AgreementTotal
-	totalPromised, err := emt.getGrandTotalPromised()
+func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
+	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
+	totalPromised, err := ip.getGrandTotalPromised()
 	if err != nil {
 		return 0, 0, err
 	}
 
 	// This is a new agreement, we need to take in the agreement total and just add it to total promised
-	if emt.lastInvoice.AgreementID != invoice.AgreementID {
+	if ip.lastInvoice.AgreementID != invoice.AgreementID {
 		diff = invoice.AgreementTotal
 	}
 
@@ -228,36 +231,76 @@ func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoi
 	return amountToPromise, diff, nil
 }
 
-func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) error {
-	amountToPromise, diff, err := emt.calculateAmountToPromise(invoice)
+func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
+	amountToPromise, diff, err := ip.calculateAmountToPromise(invoice)
 	if err != nil {
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, emt.channelAddress.Address, emt.deps.Ks, common.HexToAddress(emt.deps.Identity.Address))
+	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
 
-	err = emt.deps.PeerExchangeMessageSender.Send(*msg)
+	err = ip.deps.PeerExchangeMessageSender.Send(*msg)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	defer emt.deps.Publisher.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
-		Identity:       emt.deps.Identity,
+	defer ip.deps.EventBus.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
+		Identity:       ip.deps.Identity,
 		AmountPromised: diff,
 	})
 
 	// TODO: we'd probably want to check if we have enough balance here
-	err = emt.incrementGrandTotalPromised(diff)
+	err = ip.incrementGrandTotalPromised(diff)
 	return errors.Wrap(err, "could not increment grand total")
 }
 
 // Stop stops the message tracker.
-func (emt *ExchangeMessageTracker) Stop() {
-	emt.once.Do(func() {
+func (ip *InvoicePayer) Stop() {
+	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		close(emt.stop)
+		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferedEvent)
+		close(ip.stop)
 	})
+}
+
+func (ip *InvoicePayer) consumeDataTransferedEvent(e connection.SessionStatsEvent) {
+	// skip irrelevant sessions
+	if !strings.EqualFold(string(e.SessionInfo.SessionID), ip.deps.SessionID) {
+		return
+	}
+
+	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
+	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
+	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
+	ip.updateDataTransfer(e.Stats.BytesSent, e.Stats.BytesReceived)
+}
+
+func (ip *InvoicePayer) updateDataTransfer(up, down uint64) {
+	ip.dataTransferedLock.Lock()
+	defer ip.dataTransferedLock.Unlock()
+
+	newUp := ip.dataTransfered.up
+	if up > ip.dataTransfered.up {
+		newUp = up
+	}
+
+	newDown := ip.dataTransfered.down
+	if down > ip.dataTransfered.down {
+		newDown = down
+	}
+
+	ip.dataTransfered = dataTransfered{
+		up:   newUp,
+		down: newDown,
+	}
+}
+
+func (ip *InvoicePayer) getDataTransfered() dataTransfered {
+	ip.dataTransferedLock.Lock()
+	defer ip.dataTransferedLock.Unlock()
+
+	return ip.dataTransfered
 }
