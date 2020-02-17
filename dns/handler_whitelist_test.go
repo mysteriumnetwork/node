@@ -48,11 +48,19 @@ var (
 
 func Test_WhitelistAnswers(t *testing.T) {
 	tests := []struct {
+		name           string
 		response       *dns.Msg
 		whitelistedIPs map[string]int
-		message        string
 	}{
 		{
+			"should not allow failed responses",
+			&dns.Msg{
+				MsgHdr: dns.MsgHdr{Rcode: dns.RcodeNameError},
+			},
+			map[string]int{},
+		},
+		{
+			"should allow whitelisted hostname",
 			&dns.Msg{
 				Answer: []dns.RR{
 					&dns.A{
@@ -69,9 +77,9 @@ func Test_WhitelistAnswers(t *testing.T) {
 				"0.0.0.3": 1,
 				"0.0.0.4": 1,
 			},
-			"should allow whitelisted hostname",
 		},
 		{
+			"should not allow zone of whitelisted hostname",
 			&dns.Msg{
 				Answer: []dns.RR{
 					&dns.A{
@@ -81,9 +89,9 @@ func Test_WhitelistAnswers(t *testing.T) {
 				},
 			},
 			map[string]int{},
-			"should not allow zone of whitelisted hostname",
 		},
 		{
+			"should not allow unknown hostname",
 			&dns.Msg{
 				Answer: []dns.RR{
 					&dns.A{
@@ -93,10 +101,10 @@ func Test_WhitelistAnswers(t *testing.T) {
 				},
 			},
 			map[string]int{},
-			"should not allow unknown hostname",
 		},
 
 		{
+			"should allow whitelisted wildcard hostname",
 			&dns.Msg{
 				Answer: []dns.RR{
 					&dns.A{
@@ -113,9 +121,9 @@ func Test_WhitelistAnswers(t *testing.T) {
 				"0.0.0.8": 1,
 				"0.0.0.9": 1,
 			},
-			"should allow whitelisted wildcard hostname",
 		},
 		{
+			"should allow zone of whitelisted wildcard hostname",
 			&dns.Msg{
 				Answer: []dns.RR{
 					&dns.A{
@@ -132,26 +140,27 @@ func Test_WhitelistAnswers(t *testing.T) {
 				"0.0.0.6": 1,
 				"0.0.0.7": 1,
 			},
-			"should allow zone of whitelisted wildcard hostname",
 		},
 	}
 
-	for _, test := range tests {
-		mockedBlocker := &trafficBlockerMock{
-			allowIPCalls: map[string]int{},
-		}
-		writer := &recordingWriter{}
-		handler := WhitelistAnswers(
-			dns.HandlerFunc(func(writer dns.ResponseWriter, req *dns.Msg) {
-				writer.WriteMsg(test.response)
-			}),
-			mockedBlocker,
-			createPolicies(),
-		)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockedBlocker := &trafficBlockerMock{
+				allowIPCalls: map[string]int{},
+			}
+			writer := &recordingWriter{}
+			handler := WhitelistAnswers(
+				dns.HandlerFunc(func(writer dns.ResponseWriter, req *dns.Msg) {
+					writer.WriteMsg(tt.response)
+				}),
+				mockedBlocker,
+				createPolicies(),
+			)
 
-		handler.ServeDNS(writer, &dns.Msg{})
-		assert.Equal(t, test.whitelistedIPs, mockedBlocker.allowIPCalls, test.message)
-		assert.Equal(t, test.response, writer.responseMsg)
+			handler.ServeDNS(writer, &dns.Msg{})
+			assert.Equal(t, tt.whitelistedIPs, mockedBlocker.allowIPCalls, tt.name)
+			assert.Equal(t, tt.response, writer.responseMsg)
+		})
 	}
 }
 

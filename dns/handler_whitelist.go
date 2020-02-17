@@ -27,10 +27,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// WhitelistAnswers creates DNS handler which whitelist resolved queries to firewall.
+// WhitelistAnswers creates a DNS handler that whitelist resolved queries to firewall.
 func WhitelistAnswers(
 	resolver dns.Handler,
-	trafficBlocker firewall.IncomingTrafficBlocker,
+	trafficBlocker firewall.IncomingTrafficFirewall,
 	policies *policy.Repository,
 ) dns.Handler {
 	return &whitelistHandler{
@@ -42,7 +42,7 @@ func WhitelistAnswers(
 
 type whitelistHandler struct {
 	resolver       dns.Handler
-	trafficBlocker firewall.IncomingTrafficBlocker
+	trafficBlocker firewall.IncomingTrafficFirewall
 	policies       *policy.Repository
 }
 
