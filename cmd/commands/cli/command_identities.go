@@ -84,7 +84,6 @@ func (c *cliApp) listIdentities(args []string) {
 	for _, id := range ids {
 		status("+", id.Address)
 	}
-	return
 }
 
 const usageNewIdentity = "new [passphrase]"

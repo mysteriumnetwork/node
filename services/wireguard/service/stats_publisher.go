@@ -46,15 +46,14 @@ func newStatsPublisher(bus eventbus.Publisher, frequency time.Duration) statsPub
 
 func (s statsPublisher) start(sessionID string, supplier statsSupplier) {
 	for {
-		tick := time.After(s.frequency)
 		select {
-		case <-tick:
+		case <-time.After(s.frequency):
 			stats, err := supplier.PeerStats()
 			if err != nil {
 				log.Warn().Err(err).Msg("Could not get peer statistics")
 				continue
 			}
-			s.bus.Publish(event.AppTopicDataTransfered, event.DataTransferEventPayload{
+			s.bus.Publish(event.AppTopicDataTransferred, event.DataTransferEventPayload{
 				ID:   sessionID,
 				Up:   stats.BytesSent,
 				Down: stats.BytesReceived,

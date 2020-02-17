@@ -260,7 +260,6 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			}
 		}
 	}()
-	return
 }
 
 func (registry *contractRegistry) handleStop() {

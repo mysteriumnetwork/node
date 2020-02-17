@@ -191,7 +191,7 @@ func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
 }
 
 func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
-	if strings.ToLower(invoice.Provider) != strings.ToLower(ip.deps.Peer.Address) {
+	if !strings.EqualFold(invoice.Provider, ip.deps.Peer.Address) {
 		return ErrWrongProvider
 	}
 
