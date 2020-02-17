@@ -35,7 +35,7 @@ type Throughput struct {
 
 // String returns human readable form of the throughput
 func (t Throughput) String() string {
-	return consumer.BitCountDecimal(uint64(t.BitsPerSecond), "Bps")
+	return consumer.BitCountDecimal(uint64(t.BitsPerSecond), "bps")
 }
 
 // CurrentSpeed represents the current(moment) download and upload speeds in bits per second
