@@ -37,7 +37,7 @@ require (
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.33
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.34
 	github.com/mysteriumnetwork/go-openvpn v0.0.21
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
