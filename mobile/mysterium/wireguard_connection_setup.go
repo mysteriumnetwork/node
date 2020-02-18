@@ -20,6 +20,8 @@ package mysterium
 import (
 	"bufio"
 	"encoding/json"
+	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -68,7 +70,6 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 
 	return &wireguardConnection{
 		done:            make(chan struct{}),
-		pingerStop:      make(chan struct{}),
 		stateCh:         make(chan connection.State, 100),
 		opts:            opts,
 		device:          device,
@@ -82,7 +83,6 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 type wireguardConnection struct {
 	closeOnce       sync.Once
 	done            chan struct{}
-	pingerStop      chan struct{}
 	stateCh         chan connection.State
 	opts            wireGuardOptions
 	privateKey      string
@@ -125,16 +125,32 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		}
 	}()
 
-	if config.LocalPort > 0 {
-		err = c.natPinger.PingProvider(
+	if config.LocalPort > 0 || len(config.Ports) > 0 {
+		conn, err := c.natPinger.PingProvider(
 			config.Provider.Endpoint.IP.String(),
-			config.RemotePort,
-			config.LocalPort,
+			c.ports,
+			config.Ports,
 			0,
-			c.pingerStop,
 		)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
+		}
+
+		if conn != nil {
+			_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
+			if err != nil {
+				return err
+			}
+
+			_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
+			if err != nil {
+				return err
+			}
+
+			config.LocalPort, _ = strconv.Atoi(lPort)
+			config.Provider.Endpoint.Port, _ = strconv.Atoi(rPort)
+
+			conn.Close()
 		}
 	}
 
@@ -162,7 +178,6 @@ func (c *wireguardConnection) Stop() {
 		c.device.Stop()
 		c.stateCh <- connection.NotConnected
 
-		close(c.pingerStop)
 		close(c.stateCh)
 		close(c.done)
 	})

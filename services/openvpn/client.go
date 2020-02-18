@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"encoding/json"
-	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -167,7 +166,6 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	}
 
 	proc, clientConfig, err := c.processFactory(options, sessionConfig)
-	log.Info().Msg(fmt.Sprint(clientConfig.VpnConfig))
 	if err != nil {
 		log.Info().Err(err).Msg("Client config factory error")
 		return err

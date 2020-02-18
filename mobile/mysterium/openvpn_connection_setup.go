@@ -19,6 +19,8 @@ package mysterium
 
 import (
 	"encoding/json"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -38,7 +40,7 @@ type natPinger interface {
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
-type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error)
+type openvpn3SessionFactory func(connection.ConnectOptions, *openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error)
 
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
@@ -50,21 +52,12 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 		ipResolver: ipResolver,
 		pingerStop: make(chan struct{}),
 	}
-	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		sessionConfig := &openvpn.VPNConfig{}
-		err := json.Unmarshal(options.SessionConfig, sessionConfig)
-		if err != nil {
-			return nil, nil, err
-		}
-
+	sessionFactory := func(options connection.ConnectOptions, sessionConfig *openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
 		// override vpnClientConfig params with proxy local IP and pinger port
 		// do this only if connecting to natted provider
 		if sessionConfig.LocalPort > 0 {
 			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
 			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
-			sessionConfig.RemoteIP = "127.0.0.1"
-			// TODO: randomize this too?
-			sessionConfig.RemotePort = sessionConfig.LocalPort + 1
 		}
 
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", connection.DNSOptionAuto)
@@ -106,7 +99,7 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 }
 
 type openvpnConnection struct {
-	pingerStop    chan struct{}
+	ports         []int
 	stateCh       chan connection.State
 	stats         connection.Statistics
 	statsMu       sync.RWMutex
@@ -159,24 +152,48 @@ func (c *openvpnConnection) Statistics() (connection.Statistics, error) {
 }
 
 func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
-	newSession, clientConfig, err := c.createSession(options)
+	sessionConfig := &openvpn.VPNConfig{}
+	err := json.Unmarshal(options.SessionConfig, sessionConfig)
 	if err != nil {
 		return err
 	}
 
-	log.Info().Msgf("Client config after session create: %v", clientConfig)
-	if clientConfig.LocalPort > 0 {
-		err := c.natPinger.PingProvider(
-			clientConfig.VpnConfig.OriginalRemoteIP,
-			clientConfig.VpnConfig.OriginalRemotePort,
-			clientConfig.LocalPort,
-			clientConfig.LocalPort+1,
-			c.pingerStop,
+	if sessionConfig.LocalPort == 0 && len(sessionConfig.Ports) > 0 {
+		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
+			c.ports = []int{sessionConfig.LocalPort}
+			sessionConfig.Ports = []int{sessionConfig.RemotePort}
+		}
+
+		conn, err := c.natPinger.PingProvider(
+			sessionConfig.RemoteIP,
+			c.ports,
+			sessionConfig.Ports,
+			sessionConfig.LocalPort,
 		)
 		if err != nil {
 			return err
 		}
+
+		_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
+		if err != nil {
+			return err
+		}
+
+		_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
+		if err != nil {
+			return err
+		}
+
+		sessionConfig.LocalPort, _ = strconv.Atoi(lPort)
+		sessionConfig.RemotePort, _ = strconv.Atoi(rPort)
 	}
+
+	newSession, clientConfig, err := c.createSession(options, sessionConfig)
+	if err != nil {
+		log.Info().Err(err).Msg("Client config factory error")
+		return err
+	}
+	log.Info().Interface("data", clientConfig).Msgf("Openvpn client configuration")
 
 	c.session = newSession
 	c.session.Start()
@@ -188,8 +205,6 @@ func (c *openvpnConnection) Stop() {
 		if c.session != nil {
 			c.session.Stop()
 		}
-		log.Info().Msg("Stopping NATProxy")
-		close(c.pingerStop)
 	})
 }
 
