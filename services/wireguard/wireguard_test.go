@@ -42,7 +42,7 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 			},
 			`{
 				"bytes":0,
-				"duration":0, 
+				"duration":0,
 				"type":"",
 				"price": {
 					"amount": 50000000,
@@ -54,7 +54,7 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 			pingpong.PaymentMethod{},
 			`{
 				"bytes":0,
-				"duration":0, 
+				"duration":0,
 				"type":"",
 				"price": {}
 			}`,
@@ -80,7 +80,7 @@ func Test_PaymentMethod_Unserialize(t *testing.T) {
 		{
 			`{
 				"bytes":1,
-				"duration":2, 
+				"duration":2,
 				"type":"test",
 				"price": {
 					"amount": 50000000,
@@ -272,7 +272,7 @@ func TestServiceConfig_MarshalJSON(t *testing.T) {
 	configBytes, err := json.Marshal(config)
 	assert.NoError(t, err)
 	assert.Equal(t,
-		`{"local_port":51000,"remote_port":51001,"provider":{"public_key":"wg1","endpoint":"127.0.0.1:51001"},"consumer":{"ip_address":"127.0.0.1/25","dns_ips":"128.0.0.1","connect_delay":3000}}`,
+		`{"local_port":51000,"remote_port":51001,"ports":null,"provider":{"public_key":"wg1","endpoint":"127.0.0.1:51001"},"consumer":{"ip_address":"127.0.0.1/25","dns_ips":"128.0.0.1","connect_delay":3000}}`,
 		string(configBytes),
 	)
 }

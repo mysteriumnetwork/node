@@ -131,20 +131,22 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 			return errors.Wrap(err, "could not ping provider")
 		}
 
-		_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
-		if err != nil {
-			return err
+		if conn != nil {
+			_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
+			if err != nil {
+				return err
+			}
+
+			_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
+			if err != nil {
+				return err
+			}
+
+			config.LocalPort, _ = strconv.Atoi(lPort)
+			config.Provider.Endpoint.Port, _ = strconv.Atoi(rPort)
+
+			conn.Close()
 		}
-
-		_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
-		if err != nil {
-			return err
-		}
-
-		config.LocalPort, _ = strconv.Atoi(lPort)
-		config.Provider.Endpoint.Port, _ = strconv.Atoi(rPort)
-
-		conn.Close()
 	}
 
 	log.Info().Msg("Starting new connection")

@@ -18,6 +18,7 @@
 package openvpn
 
 import (
+	"net"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -44,10 +45,10 @@ func TestConnection_CreatesConnection(t *testing.T) {
 	assert.NotNil(t, conn)
 }
 
-// MockNATPinger returns a mock nat pinger, that really doesnt do much
+// MockNATPinger returns a mock nat pinger, that really doesn't do much
 type MockNATPinger struct{}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ string, port, consumerPort, proxyPort int, _ <-chan struct{}) error {
-	return nil
+func (mnp *MockNATPinger) PingProvider(_ string, _, _ []int, _ int) (*net.UDPConn, error) {
+	return nil, nil
 }
