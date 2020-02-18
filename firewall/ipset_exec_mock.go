@@ -1,5 +1,3 @@
-//+build linux,!android
-
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -19,15 +17,29 @@
 
 package firewall
 
-// NewOutgoingTrafficBlocker creates instance of traffic blocker.
-func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
-	return &outgoingBlockerIptables{
-		referenceTracker: make(map[string]refCount),
-		trafficLockScope: none,
-	}
+import (
+	"strings"
+)
+
+type ipsetExecResult struct {
+	called bool
+	output []string
+	err    error
 }
 
-// NewIncomingTrafficBlocker creates instance of traffic blocker.
-func NewIncomingTrafficBlocker() IncomingTrafficBlocker {
-	return NewIncomingTrafficBlockerIptables()
+type ipsetExecMock struct {
+	mocks map[string]ipsetExecResult
+}
+
+func (mce *ipsetExecMock) Exec(args []string) ([]string, error) {
+	key := strings.Join(args, " ")
+	res := mce.mocks[key]
+	res.called = true
+	mce.mocks[key] = res
+	return res.output, res.err
+}
+
+func (mce *ipsetExecMock) VerifyCalledWithArgs(args ...string) bool {
+	key := strings.Join(args, " ")
+	return mce.mocks[key].called
 }

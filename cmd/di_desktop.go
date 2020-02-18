@@ -181,6 +181,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			portPool,
 			di.EventBus,
 			portMapper,
+			di.ServiceFirewall,
 		)
 		return manager, proposal, nil
 	}

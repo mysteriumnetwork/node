@@ -1,5 +1,3 @@
-//+build linux,!android
-
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -17,17 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package firewall
+package ipset
 
-// NewOutgoingTrafficBlocker creates instance of traffic blocker.
-func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
-	return &outgoingBlockerIptables{
-		referenceTracker: make(map[string]refCount),
-		trafficLockScope: none,
+import (
+	"bufio"
+	"bytes"
+
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
+	"github.com/pkg/errors"
+)
+
+// Exec activates given args
+var Exec = defaultExec
+
+func defaultExec(args []string) ([]string, error) {
+	args = append([]string{"sudo", "/usr/sbin/ipset"}, args...)
+	output, err := cmdutil.ExecOutput(args...)
+	if err != nil {
+		return nil, errors.Wrap(err, "ipset cmd error")
 	}
-}
 
-// NewIncomingTrafficBlocker creates instance of traffic blocker.
-func NewIncomingTrafficBlocker() IncomingTrafficBlocker {
-	return NewIncomingTrafficBlockerIptables()
+	outputScanner := bufio.NewScanner(bytes.NewBufferString(output))
+	var lines []string
+	for outputScanner.Scan() {
+		lines = append(lines, outputScanner.Text())
+	}
+	return lines, outputScanner.Err()
 }

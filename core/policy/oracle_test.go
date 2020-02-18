@@ -144,6 +144,23 @@ func Test_Oracle_SubscribePolicies_WhenEndpointSucceeds(t *testing.T) {
 	)
 }
 
+func Test_Oracle_SubscribePolicies_MultipleSubscribers(t *testing.T) {
+	server := mockPolicyServer()
+	defer server.Close()
+
+	oracle := createEmptyOracle(server.URL)
+
+	repo1 := NewRepository()
+	err := oracle.SubscribePolicies(oracle.Policies([]string{"1"}), repo1)
+	assert.NoError(t, err)
+	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRulesUpdated}, repo1.Rules())
+
+	repo2 := NewRepository()
+	err = oracle.SubscribePolicies(oracle.Policies([]string{"1"}), repo2)
+	assert.NoError(t, err)
+	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRulesUpdated}, repo2.Rules())
+}
+
 func Test_Oracle_StartSyncsPolicies(t *testing.T) {
 	repo := NewRepository()
 	server := mockPolicyServer()

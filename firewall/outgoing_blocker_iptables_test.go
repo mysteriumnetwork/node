@@ -18,7 +18,6 @@
 package firewall
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/firewall/iptables"
@@ -26,12 +25,12 @@ import (
 )
 
 func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{},
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -44,12 +43,12 @@ func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
 }
 
 func TestSessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{},
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -69,7 +68,7 @@ func TestSessionTrafficBlockIsNoopWhenGlobalBlockWasCalled(t *testing.T) {
 }
 
 func TestAllowIPAccessIsAddedAndRemoved(t *testing.T) {
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -80,7 +79,7 @@ func TestAllowIPAccessIsAddedAndRemoved(t *testing.T) {
 }
 
 func TestHostsFromMultipleURLsAreAllowed(t *testing.T) {
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -93,7 +92,7 @@ func TestHostsFromMultipleURLsAreAllowed(t *testing.T) {
 }
 
 func TestRuleIsRemovedOnlyAfterLastRemovalCall(t *testing.T) {
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -111,8 +110,8 @@ func TestRuleIsRemovedOnlyAfterLastRemovalCall(t *testing.T) {
 }
 
 func TestBlockerSetupIsSuccessful(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{
 			"--version": {
 				output: []string{"iptables v1.6.0"},
 			},
@@ -125,7 +124,7 @@ func TestBlockerSetupIsSuccessful(t *testing.T) {
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 	assert.NoError(t, blocker.Setup())
@@ -134,8 +133,8 @@ func TestBlockerSetupIsSuccessful(t *testing.T) {
 }
 
 func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{
 			"--version": {
 				output: []string{"iptables v1.6.0"},
 			},
@@ -143,22 +142,22 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 				output: []string{
 					"-P OUTPUT ACCEPT",
 					// leftover - kill switch is still enabled
-					"-A OUTPUT -s 5.5.5.5 -j CONSUMER_KILL_SWITCH",
+					"-A OUTPUT -s 5.5.5.5 -j MYST_CONSUMER_KILL_SWITCH",
 				},
 			},
 			// kill switch chain still exists
-			"-S CONSUMER_KILL_SWITCH": {
+			"-S MYST_CONSUMER_KILL_SWITCH": {
 				output: []string{
 					// with some allowed ips
-					"-A CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
-					"-A CONSUMER_KILL_SWITCH -j REJECT",
+					"-A MYST_CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
+					"-A MYST_CONSUMER_KILL_SWITCH -j REJECT",
 				},
 			},
 		},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 	assert.NoError(t, blocker.Setup())
@@ -171,30 +170,30 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 }
 
 func TestBlockerResetIsSuccessful(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{
 			"-S OUTPUT": {
 				output: []string{
 					"-P OUTPUT ACCEPT",
 					// kill switch is enabled
-					"-A OUTPUT -s 1.1.1.1 -j CONSUMER_KILL_SWITCH",
+					"-A OUTPUT -s 1.1.1.1 -j MYST_CONSUMER_KILL_SWITCH",
 				},
 			},
-			"-S CONSUMER_KILL_SWITCH": {
+			"-S MYST_CONSUMER_KILL_SWITCH": {
 				output: []string{
 					//first allowed address
-					"-A CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
+					"-A MYST_CONSUMER_KILL_SWITCH -d 2.2.2.2 -j ACCEPT",
 					//second allowed address
-					"-A CONSUMER_KILL_SWITCH -d 3.3.3.3 -j ACCEPT",
+					"-A MYST_CONSUMER_KILL_SWITCH -d 3.3.3.3 -j ACCEPT",
 					//drop everything else
-					"-A CONSUMER_KILL_SWITCH -j REJECT",
+					"-A MYST_CONSUMER_KILL_SWITCH -j REJECT",
 				},
 			},
 		},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 	blocker.Teardown()
@@ -204,12 +203,12 @@ func TestBlockerResetIsSuccessful(t *testing.T) {
 }
 
 func TestBlockerAddsAllowedIP(t *testing.T) {
-	mockedExec := mockedCmdExec{
-		mocks: map[string]cmdExecResult{},
+	mockedExec := iptablesExecMock{
+		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedExec.Exec
 
-	blocker := &iptablesTrafficBlocker{
+	blocker := &outgoingBlockerIptables{
 		referenceTracker: make(map[string]refCount),
 	}
 
@@ -220,31 +219,4 @@ func TestBlockerAddsAllowedIP(t *testing.T) {
 	removeRuleFunc()
 	assert.True(t, mockedExec.VerifyCalledWithArgs("-D", killswitchChain, "-d", "2.2.2.2", "-j", "ACCEPT"))
 
-}
-
-type cmdExecResult struct {
-	called bool
-	output []string
-	err    error
-}
-
-type mockedCmdExec struct {
-	mocks map[string]cmdExecResult
-}
-
-func (mce *mockedCmdExec) Exec(args ...string) ([]string, error) {
-	key := argsToKey(args...)
-	res := mce.mocks[key]
-	res.called = true
-	mce.mocks[key] = res
-	return res.output, res.err
-}
-
-func (mce *mockedCmdExec) VerifyCalledWithArgs(args ...string) bool {
-	key := argsToKey(args...)
-	return mce.mocks[key].called
-}
-
-func argsToKey(args ...string) string {
-	return strings.Join(args, " ")
 }

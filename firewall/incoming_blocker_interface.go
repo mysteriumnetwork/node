@@ -1,5 +1,3 @@
-//+build linux,!android
-
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -19,15 +17,17 @@
 
 package firewall
 
-// NewOutgoingTrafficBlocker creates instance of traffic blocker.
-func NewOutgoingTrafficBlocker() OutgoingTrafficBlocker {
-	return &outgoingBlockerIptables{
-		referenceTracker: make(map[string]refCount),
-		trafficLockScope: none,
-	}
+import (
+	"net"
+)
+
+// IncomingTrafficBlocker defines provider side firewall, to control which traffic is enabled to pass and which not.
+type IncomingTrafficBlocker interface {
+	Setup() error
+	Teardown()
+	BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error)
+	AllowIPAccess(ip net.IP) (IncomingRuleRemove, error)
 }
 
-// NewIncomingTrafficBlocker creates instance of traffic blocker.
-func NewIncomingTrafficBlocker() IncomingTrafficBlocker {
-	return NewIncomingTrafficBlockerIptables()
-}
+// IncomingRuleRemove type defines function for removal of created rule.
+type IncomingRuleRemove func() error
