@@ -658,7 +658,14 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	if di.BrokerConnection, err = di.BrokerConnector.Connect(di.NetworkDefinition.BrokerAddress); err != nil {
+	brokerURL, err := nats.ParseServerURI(di.NetworkDefinition.BrokerAddress)
+	if err != nil {
+		return err
+	}
+	if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
+		return err
+	}
+	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURL.String()); err != nil {
 		return err
 	}
 
