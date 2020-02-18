@@ -183,6 +183,10 @@ func (tbn *trafficBlockerMock) BlockIncomingTraffic(net.IPNet) (firewall.Incomin
 	return nil, nil
 }
 
+func (tbn *trafficBlockerMock) AllowURLAccess(rawURLs ...string) (firewall.IncomingRuleRemove, error) {
+	return nil, nil
+}
+
 func (tbn *trafficBlockerMock) AllowIPAccess(ip net.IP) (firewall.IncomingRuleRemove, error) {
 	ipString := ip.String()
 	if _, called := tbn.allowIPCalls[ipString]; !called {

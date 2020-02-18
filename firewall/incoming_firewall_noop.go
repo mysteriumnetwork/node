@@ -47,6 +47,19 @@ func (ifn *incomingFirewallNoop) BlockIncomingTraffic(network net.IPNet) (Incomi
 	}, nil
 }
 
+// AllowIPAccess logs URL for which access was requested.
+func (ifn *incomingFirewallNoop) AllowURLAccess(rawURLs ...string) (IncomingRuleRemove, error) {
+	for _, rawURL := range rawURLs {
+		log.Info().Msgf("Allow URL %s access", rawURL)
+	}
+	return func() error {
+		for _, rawURL := range rawURLs {
+			log.Info().Msgf("Rule for URL: %s removed", rawURL)
+		}
+		return nil
+	}, nil
+}
+
 // AllowIPAccess logs IP for which access was requested.
 func (ifn *incomingFirewallNoop) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
 	log.Info().Msgf("Allow IP %s access", ip)

@@ -647,6 +647,14 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	); err != nil {
 		return err
 	}
+	if _, err := di.ServiceFirewall.AllowURLAccess(
+		network.EtherClientRPC,
+		network.MysteriumAPIAddress,
+		options.Transactor.TransactorEndpointAddress,
+		options.Accountant.AccountantEndpointAddress,
+	); err != nil {
+		return err
+	}
 
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
@@ -693,17 +701,17 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if _, err := firewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
-
+	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
+		return err
+	}
 	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, 20*time.Second)
 	go di.QualityClient.Start()
 
 	var transport quality.Transport
 	switch options.Type {
 	case node.QualityTypeElastic:
-		_, err = firewall.AllowURLAccess(options.Address)
 		transport = quality.NewElasticSearchTransport(di.HTTPClient, options.Address, 10*time.Second)
 	case node.QualityTypeMORQA:
-		_, err = firewall.AllowURLAccess(options.Address)
 		transport = quality.NewMORQATransport(di.QualityClient)
 	case node.QualityTypeNone:
 		transport = quality.NewNoopTransport()
@@ -726,6 +734,9 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	if _, err = firewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
+	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
+		return errors.Wrap(err, "failed to add firewall exception")
+	}
 	di.IPResolver = ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
 
 	var resolver location.Resolver
@@ -738,6 +749,9 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Config, options.Location.Address), di.IPResolver)
 	case node.LocationTypeOracle:
 		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
+			return err
+		}
+		if _, err := di.ServiceFirewall.AllowURLAccess(options.Location.Address); err != nil {
 			return err
 		}
 		resolver, err = location.NewOracleResolver(di.HTTPClient, options.Location.Address), nil
