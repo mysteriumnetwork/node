@@ -28,7 +28,6 @@ import (
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -81,10 +80,6 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
-			outIP, err := di.IPResolver.GetOutboundIPAsString()
-			if err != nil {
-				return nil, market.ServiceProposal{}, err
-			}
 
 			wgOptions := serviceOptions.(wireguard_service.Options)
 
@@ -99,18 +94,12 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				natPinger = di.NATPinger
 			}
 
-			locationInfo := location.ServiceLocationInfo{
-				OutIP:   outIP,
-				PubIP:   loc.IP,
-				Country: loc.Country,
-			}
-
 			portmapConfig := mapping.DefaultConfig()
 			portMapper := mapping.NewPortMapper(portmapConfig, di.EventBus)
 
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
-				locationInfo,
+				loc.Country,
 				di.NATService,
 				natPinger,
 				di.NATTracker,
@@ -284,7 +273,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
 		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
-		return endpoint.NewConnectionEndpoint(nil, resourceAllocator, 0)
+		return endpoint.NewConnectionEndpoint(resourceAllocator)
 	}
 	connFactory := func() (connection.Connection, error) {
 		opts := wireguard_connection.Options{

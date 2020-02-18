@@ -73,6 +73,7 @@ type ConsumerModeConfig struct {
 // ProviderModeConfig is provider endpoint startup configuration.
 type ProviderModeConfig struct {
 	ListenPort int
+	PublicIP   string
 }
 
 // ConsumerConfig is used for sending the public key and IP from consumer to provider

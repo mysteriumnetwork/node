@@ -65,28 +65,24 @@ type eventListener interface {
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	nodeOptions    node.Options
-	serviceOptions Options
-
-	natService     nat.NATService
-	ports          port.ServicePortSupplier
-	natPingerPorts port.ServicePortSupplier
-	natPinger      NATPinger
-	natEventGetter NATEventGetter
-	dnsProxy       *dns.Proxy
-	eventListener  eventListener
-	portMapper     mapping.PortMapper
-	trafficBlocker firewall.IncomingTrafficFirewall
-
+	natService      nat.NATService
+	ports           port.ServicePortSupplier
+	natPingerPorts  port.ServicePortSupplier
+	natPinger       NATPinger
+	natEventGetter  NATEventGetter
+	dnsProxy        *dns.Proxy
+	eventListener   eventListener
+	portMapper      mapping.PortMapper
+	trafficBlocker  firewall.IncomingTrafficFirewall
 	vpnNetwork      net.IPNet
 	vpnServerPort   int
 	processLauncher *processLauncher
 	openvpnProcess  openvpn.Process
+	ipResolver      ip.Resolver
+	serviceOptions  Options
+	nodeOptions     node.Options
 
-	outboundIP string
-	ipResolver ip.Resolver
-
-	// These fields assigned during serve.
+	outboundIP    string
 	country       string
 	dnsIP         net.IP
 	dnsOK         bool
@@ -133,12 +129,17 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	}
 	m.vpnServerPort = servicePort.Num()
 
+	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return errors.Wrap(err, "could not get outbound IP")
+	}
+
 	pubIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
 		return errors.Wrap(err, "could not get public IP")
 	}
 
-	if !m.behindNAT(pubIP) {
+	if m.behindNAT(pubIP) {
 		if releasePorts, ok := m.tryAddPortMapping(m.vpnServerPort); ok {
 			defer releasePorts()
 		}
