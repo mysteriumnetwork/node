@@ -22,8 +22,8 @@ import "github.com/mysteriumnetwork/node/identity"
 const (
 	// AppTopicSession represents the session change topic.
 	AppTopicSession = "Session change"
-	// AppTopicDataTransfered represents the data transfer topic.
-	AppTopicDataTransfered = "Session data transfered"
+	// AppTopicDataTransferred represents the data transfer topic.
+	AppTopicDataTransferred = "Session data transferred"
 	// AppTopicSessionTokensEarned is a topic for publish events about tokens earned as a provider.
 	AppTopicSessionTokensEarned = "SessionTokensEarned"
 )

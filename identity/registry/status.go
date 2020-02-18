@@ -37,7 +37,7 @@ const (
 	InProgress
 	// Promoting shows that a consumer is being promoted to provider
 	Promoting
-	// RegistrationError shows that an error occured during registration
+	// RegistrationError shows that an error occurred during registration
 	RegistrationError
 )
 

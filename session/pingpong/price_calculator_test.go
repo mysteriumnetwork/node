@@ -88,9 +88,9 @@ func Test_isServiceFree(t *testing.T) {
 
 func Test_calculatePaymentAmount(t *testing.T) {
 	type args struct {
-		timePassed      time.Duration
-		bytesTransfered dataTransfered
-		method          market.PaymentMethod
+		timePassed       time.Duration
+		bytesTransferred dataTransferred
+		method           market.PaymentMethod
 	}
 	tests := []struct {
 		name string
@@ -101,7 +101,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "returns zero on free service",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransfered: dataTransfered{
+				bytesTransferred: dataTransferred{
 					up: 100, down: 100,
 				},
 				method: &mockPaymentMethod{
@@ -115,7 +115,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates time only",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransfered: dataTransfered{
+				bytesTransferred: dataTransferred{
 					up: 100, down: 100,
 				},
 				method: &mockPaymentMethod{
@@ -129,7 +129,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates time only with seconds",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransfered: dataTransfered{
+				bytesTransferred: dataTransferred{
 					up: 100, down: 100,
 				},
 				method: &mockPaymentMethod{
@@ -143,7 +143,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates bytes only",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransfered: dataTransfered{
+				bytesTransferred: dataTransferred{
 					up: 1000000000 / 2, down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
@@ -157,7 +157,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates both",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransfered: dataTransfered{
+				bytesTransferred: dataTransferred{
 					up: 1000000000 / 2, down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
@@ -172,7 +172,7 @@ func Test_calculatePaymentAmount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := calculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransfered, tt.args.method); got != tt.want {
+			if got := calculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, tt.args.method); got != tt.want {
 				t.Errorf("calculatePaymentAmount() = %v, want %v", got, tt.want)
 			}
 		})

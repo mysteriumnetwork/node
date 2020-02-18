@@ -34,35 +34,35 @@ const (
 	// B is short for Byte
 	B = Byte
 
-	// Kilobyte represents 1024 bytes
-	Kilobyte = 1024 * Byte
-	// KB is short for Kilobyte
-	KB = Kilobyte
+	// Kibibyte represents 1024 bytes
+	Kibibyte = 1024 * Byte
+	// KiB is short for Kibibyte
+	KiB = Kibibyte
 
-	// Megabyte represents 1024 kilobytes
-	Megabyte = 1024 * Kilobyte
-	// MB is short for Megabyte
-	MB = Megabyte
+	// Mebibyte represents 1024 kibibytes
+	Mebibyte = 1024 * Kibibyte
+	// MiB is short for Mebibyte
+	MiB = Mebibyte
 
-	// Gigabyte represents 1024 megabytes
-	Gigabyte = 1024 * Megabyte
-	// GB is short for Gigabyte
-	GB = Gigabyte
+	// Gibibyte represents 1024 mebibytes
+	Gibibyte = 1024 * Mebibyte
+	// GiB is short for Gibibyte
+	GiB = Gibibyte
 
-	// Terabyte represents 1024 gigabytes
-	Terabyte = 1024 * Gigabyte
-	// TB is short for Terabyte
-	TB = Terabyte
+	// Tebibyte represents 1024 gibibytes
+	Tebibyte = 1024 * Gibibyte
+	// TiB is short for Tebibyte
+	TiB = Tebibyte
 
-	// Petabyte represents 1024 terabytes
-	Petabyte = 1024 * Terabyte
-	// PB is short for Petabyte
-	PB = Petabyte
+	// Pebibyte represents 1024 tebibytes
+	Pebibyte = 1024 * Tebibyte
+	// PiB is short for Pebibyte
+	PiB = Pebibyte
 
-	// Exabyte represents 1024 petabytes
-	Exabyte = 1024 * Petabyte
-	// EB is short for Exabyte
-	EB = Exabyte
+	// Exbibyte represents 1024 pebibytes
+	Exbibyte = 1024 * Pebibyte
+	// EiB is short for Exbibyte
+	EiB = Exbibyte
 )
 
 // Bits returns size in bits
@@ -75,34 +75,34 @@ func (size BitSize) Bytes() float64 {
 	return float64(size / Byte)
 }
 
-// Kilobytes returns size in kilobytes
-func (size BitSize) Kilobytes() float64 {
-	return float64(size / Kilobyte)
+// Kibibytes returns size in kibibytes
+func (size BitSize) Kibibytes() float64 {
+	return float64(size / Kibibyte)
 }
 
-// Megabytes returns size in megabytes
-func (size BitSize) Megabytes() float64 {
-	return float64(size / Megabyte)
+// Mebibytes returns size in mebibytes
+func (size BitSize) Mebibytes() float64 {
+	return float64(size / Mebibyte)
 }
 
-// Gigabytes returns size in gigabytes
-func (size BitSize) Gigabytes() float64 {
-	return float64(size / Gigabyte)
+// Gibibytes returns size in gigabytes
+func (size BitSize) Gibibytes() float64 {
+	return float64(size / Gibibyte)
 }
 
-// Terabytes returns size in terabytes
-func (size BitSize) Terabytes() float64 {
-	return float64(size / Terabyte)
+// Tebibytes returns size in tebibytes
+func (size BitSize) Tebibytes() float64 {
+	return float64(size / Tebibyte)
 }
 
-// Petabytes returns size in petabytes
-func (size BitSize) Petabytes() float64 {
-	return float64(size / Petabyte)
+// Pebibytes returns size in pebibytes
+func (size BitSize) Pebibytes() float64 {
+	return float64(size / Pebibyte)
 }
 
-// Exabytes returns size in exabytes
-func (size BitSize) Exabytes() float64 {
-	return float64(size / Exabyte)
+// Exbibytes returns size in exbibytes
+func (size BitSize) Exbibytes() float64 {
+	return float64(size / Exbibyte)
 }
 
 // String returns human-readable string representation of size
@@ -111,23 +111,23 @@ func (size BitSize) String() string {
 	case size == 0:
 		return fmt.Sprintf("%db", size.Bits())
 
-	case size.isDivisible(EB):
-		return fmt.Sprintf("%.0fEB", size.Exabytes())
+	case size.isDivisible(EiB):
+		return fmt.Sprintf("%.0fEiB", size.Exbibytes())
 
-	case size.isDivisible(PB):
-		return fmt.Sprintf("%.0fPB", size.Petabytes())
+	case size.isDivisible(PiB):
+		return fmt.Sprintf("%.0fPiB", size.Pebibytes())
 
-	case size.isDivisible(TB):
-		return fmt.Sprintf("%.0fTB", size.Terabytes())
+	case size.isDivisible(TiB):
+		return fmt.Sprintf("%.0fTiB", size.Tebibytes())
 
-	case size.isDivisible(GB):
-		return fmt.Sprintf("%.0fGB", size.Gigabytes())
+	case size.isDivisible(GiB):
+		return fmt.Sprintf("%.0fGiB", size.Gibibytes())
 
-	case size.isDivisible(MB):
-		return fmt.Sprintf("%.0fMB", size.Megabytes())
+	case size.isDivisible(MiB):
+		return fmt.Sprintf("%.0fMiB", size.Mebibytes())
 
-	case size.isDivisible(KB):
-		return fmt.Sprintf("%.0fKB", size.Kilobytes())
+	case size.isDivisible(KiB):
+		return fmt.Sprintf("%.0fKiB", size.Kibibytes())
 
 	case size.isDivisible(B):
 		return fmt.Sprintf("%.0fB", size.Bytes())

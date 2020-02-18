@@ -148,7 +148,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		Provider:       deps.Peer.Address,
 	}
 
-	testDone := make(chan struct{}, 0)
+	testDone := make(chan struct{})
 
 	defer InvoicePayer.Stop()
 	go func() {
@@ -216,7 +216,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 		Provider:       deps.Peer.Address,
 	}
 
-	testDone := make(chan struct{}, 0)
+	testDone := make(chan struct{})
 
 	defer InvoicePayer.Stop()
 	go func() {

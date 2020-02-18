@@ -327,6 +327,7 @@ func (m *Manager) Serve(instance *service.Instance) error {
 func (m *Manager) Stop() error {
 	log.Info().Msg("Wireguard: stopping")
 	m.startStopMu.Lock()
+	defer m.startStopMu.Unlock()
 
 	cleanupWg := sync.WaitGroup{}
 	for k, v := range m.sessionCleanup {
@@ -345,7 +346,6 @@ func (m *Manager) Stop() error {
 		}
 	}
 
-	m.startStopMu.Unlock()
 	close(m.done)
 	log.Info().Msg("Wireguard: stopped")
 	return nil

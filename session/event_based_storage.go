@@ -123,7 +123,7 @@ func (ebs *EventBasedStorage) RemoveForService(serviceID string) {
 
 // Subscribe subscribes the ebs to relevant events
 func (ebs *EventBasedStorage) Subscribe() error {
-	if err := ebs.bus.SubscribeAsync(event.AppTopicDataTransfered, ebs.consumeDataTransferredEvent); err != nil {
+	if err := ebs.bus.SubscribeAsync(event.AppTopicDataTransferred, ebs.consumeDataTransferredEvent); err != nil {
 		return err
 	}
 	if err := ebs.bus.SubscribeAsync(event.AppTopicSessionTokensEarned, ebs.consumeTokensEarnedEvent); err != nil {

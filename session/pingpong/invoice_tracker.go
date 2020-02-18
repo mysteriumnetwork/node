@@ -98,11 +98,11 @@ type sentInvoice struct {
 	r       []byte
 }
 
-type dataTransfered struct {
+type dataTransferred struct {
 	up, down uint64
 }
 
-func (dt dataTransfered) sum() uint64 {
+func (dt dataTransferred) sum() uint64 {
 	return dt.up + dt.down
 }
 
@@ -124,8 +124,8 @@ type InvoiceTracker struct {
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
 
-	dataTransfered     dataTransfered
-	dataTransferedLock sync.Mutex
+	dataTransferred     dataTransferred
+	dataTransferredLock sync.Mutex
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -345,7 +345,7 @@ func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
 	it.deps.TimeTracker.StartTracking()
 
-	if err := it.deps.EventBus.SubscribeAsync(event.AppTopicDataTransfered, it.consumeDataTransferedEvent); err != nil {
+	if err := it.deps.EventBus.SubscribeAsync(event.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
 		return err
 	}
 
@@ -437,7 +437,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 		return ErrExchangeWaitTimeout
 	}
 
-	shouldBe := calculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransfered(), it.deps.Proposal.PaymentMethod)
+	shouldBe := calculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
 	// This is due to the fact that both payment providers start at different times.
@@ -589,12 +589,12 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = it.deps.EventBus.Unsubscribe(event.AppTopicDataTransfered, it.consumeDataTransferedEvent)
+		_ = it.deps.EventBus.Unsubscribe(event.AppTopicDataTransferred, it.consumeDataTransferredEvent)
 		close(it.stop)
 	})
 }
 
-func (it *InvoiceTracker) consumeDataTransferedEvent(e event.DataTransferEventPayload) {
+func (it *InvoiceTracker) consumeDataTransferredEvent(e event.DataTransferEventPayload) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(e.ID, it.deps.SessionID) {
 		return
@@ -607,28 +607,28 @@ func (it *InvoiceTracker) consumeDataTransferedEvent(e event.DataTransferEventPa
 }
 
 func (it *InvoiceTracker) updateDataTransfer(up, down uint64) {
-	it.dataTransferedLock.Lock()
-	defer it.dataTransferedLock.Unlock()
+	it.dataTransferredLock.Lock()
+	defer it.dataTransferredLock.Unlock()
 
-	newUp := it.dataTransfered.up
-	if up > it.dataTransfered.up {
+	newUp := it.dataTransferred.up
+	if up > it.dataTransferred.up {
 		newUp = up
 	}
 
-	newDown := it.dataTransfered.down
-	if down > it.dataTransfered.down {
+	newDown := it.dataTransferred.down
+	if down > it.dataTransferred.down {
 		newDown = down
 	}
 
-	it.dataTransfered = dataTransfered{
+	it.dataTransferred = dataTransferred{
 		up:   newUp,
 		down: newDown,
 	}
 }
 
-func (it *InvoiceTracker) getDataTransfered() dataTransfered {
-	it.dataTransferedLock.Lock()
-	defer it.dataTransferedLock.Unlock()
+func (it *InvoiceTracker) getDataTransferred() dataTransferred {
+	it.dataTransferredLock.Lock()
+	defer it.dataTransferredLock.Unlock()
 
-	return it.dataTransfered
+	return it.dataTransferred
 }

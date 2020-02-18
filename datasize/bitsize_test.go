@@ -34,23 +34,23 @@ func TestConstants(t *testing.T) {
 		{Byte, 8},
 		{B, 8},
 
-		{Kilobyte, 8 * 1024},
-		{KB, 8 * 1024},
+		{Kibibyte, 8 * 1024},
+		{KiB, 8 * 1024},
 
-		{Megabyte, 8 * 1024 * 1024},
-		{MB, 8 * 1024 * 1024},
+		{Mebibyte, 8 * 1024 * 1024},
+		{MiB, 8 * 1024 * 1024},
 
-		{Gigabyte, 8 * 1024 * 1024 * 1024},
-		{GB, 8 * 1024 * 1024 * 1024},
+		{Gibibyte, 8 * 1024 * 1024 * 1024},
+		{GiB, 8 * 1024 * 1024 * 1024},
 
-		{Terabyte, 8 * 1024 * 1024 * 1024 * 1024},
-		{TB, 8 * 1024 * 1024 * 1024 * 1024},
+		{Tebibyte, 8 * 1024 * 1024 * 1024 * 1024},
+		{TiB, 8 * 1024 * 1024 * 1024 * 1024},
 
-		{Petabyte, 8 * 1024 * 1024 * 1024 * 1024 * 1024},
-		{PB, 8 * 1024 * 1024 * 1024 * 1024 * 1024},
+		{Pebibyte, 8 * 1024 * 1024 * 1024 * 1024 * 1024},
+		{PiB, 8 * 1024 * 1024 * 1024 * 1024 * 1024},
 
-		{Exabyte, 8 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024},
-		{EB, 8 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024},
+		{Exbibyte, 8 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024},
+		{EiB, 8 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024},
 	}
 
 	for _, tt := range table {
@@ -80,10 +80,10 @@ func TestBytes(t *testing.T) {
 		value         BitSize
 		valueExpected float64
 	}{
-		{KB, 1024},
-		{10 * KB, 10240},
-		{0.5 * KB, 512},
-		{0.001 * KB, 1.024},
+		{KiB, 1024},
+		{10 * KiB, 10240},
+		{0.5 * KiB, 512},
+		{0.001 * KiB, 1.024},
 	}
 
 	for _, tt := range table {
@@ -91,99 +91,99 @@ func TestBytes(t *testing.T) {
 	}
 }
 
-func TestKilobytes(t *testing.T) {
+func TestKibibytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
 		valueExpected float64
 	}{
-		{MB, 1024},
-		{10 * MB, 10240},
-		{0.5 * MB, 512},
-		{0.001 * MB, 1.024},
+		{MiB, 1024},
+		{10 * MiB, 10240},
+		{0.5 * MiB, 512},
+		{0.001 * MiB, 1.024},
 	}
 
 	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Kilobytes())
+		assert.Equal(t, tt.valueExpected, tt.value.Kibibytes())
 	}
 }
 
-func TestMegabytes(t *testing.T) {
+func TestMebibytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
 		valueExpected float64
 	}{
-		{GB, 1024},
-		{10 * GB, 10240},
-		{0.5 * GB, 512},
-		{0.001 * GB, 1.024},
+		{GiB, 1024},
+		{10 * GiB, 10240},
+		{0.5 * GiB, 512},
+		{0.001 * GiB, 1.024},
 	}
 
 	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Megabytes())
+		assert.Equal(t, tt.valueExpected, tt.value.Mebibytes())
 	}
 }
 
-func TestGigabytes(t *testing.T) {
+func TestGibibytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
 		valueExpected float64
 	}{
-		{TB, 1024},
-		{10 * TB, 10240},
-		{0.5 * TB, 512},
-		{0.001 * TB, 1.024},
+		{TiB, 1024},
+		{10 * TiB, 10240},
+		{0.5 * TiB, 512},
+		{0.001 * TiB, 1.024},
 	}
 
 	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Gigabytes())
+		assert.Equal(t, tt.valueExpected, tt.value.Gibibytes())
 	}
 }
 
-func TestTerabytes(t *testing.T) {
+func TestTebibytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
 		valueExpected float64
 	}{
-		{PB, 1024},
-		{10 * PB, 10240},
-		{0.5 * PB, 512},
-		{0.001 * PB, 1.024},
+		{PiB, 1024},
+		{10 * PiB, 10240},
+		{0.5 * PiB, 512},
+		{0.001 * PiB, 1.024},
 	}
 
 	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Terabytes())
+		assert.Equal(t, tt.valueExpected, tt.value.Tebibytes())
 	}
 }
 
-func TestPetabytes(t *testing.T) {
+func TestPebibytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
 		valueExpected float64
 	}{
-		{EB, 1024},
-		{10 * EB, 10240},
-		{0.5 * EB, 512},
-		{0.001 * EB, 1.024},
+		{EiB, 1024},
+		{10 * EiB, 10240},
+		{0.5 * EiB, 512},
+		{0.001 * EiB, 1.024},
 	}
 
 	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Petabytes())
+		assert.Equal(t, tt.valueExpected, tt.value.Pebibytes())
 	}
 }
 
-func TestExabytes(t *testing.T) {
+func TestExbibytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
 		valueExpected float64
 	}{
-		{EB, 1},
-		{10 * EB, 10},
-		{0.5 * EB, 0.5},
-		{0.001 * EB, 0.001},
+		{EiB, 1},
+		{10 * EiB, 10},
+		{0.5 * EiB, 0.5},
+		{0.001 * EiB, 0.001},
 	}
 
 	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Exabytes())
+		assert.Equal(t, tt.valueExpected, tt.value.Exbibytes())
 	}
 }
 
@@ -195,17 +195,17 @@ func TestMarshalText(t *testing.T) {
 		{0, "0b"},
 		{Bit, "1b"},
 		{B, "1B"},
-		{KB, "1KB"},
-		{MB, "1MB"},
-		{GB, "1GB"},
-		{TB, "1TB"},
-		{PB, "1PB"},
-		{EB, "1EB"},
-		{400 * TB, "400TB"},
-		{2048 * MB, "2GB"},
-		{B + KB, "1025B"},
-		{MB + 20*KB, "1044KB"},
-		{100*MB + KB, "102401KB"},
+		{KiB, "1KiB"},
+		{MiB, "1MiB"},
+		{GiB, "1GiB"},
+		{TiB, "1TiB"},
+		{PiB, "1PiB"},
+		{EiB, "1EiB"},
+		{400 * TiB, "400TiB"},
+		{2048 * MiB, "2GiB"},
+		{B + KiB, "1025B"},
+		{MiB + 20*KiB, "1044KiB"},
+		{100*MiB + KiB, "102401KiB"},
 	}
 
 	for _, tt := range table {

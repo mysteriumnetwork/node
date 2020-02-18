@@ -41,7 +41,7 @@ func isServiceFree(method market.PaymentMethod) bool {
 	return false
 }
 
-func calculatePaymentAmount(timePassed time.Duration, bytesTransfered dataTransfered, method market.PaymentMethod) uint64 {
+func calculatePaymentAmount(timePassed time.Duration, bytesTransferred dataTransferred, method market.PaymentMethod) uint64 {
 	if isServiceFree(method) {
 		return 0
 	}
@@ -56,12 +56,12 @@ func calculatePaymentAmount(timePassed time.Duration, bytesTransfered dataTransf
 
 	timeComponent := uint64(math.Round(ticksPassed * float64(price)))
 
-	var chunksTransfered float64
+	var chunksTransferred float64
 	if method.GetRate().PerByte > 0 {
-		chunksTransfered = float64(bytesTransfered.sum()) / float64(method.GetRate().PerByte)
+		chunksTransferred = float64(bytesTransferred.sum()) / float64(method.GetRate().PerByte)
 	}
 
-	byteComponent := uint64(math.Round(chunksTransfered * float64(price)))
+	byteComponent := uint64(math.Round(chunksTransferred * float64(price)))
 	total := timeComponent + byteComponent
 	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v ", total, timeComponent, byteComponent)
 	return total
