@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/consumer"
@@ -66,27 +67,6 @@ func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 	assert.Zero(t, tracker.previous.BytesSent)
 }
 
-func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
-	startTime := time.Now()
-	var bytesTransfered uint64 = 10000
-	tracker := Tracker{
-		previousTime: startTime,
-	}
-
-	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
-		Stats: consumer.SessionStatistics{
-			BytesReceived: bytesTransfered,
-			BytesSent:     bytesTransfered,
-		},
-	})
-
-	assert.NotEqual(t, tracker.previousTime, startTime)
-	speed := tracker.Get()
-	expected := float64(bytesTransfered) / tracker.previousTime.Sub(startTime).Seconds() * bitsInByte
-	assert.Equal(t, expected, speed.Down.BitsPerSecond)
-	assert.Equal(t, expected, speed.Up.BitsPerSecond)
-}
-
 func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	tracker := Tracker{}
 	e := connection.SessionStatsEvent{
@@ -100,4 +80,32 @@ func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	assert.Equal(t, e.Stats.BytesReceived, tracker.previous.BytesReceived)
 	assert.Equal(t, e.Stats.BytesSent, tracker.previous.BytesSent)
 	assert.Zero(t, tracker.Get().Down.BitsPerSecond)
+}
+
+func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T) {
+	tracker := Tracker{}
+	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesSent:     0,
+			BytesReceived: 0,
+		},
+	})
+	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesSent:     2048,
+			BytesReceived: 2048,
+		},
+	})
+	down := datasize.BitSize(tracker.Get().Down.BitsPerSecond)
+	assert.Zero(t, int(down.Kilobytes()))
+
+	time.Sleep(time.Second)
+	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesSent:     4096,
+			BytesReceived: 4096,
+		},
+	})
+	down = datasize.BitSize(tracker.Get().Down.BitsPerSecond)
+	assert.InDelta(t, 4.0, down.Kilobytes(), 1.0)
 }

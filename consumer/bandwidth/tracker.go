@@ -35,7 +35,7 @@ type Throughput struct {
 
 // String returns human readable form of the throughput
 func (t Throughput) String() string {
-	return consumer.BitCountDecimal(uint64(t.BitsPerSecond), "Bps")
+	return consumer.BitCountDecimal(uint64(t.BitsPerSecond), "bps")
 }
 
 // CurrentSpeed represents the current(moment) download and upload speeds in bits per second
@@ -58,21 +58,29 @@ func (t *Tracker) Get() CurrentSpeed {
 	return t.currentSpeed
 }
 
+const consumeCooldown = 500 * time.Millisecond
+
 // ConsumeStatisticsEvent handles the connection statistics changes
 func (t *Tracker) ConsumeStatisticsEvent(e connection.SessionStatsEvent) {
 	t.lock.Lock()
 	defer func() {
-		t.previous = e.Stats
 		t.lock.Unlock()
 	}()
 
 	if t.previousTime.IsZero() {
 		t.previousTime = time.Now()
+		t.previous = e.Stats
 		return
 	}
 
 	currentTime := time.Now()
 	secondsSince := currentTime.Sub(t.previousTime).Seconds()
+
+	if secondsSince < consumeCooldown.Seconds() {
+		log.Debug().Msgf("%fs passed since the last consumption, ignoring the event", secondsSince)
+		return
+	}
+
 	t.previousTime = currentTime
 
 	byteDownDiff := e.Stats.BytesReceived - t.previous.BytesReceived
@@ -82,6 +90,7 @@ func (t *Tracker) ConsumeStatisticsEvent(e connection.SessionStatsEvent) {
 		Up:   Throughput{BitsPerSecond: float64(byteUpDiff) / secondsSince * bitsInByte},
 		Down: Throughput{BitsPerSecond: float64(byteDownDiff) / secondsSince * bitsInByte},
 	}
+	t.previous = e.Stats
 
 	log.Debug().Msgf("Download speed: %s", t.currentSpeed.Down)
 	log.Debug().Msgf("Upload speed: %s", t.currentSpeed.Up)
