@@ -81,14 +81,16 @@ type ProviderModeConfig struct {
 type ConsumerConfig struct {
 	PublicKey string `json:"PublicKey"`
 	// IP is needed when provider is behind NAT. In such case provider parses this IP and tries to ping consumer.
-	IP string `json:"IP,omitempty"`
+	IP    string `json:"IP,omitempty"`
+	Ports []int  `json:"Ports"`
 }
 
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {
 	// LocalPort and RemotePort are needed for NAT hole punching only.
-	LocalPort  int `json:"-"`
-	RemotePort int `json:"-"`
+	LocalPort  int   `json:"-"`
+	RemotePort int   `json:"-"`
+	Ports      []int `json:"Ports"`
 
 	Provider struct {
 		PublicKey string
@@ -116,9 +118,11 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		LocalPort  int      `json:"local_port"`
 		RemotePort int      `json:"remote_port"`
+		Ports      []int    `json:"ports"`
 		Provider   provider `json:"provider"`
 		Consumer   consumer `json:"consumer"`
 	}{
+		Ports:      s.Ports,
 		LocalPort:  s.LocalPort,
 		RemotePort: s.RemotePort,
 		Provider: provider{
@@ -147,6 +151,7 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	var config struct {
 		LocalPort  int      `json:"local_port"`
 		RemotePort int      `json:"remote_port"`
+		Ports      []int    `json:"ports"`
 		Provider   provider `json:"provider"`
 		Consumer   consumer `json:"consumer"`
 	}
@@ -164,6 +169,7 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	s.Ports = config.Ports
 	s.LocalPort = config.LocalPort
 	s.RemotePort = config.RemotePort
 	s.Provider.Endpoint = *endpoint

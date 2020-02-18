@@ -40,7 +40,7 @@ func TestPinger_Start_Stop(t *testing.T) {
 	pinger.Stop()
 }
 
-func TestPinger_Provider_Consumser_Ping_Flow(t *testing.T) {
+func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 	providerProxyPort := 51199
 	providerPort := 51200
 	consumerPort := 51201

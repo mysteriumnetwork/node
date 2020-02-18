@@ -20,11 +20,13 @@ package connection
 import (
 	"encoding/json"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -48,7 +50,6 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NAT
 
 	return &Connection{
 		done:                make(chan struct{}),
-		pingerStop:          make(chan struct{}),
 		stateCh:             make(chan connection.State, 100),
 		privateKey:          privateKey,
 		opts:                opts,
@@ -62,11 +63,11 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NAT
 
 // Connection which does wireguard tunneling.
 type Connection struct {
-	stopOnce   sync.Once
-	done       chan struct{}
-	pingerStop chan struct{}
-	stateCh    chan connection.State
+	stopOnce sync.Once
+	done     chan struct{}
+	stateCh  chan connection.State
 
+	ports               []int
 	privateKey          string
 	ipResolver          ip.Resolver
 	connectionEndpoint  wg.ConnectionEndpoint
@@ -119,17 +120,31 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	c.stateCh <- connection.Connecting
 
-	if config.LocalPort > 0 {
-		err = c.natPinger.PingProvider(
+	if config.LocalPort > 0 || len(config.Ports) > 0 {
+		conn, err := c.natPinger.PingProvider(
 			config.Provider.Endpoint.IP.String(),
-			config.RemotePort,
-			config.LocalPort,
+			c.ports,
+			config.Ports,
 			0,
-			c.pingerStop,
 		)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
+
+		_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
+		if err != nil {
+			return err
+		}
+
+		_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
+		if err != nil {
+			return err
+		}
+
+		config.LocalPort, _ = strconv.Atoi(lPort)
+		config.Provider.Endpoint.Port, _ = strconv.Atoi(rPort)
+
+		conn.Close()
 	}
 
 	log.Info().Msg("Starting new connection")
@@ -217,9 +232,22 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 			return nil, errors.Wrap(err, "failed to get consumer public IP")
 		}
 	}
+
+	pool := port.NewPool()
+
+	for i := 0; i < 10; i++ {
+		cp, err := pool.Acquire()
+		if err != nil {
+			return nil, err
+		}
+
+		c.ports = append(c.ports, cp.Num())
+	}
+
 	return wg.ConsumerConfig{
 		PublicKey: publicKey,
 		IP:        publicIP,
+		Ports:     c.ports,
 	}, nil
 }
 
@@ -249,7 +277,6 @@ func (c *Connection) Stop() {
 
 		c.stateCh <- connection.NotConnected
 
-		close(c.pingerStop)
 		close(c.stateCh)
 		close(c.done)
 	})
