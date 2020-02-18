@@ -19,18 +19,16 @@ package service
 
 import (
 	"crypto/x509/pkix"
-	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/rs/zerolog/log"
@@ -46,7 +44,8 @@ type eventBus interface {
 // NewManager creates new instance of Openvpn service
 func NewManager(nodeOptions node.Options,
 	serviceOptions Options,
-	location location.ServiceLocationInfo,
+	country string,
+	ipResolver ip.Resolver,
 	sessionMap openvpn_session.SessionMap,
 	natService nat.NATService,
 	natPinger NATPinger,
@@ -74,69 +73,23 @@ func NewManager(nodeOptions node.Options,
 	}
 
 	return &Manager{
-		natService:                     natService,
-		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
-		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
-		processLauncher:                newProcessLauncher(nodeOptions, sessionValidator, callback),
-		natPingerPorts:                 port.NewPool(),
-		natPinger:                      natPinger,
-		serviceOptions:                 serviceOptions,
-		natEventGetter:                 natEventGetter,
-		ports:                          portPool,
-		eventListener:                  bus,
-		portMapper:                     portMapper,
-		trafficBlocker:                 trafficBlocker,
-		location:                       location,
+		nodeOptions:     nodeOptions,
+		serviceOptions:  serviceOptions,
+		natService:      natService,
+		processLauncher: newProcessLauncher(nodeOptions, sessionValidator, callback),
+		natPingerPorts:  port.NewPool(),
+		natPinger:       natPinger,
+		natEventGetter:  natEventGetter,
+		ports:           portPool,
+		eventListener:   bus,
+		portMapper:      portMapper,
+		trafficBlocker:  trafficBlocker,
+		country:         country,
+		ipResolver:      ipResolver,
 	}
 }
 
-// newServerConfigFactory returns function generating server config and generates required security primitives
-func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) ServerConfigFactory {
-	return func(secPrimitives *tls.Primitives, port int) *openvpn_service.ServerConfig {
-		return openvpn_service.NewServerConfig(
-			nodeOptions.Directories.Runtime,
-			nodeOptions.Directories.Config,
-			serviceOptions.Subnet,
-			serviceOptions.Netmask,
-			secPrimitives,
-			nodeOptions.BindAddress,
-			port,
-			serviceOptions.Protocol,
-		)
-	}
-}
-
-// newSessionConfigNegotiatorFactory returns function generating session config for remote client
-func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options) SessionConfigNegotiatorFactory {
-	return func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) ConfigNegotiator {
-		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
-		vpnConfig := &openvpn_service.VPNConfig{
-			RemoteIP:        serverIP,
-			RemotePort:      port,
-			RemoteProtocol:  serviceOptions.Protocol,
-			TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
-			CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
-		}
-		if dnsIP != nil {
-			vpnConfig.DNSIPs = dnsIP.String()
-		}
-		return &OpenvpnConfigNegotiator{
-			vpnConfig: vpnConfig,
-		}
-	}
-}
-
-// OpenvpnConfigNegotiator knows how to send the openvpn config to the consumer
-type OpenvpnConfigNegotiator struct {
-	vpnConfig *openvpn_service.VPNConfig
-}
-
-// ProvideVPNConfig returns the config for OpenVPN
-func (ocn *OpenvpnConfigNegotiator) ProvideVPNConfig() *openvpn_service.VPNConfig {
-	return ocn.vpnConfig
-}
-
-func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {
+func vpnServerIP(port int, outboundIP, publicIP string, isLocalnet bool) string {
 	//TODO public ip could be overridden by arg nodeOptions if needed
 	if publicIP == outboundIP {
 		return publicIP
@@ -157,9 +110,9 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 		publicIP,
 		outboundIP,
 		publicIP,
-		serviceOptions.Port,
+		port,
 		outboundIP,
-		serviceOptions.Port,
+		port,
 	)
 	return publicIP
 }

@@ -133,30 +133,9 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
 		}
-		outIP, err := di.IPResolver.GetOutboundIPAsString()
-		if err != nil {
-			return nil, market.ServiceProposal{}, err
-		}
-
-		currentLocation := market.Location{
-			Continent: loc.Continent,
-			Country:   loc.Country,
-			City:      loc.City,
-
-			ASN:      loc.ASN,
-			ISP:      loc.ISP,
-			NodeType: loc.NodeType,
-		}
 
 		transportOptions := serviceOptions.(openvpn_service.Options)
-
-		locationInfo := location.ServiceLocationInfo{
-			OutIP:   outIP,
-			PubIP:   loc.IP,
-			Country: loc.Country,
-		}
-
-		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
+		proposal := openvpn_discovery.NewServiceProposalWithLocation(loc, transportOptions.Protocol)
 
 		var portPool port.ServicePortSupplier
 		var natPinger traversal.NATPinger
@@ -173,7 +152,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		manager := openvpn_service.NewManager(
 			nodeOptions,
 			transportOptions,
-			locationInfo,
+			loc.Country,
+			di.IPResolver,
 			di.ServiceSessionStorage,
 			di.NATService,
 			natPinger,
