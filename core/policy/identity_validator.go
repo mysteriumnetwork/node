@@ -21,28 +21,12 @@ import (
 	"errors"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 )
 
 // ValidateAllowedIdentity checks if given identity is allowed by given policies
 func ValidateAllowedIdentity(policies *Repository) func(identity.Identity) error {
 	return func(peerID identity.Identity) error {
-		hasIdentityRules := false
-
-		for _, policyRules := range policies.Rules() {
-			for _, rule := range policyRules.Allow {
-				if rule.Type != market.AccessPolicyTypeIdentity {
-					continue
-				}
-
-				hasIdentityRules = true
-				if rule.Value == peerID.Address {
-					return nil
-				}
-			}
-		}
-
-		if !hasIdentityRules {
+		if policies.IsIdentityAllowed(peerID) {
 			return nil
 		}
 		return errors.New("identity is not allowed")

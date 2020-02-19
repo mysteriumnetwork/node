@@ -133,7 +133,7 @@ install_ubuntu() {
         echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list
     fi
     apt update
-    apt install -y resolvconf openvpn
+    apt install -y ipset resolvconf openvpn
 
     # add-apt-repository may not be available in Ubuntu server out of the box
     apt install -y software-properties-common
@@ -161,7 +161,7 @@ install_ubuntu() {
 install_raspbian() {
     # openvpn, etc.
     apt update
-    apt install -y resolvconf openvpn
+    apt install -y ipset resolvconf openvpn
 
     # Wireguard
     apt install -y git bc bison flex libssl-dev libncurses5-dev # For rpi-source
@@ -188,7 +188,7 @@ install_raspbian() {
 install_debian() {
     # openvpn, etc.
     apt update
-    apt install -y resolvconf openvpn
+    apt install -y ipset resolvconf openvpn
 
     # Wireguard
     echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list

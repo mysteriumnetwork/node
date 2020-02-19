@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
@@ -81,6 +82,7 @@ func NewManager(
 		natPingerPorts:     port.NewPool(),
 		publisher:          eventPublisher,
 		portMapper:         portMapper,
+
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(&location, resourcesAllocator, options.ConnectDelay)
 		},
@@ -102,6 +104,7 @@ type Manager struct {
 	natEventGetter NATEventGetter
 	publisher      eventbus.Publisher
 	portMapper     mapping.PortMapper
+	trafficBlocker firewall.IncomingTrafficFirewall
 
 	dnsOK    bool
 	dnsPort  int
@@ -309,12 +312,17 @@ func (m *Manager) Serve(instance *service.Instance) error {
 	// Start DNS proxy.
 	m.dnsPort = 11253
 	m.dnsOK = false
-	m.dnsProxy = dns.NewProxy("", m.dnsPort)
-	if err := m.dnsProxy.Run(); err != nil {
-		log.Warn().Err(err).Msg("Provider DNS will not be available")
+	dnsHandler, err := dns.ResolveViaSystem()
+	if err == nil {
+		m.dnsProxy = dns.NewProxy("", m.dnsPort, dnsHandler)
+		if err := m.dnsProxy.Run(); err != nil {
+			log.Warn().Err(err).Msg("Provider DNS will not be available")
+		} else {
+			// m.dnsProxy = dnsProxy
+			m.dnsOK = true
+		}
 	} else {
-		// m.dnsProxy = dnsProxy
-		m.dnsOK = true
+		log.Warn().Err(err).Msg("Provider DNS will not be available")
 	}
 
 	m.startStopMu.Unlock()

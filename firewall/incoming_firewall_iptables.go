@@ -20,6 +20,7 @@ package firewall
 import (
 	"net"
 	"strings"
+	"time"
 
 	"github.com/mysteriumnetwork/node/firewall/ipset"
 	"github.com/mysteriumnetwork/node/firewall/iptables"
@@ -31,15 +32,10 @@ const (
 	dnsFirewallIpset = "myst-provider-dst-whitelist"
 )
 
-// NewIncomingTrafficBlockerIptables creates instance iptables based traffic blocker.
-func NewIncomingTrafficBlockerIptables() IncomingTrafficBlocker {
-	return &incomingBlockerIptables{}
-}
+// incomingFirewallIptables allows incoming traffic blocking in IP granularity.
+type incomingFirewallIptables struct{}
 
-// incomingBlockerIptables allows incoming traffic blocking in IP granularity.
-type incomingBlockerIptables struct{}
-
-func (ibi *incomingBlockerIptables) Setup() error {
+func (ibi *incomingFirewallIptables) Setup() error {
 	if err := ibi.checkIpsetVersion(); err != nil {
 		return err
 	}
@@ -50,14 +46,14 @@ func (ibi *incomingBlockerIptables) Setup() error {
 	}
 	ipset.Exec(ipset.OpDelete(dnsFirewallIpset))
 
-	op := ipset.OpCreate(dnsFirewallIpset, ipset.SetTypeHashIP, nil, 0)
+	op := ipset.OpCreate(dnsFirewallIpset, ipset.SetTypeHashIP, 24*time.Hour, nil, 0)
 	if _, err := ipset.Exec(op); err != nil {
 		return err
 	}
 	return ibi.setupDNSFirewallChain()
 }
 
-func (ibi *incomingBlockerIptables) Teardown() {
+func (ibi *incomingFirewallIptables) Teardown() {
 	if err := ibi.cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
@@ -66,7 +62,7 @@ func (ibi *incomingBlockerIptables) Teardown() {
 	}
 }
 
-func (ibi *incomingBlockerIptables) BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error) {
+func (ibi *incomingFirewallIptables) BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error) {
 	remover, err := iptables.AddRuleWithRemoval(
 		iptables.AppendTo("FORWARD").RuleSpec("-s", network.String(), "-j", dnsFirewallChain),
 	)
@@ -79,8 +75,8 @@ func (ibi *incomingBlockerIptables) BlockIncomingTraffic(network net.IPNet) (Inc
 	}, nil
 }
 
-func (ibi *incomingBlockerIptables) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
-	if _, err := ipset.Exec(ipset.OpIPAdd(dnsFirewallIpset, ip)); err != nil {
+func (ibi *incomingFirewallIptables) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
+	if _, err := ipset.Exec(ipset.OpIPAdd(dnsFirewallIpset, ip, true)); err != nil {
 		return nil, err
 	}
 	return func() error {
@@ -89,7 +85,7 @@ func (ibi *incomingBlockerIptables) AllowIPAccess(ip net.IP) (IncomingRuleRemove
 	}, nil
 }
 
-func (ibi *incomingBlockerIptables) checkIpsetVersion() error {
+func (ibi *incomingFirewallIptables) checkIpsetVersion() error {
 	output, err := ipset.Exec(ipset.OpVersion())
 	if err != nil {
 		return err
@@ -100,7 +96,7 @@ func (ibi *incomingBlockerIptables) checkIpsetVersion() error {
 	return nil
 }
 
-func (ibi *incomingBlockerIptables) setupDNSFirewallChain() error {
+func (ibi *incomingFirewallIptables) setupDNSFirewallChain() error {
 	// Add chain
 	if _, err := iptables.Exec("-N", dnsFirewallChain); err != nil {
 		return err
@@ -119,7 +115,7 @@ func (ibi *incomingBlockerIptables) setupDNSFirewallChain() error {
 	return nil
 }
 
-func (ibi *incomingBlockerIptables) cleanupStaleRules() error {
+func (ibi *incomingFirewallIptables) cleanupStaleRules() error {
 	// List rules
 	rules, err := iptables.Exec("-S", "FORWARD")
 	if err != nil {
@@ -153,4 +149,4 @@ func (ibi *incomingBlockerIptables) cleanupStaleRules() error {
 	return err
 }
 
-var _ IncomingTrafficBlocker = &incomingBlockerIptables{}
+var _ IncomingTrafficFirewall = &incomingFirewallIptables{}

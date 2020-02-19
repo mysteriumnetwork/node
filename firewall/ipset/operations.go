@@ -20,6 +20,7 @@ package ipset
 import (
 	"net"
 	"strconv"
+	"time"
 )
 
 // SetType defines type of IP set.
@@ -36,8 +37,11 @@ func OpVersion() []string {
 }
 
 // OpCreate is an operation which creates a new set.
-func OpCreate(setName string, setType SetType, netMask net.IPMask, hashSize int) []string {
+func OpCreate(setName string, setType SetType, timeout time.Duration, netMask net.IPMask, hashSize int) []string {
 	args := []string{"create", setName, string(setType)}
+	if timeout != 0 {
+		args = append(args, "--timeout", strconv.Itoa(int(timeout.Seconds())))
+	}
 	if netMask != nil {
 		ones, _ := netMask.Size()
 		args = append(args, "--netmask", strconv.Itoa(ones))
@@ -54,8 +58,12 @@ func OpDelete(setName string) []string {
 }
 
 // OpIPAdd is an operation which adds IP entry to the named set.
-func OpIPAdd(setName string, ip net.IP) []string {
-	return []string{"add", setName, ip.String()}
+func OpIPAdd(setName string, ip net.IP, ignoreExisting bool) []string {
+	args := []string{"add", setName, ip.String()}
+	if ignoreExisting {
+		args = append(args, "--exist")
+	}
+	return args
 }
 
 // OpIPRemove is an operation which deletes IP entry from the named set.

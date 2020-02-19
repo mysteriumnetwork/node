@@ -18,49 +18,42 @@
 package firewall
 
 import (
+	"net"
+
 	"github.com/rs/zerolog/log"
 )
 
-// outgoingBlockerNoop is a Vendor implementation which only logs allow requests with no effects.
+// incomingFirewallNoop is a implementation which only logs allow requests with no effects.
 // Used by default.
-type outgoingBlockerNoop struct{}
+type incomingFirewallNoop struct{}
 
 // Setup noop setup (just log call).
-func (obn *outgoingBlockerNoop) Setup() error {
+func (ifn *incomingFirewallNoop) Setup() error {
+	log.Info().Msg("Rules bootstrap was requested")
 	return nil
 }
 
 // Teardown noop cleanup (just log call).
-func (obn *outgoingBlockerNoop) Teardown() {
+func (ifn *incomingFirewallNoop) Teardown() {
 	log.Info().Msg("Rules reset was requested")
 }
 
 // BlockOutgoingTraffic just logs the call.
-func (obn *outgoingBlockerNoop) BlockOutgoingTraffic(scope Scope, outboundIP string) (OutgoingRuleRemove, error) {
-	log.Info().Msg("Outgoing traffic block requested")
-	return func() {
-		log.Info().Msg("Outgoing traffic block removed")
+func (ifn *incomingFirewallNoop) BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error) {
+	log.Info().Msg("Incoming traffic block requested")
+	return func() error {
+		log.Info().Msg("Incoming traffic block removed")
+		return nil
 	}, nil
 }
 
 // AllowIPAccess logs IP for which access was requested.
-func (obn *outgoingBlockerNoop) AllowIPAccess(ip string) (OutgoingRuleRemove, error) {
+func (ifn *incomingFirewallNoop) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
 	log.Info().Msgf("Allow IP %s access", ip)
-	return func() {
+	return func() error {
 		log.Info().Msgf("Rule for IP: %s removed", ip)
+		return nil
 	}, nil
 }
 
-// AllowIPAccess logs URL for which access was requested.
-func (obn *outgoingBlockerNoop) AllowURLAccess(rawURLs ...string) (OutgoingRuleRemove, error) {
-	for _, rawURL := range rawURLs {
-		log.Info().Msgf("Allow URL %s access", rawURL)
-	}
-	return func() {
-		for _, rawURL := range rawURLs {
-			log.Info().Msgf("Rule for URL: %s removed", rawURL)
-		}
-	}, nil
-}
-
-var _ OutgoingTrafficBlocker = &outgoingBlockerNoop{}
+var _ IncomingTrafficFirewall = &incomingFirewallNoop{}

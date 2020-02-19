@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_iptablesDNSFirewall_Setup(t *testing.T) {
+func Test_incomingFirewallIptables_Setup(t *testing.T) {
 	mockedIpset := ipsetExecMock{
 		mocks: map[string]ipsetExecResult{
 			"--version": {
@@ -47,17 +47,17 @@ func Test_iptablesDNSFirewall_Setup(t *testing.T) {
 	}
 	iptables.Exec = mockedIptables.Exec
 
-	firewall := &incomingBlockerIptables{}
-	err := firewall.Setup()
+	fw := &incomingFirewallIptables{}
+	err := fw.Setup()
 	assert.NoError(t, err)
 	assert.True(t, mockedIpset.VerifyCalledWithArgs("version"))
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("create myst-provider-dst-whitelist hash:ip"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("create myst-provider-dst-whitelist hash:ip --timeout 86400"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-N MYST_PROVIDER_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A MYST_PROVIDER_FIREWALL -m set --match-set myst-provider-dst-whitelist dst -j ACCEPT"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A MYST_PROVIDER_FIREWALL -j REJECT"))
 }
 
-func Test_iptablesDNSFirewall_Teardown(t *testing.T) {
+func Test_incomingFirewallIptables_Teardown(t *testing.T) {
 	mockedIpset := ipsetExecMock{
 		mocks: map[string]ipsetExecResult{},
 	}
@@ -74,14 +74,14 @@ func Test_iptablesDNSFirewall_Teardown(t *testing.T) {
 	}
 	iptables.Exec = mockedIptables.Exec
 
-	firewall := &incomingBlockerIptables{}
-	firewall.Teardown()
+	fw := &incomingFirewallIptables{}
+	fw.Teardown()
 	assert.True(t, mockedIpset.VerifyCalledWithArgs("destroy myst-provider-dst-whitelist"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-F MYST_PROVIDER_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-X MYST_PROVIDER_FIREWALL"))
 }
 
-func Test_iptablesDNSFirewall_TeardownIfPreviousCleanupFailed(t *testing.T) {
+func Test_incomingFirewallIptables_TeardownIfPreviousCleanupFailed(t *testing.T) {
 	mockedIpset := ipsetExecMock{
 		mocks: map[string]ipsetExecResult{},
 	}
@@ -96,7 +96,7 @@ func Test_iptablesDNSFirewall_TeardownIfPreviousCleanupFailed(t *testing.T) {
 					"-A FORWARD -s 10.8.0.1/24 -j MYST_PROVIDER_FIREWALL",
 				},
 			},
-			// DNS firewall chain still exists
+			// DNS fw chain still exists
 			"-S MYST_PROVIDER_FIREWALL": {
 				output: []string{
 					// with some allowed ips
@@ -109,24 +109,24 @@ func Test_iptablesDNSFirewall_TeardownIfPreviousCleanupFailed(t *testing.T) {
 	}
 	iptables.Exec = mockedIptables.Exec
 
-	firewall := &incomingBlockerIptables{}
-	firewall.Teardown()
+	fw := &incomingFirewallIptables{}
+	fw.Teardown()
 	assert.True(t, mockedIpset.VerifyCalledWithArgs("destroy myst-provider-dst-whitelist"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-D FORWARD -s 10.8.0.1/24 -j MYST_PROVIDER_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-F MYST_PROVIDER_FIREWALL"))
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-X MYST_PROVIDER_FIREWALL"))
 }
 
-func Test_iptablesDNSFirewall_BlockIncomingTraffic(t *testing.T) {
+func Test_incomingFirewallIptables_BlockIncomingTraffic(t *testing.T) {
 	mockedIptables := iptablesExecMock{
 		mocks: map[string]iptablesExecResult{},
 	}
 	iptables.Exec = mockedIptables.Exec
 
-	firewall := &incomingBlockerIptables{}
+	fw := &incomingFirewallIptables{}
 
 	_, network, _ := net.ParseCIDR("10.8.0.1/24")
-	removeRule, err := firewall.BlockIncomingTraffic(*network)
+	removeRule, err := fw.BlockIncomingTraffic(*network)
 	assert.NoError(t, err)
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-A FORWARD -s 10.8.0.0/24 -j MYST_PROVIDER_FIREWALL"))
 
@@ -134,17 +134,17 @@ func Test_iptablesDNSFirewall_BlockIncomingTraffic(t *testing.T) {
 	assert.True(t, mockedIptables.VerifyCalledWithArgs("-D FORWARD -s 10.8.0.0/24 -j MYST_PROVIDER_FIREWALL"))
 }
 
-func Test_iptablesDNSFirewall_AllowIPAccess(t *testing.T) {
+func Test_incomingFirewallIptables_AllowIPAccess(t *testing.T) {
 	mockedIpset := ipsetExecMock{
 		mocks: map[string]ipsetExecResult{},
 	}
 	ipset.Exec = mockedIpset.Exec
 
-	firewall := &incomingBlockerIptables{}
+	fw := &incomingFirewallIptables{}
 
-	removeRule, err := firewall.AllowIPAccess(net.IP{1, 2, 3, 4})
+	removeRule, err := fw.AllowIPAccess(net.IP{1, 2, 3, 4})
 	assert.NoError(t, err)
-	assert.True(t, mockedIpset.VerifyCalledWithArgs("add myst-provider-dst-whitelist 1.2.3.4"))
+	assert.True(t, mockedIpset.VerifyCalledWithArgs("add myst-provider-dst-whitelist 1.2.3.4 --exist"))
 
 	err = removeRule()
 	assert.NoError(t, err)
