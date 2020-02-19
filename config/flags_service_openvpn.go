@@ -18,8 +18,6 @@
 package config
 
 import (
-	"time"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -48,12 +46,6 @@ var (
 		Usage: "OpenVPN subnet netmask",
 		Value: "255.255.255.0",
 	}
-	// FlagOpenvpnStatisticsReportInterval changes the reporting interval.
-	FlagOpenvpnStatisticsReportInterval = cli.DurationFlag{
-		Name:  "openvpn.stats.interval",
-		Usage: "Sets the frequency of statistics reporting",
-		Value: time.Second * 2,
-	}
 )
 
 // RegisterFlagsServiceOpenvpn registers OpenVPN CLI flags for parsing them later
@@ -63,7 +55,6 @@ func RegisterFlagsServiceOpenvpn(flags *[]cli.Flag) {
 		&FlagOpenvpnPort,
 		&FlagOpenvpnSubnet,
 		&FlagOpenvpnNetmask,
-		&FlagOpenvpnStatisticsReportInterval,
 	)
 }
 
@@ -73,5 +64,4 @@ func ParseFlagsServiceOpenvpn(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagOpenvpnPort)
 	Current.ParseStringFlag(ctx, FlagOpenvpnSubnet)
 	Current.ParseStringFlag(ctx, FlagOpenvpnNetmask)
-	Current.ParseDurationFlag(ctx, FlagOpenvpnStatisticsReportInterval)
 }

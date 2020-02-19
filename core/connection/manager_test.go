@@ -337,6 +337,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.NoError(tc.T(), err)
 
 	waitABit()
+	time.Sleep(StatsReportInterval)
 
 	history := tc.stubPublisher.GetEventHistory()
 	assert.Len(tc.T(), history, 4)

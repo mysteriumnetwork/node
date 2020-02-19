@@ -45,7 +45,9 @@ func TestConnectionStartStop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, connection.Connecting, <-conn.State())
 	assert.Equal(t, connection.Connected, <-conn.State())
-	assert.Equal(t, consumer.SessionStatistics{BytesSent: 10, BytesReceived: 11}, <-conn.Statistics())
+	stats, err := conn.Statistics()
+	assert.NoError(t, err)
+	assert.Equal(t, consumer.SessionStatistics{BytesSent: 10, BytesReceived: 11}, stats)
 
 	// Stop connection.
 	go func() {

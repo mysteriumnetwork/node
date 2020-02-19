@@ -36,9 +36,8 @@ import (
 
 // Options represents connection options.
 type Options struct {
-	DNSConfigDir        string
-	StatsUpdateInterval time.Duration
-	HandshakeTimeout    time.Duration
+	DNSConfigDir     string
+	HandshakeTimeout time.Duration
 }
 
 // NewConnection returns new WireGuard connection.
@@ -50,10 +49,8 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NAT
 
 	return &Connection{
 		done:                make(chan struct{}),
-		statsCheckerStop:    make(chan struct{}),
 		pingerStop:          make(chan struct{}),
 		stateCh:             make(chan connection.State, 100),
-		statisticsCh:        make(chan consumer.SessionStatistics, 100),
 		privateKey:          privateKey,
 		opts:                opts,
 		ipResolver:          ipResolver,
@@ -66,12 +63,10 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NAT
 
 // Connection which does wireguard tunneling.
 type Connection struct {
-	stopOnce         sync.Once
-	done             chan struct{}
-	statsCheckerStop chan struct{}
-	pingerStop       chan struct{}
-	stateCh          chan connection.State
-	statisticsCh     chan consumer.SessionStatistics
+	stopOnce   sync.Once
+	done       chan struct{}
+	pingerStop chan struct{}
+	stateCh    chan connection.State
 
 	privateKey          string
 	ipResolver          ip.Resolver
@@ -84,14 +79,23 @@ type Connection struct {
 	handshakeWaiter     HandshakeWaiter
 }
 
+var _ connection.Connection = &Connection{}
+
 // State returns connection state channel.
 func (c *Connection) State() <-chan connection.State {
 	return c.stateCh
 }
 
 // Statistics returns connection statistics channel.
-func (c *Connection) Statistics() <-chan consumer.SessionStatistics {
-	return c.statisticsCh
+func (c *Connection) Statistics() (consumer.SessionStatistics, error) {
+	stats, err := c.connectionEndpoint.PeerStats()
+	if err != nil {
+		return consumer.SessionStatistics{}, err
+	}
+	return consumer.SessionStatistics{
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
+	}, nil
 }
 
 // Start establish wireguard connection to the service provider.
@@ -164,8 +168,6 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return errors.Wrap(err, "failed to configure DNS")
 	}
 
-	go c.updateStatsPeriodically(c.opts.StatsUpdateInterval)
-
 	c.stateCh <- connection.Connected
 	return nil
 }
@@ -233,8 +235,6 @@ func (c *Connection) Stop() {
 		c.stateCh <- connection.Disconnecting
 
 		if c.connectionEndpoint != nil {
-			c.sendStats()
-
 			if err := c.dnsManager.Clean(c.opts.DNSConfigDir, c.connectionEndpoint.InterfaceName()); err != nil {
 				log.Error().Err(err).Msg("Failed to clear DNS")
 			}
@@ -249,33 +249,8 @@ func (c *Connection) Stop() {
 
 		c.stateCh <- connection.NotConnected
 
-		close(c.statsCheckerStop)
 		close(c.pingerStop)
 		close(c.stateCh)
 		close(c.done)
 	})
-}
-
-func (c *Connection) updateStatsPeriodically(duration time.Duration) {
-	for {
-		select {
-		case <-time.After(duration):
-			c.sendStats()
-		case <-c.statsCheckerStop:
-			close(c.statisticsCh)
-			return
-		}
-	}
-}
-
-func (c *Connection) sendStats() {
-	stats, err := c.connectionEndpoint.PeerStats()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to receive peer stats")
-		return
-	}
-	c.statisticsCh <- consumer.SessionStatistics{
-		BytesSent:     stats.BytesSent,
-		BytesReceived: stats.BytesReceived,
-	}
 }

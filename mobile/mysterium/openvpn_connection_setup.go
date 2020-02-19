@@ -44,9 +44,12 @@ var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
 // NewOpenVPNConnection creates a new openvpn connection
 func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity.SignerFactory, tunnelSetup Openvpn3TunnelSetup, natPinger natPinger, ipResolver ip.Resolver) (con connection.Connection, err error) {
-	stateCh := make(chan connection.State, 100)
-	statisticsCh := make(chan consumer.SessionStatistics, 100)
-
+	conn := &openvpnConnection{
+		stateCh:    make(chan connection.State, 100),
+		natPinger:  natPinger,
+		ipResolver: ipResolver,
+		pingerStop: make(chan struct{}),
+	}
 	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
 		sessionConfig := &openvpn.VPNConfig{}
 		err := json.Unmarshal(options.SessionConfig, sessionConfig)
@@ -94,24 +97,19 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 		}
 
 		natPinger.SetProtectSocketCallback(tunnelSetup.SocketProtect)
-		newSession := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateCh, statisticsCh), tunnelSetup)
+		newSession := openvpn3.NewMobileSession(config, credentials, conn, tunnelSetup)
 		sessionTracker.sessionCreated(newSession)
 		return newSession, vpnClientConfig, nil
 	}
-	return &openvpnConnection{
-		stateCh:       stateCh,
-		statisticsCh:  statisticsCh,
-		createSession: sessionFactory,
-		natPinger:     natPinger,
-		ipResolver:    ipResolver,
-		pingerStop:    make(chan struct{}),
-	}, nil
+	conn.createSession = sessionFactory
+	return conn, nil
 }
 
 type openvpnConnection struct {
 	pingerStop    chan struct{}
 	stateCh       chan connection.State
-	statisticsCh  chan consumer.SessionStatistics
+	stats         consumer.SessionStatistics
+	statsMu       sync.RWMutex
 	session       *openvpn3.Session
 	createSession openvpn3SessionFactory
 	natPinger     natPinger
@@ -119,12 +117,44 @@ type openvpnConnection struct {
 	stopOnce      sync.Once
 }
 
+var _ connection.Connection = &openvpnConnection{}
+
+func (c *openvpnConnection) OnEvent(event openvpn3.Event) {
+	switch event.Name {
+	case "CONNECTING":
+		c.stateCh <- connection.Connecting
+	case "CONNECTED":
+		c.stateCh <- connection.Connected
+	case "DISCONNECTED":
+		c.stateCh <- connection.Disconnecting
+		c.stateCh <- connection.NotConnected
+		close(c.stateCh)
+	default:
+		log.Info().Msgf("Unhandled event: %+v", event)
+	}
+}
+
+func (c *openvpnConnection) OnStats(openvpnStats openvpn3.Statistics) {
+	c.statsMu.Lock()
+	defer c.statsMu.Unlock()
+	c.stats = consumer.SessionStatistics{
+		BytesSent:     openvpnStats.BytesOut,
+		BytesReceived: openvpnStats.BytesIn,
+	}
+}
+
+func (c *openvpnConnection) Log(text string) {
+	log.Info().Msg("Openvpn log: " + text)
+}
+
 func (c *openvpnConnection) State() <-chan connection.State {
 	return c.stateCh
 }
 
-func (c *openvpnConnection) Statistics() <-chan consumer.SessionStatistics {
-	return c.statisticsCh
+func (c *openvpnConnection) Statistics() (consumer.SessionStatistics, error) {
+	c.statsMu.RLock()
+	defer c.statsMu.RUnlock()
+	return c.stats, nil
 }
 
 func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
@@ -184,50 +214,6 @@ func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
 	return &openvpn.ConsumerConfig{
 		IP: publicIP,
 	}, nil
-}
-
-func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) openvpn3.MobileSessionCallbacks {
-	return channelToCallbacksAdapter{
-		stateChannel:      stateChannel,
-		statisticsChannel: statisticsChannel,
-	}
-}
-
-type channelToCallbacksAdapter struct {
-	stateChannel      connection.StateChannel
-	statisticsChannel connection.StatisticsChannel
-}
-
-func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
-	switch event.Name {
-	case "CONNECTING":
-		adapter.stateChannel <- connection.Connecting
-	case "CONNECTED":
-		adapter.stateChannel <- connection.Connected
-	case "DISCONNECTED":
-		adapter.stateChannel <- connection.Disconnecting
-		adapter.stateChannel <- connection.NotConnected
-		close(adapter.stateChannel)
-		close(adapter.statisticsChannel)
-	default:
-		log.Info().Msgf("Unhandled event: %+v", event)
-	}
-}
-
-func (channelToCallbacksAdapter) Log(text string) {
-	log.Info().Msg("Openvpn log: " + text)
-}
-
-func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
-	sessionStats := consumer.SessionStatistics{
-		BytesSent:     openvpnStats.BytesOut,
-		BytesReceived: openvpnStats.BytesIn,
-	}
-	select {
-	case adapter.statisticsChannel <- sessionStats:
-	default:
-		log.Warn().Msg("Statistics dropped. Channel full")
-	}
 }
 
 // Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop
