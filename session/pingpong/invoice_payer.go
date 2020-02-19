@@ -18,11 +18,13 @@
 package pingpong
 
 import (
+	"context"
 	"math"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
@@ -167,15 +169,44 @@ func (ip *InvoicePayer) getGrandTotalPromised() (uint64, error) {
 }
 
 func (ip *InvoicePayer) recoverGrandTotalPromised() (uint64, error) {
-	data, err := ip.deps.ConsumerInfoGetter(ip.deps.Identity.Address)
-	if err != nil {
-		if err != ErrAccountantNotFound {
-			return 0, err
+	var boff backoff.BackOff
+	eback := backoff.NewExponentialBackOff()
+	eback.MaxElapsedTime = time.Second * 20
+	eback.InitialInterval = time.Second * 2
+
+	boff = backoff.WithMaxRetries(eback, 10)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-ip.stop:
+			cancel()
+		case <-ctx.Done():
 		}
-		log.Debug().Msgf("No previous invoice grand total, assuming zero")
-		return 0, nil
+	}()
+
+	var data ConsumerData
+	boff = backoff.WithContext(boff, ctx)
+	toRetry := func() error {
+		d, err := ip.deps.ConsumerInfoGetter(ip.deps.Identity.Address)
+		if err != nil {
+			if err != ErrAccountantNotFound {
+				return err
+			}
+			log.Debug().Msgf("No previous invoice grand total, assuming zero")
+			return nil
+		}
+		data = d
+		return nil
 	}
-	return data.LatestPromise.Amount, nil
+
+	err := backoff.Retry(toRetry, boff)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get balance from accountant")
+	}
+
+	return data.LatestPromise.Amount, err
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
