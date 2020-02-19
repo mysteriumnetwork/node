@@ -20,7 +20,7 @@ package session
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	node_session "github.com/mysteriumnetwork/node/session"
@@ -54,7 +54,7 @@ type History struct {
 	Started         time.Time
 	Status          string
 	Updated         time.Time
-	DataStats       consumer.SessionStatistics // is updated on disconnect event
+	DataStats       connection.Statistics // is updated on disconnect event
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)

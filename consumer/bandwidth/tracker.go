@@ -45,8 +45,7 @@ type CurrentSpeed struct {
 
 // Tracker keeps track of current speed
 type Tracker struct {
-	previous     consumer.SessionStatistics
-	previousTime time.Time
+	previous     connection.Statistics
 	currentSpeed CurrentSpeed
 	lock         sync.RWMutex
 }
@@ -61,36 +60,32 @@ func (t *Tracker) Get() CurrentSpeed {
 const consumeCooldown = 500 * time.Millisecond
 
 // ConsumeStatisticsEvent handles the connection statistics changes
-func (t *Tracker) ConsumeStatisticsEvent(e connection.SessionStatsEvent) {
+func (t *Tracker) ConsumeStatisticsEvent(evt connection.SessionStatsEvent) {
 	t.lock.Lock()
 	defer func() {
 		t.lock.Unlock()
 	}()
 
-	if t.previousTime.IsZero() {
-		t.previousTime = time.Now()
-		t.previous = e.Stats
+	// Skip speed calculation on the very first event.
+	if t.previous.At.IsZero() {
+		t.previous = evt.Stats
 		return
 	}
 
-	currentTime := time.Now()
-	secondsSince := currentTime.Sub(t.previousTime).Seconds()
-
+	secondsSince := evt.Stats.At.Sub(t.previous.At).Seconds()
 	if secondsSince < consumeCooldown.Seconds() {
 		log.Debug().Msgf("%fs passed since the last consumption, ignoring the event", secondsSince)
 		return
 	}
 
-	t.previousTime = currentTime
-
-	byteDownDiff := e.Stats.BytesReceived - t.previous.BytesReceived
-	byteUpDiff := e.Stats.BytesSent - t.previous.BytesSent
+	byteDownDiff := evt.Stats.BytesReceived - t.previous.BytesReceived
+	byteUpDiff := evt.Stats.BytesSent - t.previous.BytesSent
 
 	t.currentSpeed = CurrentSpeed{
 		Up:   Throughput{BitsPerSecond: float64(byteUpDiff) / secondsSince * bitsInByte},
 		Down: Throughput{BitsPerSecond: float64(byteDownDiff) / secondsSince * bitsInByte},
 	}
-	t.previous = e.Stats
+	t.previous = evt.Stats
 
 	log.Debug().Msgf("Download speed: %s", t.currentSpeed.Down)
 	log.Debug().Msgf("Upload speed: %s", t.currentSpeed.Up)
@@ -102,8 +97,7 @@ func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 	defer t.lock.Unlock()
 	switch sessionEvent.Status {
 	case connection.SessionEndedStatus, connection.SessionCreatedStatus:
-		t.previous = consumer.SessionStatistics{}
-		t.previousTime = time.Time{}
+		t.previous = connection.Statistics{}
 		t.currentSpeed = CurrentSpeed{}
 	}
 }

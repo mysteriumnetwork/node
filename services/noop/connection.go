@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
@@ -47,8 +46,8 @@ func (c *Connection) State() <-chan connection.State {
 }
 
 // Statistics returns connection statistics channel.
-func (c *Connection) Statistics() (consumer.SessionStatistics, error) {
-	return consumer.SessionStatistics{}, nil
+func (c *Connection) Statistics() (connection.Statistics, error) {
+	return connection.Statistics{At: time.Now()}, nil
 }
 
 // Start implements the connection.Connection interface

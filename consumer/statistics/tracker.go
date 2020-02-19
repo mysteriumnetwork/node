@@ -30,8 +30,8 @@ type TimeGetter func() time.Time
 
 // SessionStatisticsTracker keeps the session stats safe and sound
 type SessionStatisticsTracker struct {
-	lastStats    consumer.SessionStatistics
-	sessionStats consumer.SessionStatistics
+	lastStats    connection.Statistics
+	sessionStats connection.Statistics
 	timeGetter   TimeGetter
 	sessionStart *time.Time
 }
@@ -42,13 +42,13 @@ func NewSessionStatisticsTracker(timeGetter TimeGetter) *SessionStatisticsTracke
 }
 
 // Retrieve retrieves session stats from statisticsTracker
-func (sst *SessionStatisticsTracker) Retrieve() consumer.SessionStatistics {
+func (sst *SessionStatisticsTracker) Retrieve() connection.Statistics {
 	return sst.sessionStats
 }
 
 // Reset resets session stats to 0
 func (sst *SessionStatisticsTracker) Reset() {
-	sst.sessionStats = consumer.SessionStatistics{}
+	sst.sessionStats = connection.Statistics{}
 }
 
 // MarkSessionStart marks current time as session start time for statistics
@@ -73,7 +73,7 @@ func (sst *SessionStatisticsTracker) markSessionEnd() {
 
 // ConsumeStatisticsEvent handles the connection statistics changes
 func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(e connection.SessionStatsEvent) {
-	sst.sessionStats = consumer.AddUpStatistics(sst.sessionStats, sst.lastStats.DiffWithNew(e.Stats))
+	sst.sessionStats = sst.sessionStats.Plus(sst.lastStats.Diff(e.Stats))
 	sst.lastStats = e.Stats
 	log.Debug().Msgf("bytes received %v, sent %v", consumer.BitCountDecimal(sst.sessionStats.BytesReceived, "B"), consumer.BitCountDecimal(sst.sessionStats.BytesSent, "B"))
 }

@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/boltdbtest"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
@@ -39,7 +39,7 @@ var (
 	timeUpdated     = time.Now().UTC()
 	providerCountry = "providerCountry"
 	bucketName      = "session-history"
-	statsMock       = consumer.SessionStatistics{
+	statsMock       = connection.Statistics{
 		BytesSent:     1,
 		BytesReceived: 1,
 	}

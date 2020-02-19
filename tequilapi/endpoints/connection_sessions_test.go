@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
@@ -42,7 +42,7 @@ var (
 		ProviderCountry: "ProviderCountry",
 		Started:         time.Now(),
 		Updated:         time.Now(),
-		DataStats: consumer.SessionStatistics{
+		DataStats: connection.Statistics{
 			BytesReceived: 10,
 			BytesSent:     10,
 		},

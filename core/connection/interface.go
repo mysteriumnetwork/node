@@ -19,7 +19,6 @@ package connection
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -37,14 +36,11 @@ type Connection interface {
 	Stop()
 	GetConfig() (ConsumerConfig, error)
 	State() <-chan State
-	Statistics() (consumer.SessionStatistics, error)
+	Statistics() (Statistics, error)
 }
 
 // StateChannel is the channel we receive state change events on
 type StateChannel chan State
-
-// StatisticsChannel is the channel we receive stats change events on
-type StatisticsChannel chan consumer.SessionStatistics
 
 // PromiseIssuer issues promises from consumer to provider.
 // Consumer signs those promises.

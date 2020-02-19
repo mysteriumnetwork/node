@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -87,12 +86,13 @@ func (c *Connection) State() <-chan connection.State {
 }
 
 // Statistics returns connection statistics channel.
-func (c *Connection) Statistics() (consumer.SessionStatistics, error) {
+func (c *Connection) Statistics() (connection.Statistics, error) {
 	stats, err := c.connectionEndpoint.PeerStats()
 	if err != nil {
-		return consumer.SessionStatistics{}, err
+		return connection.Statistics{}, err
 	}
-	return consumer.SessionStatistics{
+	return connection.Statistics{
+		At:            time.Now(),
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
 	}, nil

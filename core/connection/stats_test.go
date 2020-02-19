@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,36 +15,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package consumer
+package connection
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	exampleStats = SessionStatistics{
+	exampleStats = Statistics{
 		BytesReceived: 1,
 		BytesSent:     2,
 	}
 )
 
-func TestSessionStatistics_DiffWithNew(t *testing.T) {
+func TestStatistics_Diff(t *testing.T) {
 	tests := []struct {
 		name string
-		old  SessionStatistics
-		new  SessionStatistics
-		want SessionStatistics
+		old  Statistics
+		new  Statistics
+		want Statistics
 	}{
 		{
 			name: "calculates statistics correctly if they are continuous",
-			old:  SessionStatistics{},
+			old:  Statistics{},
 			new:  exampleStats,
 			want: exampleStats,
 		},
 		{
 			name: "calculates statistics correctly if they are not continuous",
-			old: SessionStatistics{
+			old: Statistics{
 				BytesReceived: 5,
 				BytesSent:     6,
 			},
@@ -55,31 +57,29 @@ func TestSessionStatistics_DiffWithNew(t *testing.T) {
 			name: "returns zeros on no change",
 			old:  exampleStats,
 			new:  exampleStats,
-			want: SessionStatistics{},
+			want: Statistics{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ss := tt.old
-			if got := ss.DiffWithNew(tt.new); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SessionStatistics.DiffWithNew() = %v, want %v", got, tt.want)
-			}
+			result := tt.old.Diff(tt.new)
+			assert.True(t, reflect.DeepEqual(result, tt.want))
 		})
 	}
 }
 
-func TestAddUpStatistics(t *testing.T) {
+func TestStatistics_Plus(t *testing.T) {
 	tests := []struct {
 		name  string
-		stats SessionStatistics
-		diff  SessionStatistics
-		want  SessionStatistics
+		stats Statistics
+		diff  Statistics
+		want  Statistics
 	}{
 		{
 			name:  "adds up stats correctly",
 			diff:  exampleStats,
 			stats: exampleStats,
-			want: SessionStatistics{
+			want: Statistics{
 				BytesReceived: 2,
 				BytesSent:     4,
 			},
@@ -87,50 +87,9 @@ func TestAddUpStatistics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := AddUpStatistics(tt.stats, tt.diff); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AddUpStatistics() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_bitCountDecimal(t *testing.T) {
-	tests := []struct {
-		name  string
-		input uint64
-		want  string
-	}{
-		{
-			name:  "tests",
-			input: 1000,
-			want:  "1.0 kBps",
-		},
-		{
-			name:  "tests",
-			input: 1500,
-			want:  "1.5 kBps",
-		},
-		{
-			name:  "tests",
-			input: 100 * 0.5,
-			want:  "50 Bps",
-		},
-		{
-			name:  "tests",
-			input: 1000 * 1000,
-			want:  "1.0 MBps",
-		},
-		{
-			name:  "tests",
-			input: 1000 * 1000 * 1000,
-			want:  "1.0 GBps",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := BitCountDecimal(tt.input, "Bps"); got != tt.want {
-				t.Errorf("bitCountDecimal() = %v, want %v", got, tt.want)
-			}
+			result := tt.stats.Plus(tt.diff)
+			assert.EqualValues(t, tt.want.BytesReceived, result.BytesReceived)
+			assert.EqualValues(t, tt.want.BytesSent, result.BytesSent)
 		})
 	}
 }

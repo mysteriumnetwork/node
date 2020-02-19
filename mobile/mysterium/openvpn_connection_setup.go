@@ -20,9 +20,9 @@ package mysterium
 import (
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
@@ -108,7 +108,7 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 type openvpnConnection struct {
 	pingerStop    chan struct{}
 	stateCh       chan connection.State
-	stats         consumer.SessionStatistics
+	stats         connection.Statistics
 	statsMu       sync.RWMutex
 	session       *openvpn3.Session
 	createSession openvpn3SessionFactory
@@ -137,7 +137,8 @@ func (c *openvpnConnection) OnEvent(event openvpn3.Event) {
 func (c *openvpnConnection) OnStats(openvpnStats openvpn3.Statistics) {
 	c.statsMu.Lock()
 	defer c.statsMu.Unlock()
-	c.stats = consumer.SessionStatistics{
+	c.stats = connection.Statistics{
+		At:            time.Now(),
 		BytesSent:     openvpnStats.BytesOut,
 		BytesReceived: openvpnStats.BytesIn,
 	}
@@ -151,7 +152,7 @@ func (c *openvpnConnection) State() <-chan connection.State {
 	return c.stateCh
 }
 
-func (c *openvpnConnection) Statistics() (consumer.SessionStatistics, error) {
+func (c *openvpnConnection) Statistics() (connection.Statistics, error) {
 	c.statsMu.RLock()
 	defer c.statsMu.RUnlock()
 	return c.stats, nil

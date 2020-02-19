@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -47,7 +46,8 @@ func TestConnectionStartStop(t *testing.T) {
 	assert.Equal(t, connection.Connected, <-conn.State())
 	stats, err := conn.Statistics()
 	assert.NoError(t, err)
-	assert.Equal(t, consumer.SessionStatistics{BytesSent: 10, BytesReceived: 11}, stats)
+	assert.EqualValues(t, 10, stats.BytesSent)
+	assert.EqualValues(t, 11, stats.BytesReceived)
 
 	// Stop connection.
 	go func() {

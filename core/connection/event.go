@@ -17,8 +17,6 @@
 
 package connection
 
-import "github.com/mysteriumnetwork/node/consumer"
-
 // Topic represents the different topics a consumer can subscribe to
 const (
 	// AppTopicConsumerConnectionState represents the connection state change topic
@@ -50,6 +48,6 @@ type SessionEvent struct {
 
 // SessionStatsEvent represents a session statistics event
 type SessionStatsEvent struct {
-	Stats       consumer.SessionStatistics
+	Stats       Statistics
 	SessionInfo SessionInfo
 }

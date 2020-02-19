@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -69,10 +68,10 @@ func (cm *mockConnectionManager) Wait() error {
 
 type StubStatisticsTracker struct {
 	duration time.Duration
-	stats    consumer.SessionStatistics
+	stats    connection.Statistics
 }
 
-func (ssk *StubStatisticsTracker) Retrieve() consumer.SessionStatistics {
+func (ssk *StubStatisticsTracker) Retrieve() connection.Statistics {
 	return ssk.stats
 }
 
@@ -406,7 +405,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	statsKeeper := &StubStatisticsTracker{
 		duration: time.Minute,
-		stats:    consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+		stats:    connection.Statistics{BytesSent: 1, BytesReceived: 2},
 	}
 
 	manager := mockConnectionManager{}
@@ -427,7 +426,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 
 func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
 	statsKeeper := &StubStatisticsTracker{
-		stats: consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+		stats: connection.Statistics{BytesSent: 1, BytesReceived: 2},
 	}
 
 	manager := mockConnectionManager{}

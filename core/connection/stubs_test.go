@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/rs/zerolog/log"
@@ -138,7 +137,7 @@ type connectionMock struct {
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
 	stateCallback       func(state fakeState)
-	onStartReportStats  consumer.SessionStatistics
+	onStartReportStats  Statistics
 	fakeProcess         sync.WaitGroup
 	stopBlock           chan struct{}
 	sync.RWMutex
@@ -148,7 +147,7 @@ func (foc *connectionMock) State() <-chan State {
 	return foc.stateChannel
 }
 
-func (foc *connectionMock) Statistics() (consumer.SessionStatistics, error) {
+func (foc *connectionMock) Statistics() (Statistics, error) {
 	return foc.onStartReportStats, nil
 }
 

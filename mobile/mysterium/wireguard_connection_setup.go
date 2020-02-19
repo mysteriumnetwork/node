@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -99,12 +98,13 @@ func (c *wireguardConnection) State() <-chan connection.State {
 	return c.stateCh
 }
 
-func (c *wireguardConnection) Statistics() (consumer.SessionStatistics, error) {
+func (c *wireguardConnection) Statistics() (connection.Statistics, error) {
 	stats, err := c.device.Stats()
 	if err != nil {
-		return consumer.SessionStatistics{}, err
+		return connection.Statistics{}, err
 	}
-	return consumer.SessionStatistics{
+	return connection.Statistics{
+		At:            time.Now(),
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
 	}, nil

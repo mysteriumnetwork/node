@@ -20,7 +20,6 @@ package connection
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
@@ -29,7 +28,7 @@ import (
 const StatsReportInterval = 2 * time.Second
 
 type statsSupplier interface {
-	Statistics() (consumer.SessionStatistics, error)
+	Statistics() (Statistics, error)
 }
 
 type statsPublisher struct {
@@ -56,10 +55,7 @@ func (s statsPublisher) start(sessionInfo SessionInfo, supplier statsSupplier) {
 				continue
 			}
 			s.bus.Publish(AppTopicConsumerStatistics, SessionStatsEvent{
-				Stats: consumer.SessionStatistics{
-					BytesSent:     stats.BytesSent,
-					BytesReceived: stats.BytesReceived,
-				},
+				Stats:       stats,
 				SessionInfo: sessionInfo,
 			})
 		case <-s.done:

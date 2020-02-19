@@ -20,13 +20,13 @@ package openvpn
 import (
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -102,7 +102,7 @@ type Client struct {
 	runtimeDirectory    string
 	signerFactory       identity.SignerFactory
 	stateCh             chan connection.State
-	stats               consumer.SessionStatistics
+	stats               connection.Statistics
 	statsMu             sync.RWMutex
 	process             openvpn.Process
 	processFactory      processFactory
@@ -121,7 +121,7 @@ func (c *Client) State() <-chan connection.State {
 }
 
 // Statistics returns connection statistics channel.
-func (c *Client) Statistics() (consumer.SessionStatistics, error) {
+func (c *Client) Statistics() (connection.Statistics, error) {
 	c.statsMu.RLock()
 	defer c.statsMu.RUnlock()
 	return c.stats, nil
@@ -186,6 +186,7 @@ func (c *Client) Stop() {
 func (c *Client) OnStats(cnt openvpn_bytescount.Bytecount) error {
 	c.statsMu.Lock()
 	defer c.statsMu.Unlock()
+	c.stats.At = time.Now()
 	c.stats.BytesReceived = cnt.BytesIn
 	c.stats.BytesSent = cnt.BytesOut
 	return nil

@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/identity"
@@ -116,7 +115,7 @@ type statisticsResponse struct {
 
 // SessionStatisticsTracker represents the session stat keeper
 type SessionStatisticsTracker interface {
-	Retrieve() consumer.SessionStatistics
+	Retrieve() connection.Statistics
 	GetSessionDuration() time.Duration
 }
 

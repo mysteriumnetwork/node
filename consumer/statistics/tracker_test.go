@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +29,7 @@ import (
 func TestStatsSavingWorks(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	e := connection.SessionStatsEvent{
-		Stats: consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+		Stats: connection.Statistics{BytesSent: 1, BytesReceived: 2},
 	}
 
 	statisticsTracker.ConsumeStatisticsEvent(e)
@@ -92,7 +91,7 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 		timeGetter: time.Now,
 	}
 	e := connection.SessionStatsEvent{
-		Stats: consumer.SessionStatistics{
+		Stats: connection.Statistics{
 			BytesReceived: 1,
 			BytesSent:     1,
 		},
@@ -107,7 +106,7 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 	assert.EqualValues(t, e.Stats, sst.sessionStats)
 
 	e2 := connection.SessionStatsEvent{
-		Stats: consumer.SessionStatistics{
+		Stats: connection.Statistics{
 			BytesReceived: 2,
 			BytesSent:     2,
 		},
@@ -117,7 +116,7 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 	assert.EqualValues(t, e2.Stats, sst.lastStats)
 	assert.EqualValues(t, e2.Stats, sst.sessionStats)
 
-	statsAfterChain := consumer.SessionStatistics{
+	statsAfterChain := connection.Statistics{
 		BytesReceived: 3,
 		BytesSent:     3,
 	}
