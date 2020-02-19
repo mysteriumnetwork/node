@@ -22,17 +22,13 @@ import (
 	"strconv"
 
 	"github.com/miekg/dns"
-	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 // Proxy defines DNS server with all handler attached to it.
 type Proxy struct {
-	server         *dns.Server
-	trafficBlocker firewall.IncomingTrafficFirewall
-	policies       *policy.Repository
+	server *dns.Server
 }
 
 // NewProxy returns new instance of API server.
