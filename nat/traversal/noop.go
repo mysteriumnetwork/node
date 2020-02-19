@@ -45,12 +45,12 @@ func (np *NoopPinger) Start() {}
 func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, cPorts, pPorts []int, proxyPort int) (*net.UDPConn, error) {
+func (np *NoopPinger) PingProvider(_ Params, proxyPort int) (*net.UDPConn, error) {
 	return nil, nil
 }
 
 // PingTarget does nothing
-func (np *NoopPinger) PingTarget(*Params) {}
+func (np *NoopPinger) PingTarget(Params) {}
 
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(key string, port int) {}

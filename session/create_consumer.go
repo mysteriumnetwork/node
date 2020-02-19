@@ -36,7 +36,7 @@ type createConsumer struct {
 
 // Starter starts the session.
 type Starter interface {
-	Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) error
+	Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams traversal.Params) error
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages

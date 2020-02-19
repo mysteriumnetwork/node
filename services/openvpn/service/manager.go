@@ -189,7 +189,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		}
 	}()
 
-	if err := m.startServer(m.openvpnProcess, stateChannel); err != nil {
+	if err := m.startServer(stateChannel); err != nil {
 		return errors.Wrap(err, "failed to start Openvpn server")
 	}
 
@@ -244,7 +244,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 		return nil, errors.New("Service port not initialized")
 	}
 
-	traversalParams := &traversal.Params{}
+	traversalParams := traversal.Params{}
 
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
@@ -299,8 +299,8 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 			}
 
 			traversalParams.IP = consumerConfig.IP
-			traversalParams.ProviderPorts = vpnConfig.Ports
-			traversalParams.ConsumerPorts = consumerConfig.Ports
+			traversalParams.LocalPorts = vpnConfig.Ports
+			traversalParams.RemotePorts = consumerConfig.Ports
 			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
 		}
 	}
@@ -308,8 +308,8 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
 }
 
-func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.State) error {
-	if err := server.Start(); err != nil {
+func (m *Manager) startServer(stateChannel chan openvpn.State) error {
+	if err := m.openvpnProcess.Start(); err != nil {
 		return err
 	}
 

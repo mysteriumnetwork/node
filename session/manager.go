@@ -47,7 +47,7 @@ type IDGenerator func() (ID, error)
 type ConfigParams struct {
 	SessionServiceConfig   ServiceConfiguration
 	SessionDestroyCallback DestroyCallback
-	TraversalParams        *traversal.Params
+	TraversalParams        traversal.Params
 }
 
 type publisher interface {
@@ -90,7 +90,7 @@ func NewManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
-	natPingerChan func(*traversal.Params),
+	natPingerChan func(traversal.Params),
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
@@ -112,7 +112,7 @@ type Manager struct {
 	currentProposal      market.ServiceProposal
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
-	natPingerChan        func(*traversal.Params)
+	natPingerChan        func(traversal.Params)
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher
@@ -121,7 +121,7 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (err error) {
+func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams traversal.Params) (err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 

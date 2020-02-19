@@ -249,7 +249,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	m.sessionCleanup[sessionID] = destroy
 	m.sessionCleanupMu.Unlock()
 
-	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: &traversalParams}, nil
+	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
 func (m *Manager) tryAddPortMapping(pubIP string, port int) (release func(), ok bool) {
@@ -294,7 +294,7 @@ func (m *Manager) addConsumerPeer(conn wg.ConnectionEndpoint, consumerPort, prov
 }
 
 func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams traversal.Params) (wg.ServiceConfig, error) {
-	config.Ports = traversalParams.ProviderPorts
+	config.Ports = traversalParams.LocalPorts
 
 	// Provide new provider endpoint which points to providers NAT Proxy.
 	newProviderEndpoint, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", config.Provider.Endpoint.IP, config.RemotePort))
@@ -306,8 +306,8 @@ func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams tr
 	config.Consumer.ConnectDelay = 0
 
 	// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
-	config.LocalPort = traversalParams.ConsumerPorts[len(traversalParams.ConsumerPorts)-1]
-	config.RemotePort = traversalParams.ProviderPorts[len(traversalParams.ProviderPorts)-1]
+	config.LocalPort = traversalParams.RemotePorts[len(traversalParams.RemotePorts)-1]
+	config.RemotePort = traversalParams.LocalPorts[len(traversalParams.LocalPorts)-1]
 	config.Provider.Endpoint.Port = config.RemotePort
 
 	return config, nil
@@ -334,7 +334,7 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumerConfig wg.Co
 			return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
 		}
 
-		params.ProviderPorts = append(params.ProviderPorts, pp.Num())
+		params.LocalPorts = append(params.LocalPorts, pp.Num())
 	}
 
 	if consumerConfig.IP == "" {
@@ -342,7 +342,7 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumerConfig wg.Co
 	}
 
 	params.IP = consumerConfig.IP
-	params.ConsumerPorts = consumerConfig.Ports
+	params.RemotePorts = consumerConfig.Ports
 	params.ProxyPortMappingKey = fmt.Sprintf("%s_%s", wg.ServiceType, consumerConfig.PublicKey)
 
 	return params, nil

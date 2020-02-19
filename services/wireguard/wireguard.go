@@ -90,7 +90,7 @@ type ServiceConfig struct {
 	// LocalPort and RemotePort are needed for NAT hole punching only.
 	LocalPort  int   `json:"-"`
 	RemotePort int   `json:"-"`
-	Ports      []int `json:"Ports"`
+	Ports      []int `json:"ports"`
 
 	Provider struct {
 		PublicKey string

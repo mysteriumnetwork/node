@@ -20,7 +20,6 @@ package openvpn
 import (
 	"encoding/json"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -135,34 +134,32 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 		return err
 	}
 
-	if sessionConfig.LocalPort == 0 && len(sessionConfig.Ports) > 0 {
+	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
+	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
 		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
 			c.ports = []int{sessionConfig.LocalPort}
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
 
-		conn, err := c.natPinger.PingProvider(
-			sessionConfig.RemoteIP,
-			c.ports,
-			sessionConfig.Ports,
-			sessionConfig.LocalPort,
-		)
+		params := traversal.Params{
+			IP:          sessionConfig.RemoteIP,
+			LocalPorts:  c.ports,
+			RemotePorts: sessionConfig.Ports,
+		}
+
+		conn, err := c.natPinger.PingProvider(params, sessionConfig.LocalPort)
 		if err != nil {
 			return err
 		}
 
-		_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
-		if err != nil {
-			return err
+		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			sessionConfig.LocalPort = addr.Port
 		}
 
-		_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
-		if err != nil {
-			return err
+		if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
+			sessionConfig.RemotePort = addr.Port
 		}
 
-		sessionConfig.LocalPort, _ = strconv.Atoi(lPort)
-		sessionConfig.RemotePort, _ = strconv.Atoi(rPort)
 	}
 
 	proc, clientConfig, err := c.processFactory(options, sessionConfig)

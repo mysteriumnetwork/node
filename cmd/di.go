@@ -574,7 +574,7 @@ func newSessionManagerFactory(
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
 	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
-	natPingerChan func(*traversal.Params),
+	natPingerChan func(traversal.Params),
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,

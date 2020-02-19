@@ -41,13 +41,13 @@ var (
 
 // NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
 type NATProviderPinger interface {
-	PingProvider(ip string, cPorts, pPorts []int, proxyPort int) (*net.UDPConn, error)
+	PingProvider(params Params, proxyPort int) (*net.UDPConn, error)
 }
 
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	NATProviderPinger
-	PingTarget(*Params)
+	PingTarget(Params)
 	BindServicePort(key string, port int)
 	Start()
 	Stop()
@@ -72,7 +72,7 @@ func DefaultPingConfig() *PingConfig {
 // Pinger represents NAT pinger structure
 type Pinger struct {
 	pingConfig     *PingConfig
-	pingTarget     chan *Params
+	pingTarget     chan Params
 	stop           chan struct{}
 	stopNATProxy   chan struct{}
 	once           sync.Once
@@ -89,7 +89,7 @@ type PortSupplier interface {
 func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 	return &Pinger{
 		pingConfig:     pingConfig,
-		pingTarget:     make(chan *Params),
+		pingTarget:     make(chan Params),
 		stop:           make(chan struct{}),
 		stopNATProxy:   make(chan struct{}),
 		natProxy:       newNATProxy(),
@@ -99,8 +99,8 @@ func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 
 // Params contains session parameters needed to NAT ping remote peer
 type Params struct {
-	ProviderPorts       []int
-	ConsumerPorts       []int
+	RemotePorts         []int
+	LocalPorts          []int
 	IP                  string
 	ProxyPortMappingKey string
 }
@@ -114,16 +114,10 @@ func (p *Pinger) Start() {
 		case <-p.stop:
 			log.Info().Msg("NAT pinger is stopped")
 			return
-		case pingParams := <-p.pingTarget:
-			if isPunchingRequired(pingParams) {
-				go p.pingTargetConsumer(pingParams)
-			}
+		case params := <-p.pingTarget:
+			go p.pingTargetConsumer(params)
 		}
 	}
-}
-
-func isPunchingRequired(params *Params) bool {
-	return true
 }
 
 // Stop stops pinger loop
@@ -135,13 +129,13 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, cPorts, pPorts []int, proxyPort int) (*net.UDPConn, error) {
+func (p *Pinger) PingProvider(params Params, proxyPort int) (*net.UDPConn, error) {
 	log.Info().Msg("NAT pinging to provider")
 
 	stop := make(chan struct{})
 	defer close(stop)
 
-	conn, err := p.multiPing(ip, cPorts, pPorts, 128, stop)
+	conn, err := p.multiPing(params, 128, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -208,7 +202,7 @@ func (p *Pinger) getConnection(ip string, remotePort int, localPort int) (*net.U
 }
 
 // PingTarget relays ping target address data
-func (p *Pinger) PingTarget(target *Params) {
+func (p *Pinger) PingTarget(target Params) {
 	select {
 	case p.pingTarget <- target:
 		return
@@ -238,8 +232,9 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 			// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
 			conn.SetReadDeadline(time.Now().Add(p.pingConfig.Timeout * 2))
 			n, err := conn.Read(buf)
-			// Set higher read deadline when NAT proxy is used.
-			conn.SetReadDeadline(time.Now().Add(12 * time.Hour))
+			// Reset read deadline.
+			conn.SetReadDeadline(time.Time{})
+
 			if err != nil || n == 0 {
 				log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", conn.RemoteAddr().String())
 				continue
@@ -261,10 +256,10 @@ func (p *Pinger) Valid() bool {
 	return true
 }
 
-func (p *Pinger) pingTargetConsumer(pingParams *Params) {
-	log.Info().Msgf("Pinging peer with: %+v", pingParams)
+func (p *Pinger) pingTargetConsumer(params Params) {
+	log.Info().Msgf("Pinging peer with: %+v", params)
 
-	if pingParams.ProxyPortMappingKey == "" {
+	if params.ProxyPortMappingKey == "" {
 		log.Error().Msg("Service proxy connection port mapping key is missing")
 		return
 	}
@@ -272,7 +267,7 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 	stop := make(chan struct{})
 	defer close(stop)
 
-	conn, err := p.multiPing(pingParams.IP, pingParams.ProviderPorts, pingParams.ConsumerPorts, 2, stop)
+	conn, err := p.multiPing(params, 2, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return
@@ -289,11 +284,11 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
 	log.Info().Msg("Ping received, waiting for a new connection")
 
-	go p.natProxy.handOff(pingParams.ProxyPortMappingKey, conn)
+	go p.natProxy.handOff(params.ProxyPortMappingKey, conn)
 }
 
-func (p *Pinger) multiPing(remoteIP string, localPorts, remotePorts []int, initialTTL int, stop <-chan struct{}) (*net.UDPConn, error) {
-	if len(localPorts) != len(remotePorts) {
+func (p *Pinger) multiPing(params Params, initialTTL int, stop <-chan struct{}) (*net.UDPConn, error) {
+	if len(params.LocalPorts) != len(params.RemotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
 
@@ -302,16 +297,16 @@ func (p *Pinger) multiPing(remoteIP string, localPorts, remotePorts []int, initi
 		err  error
 	}
 
-	ch := make(chan res, len(localPorts))
+	ch := make(chan res, len(params.LocalPorts))
 
-	for i := range localPorts {
+	for i := range params.LocalPorts {
 		go func(i int) {
-			conn, err := p.singlePing(remoteIP, localPorts[i], remotePorts[i], initialTTL+i, stop)
+			conn, err := p.singlePing(params.IP, params.LocalPorts[i], params.RemotePorts[i], initialTTL+i, stop)
 			ch <- res{conn, err}
 		}(i)
 	}
 
-	// First responce wins. Other are not important.
+	// First response wins. Other are not important.
 	r := <-ch
 	return r.conn, r.err
 }

@@ -69,7 +69,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage, traversalParams traversal.Params) (*session.ConfigParams, error) {
 	key := &wg.ConsumerConfig{}
 	err := json.Unmarshal(publicKey, key)
 	if err != nil {

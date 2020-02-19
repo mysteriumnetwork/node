@@ -21,7 +21,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -125,30 +124,27 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		}
 	}()
 
+	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
 	if config.LocalPort > 0 || len(config.Ports) > 0 {
-		conn, err := c.natPinger.PingProvider(
-			config.Provider.Endpoint.IP.String(),
-			c.ports,
-			config.Ports,
-			0,
-		)
+		params := traversal.Params{
+			IP:          config.Provider.Endpoint.IP.String(),
+			LocalPorts:  c.ports,
+			RemotePorts: config.Ports,
+		}
+
+		conn, err := c.natPinger.PingProvider(params, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
 
 		if conn != nil {
-			_, lPort, err := net.SplitHostPort(conn.LocalAddr().String())
-			if err != nil {
-				return err
+			if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+				config.LocalPort = addr.Port
 			}
 
-			_, rPort, err := net.SplitHostPort(conn.RemoteAddr().String())
-			if err != nil {
-				return err
+			if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
+				config.Provider.Endpoint.Port = addr.Port
 			}
-
-			config.LocalPort, _ = strconv.Atoi(lPort)
-			config.Provider.Endpoint.Port, _ = strconv.Atoi(rPort)
 
 			conn.Close()
 		}
