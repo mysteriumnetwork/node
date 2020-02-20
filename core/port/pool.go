@@ -34,6 +34,7 @@ type Pool struct {
 // ServicePortSupplier provides port needed to run a service on
 type ServicePortSupplier interface {
 	Acquire() (Port, error)
+	AcquireMultiple(n int) (ports []Port, err error)
 }
 
 // NewPool creates a port pool that will provide ports from range 40000-50000
@@ -81,4 +82,18 @@ func (pool *Pool) seekAvailablePort() (int, error) {
 		}
 	}
 	return 0, errors.New("port pool is exhausted")
+}
+
+// AcquireMultiple returns n unused ports from pool's range.
+func (pool *Pool) AcquireMultiple(n int) (ports []Port, err error) {
+	for i := 0; i < n; i++ {
+		p, err := pool.Acquire()
+		if err != nil {
+			return ports, err
+		}
+
+		ports = append(ports, p)
+	}
+
+	return ports, nil
 }

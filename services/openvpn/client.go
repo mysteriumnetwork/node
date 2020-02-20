@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -121,7 +122,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Info().Msg("Starting connection")
 
 	sessionConfig := VPNConfig{}
-	err := json.Unmarshal(options.SessionConfig, sessionConfig)
+	err := json.Unmarshal(options.SessionConfig, &sessionConfig)
 	if err != nil {
 		return err
 	}
@@ -215,15 +216,13 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
-	pool := port.NewPool()
+	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	if err != nil {
+		return nil, err
+	}
 
-	for i := 0; i < 10; i++ {
-		cp, err := pool.Acquire()
-		if err != nil {
-			return nil, err
-		}
-
-		c.ports = append(c.ports, cp.Num())
+	for _, p := range ports {
+		c.ports = append(c.ports, p.Num())
 	}
 
 	return &ConsumerConfig{

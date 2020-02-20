@@ -41,3 +41,17 @@ func (pool *PoolFixed) Acquire() (port Port, err error) {
 	pool.port = port
 	return
 }
+
+// AcquireMultiple returns n unused ports from pool's range.
+func (pool *PoolFixed) AcquireMultiple(n int) (ports []Port, err error) {
+	for i := 0; i < n; i++ {
+		p, err := pool.Acquire()
+		if err != nil {
+			return ports, err
+		}
+
+		ports = append(ports, p)
+	}
+
+	return ports, nil
+}

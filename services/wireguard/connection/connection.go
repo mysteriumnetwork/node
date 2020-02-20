@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -229,15 +230,13 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 		}
 	}
 
-	pool := port.NewPool()
+	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	if err != nil {
+		return nil, err
+	}
 
-	for i := 0; i < 10; i++ {
-		cp, err := pool.Acquire()
-		if err != nil {
-			return nil, err
-		}
-
-		c.ports = append(c.ports, cp.Num())
+	for _, p := range ports {
+		c.ports = append(c.ports, p.Num())
 	}
 
 	return wg.ConsumerConfig{

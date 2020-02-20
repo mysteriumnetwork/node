@@ -306,9 +306,11 @@ func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams tr
 	config.Consumer.ConnectDelay = 0
 
 	// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
-	config.LocalPort = traversalParams.RemotePorts[len(traversalParams.RemotePorts)-1]
-	config.RemotePort = traversalParams.LocalPorts[len(traversalParams.LocalPorts)-1]
-	config.Provider.Endpoint.Port = config.RemotePort
+	if len(traversalParams.RemotePorts) > 0 && len(traversalParams.LocalPorts) > 0 {
+		config.LocalPort = traversalParams.RemotePorts[len(traversalParams.RemotePorts)-1]
+		config.RemotePort = traversalParams.LocalPorts[len(traversalParams.LocalPorts)-1]
+		config.Provider.Endpoint.Port = config.RemotePort
+	}
 
 	return config, nil
 }
