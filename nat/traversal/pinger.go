@@ -162,6 +162,8 @@ func (p *Pinger) ping(conn *net.UDPConn, ttl int, stop <-chan struct{}) error {
 		select {
 		case <-stop:
 			return nil
+		case <-p.stop:
+			return nil
 
 		case <-time.After(p.pingConfig.Interval):
 			log.Debug().Msgf("Pinging %s from %s...", conn.RemoteAddr().String(), conn.LocalAddr().String())
@@ -206,6 +208,8 @@ func (p *Pinger) PingTarget(target Params) {
 	select {
 	case p.pingTarget <- target:
 		return
+	case <-p.stop:
+		return
 	// do not block if ping target is not received
 	case <-time.After(100 * time.Millisecond):
 		log.Info().Msgf("Ping target timeout: %v", target)
@@ -227,6 +231,8 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		case <-timeout:
 			return errNATPunchAttemptTimedOut
 		case <-stop:
+			return errNATPunchAttemptStopped
+		case <-p.stop:
 			return errNATPunchAttemptStopped
 		default:
 			// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
