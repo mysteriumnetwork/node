@@ -44,7 +44,7 @@ import (
 var ErrProcessNotStarted = errors.New("process not started yet")
 
 // processFactory creates a new openvpn process
-type processFactory func(options connection.ConnectOptions, sessionConfig *VPNConfig) (openvpn.Process, *ClientConfig, error)
+type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
@@ -65,15 +65,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 		removeAllowedIPRule: func() {},
 	}
 
-	procFactory := func(options connection.ConnectOptions, sessionConfig *VPNConfig) (openvpn.Process, *ClientConfig, error) {
-
-		// override vpnClientConfig params with proxy local IP and pinger port
-		// do this only if connecting to natted provider
-		if sessionConfig.LocalPort > 0 {
-			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
-			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
-		}
-
+	procFactory := func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error) {
 		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, configDirectory, runtimeDirectory, options.DNS)
 		if err != nil {
 			return nil, nil, err
@@ -128,7 +120,7 @@ func (c *Client) Statistics() (connection.Statistics, error) {
 func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Info().Msg("Starting connection")
 
-	sessionConfig := &VPNConfig{}
+	sessionConfig := VPNConfig{}
 	err := json.Unmarshal(options.SessionConfig, sessionConfig)
 	if err != nil {
 		return err
@@ -242,10 +234,6 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 
 //VPNConfig structure represents VPN configuration options for given session
 type VPNConfig struct {
-	// OriginalRemoteIP and OriginalRemotePort are used for NAT punching from consumer side.
-	OriginalRemoteIP   string
-	OriginalRemotePort int
-
 	DNSIPs          string `json:"dns_ips"`
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`

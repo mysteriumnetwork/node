@@ -30,7 +30,7 @@ import (
 )
 
 // ValidateConfig is function which takes VPNConfig as argument, checks it and returns error if validation fails
-type ValidateConfig func(config *VPNConfig) error
+type ValidateConfig func(config VPNConfig) error
 
 // ConfigValidator represents structure which contains list of validating functions
 type ConfigValidator struct {
@@ -51,7 +51,7 @@ func NewDefaultValidator() *ConfigValidator {
 }
 
 // IsValid function checks if provided config is valid against given config validator and returns first encountered error
-func (v *ConfigValidator) IsValid(config *VPNConfig) error {
+func (v *ConfigValidator) IsValid(config VPNConfig) error {
 	for _, validator := range v.validators {
 		if err := validator(config); err != nil {
 			return err
@@ -60,7 +60,7 @@ func (v *ConfigValidator) IsValid(config *VPNConfig) error {
 	return nil
 }
 
-func validProtocol(config *VPNConfig) error {
+func validProtocol(config VPNConfig) error {
 	switch config.RemoteProtocol {
 	case
 		"udp",
@@ -70,14 +70,14 @@ func validProtocol(config *VPNConfig) error {
 	return errors.New("invalid protocol: " + config.RemoteProtocol)
 }
 
-func validPort(config *VPNConfig) error {
+func validPort(config VPNConfig) error {
 	if config.RemotePort > 65535 || config.RemotePort < 1024 {
 		return errors.New("invalid port range, should fall within 1024 .. 65535 range")
 	}
 	return nil
 }
 
-func validIPFormat(config *VPNConfig) error {
+func validIPFormat(config VPNConfig) error {
 	parsed := net.ParseIP(config.RemoteIP)
 	if parsed == nil {
 		return errors.New("unable to parse ip address " + config.RemoteIP)
@@ -88,10 +88,15 @@ func validIPFormat(config *VPNConfig) error {
 	return nil
 }
 
+func validTLSPresharedKey(config VPNConfig) error {
+	_, err := formatTLSPresharedKey(config)
+	return err
+}
+
 // preshared key format (PEM blocks with data encoded to hex) are taken from
-// openvpn --genkey --secret static.key, which is openvpn specific
-// side effect: it reformats key from single line to multiline fixed length strings
-func validTLSPresharedKey(config *VPNConfig) error {
+// openvpn --genkey --secret static.key, which is openvpn specific.
+// it reformats key from single line to multiline fixed length strings.
+func formatTLSPresharedKey(config VPNConfig) (VPNConfig, error) {
 	contentScanner := bufio.NewScanner(bytes.NewBufferString(config.TLSPresharedKey))
 	for contentScanner.Scan() {
 		line := contentScanner.Text()
@@ -101,11 +106,11 @@ func validTLSPresharedKey(config *VPNConfig) error {
 		}
 	}
 	if err := contentScanner.Err(); err != nil {
-		return contentScanner.Err()
+		return VPNConfig{}, contentScanner.Err()
 	}
 	header := contentScanner.Text()
 	if header != "-----BEGIN OpenVPN Static key V1-----" {
-		return errors.New("Invalid key header: " + header)
+		return VPNConfig{}, errors.New("Invalid key header: " + header)
 	}
 
 	var key string
@@ -118,11 +123,11 @@ func validTLSPresharedKey(config *VPNConfig) error {
 		}
 	}
 	if err := contentScanner.Err(); err != nil {
-		return err
+		return VPNConfig{}, err
 	}
 	// 256 bytes key is 512 bytes if encoded to hex
 	if len(key) != 512 {
-		return errors.New("invalid key length")
+		return VPNConfig{}, errors.New("invalid key length")
 	}
 
 	var buff = &bytes.Buffer{}
@@ -135,10 +140,10 @@ func validTLSPresharedKey(config *VPNConfig) error {
 	fmt.Fprintln(buff, "-----END OpenVPN Static key V1-----")
 	config.TLSPresharedKey = buff.String()
 
-	return nil
+	return config, nil
 }
 
-func validCACertificate(config *VPNConfig) error {
+func validCACertificate(config VPNConfig) error {
 	pemBlock, _ := pem.Decode([]byte(config.CACertificate))
 	if pemBlock.Type != "CERTIFICATE" {
 		return errors.New("invalid CA certificate. Certificate block expected")

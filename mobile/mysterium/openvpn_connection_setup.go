@@ -39,7 +39,7 @@ type natPinger interface {
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
-type openvpn3SessionFactory func(connection.ConnectOptions, *openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error)
+type openvpn3SessionFactory func(connection.ConnectOptions, openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error)
 
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
@@ -51,14 +51,8 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 		ipResolver: ipResolver,
 		pingerStop: make(chan struct{}),
 	}
-	sessionFactory := func(options connection.ConnectOptions, sessionConfig *openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		// override vpnClientConfig params with proxy local IP and pinger port
-		// do this only if connecting to natted provider
-		if sessionConfig.LocalPort > 0 {
-			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
-			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
-		}
 
+	sessionFactory := func(options connection.ConnectOptions, sessionConfig openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", connection.DNSOptionAuto)
 		if err != nil {
 			return nil, nil, err
@@ -151,8 +145,8 @@ func (c *openvpnConnection) Statistics() (connection.Statistics, error) {
 }
 
 func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
-	sessionConfig := &openvpn.VPNConfig{}
-	err := json.Unmarshal(options.SessionConfig, sessionConfig)
+	sessionConfig := openvpn.VPNConfig{}
+	err := json.Unmarshal(options.SessionConfig, &sessionConfig)
 	if err != nil {
 		return err
 	}
