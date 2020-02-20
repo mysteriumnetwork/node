@@ -99,7 +99,7 @@ func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T
 		},
 	})
 	down := datasize.BitSize(tracker.Get().Down.BitsPerSecond)
-	assert.Zero(t, int(down.Kibibytes()))
+	assert.Zero(t, down.Bytes())
 
 	time.Sleep(time.Second)
 	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
@@ -110,5 +110,5 @@ func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T
 		},
 	})
 	down = datasize.BitSize(tracker.Get().Down.BitsPerSecond)
-	assert.InDelta(t, 4.0, down.Kibibytes(), 1.0)
+	assert.InDelta(t, 4096, down.Bytes(), 1024)
 }

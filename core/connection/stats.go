@@ -17,7 +17,12 @@
 
 package connection
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	"github.com/mysteriumnetwork/node/datasize"
+)
 
 // Statistics represents connection statistics.
 type Statistics struct {
@@ -49,4 +54,12 @@ func (stats Statistics) Plus(diff Statistics) Statistics {
 		BytesReceived: stats.BytesReceived + diff.BytesReceived,
 		BytesSent:     stats.BytesSent + diff.BytesSent,
 	}
+}
+
+func (stats Statistics) String() string {
+	return fmt.Sprintf(
+		"Received: %s, sent: %s",
+		datasize.FromBytes(stats.BytesReceived),
+		datasize.FromBytes(stats.BytesSent),
+	)
 }

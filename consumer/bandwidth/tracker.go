@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,7 +35,7 @@ type Throughput struct {
 
 // String returns human readable form of the throughput
 func (t Throughput) String() string {
-	return consumer.BitCountDecimal(uint64(t.BitsPerSecond), "bps")
+	return datasize.BitSize(t.BitsPerSecond).String() + "/s"
 }
 
 // CurrentSpeed represents the current(moment) download and upload speeds in bits per second

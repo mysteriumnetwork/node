@@ -20,7 +20,6 @@ package statistics
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/rs/zerolog/log"
 )
@@ -75,7 +74,7 @@ func (sst *SessionStatisticsTracker) markSessionEnd() {
 func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(e connection.SessionStatsEvent) {
 	sst.sessionStats = sst.sessionStats.Plus(sst.lastStats.Diff(e.Stats))
 	sst.lastStats = e.Stats
-	log.Debug().Msgf("bytes received %v, sent %v", consumer.BitCountDecimal(sst.sessionStats.BytesReceived, "B"), consumer.BitCountDecimal(sst.sessionStats.BytesSent, "B"))
+	log.Debug().Msg(sst.sessionStats.String())
 }
 
 // ConsumeSessionEvent handles the session state changes

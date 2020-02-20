@@ -72,11 +72,9 @@ func PriceMinute(lowerBound, upperBound uint64) func(market.ServiceProposal) boo
 	return pricePerTime(lowerBound, upperBound, time.Minute)
 }
 
-var bytesInGibibyte = uint64(datasize.GiB.Bytes())
-
 // PriceGiB checks if the price per GiB is below the given value
 func PriceGiB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
-	return pricePerDataTransfer(lowerBound, upperBound, bytesInGibibyte)
+	return pricePerDataTransfer(lowerBound, upperBound, datasize.GiB.Bytes())
 }
 
 func pricePerTime(lowerBound, upperBound uint64, duration time.Duration) func(market.ServiceProposal) bool {
