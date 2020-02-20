@@ -26,6 +26,7 @@ type IncomingTrafficFirewall interface {
 	Setup() error
 	Teardown()
 	BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error)
+	AllowURLAccess(rawURLs ...string) (IncomingRuleRemove, error)
 	AllowIPAccess(ip net.IP) (IncomingRuleRemove, error)
 }
 

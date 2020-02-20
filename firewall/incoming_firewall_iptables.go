@@ -19,6 +19,7 @@ package firewall
 
 import (
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -28,8 +29,8 @@ import (
 )
 
 const (
-	dnsFirewallChain = "MYST_PROVIDER_FIREWALL"
-	dnsFirewallIpset = "myst-provider-dst-whitelist"
+	incomingFirewallChain = "MYST_PROVIDER_FIREWALL"
+	incomingFirewallIpset = "myst-provider-dst-whitelist"
 )
 
 // incomingFirewallIptables allows incoming traffic blocking in IP granularity.
@@ -44,27 +45,27 @@ func (ibi *incomingFirewallIptables) Setup() error {
 	if err := ibi.cleanupStaleRules(); err != nil {
 		return err
 	}
-	ipset.Exec(ipset.OpDelete(dnsFirewallIpset))
+	ipset.Exec(ipset.OpDelete(incomingFirewallIpset))
 
-	op := ipset.OpCreate(dnsFirewallIpset, ipset.SetTypeHashIP, 24*time.Hour, nil, 0)
+	op := ipset.OpCreate(incomingFirewallIpset, ipset.SetTypeHashIP, 24*time.Hour, nil, 0)
 	if _, err := ipset.Exec(op); err != nil {
 		return err
 	}
-	return ibi.setupDNSFirewallChain()
+	return ibi.setupFirewallChain()
 }
 
 func (ibi *incomingFirewallIptables) Teardown() {
 	if err := ibi.cleanupStaleRules(); err != nil {
 		log.Warn().Err(err).Msg("Error cleaning up iptables rules, you might want to do it yourself")
 	}
-	if errOutput, err := ipset.Exec(ipset.OpDelete(dnsFirewallIpset)); err != nil {
+	if errOutput, err := ipset.Exec(ipset.OpDelete(incomingFirewallIpset)); err != nil {
 		log.Warn().Err(err).Msgf("Error deleting ipset table. %s", strings.Join(errOutput, ""))
 	}
 }
 
 func (ibi *incomingFirewallIptables) BlockIncomingTraffic(network net.IPNet) (IncomingRuleRemove, error) {
 	remover, err := iptables.AddRuleWithRemoval(
-		iptables.AppendTo("FORWARD").RuleSpec("-s", network.String(), "-j", dnsFirewallChain),
+		iptables.AppendTo("FORWARD").RuleSpec("-s", network.String(), "-j", incomingFirewallChain),
 	)
 	if err != nil {
 		return nil, err
@@ -75,12 +76,41 @@ func (ibi *incomingFirewallIptables) BlockIncomingTraffic(network net.IPNet) (In
 	}, nil
 }
 
+// AllowURLAccess adds URL based exception.
+func (ibi *incomingFirewallIptables) AllowURLAccess(rawURLs ...string) (IncomingRuleRemove, error) {
+	var ruleRemovers []func()
+	removeAll := func() error {
+		for _, ruleRemover := range ruleRemovers {
+			ruleRemover()
+		}
+		return nil
+	}
+
+	for _, rawURL := range rawURLs {
+		parsed, err := url.Parse(rawURL)
+		if err != nil {
+			removeAll()
+			return nil, err
+		}
+
+		remover, err := iptables.AddRuleWithRemoval(
+			iptables.InsertAt(incomingFirewallChain, 1).RuleSpec("-d", parsed.Hostname(), "-j", "ACCEPT"),
+		)
+		if err != nil {
+			removeAll()
+			return nil, err
+		}
+		ruleRemovers = append(ruleRemovers, remover)
+	}
+	return removeAll, nil
+}
+
 func (ibi *incomingFirewallIptables) AllowIPAccess(ip net.IP) (IncomingRuleRemove, error) {
-	if _, err := ipset.Exec(ipset.OpIPAdd(dnsFirewallIpset, ip, true)); err != nil {
+	if _, err := ipset.Exec(ipset.OpIPAdd(incomingFirewallIpset, ip, true)); err != nil {
 		return nil, err
 	}
 	return func() error {
-		_, err := ipset.Exec(ipset.OpIPRemove(dnsFirewallIpset, ip))
+		_, err := ipset.Exec(ipset.OpIPRemove(incomingFirewallIpset, ip))
 		return err
 	}, nil
 }
@@ -96,19 +126,19 @@ func (ibi *incomingFirewallIptables) checkIpsetVersion() error {
 	return nil
 }
 
-func (ibi *incomingFirewallIptables) setupDNSFirewallChain() error {
+func (ibi *incomingFirewallIptables) setupFirewallChain() error {
 	// Add chain
-	if _, err := iptables.Exec("-N", dnsFirewallChain); err != nil {
+	if _, err := iptables.Exec("-N", incomingFirewallChain); err != nil {
 		return err
 	}
 
-	// Append rule - packets going to DNS firewall with these destination IPs are whitelisted
-	if _, err := iptables.Exec("-A", dnsFirewallChain, "-m", "set", "--match-set", dnsFirewallIpset, "dst", "-j", "ACCEPT"); err != nil {
+	// Append rule - packets going to firewall with these destination IPs are whitelisted
+	if _, err := iptables.Exec("-A", incomingFirewallChain, "-m", "set", "--match-set", incomingFirewallIpset, "dst", "-j", "ACCEPT"); err != nil {
 		return err
 	}
 
-	// Append rule - by default all packets going to DNS firewall chain are rejected
-	if _, err := iptables.Exec("-A", dnsFirewallChain, "-j", "REJECT"); err != nil {
+	// Append rule - by default all packets going to firewall chain are rejected
+	if _, err := iptables.Exec("-A", incomingFirewallChain, "-j", "REJECT"); err != nil {
 		return err
 	}
 
@@ -123,7 +153,7 @@ func (ibi *incomingFirewallIptables) cleanupStaleRules() error {
 	}
 	for _, rule := range rules {
 		// detect if any references exist in FORWARD chain like -j MYST_PROVIDER_FIREWALL
-		if strings.HasSuffix(rule, dnsFirewallChain) {
+		if strings.HasSuffix(rule, incomingFirewallChain) {
 			deleteRule := strings.Replace(rule, "-A", "-D", 1)
 			deleteRuleArgs := strings.Split(deleteRule, " ")
 			if _, err := iptables.Exec(deleteRuleArgs...); err != nil {
@@ -133,19 +163,19 @@ func (ibi *incomingFirewallIptables) cleanupStaleRules() error {
 	}
 
 	// List chain rules
-	if _, err := iptables.Exec("-L", dnsFirewallChain); err != nil {
+	if _, err := iptables.Exec("-L", incomingFirewallChain); err != nil {
 		// error means no such chain - log error just in case and bail out
 		log.Info().Err(err).Msg("[setup] Got error while listing kill switch chain rules. Probably nothing to worry about")
 		return nil
 	}
 
 	// Remove chain rules
-	if _, err := iptables.Exec("-F", dnsFirewallChain); err != nil {
+	if _, err := iptables.Exec("-F", incomingFirewallChain); err != nil {
 		return err
 	}
 
 	// Remove chain
-	_, err = iptables.Exec("-X", dnsFirewallChain)
+	_, err = iptables.Exec("-X", incomingFirewallChain)
 	return err
 }
 
