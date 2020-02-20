@@ -93,7 +93,7 @@ func TestServiceDefinitionUnserialize(t *testing.T) {
 			ServiceDefinition{
 				Location:          locationUS,
 				LocationOriginate: locationUS,
-				SessionBandwidth:  Bandwidth(1 * datasize.Byte),
+				SessionBandwidth:  Bandwidth(1 * datasize.B),
 				Protocol:          protocol,
 			},
 			nil,

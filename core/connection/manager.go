@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -100,7 +100,7 @@ type connectionManager struct {
 	newDialog                DialogCreator
 	paymentEngineFactory     PaymentEngineFactory
 	newConnection            Creator
-	eventPublisher           Publisher
+	eventPublisher           eventbus.Publisher
 	connectivityStatusSender connectivity.StatusSender
 	ipResolver               ip.Resolver
 	ipCheckParams            IPCheckParams
@@ -389,9 +389,15 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	// Consume statistics right after start - openvpn3 will publish them even before connected state.
-	unsubscribeStats := manager.consumeStats(conn.Statistics())
-	manager.cleanup = append(manager.cleanup, unsubscribeStats)
+	statsPublisher := newStatsPublisher(manager.eventPublisher)
+	go statsPublisher.start(manager.getCurrentSession(), conn)
+
+	manager.cleanup = append(manager.cleanup, func() error {
+		log.Trace().Msg("Cleaning: stopping statistics publisher")
+		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
+		statsPublisher.stop()
+		return nil
+	})
 	manager.cleanup = append(manager.cleanup, func() error {
 		log.Trace().Msg("Cleaning: stopping connection")
 		defer log.Trace().Msg("Cleaning: stopping connection DONE")
@@ -506,26 +512,6 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 
 	log.Debug().Msg("State updater stopCalled")
 	logDisconnectError(manager.Disconnect())
-}
-
-func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) func() error {
-	stop := make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case stats := <-statisticsChannel:
-				manager.eventPublisher.Publish(AppTopicConsumerStatistics, SessionStatsEvent{
-					Stats:       stats,
-					SessionInfo: manager.getCurrentSession(),
-				})
-			case <-stop:
-				return
-			}
-		}
-	}()
-
-	return func() error { close(stop); return nil }
 }
 
 func (manager *connectionManager) onStateChanged(state State) {

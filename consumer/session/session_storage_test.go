@@ -21,7 +21,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -141,10 +140,10 @@ func (sss *StubSessionStorer) GetAllFrom(from string, array interface{}) error {
 }
 
 type StubRetriever struct {
-	Value consumer.SessionStatistics
+	Value connection.Statistics
 }
 
-func (sr *StubRetriever) Retrieve() consumer.SessionStatistics {
+func (sr *StubRetriever) Retrieve() connection.Statistics {
 	return sr.Value
 }
 

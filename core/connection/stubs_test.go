@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/rs/zerolog/log"
@@ -99,12 +98,10 @@ func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection
 	}
 
 	c.mockConnection.stateChannel = make(chan State, 100)
-	c.mockConnection.statisticsChannel = make(chan consumer.SessionStatistics, 100)
 
 	stateCallback := func(state fakeState) {
 		if state == connectedState {
 			c.mockConnection.stateChannel <- Connected
-			c.mockConnection.statisticsChannel <- c.mockConnection.onStartReportStats
 		}
 		if state == exitingState {
 			c.mockConnection.stateChannel <- Disconnecting
@@ -122,7 +119,6 @@ func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection
 	// we copy the values over, so that the factory always returns a new instance of connection
 	copy := connectionMock{
 		stateChannel:        c.mockConnection.stateChannel,
-		statisticsChannel:   c.mockConnection.statisticsChannel,
 		onStartReportStates: c.mockConnection.onStartReportStates,
 		onStartReturnError:  c.mockConnection.onStartReturnError,
 		onStopReportStates:  c.mockConnection.onStopReportStates,
@@ -137,12 +133,11 @@ func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection
 
 type connectionMock struct {
 	stateChannel        chan State
-	statisticsChannel   chan consumer.SessionStatistics
 	onStartReturnError  error
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
 	stateCallback       func(state fakeState)
-	onStartReportStats  consumer.SessionStatistics
+	onStartReportStats  Statistics
 	fakeProcess         sync.WaitGroup
 	stopBlock           chan struct{}
 	sync.RWMutex
@@ -152,8 +147,8 @@ func (foc *connectionMock) State() <-chan State {
 	return foc.stateChannel
 }
 
-func (foc *connectionMock) Statistics() <-chan consumer.SessionStatistics {
-	return foc.statisticsChannel
+func (foc *connectionMock) Statistics() (Statistics, error) {
+	return foc.onStartReportStats, nil
 }
 
 func (foc *connectionMock) GetConfig() (ConsumerConfig, error) {

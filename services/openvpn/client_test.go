@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -32,7 +31,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
-	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{}, time.Second)
+	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	connectionOptions := connection.ConnectOptions{}
 	assert.Nil(t, err)
 	err = conn.Start(connectionOptions)
@@ -40,7 +39,7 @@ func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnection_CreatesConnection(t *testing.T) {
-	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{}, time.Second)
+	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
 }

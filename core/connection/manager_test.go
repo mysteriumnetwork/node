@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -41,7 +40,7 @@ type testContext struct {
 	mockDialog            *mockDialog
 	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *StubPublisher
-	mockStatistics        consumer.SessionStatistics
+	mockStatistics        Statistics
 	fakeResolver          ip.Resolver
 	ipCheckParams         IPCheckParams
 	statusSender          *mockStatusSender
@@ -79,7 +78,7 @@ func (tc *testContext) SetupTest() {
 		return tc.mockDialog, nil
 	}
 
-	tc.mockStatistics = consumer.SessionStatistics{
+	tc.mockStatistics = Statistics{
 		BytesReceived: 10,
 		BytesSent:     20,
 	}
@@ -337,6 +336,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.NoError(tc.T(), err)
 
 	waitABit()
+	time.Sleep(StatsReportInterval)
 
 	history := tc.stubPublisher.GetEventHistory()
 	assert.Len(tc.T(), history, 4)

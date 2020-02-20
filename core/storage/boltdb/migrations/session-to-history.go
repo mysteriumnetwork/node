@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/asdine/storm"
-	"github.com/mysteriumnetwork/node/consumer"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
 	"github.com/rs/zerolog/log"
@@ -40,7 +40,7 @@ type Session struct {
 	Started         time.Time
 	Status          Status
 	Updated         time.Time
-	DataStats       consumer.SessionStatistics // is updated on disconnect event
+	DataStats       connection.Statistics // is updated on disconnect event
 }
 
 // ToSessionHistory converts the session struct to a session history struct

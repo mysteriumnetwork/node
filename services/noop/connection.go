@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
@@ -29,7 +28,6 @@ import (
 func NewConnection() (connection.Connection, error) {
 	return &Connection{
 		stateCh: make(chan connection.State, 100),
-		statsCh: make(chan consumer.SessionStatistics, 100),
 	}, nil
 }
 
@@ -38,8 +36,9 @@ type Connection struct {
 	isRunning      bool
 	noopConnection sync.WaitGroup
 	stateCh        chan connection.State
-	statsCh        chan consumer.SessionStatistics
 }
+
+var _ connection.Connection = &Connection{}
 
 // State returns connection state channel.
 func (c *Connection) State() <-chan connection.State {
@@ -47,8 +46,8 @@ func (c *Connection) State() <-chan connection.State {
 }
 
 // Statistics returns connection statistics channel.
-func (c *Connection) Statistics() <-chan consumer.SessionStatistics {
-	return c.statsCh
+func (c *Connection) Statistics() (connection.Statistics, error) {
+	return connection.Statistics{At: time.Now()}, nil
 }
 
 // Start implements the connection.Connection interface

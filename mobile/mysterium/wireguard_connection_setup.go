@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -68,41 +67,47 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 	}
 
 	return &wireguardConnection{
-		statsCheckerStop: make(chan struct{}),
-		done:             make(chan struct{}),
-		pingerStop:       make(chan struct{}),
-		stateCh:          make(chan connection.State, 100),
-		statisticsCh:     make(chan consumer.SessionStatistics, 100),
-		opts:             opts,
-		device:           device,
-		privateKey:       privateKey,
-		ipResolver:       ipResolver,
-		natPinger:        natPinger,
-		handshakeWaiter:  handshakeWaiter,
+		done:            make(chan struct{}),
+		pingerStop:      make(chan struct{}),
+		stateCh:         make(chan connection.State, 100),
+		opts:            opts,
+		device:          device,
+		privateKey:      privateKey,
+		ipResolver:      ipResolver,
+		natPinger:       natPinger,
+		handshakeWaiter: handshakeWaiter,
 	}, nil
 }
 
 type wireguardConnection struct {
-	closeOnce        sync.Once
-	done             chan struct{}
-	pingerStop       chan struct{}
-	statsCheckerStop chan struct{}
-	stateCh          chan connection.State
-	statisticsCh     chan consumer.SessionStatistics
-	opts             wireGuardOptions
-	privateKey       string
-	device           wireguardDevice
-	ipResolver       ip.Resolver
-	natPinger        natPinger
-	handshakeWaiter  wireguard_connection.HandshakeWaiter
+	closeOnce       sync.Once
+	done            chan struct{}
+	pingerStop      chan struct{}
+	stateCh         chan connection.State
+	opts            wireGuardOptions
+	privateKey      string
+	device          wireguardDevice
+	ipResolver      ip.Resolver
+	natPinger       natPinger
+	handshakeWaiter wireguard_connection.HandshakeWaiter
 }
+
+var _ connection.Connection = &wireguardConnection{}
 
 func (c *wireguardConnection) State() <-chan connection.State {
 	return c.stateCh
 }
 
-func (c *wireguardConnection) Statistics() <-chan consumer.SessionStatistics {
-	return c.statisticsCh
+func (c *wireguardConnection) Statistics() (connection.Statistics, error) {
+	stats, err := c.device.Stats()
+	if err != nil {
+		return connection.Statistics{}, err
+	}
+	return connection.Statistics{
+		At:            time.Now(),
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
+	}, nil
 }
 
 func (c *wireguardConnection) Start(options connection.ConnectOptions) (err error) {
@@ -141,8 +146,6 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		return errors.Wrap(err, "failed to handshake")
 	}
 
-	go c.updateStatsPeriodically(c.opts.statsUpdateInterval)
-
 	log.Debug().Msg("Connected successfully")
 	c.stateCh <- connection.Connected
 	return nil
@@ -156,11 +159,9 @@ func (c *wireguardConnection) Wait() error {
 func (c *wireguardConnection) Stop() {
 	c.closeOnce.Do(func() {
 		c.stateCh <- connection.Disconnecting
-		c.sendStats()
 		c.device.Stop()
 		c.stateCh <- connection.NotConnected
 
-		close(c.statsCheckerStop)
 		close(c.pingerStop)
 		close(c.stateCh)
 		close(c.done)
@@ -194,31 +195,6 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 func (c *wireguardConnection) isNoopPinger() bool {
 	_, ok := c.natPinger.(*traversal.NoopPinger)
 	return ok
-}
-
-func (c *wireguardConnection) updateStatsPeriodically(duration time.Duration) {
-	for {
-		select {
-		case <-time.After(duration):
-			c.sendStats()
-		case <-c.statsCheckerStop:
-			close(c.statisticsCh)
-			return
-		}
-	}
-}
-
-func (c *wireguardConnection) sendStats() {
-	stats, err := c.device.Stats()
-	if err != nil {
-		log.Error().Err(err).Msg("Error updating statistics")
-		return
-	}
-
-	c.statisticsCh <- consumer.SessionStatistics{
-		BytesSent:     stats.BytesSent,
-		BytesReceived: stats.BytesReceived,
-	}
 }
 
 type wireguardDevice interface {

@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
@@ -36,7 +35,7 @@ var ErrSessionNotStarted = errors.New("session not started")
 
 // StatsTracker allows for retrieval and resetting of statistics
 type StatsTracker interface {
-	Retrieve() consumer.SessionStatistics
+	Retrieve() connection.Statistics
 	Reset()
 }
 

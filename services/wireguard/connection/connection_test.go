@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -45,7 +44,10 @@ func TestConnectionStartStop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, connection.Connecting, <-conn.State())
 	assert.Equal(t, connection.Connected, <-conn.State())
-	assert.Equal(t, consumer.SessionStatistics{BytesSent: 10, BytesReceived: 11}, <-conn.Statistics())
+	stats, err := conn.Statistics()
+	assert.NoError(t, err)
+	assert.EqualValues(t, 10, stats.BytesSent)
+	assert.EqualValues(t, 11, stats.BytesReceived)
 
 	// Stop connection.
 	go func() {
@@ -94,8 +96,7 @@ func newConn(t *testing.T) *Connection {
 		return &mockConnectionEndpoint{}, nil
 	}
 	opts := Options{
-		DNSConfigDir:        "/dns/dir",
-		StatsUpdateInterval: 1 * time.Millisecond,
+		DNSConfigDir: "/dns/dir",
 	}
 	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), traversal.NewNoopPinger(), endpointFactory, &mockDnsManager{}, &mockHandshakeWaiter{})
 	assert.NoError(t, err)

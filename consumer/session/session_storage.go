@@ -20,7 +20,6 @@ package session
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/rs/zerolog/log"
@@ -30,7 +29,7 @@ const sessionStorageBucketName = "session-history"
 
 // StatsRetriever can fetch current session stats
 type StatsRetriever interface {
-	Retrieve() consumer.SessionStatistics
+	Retrieve() connection.Statistics
 }
 
 // Storer allows us to get all sessions, save and update them

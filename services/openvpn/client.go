@@ -27,13 +27,11 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
@@ -51,11 +49,19 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
 	natPinger traversal.NATProviderPinger,
-	statInterval time.Duration,
 ) (connection.Connection, error) {
 
 	stateCh := make(chan connection.State, 100)
-	statisticsCh := make(chan consumer.SessionStatistics, 100)
+	client := &Client{
+		configDirectory:     configDirectory,
+		runtimeDirectory:    runtimeDirectory,
+		signerFactory:       signerFactory,
+		stateCh:             stateCh,
+		ipResolver:          ipResolver,
+		natPinger:           natPinger,
+		pingerStop:          make(chan struct{}),
+		removeAllowedIPRule: func() {},
+	}
 
 	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
 		sessionConfig := &VPNConfig{}
@@ -80,23 +86,13 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 
 		stateMiddleware := newStateMiddleware(stateCh)
 		authMiddleware := newAuthMiddleware(options.SessionID, signer)
-		byteCountMiddleware := newBytecountMiddleware(statisticsCh, statInterval)
+		byteCountMiddleware := openvpn_bytescount.NewMiddleware(client.OnStats, connection.StatsReportInterval)
 		proc := openvpn.CreateNewProcess(openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
 		return proc, vpnClientConfig, nil
 	}
 
-	return &Client{
-		configDirectory:     configDirectory,
-		runtimeDirectory:    runtimeDirectory,
-		signerFactory:       signerFactory,
-		stateCh:             stateCh,
-		statisticsCh:        statisticsCh,
-		processFactory:      procFactory,
-		ipResolver:          ipResolver,
-		natPinger:           natPinger,
-		pingerStop:          make(chan struct{}),
-		removeAllowedIPRule: func() {},
-	}, nil
+	client.processFactory = procFactory
+	return client, nil
 }
 
 // Client takes in the openvpn process and works with it
@@ -106,7 +102,8 @@ type Client struct {
 	runtimeDirectory    string
 	signerFactory       identity.SignerFactory
 	stateCh             chan connection.State
-	statisticsCh        chan consumer.SessionStatistics
+	stats               connection.Statistics
+	statsMu             sync.RWMutex
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
@@ -116,14 +113,18 @@ type Client struct {
 	stopOnce            sync.Once
 }
 
+var _ connection.Connection = &Client{}
+
 // State returns connection state channel.
 func (c *Client) State() <-chan connection.State {
 	return c.stateCh
 }
 
 // Statistics returns connection statistics channel.
-func (c *Client) Statistics() <-chan consumer.SessionStatistics {
-	return c.statisticsCh
+func (c *Client) Statistics() (connection.Statistics, error) {
+	c.statsMu.RLock()
+	defer c.statsMu.RUnlock()
+	return c.stats, nil
 }
 
 // Start starts the connection
@@ -181,6 +182,16 @@ func (c *Client) Stop() {
 	})
 }
 
+// OnStats updates connection statistics.
+func (c *Client) OnStats(cnt openvpn_bytescount.Bytecount) error {
+	c.statsMu.Lock()
+	defer c.statsMu.Unlock()
+	c.stats.At = time.Now()
+	c.stats.BytesReceived = cnt.BytesIn
+	c.stats.BytesSent = cnt.BytesOut
+	return nil
+}
+
 // GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 	switch c.natPinger.(type) {
@@ -217,11 +228,6 @@ type VPNConfig struct {
 func newAuthMiddleware(sessionID session.ID, signer identity.Signer) management.Middleware {
 	credentialsProvider := openvpn_session.SignatureCredentialsProvider(sessionID, signer)
 	return auth.NewMiddleware(credentialsProvider)
-}
-
-func newBytecountMiddleware(statisticsChannel connection.StatisticsChannel, interval time.Duration) management.Middleware {
-	statsSaver := bytescount.NewSessionStatsSaver(statisticsChannel)
-	return openvpn_bytescount.NewMiddleware(statsSaver, interval)
 }
 
 func newStateMiddleware(stateChannel connection.StateChannel) management.Middleware {

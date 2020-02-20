@@ -32,12 +32,12 @@ func TestBandwidthSerialize(t *testing.T) {
 		expectedJSON string
 	}{
 		{Bandwidth(1 * datasize.Bit), "1"},
-		{Bandwidth(1 * datasize.Byte), "8"},
-		{Bandwidth(0.5 * datasize.Byte), "4"},
-		{Bandwidth(0.51 * datasize.Byte), "4"},
+		{Bandwidth(1 * datasize.B), "8"},
+		{Bandwidth(0.5 * datasize.B), "4"},
+		{Bandwidth(0.51 * datasize.B), "4"},
 		{Bandwidth(0 * datasize.Bit), "0"},
-		{Bandwidth(1 * datasize.Tebibyte), "8796093022208"},
-		{Bandwidth(2 * datasize.Tebibyte), "17592186044416"},
+		{Bandwidth(1 * datasize.TiB), "8796093022208"},
+		{Bandwidth(2 * datasize.TiB), "17592186044416"},
 	}
 
 	for _, test := range tests {
@@ -55,10 +55,10 @@ func TestBandwidthUnserialize(t *testing.T) {
 		expectedErrorMsg string
 	}{
 		{"1", Bandwidth(1 * datasize.Bit), ""},
-		{"8", Bandwidth(1 * datasize.Byte), ""},
-		{"4", Bandwidth(0.5 * datasize.Byte), ""},
-		{"8796093022208", Bandwidth(1 * datasize.Tebibyte), ""},
-		{"17592186044416", Bandwidth(2 * datasize.Tebibyte), ""},
+		{"8", Bandwidth(1 * datasize.B), ""},
+		{"4", Bandwidth(0.5 * datasize.B), ""},
+		{"8796093022208", Bandwidth(1 * datasize.TiB), ""},
+		{"17592186044416", Bandwidth(2 * datasize.TiB), ""},
 		{
 			"-1",
 			Bandwidth(0),

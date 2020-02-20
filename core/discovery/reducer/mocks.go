@@ -20,6 +20,7 @@ package reducer
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -102,7 +103,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(7000001, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGibibyte,
+				PerByte: datasize.GiB.Bytes(),
 			},
 		},
 	}
@@ -110,7 +111,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(0, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGibibyte,
+				PerByte: datasize.GiB.Bytes(),
 			},
 		},
 	}
@@ -118,7 +119,7 @@ var (
 		PaymentMethod: &mockPaymentMethod{
 			price: money.NewMoney(7000000, money.CurrencyMyst),
 			rate: market.PaymentRate{
-				PerByte: bytesInGibibyte,
+				PerByte: datasize.GiB.Bytes(),
 			},
 		},
 	}

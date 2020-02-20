@@ -18,45 +18,12 @@
 package datasize
 
 import (
+	"math"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestConstants(t *testing.T) {
-	table := []struct {
-		value        BitSize
-		expectedBits uint64
-	}{
-		{b, 1},
-		{Bit, 1},
-
-		{Byte, 8},
-		{B, 8},
-
-		{Kibibyte, 8 * 1024},
-		{KiB, 8 * 1024},
-
-		{Mebibyte, 8 * 1024 * 1024},
-		{MiB, 8 * 1024 * 1024},
-
-		{Gibibyte, 8 * 1024 * 1024 * 1024},
-		{GiB, 8 * 1024 * 1024 * 1024},
-
-		{Tebibyte, 8 * 1024 * 1024 * 1024 * 1024},
-		{TiB, 8 * 1024 * 1024 * 1024 * 1024},
-
-		{Pebibyte, 8 * 1024 * 1024 * 1024 * 1024 * 1024},
-		{PiB, 8 * 1024 * 1024 * 1024 * 1024 * 1024},
-
-		{Exbibyte, 8 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024},
-		{EiB, 8 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.expectedBits, uint64(tt.value))
-	}
-}
 
 func TestBits(t *testing.T) {
 	table := []struct {
@@ -78,12 +45,12 @@ func TestBits(t *testing.T) {
 func TestBytes(t *testing.T) {
 	table := []struct {
 		value         BitSize
-		valueExpected float64
+		valueExpected uint64
 	}{
 		{KiB, 1024},
 		{10 * KiB, 10240},
 		{0.5 * KiB, 512},
-		{0.001 * KiB, 1.024},
+		{0.001 * KiB, 1},
 	}
 
 	for _, tt := range table {
@@ -91,124 +58,36 @@ func TestBytes(t *testing.T) {
 	}
 }
 
-func TestKibibytes(t *testing.T) {
-	table := []struct {
-		value         BitSize
-		valueExpected float64
+func Test_String(t *testing.T) {
+	tests := []struct {
+		input BitSize
+		want  string
 	}{
-		{MiB, 1024},
-		{10 * MiB, 10240},
-		{0.5 * MiB, 512},
-		{0.001 * MiB, 1.024},
+		{0, "0 b"},
+		{Bit, "1 b"},
+		{B, "1 B"},
+		{KiB, "1.0 KiB"},
+		{MiB, "1.0 MiB"},
+		{GiB, "1.0 GiB"},
+		{TiB, "1.0 TiB"},
+		{PiB, "1.0 PiB"},
+		{EiB, "1.0 EiB"},
+		{400 * TiB, "400.0 TiB"},
+		{2048 * MiB, "2.0 GiB"},
+		{B + KiB, "1.0 KiB"},
+		{MiB + 20*KiB, "1.0 MiB"},
+		{100*MiB + KiB, "100.0 MiB"},
+		{50 * B, "50 B"},
+		{1024 * B, "1.0 KiB"},
+		{1500 * B, "1.5 KiB"},
+		{1024 * 1024 * B, "1.0 MiB"},
+		{1024 * 1024 * 1024 * B, "1.0 GiB"},
+		{BitSize(math.MaxUint64 + 1), "2.0 EiB"},
 	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Kibibytes())
-	}
-}
-
-func TestMebibytes(t *testing.T) {
-	table := []struct {
-		value         BitSize
-		valueExpected float64
-	}{
-		{GiB, 1024},
-		{10 * GiB, 10240},
-		{0.5 * GiB, 512},
-		{0.001 * GiB, 1.024},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Mebibytes())
-	}
-}
-
-func TestGibibytes(t *testing.T) {
-	table := []struct {
-		value         BitSize
-		valueExpected float64
-	}{
-		{TiB, 1024},
-		{10 * TiB, 10240},
-		{0.5 * TiB, 512},
-		{0.001 * TiB, 1.024},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Gibibytes())
-	}
-}
-
-func TestTebibytes(t *testing.T) {
-	table := []struct {
-		value         BitSize
-		valueExpected float64
-	}{
-		{PiB, 1024},
-		{10 * PiB, 10240},
-		{0.5 * PiB, 512},
-		{0.001 * PiB, 1.024},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Tebibytes())
-	}
-}
-
-func TestPebibytes(t *testing.T) {
-	table := []struct {
-		value         BitSize
-		valueExpected float64
-	}{
-		{EiB, 1024},
-		{10 * EiB, 10240},
-		{0.5 * EiB, 512},
-		{0.001 * EiB, 1.024},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Pebibytes())
-	}
-}
-
-func TestExbibytes(t *testing.T) {
-	table := []struct {
-		value         BitSize
-		valueExpected float64
-	}{
-		{EiB, 1},
-		{10 * EiB, 10},
-		{0.5 * EiB, 0.5},
-		{0.001 * EiB, 0.001},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueExpected, tt.value.Exbibytes())
-	}
-}
-
-func TestMarshalText(t *testing.T) {
-	table := []struct {
-		value       BitSize
-		valueString string
-	}{
-		{0, "0b"},
-		{Bit, "1b"},
-		{B, "1B"},
-		{KiB, "1KiB"},
-		{MiB, "1MiB"},
-		{GiB, "1GiB"},
-		{TiB, "1TiB"},
-		{PiB, "1PiB"},
-		{EiB, "1EiB"},
-		{400 * TiB, "400TiB"},
-		{2048 * MiB, "2GiB"},
-		{B + KiB, "1025B"},
-		{MiB + 20*KiB, "1044KiB"},
-		{100*MiB + KiB, "102401KiB"},
-	}
-
-	for _, tt := range table {
-		assert.Equal(t, tt.valueString, tt.value.String())
+	for idx, tt := range tests {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			result := tt.input.String()
+			assert.Equal(t, tt.want, result)
+		})
 	}
 }

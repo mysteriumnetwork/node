@@ -21,122 +21,61 @@ import (
 	"fmt"
 )
 
-// BitSize represents data size in various units
+// BitSize represents data size in various units.
 type BitSize float64
 
 const (
-	// Bit represents 1 bit
+	// Bit represents 1 bit.
 	Bit BitSize = 1
-	b           = Bit
-
-	// Byte is 8 bits
-	Byte = 8 * Bit
-	// B is short for Byte
-	B = Byte
-
-	// Kibibyte represents 1024 bytes
-	Kibibyte = 1024 * Byte
-	// KiB is short for Kibibyte
-	KiB = Kibibyte
-
-	// Mebibyte represents 1024 kibibytes
-	Mebibyte = 1024 * Kibibyte
-	// MiB is short for Mebibyte
-	MiB = Mebibyte
-
-	// Gibibyte represents 1024 mebibytes
-	Gibibyte = 1024 * Mebibyte
-	// GiB is short for Gibibyte
-	GiB = Gibibyte
-
-	// Tebibyte represents 1024 gibibytes
-	Tebibyte = 1024 * Gibibyte
-	// TiB is short for Tebibyte
-	TiB = Tebibyte
-
-	// Pebibyte represents 1024 tebibytes
-	Pebibyte = 1024 * Tebibyte
-	// PiB is short for Pebibyte
-	PiB = Pebibyte
-
-	// Exbibyte represents 1024 pebibytes
-	Exbibyte = 1024 * Pebibyte
-	// EiB is short for Exbibyte
-	EiB = Exbibyte
+	// B is short for Byte.
+	B = 8 * Bit
+	// KiB is short for Kibibyte.
+	KiB = 1024 * B
+	// MiB is short for Mebibyte.
+	MiB = 1024 * KiB
+	// GiB is short for Gibibyte.
+	GiB = 1024 * MiB
+	// TiB is short for Tebibyte.
+	TiB = 1024 * GiB
+	// PiB is short for Pebibyte.
+	PiB = 1024 * TiB
+	// EiB is short for Exbibyte.
+	EiB = 1024 * PiB
 )
 
-// Bits returns size in bits
+var units = []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
+
+// FromBytes creates BitSize from bytes value.
+func FromBytes(bytes uint64) BitSize {
+	return BitSize(bytes * B.Bits())
+}
+
+// Bits returns size in bits.
 func (size BitSize) Bits() uint64 {
 	return uint64(size)
 }
 
-// Bytes returns size in bytes
-func (size BitSize) Bytes() float64 {
-	return float64(size / Byte)
+// Bytes returns size in bytes.
+func (size BitSize) Bytes() uint64 {
+	return uint64(float64(size) / float64(B.Bits()))
 }
 
-// Kibibytes returns size in kibibytes
-func (size BitSize) Kibibytes() float64 {
-	return float64(size / Kibibyte)
-}
-
-// Mebibytes returns size in mebibytes
-func (size BitSize) Mebibytes() float64 {
-	return float64(size / Mebibyte)
-}
-
-// Gibibytes returns size in gigabytes
-func (size BitSize) Gibibytes() float64 {
-	return float64(size / Gibibyte)
-}
-
-// Tebibytes returns size in tebibytes
-func (size BitSize) Tebibytes() float64 {
-	return float64(size / Tebibyte)
-}
-
-// Pebibytes returns size in pebibytes
-func (size BitSize) Pebibytes() float64 {
-	return float64(size / Pebibyte)
-}
-
-// Exbibytes returns size in exbibytes
-func (size BitSize) Exbibytes() float64 {
-	return float64(size / Exbibyte)
-}
-
-// String returns human-readable string representation of size
+// String returns a human readable representation of bytes.
 func (size BitSize) String() string {
-	switch {
-	case size == 0:
-		return fmt.Sprintf("%db", size.Bits())
-
-	case size.isDivisible(EiB):
-		return fmt.Sprintf("%.0fEiB", size.Exbibytes())
-
-	case size.isDivisible(PiB):
-		return fmt.Sprintf("%.0fPiB", size.Pebibytes())
-
-	case size.isDivisible(TiB):
-		return fmt.Sprintf("%.0fTiB", size.Tebibytes())
-
-	case size.isDivisible(GiB):
-		return fmt.Sprintf("%.0fGiB", size.Gibibytes())
-
-	case size.isDivisible(MiB):
-		return fmt.Sprintf("%.0fMiB", size.Mebibytes())
-
-	case size.isDivisible(KiB):
-		return fmt.Sprintf("%.0fKiB", size.Kibibytes())
-
-	case size.isDivisible(B):
-		return fmt.Sprintf("%.0fB", size.Bytes())
-
-	default:
-		return fmt.Sprintf("%db", size.Bits())
+	if size < B {
+		// No fraction on bits
+		return fmt.Sprintf("%d %v", uint64(size), "b")
 	}
-}
-
-func (size BitSize) isDivisible(divider BitSize) bool {
-	return size.Bits()%divider.Bits() == 0
+	if size < KiB {
+		// No fraction on bytes
+		return fmt.Sprintf("%d %v", size.Bytes(), "B")
+	}
+	val := float64(size.Bytes())
+	i := 0
+	maxUnit := len(units) - 1
+	for val >= 1024 && i < maxUnit {
+		val = val / 1024
+		i++
+	}
+	return fmt.Sprintf("%.1f %s", val, units[i])
 }
