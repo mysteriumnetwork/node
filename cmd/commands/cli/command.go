@@ -72,7 +72,7 @@ func NewCommand() *cli.Command {
 			}
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
-			return describeQuit(cmdCLI.Run())
+			return describeQuit(cmdCLI.Run(ctx.Args()))
 		},
 	}
 }
@@ -107,11 +107,16 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 ))
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
-func (c *cliApp) Run() (err error) {
-	fmt.Println(versionSummary)
-
-	c.fetchedProposals = c.fetchProposals()
+func (c *cliApp) Run(args cli.Args) (err error) {
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
+	c.fetchedProposals = c.fetchProposals()
+
+	if args.Len() > 0 {
+		c.handleActions(strings.Join(args.Slice(), " "))
+		return nil
+	}
+
+	fmt.Println(versionSummary)
 
 	c.reader, err = readline.NewEx(&readline.Config{
 		Prompt:          fmt.Sprintf(redColor, "» "),
