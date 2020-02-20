@@ -137,17 +137,15 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 			return errors.Wrap(err, "could not ping provider")
 		}
 
-		if conn != nil {
-			if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
-				config.LocalPort = addr.Port
-			}
-
-			if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
-				config.Provider.Endpoint.Port = addr.Port
-			}
-
-			conn.Close()
+		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			config.LocalPort = addr.Port
 		}
+
+		if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
+			config.Provider.Endpoint.Port = addr.Port
+		}
+
+		conn.Close()
 	}
 
 	if err := c.device.Start(c.privateKey, config); err != nil {

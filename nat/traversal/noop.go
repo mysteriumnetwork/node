@@ -46,7 +46,7 @@ func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
 func (np *NoopPinger) PingProvider(_ Params, proxyPort int) (*net.UDPConn, error) {
-	return nil, nil
+	return &net.UDPConn{}, nil
 }
 
 // PingTarget does nothing
