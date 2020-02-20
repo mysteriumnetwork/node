@@ -73,7 +73,7 @@ type Manager struct {
 	dnsProxy        *dns.Proxy
 	eventListener   eventListener
 	portMapper      mapping.PortMapper
-	trafficBlocker  firewall.IncomingTrafficFirewall
+	trafficFirewall firewall.IncomingTrafficFirewall
 	vpnNetwork      net.IPNet
 	vpnServerPort   int
 	processLauncher *processLauncher
@@ -100,8 +100,8 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	dnsHandler, err := dns.ResolveViaSystem()
 	if err == nil {
 		if instance.Policies().HasDNSRules() {
-			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficBlocker, instance.Policies())
-			removeRule, err := m.trafficBlocker.BlockIncomingTraffic(m.vpnNetwork)
+			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficFirewall, instance.Policies())
+			removeRule, err := m.trafficFirewall.BlockIncomingTraffic(m.vpnNetwork)
 			if err != nil {
 				return errors.Wrap(err, "failed to enable traffic blocking")
 			}

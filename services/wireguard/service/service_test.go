@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -60,9 +61,18 @@ func Test_GetProposal(t *testing.T) {
 
 func Test_Manager_Stop(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
+	service := service.NewInstance(
+		"",
+		service.Running,
+		nil,
+		market.ServiceProposal{},
+		policy.NewRepository(),
+		nil,
+		nil,
+	)
 
 	go func() {
-		err := manager.Serve(&service.Instance{})
+		err := manager.Serve(service)
 		assert.NoError(t, err)
 	}()
 

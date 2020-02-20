@@ -140,6 +140,7 @@ func NewInstance(
 	state State,
 	service RunnableService,
 	proposal market.ServiceProposal,
+	policies *policy.Repository,
 	dialog communication.DialogWaiter,
 	discovery Discovery,
 ) *Instance {
@@ -148,6 +149,7 @@ func NewInstance(
 		state:        state,
 		service:      service,
 		proposal:     proposal,
+		policies:     policies,
 		dialogWaiter: dialog,
 		discovery:    discovery,
 	}

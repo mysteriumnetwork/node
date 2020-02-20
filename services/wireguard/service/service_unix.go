@@ -68,6 +68,7 @@ func NewManager(
 	options Options,
 	portSupplier port.ServicePortSupplier,
 	portMapper mapping.PortMapper,
+	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
 	resourcesAllocator := resources.NewAllocator(portSupplier, options.Subnet)
 
@@ -81,6 +82,7 @@ func NewManager(
 		natPingerPorts:     port.NewPool(),
 		publisher:          eventPublisher,
 		portMapper:         portMapper,
+		trafficFirewall:    trafficFirewall,
 
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(resourcesAllocator)
@@ -98,13 +100,13 @@ type Manager struct {
 
 	resourcesAllocator *resources.Allocator
 
-	natService     nat.NATService
-	natPinger      NATPinger
-	natPingerPorts port.ServicePortSupplier
-	natEventGetter NATEventGetter
-	publisher      eventbus.Publisher
-	portMapper     mapping.PortMapper
-	trafficBlocker firewall.IncomingTrafficFirewall
+	natService      nat.NATService
+	natPinger       NATPinger
+	natPingerPorts  port.ServicePortSupplier
+	natEventGetter  NATEventGetter
+	publisher       eventbus.Publisher
+	portMapper      mapping.PortMapper
+	trafficFirewall firewall.IncomingTrafficFirewall
 
 	dnsOK    bool
 	dnsPort  int
@@ -114,6 +116,7 @@ type Manager struct {
 
 	ipResolver ip.Resolver
 
+	serviceInstance  *service.Instance
 	sessionCleanup   map[string]func()
 	sessionCleanupMu sync.Mutex
 
@@ -181,7 +184,15 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	}
 
 	var dnsIP net.IP
+	var releaseTrafficFirewall firewall.IncomingRuleRemove
 	if m.dnsOK {
+		if m.serviceInstance.Policies().HasDNSRules() {
+			releaseTrafficFirewall, err = m.trafficFirewall.BlockIncomingTraffic(providerConfig.Network)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to enable traffic blocking")
+			}
+		}
+
 		dnsIP = netutil.FirstIP(config.Consumer.IPAddress)
 		config.Consumer.DNSIPs = dnsIP.String()
 	}
@@ -212,10 +223,18 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 			log.Trace().Msg("Deleting port mapping")
 			releasePortMapping()
 		}
+
+		if releaseTrafficFirewall != nil {
+			if err := releaseTrafficFirewall(); err != nil {
+				log.Warn().Err(err).Msg("failed to disable traffic blocking")
+			}
+		}
+
 		log.Trace().Msg("Deleting nat rules")
 		if err := m.natService.Del(natRules); err != nil {
 			log.Error().Err(err).Msg("Failed to delete NAT rules")
 		}
+
 		log.Trace().Msg("Stopping connection endpoint")
 		if err := conn.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")
@@ -325,6 +344,7 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumserConfig wg.C
 func (m *Manager) Serve(instance *service.Instance) error {
 	log.Info().Msg("Wireguard: starting")
 	m.startStopMu.Lock()
+	m.serviceInstance = instance
 
 	var err error
 	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
@@ -337,6 +357,10 @@ func (m *Manager) Serve(instance *service.Instance) error {
 	m.dnsOK = false
 	dnsHandler, err := dns.ResolveViaSystem()
 	if err == nil {
+		if m.serviceInstance.Policies().HasDNSRules() {
+			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficFirewall, instance.Policies())
+		}
+
 		m.dnsProxy = dns.NewProxy("", m.dnsPort, dnsHandler)
 		if err := m.dnsProxy.Run(); err != nil {
 			log.Warn().Err(err).Msg("Provider DNS will not be available")
