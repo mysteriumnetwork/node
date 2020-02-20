@@ -24,7 +24,8 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/shaper"
@@ -43,19 +44,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ServerConfigFactory callback generates session config for remote client
-type ServerConfigFactory func(secPrimitives *tls.Primitives, port int) *openvpn_service.ServerConfig
-
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
-
-// SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
-type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, dnsIP net.IP, outboundIP, publicIP string, port int) ConfigNegotiator
-
-// ConfigNegotiator creates OpenVPN configuration
-type ConfigNegotiator interface {
-	ProvideVPNConfig() *openvpn_service.VPNConfig
-}
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
@@ -75,27 +65,28 @@ type eventListener interface {
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	natService     nat.NATService
-	ports          port.ServicePortSupplier
-	natPingerPorts port.ServicePortSupplier
-	natPinger      NATPinger
-	natEventGetter NATEventGetter
-	dnsProxy       *dns.Proxy
-	eventListener  eventListener
-	portMapper     mapping.PortMapper
-	trafficBlocker firewall.IncomingTrafficFirewall
+	natService      nat.NATService
+	ports           port.ServicePortSupplier
+	natPingerPorts  port.ServicePortSupplier
+	natPinger       NATPinger
+	natEventGetter  NATEventGetter
+	dnsProxy        *dns.Proxy
+	eventListener   eventListener
+	portMapper      mapping.PortMapper
+	trafficBlocker  firewall.IncomingTrafficFirewall
+	vpnNetwork      net.IPNet
+	vpnServerPort   int
+	processLauncher *processLauncher
+	openvpnProcess  openvpn.Process
+	ipResolver      ip.Resolver
+	serviceOptions  Options
+	nodeOptions     node.Options
 
-	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
-
-	vpnNetwork               net.IPNet
-	vpnServerPort            int
-	vpnServerConfigFactory   ServerConfigFactory
-	vpnServiceConfigProvider ConfigNegotiator
-	processLauncher          *processLauncher
-	openvpnProcess           openvpn.Process
-
-	location       location.ServiceLocationInfo
-	serviceOptions Options
+	outboundIP    string
+	country       string
+	dnsIP         net.IP
+	dnsOK         bool
+	tlsPrimitives *tls.Primitives
 }
 
 // Serve starts service - does block
@@ -105,8 +96,6 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		Mask: net.IPMask(net.ParseIP(m.serviceOptions.Netmask).To4()),
 	}
 
-	var dnsOK bool
-	var dnsIP net.IP
 	var dnsPort = 11153
 	dnsHandler, err := dns.ResolveViaSystem()
 	if err == nil {
@@ -127,8 +116,8 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		if err := m.dnsProxy.Run(); err != nil {
 			log.Warn().Err(err).Msg("Provider DNS will not be available")
 		} else {
-			dnsOK = true
-			dnsIP = netutil.FirstIP(m.vpnNetwork)
+			m.dnsOK = true
+			m.dnsIP = netutil.FirstIP(m.vpnNetwork)
 		}
 	} else {
 		log.Warn().Err(err).Msg("Provider DNS will not be available")
@@ -140,25 +129,46 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	}
 	m.vpnServerPort = servicePort.Num()
 
-	if releasePorts, ok := m.tryAddPortMapping(m.vpnServerPort); ok {
-		defer releasePorts()
+	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return errors.Wrap(err, "could not get outbound IP")
 	}
 
-	primitives, err := primitiveFactory(m.location.Country, instance.Proposal().ProviderID)
+	pubIP, err := m.ipResolver.GetPublicIP()
+	if err != nil {
+		return errors.Wrap(err, "could not get public IP")
+	}
+
+	if m.behindNAT(pubIP) {
+		if releasePorts, ok := m.tryAddPortMapping(m.vpnServerPort); ok {
+			defer releasePorts()
+		}
+	}
+
+	m.tlsPrimitives, err = primitiveFactory(m.country, instance.Proposal().ProviderID)
 	if err != nil {
 		return
 	}
 
-	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.location.OutIP, m.location.PubIP, m.vpnServerPort)
-
-	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	stateChannel := make(chan openvpn.State, 10)
 
 	protectedNetworks := stringutil.Split(config.GetString(config.FlagFirewallProtectedNetworks), ',')
 	var openvpnFilterAllow []string
-	if dnsOK {
-		openvpnFilterAllow = []string{dnsIP.String()}
+	if m.dnsOK {
+		openvpnFilterAllow = []string{m.dnsIP.String()}
 	}
+
+	vpnServerConfig := openvpn_service.NewServerConfig(
+		m.nodeOptions.Directories.Runtime,
+		m.nodeOptions.Directories.Config,
+		m.serviceOptions.Subnet,
+		m.serviceOptions.Netmask,
+		m.tlsPrimitives,
+		m.nodeOptions.BindAddress,
+		m.vpnServerPort,
+		m.serviceOptions.Protocol,
+	)
+
 	m.openvpnProcess = m.processLauncher.launch(launchOpts{
 		config:       vpnServerConfig,
 		filterAllow:  openvpnFilterAllow,
@@ -185,9 +195,9 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 
 	if _, err := m.natService.Setup(nat.Options{
 		VPNNetwork:        m.vpnNetwork,
-		ProviderExtIP:     net.ParseIP(m.location.OutIP),
-		EnableDNSRedirect: dnsOK,
-		DNSIP:             dnsIP,
+		ProviderExtIP:     net.ParseIP(m.outboundIP),
+		EnableDNSRedirect: m.dnsOK,
+		DNSIP:             m.dnsIP,
 		DNSPort:           dnsPort,
 	}); err != nil {
 		return errors.Wrap(err, "failed to setup NAT/firewall rules")
@@ -205,10 +215,6 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 }
 
 func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
-	if !m.location.BehindNAT() {
-		return nil, false
-	}
-
 	release, ok = m.portMapper.Map(
 		m.serviceOptions.Protocol,
 		port,
@@ -234,9 +240,6 @@ func (m *Manager) Stop() error {
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
 func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
-	if m.vpnServiceConfigProvider == nil {
-		return nil, errors.New("Config provider not initialized")
-	}
 	if m.vpnServerPort == 0 {
 		return nil, errors.New("Service port not initialized")
 	}
@@ -245,7 +248,23 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 		Cancel:       make(chan struct{}),
 		ProviderPort: m.vpnServerPort,
 	}
-	vpnConfig := m.vpnServiceConfigProvider.ProvideVPNConfig()
+
+	publicIP, err := m.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get public IP")
+	}
+
+	serverIP := vpnServerIP(m.serviceOptions.Port, m.outboundIP, publicIP, m.nodeOptions.OptionsNetwork.Localnet)
+	vpnConfig := &openvpn_service.VPNConfig{
+		RemoteIP:        serverIP,
+		RemotePort:      m.vpnServerPort,
+		RemoteProtocol:  m.serviceOptions.Protocol,
+		TLSPresharedKey: m.tlsPrimitives.PresharedKey.ToPEMFormat(),
+		CACertificate:   m.tlsPrimitives.CertificateAuthority.ToPEMFormat(),
+	}
+	if m.dnsOK {
+		vpnConfig.DNSIPs = m.dnsIP.String()
+	}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
@@ -255,7 +274,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 			return nil, errors.Wrap(err, "could not parse consumer config")
 		}
 
-		if m.location.BehindNAT() && m.portMappingFailed() {
+		if m.behindNAT(publicIP) && m.portMappingFailed() {
 			pp, err := m.natPingerPorts.Acquire()
 			if err != nil {
 				return nil, err
@@ -283,7 +302,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 }
 
 func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.State) error {
-	if err := m.openvpnProcess.Start(); err != nil {
+	if err := server.Start(); err != nil {
 		return err
 	}
 
@@ -324,4 +343,8 @@ func (m *Manager) portMappingFailed() bool {
 		return true
 	}
 	return lastEvent.Stage == mapping.StageName && !lastEvent.Successful
+}
+
+func (m *Manager) behindNAT(pubIP string) bool {
+	return m.outboundIP != pubIP
 }

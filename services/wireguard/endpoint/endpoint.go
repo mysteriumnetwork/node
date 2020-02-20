@@ -20,7 +20,6 @@ package endpoint
 import (
 	"net"
 
-	"github.com/mysteriumnetwork/node/core/location"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -30,10 +29,7 @@ import (
 )
 
 // NewConnectionEndpoint returns new connection endpoint instance.
-func NewConnectionEndpoint(
-	location *location.ServiceLocationInfo,
-	resourceAllocator *resources.Allocator,
-	connectDelay int) (wg.ConnectionEndpoint, error) {
+func NewConnectionEndpoint(resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
 
 	wgClient, err := newWGClient()
 	if err != nil {
@@ -41,22 +37,18 @@ func NewConnectionEndpoint(
 	}
 
 	return &connectionEndpoint{
-		location:          location,
 		wgClient:          wgClient,
 		resourceAllocator: resourceAllocator,
-		connectDelay:      connectDelay,
 	}, nil
 }
 
 type connectionEndpoint struct {
-	location          *location.ServiceLocationInfo
 	iface             string
 	privateKey        string
 	ipAddr            net.IPNet
 	endpoint          net.UDPAddr
 	resourceAllocator *resources.Allocator
 	wgClient          wgClient
-	connectDelay      int // connect delay in milliseconds
 }
 
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.
@@ -87,6 +79,13 @@ func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) er
 }
 
 func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (err error) {
+	if config.PublicIP == "" {
+		return errors.New("public IP is required")
+	}
+	if config.ListenPort == 0 {
+		return errors.New("listen port is required")
+	}
+
 	if err := ce.cleanAbandonedInterfaces(); err != nil {
 		return err
 	}
@@ -105,7 +104,7 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 		return errors.Wrap(err, "could not allocate IP NET")
 	}
 	ce.ipAddr.IP = netutil.FirstIP(ce.ipAddr)
-	ce.endpoint = net.UDPAddr{IP: net.ParseIP(ce.location.PubIP), Port: config.ListenPort}
+	ce.endpoint = net.UDPAddr{IP: net.ParseIP(config.PublicIP), Port: config.ListenPort}
 
 	deviceConfig := wg.DeviceConfig{
 		IfaceName:  ce.iface,
@@ -151,9 +150,6 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Provider.Endpoint = ce.endpoint
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = ce.consumerIP(ce.ipAddr)
-	if ce.location.BehindNAT() {
-		config.Consumer.ConnectDelay = ce.connectDelay
-	}
 	return config, nil
 }
 

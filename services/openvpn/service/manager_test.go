@@ -20,7 +20,6 @@ package service
 import (
 	"testing"
 
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,22 +27,4 @@ func TestManager_StopNotPanic(t *testing.T) {
 	m := Manager{}
 	err := m.Stop()
 	assert.NoError(t, err)
-}
-
-func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
-	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
-	_, err := m.ProvideConfig("", []byte(""))
-	assert.NoError(t, err)
-}
-
-func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
-	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
-	_, err := m.ProvideConfig("", nil)
-	assert.NoError(t, err)
-}
-
-type mockConfigProvider struct{}
-
-func (cp *mockConfigProvider) ProvideVPNConfig() *openvpn_service.VPNConfig {
-	return &openvpn_service.VPNConfig{}
 }

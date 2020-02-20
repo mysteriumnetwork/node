@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/dns"
@@ -61,7 +60,7 @@ type NATEventGetter interface {
 // NewManager creates new instance of Wireguard service
 func NewManager(
 	ipResolver ip.Resolver,
-	location location.ServiceLocationInfo,
+	country string,
 	natService nat.NATService,
 	natPinger NATPinger,
 	natEventGetter NATEventGetter,
@@ -84,9 +83,10 @@ func NewManager(
 		portMapper:         portMapper,
 
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(&location, resourcesAllocator, options.ConnectDelay)
+			return endpoint.NewConnectionEndpoint(resourcesAllocator)
 		},
-		location:       location,
+		country:        country,
+		connectDelayMS: options.ConnectDelay,
 		sessionCleanup: map[string]func(){},
 	}
 }
@@ -113,10 +113,13 @@ type Manager struct {
 	connEndpointFactory func() (wg.ConnectionEndpoint, error)
 
 	ipResolver ip.Resolver
-	location   location.ServiceLocationInfo
 
 	sessionCleanup   map[string]func()
 	sessionCleanupMu sync.Mutex
+
+	country        string
+	connectDelayMS int
+	outboundIP     string
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
@@ -133,14 +136,19 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 		return nil, errors.Wrap(err, "could not allocate provider listen port")
 	}
 
-	releasePortMapping, portMappingOk := m.tryAddPortMapping(listenPort)
+	pubIP, err := m.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get public IP")
+	}
 
-	conn, err := m.startNewConnection(listenPort)
+	releasePortMapping, portMappingOk := m.tryAddPortMapping(pubIP, listenPort)
+
+	conn, err := m.startNewConnection(pubIP, listenPort)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start new connection")
 	}
 
-	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.location.BehindNAT()
+	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.behindNAT(pubIP)
 
 	traversalParams, err := m.newTraversalParams(natPingerEnabled, consumerConfig)
 	if err != nil {
@@ -160,6 +168,8 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 			return nil, errors.Wrap(err, "could not apply NAT traversal params")
 		}
 		config = newConfig
+	} else {
+		config.Consumer.ConnectDelay = m.connectDelayMS
 	}
 
 	if err := m.addConsumerPeer(conn, traversalParams.ConsumerPort, traversalParams.ProviderPort, consumerConfig.PublicKey); err != nil {
@@ -175,7 +185,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	natRules, err := m.natService.Setup(nat.Options{
 		VPNNetwork:        config.Consumer.IPAddress,
 		DNSIP:             dnsIP,
-		ProviderExtIP:     net.ParseIP(m.location.OutIP),
+		ProviderExtIP:     net.ParseIP(m.outboundIP),
 		EnableDNSRedirect: m.dnsOK,
 		DNSPort:           m.dnsPort,
 	})
@@ -215,11 +225,10 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: &traversalParams}, nil
 }
 
-func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
-	if !m.location.BehindNAT() {
+func (m *Manager) tryAddPortMapping(pubIP string, port int) (release func(), ok bool) {
+	if !m.behindNAT(pubIP) {
 		return nil, false
 	}
-
 	release, ok = m.portMapper.Map(
 		"UDP",
 		port,
@@ -228,13 +237,13 @@ func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
 	return release, ok
 }
 
-func (m *Manager) startNewConnection(port int) (wg.ConnectionEndpoint, error) {
+func (m *Manager) startNewConnection(publicIP string, port int) (wg.ConnectionEndpoint, error) {
 	connEndpoint, err := m.connEndpointFactory()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not run conn endpoint factory")
 	}
 
-	if err := connEndpoint.StartProviderMode(wg.ProviderModeConfig{ListenPort: port}); err != nil {
+	if err := connEndpoint.StartProviderMode(wg.ProviderModeConfig{PublicIP: publicIP, ListenPort: port}); err != nil {
 		return nil, errors.Wrap(err, "could not start provider wg connection endpoint")
 	}
 	return connEndpoint, nil
@@ -309,6 +318,12 @@ func (m *Manager) Serve(instance *service.Instance) error {
 	log.Info().Msg("Wireguard: starting")
 	m.startStopMu.Lock()
 
+	var err error
+	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return errors.Wrap(err, "could not get outbound IP")
+	}
+
 	// Start DNS proxy.
 	m.dnsPort = 11253
 	m.dnsOK = false
@@ -357,4 +372,8 @@ func (m *Manager) Stop() error {
 	close(m.done)
 	log.Info().Msg("Wireguard: stopped")
 	return nil
+}
+
+func (m *Manager) behindNAT(pubIP string) bool {
+	return m.outboundIP != pubIP
 }

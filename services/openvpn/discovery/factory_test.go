@@ -20,6 +20,7 @@ package discovery
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -27,14 +28,13 @@ import (
 )
 
 var (
-	locationLTTelia = market.Location{
+	locationLTTelia = location.Location{
 		Continent: "EU",
 		Country:   "LT",
 		City:      "Vilnius",
-
-		ASN:      8764,
-		ISP:      "Telia Lietuva, AB",
-		NodeType: "residential",
+		ASN:       8764,
+		ISP:       "Telia Lietuva, AB",
+		NodeType:  "residential",
 	}
 	protocol = "tcp"
 )
@@ -47,8 +47,8 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 		market.ServiceProposal{
 			ServiceType: "openvpn",
 			ServiceDefinition: dto.ServiceDefinition{
-				Location:          locationLTTelia,
-				LocationOriginate: locationLTTelia,
+				Location:          proposal.ServiceDefinition.GetLocation(),
+				LocationOriginate: proposal.ServiceDefinition.GetLocation(),
 				SessionBandwidth:  83886080,
 				Protocol:          "tcp",
 			},
