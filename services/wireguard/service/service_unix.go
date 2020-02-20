@@ -131,24 +131,28 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 		return nil, errors.Wrap(err, "could not unmarshal wg consumer config")
 	}
 
-	listenPort, err := m.resourcesAllocator.AllocatePort()
+	providerConfig := wg.ProviderModeConfig{}
+	providerConfig.Network, err = m.resourcesAllocator.AllocateIPNet()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not allocate provider IP NET")
+	}
+	providerConfig.ListenPort, err = m.resourcesAllocator.AllocatePort()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not allocate provider listen port")
 	}
-
-	pubIP, err := m.ipResolver.GetPublicIP()
+	providerConfig.PublicIP, err = m.ipResolver.GetPublicIP()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get public IP")
 	}
 
-	releasePortMapping, portMappingOk := m.tryAddPortMapping(pubIP, listenPort)
+	releasePortMapping, portMappingOk := m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
 
-	conn, err := m.startNewConnection(pubIP, listenPort)
+	conn, err := m.startNewConnection(providerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start new connection")
 	}
 
-	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.behindNAT(pubIP)
+	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.behindNAT(providerConfig.PublicIP)
 
 	traversalParams, err := m.newTraversalParams(natPingerEnabled, consumerConfig)
 	if err != nil {
@@ -216,6 +220,10 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 		if err := conn.Stop(); err != nil {
 			log.Error().Err(err).Msg("Failed to stop connection endpoint")
 		}
+
+		if err := m.resourcesAllocator.ReleaseIPNet(providerConfig.Network); err != nil {
+			log.Error().Err(err).Msg("Failed to release IP network")
+		}
 	}
 
 	m.sessionCleanupMu.Lock()
@@ -237,13 +245,13 @@ func (m *Manager) tryAddPortMapping(pubIP string, port int) (release func(), ok 
 	return release, ok
 }
 
-func (m *Manager) startNewConnection(publicIP string, port int) (wg.ConnectionEndpoint, error) {
+func (m *Manager) startNewConnection(config wg.ProviderModeConfig) (wg.ConnectionEndpoint, error) {
 	connEndpoint, err := m.connEndpointFactory()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not run conn endpoint factory")
 	}
 
-	if err := connEndpoint.StartProviderMode(wg.ProviderModeConfig{PublicIP: publicIP, ListenPort: port}); err != nil {
+	if err := connEndpoint.StartProviderMode(config); err != nil {
 		return nil, errors.Wrap(err, "could not start provider wg connection endpoint")
 	}
 	return connEndpoint, nil

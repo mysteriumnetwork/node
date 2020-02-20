@@ -99,11 +99,10 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 	if err != nil {
 		return errors.Wrap(err, "could not generate private key")
 	}
-	ce.ipAddr, err = ce.resourceAllocator.AllocateIPNet()
-	if err != nil {
-		return errors.Wrap(err, "could not allocate IP NET")
-	}
+
+	ce.ipAddr = config.Network
 	ce.ipAddr.IP = netutil.FirstIP(ce.ipAddr)
+
 	ce.endpoint = net.UDPAddr{IP: net.ParseIP(config.PublicIP), Port: config.ListenPort}
 
 	deviceConfig := wg.DeviceConfig{
@@ -160,10 +159,6 @@ func (ce *connectionEndpoint) ConfigureRoutes(ip net.IP) error {
 // Stop closes wireguard client and destroys wireguard network interface.
 func (ce *connectionEndpoint) Stop() error {
 	if err := ce.wgClient.Close(); err != nil {
-		return err
-	}
-
-	if err := ce.resourceAllocator.ReleaseIPNet(ce.ipAddr); err != nil {
 		return err
 	}
 
