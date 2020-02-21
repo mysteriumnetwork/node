@@ -122,26 +122,17 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
 	if config.LocalPort > 0 || len(config.Ports) > 0 {
-		params := traversal.Params{
-			IP:          config.Provider.Endpoint.IP.String(),
-			LocalPorts:  c.ports,
-			RemotePorts: config.Ports,
-		}
+		ip := config.Provider.Endpoint.IP.String()
+		localPorts := c.ports
+		remotePorts := config.Ports
 
-		conn, err := c.natPinger.PingProvider(params, 0)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
 
-		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
-			config.LocalPort = addr.Port
-		}
-
-		if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
-			config.Provider.Endpoint.Port = addr.Port
-		}
-
-		conn.Close()
+		config.LocalPort = lPort
+		config.Provider.Endpoint.Port = rPort
 	}
 
 	log.Info().Msg("Starting new connection")

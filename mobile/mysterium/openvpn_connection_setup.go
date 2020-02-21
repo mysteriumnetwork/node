@@ -19,13 +19,14 @@ package mysterium
 
 import (
 	"encoding/json"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -49,7 +50,6 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 		stateCh:    make(chan connection.State, 100),
 		natPinger:  natPinger,
 		ipResolver: ipResolver,
-		pingerStop: make(chan struct{}),
 	}
 
 	sessionFactory := func(options connection.ConnectOptions, sessionConfig openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
@@ -158,24 +158,17 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
 
-		params := traversal.Params{
-			IP:          sessionConfig.RemoteIP,
-			LocalPorts:  c.ports,
-			RemotePorts: sessionConfig.Ports,
-		}
+		ip := sessionConfig.RemoteIP
+		localPorts := c.ports
+		remotePorts := sessionConfig.Ports
 
-		conn, err := c.natPinger.PingProvider(params, sessionConfig.LocalPort)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not ping provider")
 		}
 
-		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
-			sessionConfig.LocalPort = addr.Port
-		}
-
-		if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
-			sessionConfig.RemotePort = addr.Port
-		}
+		sessionConfig.LocalPort = lPort
+		sessionConfig.RemotePort = rPort
 	}
 
 	newSession, clientConfig, err := c.createSession(options, sessionConfig)
@@ -217,8 +210,18 @@ func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
+	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range ports {
+		c.ports = append(c.ports, p.Num())
+	}
+
 	return &openvpn.ConsumerConfig{
-		IP: publicIP,
+		IP:    publicIP,
+		Ports: c.ports,
 	}, nil
 }
 

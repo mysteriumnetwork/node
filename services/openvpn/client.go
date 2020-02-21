@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"encoding/json"
-	"net"
 	"sync"
 	"time"
 
@@ -62,7 +61,6 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 		stateCh:             stateCh,
 		ipResolver:          ipResolver,
 		natPinger:           natPinger,
-		pingerStop:          make(chan struct{}),
 		removeAllowedIPRule: func() {},
 	}
 
@@ -134,25 +132,17 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
 
-		params := traversal.Params{
-			IP:          sessionConfig.RemoteIP,
-			LocalPorts:  c.ports,
-			RemotePorts: sessionConfig.Ports,
-		}
+		ip := sessionConfig.RemoteIP
+		localPorts := c.ports
+		remotePorts := sessionConfig.Ports
 
-		conn, err := c.natPinger.PingProvider(params, sessionConfig.LocalPort)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not ping provider")
 		}
 
-		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
-			sessionConfig.LocalPort = addr.Port
-		}
-
-		if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
-			sessionConfig.RemotePort = addr.Port
-		}
-
+		sessionConfig.LocalPort = lPort
+		sessionConfig.RemotePort = rPort
 	}
 
 	proc, clientConfig, err := c.processFactory(options, sessionConfig)

@@ -20,13 +20,14 @@ package mysterium
 import (
 	"bufio"
 	"encoding/json"
-	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -80,6 +81,7 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 }
 
 type wireguardConnection struct {
+	ports           []int
 	closeOnce       sync.Once
 	done            chan struct{}
 	stateCh         chan connection.State
@@ -126,26 +128,17 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 
 	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
 	if config.LocalPort > 0 || len(config.Ports) > 0 {
-		params := traversal.Params{
-			IP:          config.Provider.Endpoint.IP.String(),
-			LocalPorts:  c.ports,
-			RemotePorts: config.Ports,
-		}
+		ip := config.Provider.Endpoint.IP.String()
+		localPorts := c.ports
+		remotePorts := config.Ports
 
-		conn, err := c.natPinger.PingProvider(params, 0)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
 
-		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
-			config.LocalPort = addr.Port
-		}
-
-		if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
-			config.Provider.Endpoint.Port = addr.Port
-		}
-
-		conn.Close()
+		config.LocalPort = lPort
+		config.Provider.Endpoint.Port = rPort
 	}
 
 	if err := c.device.Start(c.privateKey, config); err != nil {
@@ -193,11 +186,21 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get consumer public IP")
 		}
+
+		ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range ports {
+			c.ports = append(c.ports, p.Num())
+		}
 	}
 
 	return wireguard.ConsumerConfig{
 		PublicKey: publicKey,
 		IP:        publicIP,
+		Ports:     c.ports,
 	}, nil
 }
 

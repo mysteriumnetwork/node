@@ -18,13 +18,11 @@
 package openvpn
 
 import (
-	"net"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,6 +48,6 @@ func TestConnection_CreatesConnection(t *testing.T) {
 type MockNATPinger struct{}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ traversal.Params, _ int) (*net.UDPConn, error) {
-	return nil, nil
+func (mnp *MockNATPinger) PingProvider(_ string, _, _ []int, _ int) (int, int, error) {
+	return 0, 0, nil
 }

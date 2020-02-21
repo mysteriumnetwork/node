@@ -41,7 +41,7 @@ var (
 
 // NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
 type NATProviderPinger interface {
-	PingProvider(params Params, proxyPort int) (*net.UDPConn, error)
+	PingProvider(ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 }
 
 // NATPinger is responsible for pinging nat holes
@@ -129,24 +129,36 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(params Params, proxyPort int) (*net.UDPConn, error) {
+func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error) {
 	log.Info().Msg("NAT pinging to provider")
 
 	stop := make(chan struct{})
 	defer close(stop)
 
-	conn, err := p.multiPing(params, 128, stop)
+	conn, err := p.multiPing(ip, localPorts, remotePorts, 128, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
-		return nil, err
+		return 0, 0, err
 	}
 
-	consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
-	log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
+	if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+		localPort = addr.Port
+	}
 
-	p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
+	if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
+		remotePort = addr.Port
+	}
 
-	return conn, err
+	if proxyPort > 0 {
+		consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
+		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
+
+		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
+	} else {
+		conn.Close()
+	}
+
+	return localPort, remotePort, err
 }
 
 func (p *Pinger) ping(conn *net.UDPConn, ttl int, stop <-chan struct{}) error {
@@ -273,7 +285,7 @@ func (p *Pinger) pingTargetConsumer(params Params) {
 	stop := make(chan struct{})
 	defer close(stop)
 
-	conn, err := p.multiPing(params, 2, stop)
+	conn, err := p.multiPing(params.IP, params.LocalPorts, params.RemotePorts, 2, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return
@@ -293,8 +305,8 @@ func (p *Pinger) pingTargetConsumer(params Params) {
 	go p.natProxy.handOff(params.ProxyPortMappingKey, conn)
 }
 
-func (p *Pinger) multiPing(params Params, initialTTL int, stop <-chan struct{}) (*net.UDPConn, error) {
-	if len(params.LocalPorts) != len(params.RemotePorts) {
+func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL int, stop <-chan struct{}) (*net.UDPConn, error) {
+	if len(localPorts) != len(remotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
 
@@ -303,11 +315,11 @@ func (p *Pinger) multiPing(params Params, initialTTL int, stop <-chan struct{}) 
 		err  error
 	}
 
-	ch := make(chan res, len(params.LocalPorts))
+	ch := make(chan res, len(localPorts))
 
-	for i := range params.LocalPorts {
+	for i := range localPorts {
 		go func(i int) {
-			conn, err := p.singlePing(params.IP, params.LocalPorts[i], params.RemotePorts[i], initialTTL+i, stop)
+			conn, err := p.singlePing(ip, localPorts[i], remotePorts[i], initialTTL+i, stop)
 			ch <- res{conn, err}
 		}(i)
 	}

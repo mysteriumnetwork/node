@@ -282,7 +282,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 			vpnConfig.LocalPort = cp.Num()
 		}
 
-		if m.location.BehindNAT() && m.portMappingFailed() {
+		if m.behindNAT(publicIP) && m.portMappingFailed() {
 			for range consumerConfig.Ports {
 				pp, err := m.natPingerPorts.Acquire()
 				if err != nil {

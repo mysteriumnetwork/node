@@ -17,8 +17,6 @@
 
 package traversal
 
-import "net"
-
 // NoopPinger does nothing
 type NoopPinger struct{}
 
@@ -45,8 +43,8 @@ func (np *NoopPinger) Start() {}
 func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(_ Params, proxyPort int) (*net.UDPConn, error) {
-	return &net.UDPConn{}, nil
+func (np *NoopPinger) PingProvider(_ string, _, _ []int, proxyPort int) (int, int, error) {
+	return 0, 0, nil
 }
 
 // PingTarget does nothing
