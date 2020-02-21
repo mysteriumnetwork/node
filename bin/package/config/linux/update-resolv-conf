@@ -1,9 +1,10 @@
 #!/bin/bash
 #
-# Parses DHCP options from openvpn to update resolv.conf
-# To use set as 'up' and 'down' script in your openvpn *.conf:
-# up /etc/openvpn/update-resolv-conf
-# down /etc/openvpn/update-resolv-conf
+# Parses DHCP options from passed through ENV to update resolv.conf
+# Called from myst node binary
+#
+# Script adapted from update-resolv-conf script provided by Openvpn project.
+# Licensed under the GNU GPL.  See /usr/share/common-licenses/GPL.
 #
 # Used snippets of resolvconf script by Thomas Hood and Chris Hanson.
 # Licensed under the GNU GPL.  See /usr/share/common-licenses/GPL.
@@ -53,9 +54,9 @@ case "$script_type" in
     for NS in $NMSRVRS ; do
             R="${R}nameserver $NS\n"
     done
-    echo -e -n "$R" | sudo $RESOLVCONFBIN -a "${dev}.openvpn"
+    echo -e -n "$R" | sudo $RESOLVCONFBIN -a "tun.${dev}"
     ;;
   down)
-    sudo $RESOLVCONFBIN -d "${dev}.openvpn"
+    sudo $RESOLVCONFBIN -d "tun.${dev}"
     ;;
 esac
