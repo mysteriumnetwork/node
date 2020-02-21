@@ -18,7 +18,6 @@
 package dns
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/miekg/dns"
@@ -70,8 +69,6 @@ func (wh *whitelistHandler) whitelistByAnswer(response *dns.Msg) error {
 			if err := wh.whitelistByARecord(recordValue); err != nil {
 				return err
 			}
-		default:
-			return fmt.Errorf("unknown record type: %s", dns.Type(record.Header().Rrtype))
 		}
 	}
 	return nil

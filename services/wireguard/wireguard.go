@@ -72,6 +72,7 @@ type ConsumerModeConfig struct {
 
 // ProviderModeConfig is provider endpoint startup configuration.
 type ProviderModeConfig struct {
+	Network    net.IPNet
 	ListenPort int
 	PublicIP   string
 }

@@ -53,7 +53,7 @@ func NewManager(nodeOptions node.Options,
 	portPool port.ServicePortSupplier,
 	bus eventBus,
 	portMapper mapping.PortMapper,
-	trafficBlocker firewall.IncomingTrafficFirewall,
+	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
 	clientMap := openvpn_session.NewClientMap(sessionMap)
 
@@ -83,7 +83,7 @@ func NewManager(nodeOptions node.Options,
 		ports:           portPool,
 		eventListener:   bus,
 		portMapper:      portMapper,
-		trafficBlocker:  trafficBlocker,
+		trafficFirewall: trafficFirewall,
 		country:         country,
 		ipResolver:      ipResolver,
 	}
