@@ -29,12 +29,12 @@ func TestAcquiredPortsAreUsable(t *testing.T) {
 	pool := NewPool()
 
 	port, _ := pool.Acquire()
-	err := listenUdp(port.Num())
+	err := listenUDP(port.Num())
 
 	assert.NoError(t, err)
 }
 
-func listenUdp(port int) error {
+func listenUDP(port int) error {
 	udpAddr, err := net.ResolveUDPAddr("udp", ":"+strconv.Itoa(port))
 	if err != nil {
 		return err

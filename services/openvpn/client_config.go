@@ -27,7 +27,6 @@ import (
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
-	LocalPort int
 	VpnConfig *VPNConfig
 }
 
@@ -42,7 +41,6 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort, localPort int)
 	c.SetFlag("float")
 	// more on this: https://www.v13.gr/blog/?p=386
 	c.SetParam("remote-cert-ku", "84")
-	c.LocalPort = localPort
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
 }
@@ -79,7 +77,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, dnsOption connection.DNSOption) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig VPNConfig, configDir string, runtimeDir string, dnsOption connection.DNSOption) (*ClientConfig, error) {
 	// TODO Rename `vpnConfig` to `sessionConfig`
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
@@ -94,7 +92,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	for _, ip := range dnsIPs {
 		clientFileConfig.SetParam("dhcp-option", "DNS", ip)
 	}
-	clientFileConfig.VpnConfig = vpnConfig
+	clientFileConfig.VpnConfig = &vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)

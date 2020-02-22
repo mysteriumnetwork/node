@@ -23,8 +23,10 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -38,7 +40,7 @@ type natPinger interface {
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
-type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error)
+type openvpn3SessionFactory func(connection.ConnectOptions, openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error)
 
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
@@ -48,25 +50,9 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 		stateCh:    make(chan connection.State, 100),
 		natPinger:  natPinger,
 		ipResolver: ipResolver,
-		pingerStop: make(chan struct{}),
 	}
-	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		sessionConfig := &openvpn.VPNConfig{}
-		err := json.Unmarshal(options.SessionConfig, sessionConfig)
-		if err != nil {
-			return nil, nil, err
-		}
 
-		// override vpnClientConfig params with proxy local IP and pinger port
-		// do this only if connecting to natted provider
-		if sessionConfig.LocalPort > 0 {
-			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
-			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
-			sessionConfig.RemoteIP = "127.0.0.1"
-			// TODO: randomize this too?
-			sessionConfig.RemotePort = sessionConfig.LocalPort + 1
-		}
-
+	sessionFactory := func(options connection.ConnectOptions, sessionConfig openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", connection.DNSOptionAuto)
 		if err != nil {
 			return nil, nil, err
@@ -106,7 +92,7 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 }
 
 type openvpnConnection struct {
-	pingerStop    chan struct{}
+	ports         []int
 	stateCh       chan connection.State
 	stats         connection.Statistics
 	statsMu       sync.RWMutex
@@ -159,24 +145,38 @@ func (c *openvpnConnection) Statistics() (connection.Statistics, error) {
 }
 
 func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
-	newSession, clientConfig, err := c.createSession(options)
+	sessionConfig := openvpn.VPNConfig{}
+	err := json.Unmarshal(options.SessionConfig, &sessionConfig)
 	if err != nil {
 		return err
 	}
 
-	log.Info().Msgf("Client config after session create: %v", clientConfig)
-	if clientConfig.LocalPort > 0 {
-		err := c.natPinger.PingProvider(
-			clientConfig.VpnConfig.OriginalRemoteIP,
-			clientConfig.VpnConfig.OriginalRemotePort,
-			clientConfig.LocalPort,
-			clientConfig.LocalPort+1,
-			c.pingerStop,
-		)
-		if err != nil {
-			return err
+	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
+	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
+		if len(c.ports) == 0 {
+			c.ports = []int{sessionConfig.LocalPort}
+			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
+
+		ip := sessionConfig.RemoteIP
+		localPorts := c.ports
+		remotePorts := sessionConfig.Ports
+
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
+		if err != nil {
+			return errors.Wrap(err, "could not ping provider")
+		}
+
+		sessionConfig.LocalPort = lPort
+		sessionConfig.RemotePort = rPort
 	}
+
+	newSession, clientConfig, err := c.createSession(options, sessionConfig)
+	if err != nil {
+		log.Info().Err(err).Msg("Client config factory error")
+		return err
+	}
+	log.Info().Interface("data", clientConfig).Msgf("Openvpn client configuration")
 
 	c.session = newSession
 	c.session.Start()
@@ -188,8 +188,6 @@ func (c *openvpnConnection) Stop() {
 		if c.session != nil {
 			c.session.Stop()
 		}
-		log.Info().Msg("Stopping NATProxy")
-		close(c.pingerStop)
 	})
 }
 
@@ -212,8 +210,18 @@ func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
+	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range ports {
+		c.ports = append(c.ports, p.Num())
+	}
+
 	return &openvpn.ConsumerConfig{
-		IP: publicIP,
+		IP:    publicIP,
+		Ports: c.ports,
 	}, nil
 }
 

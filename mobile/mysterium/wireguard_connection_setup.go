@@ -24,8 +24,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
@@ -68,7 +70,6 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 
 	return &wireguardConnection{
 		done:            make(chan struct{}),
-		pingerStop:      make(chan struct{}),
 		stateCh:         make(chan connection.State, 100),
 		opts:            opts,
 		device:          device,
@@ -80,9 +81,9 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 }
 
 type wireguardConnection struct {
+	ports           []int
 	closeOnce       sync.Once
 	done            chan struct{}
-	pingerStop      chan struct{}
 	stateCh         chan connection.State
 	opts            wireGuardOptions
 	privateKey      string
@@ -125,17 +126,19 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		}
 	}()
 
-	if config.LocalPort > 0 {
-		err = c.natPinger.PingProvider(
-			config.Provider.Endpoint.IP.String(),
-			config.RemotePort,
-			config.LocalPort,
-			0,
-			c.pingerStop,
-		)
+	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
+	if config.LocalPort > 0 || len(config.Ports) > 0 {
+		ip := config.Provider.Endpoint.IP.String()
+		localPorts := c.ports
+		remotePorts := config.Ports
+
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
+
+		config.LocalPort = lPort
+		config.Provider.Endpoint.Port = rPort
 	}
 
 	if err := c.device.Start(c.privateKey, config); err != nil {
@@ -162,7 +165,6 @@ func (c *wireguardConnection) Stop() {
 		c.device.Stop()
 		c.stateCh <- connection.NotConnected
 
-		close(c.pingerStop)
 		close(c.stateCh)
 		close(c.done)
 	})
@@ -184,11 +186,21 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get consumer public IP")
 		}
+
+		ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range ports {
+			c.ports = append(c.ports, p.Num())
+		}
 	}
 
 	return wireguard.ConsumerConfig{
 		PublicKey: publicKey,
 		IP:        publicIP,
+		Ports:     c.ports,
 	}, nil
 }
 

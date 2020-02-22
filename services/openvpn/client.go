@@ -27,8 +27,10 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -42,7 +44,7 @@ import (
 var ErrProcessNotStarted = errors.New("process not started yet")
 
 // processFactory creates a new openvpn process
-type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
+type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
@@ -59,24 +61,10 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 		stateCh:             stateCh,
 		ipResolver:          ipResolver,
 		natPinger:           natPinger,
-		pingerStop:          make(chan struct{}),
 		removeAllowedIPRule: func() {},
 	}
 
-	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
-		sessionConfig := &VPNConfig{}
-		err := json.Unmarshal(options.SessionConfig, sessionConfig)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// override vpnClientConfig params with proxy local IP and pinger port
-		// do this only if connecting to natted provider
-		if sessionConfig.LocalPort > 0 {
-			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
-			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
-		}
-
+	procFactory := func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error) {
 		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, configDirectory, runtimeDirectory, options.DNS)
 		if err != nil {
 			return nil, nil, err
@@ -108,7 +96,7 @@ type Client struct {
 	processFactory      processFactory
 	ipResolver          ip.Resolver
 	natPinger           traversal.NATProviderPinger
-	pingerStop          chan struct{}
+	ports               []int
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
 }
@@ -130,7 +118,34 @@ func (c *Client) Statistics() (connection.Statistics, error) {
 // Start starts the connection
 func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Info().Msg("Starting connection")
-	proc, clientConfig, err := c.processFactory(options)
+
+	sessionConfig := VPNConfig{}
+	err := json.Unmarshal(options.SessionConfig, &sessionConfig)
+	if err != nil {
+		return err
+	}
+
+	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
+	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
+		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
+			c.ports = []int{sessionConfig.LocalPort}
+			sessionConfig.Ports = []int{sessionConfig.RemotePort}
+		}
+
+		ip := sessionConfig.RemoteIP
+		localPorts := c.ports
+		remotePorts := sessionConfig.Ports
+
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
+		if err != nil {
+			return errors.Wrap(err, "could not ping provider")
+		}
+
+		sessionConfig.LocalPort = lPort
+		sessionConfig.RemotePort = rPort
+	}
+
+	proc, clientConfig, err := c.processFactory(options, sessionConfig)
 	if err != nil {
 		log.Info().Err(err).Msg("Client config factory error")
 		return err
@@ -143,19 +158,6 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	}
 	c.removeAllowedIPRule = removeAllowedIPRule
 
-	if clientConfig.VpnConfig.LocalPort > 0 {
-		err = c.natPinger.PingProvider(
-			clientConfig.VpnConfig.OriginalRemoteIP,
-			clientConfig.VpnConfig.OriginalRemotePort,
-			clientConfig.LocalPort,
-			clientConfig.LocalPort+1,
-			c.pingerStop,
-		)
-		if err != nil {
-			removeAllowedIPRule()
-			return err
-		}
-	}
 	err = c.process.Start()
 	if err != nil {
 		removeAllowedIPRule()
@@ -178,7 +180,6 @@ func (c *Client) Stop() {
 			c.process.Stop()
 		}
 		c.removeAllowedIPRule()
-		close(c.pingerStop)
 	})
 }
 
@@ -205,21 +206,28 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
+	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range ports {
+		c.ports = append(c.ports, p.Num())
+	}
+
 	return &ConsumerConfig{
-		IP: publicIP,
+		IP:    publicIP,
+		Ports: c.ports,
 	}, nil
 }
 
 //VPNConfig structure represents VPN configuration options for given session
 type VPNConfig struct {
-	// OriginalRemoteIP and OriginalRemotePort are used for NAT punching from consumer side.
-	OriginalRemoteIP   string
-	OriginalRemotePort int
-
 	DNSIPs          string `json:"dns_ips"`
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
 	LocalPort       int    `json:"lport"`
+	Ports           []int  `json:"ports"`
 	RemoteProtocol  string `json:"protocol"`
 	TLSPresharedKey string `json:"TLSPresharedKey"`
 	CACertificate   string `json:"CACertificate"`

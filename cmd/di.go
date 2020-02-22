@@ -574,7 +574,7 @@ func newSessionManagerFactory(
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
 	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
-	natPingerChan func(*traversal.Params),
+	natPingerChan func(traversal.Params),
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
@@ -811,7 +811,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
 			traversal.DefaultPingConfig(),
-			traversal.NewNATProxy(),
 			di.EventBus,
 		)
 	} else {

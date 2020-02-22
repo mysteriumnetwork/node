@@ -61,42 +61,42 @@ YFcPCscvdnZ1U8hTUaREZmDB2w9eaGyCM4YXAg==
 `
 
 func TestValidatorReturnsNilErrorOnValidVPNConfig(t *testing.T) {
-	vpnConfig := &VPNConfig{
-		OriginalRemoteIP:   "",
-		OriginalRemotePort: 0,
-		DNSIPs:             "",
-		RemoteIP:           "1.2.3.4",
-		RemotePort:         10999,
-		LocalPort:          1194,
-		RemoteProtocol:     "tcp",
-		TLSPresharedKey:    tlsTestKey,
-		CACertificate:      caCertificate,
+	vpnConfig := VPNConfig{
+		DNSIPs:          "",
+		RemoteIP:        "1.2.3.4",
+		RemotePort:      10999,
+		LocalPort:       1194,
+		RemoteProtocol:  "tcp",
+		TLSPresharedKey: tlsTestKey,
+		CACertificate:   caCertificate,
 	}
 	assert.NoError(t, NewDefaultValidator().IsValid(vpnConfig))
 }
 
 func TestIPv6AreNotAllowed(t *testing.T) {
 	vpnConfig := VPNConfig{RemoteIP: "2001:db8:85a3::8a2e:370:7334"}
-	assert.Error(t, validIPFormat(&vpnConfig))
+	assert.Error(t, validIPFormat(vpnConfig))
 }
 
 func TestUnknownProtocolIsNotAllowed(t *testing.T) {
 	vpnConfig := VPNConfig{RemoteProtocol: "fake_protocol"}
-	assert.Error(t, validProtocol(&vpnConfig))
+	assert.Error(t, validProtocol(vpnConfig))
 }
 
 func TestPortOutOfRangeIsNotAllowed(t *testing.T) {
 	vpnConfig := VPNConfig{RemotePort: -1}
-	assert.Error(t, validPort(&vpnConfig))
+	assert.Error(t, validPort(vpnConfig))
 }
 
 func TestTLSPresharedKeyIsValid(t *testing.T) {
 	vpnConfig := VPNConfig{TLSPresharedKey: tlsTestKey}
-	assert.NoError(t, validTLSPresharedKey(&vpnConfig))
-	assert.Equal(t, tlsTestKeyPreformatted, vpnConfig.TLSPresharedKey)
+	assert.NoError(t, validTLSPresharedKey(vpnConfig))
+	newVPNConfig, err := formatTLSPresharedKey(vpnConfig)
+	assert.NoError(t, err)
+	assert.Equal(t, tlsTestKeyPreformatted, newVPNConfig.TLSPresharedKey)
 }
 
 func TestCACertificateIsValid(t *testing.T) {
 	vpnConfig := VPNConfig{CACertificate: caCertificate}
-	assert.NoError(t, validCACertificate(&vpnConfig))
+	assert.NoError(t, validCACertificate(vpnConfig))
 }

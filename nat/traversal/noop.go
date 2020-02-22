@@ -43,12 +43,12 @@ func (np *NoopPinger) Start() {}
 func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, port, consumerPort, proxyPort int, stop <-chan struct{}) error {
-	return nil
+func (np *NoopPinger) PingProvider(_ string, _, _ []int, proxyPort int) (int, int, error) {
+	return 0, 0, nil
 }
 
 // PingTarget does nothing
-func (np *NoopPinger) PingTarget(*Params) {}
+func (np *NoopPinger) PingTarget(Params) {}
 
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(key string, port int) {}

@@ -57,6 +57,12 @@ var (
 		Usage: "Enables NAT hole punching",
 		Value: true,
 	}
+	// FlagNATPunchingMaxTTL sets max number of devices to try pass for NAT hole punching.
+	FlagNATPunchingMaxTTL = cli.IntFlag{
+		Name:  "natpunching.max-ttl",
+		Usage: "Max number of devices to try pass for NAT hole punching",
+		Value: 10,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -66,6 +72,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagTestnet,
 		&FlagLocalnet,
 		&FlagNATPunching,
+		&FlagNATPunchingMaxTTL,
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
@@ -80,4 +87,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
+	Current.ParseIntFlag(ctx, FlagNATPunchingMaxTTL)
 }

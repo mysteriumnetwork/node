@@ -179,7 +179,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 		config.Consumer.ConnectDelay = m.connectDelayMS
 	}
 
-	if err := m.addConsumerPeer(conn, traversalParams.ConsumerPort, traversalParams.ProviderPort, consumerConfig.PublicKey); err != nil {
+	if err := m.addConsumerPeer(conn, config.LocalPort, config.RemotePort, consumerConfig.PublicKey); err != nil {
 		return nil, errors.Wrap(err, "could not add consumer peer")
 	}
 
@@ -249,7 +249,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	m.sessionCleanup[sessionID] = destroy
 	m.sessionCleanupMu.Unlock()
 
-	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: &traversalParams}, nil
+	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
 func (m *Manager) tryAddPortMapping(pubIP string, port int) (release func(), ok bool) {
@@ -294,8 +294,7 @@ func (m *Manager) addConsumerPeer(conn wg.ConnectionEndpoint, consumerPort, prov
 }
 
 func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams traversal.Params) (wg.ServiceConfig, error) {
-	config.LocalPort = traversalParams.ConsumerPort
-	config.RemotePort = traversalParams.ProviderPort
+	config.Ports = traversalParams.LocalPorts
 
 	// Provide new provider endpoint which points to providers NAT Proxy.
 	newProviderEndpoint, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", config.Provider.Endpoint.IP, config.RemotePort))
@@ -306,36 +305,47 @@ func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams tr
 	// There is no need to add any connect delay when port mapping failed.
 	config.Consumer.ConnectDelay = 0
 
+	// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
+	if len(traversalParams.RemotePorts) > 0 && len(traversalParams.LocalPorts) > 0 {
+		config.LocalPort = traversalParams.RemotePorts[len(traversalParams.RemotePorts)-1]
+		config.RemotePort = traversalParams.LocalPorts[len(traversalParams.LocalPorts)-1]
+		config.Provider.Endpoint.Port = config.RemotePort
+	}
+
 	return config, nil
 }
 
-func (m *Manager) newTraversalParams(natPingerEnabled bool, consumserConfig wg.ConsumerConfig) (traversal.Params, error) {
-	params := traversal.Params{
-		Cancel: make(chan struct{}),
-	}
-
+func (m *Manager) newTraversalParams(natPingerEnabled bool, consumerConfig wg.ConsumerConfig) (params traversal.Params, err error) {
 	if !natPingerEnabled {
 		return params, nil
 	}
 
-	pp, err := m.natPingerPorts.Acquire()
-	if err != nil {
-		return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
+	if len(consumerConfig.Ports) == 0 {
+		cp, err := m.natPingerPorts.Acquire()
+		if err != nil {
+			return params, err
+		}
+
+		// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
+		consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
 	}
 
-	cp, err := m.natPingerPorts.Acquire()
-	if err != nil {
-		return params, errors.Wrap(err, "could not acquire NAT pinger consumer port")
+	for range consumerConfig.Ports {
+		pp, err := m.natPingerPorts.Acquire()
+		if err != nil {
+			return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
+		}
+
+		params.LocalPorts = append(params.LocalPorts, pp.Num())
 	}
 
-	params.ProviderPort = pp.Num()
-	params.ConsumerPort = cp.Num()
-	params.ProxyPortMappingKey = fmt.Sprintf("%s_%d", wg.ServiceType, params.ProviderPort)
-
-	if consumserConfig.IP == "" {
+	if consumerConfig.IP == "" {
 		return params, errors.New("remote party does not support NAT Hole punching, public IP is missing")
 	}
-	params.ConsumerPublicIP = consumserConfig.IP
+
+	params.IP = consumerConfig.IP
+	params.RemotePorts = consumerConfig.Ports
+	params.ProxyPortMappingKey = fmt.Sprintf("%s_%s", wg.ServiceType, consumerConfig.PublicKey)
 
 	return params, nil
 }

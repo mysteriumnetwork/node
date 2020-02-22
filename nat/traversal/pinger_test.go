@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +40,7 @@ func TestPinger_Start_Stop(t *testing.T) {
 	pinger.Stop()
 }
 
-func TestPinger_Provider_Consumser_Ping_Flow(t *testing.T) {
+func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 	providerProxyPort := 51199
 	providerPort := 51200
 	consumerPort := 51201
@@ -72,12 +71,11 @@ func TestPinger_Provider_Consumser_Ping_Flow(t *testing.T) {
 	// Start pinging consumer.
 	go func() {
 		pinger.BindServicePort("wg1", providerProxyPort)
-		p := &Params{
-			ProviderPort:        providerPort,
-			ConsumerPort:        consumerPort,
-			ConsumerPublicIP:    "127.0.0.1",
+		p := Params{
+			LocalPorts:          []int{providerPort},
+			RemotePorts:         []int{consumerPort},
+			IP:                  "127.0.0.1",
 			ProxyPortMappingKey: "wg1",
-			Cancel:              make(chan struct{}),
 		}
 		pinger.PingTarget(p)
 	}()
@@ -88,7 +86,7 @@ func TestPinger_Provider_Consumser_Ping_Flow(t *testing.T) {
 	// Start pinging provider.
 	stop := make(chan struct{})
 	defer close(stop)
-	err := pinger.PingProvider("127.0.0.1", providerPort, consumerPort, consumerPort+1, stop)
+	_, _, err := pinger.PingProvider("127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerPort+1)
 
 	assert.NoError(t, err)
 	assert.Contains(t, string(proxyBuf), fmt.Sprintf("continuously pinging to 127.0.0.1:%d", providerPort))
@@ -114,11 +112,17 @@ func TestPinger_PingProvider_Timeout(t *testing.T) {
 
 	stop := make(chan struct{})
 	defer close(stop)
-	err := pinger.PingProvider("127.0.0.1", providerPort, consumerPort, 0, stop)
+	_, _, err := pinger.PingProvider("127.0.0.1", []int{consumerPort}, []int{providerPort}, 0)
+
 	assert.Error(t, errNATPunchAttemptTimedOut, err)
 }
 
 func newPinger(config *PingConfig) NATPinger {
-	proxy := NewNATProxy()
-	return NewPinger(config, proxy, mocks.NewEventBus())
+	return NewPinger(config, &mockPublisher{})
+}
+
+type mockPublisher struct {
+}
+
+func (p mockPublisher) Publish(topic string, data interface{}) {
 }

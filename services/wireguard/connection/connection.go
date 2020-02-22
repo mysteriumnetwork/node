@@ -23,8 +23,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -48,7 +50,6 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NAT
 
 	return &Connection{
 		done:                make(chan struct{}),
-		pingerStop:          make(chan struct{}),
 		stateCh:             make(chan connection.State, 100),
 		privateKey:          privateKey,
 		opts:                opts,
@@ -62,11 +63,11 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NAT
 
 // Connection which does wireguard tunneling.
 type Connection struct {
-	stopOnce   sync.Once
-	done       chan struct{}
-	pingerStop chan struct{}
-	stateCh    chan connection.State
+	stopOnce sync.Once
+	done     chan struct{}
+	stateCh  chan connection.State
 
+	ports               []int
 	privateKey          string
 	ipResolver          ip.Resolver
 	connectionEndpoint  wg.ConnectionEndpoint
@@ -119,17 +120,19 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	c.stateCh <- connection.Connecting
 
-	if config.LocalPort > 0 {
-		err = c.natPinger.PingProvider(
-			config.Provider.Endpoint.IP.String(),
-			config.RemotePort,
-			config.LocalPort,
-			0,
-			c.pingerStop,
-		)
+	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
+	if config.LocalPort > 0 || len(config.Ports) > 0 {
+		ip := config.Provider.Endpoint.IP.String()
+		localPorts := c.ports
+		remotePorts := config.Ports
+
+		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
+
+		config.LocalPort = lPort
+		config.Provider.Endpoint.Port = rPort
 	}
 
 	log.Info().Msg("Starting new connection")
@@ -217,9 +220,20 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 			return nil, errors.Wrap(err, "failed to get consumer public IP")
 		}
 	}
+
+	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range ports {
+		c.ports = append(c.ports, p.Num())
+	}
+
 	return wg.ConsumerConfig{
 		PublicKey: publicKey,
 		IP:        publicIP,
+		Ports:     c.ports,
 	}, nil
 }
 
@@ -249,7 +263,6 @@ func (c *Connection) Stop() {
 
 		c.stateCh <- connection.NotConnected
 
-		close(c.pingerStop)
 		close(c.stateCh)
 		close(c.done)
 	})
