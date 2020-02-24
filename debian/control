@@ -22,6 +22,7 @@ Depends:
  resolvconf,
  openvpn (>= 2.4.0),
  ca-certificates,
+ ipset,
  iptables,
  iproute2,
  wireguard,
