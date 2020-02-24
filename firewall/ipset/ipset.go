@@ -29,7 +29,7 @@ import (
 var Exec = defaultExec
 
 func defaultExec(args []string) ([]string, error) {
-	args = append([]string{"sudo", "/usr/sbin/ipset"}, args...)
+	args = append([]string{"sudo", "ipset"}, args...)
 	output, err := cmdutil.ExecOutput(args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "ipset cmd error")
