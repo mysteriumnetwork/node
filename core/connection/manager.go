@@ -106,16 +106,17 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 
 	// These are populated by Connect at runtime.
-	ctx                    context.Context
-	status                 Status
-	statusLock             sync.RWMutex
-	sessionInfo            SessionInfo
-	sessionInfoMu          sync.Mutex
-	cleanup                []func() error
-	cleanupAfterDisconnect []func() error
-	cancel                 func()
+	ctx           context.Context
+	status        Status
+	statusLock    sync.RWMutex
+	sessionInfo   SessionInfo
+	sessionInfoMu sync.Mutex
+	cleanup       []func() error
+	cancel        func()
 
-	discoLock sync.Mutex
+	connection           Connection
+	connectionStatesDone chan struct{}
+	discoLock            sync.Mutex
 }
 
 // NewManager creates connection manager with given dependencies
@@ -161,12 +162,12 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	connection, err := manager.newConnection(proposal.ServiceType)
+	manager.connection, err = manager.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
 	}
 
-	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, accountantID, proposal)
+	sessionDTO, paymentInfo, err := manager.createSession(dialog, consumerID, accountantID, proposal)
 	if err != nil {
 		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
@@ -180,7 +181,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO)
+	err = manager.startConnection(consumerID, proposal, params, sessionDTO)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -271,7 +272,6 @@ func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo
 }
 
 func (manager *connectionManager) cleanConnection() {
-	manager.cancel()
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
 		log.Trace().Msgf("Connection cleaning up: (%v/%v)", i+1, len(manager.cleanup))
 		err := manager.cleanup[i]()
@@ -282,25 +282,13 @@ func (manager *connectionManager) cleanConnection() {
 	manager.cleanup = nil
 }
 
-func (manager *connectionManager) cleanAfterDisconnect() {
-	manager.cancel()
-	for i := len(manager.cleanupAfterDisconnect) - 1; i >= 0; i-- {
-		log.Trace().Msgf("Connection cleaning up (after disconnect): (%v/%v)", i+1, len(manager.cleanupAfterDisconnect))
-		err := manager.cleanupAfterDisconnect[i]()
-		if err != nil {
-			log.Warn().Err(err).Msg("Cleanup error")
-		}
-	}
-	manager.cleanupAfterDisconnect = nil
-}
-
 func (manager *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 	dialog, err := manager.newDialog(consumerID, providerID, contact)
 	if err != nil {
 		return nil, err
 	}
 
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	manager.cleanup = append(manager.cleanup, func() error {
 		log.Trace().Msg("Cleaning: closing dialog")
 		defer log.Trace().Msg("Cleaning: closing dialog DONE")
 		return dialog.Close()
@@ -308,8 +296,8 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
-	sessionCreateConfig, err := c.GetConfig()
+func (manager *connectionManager) createSession(dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+	sessionCreateConfig, err := manager.connection.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
@@ -325,7 +313,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	manager.cleanup = append(manager.cleanup, func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 		return session.RequestSessionDestroy(dialog, s.ID)
@@ -364,7 +352,6 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 }
 
 func (manager *connectionManager) startConnection(
-	conn Connection,
 	consumerID identity.Identity,
 	proposal market.ServiceProposal,
 	params ConnectParams,
@@ -384,24 +371,16 @@ func (manager *connectionManager) startConnection(
 		ProviderID:    identity.FromAddress(proposal.ProviderID),
 		Proposal:      proposal,
 	}
-
-	if err = conn.Start(connectOptions); err != nil {
+	if err = manager.connection.Start(connectOptions); err != nil {
 		return err
 	}
 
 	statsPublisher := newStatsPublisher(manager.eventPublisher)
-	go statsPublisher.start(manager.getCurrentSession(), conn)
-
+	go statsPublisher.start(manager.getCurrentSession(), manager.connection)
 	manager.cleanup = append(manager.cleanup, func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
 		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
 		statsPublisher.stop()
-		return nil
-	})
-	manager.cleanup = append(manager.cleanup, func() error {
-		log.Trace().Msg("Cleaning: stopping connection")
-		defer log.Trace().Msg("Cleaning: stopping connection DONE")
-		conn.Stop()
 		return nil
 	})
 
@@ -410,13 +389,13 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	err = manager.waitForConnectedState(conn.State(), sessionDTO.ID)
+	err = manager.waitForConnectedState(manager.connection.State())
 	if err != nil {
 		return err
 	}
 
-	go manager.consumeConnectionStates(conn.State())
-	go manager.connectionWaiter(conn)
+	go manager.consumeConnectionStates(manager.connection.State())
+	go manager.connectionWaiter(manager.connection)
 	return nil
 }
 
@@ -450,12 +429,17 @@ func (manager *connectionManager) Disconnect() error {
 	}
 
 	manager.setStatus(statusDisconnecting())
-	manager.cleanConnection()
-	manager.setStatus(statusNotConnected())
+	manager.cancel()
+
+	log.Debug().Msg("Connection stopping..")
+	manager.connection.Stop()
+	<-manager.connectionStatesDone
+	log.Debug().Msg("Connection stopped")
+
 	manager.publishStateEvent(NotConnected)
+	manager.setStatus(statusNotConnected())
 
-	manager.cleanAfterDisconnect()
-
+	manager.cleanConnection()
 	return nil
 }
 
@@ -481,8 +465,8 @@ func (manager *connectionManager) connectionWaiter(connection Connection) {
 	logDisconnectError(manager.Disconnect())
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
-	log.Debug().Msg("waiting for connected state")
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State) error {
+	log.Debug().Msg("Waiting for connected state")
 	for {
 		select {
 		case state, more := <-stateChannel:
@@ -506,16 +490,16 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 }
 
 func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
+	manager.connectionStatesDone = make(chan struct{})
 	for state := range stateChannel {
 		manager.onStateChanged(state)
 	}
+	close(manager.connectionStatesDone)
 
-	log.Debug().Msg("State updater stopCalled")
 	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
-	log.Debug().Msg("onStateChanged called")
 	manager.publishStateEvent(state)
 
 	switch state {
