@@ -144,6 +144,12 @@ var (
 		Usage: "Port for listening incoming api requests",
 		Value: 4050,
 	}
+	// FlagPProfEnable enables pprof via TequilAPI.
+	FlagPProfEnable = cli.BoolFlag{
+		Name:  "pprof.enable",
+		Usage: "Enables pprof",
+		Value: false,
+	}
 	// FlagUIEnable enables built-in web UI for node.
 	FlagUIEnable = cli.BoolFlag{
 		Name:  "ui.enable",
@@ -195,6 +201,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagTequilapiAddress,
 		&FlagTequilapiPort,
 		&FlagUIEnable,
+		&FlagPProfEnable,
 		&FlagUIPort,
 		&FlagVendorID,
 	)
@@ -229,6 +236,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagQualityType)
 	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
+	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseStringFlag(ctx, FlagVendorID)
