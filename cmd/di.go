@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/config"
 	appconfig "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
@@ -565,7 +566,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
-	if nodeOptions.PProfEnabled {
+	if config.GetBool(config.FlagPProfEnable) {
 		tequilapi_endpoints.AddRoutesForPProf(router)
 	}
 

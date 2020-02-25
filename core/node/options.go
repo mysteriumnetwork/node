@@ -57,7 +57,6 @@ type Options struct {
 	TequilapiPort    int
 	TequilapiEnabled bool
 	BindAddress      string
-	PProfEnabled     bool
 	UI               OptionsUI
 	FeedbackURL      string
 
@@ -86,7 +85,6 @@ func GetOptions() *Options {
 		TequilapiPort:    config.GetInt(config.FlagTequilapiPort),
 		TequilapiEnabled: true,
 		BindAddress:      config.GetString(config.FlagBindAddress),
-		PProfEnabled:     config.GetBool(config.FlagPProfEnable),
 		UI: OptionsUI{
 			UIEnabled: config.GetBool(config.FlagUIEnable),
 			UIPort:    config.GetInt(config.FlagUIPort),
