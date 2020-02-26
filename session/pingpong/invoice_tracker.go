@@ -91,7 +91,7 @@ type accountantCaller interface {
 
 type settler func(providerID, accountantID identity.Identity) error
 
-const chargePeriodLeeway = time.Hour * 2
+const chargePeriodLeeway = time.Minute * 15
 
 type sentInvoice struct {
 	invoice crypto.Invoice
