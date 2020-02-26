@@ -114,9 +114,9 @@ type connectionManager struct {
 	cleanup       []func() error
 	cancel        func()
 
-	connection           Connection
-	connectionStatesDone chan struct{}
-	discoLock            sync.Mutex
+	connection Connection
+	discoLock  sync.Mutex
+	discoOnce  sync.Once
 }
 
 // NewManager creates connection manager with given dependencies
@@ -148,6 +148,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}
 
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
+	manager.discoOnce = sync.Once{}
 
 	manager.setStatus(statusConnecting())
 	defer func() {
@@ -429,15 +430,16 @@ func (manager *connectionManager) Disconnect() error {
 	}
 
 	manager.setStatus(statusDisconnecting())
-	manager.cancel()
 
-	log.Debug().Msg("Connection stopping..")
-	manager.connection.Stop()
-	<-manager.connectionStatesDone
-	log.Debug().Msg("Connection stopped")
+	manager.discoOnce.Do(func() {
+		log.Debug().Msg("Connection stopping..")
+		manager.cancel()
+		manager.connection.Stop()
+		log.Debug().Msg("Connection stopped")
+	})
 
-	manager.publishStateEvent(NotConnected)
 	manager.setStatus(statusNotConnected())
+	manager.publishStateEvent(NotConnected)
 
 	manager.cleanConnection()
 	return nil
@@ -490,18 +492,14 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 }
 
 func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
-	manager.connectionStatesDone = make(chan struct{})
 	for state := range stateChannel {
 		manager.onStateChanged(state)
 	}
-	close(manager.connectionStatesDone)
 
 	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
-	manager.publishStateEvent(state)
-
 	switch state {
 	case Connected:
 		sessionInfo := manager.getCurrentSession()
@@ -509,6 +507,8 @@ func (manager *connectionManager) onStateChanged(state State) {
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
 	}
+
+	manager.publishStateEvent(state)
 }
 
 func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
