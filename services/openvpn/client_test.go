@@ -35,7 +35,7 @@ func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
 	connectionOptions := connection.ConnectOptions{}
 	assert.Nil(t, err)
 	err = conn.Start(connectionOptions)
-	assert.EqualError(t, err, "unexpected end of JSON input")
+	assert.EqualError(t, err, "failed to unmarshal session config: unexpected end of JSON input")
 }
 
 func TestConnection_CreatesConnection(t *testing.T) {
