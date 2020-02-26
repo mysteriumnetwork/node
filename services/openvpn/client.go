@@ -122,7 +122,12 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	sessionConfig := VPNConfig{}
 	err := json.Unmarshal(options.SessionConfig, &sessionConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal session config")
+	}
+
+	c.removeAllowedIPRule, err = firewall.AllowIPAccess(sessionConfig.RemoteIP)
+	if err != nil {
+		return errors.Wrap(err, "failed to add allowed IP address")
 	}
 
 	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
@@ -138,6 +143,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 
 		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
 		if err != nil {
+			c.removeAllowedIPRule()
 			return errors.Wrap(err, "could not ping provider")
 		}
 
@@ -148,21 +154,16 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	proc, clientConfig, err := c.processFactory(options, sessionConfig)
 	if err != nil {
 		log.Info().Err(err).Msg("Client config factory error")
-		return err
+		return errors.Wrap(err, "client config factory error")
 	}
 	c.process = proc
 	log.Info().Interface("data", clientConfig).Msgf("Openvpn client configuration")
-	removeAllowedIPRule, err := firewall.AllowIPAccess(clientConfig.VpnConfig.RemoteIP)
-	if err != nil {
-		return err
-	}
-	c.removeAllowedIPRule = removeAllowedIPRule
 
 	err = c.process.Start()
 	if err != nil {
-		removeAllowedIPRule()
+		c.removeAllowedIPRule()
 	}
-	return err
+	return errors.Wrap(err, "failed to start client process")
 }
 
 // Wait waits for the connection to exit
