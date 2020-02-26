@@ -244,6 +244,7 @@ services:
       --accountant.address=http://accountant:8889/api/v2
       --transactor.address=http://transactor:8888/api/v1
       --quality.address=http://morqa:8085/api/v1
+      --firewall.killSwitch.always
       daemon
     dns: 172.30.0.254
     networks:
