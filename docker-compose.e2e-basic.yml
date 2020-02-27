@@ -89,7 +89,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   accountant:
-    image: mysteriumnetwork/accountant:latest
+    image: mysteriumnetwork/accountant:0.0.2
     environment:
       PORT: 8889
     expose:
