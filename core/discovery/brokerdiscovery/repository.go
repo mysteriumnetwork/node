@@ -104,6 +104,10 @@ func (r *Repository) Stop() {
 }
 
 func (r *Repository) proposalRegisterMessage(message registerMessage) error {
+	if !message.Proposal.IsSupported() {
+		return nil
+	}
+
 	r.storage.AddProposal(message.Proposal)
 
 	r.watchdogLock.Lock()
@@ -124,6 +128,10 @@ func (r *Repository) proposalUnregisterMessage(message unregisterMessage) error 
 }
 
 func (r *Repository) proposalPingMessage(message pingMessage) error {
+	if !message.Proposal.IsSupported() {
+		return nil
+	}
+
 	r.storage.AddProposal(message.Proposal)
 
 	r.watchdogLock.Lock()
