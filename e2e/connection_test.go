@@ -158,7 +158,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, "New", se.Status)
 
 	// Wait some time for session to collect stats.
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 
 	err = tequilapi.ConnectionDestroy()
 	assert.NoError(t, err)
@@ -175,7 +175,6 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se = sessionsDTO.Sessions[0]
-
 	assert.Equal(t, "Completed", se.Status)
 
 	// call the custom asserter for the given service type
