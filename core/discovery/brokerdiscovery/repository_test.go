@@ -18,27 +18,53 @@
 package brokerdiscovery
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	market.RegisterServiceDefinitionUnserializer(
+		"mock_service",
+		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
+			return mockServiceDefinition{}, nil
+		},
+	)
+	market.RegisterPaymentMethodUnserializer(
+		"mock_payment",
+		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
+			return mockPaymentMethod{}, nil
+		},
+	)
+	market.RegisterContactUnserializer("mock_contact",
+		func(rawMessage *json.RawMessage) (market.ContactDefinition, error) {
+			return mockContact{}, nil
+		},
+	)
+}
 
 var (
 	proposalFirst = market.ServiceProposal{
 		ProviderID:        "0x1",
-		ServiceDefinition: market.UnsupportedServiceDefinition{},
-		PaymentMethod:     market.UnsupportedPaymentMethod{},
-		ProviderContacts:  []market.Contact{},
+		ServiceType:       "mock_service",
+		ServiceDefinition: mockServiceDefinition{},
+		PaymentMethodType: "mock_payment",
+		PaymentMethod:     mockPaymentMethod{},
+		ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
 	}
 	proposalSecond = market.ServiceProposal{
 		ProviderID:        "0x2",
-		ServiceDefinition: market.UnsupportedServiceDefinition{},
-		PaymentMethod:     market.UnsupportedPaymentMethod{},
-		ProviderContacts:  []market.Contact{},
+		ServiceType:       "mock_service",
+		ServiceDefinition: mockServiceDefinition{},
+		PaymentMethodType: "mock_payment",
+		PaymentMethod:     mockPaymentMethod{},
+		ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
 	}
 )
 
@@ -52,18 +78,29 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
-		"proposal": {"provider_id": "0x1"}
+		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
+}
+
+func Test_Subscriber_SkipUnsupportedProposal(t *testing.T) {
+	connection := nats.StartConnectionMock()
+	defer connection.Close()
+
+	repo := NewRepository(connection, eventbus.New(), 10*time.Millisecond, 1*time.Millisecond)
+	err := repo.Start()
+	defer repo.Stop()
+	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
-		"proposal": {"provider_id": "0x2"}
+		"proposal": {"provider_id": "0x1", "service_type": "unknown"}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 2), 2*time.Second, 1*time.Millisecond)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, repo.storage.Proposals())
+	time.Sleep(10 * time.Millisecond)
+	assert.Len(t, repo.storage.Proposals(), 0)
+	assert.Exactly(t, []market.ServiceProposal{}, repo.storage.Proposals())
 }
 
 func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
@@ -91,11 +128,11 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	assert.NoError(t, err)
 
 	proposalRegister(connection, `{
-		"proposal": {"provider_id": "0x1"}
+		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
 	proposalPing(connection, `{
-		"proposal": {"provider_id": "0x1"}
+		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
@@ -113,7 +150,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	assert.NoError(t, err)
 
 	proposalUnregister(connection, `{
-		"proposal": {"provider_id": "0x1"}
+		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
@@ -146,3 +183,29 @@ func proposalCountEquals(subscriber *Repository, count int) func() bool {
 		return len(subscriber.storage.Proposals()) == count
 	}
 }
+
+type mockServiceDefinition struct {
+}
+
+func (service mockServiceDefinition) GetLocation() market.Location {
+	return market.Location{}
+}
+
+type mockPaymentMethod struct {
+}
+
+func (method mockPaymentMethod) GetPrice() money.Money {
+	return money.Money{}
+}
+
+func (method mockPaymentMethod) GetType() string {
+	return "mock"
+}
+
+func (method mockPaymentMethod) GetRate() market.PaymentRate {
+	return market.PaymentRate{
+		PerTime: time.Minute,
+	}
+}
+
+type mockContact struct{}
