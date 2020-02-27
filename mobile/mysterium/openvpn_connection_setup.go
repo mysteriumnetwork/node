@@ -35,6 +35,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const natPunchingMaxTTL = 10
+
 type natPinger interface {
 	traversal.NATProviderPinger
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
@@ -210,7 +212,7 @@ func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
-	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	ports, err := port.NewPool().AcquireMultiple(natPunchingMaxTTL)
 	if err != nil {
 		return nil, err
 	}

@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -187,7 +186,7 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 			return nil, errors.Wrap(err, "failed to get consumer public IP")
 		}
 
-		ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+		ports, err := port.NewPool().AcquireMultiple(natPunchingMaxTTL)
 		if err != nil {
 			return nil, err
 		}
