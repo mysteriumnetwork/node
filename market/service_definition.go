@@ -17,7 +17,11 @@
 
 package market
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/rs/zerolog/log"
+)
 
 // ServiceDefinition interface is interface for all service definition types
 type ServiceDefinition interface {
@@ -28,10 +32,11 @@ type ServiceDefinition interface {
 type UnsupportedServiceDefinition struct {
 }
 
-// GetLocation always panics on unsupported service types
+// GetLocation should not be called for unsupported service types
 func (UnsupportedServiceDefinition) GetLocation() Location {
 	//no location available - should never be called
-	panic("not supported")
+	log.Error().Msg("Unsupported proposal GetLocation should not be called")
+	return Location{}
 }
 
 var _ ServiceDefinition = UnsupportedServiceDefinition{}

@@ -178,7 +178,7 @@ services:
         ipv4_address: 172.31.0.203
 
   accountant:
-    image: mysteriumnetwork/accountant:latest
+    image: mysteriumnetwork/accountant:0.0.2
     environment:
       PORT: 8889
     expose:
