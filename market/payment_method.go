@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/rs/zerolog/log"
 )
 
 // PaymentMethod is a interface for all types of payment methods
@@ -42,18 +43,24 @@ type PaymentRate struct {
 type UnsupportedPaymentMethod struct {
 }
 
-// GetPrice returns a zero price
+// GetPrice should not be called
 func (UnsupportedPaymentMethod) GetPrice() money.Money {
+	//this should never be called
+	log.Error().Msg("Unsupported proposal GetPrice should not be called")
 	return money.Money{}
 }
 
-// GetType returns unsupported
+// GetType should not be called
 func (UnsupportedPaymentMethod) GetType() string {
+	//this should never be called
+	log.Error().Msg("Unsupported proposal GetType should not be called")
 	return "UNSUPPORTED"
 }
 
-// GetRate returns zero payment rate
+// GetRate should not be called
 func (UnsupportedPaymentMethod) GetRate() PaymentRate {
+	//this should never be called
+	log.Error().Msg("Unsupported proposal GetRate should not be called")
 	return PaymentRate{}
 }
 
