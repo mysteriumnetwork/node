@@ -39,7 +39,8 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		case node.DiscoveryTypeBroker:
 			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
 
-			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, di.EventBus, options.PingInterval+time.Second, 1*time.Second)
+			storage := brokerdiscovery.NewStorage(di.EventBus)
+			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, storage, options.PingInterval+time.Second, 1*time.Second)
 			if options.FetchEnabled {
 				di.DiscoveryWorker = brokerRepository
 				if err := di.DiscoveryWorker.Start(); err != nil {
