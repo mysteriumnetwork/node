@@ -153,6 +153,18 @@ func TestDialogWaiter_StartRejectInvalidSignature(t *testing.T) {
 	assert.Nil(t, dialogInstance)
 }
 
+func TestDialogWaiter_UnsubscribeOnStop(t *testing.T) {
+	connection := nats.StartConnectionMock()
+	defer connection.Close()
+
+	signer := &identity.SignerFake{}
+	waiter, _ := dialogServe(connection, signer)
+
+	assert.False(t, waiter.receiver.(*mockReceiver).unsubscribeCalled)
+	waiter.Stop()
+	assert.True(t, waiter.receiver.(*mockReceiver).unsubscribeCalled)
+}
+
 func TestDialogWaiter_StartRejectConsumersUsingValidator(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
@@ -195,10 +207,12 @@ func TestDialogWaiter_StartRejectConsumersUsingValidator(t *testing.T) {
 }
 
 func dialogServe(connection *nats.ConnectionMock, signer identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
+	codec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierSigned())
 	waiter = &dialogWaiter{
 		connection: connection,
 		topic:      "my-topic",
 		signer:     signer,
+		receiver:   &mockReceiver{realReceiver: nats.NewReceiver(connection, codec, "my-topic")},
 	}
 	handler = &dialogHandler{
 		dialogReceived: make(chan communication.Dialog),
@@ -236,4 +250,25 @@ type dialogHandler struct {
 func (handler *dialogHandler) Handle(dialog communication.Dialog) error {
 	handler.dialogReceived <- dialog
 	return nil
+}
+
+type mockReceiver struct {
+	realReceiver      communication.Receiver
+	unsubscribeCalled bool
+}
+
+func (mr *mockReceiver) Receive(consumer communication.MessageConsumer) error {
+	return mr.realReceiver.Receive(consumer)
+}
+
+func (mr *mockReceiver) ReceiveUnsubscribe(endpoint communication.MessageEndpoint) {
+	mr.realReceiver.ReceiveUnsubscribe(endpoint)
+}
+
+func (mr *mockReceiver) Respond(consumer communication.RequestConsumer) error {
+	return mr.realReceiver.Respond(consumer)
+}
+func (mr *mockReceiver) Unsubscribe() {
+	mr.unsubscribeCalled = true
+	mr.realReceiver.Unsubscribe()
 }

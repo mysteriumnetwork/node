@@ -39,11 +39,14 @@ func NewDialogWaiter(
 	signer identity.Signer,
 	validators ...validator,
 ) *dialogWaiter {
+	codec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierSigned())
+
 	return &dialogWaiter{
 		connection: connection,
 		topic:      topic,
 		signer:     signer,
 		dialogs:    make([]communication.Dialog, 0),
+		receiver:   nats.NewReceiver(connection, codec, topic),
 		validators: validators,
 	}
 }
@@ -54,6 +57,7 @@ type dialogWaiter struct {
 	signer     identity.Signer
 	dialogs    []communication.Dialog
 	validators []validator
+	receiver   communication.Receiver
 
 	sync.RWMutex
 }
@@ -77,9 +81,12 @@ func (waiter *dialogWaiter) Stop() error {
 	waiter.RLock()
 	defer waiter.RUnlock()
 
+	waiter.receiver.Unsubscribe()
+
 	for _, dialog := range waiter.dialogs {
 		dialog.Close()
 	}
+
 	return nil
 }
 
@@ -122,9 +129,8 @@ func (waiter *dialogWaiter) Start(dialogHandler communication.DialogHandler) err
 			Topic:         peerTopic,
 		}, nil
 	}
-	codec := NewCodecSecured(communication.NewCodecJSON(), waiter.signer, identity.NewVerifierSigned())
-	receiver := nats.NewReceiver(waiter.connection, codec, waiter.topic)
-	return receiver.Respond(&dialogCreateConsumer{Callback: createDialog})
+
+	return waiter.receiver.Respond(&dialogCreateConsumer{Callback: createDialog})
 }
 
 func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecured {
