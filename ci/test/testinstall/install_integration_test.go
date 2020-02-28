@@ -109,7 +109,7 @@ func testImage(t *testing.T, image string) {
 
 	assert.Eventually(func() bool {
 		return tequilaIsHealthy(t, containerId)
-	}, 5*time.Second, 500*time.Millisecond)
+	}, 20*time.Second, 500*time.Millisecond)
 }
 
 func tequilaIsHealthy(t *testing.T, containerId string) bool {
