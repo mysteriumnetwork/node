@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	nats_lib "github.com/nats-io/go-nats"
@@ -33,7 +34,7 @@ const (
 	DefaultBrokerPort = 4222
 )
 
-// ParseServerURI validates given NATS server address
+// ParseServerURI validates given NATS server address.
 func ParseServerURI(serverURI string) (*url.URL, error) {
 	// Add scheme first otherwise serverURL.Parse() fails.
 	if !strings.HasPrefix(serverURI, "nats:") {
@@ -68,9 +69,11 @@ func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	return connection, nil
 }
 
-// ConnectionWrap defines wrapped connection to NATS server(s)
+// ConnectionWrap defines wrapped connection to NATS server(s).
 type ConnectionWrap struct {
-	*nats_lib.Conn
+	conn     *nats_lib.Conn
+	connLock sync.RWMutex
+
 	servers []string
 	onClose func()
 }
@@ -91,7 +94,10 @@ func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 // Open starts the connection: left for test compatibility.
 // Deprecated: Use nats.BrokerConnector#Connect() instead.
 func (c *ConnectionWrap) Open() (err error) {
-	c.Conn, err = c.connectOptions().Connect()
+	c.connLock.Lock()
+	defer c.connLock.Unlock()
+
+	c.conn, err = c.connectOptions().Connect()
 	if err != nil {
 		return errors.Wrapf(err, `failed to connect to NATS servers "%v"`, c.servers)
 	}
@@ -99,23 +105,67 @@ func (c *ConnectionWrap) Open() (err error) {
 	return nil
 }
 
-// Close destructs the connection
+// Reopen restarts the connection.
+func (c *ConnectionWrap) Reopen() (err error) {
+	c.connLock.Lock()
+	defer c.connLock.Unlock()
+
+	if c.conn != nil {
+		c.conn.Close()
+	}
+
+	c.conn, err = c.connectOptions().Connect()
+	if err != nil {
+		return errors.Wrapf(err, `failed to reconnect to NATS servers "%v"`, c.servers)
+	}
+
+	return nil
+}
+
+// Close destructs the connection.
 func (c *ConnectionWrap) Close() {
-	if c.Conn != nil {
-		c.Conn.Close()
+	c.connLock.Lock()
+	defer c.connLock.Unlock()
+
+	if c.conn != nil {
+		c.conn.Close()
 	}
 	c.onClose()
 }
 
-// Check checks the connection
+// Check checks the connection.
 func (c *ConnectionWrap) Check() error {
 	// Flush sends ping request and tries to send all cached data.
 	// It return an error if something wrong happened. All other requests
 	// will be added to queue to be sent after reconnecting.
-	return c.Conn.FlushTimeout(3 * time.Second)
+	return c.conn.FlushTimeout(3 * time.Second)
 }
 
-// Servers returns list of currently connected servers
+// Servers returns list of currently connected servers.
 func (c *ConnectionWrap) Servers() []string {
 	return c.servers
+}
+
+// Publish publishes payload  to the given subject.
+func (c *ConnectionWrap) Publish(subject string, payload []byte) error {
+	c.connLock.RLock()
+	defer c.connLock.RUnlock()
+
+	return c.conn.Publish(subject, payload)
+}
+
+// Subscribe will express interest in the given subject.
+func (c *ConnectionWrap) Subscribe(subject string, handler nats_lib.MsgHandler) (*nats_lib.Subscription, error) {
+	c.connLock.RLock()
+	defer c.connLock.RUnlock()
+
+	return c.conn.Subscribe(subject, handler)
+}
+
+// Request will send a request payload and deliver the response message.
+func (c *ConnectionWrap) Request(subject string, payload []byte, timeout time.Duration) (*nats_lib.Msg, error) {
+	c.connLock.RLock()
+	defer c.connLock.RUnlock()
+
+	return c.conn.Request(subject, payload, timeout)
 }
