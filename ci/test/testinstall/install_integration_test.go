@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/magefile/mage/sh"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -107,9 +108,11 @@ func testImage(t *testing.T, image string) {
 	err = sh.RunV("docker", "exec", containerId, "bash", installFile)
 	failIf(err)
 
+	tb := time.Now()
 	assert.Eventually(func() bool {
 		return tequilaIsHealthy(t, containerId)
-	}, 5*time.Second, 500*time.Millisecond)
+	}, 3*time.Second, 500*time.Millisecond)
+	log.Info().Msgf("Startup took, ms: %d", time.Now().Sub(tb).Milliseconds())
 }
 
 func tequilaIsHealthy(t *testing.T, containerId string) bool {
