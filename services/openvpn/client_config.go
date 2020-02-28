@@ -84,6 +84,11 @@ func NewClientConfigFromSession(vpnConfig VPNConfig, configDir string, runtimeDi
 		return nil, err
 	}
 
+	vpnConfig, err = FormatTLSPresharedKey(vpnConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
 	dnsIPs, err := dnsOption.ResolveIPs(vpnConfig.DNSIPs)
 	if err != nil {

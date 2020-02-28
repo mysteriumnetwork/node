@@ -89,14 +89,14 @@ func validIPFormat(config VPNConfig) error {
 }
 
 func validTLSPresharedKey(config VPNConfig) error {
-	_, err := formatTLSPresharedKey(config)
+	_, err := FormatTLSPresharedKey(config)
 	return err
 }
 
-// preshared key format (PEM blocks with data encoded to hex) are taken from
+// FormatTLSPresharedKey formats preshared key (PEM blocks with data encoded to hex) are taken from
 // openvpn --genkey --secret static.key, which is openvpn specific.
 // it reformats key from single line to multiline fixed length strings.
-func formatTLSPresharedKey(config VPNConfig) (VPNConfig, error) {
+func FormatTLSPresharedKey(config VPNConfig) (VPNConfig, error) {
 	contentScanner := bufio.NewScanner(bytes.NewBufferString(config.TLSPresharedKey))
 	for contentScanner.Scan() {
 		line := contentScanner.Text()

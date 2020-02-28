@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -34,6 +33,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
+
+const natPunchingMaxTTL = 10
 
 type natPinger interface {
 	traversal.NATProviderPinger
@@ -82,12 +83,12 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 			Password: password,
 		}
 
-		natPinger.SetProtectSocketCallback(tunnelSetup.SocketProtect)
 		newSession := openvpn3.NewMobileSession(config, credentials, conn, tunnelSetup)
 		sessionTracker.sessionCreated(newSession)
 		return newSession, vpnClientConfig, nil
 	}
 	conn.createSession = sessionFactory
+	conn.tunnelSetup = tunnelSetup
 	return conn, nil
 }
 
@@ -95,6 +96,7 @@ type openvpnConnection struct {
 	ports         []int
 	stateCh       chan connection.State
 	stats         connection.Statistics
+	tunnelSetup   Openvpn3TunnelSetup
 	statsMu       sync.RWMutex
 	session       *openvpn3.Session
 	createSession openvpn3SessionFactory
@@ -158,17 +160,27 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
 
+		if sessionConfig.LocalPort == 0 {
+			port, err := port.NewPool().Acquire()
+			if err != nil {
+				return errors.Wrap(err, "failed to acquire free port")
+			}
+
+			sessionConfig.LocalPort = port.Num()
+		}
+
 		ip := sessionConfig.RemoteIP
 		localPorts := c.ports
 		remotePorts := sessionConfig.Ports
 
-		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
+		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
+		_, _, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
 
-		sessionConfig.LocalPort = lPort
-		sessionConfig.RemotePort = rPort
+		sessionConfig.RemoteIP = "127.0.0.1"
+		sessionConfig.RemotePort = sessionConfig.LocalPort
 	}
 
 	newSession, clientConfig, err := c.createSession(options, sessionConfig)
@@ -210,7 +222,7 @@ func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer public IP")
 	}
 
-	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+	ports, err := port.NewPool().AcquireMultiple(natPunchingMaxTTL)
 	if err != nil {
 		return nil, err
 	}
