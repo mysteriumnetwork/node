@@ -89,8 +89,11 @@ func (b *BrokerConnector) ReconnectAll() {
 		go func(id uuid.UUID, conn *ConnectionWrap) {
 			defer wg.Done()
 			log.Info().Msgf("Re-establishing broker connection %v", id)
-			err := conn.Conn.Flush()
-			log.Info().Msgf("Re-establishing broker connection %v DONE (check result=%v)", id, err)
+			if err := conn.Reopen(); err != nil {
+				log.Err(err).Msgf("Re-establishing broker connection %v failed", id)
+			} else {
+				log.Info().Msgf("Re-establishing broker connection %v DONE", id)
+			}
 		}(k, v)
 	}
 	wg.Wait()
