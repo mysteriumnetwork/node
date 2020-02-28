@@ -77,8 +77,8 @@ test-install-script:
   stage: test
   tags: [go,dedicated]
   script: go run mage.go -v TestInstallScript
-#  only:
-#    - master
+  only:
+    - master
 
 create-bucket:
   stage: pre-release
