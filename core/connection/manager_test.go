@@ -44,6 +44,7 @@ type testContext struct {
 	fakeResolver          ip.Resolver
 	ipCheckParams         IPCheckParams
 	statusSender          *mockStatusSender
+	statsReportInterval   time.Duration
 	sync.RWMutex
 }
 
@@ -110,6 +111,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.statusSender = &mockStatusSender{}
 	tc.fakeResolver = ip.NewResolverMock("ip")
+	tc.statsReportInterval = 1 * time.Millisecond
 
 	tc.connManager = NewManager(
 		dialogCreator,
@@ -128,6 +130,7 @@ func (tc *testContext) SetupTest() {
 		tc.statusSender,
 		tc.fakeResolver,
 		tc.ipCheckParams,
+		tc.statsReportInterval,
 	)
 }
 
@@ -336,11 +339,23 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.NoError(tc.T(), err)
 
 	waitABit()
-	time.Sleep(StatsReportInterval)
 
 	history := tc.stubPublisher.GetEventHistory()
-	assert.Len(tc.T(), history, 4)
+	assert.True(tc.T(), len(history) >= 4)
 
+	// Check if published to all expected topics.
+	expectedTopics := [...]string{AppTopicConsumerStatistics, AppTopicConsumerConnectionState, AppTopicConsumerSession}
+	for _, v := range expectedTopics {
+		var published bool
+		for _, h := range history {
+			if v == h.calledWithTopic {
+				published = true
+			}
+		}
+		tc.Assert().Truef(published, "expected publish event to %s", v)
+	}
+
+	// Check received events data.
 	for _, v := range history {
 		if v.calledWithTopic == AppTopicConsumerStatistics {
 			event := v.calledWithData.(SessionStatsEvent)

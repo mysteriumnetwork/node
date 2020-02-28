@@ -24,8 +24,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// StatsReportInterval is interval for consumer connection statistics reporting.
-const StatsReportInterval = 2 * time.Second
+// DefaultStatsReportInterval is interval for consumer connection statistics reporting.
+const DefaultStatsReportInterval = 1 * time.Second
 
 type statsSupplier interface {
 	Statistics() (Statistics, error)
@@ -37,11 +37,11 @@ type statsPublisher struct {
 	interval time.Duration
 }
 
-func newStatsPublisher(bus eventbus.Publisher) statsPublisher {
+func newStatsPublisher(bus eventbus.Publisher, interval time.Duration) statsPublisher {
 	return statsPublisher{
 		done:     make(chan struct{}),
 		bus:      bus,
-		interval: StatsReportInterval,
+		interval: interval,
 	}
 }
 

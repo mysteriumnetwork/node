@@ -526,6 +526,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		connectivity.NewStatusSender(),
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
+		connection.DefaultStatsReportInterval,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
