@@ -91,7 +91,7 @@ func TestPortOutOfRangeIsNotAllowed(t *testing.T) {
 func TestTLSPresharedKeyIsValid(t *testing.T) {
 	vpnConfig := VPNConfig{TLSPresharedKey: tlsTestKey}
 	assert.NoError(t, validTLSPresharedKey(vpnConfig))
-	newVPNConfig, err := formatTLSPresharedKey(vpnConfig)
+	newVPNConfig, err := FormatTLSPresharedKey(vpnConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, tlsTestKeyPreformatted, newVPNConfig.TLSPresharedKey)
 }
