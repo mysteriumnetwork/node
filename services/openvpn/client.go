@@ -74,7 +74,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 
 		stateMiddleware := newStateMiddleware(stateCh)
 		authMiddleware := newAuthMiddleware(options.SessionID, signer)
-		byteCountMiddleware := openvpn_bytescount.NewMiddleware(client.OnStats, connection.StatsReportInterval)
+		byteCountMiddleware := openvpn_bytescount.NewMiddleware(client.OnStats, connection.DefaultStatsReportInterval)
 		proc := openvpn.CreateNewProcess(openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
 		return proc, vpnClientConfig, nil
 	}

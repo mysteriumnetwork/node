@@ -104,6 +104,7 @@ type connectionManager struct {
 	connectivityStatusSender connectivity.StatusSender
 	ipResolver               ip.Resolver
 	ipCheckParams            IPCheckParams
+	statsReportInterval      time.Duration
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -127,6 +128,7 @@ func NewManager(
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
 	ipCheckParams IPCheckParams,
+	statsReportInterval time.Duration,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -138,6 +140,7 @@ func NewManager(
 		cleanup:                  make([]func() error, 0),
 		ipResolver:               ipResolver,
 		ipCheckParams:            ipCheckParams,
+		statsReportInterval:      statsReportInterval,
 	}
 }
 
@@ -389,7 +392,7 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	statsPublisher := newStatsPublisher(manager.eventPublisher)
+	statsPublisher := newStatsPublisher(manager.eventPublisher, manager.statsReportInterval)
 	go statsPublisher.start(manager.getCurrentSession(), conn)
 
 	manager.cleanup = append(manager.cleanup, func() error {
