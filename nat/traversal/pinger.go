@@ -167,7 +167,7 @@ func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop 
 		return errors.Wrap(err, "pinger setting ttl failed")
 	}
 
-	for i := 1; time.Duration(i)*p.pingConfig.Interval < p.pingConfig.Timeout; i++ {
+	for deadline := time.Now().Add(p.pingConfig.Timeout); time.Now().Before(deadline); {
 		select {
 		case <-stop:
 			return nil
@@ -179,15 +179,12 @@ func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop 
 
 			_, err := conn.WriteToUDP([]byte("continuously pinging to "+remoteAddr.String()), remoteAddr)
 			if err != nil {
-				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
 				return errors.Wrap(err, "pinging request failed")
 			}
 		}
 	}
 
-	err = errors.New("timeout while waiting for ping ack, trying to continue")
-	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
-	return err
+	return errors.New("timeout while waiting for ping ack, trying to continue")
 }
 
 // PingTarget relays ping target address data
@@ -229,7 +226,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) (*net.UDP
 			conn.SetReadDeadline(time.Time{})
 
 			if err != nil || n == 0 {
-				log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", raddr)
+				log.Debug().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", raddr)
 				continue
 			}
 
@@ -301,6 +298,9 @@ func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL 
 
 	// First response wins. Other are not important.
 	r := <-ch
+	if r.err != nil {
+		p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, r.err))
+	}
 	return r.conn, r.err
 }
 
