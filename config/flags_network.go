@@ -57,6 +57,12 @@ var (
 		Usage: "Enables NAT hole punching",
 		Value: true,
 	}
+	// FlagPortMapping enables NAT port mapping.
+	FlagPortMapping = cli.BoolFlag{
+		Name:  "nat-port-mapping",
+		Usage: "Enables NAT port mapping",
+		Value: true,
+	}
 	// FlagNATPunchingMaxTTL sets max number of devices to try pass for NAT hole punching.
 	FlagNATPunchingMaxTTL = cli.IntFlag{
 		Name:  "natpunching.max-ttl",
@@ -71,6 +77,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		&FlagTestnet,
 		&FlagLocalnet,
+		&FlagPortMapping,
 		&FlagNATPunching,
 		&FlagNATPunchingMaxTTL,
 		&FlagAPIAddress,
@@ -86,6 +93,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
+	Current.ParseBoolFlag(ctx, FlagPortMapping)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
 	Current.ParseIntFlag(ctx, FlagNATPunchingMaxTTL)
 }
