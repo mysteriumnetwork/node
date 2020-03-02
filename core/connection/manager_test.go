@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/stretchr/testify/assert"
@@ -131,6 +132,7 @@ func (tc *testContext) SetupTest() {
 		tc.fakeResolver,
 		tc.ipCheckParams,
 		tc.statsReportInterval,
+		func(ID identity.Identity) uint64 { return 0 },
 	)
 }
 
@@ -456,6 +458,42 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	assert.Equal(tc.T(), expectedStatusMsg, tc.statusSender.getSentMsg())
 }
 
+func (tc *testContext) TestConnectReturnsInsufficientBalanceError() {
+	proposal := market.ServiceProposal{
+		PaymentMethod: &mockPaymentMethod{price: money.Money{
+			Amount:   100,
+			Currency: "MYSTT",
+		}},
+		PaymentMethodType: "PER_MINUTE",
+	}
+
+	err := tc.connManager.Connect(consumerID, accountantID, proposal, ConnectParams{})
+
+	assert.Error(tc.T(), err, ErrInsufficientBalance)
+}
+
+func (tc *testContext) TestConnectReturnsSuccessWhenBalanceIsSufficient() {
+	proposal := market.ServiceProposal{
+		ProviderID:        activeProviderID.Address,
+		ProviderContacts:  []market.Contact{activeProviderContact},
+		ServiceType:       activeServiceType,
+		ServiceDefinition: &fakeServiceDefinition{},
+		PaymentMethod: &mockPaymentMethod{price: money.Money{
+			Amount:   100,
+			Currency: "MYSTT",
+		}},
+		PaymentMethodType: "PER_MINUTE",
+	}
+
+	tc.connManager.consumerBalanceGetter = func(ID identity.Identity) uint64 {
+		return 101
+	}
+
+	err := tc.connManager.Connect(consumerID, accountantID, proposal, ConnectParams{})
+
+	assert.NoError(tc.T(), err)
+}
+
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(testContext))
 }
@@ -523,4 +561,22 @@ func (s *mockStatusSender) getSentMsg() connectivity.StatusMessage {
 	s.Lock()
 	defer s.Unlock()
 	return *s.sentMsg
+}
+
+type mockPaymentMethod struct {
+	rate        market.PaymentRate
+	paymentType string
+	price       money.Money
+}
+
+func (mpm *mockPaymentMethod) GetPrice() money.Money {
+	return mpm.price
+}
+
+func (mpm *mockPaymentMethod) GetType() string {
+	return mpm.paymentType
+}
+
+func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
+	return mpm.rate
 }

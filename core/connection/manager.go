@@ -45,6 +45,8 @@ var (
 	ErrConnectionFailed = errors.New("connection has failed")
 	// ErrUnsupportedServiceType indicates that target proposal contains unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
+	// ErrInsufficientBalance indicates consumer has insufficient balance to connect to selected proposal
+	ErrInsufficientBalance = errors.New("insufficient balance")
 )
 
 // IPCheckParams contains common params for connection ip check.
@@ -95,6 +97,8 @@ type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
+type consumerBalanceGetter func(ID identity.Identity) uint64
+
 type connectionManager struct {
 	// These are passed on creation.
 	newDialog                DialogCreator
@@ -105,6 +109,7 @@ type connectionManager struct {
 	ipResolver               ip.Resolver
 	ipCheckParams            IPCheckParams
 	statsReportInterval      time.Duration
+	consumerBalanceGetter    consumerBalanceGetter
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -124,11 +129,12 @@ func NewManager(
 	dialogCreator DialogCreator,
 	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
-	eventPublisher Publisher,
+	eventPublisher eventbus.Publisher,
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
 	ipCheckParams IPCheckParams,
 	statsReportInterval time.Duration,
+	consumerBalanceGetter consumerBalanceGetter,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -141,12 +147,17 @@ func NewManager(
 		ipResolver:               ipResolver,
 		ipCheckParams:            ipCheckParams,
 		statsReportInterval:      statsReportInterval,
+		consumerBalanceGetter:    consumerBalanceGetter,
 	}
 }
 
 func (manager *connectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if manager.Status().State != NotConnected {
 		return ErrAlreadyExists
+	}
+
+	if ok := manager.validateBalance(consumerID, proposal); !ok {
+		return ErrInsufficientBalance
 	}
 
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
@@ -207,6 +218,17 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}()
 
 	return nil
+}
+
+// validateBalance checks if consumer has enough money for given proposal.
+func (manager *connectionManager) validateBalance(consumerID identity.Identity, proposal market.ServiceProposal) bool {
+	if proposal.PaymentMethodType == "" || proposal.PaymentMethod == nil {
+		return true
+	}
+
+	proposalPrice := proposal.PaymentMethod.GetPrice()
+	balance := manager.consumerBalanceGetter(consumerID)
+	return balance >= proposalPrice.Amount
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
