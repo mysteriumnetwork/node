@@ -94,8 +94,13 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				natPinger = di.NATPinger
 			}
 
-			portmapConfig := mapping.DefaultConfig()
-			portMapper := mapping.NewPortMapper(portmapConfig, di.EventBus)
+			var portMapper mapping.PortMapper
+			if config.GetBool(config.FlagPortMapping) {
+				portmapConfig := mapping.DefaultConfig()
+				portMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
+			} else {
+				portMapper = mapping.NewNoopPortMapper(di.EventBus)
+			}
 
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
@@ -138,7 +143,13 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			natPinger = di.NATPinger
 		}
 
-		portMapper := mapping.NewPortMapper(mapping.DefaultConfig(), di.EventBus)
+		var portMapper mapping.PortMapper
+		if config.GetBool(config.FlagPortMapping) {
+			portmapConfig := mapping.DefaultConfig()
+			portMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
+		} else {
+			portMapper = mapping.NewNoopPortMapper(di.EventBus)
+		}
 
 		manager := openvpn_service.NewManager(
 			nodeOptions,
