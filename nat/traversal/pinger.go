@@ -161,16 +161,13 @@ func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPor
 	return localPort, remotePort, err
 }
 
-func (p *Pinger) ping(conn *net.UDPConn, ttl int, stop <-chan struct{}) error {
-	// Windows detects that 1 TTL is too low and throws an exception during send
-	i := 0
-
+func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop <-chan struct{}) error {
 	err := ipv4.NewConn(conn).SetTTL(ttl)
 	if err != nil {
 		return errors.Wrap(err, "pinger setting ttl failed")
 	}
 
-	for {
+	for i := 1; time.Duration(i)*p.pingConfig.Interval < p.pingConfig.Timeout; i++ {
 		select {
 		case <-stop:
 			return nil
@@ -178,41 +175,19 @@ func (p *Pinger) ping(conn *net.UDPConn, ttl int, stop <-chan struct{}) error {
 			return nil
 
 		case <-time.After(p.pingConfig.Interval):
-			log.Debug().Msgf("Pinging %s from %s...", conn.RemoteAddr().String(), conn.LocalAddr().String())
+			log.Debug().Msgf("Pinging %s from %s...", remoteAddr.String(), conn.LocalAddr().String())
 
-			_, err := conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
+			_, err := conn.WriteToUDP([]byte("continuously pinging to "+remoteAddr.String()), remoteAddr)
 			if err != nil {
 				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
 				return errors.Wrap(err, "pinging request failed")
 			}
-
-			i++
-
-			if time.Duration(i)*p.pingConfig.Interval > p.pingConfig.Timeout {
-				err := errors.New("timeout while waiting for ping ack, trying to continue")
-				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
-				return err
-			}
 		}
 	}
-}
 
-func (p *Pinger) getConnection(ip string, remotePort int, localPort int) (*net.UDPConn, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, remotePort))
-	if err != nil {
-		return nil, err
-	}
-
-	log.Info().Msg("Remote socket: " + udpAddr.String())
-
-	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: localPort}, udpAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Info().Msg("Local socket: " + conn.LocalAddr().String())
-
-	return conn, nil
+	err = errors.New("timeout while waiting for ping ack, trying to continue")
+	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
+	return err
 }
 
 // PingTarget relays ping target address data
@@ -234,32 +209,32 @@ func (p *Pinger) BindServicePort(key string, port int) {
 	p.natProxy.registerServicePort(key, port)
 }
 
-func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
+func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) (*net.UDPAddr, error) {
 	timeout := time.After(p.pingConfig.Timeout)
 	buf := make([]byte, bufferLen)
 
 	for {
 		select {
 		case <-timeout:
-			return errNATPunchAttemptTimedOut
+			return nil, errNATPunchAttemptTimedOut
 		case <-stop:
-			return errNATPunchAttemptStopped
+			return nil, errNATPunchAttemptStopped
 		case <-p.stop:
-			return errNATPunchAttemptStopped
+			return nil, errNATPunchAttemptStopped
 		default:
 			// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
 			conn.SetReadDeadline(time.Now().Add(p.pingConfig.Timeout * 2))
-			n, err := conn.Read(buf)
+			n, raddr, err := conn.ReadFromUDP(buf)
 			// Reset read deadline.
 			conn.SetReadDeadline(time.Time{})
 
 			if err != nil || n == 0 {
-				log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", conn.RemoteAddr().String())
+				log.Error().Err(err).Msgf("Failed to read remote peer: %s - attempting to continue", raddr)
 				continue
 			}
 
-			log.Info().Msgf("Remote peer data received: %s, len: %d", string(buf[:n]), n)
-			return nil
+			log.Info().Msgf("Remote peer data received: %s, len: %d, from: %s", string(buf[:n]), n, raddr)
+			return raddr, nil
 		}
 	}
 }
@@ -330,18 +305,33 @@ func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL 
 }
 
 func (p *Pinger) singlePing(remoteIP string, localPort, remotePort, ttl int, stop <-chan struct{}) (*net.UDPConn, error) {
-	conn, err := p.getConnection(remoteIP, remotePort, localPort)
+	conn, err := net.ListenUDP("udp4", &net.UDPAddr{Port: localPort})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get connection")
 	}
 
+	log.Info().Msg("Local socket: " + conn.LocalAddr().String())
+
+	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", remoteIP, remotePort))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to resolve remote address")
+	}
+
 	go func() {
-		err := p.ping(conn, ttl, stop)
+		err := p.ping(conn, remoteAddr, ttl, stop)
 		if err != nil {
 			log.Warn().Err(err).Msg("Error while pinging")
 		}
 	}()
 
-	err = p.pingReceiver(conn, stop)
-	return conn, errors.Wrap(err, "ping receiver error")
+	laddr := conn.LocalAddr().(*net.UDPAddr)
+	raddr, err := p.pingReceiver(conn, stop)
+	if err != nil {
+		conn.Close()
+		return nil, errors.Wrap(err, "ping receiver error")
+	}
+
+	conn.Close()
+
+	return net.DialUDP("udp4", laddr, raddr)
 }

@@ -56,15 +56,17 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 
 	// Create provider's UDP proxy listener to which pinger should hand off connection.
 	// In real world this proxy represents started VPN service (WireGuard or OpenVPN).
-	proxyBuf := make([]byte, 1024)
+	ch := make(chan string)
 	go func() {
 		addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", providerProxyPort))
 		conn, err := net.ListenUDP("udp4", addr)
 		assert.NoError(t, err)
 
 		for {
-			_, err := conn.Read(proxyBuf)
+			proxyBuf := make([]byte, 1024)
+			n, err := conn.Read(proxyBuf)
 			assert.NoError(t, err)
+			ch <- string(proxyBuf[:n])
 		}
 	}()
 
@@ -83,13 +85,28 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 	// Wait some time to simulate real network delay conditions.
 	time.Sleep(5 * pingConfig.Interval)
 
-	// Start pinging provider.
-	stop := make(chan struct{})
-	defer close(stop)
 	_, _, err := pinger.PingProvider("127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerPort+1)
-
 	assert.NoError(t, err)
-	assert.Contains(t, string(proxyBuf), fmt.Sprintf("continuously pinging to 127.0.0.1:%d", providerPort))
+
+	laddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", consumerPort))
+	raddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", providerPort))
+
+	conn, err := net.DialUDP("udp4", laddr, raddr)
+	assert.NoError(t, err)
+
+	defer conn.Close()
+
+	assert.Eventually(t, func() bool {
+		conn.Write([]byte("Test message"))
+		select {
+		case msg := <-ch:
+			if msg == "Test message" {
+				return true
+			}
+		default:
+		}
+		return false
+	}, time.Second, 10*time.Millisecond)
 }
 
 func TestPinger_PingProvider_Timeout(t *testing.T) {
@@ -110,8 +127,6 @@ func TestPinger_PingProvider_Timeout(t *testing.T) {
 		select {}
 	}()
 
-	stop := make(chan struct{})
-	defer close(stop)
 	_, _, err := pinger.PingProvider("127.0.0.1", []int{consumerPort}, []int{providerPort}, 0)
 
 	assert.Error(t, errNATPunchAttemptTimedOut, err)
