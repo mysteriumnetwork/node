@@ -81,11 +81,6 @@ func (s *SessionInfo) IsActive() bool {
 	return s.SessionID != ""
 }
 
-// Publisher is responsible for publishing given events
-type Publisher interface {
-	Publish(topic string, data interface{})
-}
-
 // PaymentIssuer handles the payments for service
 type PaymentIssuer interface {
 	Start() error
