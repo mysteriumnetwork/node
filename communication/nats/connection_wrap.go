@@ -107,14 +107,6 @@ func (c *ConnectionWrap) Close() {
 	c.onClose()
 }
 
-// Check checks the connection.
-func (c *ConnectionWrap) Check() error {
-	// Flush sends ping request and tries to send all cached data.
-	// It return an error if something wrong happened. All other requests
-	// will be added to queue to be sent after reconnecting.
-	return c.Conn.FlushTimeout(3 * time.Second)
-}
-
 // Servers returns list of currently connected servers.
 func (c *ConnectionWrap) Servers() []string {
 	return c.servers
