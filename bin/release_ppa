@@ -38,7 +38,7 @@ if ! [ -x "$(command -v vend)" ]; then
     go get github.com/mysteriumnetwork/vend
 fi
 
-vend
+vend -replace github.com/nats-io/go-nats=github.com/mysteriumnetwork/nats.go
 
 DATE=`date -R`
 
