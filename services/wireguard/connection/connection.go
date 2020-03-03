@@ -122,6 +122,11 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
 	if config.LocalPort > 0 || len(config.Ports) > 0 {
+		if len(config.Ports) == 0 || len(c.ports) == 0 {
+			c.ports = []int{config.LocalPort}
+			config.Ports = []int{config.RemotePort}
+		}
+
 		ip := config.Provider.Endpoint.IP.String()
 		localPorts := c.ports
 		remotePorts := config.Ports
