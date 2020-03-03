@@ -158,11 +158,6 @@ func (conn *ConnectionMock) Open() error {
 	return nil
 }
 
-// Reopen restarts the connection
-func (conn *ConnectionMock) Reopen() error {
-	return nil
-}
-
 // Close destructs the connection
 func (conn *ConnectionMock) Close() {
 	conn.queueShutdown <- true
