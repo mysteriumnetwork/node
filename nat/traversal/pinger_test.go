@@ -62,8 +62,9 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 		conn, err := net.ListenUDP("udp4", addr)
 		assert.NoError(t, err)
 
+		proxyBuf := make([]byte, 1024)
+
 		for {
-			proxyBuf := make([]byte, 1024)
 			n, err := conn.Read(proxyBuf)
 			assert.NoError(t, err)
 			ch <- string(proxyBuf[:n])

@@ -175,7 +175,7 @@ func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop 
 			return nil
 
 		case <-time.After(p.pingConfig.Interval):
-			log.Debug().Msgf("Pinging %s from %s...", remoteAddr.String(), conn.LocalAddr().String())
+			log.Debug().Msgf("Pinging %s from %s...", remoteAddr, conn.LocalAddr())
 
 			_, err := conn.WriteToUDP([]byte("continuously pinging to "+remoteAddr.String()), remoteAddr)
 			if err != nil {
@@ -310,7 +310,7 @@ func (p *Pinger) singlePing(remoteIP string, localPort, remotePort, ttl int, sto
 		return nil, errors.Wrap(err, "failed to get connection")
 	}
 
-	log.Info().Msg("Local socket: " + conn.LocalAddr().String())
+	log.Info().Msgf("Local socket: %s", conn.LocalAddr())
 
 	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", remoteIP, remotePort))
 	if err != nil {
