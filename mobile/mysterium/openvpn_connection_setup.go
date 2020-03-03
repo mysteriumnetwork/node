@@ -155,7 +155,7 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 
 	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
 	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
-		if len(c.ports) == 0 {
+		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
 			c.ports = []int{sessionConfig.LocalPort}
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
