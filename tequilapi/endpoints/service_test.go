@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,6 +46,8 @@ var (
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
+		PaymentMethodType: mocks.DefaultPaymentMethodType,
+		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
 	ap = []market.AccessPolicy{
 		{
@@ -71,6 +74,8 @@ var (
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
 		AccessPolicies:    &ap,
+		PaymentMethodType: mocks.DefaultPaymentMethodType,
+		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
 	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil, nil)
 	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil, nil)
@@ -146,6 +151,17 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
 						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					},
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
 					}
 				}
 			}]`,
@@ -167,6 +183,17 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
 						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					},
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
 					}
 				}
 			}`,
@@ -188,6 +215,17 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
 						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					},
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
 					}
 				}
 			}`,
@@ -365,6 +403,17 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 						"country": "Lithuania",
 						"city": "Vilnius"
 					}
+				},
+				"paymentMethod": {
+					"type": "BYTES_TRANSFERRED_WITH_TIME",
+					"price": {
+						"amount":50000,
+						"currency":"MYST"
+					},
+					"rate":{
+						"perSeconds":60,
+						"perBytes":7669584
+					}
 				}
 			}
 		}`,
@@ -443,6 +492,17 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				"serviceType": "mockAccessPolicyService",
 				"serviceDefinition": {
 					"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+				},
+				"paymentMethod": {
+					"type": "BYTES_TRANSFERRED_WITH_TIME",
+					"price": {
+						"amount":50000,
+						"currency":"MYST"
+					},
+					"rate":{
+						"perSeconds":60,
+						"perBytes":7669584
+					}
 				},
 				"accessPolicies": [
 					{

@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,12 +48,16 @@ var serviceProposals = []market.ServiceProposal{
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
+		PaymentMethodType: mocks.DefaultPaymentMethodType,
+		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	},
 	{
 		ID:                1,
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "other_provider",
+		PaymentMethodType: mocks.DefaultPaymentMethodType,
+		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	},
 }
 
@@ -92,7 +97,18 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
-                    }
+                    },
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount": 50000,
+							"currency": "MYST"
+						},
+						"rate": {
+							"perSeconds": 60,
+							"perBytes": 7669584
+						}
+					}
                 }
             ]
         }`,
@@ -149,7 +165,18 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
-                    }
+                    },
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
+					}
                 }
             ]
         }`,
@@ -195,7 +222,18 @@ func TestProposalsEndpointList(t *testing.T) {
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
-                    }
+                    },
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
+					}
                 },
                 {
                     "id": 1,
@@ -207,7 +245,18 @@ func TestProposalsEndpointList(t *testing.T) {
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
-                    }
+                    },
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
+					}
                 }
             ]
         }`,
@@ -246,6 +295,17 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"city": "Vilnius"
 						}
 					},
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
+						}
+					},
 					"metrics": {
 						"connectCount": {
 							"success": 5,
@@ -263,6 +323,17 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"asn": 123,
 							"country": "Lithuania",
 							"city": "Vilnius"
+						}
+					},
+					"paymentMethod": {
+						"type": "BYTES_TRANSFERRED_WITH_TIME",
+						"price": {
+							"amount":50000,
+							"currency":"MYST"
+						},
+						"rate":{
+							"perSeconds":60,
+							"perBytes":7669584
 						}
 					}
 				}
