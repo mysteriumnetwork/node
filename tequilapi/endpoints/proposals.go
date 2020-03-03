@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -60,6 +61,17 @@ type metricsRes struct {
 	ConnectCount quality.ConnectCount `json:"connectCount"`
 }
 
+type paymentRateRes struct {
+	PerSeconds uint64 `json:"perSeconds"`
+	PerBytes   uint64 `json:"perBytes"`
+}
+
+type paymentMethodRes struct {
+	Type  string         `json:"type"`
+	Price money.Money    `json:"price"`
+	Rate  paymentRateRes `json:"rate"`
+}
+
 // swagger:model ProposalDTO
 type proposalDTO struct {
 	// per provider unique serial number of service description provided
@@ -82,6 +94,9 @@ type proposalDTO struct {
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
+
+	// PaymentMethod
+	PaymentMethod paymentMethodRes `json:"paymentMethod"`
 }
 
 func proposalToRes(p market.ServiceProposal) *proposalDTO {
@@ -101,6 +116,14 @@ func proposalToRes(p market.ServiceProposal) *proposalDTO {
 			},
 		},
 		AccessPolicies: p.AccessPolicies,
+		PaymentMethod: paymentMethodRes{
+			Type:  p.PaymentMethod.GetType(),
+			Price: p.PaymentMethod.GetPrice(),
+			Rate: paymentRateRes{
+				PerSeconds: uint64(p.PaymentMethod.GetRate().PerTime.Seconds()),
+				PerBytes:   p.PaymentMethod.GetRate().PerByte,
+			},
+		},
 	}
 }
 
