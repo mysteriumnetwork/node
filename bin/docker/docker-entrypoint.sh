@@ -12,5 +12,4 @@ exec /usr/bin/myst \
  --log-dir="" \
  --data-dir=$OS_DIR_DATA \
  --runtime-dir=$OS_DIR_RUN \
- --tequilapi.address=0.0.0.0 \
  $@
