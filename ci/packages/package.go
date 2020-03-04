@@ -111,11 +111,6 @@ func PackageLinuxDebianArm64() error {
 
 // PackageOsxAmd64 builds and stores OSX amd64 package
 func PackageOsxAmd64() error {
-	job.Precondition(func() bool {
-		pr, _ := env.IsPR()
-		fullBuild, _ := env.IsFullBuild()
-		return !pr || fullBuild
-	})
 	logconfig.Bootstrap()
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
 		return err
