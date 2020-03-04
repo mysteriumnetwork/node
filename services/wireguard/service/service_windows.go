@@ -19,136 +19,62 @@ package service
 
 import (
 	"encoding/json"
-	"sync"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/traversal"
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	natevent "github.com/mysteriumnetwork/node/nat/event"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
+
+// NATPinger defined Pinger interface for Provider
+type NATPinger interface {
+	BindServicePort(key string, port int)
+	Stop()
+	Valid() bool
+}
+
+// NATEventGetter allows us to fetch the last known NAT event
+type NATEventGetter interface {
+	LastEvent() *natevent.Event
+}
 
 // NewManager creates new instance of Wireguard service
 func NewManager(
 	ipResolver ip.Resolver,
+	country string,
 	natService nat.NATService,
-	portMap func(port int) (releasePortMapping func()),
+	natPinger NATPinger,
+	natEventGetter NATEventGetter,
+	eventPublisher eventbus.Publisher,
 	options Options,
 	portSupplier port.ServicePortSupplier,
+	portMapper mapping.PortMapper,
+	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
-
-	resourceAllocator := resources.NewAllocator(portSupplier, options.Subnet)
-	return &Manager{
-		natService:        natService,
-		resourceAllocator: resourceAllocator,
-		portMap:           portMap,
-		ipResolver:        ipResolver,
-		options:           options,
-	}
+	return &Manager{}
 }
 
 // Manager represents an instance of Wireguard service
 type Manager struct {
-	wg         sync.WaitGroup
-	natService nat.NATService
-
-	connectionEndpoint wg.ConnectionEndpoint
-
-	resourceAllocator *resources.Allocator
-
-	ipResolver ip.Resolver
-	portMap    func(port int) (releasePortMapping func())
-	options    Options
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, traversalParams traversal.Params) (*session.ConfigParams, error) {
-	key := &wg.ConsumerConfig{}
-	err := json.Unmarshal(publicKey, key)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := manager.connectionEndpoint.Config()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := manager.connectionEndpoint.AddPeer(key.PublicKey, nil, config.Consumer.IPAddress.IP.String()+"/32"); err != nil {
-		return nil, err
-	}
-
-	destroy := func() {
-		if err := manager.resourceAllocator.ReleaseIPNet(config.Consumer.IPAddress); err != nil {
-			log.Error().Err(err).Msg("Failed to release IP network")
-		}
-		if err := manager.connectionEndpoint.RemovePeer(key.PublicKey); err != nil {
-			log.Error().Err(err).Msg("failed to remove peer: " + key.PublicKey)
-		}
-	}
-
-	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
+func (manager *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Serve starts service - does block
 func (manager *Manager) Serve(instance *service.Instance) error {
-	manager.wg.Add(1)
-
-	connectionEndpoint, err := endpoint.NewConnectionEndpoint(manager.ipResolver, manager.resourceAllocator, manager.portMap, manager.options.ConnectDelay)
-	if err != nil {
-		return err
-	}
-
-	if err := connectionEndpoint.Start(nil); err != nil {
-		return err
-	}
-
-	outIP, err := manager.ipResolver.GetOutboundIP()
-	if err != nil {
-		return err
-	}
-
-	config, err := connectionEndpoint.Config()
-	if err != nil {
-		return err
-	}
-
-	if err := firewall.AddInboundRule("UDP", config.Provider.Endpoint.Port); err != nil {
-		return errors.Wrap(err, "failed to add firewall rule")
-	}
-	defer func() {
-		if err := firewall.RemoveInboundRule("UDP", config.Provider.Endpoint.Port); err != nil {
-			log.Error().Err(err).Msg("Failed to delete firewall rule for Wireguard")
-		}
-	}()
-
-	if _, err = manager.natService.Setup(nat.Options{
-		VPNNetwork:    config.Consumer.IPAddress,
-		ProviderExtIP: outIP,
-	}); err != nil {
-		return errors.Wrap(err, "failed to add NAT forwarding rule")
-	}
-
-	manager.connectionEndpoint = connectionEndpoint
-	log.Info().Msg("Wireguard service started successfully")
-
-	manager.wg.Wait()
-	return nil
+	return errors.New("not implemented")
 }
 
 // Stop stops service.
 func (manager *Manager) Stop() error {
-	manager.wg.Done()
-
-	manager.connectionEndpoint.Stop()
-
-	log.Info().Msg("Wireguard service stopped")
-	return nil
+	return errors.New("not implemented")
 }
