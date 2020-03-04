@@ -17,8 +17,13 @@
 
 package mbtime
 
-import "time"
+import (
+	"errors"
+)
 
 func nanotime() (uint64, error) {
-	return uint64(time.Now().UnixNano()), nil
+	// TODO: This is actually incorrect. UnixNano doesn't return monotonic ticks. For Windows we can
+	// TODO: to get nanotime from runtime by using go:linkname nanotime runtime.nanotime but first need
+	// TODO: to fix window compile.
+	return 0, errors.New("not implemented")
 }

@@ -21,21 +21,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_NotStartedTrackerElapsedReturnsZeroValue(t *testing.T) {
-	tt := NewTracker(func() mbtime.Time { return mbtime.New(10, 10) })
+	tt := NewTracker(func() time.Time { return time.Unix(10, 10) })
 
 	assert.Equal(t, 0*time.Second, tt.Elapsed())
 }
 
 func Test_ElapsedReturnsCorrectValue(t *testing.T) {
 	mockedClock := newMockedTime(
-		[]mbtime.Time{
-			mbtime.New(1, 0),
-			mbtime.New(4, 0),
+		[]time.Time{
+			time.Unix(1, 0),
+			time.Unix(4, 0),
 		},
 	)
 	tt := NewTracker(mockedClock)
@@ -46,10 +45,10 @@ func Test_ElapsedReturnsCorrectValue(t *testing.T) {
 	assert.Equal(t, 3*time.Second, elapsed)
 }
 
-func newMockedTime(timeValues []mbtime.Time) func() mbtime.Time {
+func newMockedTime(timeValues []time.Time) func() time.Time {
 	count := 0
 
-	return func() mbtime.Time {
+	return func() time.Time {
 		val := timeValues[count]
 		count = count + 1
 		return val

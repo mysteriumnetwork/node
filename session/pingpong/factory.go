@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -106,7 +105,7 @@ func InvoiceFactoryCreator(
 		if err != nil {
 			return nil, err
 		}
-		timeTracker := session.NewTracker(mbtime.Now)
+		timeTracker := session.NewTracker(time.Now)
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
 			Peer:                       dialog.PeerID(),
@@ -164,7 +163,7 @@ func ExchangeFactoryFunc(
 		if err != nil {
 			return nil, err
 		}
-		timeTracker := session.NewTracker(mbtime.Now)
+		timeTracker := session.NewTracker(time.Now)
 		deps := InvoicePayerDeps{
 			InvoiceChan:               invoices,
 			PeerExchangeMessageSender: NewExchangeSender(dialog),

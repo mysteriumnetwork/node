@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -66,7 +65,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(mbtime.Now)
+	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
@@ -117,7 +116,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(mbtime.Now)
+	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
@@ -191,7 +190,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(mbtime.Now)
+	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
@@ -256,7 +255,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(mbtime.Now)
+	tracker := session.NewTracker(time.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
