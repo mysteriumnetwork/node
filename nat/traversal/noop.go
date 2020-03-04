@@ -34,7 +34,7 @@ func (np *NoopPinger) Valid() bool {
 func (np *NoopPinger) StopNATProxy() {}
 
 // SetProtectSocketCallback does nothing
-func (np *NoopPinger) SetProtectSocketCallback(SocketProtect func(socket int) bool) {}
+func (np *NoopPinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {}
 
 // Start does nothing
 func (np *NoopPinger) Start() {}

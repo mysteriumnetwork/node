@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -43,7 +42,6 @@ func newNATProxy() *natProxy {
 }
 
 func (np *natProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {
-	time.Sleep(400 * time.Millisecond)
 	stop := make(chan struct{})
 	if np.socketProtect == nil {
 		// shutdown pinger session since openvpn client will connect directly (without natProxy)
