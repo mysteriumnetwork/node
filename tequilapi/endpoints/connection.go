@@ -83,6 +83,9 @@ type connectionRequest struct {
 
 // swagger:model ConnectionStatusDTO
 type connectionResponse struct {
+	// example: 0x00
+	ConsumerID string `json:"consumerId,omitempty"`
+
 	// example: Connected
 	Status string `json:"status"`
 
@@ -372,8 +375,9 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 
 func toConnectionResponse(status connection.Status) connectionResponse {
 	response := connectionResponse{
-		Status:    string(status.State),
-		SessionID: string(status.SessionID),
+		Status:     string(status.State),
+		SessionID:  string(status.SessionID),
+		ConsumerID: status.ConsumerID.Address,
 	}
 
 	if status.Proposal.ProviderID != "" {
