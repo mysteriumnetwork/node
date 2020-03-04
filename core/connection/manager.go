@@ -188,8 +188,14 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+
+		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+			return manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+		})
 		manager.publishStateEvent(StateConnectionFailed)
+
+		log.Info().Err(err).Msg("Cancelling connection initiation: ")
+		manager.Cancel()
 		return err
 	}
 
@@ -236,12 +242,12 @@ func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, se
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
-func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, sessionID session.ID, code connectivity.StatusCode, errDetails error) {
+func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
 	var errDetailsMsg string
 	if errDetails != nil {
 		errDetailsMsg = errDetails.Error()
 	}
-	manager.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
+	return manager.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
 		SessionID:  string(sessionID),
 		StatusCode: code,
 		Message:    errDetailsMsg,
@@ -371,14 +377,8 @@ func (manager *connectionManager) startConnection(
 	consumerID identity.Identity,
 	proposal market.ServiceProposal,
 	params ConnectParams,
-	sessionDTO session.SessionDto) (err error) {
-	defer func() {
-		if err != nil {
-			log.Info().Err(err).Msg("Cancelling connection initiation: ")
-			manager.Cancel()
-		}
-	}()
-
+	sessionDTO session.SessionDto,
+) (err error) {
 	connectOptions := ConnectOptions{
 		SessionID:     sessionDTO.ID,
 		SessionConfig: sessionDTO.Config,
