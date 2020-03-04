@@ -53,10 +53,6 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 		return err
 	}
 
-	if err := sender.connection.Check(); err != nil {
-		log.Warn().Err(err).Msg("Connection failed")
-	}
-
 	log.WithLevel(levelFor(messageTopic)).Msgf("Message %q sending: %s", messageTopic, messageData)
 	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
@@ -75,10 +71,6 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 	if err != nil {
 		err = errors.Wrapf(err, "failed to pack request '%s'", requestTopic)
 		return
-	}
-
-	if err := sender.connection.Check(); err != nil {
-		log.Warn().Err(err).Msg("Connection failed")
 	}
 
 	log.WithLevel(levelFor(requestTopic)).Msgf("Request %q sending: %s", requestTopic, requestData)

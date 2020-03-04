@@ -57,12 +57,12 @@ func TestParseServerURI(t *testing.T) {
 func TestConnectionWrap_NewConnection(t *testing.T) {
 	connection, err := newConnection("nats://127.0.0.1:4222")
 	assert.NoError(t, err)
-	assert.Nil(t, connection.conn)
+	assert.Nil(t, connection.Conn)
 	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.servers)
 
 	connection, err = newConnection("nats://127.0.0.1")
 	assert.NoError(t, err)
-	assert.Nil(t, connection.conn)
+	assert.Nil(t, connection.Conn)
 	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.servers)
 
 	connection, err = newConnection("nats:// example.com")

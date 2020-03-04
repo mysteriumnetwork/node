@@ -29,14 +29,14 @@ import (
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
-	registry map[uuid.UUID]*ConnectionWrap
+	registry map[uuid.UUID]Connection
 	mu       sync.Mutex
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
 func NewBrokerConnector() *BrokerConnector {
 	return &BrokerConnector{
-		registry: make(map[uuid.UUID]*ConnectionWrap),
+		registry: make(map[uuid.UUID]Connection),
 	}
 }
 
@@ -86,7 +86,7 @@ func (b *BrokerConnector) ReconnectAll() {
 	var wg sync.WaitGroup
 	for k, v := range b.registry {
 		wg.Add(1)
-		go func(id uuid.UUID, conn *ConnectionWrap) {
+		go func(id uuid.UUID, conn Connection) {
 			defer wg.Done()
 			log.Info().Msgf("Re-establishing broker connection %v", id)
 			if err := conn.Reopen(); err != nil {
