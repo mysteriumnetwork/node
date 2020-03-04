@@ -22,9 +22,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
+
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -232,4 +234,17 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseStringFlag(ctx, FlagVendorID)
+
+	ValidateAddressFlags(FlagTequilapiAddress)
+}
+
+// ValidateAddressFlags validates given address flags for public exposure
+func ValidateAddressFlags(flags ...cli.StringFlag) {
+	for _, flag := range flags {
+		if flag.Value == "localhost" || flag.Value == "127.0.0.1" {
+			return
+		}
+		log.Warn().Msgf("Possible security vulnerability by flag `%s`, `%s` might be reachable from outside! "+
+			"Ensure its set to localhost or protected by firewall.", flag.Name, flag.Value)
+	}
 }
