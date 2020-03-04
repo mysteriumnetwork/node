@@ -235,6 +235,7 @@ services:
       --location.type=manual \
       --log-level=debug
       --broker-address=broker
+      --tequilapi.address=0.0.0.0
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
@@ -280,6 +281,7 @@ services:
       --location.type=manual
       --location.country=e2e-land
       --broker-address=broker
+      --tequilapi.address=0.0.0.0
       --firewall.protected.networks=""
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=ws://ganache:8545
