@@ -148,7 +148,7 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -173,7 +173,7 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
 
 	go func() {
 		assert.NoError(tc.T(), tc.connManager.Disconnect())
@@ -209,7 +209,7 @@ func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconn
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
@@ -218,13 +218,13 @@ func (tc *testContext) TestDoubleDisconnectResultsInError() {
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
@@ -237,7 +237,7 @@ func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
 
 func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutError() {
 	tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
 }
 
 func (tc *testContext) TestConnectingInProgressCanBeCanceled() {

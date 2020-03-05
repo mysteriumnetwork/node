@@ -524,7 +524,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 	switch state {
 	case Connected:
 		sessionInfo := manager.getCurrentSession()
-		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal))
+		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal, sessionInfo.ConsumerID))
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
 	}

@@ -455,7 +455,7 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
-			identityStatus, err := c.tequilapi.GetIdentityStatus(c.currentConsumerID)
+			identityStatus, err := c.tequilapi.GetIdentityStatus(status.ConsumerID)
 			if err != nil {
 				warn(err)
 			}

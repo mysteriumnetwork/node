@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -48,17 +49,18 @@ const (
 
 // Status holds connection state, session id and proposal of the connection
 type Status struct {
-	State     State
-	SessionID session.ID
-	Proposal  market.ServiceProposal
+	ConsumerID identity.Identity
+	State      State
+	SessionID  session.ID
+	Proposal   market.ServiceProposal
 }
 
 func statusConnecting() Status {
 	return Status{State: Connecting}
 }
 
-func statusConnected(sessionID session.ID, proposal market.ServiceProposal) Status {
-	return Status{Connected, sessionID, proposal}
+func statusConnected(sessionID session.ID, proposal market.ServiceProposal, consumerID identity.Identity) Status {
+	return Status{consumerID, Connected, sessionID, proposal}
 }
 
 func statusNotConnected() Status {
