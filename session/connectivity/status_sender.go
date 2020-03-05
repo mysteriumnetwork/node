@@ -19,12 +19,12 @@ package connectivity
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/rs/zerolog/log"
+	"github.com/pkg/errors"
 )
 
 // StatusSender is responsible for sending session connectivity status to other peer.
 type StatusSender interface {
-	Send(dialog communication.Sender, msg *StatusMessage)
+	Send(dialog communication.Sender, msg *StatusMessage) error
 }
 
 // NewStatusSender creates StatusSender instance.
@@ -35,11 +35,13 @@ func NewStatusSender() StatusSender {
 type statusSender struct{}
 
 // Send sends status message to other peer via broker.
-func (s *statusSender) Send(dialog communication.Sender, msg *StatusMessage) {
+func (s *statusSender) Send(dialog communication.Sender, msg *StatusMessage) error {
 	producer := &statusProducer{
 		message: msg,
 	}
-	if err := dialog.Send(producer); err != nil {
-		log.Error().Err(err).Msg("Could not send connectivity status")
+	err := dialog.Send(producer)
+	if err != nil {
+		return errors.Wrap(err, "could not send connectivity status")
 	}
+	return nil
 }

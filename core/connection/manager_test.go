@@ -512,10 +512,11 @@ type mockStatusSender struct {
 	sync.Mutex
 }
 
-func (s *mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
+func (s *mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) error {
 	s.Lock()
 	defer s.Unlock()
 	s.sentMsg = msg
+	return nil
 }
 
 func (s *mockStatusSender) getSentMsg() connectivity.StatusMessage {
