@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -144,7 +145,8 @@ func ExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string,
 	eventBus eventbus.EventBus,
-	getConsumerInfo getConsumerInfo) func(paymentInfo session.PaymentInfo,
+	getConsumerInfo getConsumerInfo,
+	dataLeewayMegabytes uint64) func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 	return func(paymentInfo session.PaymentInfo,
@@ -178,6 +180,7 @@ func ExchangeFactoryFunc(
 			AccountantAddress:         accountant,
 			ConsumerInfoGetter:        getConsumerInfo,
 			SessionID:                 sessionID,
+			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
 		}
 		return NewInvoicePayer(deps), nil
 	}
