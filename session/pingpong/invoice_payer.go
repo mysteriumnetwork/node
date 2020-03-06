@@ -26,6 +26,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
 
@@ -45,6 +46,7 @@ var ErrProviderOvercharge = errors.New("provider is overcharging")
 
 const consumerFirstInvoiceTolerance = 1.35
 const consumerInvoiceTolerance = 1.05
+const dataLeeway = datasize.MiB * 20
 
 // PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
@@ -100,6 +102,7 @@ type InvoicePayerDeps struct {
 	EventBus                  eventbus.EventBus
 	AccountantAddress         identity.Identity
 	ConsumerInfoGetter        getConsumerInfo
+	DataLeeway                datasize.BitSize
 }
 
 // NewInvoicePayer returns a new instance of exchange message tracker.
@@ -226,7 +229,10 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), ip.getDataTransferred(), ip.deps.Proposal.PaymentMethod)
+	transfered := ip.getDataTransferred()
+	transfered.up += ip.deps.DataLeeway.Bytes()
+
+	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transfered, ip.deps.Proposal.PaymentMethod)
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * consumerInvoiceTolerance))
 	if !ip.receivedFirst {

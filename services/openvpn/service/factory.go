@@ -34,7 +34,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const statisticsReportingIntervalInSeconds = 30
+const statisticsReportingIntervalInSeconds = 1
 
 type eventBus interface {
 	Publish(topic string, data interface{})
