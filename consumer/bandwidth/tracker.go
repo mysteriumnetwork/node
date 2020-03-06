@@ -87,8 +87,8 @@ func (t *Tracker) ConsumeStatisticsEvent(evt connection.SessionStatsEvent) {
 	}
 	t.previous = evt.Stats
 
-	log.Debug().Msgf("Download speed: %s", t.currentSpeed.Down)
-	log.Debug().Msgf("Upload speed: %s", t.currentSpeed.Up)
+	log.Trace().Msgf("Download speed: %s", t.currentSpeed.Down)
+	log.Trace().Msgf("Upload speed: %s", t.currentSpeed.Up)
 }
 
 // ConsumeSessionEvent handles the session state changes
