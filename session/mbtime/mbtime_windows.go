@@ -18,12 +18,15 @@
 package mbtime
 
 import (
-	"errors"
+	// Needed for go:linkname
+	_ "unsafe"
 )
 
+//go:noescape
+//go:linkname nanotimeWin runtime.nanotime
+func nanotimeWin() int64
+
 func nanotime() (uint64, error) {
-	// TODO: This is actually incorrect. UnixNano doesn't return monotonic ticks. For Windows we can
-	// TODO: to get nanotime from runtime by using go:linkname nanotime runtime.nanotime but first need
-	// TODO: to fix window compile.
-	return 0, errors.New("not implemented")
+	// On Windows nanotime should already include boot time so we can link it from runtime.
+	return uint64(nanotimeWin()), nil
 }

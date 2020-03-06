@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -83,7 +84,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -138,7 +139,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -194,7 +195,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 	defer bolt.Close()
 
 	mockError := errors.New("explosions everywhere")
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -249,7 +250,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -306,7 +307,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	defer bolt.Close()
 
 	mockErr := errors.New("explosions everywhere")
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -361,7 +362,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -423,7 +424,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
@@ -481,7 +482,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	tracker := session.NewTracker(time.Now)
+	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
 	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
