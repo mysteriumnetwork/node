@@ -520,6 +520,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.RegistryAddress,
 			di.EventBus,
 			consumerDataGetter,
+			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
 		),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,

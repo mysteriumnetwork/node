@@ -31,4 +31,5 @@ type OptionsPayments struct {
 	ConsumerLowerGBPriceBound          uint64
 	ConsumerUpperMinutePriceBound      uint64
 	ConsumerLowerMinutePriceBound      uint64
+	ConsumerDataLeewayMegabytes        uint64
 }

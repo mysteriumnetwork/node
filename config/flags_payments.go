@@ -84,6 +84,12 @@ var (
 		Usage: "Sets the minimum price of the service per gb. All proposals with a below above this bound will be filtered out and not visible.",
 		Value: 0,
 	}
+	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
+	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
+		Name:  "payments.consumer.data-leeway-megabytes",
+		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
+		Value: 20,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -100,6 +106,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsConsumerPricePerMinuteLowerBound,
 		&FlagPaymentsConsumerPricePerGBUpperBound,
 		&FlagPaymentsConsumerPricePerGBLowerBound,
+		&FlagPaymentsConsumerDataLeewayMegabytes,
 	)
 }
 
@@ -115,4 +122,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
+	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 }
