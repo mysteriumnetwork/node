@@ -84,6 +84,9 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
+		ConsumerInfoGetter: func(string) (ConsumerData, error) {
+			return ConsumerData{}, nil
+		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -136,7 +139,11 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 			},
 		},
 		ConsumerInfoGetter: func(string) (ConsumerData, error) {
-			return ConsumerData{}, nil
+			return ConsumerData{
+				LatestPromise: LatestPromise{
+					Amount: 10,
+				},
+			}, nil
 		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)
@@ -162,10 +169,11 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 
 	exchangeMessage := <-mockSender.chanToWriteTo
 	InvoicePayer.Stop()
+
 	addr, err := exchangeMessage.RecoverConsumerIdentity()
 	assert.Nil(t, err)
-
 	assert.Equal(t, acc.Address.Hex(), addr.Hex())
+	assert.Equal(t, uint64(10), exchangeMessage.Promise.Amount)
 
 	<-testDone
 }
@@ -274,6 +282,9 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
+		ConsumerInfoGetter: func(string) (ConsumerData, error) {
+			return ConsumerData{}, nil
+		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 	defer InvoicePayer.Stop()
@@ -364,102 +375,6 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 			}
 			if err := emt.isInvoiceOK(tt.invoice); (err != nil) != tt.wantErr {
 				t.Errorf("InvoicePayer.isInvoiceOK() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestInvoicePayer_getGrandTotalPromised(t *testing.T) {
-	type fields struct {
-		consumerTotalsStorage consumerTotalsStorage
-		consumerInfoGetter    func(string) (ConsumerData, error)
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		want    uint64
-		wantErr bool
-	}{
-		{
-			name: "returns the amount from storage",
-			fields: fields{
-				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					res: 10,
-				},
-			},
-			want:    10,
-			wantErr: false,
-		},
-		{
-			name: "returns the error from storage",
-			fields: fields{
-				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					err: errors.New("some error"),
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "returns recovered if not found",
-			fields: fields{
-				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					err: ErrNotFound,
-				},
-				consumerInfoGetter: func(string) (ConsumerData, error) {
-					return ConsumerData{
-						LatestPromise: LatestPromise{
-							Amount: 10,
-						},
-					}, nil
-				},
-			},
-			wantErr: false,
-			want:    10,
-		},
-		{
-			name: "returns error if recovery fails",
-			fields: fields{
-				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					err: ErrNotFound,
-				},
-				consumerInfoGetter: func(string) (ConsumerData, error) {
-					return ConsumerData{
-						LatestPromise: LatestPromise{
-							Amount: 10,
-						},
-					}, errors.New("explosions")
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "returns 0 if recovery returns 404",
-			fields: fields{
-				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					err: ErrNotFound,
-				},
-				consumerInfoGetter: func(string) (ConsumerData, error) {
-					return ConsumerData{}, ErrAccountantNotFound
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			emt := &InvoicePayer{
-				deps: InvoicePayerDeps{
-					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
-					ConsumerInfoGetter:    tt.fields.consumerInfoGetter,
-				},
-			}
-			got, err := emt.getGrandTotalPromised()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("InvoicePayer.getGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("InvoicePayer.getGrandTotalPromised() = %v, want %v", got, tt.want)
 			}
 		})
 	}
