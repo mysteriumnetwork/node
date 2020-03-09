@@ -21,6 +21,9 @@ import (
 	"syscall"
 	"time"
 
+	// Needed for go:linkname
+	_ "unsafe"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,8 +39,8 @@ type Time struct {
 func Now() Time {
 	ts, err := nanotime()
 	if err != nil {
-		log.Error().Err(err).Msgf("Using time.Now().UnixNano() as fallback")
-		return Time{ns: time.Duration(time.Now().UnixNano())}
+		log.Error().Err(err).Msgf("Using fallback time")
+		return Time{ns: time.Duration(nanotimeFallback())}
 	}
 	return Time{ns: time.Duration(ts)}
 }
@@ -76,3 +79,7 @@ func tempSyscallErr(err error) bool {
 	}
 	return errno.Temporary()
 }
+
+//go:noescape
+//go:linkname nanotimeFallback runtime.nanotime
+func nanotimeFallback() int64
