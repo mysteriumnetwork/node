@@ -528,6 +528,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
 		connection.DefaultStatsReportInterval,
+		di.ConsumerBalanceTracker.GetBalance,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)

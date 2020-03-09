@@ -346,17 +346,29 @@ type ConnectRequest struct {
 	DisableKillSwitch bool
 }
 
+// ConnectResponse represents connect response with optional error code and message.
+type ConnectResponse struct {
+	ErrorCode    string
+	ErrorMessage string
+}
+
+const (
+	connectErrInvalidProposal     = "InvalidProposal"
+	connectErrInsufficientBalance = "InsufficientBalance"
+	connectErrUnknown             = "Unknown"
+)
+
 // Connect connects to given provider.
-func (mb *MobileNode) Connect(req *ConnectRequest) error {
+func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 	proposal, err := mb.proposalsManager.repository.Proposal(market.ProposalID{
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not get proposal")
-	}
-	if proposal == nil {
-		return fmt.Errorf("proposal %s-%s not found", req.ProviderID, req.ServiceType)
+		return &ConnectResponse{
+			ErrorCode:    connectErrInvalidProposal,
+			ErrorMessage: err.Error(),
+		}
 	}
 
 	connectOptions := connection.ConnectParams{
@@ -364,7 +376,15 @@ func (mb *MobileNode) Connect(req *ConnectRequest) error {
 		DNS:               connection.DNSOptionAuto,
 	}
 	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.accountant, *proposal, connectOptions); err != nil {
-		return errors.Wrap(err, "could not connect")
+		if err == connection.ErrInsufficientBalance {
+			return &ConnectResponse{
+				ErrorCode: connectErrInsufficientBalance,
+			}
+		}
+		return &ConnectResponse{
+			ErrorCode:    connectErrUnknown,
+			ErrorMessage: err.Error(),
+		}
 	}
 	return nil
 }
