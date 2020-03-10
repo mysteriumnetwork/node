@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"strings"
 	"sync"
@@ -126,6 +127,10 @@ func (ip *InvoicePayer) Start() error {
 	}
 	ip.channelAddress = identity.FromAddress(addr.Hex())
 
+	if err = ip.recoverGrandTotalPromised(); err != nil {
+		return fmt.Errorf("could not get balance from accountant: %w", err)
+	}
+
 	ip.deps.TimeTracker.StartTracking()
 
 	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
@@ -154,24 +159,7 @@ func (ip *InvoicePayer) Start() error {
 	}
 }
 
-const grandTotalKey = "consumer_grand_total"
-
-func (ip *InvoicePayer) getGrandTotalPromised() (uint64, error) {
-	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
-	if err == ErrNotFound {
-		res, recoveryError := ip.recoverGrandTotalPromised()
-		if recoveryError != nil {
-			return 0, recoveryError
-		}
-		incrementErr := ip.incrementGrandTotalPromised(res)
-		return res, incrementErr
-	} else if err != nil {
-		return 0, errors.Wrap(err, "could not get previous grand total")
-	}
-	return res, nil
-}
-
-func (ip *InvoicePayer) recoverGrandTotalPromised() (uint64, error) {
+func (ip *InvoicePayer) recoverGrandTotalPromised() error {
 	var boff backoff.BackOff
 	eback := backoff.NewExponentialBackOff()
 	eback.MaxElapsedTime = time.Second * 20
@@ -204,12 +192,16 @@ func (ip *InvoicePayer) recoverGrandTotalPromised() (uint64, error) {
 		return nil
 	}
 
-	err := backoff.Retry(toRetry, boff)
-	if err != nil {
-		log.Error().Err(err).Msg("could not get balance from accountant")
+	if err := backoff.Retry(toRetry, boff); err != nil {
+		return err
 	}
 
-	return data.LatestPromise.Amount, err
+	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
+	return ip.deps.ConsumerTotalsStorage.Store(
+		ip.deps.Identity.Address,
+		ip.deps.AccountantAddress.Address,
+		data.LatestPromise.Amount,
+	)
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
@@ -252,9 +244,9 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
 	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
-	totalPromised, err := ip.getGrandTotalPromised()
+	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
 	}
 
 	// This is a new agreement, we need to take in the agreement total and just add it to total promised
