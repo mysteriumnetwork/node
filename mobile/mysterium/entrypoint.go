@@ -386,7 +386,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 			ErrorMessage: err.Error(),
 		}
 	}
-	return nil
+	return &ConnectResponse{}
 }
 
 // Disconnect disconnects or cancels current connection.
