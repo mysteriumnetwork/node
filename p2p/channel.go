@@ -32,6 +32,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/xtaci/kcp-go/v5"
+	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
@@ -47,34 +48,44 @@ type Channel struct {
 	srv         *http.Server
 	listenPort  int
 	handlers    map[string]HandlerFunc
+	privateKey  PrivateKey
 	blockCrypt  kcp.BlockCrypt
 	sendTimeout time.Duration
 
-	peer *peer
+	peer *Peer
 }
 
-// peer represents p2p peer to which channel can send data.
-type peer struct {
+// Peer represents p2p peer to which channel can send data.
+type Peer struct {
 	client *http.Client
-	addr   *net.UDPAddr
+
+	// Addr is public peer's endpoint address.
+	Addr *net.UDPAddr
+	// PublicKey is peer's public key.
+	PublicKey PublicKey
 }
 
 // HandlerFunc is channel request handler func signature.
 type HandlerFunc func(c Context) error
 
 // NewChannel creates new p2p channel with initialized crypto primitives for data encryption.
-func NewChannel(listenPort int, privateKey []byte) (*Channel, error) {
-	blockCrypt, err := kcp.NewAESBlockCrypt(privateKey)
+func NewChannel(listenPort int, privateKey PrivateKey, peer *Peer) (*Channel, error) {
+	blockCrypt, err := newBlockCrypt(privateKey, peer.PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not create AES crypt block: %w", err)
+		return nil, fmt.Errorf("could not create block crypt: %w", err)
 	}
 
-	return &Channel{
+	c := &Channel{
 		listenPort:  listenPort,
-		blockCrypt:  blockCrypt,
+		privateKey:  privateKey,
 		handlers:    make(map[string]HandlerFunc),
+		blockCrypt:  blockCrypt,
 		sendTimeout: 30 * time.Second,
-	}, nil
+		peer:        peer,
+	}
+	c.initPeer()
+
+	return c, nil
 }
 
 // ListenAndServe creates UDP listener and listens for incoming peer requests. Blocks.
@@ -98,32 +109,6 @@ func (c *Channel) ListenAndServe() error {
 // Close closes channel.
 func (c *Channel) Close() error {
 	return c.srv.Close()
-}
-
-// JoinPeer joins peer to whom channel can start sending data.
-func (c *Channel) JoinPeer(addr *net.UDPAddr) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// TODO: Peer source port could change. We need to detect such possible change and update peer port automatically.
-	transport := http2.Transport{
-		DialTLS: func(network, addr string, cfg *tls.Config) (conn net.Conn, err error) {
-			return kcp.DialWithOptions(addr, c.blockCrypt, 10, 3)
-		},
-		// Allow to use h2c.
-		AllowHTTP: true,
-	}
-	client := http.Client{
-		Transport: &transport,
-		Timeout:   60 * time.Second,
-	}
-
-	c.peer = &peer{
-		client: &client,
-		addr:   addr,
-	}
-
-	// TODO: Start keep alive pings.
 }
 
 // SetSendTimeout overrides default send timeout.
@@ -159,10 +144,26 @@ func (c *Channel) Handle(topic string, handler HandlerFunc) {
 	c.handlers[topic] = handler
 }
 
+func (c *Channel) initPeer() {
+	// TODO: Peer source port could change. We need to detect such possible change and update peer port automatically.
+	transport := http2.Transport{
+		DialTLS: func(network, addr string, cfg *tls.Config) (conn net.Conn, err error) {
+			return kcp.DialWithOptions(addr, c.blockCrypt, 10, 3)
+		},
+		// Allow to use h2c.
+		AllowHTTP: true,
+	}
+	c.peer.client = &http.Client{
+		Transport: &transport,
+		Timeout:   60 * time.Second,
+	}
+	// TODO: Start keep alive pings.
+}
+
 // sendMsg sends data bytes via HTTP POST request and optionally reads response body.
 func (c *Channel) sendMsg(ctx context.Context, topic string, msg *Message) (*Message, error) {
 	// Prepare new HTTP POST request with body payload.
-	url := fmt.Sprintf("http://%s:%d/%s", c.peer.addr.IP, c.peer.addr.Port, topic)
+	url := fmt.Sprintf("http://%s:%d/%s", c.peer.Addr.IP, c.peer.Addr.Port, topic)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(msg.Data))
 	if err != nil {
 		return nil, err
@@ -182,7 +183,7 @@ func (c *Channel) sendMsg(ctx context.Context, topic string, msg *Message) (*Mes
 			if err != nil {
 				return nil, err
 			}
-			return nil, fmt.Errorf("send failed: %s", string(resErr))
+			return nil, fmt.Errorf("peer error response: %s", string(resErr))
 		}
 		return nil, fmt.Errorf("send failed: expected status %d, got %d", http.StatusOK, res.StatusCode)
 	}
@@ -245,4 +246,15 @@ func (h *requestsHandler) handle(w http.ResponseWriter, r *http.Request, handler
 	if ctx.res != nil {
 		_, _ = w.Write(ctx.res.Data)
 	}
+}
+
+func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {
+	// Compute shared key. Nonce for each message will be added inside kcp salsa block crypt.
+	var sharedKey [32]byte
+	box.Precompute(&sharedKey, (*[32]byte)(&peerPublicKey), (*[32]byte)(&privateKey))
+	blockCrypt, err := kcp.NewSalsa20BlockCrypt(sharedKey[:])
+	if err != nil {
+		return nil, fmt.Errorf("could not create Sasla20 block crypt: %w", err)
+	}
+	return blockCrypt, nil
 }
