@@ -20,6 +20,7 @@ package policy
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -95,6 +96,33 @@ func Test_Repository_RulesForPolicies(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, []market.AccessPolicyRuleSet{policyOneRules, policyTwoRules}, policiesRules)
+}
+
+func Test_Repository_SetPolicyRules(t *testing.T) {
+	repo := NewRepository()
+	repo.SetPolicyRules(
+		policyOne,
+		market.AccessPolicyRuleSet{
+			ID:    "1",
+			Title: "One",
+			Allow: []market.AccessRule{
+				{Type: market.AccessPolicyTypeIdentity, Value: "0x1"},
+			},
+		},
+	)
+
+	repo.SetPolicyRules(
+		policyOne,
+		market.AccessPolicyRuleSet{
+			ID:    "1",
+			Title: "One",
+			Allow: []market.AccessRule{
+				{Type: market.AccessPolicyTypeIdentity, Value: "0x2"},
+			},
+		},
+	)
+
+	assert.True(t, repo.IsIdentityAllowed(identity.FromAddress("0x2")))
 }
 
 func Test_Repository_Rules(t *testing.T) {

@@ -44,7 +44,7 @@ func NewRepository() *Repository {
 	}
 }
 
-// SetPolicyRules set policy ant it's items to repository
+// SetPolicyRules set policy and it's items to repository
 func (r *Repository) SetPolicyRules(policy market.AccessPolicy, policyRules market.AccessPolicyRuleSet) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
@@ -182,9 +182,9 @@ func (r *Repository) IsHostAllowed(host string) bool {
 }
 
 func (r *Repository) findItemFor(policy market.AccessPolicy) (*listItem, error) {
-	for _, item := range r.items {
+	for i, item := range r.items {
 		if item.policy == policy {
-			return &item, nil
+			return &r.items[i], nil
 		}
 	}
 	return nil, fmt.Errorf("unknown policy: %s", policy)
