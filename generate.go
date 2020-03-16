@@ -1,3 +1,4 @@
 //go:generate protoc -I=. --go_out=./pb ./pb/ping.proto
+//go:generate protoc -I=. --go_out=./pb ./pb/p2p.proto
 
-package generate
+package main

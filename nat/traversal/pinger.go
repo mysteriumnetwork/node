@@ -46,11 +46,16 @@ type NATProviderPinger interface {
 	PingProvider(ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 }
 
+// NATPeerPinger pings peer and returns UDP connections.
+type NATPeerPinger interface {
+	PingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+}
+
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	NATProviderPinger
+	NATPeerPinger
 	PingConsumer(ip string, localPorts, remotePorts []int, mappingKey string)
-	PingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	BindServicePort(key string, port int)
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)

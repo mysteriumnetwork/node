@@ -19,6 +19,7 @@ package connection
 
 import (
 	"context"
+	"net"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/pkg/errors"
@@ -105,6 +107,7 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 	statsReportInterval      time.Duration
 	consumerBalanceGetter    consumerBalanceGetter
+	p2pManager               p2p.Manager
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -165,6 +168,16 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
+	channel, err := manager.p2pManager.CreateChannel(consumerID, providerID, 10*time.Second)
+	if err != nil {
+		return err
+	}
+	defer channel.Close()
+	// TODO: This may not be needed and could work by only passing punched port. In such case Channel can expose method like NATSessionPort() etc.
+	var providerNATConn *net.UDPConn
+
+	// TODO: Use channel in all places there dialog is used.
+
 	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
@@ -189,7 +202,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO)
+	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, providerNATConn)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -395,14 +408,16 @@ func (manager *connectionManager) startConnection(
 	proposal market.ServiceProposal,
 	params ConnectParams,
 	sessionDTO session.SessionDto,
+	providerNATConn *net.UDPConn,
 ) (err error) {
 	connectOptions := ConnectOptions{
-		SessionID:     sessionDTO.ID,
-		SessionConfig: sessionDTO.Config,
-		DNS:           params.DNS,
-		ConsumerID:    consumerID,
-		ProviderID:    identity.FromAddress(proposal.ProviderID),
-		Proposal:      proposal,
+		SessionID:       sessionDTO.ID,
+		SessionConfig:   sessionDTO.Config,
+		DNS:             params.DNS,
+		ConsumerID:      consumerID,
+		ProviderID:      identity.FromAddress(proposal.ProviderID),
+		Proposal:        proposal,
+		ProviderNATConn: providerNATConn,
 	}
 
 	if err = conn.Start(connectOptions); err != nil {

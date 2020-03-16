@@ -20,9 +20,8 @@ package identity
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_UnlockAndSignAndVerify(t *testing.T) {

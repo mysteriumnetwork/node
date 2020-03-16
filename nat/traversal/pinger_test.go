@@ -123,7 +123,6 @@ func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	go consumer.PingPeer("127.0.0.1", cPorts, pPorts, 2, 3)
 	conns, err := provider.PingPeer("127.0.0.1", pPorts, cPorts, 2, 3)
 	assert.NoError(t, err)
-
 	assert.Len(t, conns, 3)
 }
 
