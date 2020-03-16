@@ -17,6 +17,8 @@
 
 package traversal
 
+import "net"
+
 // NoopPinger does nothing
 type NoopPinger struct{}
 
@@ -36,19 +38,20 @@ func (np *NoopPinger) StopNATProxy() {}
 // SetProtectSocketCallback does nothing
 func (np *NoopPinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {}
 
-// Start does nothing
-func (np *NoopPinger) Start() {}
-
 // Stop does nothing
 func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(_ string, _, _ []int, proxyPort int) (int, int, error) {
+func (np *NoopPinger) PingProvider(_ string, _, _ []int, _ int) (int, int, error) {
 	return 0, 0, nil
 }
 
-// PingTarget does nothing
-func (np *NoopPinger) PingTarget(Params) {}
+// PingConsumer does nothing
+func (np *NoopPinger) PingConsumer(ip string, localPorts, remotePorts []int, mappingKey string) {}
 
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(key string, port int) {}
+
+func (np *NoopPinger) PingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	return nil, nil
+}

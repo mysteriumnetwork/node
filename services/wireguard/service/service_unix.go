@@ -305,13 +305,6 @@ func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams tr
 	// There is no need to add any connect delay when port mapping failed.
 	config.Consumer.ConnectDelay = 0
 
-	// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
-	if len(traversalParams.RemotePorts) > 0 && len(traversalParams.LocalPorts) > 0 {
-		config.LocalPort = traversalParams.RemotePorts[len(traversalParams.RemotePorts)-1]
-		config.RemotePort = traversalParams.LocalPorts[len(traversalParams.LocalPorts)-1]
-		config.Provider.Endpoint.Port = config.RemotePort
-	}
-
 	return config, nil
 }
 
@@ -320,23 +313,13 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumerConfig wg.Co
 		return params, nil
 	}
 
-	if len(consumerConfig.Ports) == 0 {
-		cp, err := m.natPingerPorts.Acquire()
-		if err != nil {
-			return params, err
-		}
-
-		// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
-		consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
+	ports, err := m.natPingerPorts.AcquireMultiple(len(consumerConfig.Ports))
+	if err != nil {
+		return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
 	}
 
-	for range consumerConfig.Ports {
-		pp, err := m.natPingerPorts.Acquire()
-		if err != nil {
-			return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
-		}
-
-		params.LocalPorts = append(params.LocalPorts, pp.Num())
+	for _, p := range ports {
+		params.LocalPorts = append(params.LocalPorts, p.Num())
 	}
 
 	if consumerConfig.IP == "" {

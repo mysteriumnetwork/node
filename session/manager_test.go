@@ -66,9 +66,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	sessionStore := NewStorageMemory()
 
-	natPinger := func(traversal.Params) {}
-
-	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
+	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := traversal.Params{}
@@ -87,9 +85,8 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	natPinger := func(traversal.Params) {}
 
-	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
+	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := traversal.Params{}
@@ -109,9 +106,8 @@ func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	natPinger := func(traversal.Params) {}
 
-	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
+	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
@@ -119,9 +115,8 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 
 func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	natPinger := func(traversal.Params) {}
 
-	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
+	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := traversal.Params{}
@@ -135,10 +130,9 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	natPinger := func(traversal.Params) {}
 
 	mp := mocks.NewEventBus()
-	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, natPinger,
+	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mp)
 
 	pingerParams := traversal.Params{}

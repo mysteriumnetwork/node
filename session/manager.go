@@ -90,7 +90,7 @@ func NewManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
-	natPingerChan func(traversal.Params),
+	natPinger traversal.NATPinger,
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
@@ -98,7 +98,7 @@ func NewManager(
 	return &Manager{
 		currentProposal:      currentProposal,
 		sessionStorage:       sessionStorage,
-		natPingerChan:        natPingerChan,
+		natPinger:            natPinger,
 		natEventGetter:       natEventGetter,
 		serviceId:            serviceId,
 		publisher:            publisher,
@@ -112,7 +112,7 @@ type Manager struct {
 	currentProposal      market.ServiceProposal
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
-	natPingerChan        func(traversal.Params)
+	natPinger            traversal.NATPinger
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher
@@ -160,7 +160,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 		}
 	}()
 
-	manager.natPingerChan(pingerParams)
+	go manager.natPinger.PingConsumer(pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
 	manager.sessionStorage.Add(*session)
 	return nil
 }
