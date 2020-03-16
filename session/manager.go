@@ -78,7 +78,7 @@ type Storage interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, accountantID identity.Identity, sessionID string) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID, accountantID identity.Identity, sessionID string) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -133,19 +133,19 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.ServiceType = manager.currentProposal.ServiceType
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
-	session.done = make(chan struct{})
+	session.Done = make(chan struct{})
 	session.Config = config
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID, string(session.ID))
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, consumerInfo.AccountantID, string(session.ID))
 	if err != nil {
 		return err
 	}
 
 	// stop the balance tracker once the session is finished
 	go func() {
-		<-session.done
+		<-session.Done
 		engine.Stop()
 	}()
 
@@ -203,7 +203,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))
-	close(session.done)
+	close(session.Done)
 
 	return nil
 }

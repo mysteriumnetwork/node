@@ -125,6 +125,8 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "ping-pong", resMsg.Value)
 	})
+
+	time.Sleep(10 * time.Second)
 }
 
 func TestChannelSendTimeoutWhenPrivateKeysMismatch(t *testing.T) {
