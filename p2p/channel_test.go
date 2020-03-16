@@ -48,10 +48,6 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		var err error
 		provider, err = NewChannel(providerPort, providerPrivateKey, peer)
 		assert.NoError(t, err)
-		go func() {
-			err = provider.ListenAndServe()
-			assert.NoError(t, err)
-		}()
 	})
 
 	t.Run("Test consumer channel creation", func(t *testing.T) {
@@ -62,10 +58,6 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		var err error
 		consumer, err = NewChannel(consumerPort, consumerPrivateKey, peer)
 		assert.NoError(t, err)
-		go func() {
-			err := consumer.ListenAndServe()
-			assert.NoError(t, err)
-		}()
 	})
 
 	t.Run("Test publish subscribe pattern", func(t *testing.T) {
@@ -153,7 +145,6 @@ func TestChannelSendTimeoutWhenPrivateKeysMismatch(t *testing.T) {
 	provider.Handle("test", func(c Context) error {
 		return c.OkWithReply(&Message{Data: []byte("hello")})
 	})
-	go provider.ListenAndServe()
 
 	// Create consumer with incorrect providers public key. Send should timeout.
 	consumer, err := NewChannel(ports[1], consumerPrivateKey, &Peer{
@@ -162,7 +153,6 @@ func TestChannelSendTimeoutWhenPrivateKeysMismatch(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	consumer.SetSendTimeout(300 * time.Millisecond)
-	go consumer.ListenAndServe()
 	_, err = consumer.Send("test", &Message{Data: []byte("hello")})
 	assert.EqualError(t, err, fmt.Sprintf("could not send message: Post http://127.0.0.1:%d/test: context deadline exceeded", ports[0]))
 }
@@ -185,7 +175,6 @@ func TestChannelSendReturnErrorWhenPeerCannotHandleIt(t *testing.T) {
 	provider.Handle("test", func(c Context) error {
 		return c.Error(errors.New("I don't like you"))
 	})
-	go provider.ListenAndServe()
 
 	// Create consumer with incorrect providers public key. Send should timeout.
 	consumer, err := NewChannel(ports[1], consumerPrivateKey, &Peer{
@@ -194,7 +183,6 @@ func TestChannelSendReturnErrorWhenPeerCannotHandleIt(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	consumer.SetSendTimeout(300 * time.Millisecond)
-	go consumer.ListenAndServe()
 	_, err = consumer.Send("test", &Message{Data: []byte("hello")})
 	assert.EqualError(t, err, "could not send message: peer error response: I don't like you")
 }

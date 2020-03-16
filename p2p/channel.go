@@ -68,7 +68,8 @@ type Peer struct {
 // HandlerFunc is channel request handler func signature.
 type HandlerFunc func(c Context) error
 
-// NewChannel creates new p2p channel with initialized crypto primitives for data encryption.
+// NewChannel creates new p2p channel with initialized crypto primitives for data encryption
+// and starts listening for connections.
 func NewChannel(listenPort int, privateKey PrivateKey, peer *Peer) (*Channel, error) {
 	blockCrypt, err := newBlockCrypt(privateKey, peer.PublicKey)
 	if err != nil {
@@ -85,17 +86,25 @@ func NewChannel(listenPort int, privateKey PrivateKey, peer *Peer) (*Channel, er
 	}
 	c.initPeer()
 
+	ln, err := c.listen()
+	if err != nil {
+		return nil, err
+	}
+	go c.serve(ln)
+
 	return c, nil
 }
 
-// ListenAndServe creates UDP listener and listens for incoming peer requests. Blocks.
-func (c *Channel) ListenAndServe() error {
+func (c *Channel) listen() (*kcp.Listener, error) {
 	addr := fmt.Sprintf(":%d", c.listenPort)
 	ln, err := kcp.ListenWithOptions(addr, c.blockCrypt, 10, 3)
 	if err != nil {
-		return fmt.Errorf("could not create p2p listener: %w", err)
+		return nil, fmt.Errorf("could not create p2p listener: %w", err)
 	}
+	return ln, nil
+}
 
+func (c *Channel) serve(ln *kcp.Listener) error {
 	// Configure server to use h2c.
 	h2s := &http2.Server{}
 	server := &http.Server{
