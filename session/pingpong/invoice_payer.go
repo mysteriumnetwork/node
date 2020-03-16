@@ -45,9 +45,7 @@ var ErrWrongProvider = errors.New("wrong provider supplied")
 // ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
 
-const consumerFirstInvoiceTolerance = 1.35
-const consumerInvoiceTolerance = 1.05
-const dataLeeway = datasize.MiB * 20
+const consumerInvoiceBasicTolerance = 1.05
 
 // PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
@@ -225,13 +223,11 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 	transfered.up += ip.deps.DataLeeway.Bytes()
 
 	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transfered, ip.deps.Proposal.PaymentMethod)
+	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transfered)
 
-	upperBound := uint64(math.Trunc(float64(shouldBe) * consumerInvoiceTolerance))
-	if !ip.receivedFirst {
-		upperBound = uint64(math.Trunc(float64(shouldBe) * consumerFirstInvoiceTolerance))
-	}
+	upperBound := uint64(math.Trunc(float64(shouldBe) * estimatedTolerance))
 
-	log.Debug().Msgf("Upper bound %v", upperBound)
+	log.Debug().Msgf("Estimated tolerance %.4v, upper bound %v", estimatedTolerance, upperBound)
 
 	if invoice.AgreementTotal > upperBound {
 		log.Warn().Msg("Provider trying to overcharge")
@@ -240,6 +236,30 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 
 	ip.receivedFirst = true
 	return nil
+}
+
+func estimateInvoiceTolerance(elapsed time.Duration, transfered dataTransferred) float64 {
+	totalMiBytesTransferred := float64(transfered.sum()) / ( 1024 * 1024 )
+	avgSpeedInMiBits := totalMiBytesTransferred  / elapsed.Seconds() * 8
+
+	// correction calculation based on total session duration.
+	var durInMinutes float64
+
+	if elapsed.Minutes() < 1 {
+		durInMinutes = 1
+	} else {
+		durInMinutes = elapsed.Minutes()
+	}
+	durationComponent := 1 - durInMinutes / ( 1 + durInMinutes )
+
+	// correction calculation based on average session speed.
+	if avgSpeedInMiBits == 0 {
+		avgSpeedInMiBits = 1
+	}
+
+	avgSpeedComponent := 1 - 1 / ( 1 + avgSpeedInMiBits / 1024 )
+
+	return durationComponent + avgSpeedComponent + consumerInvoiceBasicTolerance
 }
 
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
