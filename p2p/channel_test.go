@@ -19,6 +19,7 @@ package p2p
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -29,38 +30,34 @@ import (
 )
 
 func TestChannelFullCommunicationFlow(t *testing.T) {
-	var err error
-	var consumer, provider *Channel
+	var provider, consumer *Channel
 	ports := acquirePorts(t, 2)
 	providerPort := ports[0]
 	consumerPort := ports[1]
-	privateKey := GeneratePrivateKey()
+
+	providerPublicKey, providerPrivateKey, err := GenerateKey()
+	assert.NoError(t, err)
+	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
 	assert.NoError(t, err)
 
 	t.Run("Test provider channel creation", func(t *testing.T) {
-		provider, err = NewChannel(providerPort, privateKey)
+		peer := &Peer{
+			Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: consumerPort},
+			PublicKey: consumerPublicKey,
+		}
+		var err error
+		provider, err = NewChannel(providerPort, providerPrivateKey, peer)
 		assert.NoError(t, err)
-		go func() {
-			err = provider.ListenAndServe()
-			assert.NoError(t, err)
-		}()
 	})
 
 	t.Run("Test consumer channel creation", func(t *testing.T) {
-		consumer, err = NewChannel(consumerPort, privateKey)
+		peer := &Peer{
+			Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: providerPort},
+			PublicKey: providerPublicKey,
+		}
+		var err error
+		consumer, err = NewChannel(consumerPort, consumerPrivateKey, peer)
 		assert.NoError(t, err)
-		go func() {
-			err := consumer.ListenAndServe()
-			assert.NoError(t, err)
-		}()
-	})
-
-	t.Run("Test peer join", func(t *testing.T) {
-		assert.NotNil(t, consumer)
-		consumer.JoinPeer(&net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: providerPort})
-
-		assert.NotNil(t, provider)
-		provider.JoinPeer(&net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: consumerPort})
 	})
 
 	t.Run("Test publish subscribe pattern", func(t *testing.T) {
@@ -85,7 +82,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 
 		publishedConsumerMsg := &pb.PingPong{Value: "Consumer BigZ"}
 		msg := ProtoMessage(publishedConsumerMsg)
-		_, err = consumer.Send("ping.pong", msg)
+		_, err := consumer.Send("ping.pong", msg)
 		assert.NoError(t, err)
 
 		publishedProviderMsg := &pb.PingPong{Value: "Provider SmallZ"}
@@ -118,10 +115,8 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 			assert.NoError(t, err)
 			return c.OkWithReply(msg)
 		})
-		assert.NoError(t, err)
 
 		msg := ProtoMessage(&pb.PingPong{Value: "ping"})
-		assert.NoError(t, err)
 		res, err := consumer.Send("testreq", msg)
 		assert.NoError(t, err)
 
@@ -135,45 +130,61 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 func TestChannelSendTimeoutWhenPrivateKeysMismatch(t *testing.T) {
 	ports := acquirePorts(t, 2)
 
+	// Create provider consumer keys.
+	_, providerPrivateKey, err := GenerateKey()
+	assert.NoError(t, err)
+	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
+	assert.NoError(t, err)
+
 	// Create provider.
-	provider, err := NewChannel(ports[0], GeneratePrivateKey())
+	provider, err := NewChannel(ports[0], providerPrivateKey, &Peer{
+		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[1]},
+		PublicKey: consumerPublicKey,
+	})
 	assert.NoError(t, err)
 	provider.Handle("test", func(c Context) error {
 		return c.OkWithReply(&Message{Data: []byte("hello")})
 	})
-	go provider.ListenAndServe()
 
-	// Create consumer with his own private key. Send should timeout.
-	consumer, err := NewChannel(ports[1], GeneratePrivateKey())
+	// Create consumer with incorrect providers public key. Send should timeout.
+	consumer, err := NewChannel(ports[1], consumerPrivateKey, &Peer{
+		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[0]},
+		PublicKey: consumerPublicKey, // For correct setup here should be provider key.
+	})
 	assert.NoError(t, err)
-	consumer.JoinPeer(&net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[0]})
-	consumer.SetSendTimeout(10 * time.Millisecond)
+	consumer.SetSendTimeout(300 * time.Millisecond)
 	_, err = consumer.Send("test", &Message{Data: []byte("hello")})
-	assert.Error(t, err)
+	assert.EqualError(t, err, fmt.Sprintf("could not send message: Post http://127.0.0.1:%d/test: context deadline exceeded", ports[0]))
 }
 
 func TestChannelSendReturnErrorWhenPeerCannotHandleIt(t *testing.T) {
 	ports := acquirePorts(t, 2)
-	key := GeneratePrivateKey()
+
+	// Create provider consumer keys.
+	providerPublicKey, providerPrivateKey, err := GenerateKey()
+	assert.NoError(t, err)
+	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
+	assert.NoError(t, err)
+
 	// Create provider.
-	provider, err := NewChannel(ports[0], key)
+	provider, err := NewChannel(ports[0], providerPrivateKey, &Peer{
+		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[1]},
+		PublicKey: consumerPublicKey,
+	})
 	assert.NoError(t, err)
 	provider.Handle("test", func(c Context) error {
 		return c.Error(errors.New("I don't like you"))
 	})
-	go provider.ListenAndServe()
 
-	// Create consumer with his own private key. Send should timeout.
-	consumer, err := NewChannel(ports[1], key)
+	// Create consumer with incorrect providers public key. Send should timeout.
+	consumer, err := NewChannel(ports[1], consumerPrivateKey, &Peer{
+		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[0]},
+		PublicKey: providerPublicKey,
+	})
 	assert.NoError(t, err)
-	consumer.JoinPeer(&net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[0]})
+	consumer.SetSendTimeout(300 * time.Millisecond)
 	_, err = consumer.Send("test", &Message{Data: []byte("hello")})
-	assert.EqualError(t, err, "could not send message: send failed: I don't like you")
-}
-
-func TestChannelListenFailWithInvalidKey(t *testing.T) {
-	_, err := NewChannel(1234, []byte("invalid"))
-	assert.Error(t, err)
+	assert.EqualError(t, err, "could not send message: peer error response: I don't like you")
 }
 
 func acquirePorts(t *testing.T, n int) []int {
