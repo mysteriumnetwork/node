@@ -26,14 +26,15 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -78,7 +79,6 @@ type InvoicePayer struct {
 	stop           chan struct{}
 	once           sync.Once
 	channelAddress identity.Identity
-	receivedFirst  bool
 
 	lastInvoice crypto.Invoice
 	deps        InvoicePayerDeps
@@ -219,11 +219,11 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	transfered := ip.getDataTransferred()
-	transfered.up += ip.deps.DataLeeway.Bytes()
+	transferred := ip.getDataTransferred()
+	transferred.up += ip.deps.DataLeeway.Bytes()
 
-	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transfered, ip.deps.Proposal.PaymentMethod)
-	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transfered)
+	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
+	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transferred)
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * estimatedTolerance))
 
@@ -234,30 +234,32 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrProviderOvercharge
 	}
 
-	ip.receivedFirst = true
 	return nil
 }
 
-func estimateInvoiceTolerance(elapsed time.Duration, transfered dataTransferred) float64 {
-	totalMiBytesTransferred := float64(transfered.sum()) / ( 1024 * 1024 )
-	avgSpeedInMiBits := totalMiBytesTransferred  / elapsed.Seconds() * 8
+func estimateInvoiceTolerance(elapsed time.Duration, transferred dataTransferred) float64 {
+	if elapsed.Seconds() < 1 {
+		return 3
+	}
+
+	totalMiBytesTransferred := float64(transferred.sum()) / (1024 * 1024)
+	avgSpeedInMiBits := totalMiBytesTransferred / elapsed.Seconds() * 8
 
 	// correction calculation based on total session duration.
-	var durInMinutes float64
+	durInMinutes := elapsed.Minutes()
 
 	if elapsed.Minutes() < 1 {
 		durInMinutes = 1
-	} else {
-		durInMinutes = elapsed.Minutes()
 	}
-	durationComponent := 1 - durInMinutes / ( 1 + durInMinutes )
+
+	durationComponent := 1 - durInMinutes/(1+durInMinutes)
 
 	// correction calculation based on average session speed.
 	if avgSpeedInMiBits == 0 {
 		avgSpeedInMiBits = 1
 	}
 
-	avgSpeedComponent := 1 - 1 / ( 1 + avgSpeedInMiBits / 1024 )
+	avgSpeedComponent := 1 - 1/(1+avgSpeedInMiBits/1024)
 
 	return durationComponent + avgSpeedComponent + consumerInvoiceBasicTolerance
 }
