@@ -52,6 +52,7 @@ func (np *NoopPinger) PingConsumer(ip string, localPorts, remotePorts []int, map
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(key string, port int) {}
 
+// PingPeer does nothing.
 func (np *NoopPinger) PingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return nil, nil
 }
