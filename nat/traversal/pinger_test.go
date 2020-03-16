@@ -120,14 +120,14 @@ func TestPinger_PingPeer_N_Connections(t *testing.T) {
 		cPorts = append(cPorts, ports[5+i].Num())
 	}
 
-	go consumer.PingPeer("192.168.0.101", cPorts, pPorts, 2, 3)
+	go consumer.PingPeer("127.0.0.1", cPorts, pPorts, 2, 3)
 	conns, err := provider.PingPeer("127.0.0.1", pPorts, cPorts, 2, 3)
 	assert.NoError(t, err)
 
 	assert.Len(t, conns, 3)
 }
 
-func TestPinger_PingPeer_Too_Many_Connections(t *testing.T) {
+func TestPinger_PingPeer_Not_Enough_Connections(t *testing.T) {
 	pingConfig := &PingConfig{
 		Interval: 10 * time.Millisecond,
 		Timeout:  1000 * time.Millisecond,
@@ -145,7 +145,7 @@ func TestPinger_PingPeer_Too_Many_Connections(t *testing.T) {
 		cPorts = append(cPorts, ports[5+i].Num())
 	}
 
-	go consumer.PingPeer("192.168.0.101", cPorts, pPorts, 2, 30)
+	go consumer.PingPeer("127.0.0.1", cPorts, pPorts, 2, 30)
 	conns, err := provider.PingPeer("127.0.0.1", pPorts, cPorts, 2, 30)
 	assert.EqualError(t, err, "not enough connections")
 
