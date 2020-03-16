@@ -239,7 +239,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
 			di.AccountantPromiseStorage,
-			di.NATPinger.PingTarget,
+			di.NATPinger,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,

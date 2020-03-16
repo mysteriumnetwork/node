@@ -23,16 +23,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPinger_Start_Stop(t *testing.T) {
+func TestPinger_Multiple_Stop(t *testing.T) {
 	pinger := newPinger(&PingConfig{
 		Interval: 1 * time.Millisecond,
 		Timeout:  10 * time.Millisecond,
 	})
-
-	go pinger.Start()
 
 	// Make sure multiple stops doesn't crash.
 	pinger.Stop()
@@ -49,9 +48,8 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 		Interval: 10 * time.Millisecond,
 		Timeout:  100 * time.Millisecond,
 	}
-	pinger := newPinger(pingConfig)
 
-	go pinger.Start()
+	pinger := newPinger(pingConfig)
 	defer pinger.Stop()
 
 	// Create provider's UDP proxy listener to which pinger should hand off connection.
@@ -74,13 +72,7 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 	// Start pinging consumer.
 	go func() {
 		pinger.BindServicePort("wg1", providerProxyPort)
-		p := Params{
-			LocalPorts:          []int{providerPort},
-			RemotePorts:         []int{consumerPort},
-			IP:                  "127.0.0.1",
-			ProxyPortMappingKey: "wg1",
-		}
-		pinger.PingTarget(p)
+		pinger.PingConsumer("127.0.0.1", []int{providerPort}, []int{consumerPort}, "wg1")
 	}()
 
 	// Wait some time to simulate real network delay conditions.
@@ -108,6 +100,56 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 		}
 		return false
 	}, time.Second, 10*time.Millisecond)
+}
+
+func TestPinger_PingPeer_N_Connections(t *testing.T) {
+	pingConfig := &PingConfig{
+		Interval: 10 * time.Millisecond,
+		Timeout:  1000 * time.Millisecond,
+	}
+
+	provider := newPinger(pingConfig)
+	consumer := newPinger(pingConfig)
+
+	var pPorts, cPorts []int
+	ports, err := port.NewPool().AcquireMultiple(10)
+	assert.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		pPorts = append(pPorts, ports[i].Num())
+		cPorts = append(cPorts, ports[5+i].Num())
+	}
+
+	go consumer.PingPeer("127.0.0.1", cPorts, pPorts, 2, 3)
+	conns, err := provider.PingPeer("127.0.0.1", pPorts, cPorts, 2, 3)
+	assert.NoError(t, err)
+
+	assert.Len(t, conns, 3)
+}
+
+func TestPinger_PingPeer_Not_Enough_Connections(t *testing.T) {
+	pingConfig := &PingConfig{
+		Interval: 10 * time.Millisecond,
+		Timeout:  1000 * time.Millisecond,
+	}
+
+	provider := newPinger(pingConfig)
+	consumer := newPinger(pingConfig)
+
+	var pPorts, cPorts []int
+	ports, err := port.NewPool().AcquireMultiple(10)
+	assert.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		pPorts = append(pPorts, ports[i].Num())
+		cPorts = append(cPorts, ports[5+i].Num())
+	}
+
+	go consumer.PingPeer("127.0.0.1", cPorts, pPorts, 2, 30)
+	conns, err := provider.PingPeer("127.0.0.1", pPorts, cPorts, 2, 30)
+	assert.EqualError(t, err, "not enough connections")
+
+	assert.Len(t, conns, 5)
 }
 
 func TestPinger_PingProvider_Timeout(t *testing.T) {

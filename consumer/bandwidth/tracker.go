@@ -74,7 +74,7 @@ func (t *Tracker) ConsumeStatisticsEvent(evt connection.SessionStatsEvent) {
 
 	secondsSince := evt.Stats.At.Sub(t.previous.At).Seconds()
 	if secondsSince < consumeCooldown.Seconds() {
-		log.Debug().Msgf("%fs passed since the last consumption, ignoring the event", secondsSince)
+		log.Trace().Msgf("%fs passed since the last consumption, ignoring the event", secondsSince)
 		return
 	}
 

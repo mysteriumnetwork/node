@@ -26,7 +26,6 @@ import (
 
 // NATPinger allows to send nat pings as well as stop it
 type NATPinger interface {
-	Start()
 	Stop()
 }
 
@@ -79,8 +78,6 @@ func (node *Node) Start() error {
 	}()
 
 	node.publisher.Publish(event.AppTopicNode, event.Payload{Status: event.StatusStarted})
-
-	go node.natPinger.Start()
 
 	return nil
 }
