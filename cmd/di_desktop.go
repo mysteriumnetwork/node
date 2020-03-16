@@ -256,6 +256,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.Transactor,
 			proposal,
 			di.AccountantPromiseSettler.ForceSettle,
+			di.Keystore,
 		)
 		return session.NewManager(
 			proposal,

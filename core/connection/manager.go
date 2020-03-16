@@ -174,15 +174,13 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
-	channel, err := manager.p2pManager.CreateChannel(consumerID, providerID, 10*time.Second)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to establish p2p channel")
-	}
-	// defer channel.Close()
-	// TODO: close p2p channel gracefully.
-
-	// TODO: This may not be needed and could work by only passing punched port. In such case Channel can expose method like NATSessionPort() etc.
-	var providerNATConn *net.UDPConn
+	var channel *p2p.Channel
+	// TODO: P2P will be enabled in separate PR.
+	//channel, err := manager.p2pManager.CreateChannel(consumerID, providerID, 10*time.Second)
+	//if err != nil {
+	//	log.Warn().Err(err).Msg("Failed to establish p2p channel")
+	//}
+	//var providerNATConn *net.UDPConn
 
 	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
@@ -214,7 +212,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, providerNATConn)
+	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, nil)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled

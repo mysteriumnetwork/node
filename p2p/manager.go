@@ -40,7 +40,12 @@ type brokerConnector interface {
 	Connect(serverURIs ...string) (nats.Connection, error)
 }
 
-const pingMaxPorts = 10
+const (
+	pingMaxPorts       = 20
+	requiredConnLen    = 2
+	consumerInitialTTL = 128
+	providerInitialTTL = 2
+)
 
 // NewManager creates new p2p communication manager.
 func NewManager(broker brokerConnector, address string, signer identity.SignerFactory, ipResolver ip.Resolver, natPinger traversal.NATPinger) *Manager {
@@ -89,29 +94,25 @@ func (m *Manager) CreateChannel(consumerID, providerID identity.Identity, timeou
 	}
 
 	var remotePort, localPort int
+	var conn0 *net.UDPConn
 	var serviceConn *net.UDPConn
 	if len(config.peerPorts) == 1 {
 		localPort = config.localPorts[0]
 		remotePort = config.peerPorts[0]
 	} else {
 		log.Debug().Msgf("Pinging provider %s with public IP %s using ports %v:%v", providerID.Address, config.peerPublicIP, config.localPorts, config.peerPorts)
-		conns, err := m.pinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, 128, 2)
+		conns, err := m.pinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnLen)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}
-		conn0 := conns[0]
+		conn0 = conns[0]
 		localPort = conn0.LocalAddr().(*net.UDPAddr).Port
 		remotePort = conn0.RemoteAddr().(*net.UDPAddr).Port
-		conn0.Close()
 		serviceConn = conns[1]
 	}
 
 	log.Debug().Msgf("Creating channel with listen port: %d, peer port: %d", localPort, remotePort)
-	peer := Peer{
-		Addr:      &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: remotePort},
-		PublicKey: config.peerPubKey,
-	}
-	channel, err := NewChannel(localPort, config.privateKey, &peer)
+	channel, err := NewChannel(conn0, config.privateKey, config.peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create p2p channel: %w", err)
 	}
@@ -152,29 +153,25 @@ func (m *Manager) SubscribeChannel(providerID identity.Identity, channelHandler 
 
 		var remotePort, localPort int
 		var serviceConn *net.UDPConn
+		var conn0 *net.UDPConn
 		if len(config.peerPorts) == 1 {
 			localPort = config.localPorts[0]
 			remotePort = config.peerPorts[0]
 		} else {
 			log.Debug().Msgf("Pinging consumer with public IP %s using ports %v:%v", config.peerPublicIP, config.localPorts, config.peerPorts)
-			conns, err := m.pinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, 2, 2)
+			conns, err := m.pinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, providerInitialTTL, requiredConnLen)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
 			}
-			conn0 := conns[0]
+			conn0 = conns[0]
 			localPort = conn0.LocalAddr().(*net.UDPAddr).Port
 			remotePort = conn0.RemoteAddr().(*net.UDPAddr).Port
-			conn0.Close()
 			serviceConn = conns[1]
 		}
 
 		log.Debug().Msgf("Creating channel with listen port: %d, peer port: %d", localPort, remotePort)
-		peer := Peer{
-			Addr:      &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: remotePort},
-			PublicKey: config.peerPubKey,
-		}
-		channel, err := NewChannel(localPort, config.privateKey, &peer)
+		channel, err := NewChannel(conn0, config.privateKey, config.peerPubKey)
 		if err != nil {
 			log.Err(err).Msg("Could not create channel")
 			return

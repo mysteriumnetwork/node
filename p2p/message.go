@@ -18,9 +18,21 @@
 package p2p
 
 import (
+	"bytes"
+	"fmt"
+	"net/textproto"
+	"strconv"
+
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
+
+func init() {
+	// This is needed to initialise global common headers map state internally
+	// before reading header values so race detector doesn't fail unit tests
+	// when multiple goroutines reads conn data headers.
+	textproto.CanonicalMIMEHeaderKey("")
+}
 
 const (
 	topicKeepAlive = "p2p-keepalive"
@@ -58,4 +70,66 @@ func ProtoMessage(m proto.Message) *Message {
 		return &Message{Data: []byte{}}
 	}
 	return &Message{Data: pbBytes}
+}
+
+const (
+	headerFieldRequestID = "Request-ID"
+	headerFieldTopic     = "Topic"
+	headerStatusCode     = "Status-Code"
+
+	statusCodeOK          = 1
+	statusCodePublicErr   = 2
+	statusCodeInternalErr = 3
+)
+
+// transportMsg is internal structure for sending and receiving messages.
+type transportMsg struct {
+	// Header fields.
+	id         uint
+	topic      string
+	statusCode uint
+
+	// Data field.
+	data []byte
+}
+
+func (m *transportMsg) readFrom(conn *textproto.Conn) error {
+	// Read header.
+	header, err := conn.ReadMIMEHeader()
+	if err != nil {
+		return err
+	}
+	id, err := strconv.Atoi(header.Get(headerFieldRequestID))
+	if err != nil {
+		return fmt.Errorf("could not parse request id: %w", err)
+	}
+	m.id = uint(id)
+	m.topic = header.Get(headerFieldTopic)
+	statusCode, err := strconv.Atoi(header.Get(headerStatusCode))
+	if err != nil {
+		return fmt.Errorf("could not parse status code: %w", err)
+	}
+	m.statusCode = uint(statusCode)
+
+	// Read data.
+	data, err := conn.ReadDotBytes()
+	if err != nil {
+		return err
+	}
+	if len(data) > 0 {
+		m.data = data[:len(data)-1]
+	}
+	return nil
+}
+
+func (m *transportMsg) writeTo(conn *textproto.Conn) error {
+	w := conn.DotWriter()
+	var header bytes.Buffer
+	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerFieldRequestID, m.id))
+	header.WriteString(fmt.Sprintf("%s:%s\r\n", headerFieldTopic, m.topic))
+	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerStatusCode, m.statusCode))
+	header.WriteByte('\n')
+	w.Write(header.Bytes())
+	w.Write(m.data)
+	return w.Close()
 }

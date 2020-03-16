@@ -19,8 +19,8 @@ package p2p
 
 import (
 	"errors"
-	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,35 +30,7 @@ import (
 )
 
 func TestChannelFullCommunicationFlow(t *testing.T) {
-	var provider, consumer *Channel
-	ports := acquirePorts(t, 2)
-	providerPort := ports[0]
-	consumerPort := ports[1]
-
-	providerPublicKey, providerPrivateKey, err := GenerateKey()
-	assert.NoError(t, err)
-	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
-	assert.NoError(t, err)
-
-	t.Run("Test provider channel creation", func(t *testing.T) {
-		peer := &Peer{
-			Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: consumerPort},
-			PublicKey: consumerPublicKey,
-		}
-		var err error
-		provider, err = NewChannel(providerPort, providerPrivateKey, peer)
-		assert.NoError(t, err)
-	})
-
-	t.Run("Test consumer channel creation", func(t *testing.T) {
-		peer := &Peer{
-			Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: providerPort},
-			PublicKey: providerPublicKey,
-		}
-		var err error
-		consumer, err = NewChannel(consumerPort, consumerPrivateKey, peer)
-		assert.NoError(t, err)
-	})
+	provider, consumer := createTestChannels(t)
 
 	t.Run("Test publish subscribe pattern", func(t *testing.T) {
 		consumerReceivedMsg := make(chan *pb.PingPong, 1)
@@ -126,67 +98,103 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		assert.Equal(t, "ping-pong", resMsg.Value)
 	})
 
-	time.Sleep(10 * time.Second)
+	t.Run("Test concurrent requests", func(t *testing.T) {
+		var wg sync.WaitGroup
+		provider.Handle("concurrent", func(c Context) error {
+			wg.Done()
+			return c.OK()
+		})
+
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				_, err := consumer.Send("concurrent", &Message{Data: []byte{}})
+				assert.NoError(t, err)
+			}()
+		}
+
+		wg.Wait()
+	})
+
+	t.Run("Test slow handlers are not blocking", func(t *testing.T) {
+		provider.Handle("slow", func(c Context) error {
+			time.Sleep(time.Hour)
+			return c.OK()
+		})
+
+		provider.Handle("fast", func(c Context) error {
+			return c.OK()
+		})
+
+		slowStarted := make(chan struct{})
+		go func() {
+			slowStarted <- struct{}{}
+			_, err := consumer.Send("slow", &Message{})
+			assert.NoError(t, err)
+		}()
+
+		fastFinished := make(chan struct{})
+		go func() {
+			<-slowStarted
+			_, err := consumer.Send("fast", &Message{})
+			assert.NoError(t, err)
+			fastFinished <- struct{}{}
+		}()
+
+		select {
+		case <-fastFinished:
+		case <-time.After(time.Second):
+			t.Fatal("slow handler blocks concurrent send")
+		}
+	})
+
+	t.Run("Test peer returns public error", func(t *testing.T) {
+		provider.Handle("get-error", func(c Context) error {
+			return c.Error(errors.New("I don't like you"))
+		})
+
+		_, err := consumer.Send("get-error", &Message{Data: []byte("hello")})
+		assert.EqualError(t, err, "public peer error: I don't like you")
+	})
+
+	t.Run("Test peer returns internal error", func(t *testing.T) {
+		provider.Handle("get-error", func(c Context) error {
+			return errors.New("I don't like you")
+		})
+
+		_, err := consumer.Send("get-error", &Message{Data: []byte("hello")})
+		assert.EqualError(t, err, "internal peer error")
+	})
+
+	t.Run("Test peer returns handler not found error", func(t *testing.T) {
+		_, err := consumer.Send("ping", &Message{Data: []byte("hello")})
+		assert.EqualError(t, err, "public peer error: handler \"ping\" is not registered")
+	})
 }
 
-func TestChannelSendTimeoutWhenPrivateKeysMismatch(t *testing.T) {
+func createTestChannels(t *testing.T) (*Channel, *Channel) {
 	ports := acquirePorts(t, 2)
+	providerPort := ports[0]
+	consumerPort := ports[1]
 
-	// Create provider consumer keys.
-	_, providerPrivateKey, err := GenerateKey()
+	providerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: providerPort}, &net.UDPAddr{Port: consumerPort})
 	assert.NoError(t, err)
-	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
+
+	consumerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: consumerPort}, &net.UDPAddr{Port: providerPort})
 	assert.NoError(t, err)
 
-	// Create provider.
-	provider, err := NewChannel(ports[0], providerPrivateKey, &Peer{
-		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[1]},
-		PublicKey: consumerPublicKey,
-	})
-	assert.NoError(t, err)
-	provider.Handle("test", func(c Context) error {
-		return c.OkWithReply(&Message{Data: []byte("hello")})
-	})
-
-	// Create consumer with incorrect providers public key. Send should timeout.
-	consumer, err := NewChannel(ports[1], consumerPrivateKey, &Peer{
-		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[0]},
-		PublicKey: consumerPublicKey, // For correct setup here should be provider key.
-	})
-	assert.NoError(t, err)
-	consumer.SetSendTimeout(300 * time.Millisecond)
-	_, err = consumer.Send("test", &Message{Data: []byte("hello")})
-	assert.EqualError(t, err, fmt.Sprintf("could not send message: Post http://127.0.0.1:%d/test: context deadline exceeded", ports[0]))
-}
-
-func TestChannelSendReturnErrorWhenPeerCannotHandleIt(t *testing.T) {
-	ports := acquirePorts(t, 2)
-
-	// Create provider consumer keys.
 	providerPublicKey, providerPrivateKey, err := GenerateKey()
 	assert.NoError(t, err)
 	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
 	assert.NoError(t, err)
 
-	// Create provider.
-	provider, err := NewChannel(ports[0], providerPrivateKey, &Peer{
-		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[1]},
-		PublicKey: consumerPublicKey,
-	})
+	provider, err := NewChannel(providerConn, providerPrivateKey, consumerPublicKey)
 	assert.NoError(t, err)
-	provider.Handle("test", func(c Context) error {
-		return c.Error(errors.New("I don't like you"))
-	})
 
-	// Create consumer with incorrect providers public key. Send should timeout.
-	consumer, err := NewChannel(ports[1], consumerPrivateKey, &Peer{
-		Addr:      &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: ports[0]},
-		PublicKey: providerPublicKey,
-	})
+	consumer, err := NewChannel(consumerConn, consumerPrivateKey, providerPublicKey)
 	assert.NoError(t, err)
-	consumer.SetSendTimeout(300 * time.Millisecond)
-	_, err = consumer.Send("test", &Message{Data: []byte("hello")})
-	assert.EqualError(t, err, "could not send message: peer error response: I don't like you")
+
+	return provider, consumer
 }
 
 func acquirePorts(t *testing.T, n int) []int {

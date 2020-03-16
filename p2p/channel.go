@@ -18,112 +18,171 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
-	"net/http"
-	"strings"
+	"net/textproto"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
-const (
-	maxRequestBodySize = 1 << 20 // 1MB.
-)
-
-// Channel represents p2p communication channel which can send and received data over encrypted and reliable UDP transport.
+// Channel represents p2p communication channel which can send and received
+// data over encrypted and reliable UDP transport.
 type Channel struct {
 	mu sync.RWMutex
 
-	srv                   *http.Server
-	listenPort            int
+	conn                  *textproto.Conn
 	handlers              map[string]HandlerFunc
+	streams               map[uint]*stream
 	privateKey            PrivateKey
 	blockCrypt            kcp.BlockCrypt
 	sendTimeout           time.Duration
 	serviceConn           *net.UDPConn
 	keepAlivePingInterval time.Duration
 	stopKeepAlivePing     chan struct{}
-	peer                  *Peer
-}
-
-// Peer represents p2p peer to which channel can send data.
-type Peer struct {
-	client *http.Client
-
-	// Addr is public peer's endpoint address.
-	Addr *net.UDPAddr
-	// PublicKey is peer's public key.
-	PublicKey PublicKey
+	stopSendLoop          chan struct{}
+	stopReadLoop          chan struct{}
+	sendQueue             chan *transportMsg
 }
 
 // HandlerFunc is channel request handler func signature.
 type HandlerFunc func(c Context) error
 
+// stream is used to associate request and reply messages.
+type stream struct {
+	id    uint
+	resCh chan *transportMsg
+}
+
 // NewChannel creates new p2p channel with initialized crypto primitives for data encryption
 // and starts listening for connections.
-func NewChannel(listenPort int, privateKey PrivateKey, peer *Peer) (*Channel, error) {
-	blockCrypt, err := newBlockCrypt(privateKey, peer.PublicKey)
+func NewChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey) (*Channel, error) {
+	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create block crypt: %w", err)
 	}
 
+	udpSession, err := dialUDPSession(rawConn, blockCrypt)
+	if err != nil {
+		return nil, fmt.Errorf("could not create UDP session: %w", err)
+	}
+
 	c := &Channel{
-		listenPort:            listenPort,
-		privateKey:            privateKey,
+		conn:                  textproto.NewConn(udpSession),
 		handlers:              make(map[string]HandlerFunc),
+		streams:               make(map[uint]*stream),
+		privateKey:            privateKey,
 		blockCrypt:            blockCrypt,
 		sendTimeout:           30 * time.Second,
-		keepAlivePingInterval: 20 * time.Second,
+		keepAlivePingInterval: 2 * time.Second,
+		serviceConn:           nil,
 		stopKeepAlivePing:     make(chan struct{}, 1),
-		peer:                  peer,
+		stopSendLoop:          make(chan struct{}, 1),
+		stopReadLoop:          make(chan struct{}, 1),
+		sendQueue:             make(chan *transportMsg, 100),
 	}
-	c.initPeer()
 
-	ln, err := c.listen()
-	if err != nil {
-		return nil, err
-	}
-	go c.serve(ln)
-	c.handleKeepAlive()
-	return c, nil
-}
-
-func (c *Channel) listen() (*kcp.Listener, error) {
-	addr := fmt.Sprintf(":%d", c.listenPort)
-	ln, err := kcp.ListenWithOptions(addr, c.blockCrypt, 10, 3)
-	if err != nil {
-		return nil, fmt.Errorf("could not create p2p listener: %w", err)
-	}
-	return ln, nil
-}
-
-func (c *Channel) serve(ln *kcp.Listener) error {
-	// Configure server to use h2c.
-	h2s := &http2.Server{}
-	server := &http.Server{
-		Handler:      h2c.NewHandler(&requestsHandler{ch: c}, h2s),
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
-	return server.Serve(ln)
-}
-
-func (c *Channel) handleKeepAlive() {
+	go c.readLoop()
+	go c.sendLoop()
+	go c.sendKeepaliveLoop()
 	c.Handle(topicKeepAlive, func(c Context) error {
 		log.Debug().Msg("Received P2P keep alive ping")
 		return c.OK()
 	})
+
+	return c, nil
+}
+
+// readLoop reads incoming requests or replies to initiated requests.
+func (c *Channel) readLoop() {
+	for {
+		select {
+		case <-c.stopReadLoop:
+			return
+		default:
+			var msg transportMsg
+			if err := msg.readFrom(c.conn); err != nil {
+				continue
+			}
+
+			// If message contains topic it means that peer is making a request
+			// and waits for response.
+			if msg.topic != "" {
+				go c.handleRequest(&msg)
+			} else {
+				// In other case we treat it as a reply for peer to our request.
+				go c.handleReply(&msg)
+			}
+		}
+	}
+}
+
+// sendLoop sends data to underlying network.
+func (c *Channel) sendLoop() {
+	for {
+		select {
+		case <-c.stopSendLoop:
+			return
+		case msg, more := <-c.sendQueue:
+			if !more {
+				return
+			}
+
+			if err := msg.writeTo(c.conn); err != nil {
+				log.Err(err).Msg("Write failed")
+			}
+		}
+	}
+}
+
+// handleReply forwards reply message to associated stream result channel.
+func (c *Channel) handleReply(msg *transportMsg) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if s, ok := c.streams[msg.id]; ok {
+		s.resCh <- msg
+	} else {
+		log.Warn().Msgf("Stream %d not found", msg.id)
+	}
+}
+
+// handleRequest handles incoming request and schedules reply to send queue.
+func (c *Channel) handleRequest(msg *transportMsg) {
+	c.mu.RLock()
+	handler, ok := c.handlers[msg.topic]
+	c.mu.RUnlock()
+
+	var resMsg transportMsg
+	resMsg.id = msg.id
+
+	if !ok {
+		resMsg.statusCode = statusCodePublicErr
+		errMsg := fmt.Sprintf("handler %q is not registered", msg.topic)
+		log.Err(errors.New(errMsg))
+		resMsg.data = []byte(errMsg)
+		c.sendQueue <- &resMsg
+		return
+	}
+
+	ctx := defaultContext{req: &Message{Data: msg.data}}
+	err := handler(&ctx)
+	if err != nil {
+		resMsg.statusCode = statusCodeInternalErr
+	} else if ctx.publicError != nil {
+		resMsg.statusCode = statusCodePublicErr
+		resMsg.data = []byte(ctx.publicError.Error())
+	} else {
+		resMsg.statusCode = statusCodeOK
+		if ctx.res != nil {
+			resMsg.data = ctx.res.Data
+		}
+	}
+	c.sendQueue <- &resMsg
 }
 
 // ServiceConn returns UDP connection which can be used for services.
@@ -134,7 +193,9 @@ func (c *Channel) ServiceConn() *net.UDPConn {
 // Close closes channel.
 func (c *Channel) Close() error {
 	c.stopKeepAlivePing <- struct{}{}
-	return c.srv.Close()
+	c.stopReadLoop <- struct{}{}
+	c.stopSendLoop <- struct{}{}
+	return c.conn.Close()
 }
 
 // SetSendTimeout overrides default send timeout.
@@ -144,20 +205,12 @@ func (c *Channel) SetSendTimeout(t time.Duration) {
 
 // Send sends data to given topic. Peer listening to topic will receive message.
 func (c *Channel) Send(topic string, msg *Message) (*Message, error) {
-	// Lock just to check if peer is added.
-	c.mu.Lock()
-	if c.peer == nil {
-		c.mu.Unlock()
-		return nil, errors.New("peer must be joined before send")
-	}
-	c.mu.Unlock()
-
 	ctx, cancel := context.WithTimeout(context.Background(), c.sendTimeout)
 	defer cancel()
 
-	reply, err := c.sendMsg(ctx, topic, msg)
+	reply, err := c.sendRequest(ctx, topic, msg)
 	if err != nil {
-		return nil, fmt.Errorf("could not send message: %w", err)
+		return nil, err
 	}
 	return reply, nil
 }
@@ -170,21 +223,8 @@ func (c *Channel) Handle(topic string, handler HandlerFunc) {
 	c.handlers[topic] = handler
 }
 
-func (c *Channel) initPeer() {
-	// TODO: Peer source port could change. We need to detect such possible change and update peer port automatically.
-	transport := http2.Transport{
-		DialTLS: func(network, addr string, cfg *tls.Config) (conn net.Conn, err error) {
-			return kcp.DialWithOptions(addr, c.blockCrypt, 10, 3)
-		},
-		// Allow to use h2c.
-		AllowHTTP: true,
-	}
-	c.peer.client = &http.Client{
-		Transport: &transport,
-		Timeout:   60 * time.Second,
-	}
-
-	// Start keepalive ping loop.
+// Start keepalive ping send loop.
+func (c *Channel) sendKeepaliveLoop() {
 	go func() {
 		for {
 			select {
@@ -199,91 +239,34 @@ func (c *Channel) initPeer() {
 	}()
 }
 
-// sendMsg sends data bytes via HTTP POST request and optionally reads response body.
-func (c *Channel) sendMsg(ctx context.Context, topic string, msg *Message) (*Message, error) {
-	// Prepare new HTTP POST request with body payload.
-	url := fmt.Sprintf("http://%s:%d/%s", c.peer.Addr.IP, c.peer.Addr.Port, topic)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(msg.Data))
-	if err != nil {
-		return nil, err
-	}
+// sendRequest sends data bytes via HTTP POST request and optionally reads response body.
+func (c *Channel) sendRequest(ctx context.Context, topic string, m *Message) (*Message, error) {
+	s := &stream{id: c.conn.Next(), resCh: make(chan *transportMsg, 1)}
+	c.mu.Lock()
+	c.streams[s.id] = s
+	c.mu.Unlock()
+
+	defer func() {
+		c.mu.Lock()
+		delete(c.streams, s.id)
+		c.mu.Unlock()
+	}()
 
 	// Send request.
-	res, err := c.peer.client.Do(req.WithContext(ctx))
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
+	c.sendQueue <- &transportMsg{id: s.id, topic: topic, data: m.Data}
 
-	// Check response status and parse possible peer response error.
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusBadRequest {
-			resErr, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				return nil, err
+	// Wait for response.
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("send timeout")
+	case res := <-s.resCh:
+		if res.statusCode != statusCodeOK {
+			if res.statusCode == statusCodePublicErr {
+				return nil, fmt.Errorf("public peer error: %s", string(res.data))
 			}
-			return nil, fmt.Errorf("peer error response: %s", string(resErr))
+			return nil, errors.New("internal peer error")
 		}
-		return nil, fmt.Errorf("send failed: expected status %d, got %d", http.StatusOK, res.StatusCode)
-	}
-
-	// Return reply with data bytes.
-	resData, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	return &Message{Data: resData}, nil
-}
-
-type requestsHandler struct {
-	ch *Channel
-}
-
-// ServeHTTP implements http.Handler interface.
-func (h *requestsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	topic := strings.TrimPrefix(r.URL.Path, "/")
-	h.ch.mu.RLock()
-	handler, found := h.ch.handlers[topic]
-	h.ch.mu.RUnlock()
-	if found {
-		h.handle(w, r, handler)
-	} else {
-		log.Warn().Msgf("Handler for topic %q not found", topic)
-		w.WriteHeader(http.StatusNotFound)
-	}
-}
-
-func (h *requestsHandler) handle(w http.ResponseWriter, r *http.Request, handler HandlerFunc) {
-	// Limit body size to prevent possible malicious clients sending big payloads.
-	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
-	var reqData []byte
-	reqData, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Err(err).Msg("Failed to read request body")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer r.Body.Close()
-
-	ctx := defaultContext{req: &Message{Data: reqData}}
-	err = handler(&ctx)
-
-	if err != nil {
-		log.Err(err).Msg("Internal handler error")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if ctx.publicError != nil {
-		log.Err(ctx.publicError).Msg("Handled error")
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(ctx.publicError.Error()))
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if ctx.res != nil {
-		_, _ = w.Write(ctx.res.Data)
+		return &Message{Data: res.data}, nil
 	}
 }
 
@@ -296,4 +279,19 @@ func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCry
 		return nil, fmt.Errorf("could not create Sasla20 block crypt: %w", err)
 	}
 	return blockCrypt, nil
+}
+
+func dialUDPSession(rawConn *net.UDPConn, block kcp.BlockCrypt) (*kcp.UDPSession, error) {
+	rawConn.Close()
+
+	raddr := rawConn.RemoteAddr().(*net.UDPAddr)
+	network := "udp4"
+	if raddr.IP.To4() == nil {
+		network = "udp"
+	}
+	conn, err := net.ListenUDP(network, rawConn.LocalAddr().(*net.UDPAddr))
+	if err != nil {
+		return nil, err
+	}
+	return kcp.NewConn3(1, raddr, block, 10, 3, conn)
 }
