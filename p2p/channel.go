@@ -45,14 +45,16 @@ const (
 type Channel struct {
 	mu sync.RWMutex
 
-	srv         *http.Server
-	listenPort  int
-	handlers    map[string]HandlerFunc
-	privateKey  PrivateKey
-	blockCrypt  kcp.BlockCrypt
-	sendTimeout time.Duration
-
-	peer *Peer
+	srv                   *http.Server
+	listenPort            int
+	handlers              map[string]HandlerFunc
+	privateKey            PrivateKey
+	blockCrypt            kcp.BlockCrypt
+	sendTimeout           time.Duration
+	serviceConn           *net.UDPConn
+	keepAlivePingInterval time.Duration
+	stopKeepAlivePing     chan struct{}
+	peer                  *Peer
 }
 
 // Peer represents p2p peer to which channel can send data.
@@ -77,12 +79,14 @@ func NewChannel(listenPort int, privateKey PrivateKey, peer *Peer) (*Channel, er
 	}
 
 	c := &Channel{
-		listenPort:  listenPort,
-		privateKey:  privateKey,
-		handlers:    make(map[string]HandlerFunc),
-		blockCrypt:  blockCrypt,
-		sendTimeout: 30 * time.Second,
-		peer:        peer,
+		listenPort:            listenPort,
+		privateKey:            privateKey,
+		handlers:              make(map[string]HandlerFunc),
+		blockCrypt:            blockCrypt,
+		sendTimeout:           30 * time.Second,
+		keepAlivePingInterval: 20 * time.Second,
+		stopKeepAlivePing:     make(chan struct{}, 1),
+		peer:                  peer,
 	}
 	c.initPeer()
 
@@ -91,7 +95,7 @@ func NewChannel(listenPort int, privateKey PrivateKey, peer *Peer) (*Channel, er
 		return nil, err
 	}
 	go c.serve(ln)
-
+	c.handleKeepAlive()
 	return c, nil
 }
 
@@ -115,8 +119,21 @@ func (c *Channel) serve(ln *kcp.Listener) error {
 	return server.Serve(ln)
 }
 
+func (c *Channel) handleKeepAlive() {
+	c.Handle(topicKeepAlive, func(c Context) error {
+		log.Debug().Msg("Received P2P keep alive ping")
+		return c.OK()
+	})
+}
+
+// ServiceConn returns UDP connection which can be used for services.
+func (c *Channel) ServiceConn() *net.UDPConn {
+	return c.serviceConn
+}
+
 // Close closes channel.
 func (c *Channel) Close() error {
+	c.stopKeepAlivePing <- struct{}{}
 	return c.srv.Close()
 }
 
@@ -166,7 +183,20 @@ func (c *Channel) initPeer() {
 		Transport: &transport,
 		Timeout:   60 * time.Second,
 	}
-	// TODO: Start keep alive pings.
+
+	// Start keepalive ping loop.
+	go func() {
+		for {
+			select {
+			case <-time.After(c.keepAlivePingInterval):
+				if _, err := c.Send(topicKeepAlive, &Message{Data: []byte("PING")}); err != nil {
+					log.Err(err).Msg("Failed to send P2P keepalive message")
+				}
+			case <-c.stopKeepAlivePing:
+				return
+			}
+		}
+	}()
 }
 
 // sendMsg sends data bytes via HTTP POST request and optionally reads response body.

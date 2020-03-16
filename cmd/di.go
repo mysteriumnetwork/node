@@ -65,6 +65,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/upnp"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -141,6 +142,8 @@ type Dependencies struct {
 
 	StateKeeper *state.Keeper
 
+	P2PManager *p2p.Manager
+
 	Authenticator     *auth.Authenticator
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
@@ -211,11 +214,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.bootstrapNATComponents(nodeOptions)
+
+	di.P2PManager = p2p.NewManager(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, di.IPResolver, di.NATPinger)
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
 		return err
 	}
-
-	di.bootstrapNATComponents(nodeOptions)
 
 	if err := di.bootstrapQualityComponents(nodeOptions.BindAddress, nodeOptions.Quality); err != nil {
 		return err
@@ -496,6 +500,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		connection.DefaultIPCheckParams(),
 		connection.DefaultStatsReportInterval,
 		di.ConsumerBalanceTracker.GetBalance,
+		di.P2PManager,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -569,7 +574,7 @@ func newSessionManagerFactory(
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
-			dialog, pingpong.InvoiceSendPeriod,
+			dialog, nil, pingpong.InvoiceSendPeriod,
 			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
 			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
