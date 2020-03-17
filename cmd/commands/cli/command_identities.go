@@ -103,9 +103,10 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 		warn(err)
 		return
 	}
-	info("Registered:", identityStatus.IsRegistered)
-	info("Balance:", identityStatus.Balance)
+	info("Registered:", identityStatus.Registered)
 	info("Channel address:", identityStatus.ChannelAddress)
+	info("Balance:", identityStatus.Balance)
+	info("Balance estimate:", identityStatus.BalanceEstimate)
 }
 
 const usageNewIdentity = "new [passphrase]"
@@ -136,20 +137,20 @@ func (c *cliApp) unlockIdentity(actionArgs []string) {
 		return
 	}
 
-	identity := actionArgs[0]
+	address := actionArgs[0]
 	var passphrase string
 	if len(actionArgs) >= 2 {
 		passphrase = actionArgs[1]
 	}
 
-	info("Unlocking", identity)
-	err := c.tequilapi.Unlock(identity, passphrase)
+	info("Unlocking", address)
+	err := c.tequilapi.Unlock(address, passphrase)
 	if err != nil {
 		warn(err)
 		return
 	}
 
-	success(fmt.Sprintf("Identity %s unlocked.", identity))
+	success(fmt.Sprintf("Identity %s unlocked.", address))
 }
 
 const usageRegisterIdentity = "register <identity> [stake] [beneficiary]"
@@ -197,7 +198,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		case <-timer:
 			timeout = true
 		default:
-			if status.IsRegistered {
+			if status.Registered {
 				registered = true
 				fmt.Println()
 			} else {
