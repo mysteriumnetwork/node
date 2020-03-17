@@ -33,6 +33,7 @@ func (c *cliApp) identities(argsString string) {
 		"Usage: identities <action> [args]",
 		"Available actions:",
 		"  " + usageListIdentities,
+		"  " + usageGetIdentity,
 		"  " + usageNewIdentity,
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
@@ -52,6 +53,8 @@ func (c *cliApp) identities(argsString string) {
 	switch action {
 	case "list":
 		c.listIdentities(actionArgs)
+	case "get":
+		c.getIdentity(actionArgs)
 	case "new":
 		c.newIdentity(actionArgs)
 	case "unlock":
@@ -84,6 +87,25 @@ func (c *cliApp) listIdentities(args []string) {
 	for _, id := range ids {
 		status("+", id.Address)
 	}
+}
+
+const usageGetIdentity = "get <identity>"
+
+func (c *cliApp) getIdentity(actionArgs []string) {
+	if len(actionArgs) != 1 {
+		info("Usage: " + usageGetIdentity)
+		return
+	}
+
+	address := actionArgs[0]
+	identityStatus, err := c.tequilapi.GetIdentityStatus(address)
+	if err != nil {
+		warn(err)
+		return
+	}
+	info("Registered:", identityStatus.IsRegistered)
+	info("Balance:", identityStatus.Balance)
+	info("Channel address:", identityStatus.ChannelAddress)
 }
 
 const usageNewIdentity = "new [passphrase]"
