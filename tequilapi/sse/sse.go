@@ -26,6 +26,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -73,6 +74,16 @@ func NewHandler(stateProvider stateProvider) *Handler {
 		stopChan:      make(chan struct{}),
 		stateProvider: stateProvider,
 	}
+}
+
+// Subscribe subscribes to the event bus.
+func (h *Handler) Subscribe(bus eventbus.Subscriber) error {
+	err := bus.Subscribe(nodeEvent.AppTopicNode, h.ConsumeNodeEvent)
+	if err != nil {
+		return err
+	}
+	err = bus.Subscribe(stateEvent.AppTopicState, h.ConsumeStateEvent)
+	return err
 }
 
 // Sub subscribes a user to sse
