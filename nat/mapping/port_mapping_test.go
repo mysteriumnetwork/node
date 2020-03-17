@@ -88,6 +88,43 @@ func TestMap_uPnP_Disabled(t *testing.T) {
 	assert.Equal(t, mapping{}, router.addedMapping())
 }
 
+func TestMap_uPnP_routerIPPublic(t *testing.T) {
+	tests := []struct {
+		ip             string
+		mappingEnabled bool
+	}{
+		{ip: "1.2.3.4", mappingEnabled: true},
+		{ip: "8.8.8.8", mappingEnabled: true},
+		{ip: "10.2.3.4", mappingEnabled: false},
+		{ip: "192.168.3.4", mappingEnabled: false},
+		{ip: "172.16.3.4", mappingEnabled: false},
+	}
+	for _, tt := range tests {
+		t.Run("Test mapping with router IP detection", func(t *testing.T) {
+			router := &mockRouter{uPnPEnabled: true, routerIP: net.ParseIP(tt.ip)}
+			config := &Config{MapInterface: router}
+			portMapper := NewPortMapper(config, mocks.NewEventBus())
+
+			release, ok := portMapper.Map("UDP", 51334, "Test port mapping")
+			if tt.mappingEnabled {
+				assert.True(t, ok)
+				assert.NotNil(t, release)
+				assert.Equal(t, mapping{
+					protocol: "UDP",
+					extport:  51334,
+					intport:  51334,
+					name:     "Test port mapping",
+					lifetime: config.MapLifetime,
+				}, router.addedMapping())
+			} else {
+				assert.False(t, ok)
+				assert.Nil(t, release)
+				assert.Equal(t, mapping{}, router.addedMapping())
+			}
+		})
+	}
+}
+
 type mapping struct {
 	protocol         string
 	extport, intport int
@@ -99,6 +136,7 @@ type mockRouter struct {
 	sync.Mutex
 	uPnPEnabled    bool
 	permanentLease bool
+	routerIP       net.IP
 
 	mapping mapping
 }
@@ -135,7 +173,7 @@ func (m *mockRouter) DeleteMapping(protocol string, extport, intport int) error 
 }
 
 func (m *mockRouter) ExternalIP() (net.IP, error) {
-	return nil, nil
+	return m.routerIP, nil
 }
 
 func (m *mockRouter) String() string {
