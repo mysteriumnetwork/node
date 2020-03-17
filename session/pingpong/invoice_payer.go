@@ -26,14 +26,15 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -45,9 +46,7 @@ var ErrWrongProvider = errors.New("wrong provider supplied")
 // ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
 
-const consumerFirstInvoiceTolerance = 1.35
-const consumerInvoiceTolerance = 1.05
-const dataLeeway = datasize.MiB * 20
+const consumerInvoiceBasicTolerance = 1.05
 
 // PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
@@ -80,7 +79,6 @@ type InvoicePayer struct {
 	stop           chan struct{}
 	once           sync.Once
 	channelAddress identity.Identity
-	receivedFirst  bool
 
 	lastInvoice crypto.Invoice
 	deps        InvoicePayerDeps
@@ -221,25 +219,49 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	transfered := ip.getDataTransferred()
-	transfered.up += ip.deps.DataLeeway.Bytes()
+	transferred := ip.getDataTransferred()
+	transferred.up += ip.deps.DataLeeway.Bytes()
 
-	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transfered, ip.deps.Proposal.PaymentMethod)
+	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
+	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transferred)
 
-	upperBound := uint64(math.Trunc(float64(shouldBe) * consumerInvoiceTolerance))
-	if !ip.receivedFirst {
-		upperBound = uint64(math.Trunc(float64(shouldBe) * consumerFirstInvoiceTolerance))
-	}
+	upperBound := uint64(math.Trunc(float64(shouldBe) * estimatedTolerance))
 
-	log.Debug().Msgf("Upper bound %v", upperBound)
+	log.Debug().Msgf("Estimated tolerance %.4v, upper bound %v", estimatedTolerance, upperBound)
 
 	if invoice.AgreementTotal > upperBound {
 		log.Warn().Msg("Provider trying to overcharge")
 		return ErrProviderOvercharge
 	}
 
-	ip.receivedFirst = true
 	return nil
+}
+
+func estimateInvoiceTolerance(elapsed time.Duration, transferred dataTransferred) float64 {
+	if elapsed.Seconds() < 1 {
+		return 3
+	}
+
+	totalMiBytesTransferred := float64(transferred.sum()) / (1024 * 1024)
+	avgSpeedInMiBits := totalMiBytesTransferred / elapsed.Seconds() * 8
+
+	// correction calculation based on total session duration.
+	durInMinutes := elapsed.Minutes()
+
+	if elapsed.Minutes() < 1 {
+		durInMinutes = 1
+	}
+
+	durationComponent := 1 - durInMinutes/(1+durInMinutes)
+
+	// correction calculation based on average session speed.
+	if avgSpeedInMiBits == 0 {
+		avgSpeedInMiBits = 1
+	}
+
+	avgSpeedComponent := 1 - 1/(1+avgSpeedInMiBits/1024)
+
+	return durationComponent + avgSpeedComponent + consumerInvoiceBasicTolerance
 }
 
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
