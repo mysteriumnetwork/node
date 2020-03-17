@@ -10,6 +10,7 @@ require (
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm v2.1.2+incompatible
+	github.com/awnumar/memguard v0.21.0
 	github.com/aws/aws-sdk-go-v2 v0.15.0
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/cheggaaa/pb/v3 v3.0.1
@@ -41,7 +42,7 @@ require (
 	github.com/mysteriumnetwork/go-openvpn v0.0.22
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
-	github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db
+	github.com/mysteriumnetwork/payments v0.0.11-0.20200317124036-b5e4fd6b3b14
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/nats-server v1.4.1
@@ -74,7 +75,6 @@ require (
 	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/protobuf v1.20.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
-	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 

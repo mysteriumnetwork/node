@@ -33,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -93,7 +92,7 @@ type InvoicePayerDeps struct {
 	PeerExchangeMessageSender PeerExchangeMessageSender
 	ConsumerTotalsStorage     consumerTotalsStorage
 	TimeTracker               timeTracker
-	Ks                        *keystore.KeyStore
+	Ks                        *identity.Keystore
 	Identity, Peer            identity.Identity
 	Proposal                  market.ServiceProposal
 	SessionID                 string

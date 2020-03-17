@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/communication"
@@ -104,7 +103,7 @@ type Dependencies struct {
 
 	NATService       nat.NATService
 	Storage          *boltdb.Bolt
-	Keystore         *keystore.KeyStore
+	Keystore         *identity.Keystore
 	IdentityManager  identity.Manager
 	SignerFactory    identity.SignerFactory
 	IdentityRegistry identity_registry.IdentityRegistry

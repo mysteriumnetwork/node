@@ -52,6 +52,10 @@ github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a h1:idn718Q4
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/asdine/storm v2.1.2+incompatible h1:dczuIkyqwY2LrtXPz8ixMrU/OFgZp71kbKTHGrXYt/Q=
 github.com/asdine/storm v2.1.2+incompatible/go.mod h1:RarYDc9hq1UPLImuiXK3BIWPJLdIygvV3PsInK0FbVQ=
+github.com/awnumar/memcall v0.0.0-20191004114545-73db50fd9f80 h1:8kObYoBO4LNmQ+fLiScBfxEdxF1w2MHlvH/lr9MLaTg=
+github.com/awnumar/memcall v0.0.0-20191004114545-73db50fd9f80/go.mod h1:S911igBPR9CThzd/hYQQmTc9SWNu3ZHIlCGaWsWsoJo=
+github.com/awnumar/memguard v0.21.0 h1:BZvZ69RXlIQPChLJnpJ0u5cIJQmsWLGfNa6XX5/UZGU=
+github.com/awnumar/memguard v0.21.0/go.mod h1:+ejY3DekvjnDWBXHwL5xB5p4Il77kDsrIz+UOUNrm2Q=
 github.com/aws/aws-sdk-go-v2 v0.11.0 h1:TMUl791B9lF/R8t3msh7id+mHxOXrQY6DAqLNEpre8w=
 github.com/aws/aws-sdk-go-v2 v0.11.0/go.mod h1:cpXCmy3BB+lqwGweJjdawczHW3a+g8QgcFHcoOVoHao=
 github.com/aws/aws-sdk-go-v2 v0.15.0 h1:mQCV2MV4I0L02Nwi1xs0HM7yWbrcWjjUOy1UAv27sw8=
@@ -469,8 +473,8 @@ github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2 h1:+MzoNo
 github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2/go.mod h1:QI+154TA1KKdrSYAWpr50FP6AzHsbT3wJvFD5kSEQVE=
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed h1:x9CzKvMnu+8VH9z8lvB/6ZldbpwlLkFuraU0ycH4j5U=
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed/go.mod h1:Mj4ZoTFxQltcDoC/Mn8EgO7SkK1dUJQixLgX04p0cN0=
-github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db h1:OfCcf9GtFBAhTmet4yTnuF0ktdFBmPMq+kbgSUEEQHo=
-github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db/go.mod h1:khz9e+0ipI8uVAEBhTdSrvo5ByYcdkWtioqkj14Pf7Q=
+github.com/mysteriumnetwork/payments v0.0.11-0.20200317124036-b5e4fd6b3b14 h1:+pfUoPj9CXxHw24VzH36NSn54wK0Q8jEnVW1VQedox0=
+github.com/mysteriumnetwork/payments v0.0.11-0.20200317124036-b5e4fd6b3b14/go.mod h1:8voxT4oTTZaXyg/v+MJ/eT6A1KVkaha461irBEIJ4i0=
 github.com/nats-io/gnatsd v1.4.1 h1:RconcfDeWpKCD6QIIwiVFcvForlXpWeJP7i5/lDLy44=
 github.com/nats-io/gnatsd v1.4.1/go.mod h1:nqco77VO78hLCJpIcVfygDP2rPGfsEHkGTUk94uh5DQ=
 github.com/nats-io/nats-server v1.4.1 h1:Ul1oSOGNV/L8kjr4v6l2f9Yet6WY+LevH1/7cRZ/qyA=
@@ -688,6 +692,7 @@ golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 h1:0hQKqeLdqlt5iIwVOBErRi
 golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392/go.mod h1:/lpIB1dKB+9EgE3H3cr1v9wB50oz8l4C4h62xy7jSTY=
 golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d h1:1ZiEyfaQIg3Qh0EoqpwAakHVhecoE5wlSg5GjnafJGw=
 golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
@@ -784,7 +789,9 @@ golang.org/x/sys v0.0.0-20190913121621-c3b328c6e5a7 h1:wYqz/tQaWUgGKyx+B/rssSE6w
 golang.org/x/sys v0.0.0-20190913121621-c3b328c6e5a7/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190922100055-0a153f010e69/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20191001151750-bb3f8db39f24/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191003212358-c178f38b412c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20191127021746-63cb32ae39b2/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae h1:/WDfKMnPU+m5M4xB+6x4kaepxRw6jWvR5iDRdvjHgy8=
 golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
