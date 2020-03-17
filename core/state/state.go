@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
@@ -62,10 +63,10 @@ type Keeper struct {
 	serviceSessionStorage  serviceSessionStorage
 	sessionConnectionCount map[string]event.ConnectionStatistics
 
-	ConsumeServiceStateEvent     func(e interface{})
-	ConsumeNATEvent              func(e interface{})
-	consumeSessionEventDebounced func(e interface{})
-	announceStateChanges         func(e interface{})
+	consumeServiceStateEvent          func(e interface{})
+	consumeNATEvent                   func(e interface{})
+	consumeSessionStateEventDebounced func(e interface{})
+	announceStateChanges              func(e interface{})
 }
 
 // NewKeeper returns a new instance of the keeper
@@ -83,11 +84,25 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 
 		sessionConnectionCount: make(map[string]event.ConnectionStatistics),
 	}
-	k.ConsumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
-	k.ConsumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
-	k.consumeSessionEventDebounced = debounce(k.updateSessionState, debounceDuration)
+	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
+	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
+	k.consumeSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 	return k
+}
+
+// Subscribe subscribes to the event bus.
+func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.SubscribeAsync(service.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeSessionStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (k *Keeper) announceState(_ interface{}) {
@@ -103,14 +118,14 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-// ConsumeSessionStateEvent consumes the session change events
-func (k *Keeper) ConsumeSessionStateEvent(e sevent.Payload) {
+// consumeSessionStateEvent consumes the session change events
+func (k *Keeper) consumeSessionStateEvent(e sevent.Payload) {
 	if e.Action == sevent.Acknowledged {
 		k.consumeSessionAcknowledgeEvent(e)
 		return
 	}
 
-	k.consumeSessionEventDebounced(e)
+	k.consumeSessionStateEventDebounced(e)
 }
 
 func (k *Keeper) consumeSessionAcknowledgeEvent(e sevent.Payload) {

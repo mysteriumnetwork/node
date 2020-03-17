@@ -71,7 +71,6 @@ import (
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -269,16 +268,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	tracker := nat.NewStatusTracker(lastStageName)
 
 	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
-
-	err := di.EventBus.SubscribeAsync(service.AppTopicServiceStatus, di.StateKeeper.ConsumeServiceStateEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(sessionevent.AppTopicSession, di.StateKeeper.ConsumeSessionStateEvent)
-	if err != nil {
-		return err
-	}
-	return di.EventBus.SubscribeAsync(event.AppTopicTraversal, di.StateKeeper.ConsumeNATEvent)
+	return di.StateKeeper.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {

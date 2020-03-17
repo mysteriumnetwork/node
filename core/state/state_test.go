@@ -153,7 +153,7 @@ func Test_ConsumesNATEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeNATEvent(natEvent.Event{
+		keeper.consumeNATEvent(natEvent.Event{
 			Stage:      "booster separation",
 			Successful: false,
 			Error:      errors.New("explosive bolts failed"),
@@ -185,7 +185,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeSessionStateEvent(sessionEvent.Payload{})
+		keeper.consumeSessionStateEvent(sessionEvent.Payload{})
 	}
 
 	assert.Eventually(t, interacted(sessionStorage, 1), 2*time.Second, 10*time.Millisecond)
@@ -220,7 +220,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 		expected,
 	}
 
-	keeper.ConsumeSessionStateEvent(sessionEvent.Payload{
+	keeper.consumeSessionStateEvent(sessionEvent.Payload{
 		Action: sessionEvent.Acknowledged,
 		ID:     string(expected.ID),
 	})
@@ -249,7 +249,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeServiceStateEvent(service.EventPayload{})
+		keeper.consumeServiceStateEvent(service.EventPayload{})
 	}
 
 	assert.Eventually(t, interacted(sl, 1), 2*time.Second, 10*time.Millisecond)
