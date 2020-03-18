@@ -157,6 +157,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
 
+	manager.publishStateEvent(Connecting)
 	manager.setStatus(statusConnecting())
 	defer func() {
 		if err != nil {
