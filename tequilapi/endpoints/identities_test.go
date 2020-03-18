@@ -84,7 +84,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
@@ -92,7 +92,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 
-	assert.Equal(t, "1234abcd", mockIdm.LastUnlockAddress)
+	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
 }
 
@@ -104,7 +104,7 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{invalid json}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
@@ -118,13 +118,14 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPost,
-		"/identities",
+		identityUrl,
 		bytes.NewBufferString(`{}`),
 	)
+	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.NoError(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
-	endpoint.Unlock(resp, req, nil)
+	endpoint.Unlock(resp, req, params)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -147,7 +148,7 @@ func TestUnlockFailure(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
 
 	mockIdm.MarkUnlockToFail()
@@ -157,7 +158,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 
-	assert.Equal(t, "1234abcd", mockIdm.LastUnlockAddress)
+	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
 }
 

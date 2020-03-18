@@ -22,7 +22,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -139,7 +138,6 @@ func InvoiceFactoryCreator(
 // ExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
 func ExchangeFactoryFunc(
 	keystore *identity.Keystore,
-	options node.Options,
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,

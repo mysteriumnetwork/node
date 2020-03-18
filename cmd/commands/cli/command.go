@@ -645,6 +645,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		readline.PcItem(
 			"identities",
 			readline.PcItem("list"),
+			readline.PcItem("get", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("new"),
 			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
@@ -668,7 +669,6 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItem("warranty"),
 			readline.PcItem("conditions"),
 		),
-		readline.PcItem("registration", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 	)
 }
 

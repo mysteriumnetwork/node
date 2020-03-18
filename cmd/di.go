@@ -160,6 +160,7 @@ type Dependencies struct {
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
 	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
+	AccountantCaller         *pingpong.AccountantCaller
 }
 
 // Bootstrap initiates all container dependencies
@@ -489,7 +490,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	consumerDataGetter := pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData
+	di.AccountantCaller = pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
@@ -499,7 +500,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 		),
-		consumerDataGetter,
+		di.AccountantCaller.GetConsumerData,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -512,13 +513,12 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		dialogFactory,
 		pingpong.ExchangeFactoryFunc(
 			di.Keystore,
-			nodeOptions,
 			di.SignerFactory,
 			di.ConsumerTotalsStorage,
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 			di.EventBus,
-			consumerDataGetter,
+			di.AccountantCaller.GetConsumerData,
 			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
 		),
 		di.ConnectionRegistry.CreateConnection,
@@ -551,7 +551,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance, di.AccountantCaller.GetConsumerData)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -566,7 +566,6 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
-	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
 	if config.GetBool(config.FlagPProfEnable) {
 		tequilapi_endpoints.AddRoutesForPProf(router)

@@ -33,6 +33,7 @@ func (c *cliApp) identities(argsString string) {
 		"Usage: identities <action> [args]",
 		"Available actions:",
 		"  " + usageListIdentities,
+		"  " + usageGetIdentity,
 		"  " + usageNewIdentity,
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
@@ -52,6 +53,8 @@ func (c *cliApp) identities(argsString string) {
 	switch action {
 	case "list":
 		c.listIdentities(actionArgs)
+	case "get":
+		c.getIdentity(actionArgs)
 	case "new":
 		c.newIdentity(actionArgs)
 	case "unlock":
@@ -86,6 +89,26 @@ func (c *cliApp) listIdentities(args []string) {
 	}
 }
 
+const usageGetIdentity = "get <identity>"
+
+func (c *cliApp) getIdentity(actionArgs []string) {
+	if len(actionArgs) != 1 {
+		info("Usage: " + usageGetIdentity)
+		return
+	}
+
+	address := actionArgs[0]
+	identityStatus, err := c.tequilapi.GetIdentityStatus(address)
+	if err != nil {
+		warn(err)
+		return
+	}
+	info("Registration status:", identityStatus.RegistrationStatus)
+	info("Channel address:", identityStatus.ChannelAddress)
+	info("Balance:", identityStatus.Balance)
+	info("Balance estimate:", identityStatus.BalanceEstimate)
+}
+
 const usageNewIdentity = "new [passphrase]"
 
 func (c *cliApp) newIdentity(args []string) {
@@ -114,20 +137,20 @@ func (c *cliApp) unlockIdentity(actionArgs []string) {
 		return
 	}
 
-	identity := actionArgs[0]
+	address := actionArgs[0]
 	var passphrase string
 	if len(actionArgs) >= 2 {
 		passphrase = actionArgs[1]
 	}
 
-	info("Unlocking", identity)
-	err := c.tequilapi.Unlock(identity, passphrase)
+	info("Unlocking", address)
+	err := c.tequilapi.Unlock(address, passphrase)
 	if err != nil {
 		warn(err)
 		return
 	}
 
-	success(fmt.Sprintf("Identity %s unlocked.", identity))
+	success(fmt.Sprintf("Identity %s unlocked.", address))
 }
 
 const usageRegisterIdentity = "register <identity> [stake] [beneficiary]"
@@ -163,33 +186,27 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		warn(errors.Wrap(err, "could not register identity"))
 		return
 	}
+
 	info("Waiting for registration to complete")
-	var registered, timeout bool
-	for timer := time.After(3 * time.Minute); !timeout && !registered; {
-		time.Sleep(2 * time.Second)
-		status, err := c.tequilapi.GetIdentityStatus(address)
-		if err != nil {
-			warn(err)
-		}
+	timeout := time.After(3 * time.Minute)
+	for {
 		select {
-		case <-timer:
-			timeout = true
-		default:
-			if status.IsRegistered {
-				registered = true
+		case <-timeout:
+			warn("Identity registration timed out")
+			return
+		case <-time.After(2 * time.Second):
+			status, err := c.tequilapi.IdentityRegistrationStatus(address)
+			if err != nil {
+				warn(err)
+			}
+			fmt.Print(status.Status, ".. ")
+
+			if status.Registered {
 				fmt.Println()
-			} else {
-				fmt.Print(".")
+				success("Identity registered")
+				return
 			}
 		}
-	}
-
-	if registered {
-		success("Identity registered")
-	} else if timeout {
-		warn("Identity registration timed out")
-	} else {
-		warn("Something went wrong")
 	}
 }
 

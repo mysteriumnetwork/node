@@ -86,9 +86,10 @@ type IdentityDTO struct {
 
 // IdentityStatusDTO holds identity status with balance
 type IdentityStatusDTO struct {
-	ChannelAddress string `json:"channel_address"`
-	IsRegistered   bool   `json:"is_registered"`
-	Balance        uint64 `json:"balance"`
+	RegistrationStatus string `json:"registrationStatus"`
+	ChannelAddress     string `json:"channelAddress"`
+	Balance            uint64 `json:"balance"`
+	BalanceEstimate    uint64 `json:"balanceEstimate"`
 }
 
 // IdentityList holds returned list of identities
@@ -126,22 +127,8 @@ type LocationDTO struct {
 
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationDataDTO struct {
-	Registered bool              `json:"registered"`
-	PublicKey  PublicKeyPartsDTO `json:"publicKey"`
-	Signature  SignatureDTO      `json:"signature"`
-}
-
-// PublicKeyPartsDTO holds public key parts in hex, split into 32 byte blocks
-type PublicKeyPartsDTO struct {
-	Part1 string `json:"part1"`
-	Part2 string `json:"part2"`
-}
-
-// SignatureDTO holds decomposed ECDSA signature values R, S and V
-type SignatureDTO struct {
-	R string `json:"r"`
-	S string `json:"s"`
-	V uint8  `json:"v"`
+	Status     string `json:"status"`
+	Registered bool   `json:"registered"`
 }
 
 // ConnectOptions copied from tequilapi endpoint
