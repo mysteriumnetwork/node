@@ -22,14 +22,13 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/pkg/errors"
 )
 
 // swagger:model IdentityDTO
@@ -66,6 +65,14 @@ type statusDTO struct {
 	ChannelAddress     string `json:"channelAddress"`
 	Balance            uint64 `json:"balance"`
 	BalanceEstimate    uint64 `json:"balanceEstimate"`
+}
+
+// registrationDataDTO represents registration status and needed data for registering of given identity
+// swagger:model RegistrationDataDTO
+type registrationDataDTO struct {
+	Status string `json:"status"`
+	// Returns true if identity is registered in payments smart contract
+	Registered bool `json:"registered"`
 }
 
 type balanceGetter func(id identity.Identity) uint64
@@ -272,7 +279,13 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := params.ByName("id")
+	address := params.ByName("id")
+	id, err := endpoint.idm.GetIdentity(address)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
+	}
+
 	unlockReq, err := toUnlockRequest(request)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -285,7 +298,7 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	err = endpoint.idm.Unlock(id, *unlockReq.Passphrase)
+	err = endpoint.idm.Unlock(id.Address, *unlockReq.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
@@ -293,14 +306,15 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: remove this hack when we replace our router
-	identityAddress := params.ByName("id")
-	if identityAddress == "current" {
-		identityAddress = ""
+func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	id, err := endpoint.idm.GetIdentity(address)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
+	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -308,7 +322,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 
 	var consumer pingpong.ConsumerData
 	if regStatus.Registered() {
-		consumer, err = endpoint.fetchBalance(identityAddress)
+		consumer, err = endpoint.fetchBalance(id.Address)
 		if err != nil {
 			utils.SendError(resp, errors.Wrap(err, "failed to check balance status"), http.StatusInternalServerError)
 			return
@@ -319,9 +333,49 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
-		BalanceEstimate:    endpoint.getBalance(identity.FromAddress(identityAddress)),
+		BalanceEstimate:    endpoint.getBalance(id),
 	}
 	utils.WriteAsJSON(status, resp)
+}
+
+// swagger:operation GET /identities/{id}/registration Identity identityRegistration
+// ---
+// summary: Provide identity registration status
+// description: Provides registration status for given identity, if identity is not registered - provides additional data required for identity registration
+// parameters:
+//   - in: path
+//     name: id
+//     description: hex address of identity
+//     type: string
+//     required: true
+// responses:
+//   200:
+//     description: Registration status and data
+//     schema:
+//       "$ref": "#/definitions/RegistrationDataDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	id, err := endpoint.idm.GetIdentity(address)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
+	}
+
+	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
+		return
+	}
+
+	registrationDataDTO := &registrationDataDTO{
+		Status:     regStatus.String(),
+		Registered: regStatus.Registered(),
+	}
+	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
@@ -388,4 +442,5 @@ func AddRoutesForIdentities(
 	router.PUT("/identities/:id", idmEnd.Current)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 	router.GET("/identities/:id/status", idmEnd.Status)
+	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 }

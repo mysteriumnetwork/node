@@ -566,7 +566,6 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
-	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
 	if config.GetBool(config.FlagPProfEnable) {
 		tequilapi_endpoints.AddRoutesForPProf(router)
