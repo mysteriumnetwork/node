@@ -300,19 +300,22 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		identityAddress = ""
 	}
 
-	consumer, err := endpoint.fetchBalance(identityAddress)
-	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to check balance status"), http.StatusInternalServerError)
-		return
-	}
-
 	regStatus, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
 
-	status := &statusDTO{
+	var consumer pingpong.ConsumerData
+	if regStatus.Registered() {
+		consumer, err = endpoint.fetchBalance(identityAddress)
+		if err != nil {
+			utils.SendError(resp, errors.Wrap(err, "failed to check balance status"), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	status := statusDTO{
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
