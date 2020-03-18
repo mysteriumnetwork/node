@@ -23,8 +23,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
@@ -261,6 +263,25 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.Options(), actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
 	assert.EqualValues(t, expected.Proposal(), actual.Proposal)
+}
+
+func Test_ConsumesConnectionStateEvents(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	keeper := NewKeeper(&natStatusProviderMock{statusToReturn: mockNATStatus}, eventBus, &serviceListerMock{}, &serviceSessionStorageMock{}, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Equal(t, connection.NotConnected, keeper.state.Consumer.Connection.State)
+
+	// when
+	eventBus.Publish(connection.AppTopicConsumerConnectionState, connection.StateEvent{
+		State: connection.Connected,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.state.Consumer.Connection.State == connection.Connected
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func Test_getServiceByID(t *testing.T) {

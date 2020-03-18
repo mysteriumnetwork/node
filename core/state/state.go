@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
@@ -63,10 +64,14 @@ type Keeper struct {
 	serviceSessionStorage  serviceSessionStorage
 	sessionConnectionCount map[string]event.ConnectionStatistics
 
+	// provider
 	consumeServiceStateEvent          func(e interface{})
 	consumeNATEvent                   func(e interface{})
 	consumeSessionStateEventDebounced func(e interface{})
-	announceStateChanges              func(e interface{})
+	// consumer
+	consumeConnectionStateEvent func(interface{})
+
+	announceStateChanges func(e interface{})
 }
 
 // NewKeeper returns a new instance of the keeper
@@ -76,6 +81,11 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 			NATStatus: stateEvent.NATStatus{
 				Status: "not_finished",
 			},
+			Consumer: stateEvent.ConsumerState{
+				Connection: stateEvent.ConsumerConnection{
+					State: connection.NotConnected,
+				},
+			},
 		},
 		natStatusProvider:     natStatusProvider,
 		publisher:             publisher,
@@ -84,10 +94,15 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 
 		sessionConnectionCount: make(map[string]event.ConnectionStatistics),
 	}
+	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
 	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
 	k.consumeSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
+
+	// consumer
+	k.consumeConnectionStateEvent = debounce(k.updateConnectionState, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
+
 	return k
 }
 
@@ -100,6 +115,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumeConnectionStateEvent); err != nil {
 		return err
 	}
 	return nil
@@ -238,6 +256,21 @@ func (k *Keeper) updateSessionState(e interface{}) {
 
 	k.state.Sessions = result
 
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) updateConnectionState(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(connection.StateEvent)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		return
+	}
+	if k.state.Consumer.Connection.State == evt.State {
+		return
+	}
+	k.state.Consumer.Connection.State = evt.State
 	go k.announceStateChanges(nil)
 }
 

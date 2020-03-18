@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/stretchr/testify/assert"
@@ -122,7 +123,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	}()
 
 	initialState := <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null},"type":"state-change"}`, initialState)
+	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null,"consumer":{"connection":{"state":""}}},"type":"state-change"}`, initialState)
 
 	changedState := msp.GetState()
 	changedState.NATStatus = stateEvent.NATStatus{
@@ -132,7 +133,15 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	h.ConsumeStateEvent(changedState)
 
 	newState := <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"mass panic","error":"cookie prices rise drastically"},"serviceInfo":null,"sessions":null},"type":"state-change"}`, newState)
+	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"mass panic","error":"cookie prices rise drastically"},"serviceInfo":null,"sessions":null,"consumer":{"connection":{"state":""}}},"type":"state-change"}`, newState)
+
+	changedState = msp.GetState()
+	changedState.Consumer.Connection.State = connection.Connecting
+	h.ConsumeStateEvent(changedState)
+
+	newState = <-results
+	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null,"consumer":{"connection":{"state":"Connecting"}}},"type":"state-change"}`, newState)
+
 	cancel()
 	listener.Close()
 
