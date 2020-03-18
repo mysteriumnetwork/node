@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -53,7 +52,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -104,7 +103,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -183,7 +182,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -251,7 +250,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -537,7 +536,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -582,7 +581,7 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -593,7 +592,7 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 
 	type fields struct {
 		peerExchangeMessageSender *MockPeerExchangeMessageSender
-		keystore                  *keystore.KeyStore
+		keystore                  *identity.Keystore
 		identity                  identity.Identity
 		peer                      identity.Identity
 		lastInvoice               crypto.Invoice

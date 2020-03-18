@@ -35,14 +35,23 @@ import (
 const AppTopicIdentityUnlock = "identity-unlocked"
 
 type identityManager struct {
-	keystoreManager Keystore
+	keystoreManager keystore
 	unlocked        map[string]bool // Currently unlocked addresses
 	unlockedMu      sync.RWMutex
 	eventBus        eventbus.EventBus
 }
 
+// keystore allows actions with accounts (listing, creating, unlocking, signing)
+type keystore interface {
+	Accounts() []accounts.Account
+	NewAccount(passphrase string) (accounts.Account, error)
+	Find(a accounts.Account) (accounts.Account, error)
+	Unlock(a accounts.Account, passphrase string) error
+	SignHash(a accounts.Account, hash []byte) ([]byte, error)
+}
+
 // NewIdentityManager creates and returns new identityManager
-func NewIdentityManager(keystore Keystore, eventBus eventbus.EventBus) *identityManager {
+func NewIdentityManager(keystore keystore, eventBus eventbus.EventBus) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
 		unlocked:        map[string]bool{},

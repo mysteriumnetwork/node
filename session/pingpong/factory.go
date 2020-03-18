@@ -20,7 +20,6 @@ package pingpong
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -139,7 +138,7 @@ func InvoiceFactoryCreator(
 
 // ExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
 func ExchangeFactoryFunc(
-	keystore *keystore.KeyStore,
+	keystore *identity.Keystore,
 	options node.Options,
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
