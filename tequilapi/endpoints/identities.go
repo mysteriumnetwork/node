@@ -62,10 +62,10 @@ type identityUnlockingDto struct {
 
 // swagger:model StatusDTO
 type statusDTO struct {
-	Registered      bool   `json:"registered"`
-	ChannelAddress  string `json:"channelAddress"`
-	Balance         uint64 `json:"balance"`
-	BalanceEstimate uint64 `json:"balanceEstimate"`
+	RegistrationStatus string `json:"registrationStatus"`
+	ChannelAddress     string `json:"channelAddress"`
+	Balance            uint64 `json:"balance"`
+	BalanceEstimate    uint64 `json:"balanceEstimate"`
 }
 
 type balanceGetter func(id identity.Identity) uint64
@@ -306,22 +306,17 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	s, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
+	regStatus, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
-	isRegistered := false
-	switch s {
-	case registry.RegisteredConsumer, registry.Promoting, registry.RegisteredProvider:
-		isRegistered = true
-	}
 
 	status := &statusDTO{
-		Registered:      isRegistered,
-		ChannelAddress:  consumer.ChannelID,
-		Balance:         consumer.Balance,
-		BalanceEstimate: endpoint.getBalance(identity.FromAddress(identityAddress)),
+		RegistrationStatus: regStatus.String(),
+		ChannelAddress:     consumer.ChannelID,
+		Balance:            consumer.Balance,
+		BalanceEstimate:    endpoint.getBalance(identity.FromAddress(identityAddress)),
 	}
 	utils.WriteAsJSON(status, resp)
 }

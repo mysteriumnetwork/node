@@ -29,6 +29,7 @@ import (
 //
 // swagger:model RegistrationDataDTO
 type RegistrationDataDTO struct {
+	Status string `json:"status"`
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
 }
@@ -71,14 +72,9 @@ func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.Respons
 		return
 	}
 
-	isRegistered := false
-	switch status {
-	case RegisteredConsumer, Promoting, RegisteredProvider:
-		isRegistered = true
-	}
-
 	registrationDataDTO := &RegistrationDataDTO{
-		Registered: isRegistered,
+		Status:     status.String(),
+		Registered: status.Registered(),
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }

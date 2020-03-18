@@ -669,7 +669,6 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItem("warranty"),
 			readline.PcItem("conditions"),
 		),
-		readline.PcItem("registration", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 	)
 }
 
