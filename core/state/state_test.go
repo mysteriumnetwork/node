@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
@@ -271,7 +272,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	keeper := NewKeeper(&natStatusProviderMock{statusToReturn: mockNATStatus}, eventBus, &serviceListerMock{}, &serviceSessionStorageMock{}, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connection.NotConnected, keeper.state.Consumer.Connection.State)
+	assert.Equal(t, connection.NotConnected, keeper.GetState().Consumer.Connection.State)
 
 	// when
 	eventBus.Publish(connection.AppTopicConsumerConnectionState, connection.StateEvent{
@@ -280,7 +281,35 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.state.Consumer.Connection.State == connection.Connected
+		return keeper.GetState().Consumer.Connection.State == connection.Connected
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	keeper := NewKeeper(&natStatusProviderMock{statusToReturn: mockNATStatus}, eventBus, &serviceListerMock{}, &serviceSessionStorageMock{}, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Nil(t, keeper.GetState().Consumer.Connection.Statistics)
+
+	// when
+	eventBus.Publish(connection.AppTopicConsumerStatistics, connection.SessionStatsEvent{
+		Stats: connection.Statistics{
+			At:            time.Now(),
+			BytesReceived: 10 * datasize.MiB.Bytes(),
+			BytesSent:     500 * datasize.KiB.Bytes(),
+		},
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		stats := keeper.GetState().Consumer.Connection.Statistics
+		if stats == nil {
+			return false
+		}
+		return stats.BytesReceived == 10*datasize.MiB.Bytes() &&
+			stats.BytesSent == 500*datasize.KiB.Bytes()
 	}, 2*time.Second, 10*time.Millisecond)
 }
 

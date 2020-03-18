@@ -69,7 +69,8 @@ type Keeper struct {
 	consumeNATEvent                   func(e interface{})
 	consumeSessionStateEventDebounced func(e interface{})
 	// consumer
-	consumeConnectionStateEvent func(interface{})
+	consumeConnectionStateEvent      func(interface{})
+	consumeConnectionStatisticsEvent func(interface{})
 
 	announceStateChanges func(e interface{})
 }
@@ -101,6 +102,7 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 
 	// consumer
 	k.consumeConnectionStateEvent = debounce(k.updateConnectionState, debounceDuration)
+	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStatistics, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 
 	return k
@@ -118,6 +120,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumeConnectionStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
 	return nil
@@ -271,6 +276,17 @@ func (k *Keeper) updateConnectionState(e interface{}) {
 		return
 	}
 	k.state.Consumer.Connection.State = evt.State
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) updateConnectionStatistics(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(connection.SessionStatsEvent)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection statistics update")
+	}
+	k.state.Consumer.Connection.Statistics = &evt.Stats
 	go k.announceStateChanges(nil)
 }
 
