@@ -275,10 +275,10 @@ func (k *Keeper) updateConnectionState(e interface{}) {
 	if k.state.Consumer.Connection.State == evt.State {
 		return
 	}
-	k.state.Consumer.Connection.State = evt.State
 	if evt.State == connection.NotConnected {
-		k.state.Consumer.Connection.Statistics = nil
+		k.state.Consumer.Connection = stateEvent.ConsumerConnection{}
 	}
+	k.state.Consumer.Connection.State = evt.State
 	go k.announceStateChanges(nil)
 }
 
