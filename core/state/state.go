@@ -276,6 +276,9 @@ func (k *Keeper) updateConnectionState(e interface{}) {
 		return
 	}
 	k.state.Consumer.Connection.State = evt.State
+	if evt.State == connection.NotConnected {
+		k.state.Consumer.Connection.Statistics = nil
+	}
 	go k.announceStateChanges(nil)
 }
 
