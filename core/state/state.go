@@ -101,7 +101,7 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 	k.consumeSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStateEvent = debounce(k.updateConnectionState, debounceDuration)
+	k.consumeConnectionStateEvent = k.updateConnectionState
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStatistics, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 
