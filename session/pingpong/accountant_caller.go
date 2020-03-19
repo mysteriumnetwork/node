@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,6 +57,7 @@ func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI strin
 type RequestPromise struct {
 	ExchangeMessage crypto.ExchangeMessage `json:"exchange_message"`
 	TransactorFee   uint64                 `json:"transactor_fee"`
+	RRecoveryData   string                 `json:"r_recovery_data"`
 }
 
 // RequestPromise requests a promise from accountant.
@@ -233,6 +235,9 @@ var ErrAccountantOverspend = errors.New("consumer does not have enough balance a
 // ErrAccountantMalformedJSON indicates that the provider has sent an invalid json in the request.
 var ErrAccountantMalformedJSON = errors.New("malformed json")
 
+// ErrNeedsRRecovery indicates that we need to recover R.
+var ErrNeedsRRecovery = errors.New("r recovery required")
+
 // ErrAccountantNoPreviousPromise indicates that we have no previous knowledge of a promise for the provider.
 var ErrAccountantNoPreviousPromise = errors.New("no previous promise found")
 
@@ -254,4 +259,27 @@ var accountantCauseToError = map[string]error{
 	ErrAccountantNoPreviousPromise.Error():        ErrAccountantNoPreviousPromise,
 	ErrAccountantHashlockMissmatch.Error():        ErrAccountantHashlockMissmatch,
 	ErrAccountantNotFound.Error():                 ErrAccountantNotFound,
+	ErrNeedsRRecovery.Error():                     ErrNeedsRRecovery,
+}
+
+var encryptedRRegexp = regexp.MustCompile(`Encrypted recovery data: "(?P<recoverydetails>[0-9a-f]+)"`)
+
+type rRecoveryDetails struct {
+	R           string `json:"r"`
+	AgreementID uint64 `json:"agreement_id"`
+}
+
+func parseErrNeedsRRecoveryDetails(in string) (string, error) {
+	if !encryptedRRegexp.MatchString(in) {
+		return "", errors.Wrap(errors.New("invalid error message"), in)
+	}
+
+	subs := encryptedRRegexp.FindAllStringSubmatch(in, -1)[0]
+	names := encryptedRRegexp.SubexpNames()
+	mapped := map[string]string{}
+	for i, v := range subs {
+		mapped[names[i]] = v
+	}
+
+	return mapped["recoverydetails"], nil
 }

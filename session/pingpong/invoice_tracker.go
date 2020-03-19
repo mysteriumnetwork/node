@@ -20,6 +20,7 @@ package pingpong
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -128,6 +129,11 @@ type InvoiceTracker struct {
 	dataTransferredLock sync.Mutex
 }
 
+type encryption interface {
+	Decrypt(addr common.Address, encrypted []byte) ([]byte, error)
+	Encrypt(addr common.Address, plaintext []byte) ([]byte, error)
+}
+
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
 type InvoiceTrackerDeps struct {
 	Proposal                   market.ServiceProposal
@@ -152,6 +158,7 @@ type InvoiceTrackerDeps struct {
 	ChannelAddressCalculator   channelAddressCalculator
 	Settler                    settler
 	SessionID                  string
+	Encryption                 encryption
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -271,9 +278,25 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 		it.updateFee()
 	}
 
+	details := rRecoveryDetails{
+		R:           hex.EncodeToString(r),
+		AgreementID: pm.AgreementID,
+	}
+
+	bytes, err := json.Marshal(details)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal R recovery details")
+	}
+
+	encrypted, err := it.deps.Encryption.Encrypt(it.deps.ProviderID.ToCommonAddress(), bytes)
+	if err != nil {
+		return errors.Wrap(err, "could not encrypt R")
+	}
+
 	request := RequestPromise{
 		ExchangeMessage: pm,
 		TransactorFee:   it.transactorFee.Fee,
+		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
 	promise, err := it.deps.AccountantCaller.RequestPromise(request)
@@ -486,6 +509,35 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
+func (it *InvoiceTracker) recoverR(err error) error {
+	log.Info().Msg("Recovering R...")
+	rDetails, err := parseErrNeedsRRecoveryDetails(err.Error())
+	if err != nil {
+		return errors.Wrap(err, "could not parse error details for R recovery")
+	}
+
+	decoded, err := hex.DecodeString(rDetails)
+	if err != nil {
+		return errors.Wrap(err, "could not decode R recovery details")
+	}
+
+	decrypted, err := it.deps.Encryption.Decrypt(it.deps.ProviderID.ToCommonAddress(), decoded)
+	if err != nil {
+		return errors.Wrap(err, "could not decrypt R details")
+	}
+
+	res := rRecoveryDetails{}
+	err = json.Unmarshal(decrypted, &res)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal R details")
+	}
+
+	log.Info().Msg("R, recovered, will reveal...")
+
+	err = it.deps.AccountantCaller.RevealR(res.R, it.deps.ProviderID.Address, res.AgreementID)
+	return errors.Wrap(err, "could not reveal R")
+}
+
 func (it *InvoiceTracker) handleAccountantError(err error) error {
 	if err == nil {
 		it.resetAccountantFailureCount()
@@ -493,9 +545,10 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 	}
 
 	switch errors.Cause(err) {
+	case ErrNeedsRRecovery:
+		return it.recoverR(err)
 	case ErrAccountantHashlockMissmatch, ErrAccountantPreviousRNotRevealed:
-		// These need to trigger some sort of R recovery.
-		// The mechanism should be implemented under https://github.com/mysteriumnetwork/node/issues/1585
+		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
 		// For now though, handle as ignorable.
 		fallthrough
 	case

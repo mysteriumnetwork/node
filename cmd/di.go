@@ -574,6 +574,7 @@ func newSessionManagerFactory(
 	transactor *registry.Transactor,
 	settler *pingpong.AccountantPromiseSettler,
 	httpClient *requests.HTTPClient,
+	keystore *identity.Keystore,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
@@ -591,6 +592,7 @@ func newSessionManagerFactory(
 			transactor,
 			proposal,
 			settler.ForceSettle,
+			keystore,
 		)
 		return session.NewManager(
 			proposal,

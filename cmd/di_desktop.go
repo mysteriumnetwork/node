@@ -248,6 +248,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.Transactor,
 			di.AccountantPromiseSettler,
 			di.HTTPClient,
+			di.Keystore,
 		)
 
 		return session.NewDialogHandler(
