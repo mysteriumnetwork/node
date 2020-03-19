@@ -23,8 +23,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
@@ -153,7 +156,7 @@ func Test_ConsumesNATEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeNATEvent(natEvent.Event{
+		keeper.consumeNATEvent(natEvent.Event{
 			Stage:      "booster separation",
 			Successful: false,
 			Error:      errors.New("explosive bolts failed"),
@@ -185,7 +188,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeSessionStateEvent(sessionEvent.Payload{})
+		keeper.consumeSessionStateEvent(sessionEvent.Payload{})
 	}
 
 	assert.Eventually(t, interacted(sessionStorage, 1), 2*time.Second, 10*time.Millisecond)
@@ -220,7 +223,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 		expected,
 	}
 
-	keeper.ConsumeSessionStateEvent(sessionEvent.Payload{
+	keeper.consumeSessionStateEvent(sessionEvent.Payload{
 		Action: sessionEvent.Acknowledged,
 		ID:     string(expected.ID),
 	})
@@ -249,7 +252,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeServiceStateEvent(service.EventPayload{})
+		keeper.consumeServiceStateEvent(service.EventPayload{})
 	}
 
 	assert.Eventually(t, interacted(sl, 1), 2*time.Second, 10*time.Millisecond)
@@ -261,6 +264,53 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.Options(), actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
 	assert.EqualValues(t, expected.Proposal(), actual.Proposal)
+}
+
+func Test_ConsumesConnectionStateEvents(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	keeper := NewKeeper(&natStatusProviderMock{statusToReturn: mockNATStatus}, eventBus, &serviceListerMock{}, &serviceSessionStorageMock{}, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Equal(t, connection.NotConnected, keeper.GetState().Consumer.Connection.State)
+
+	// when
+	eventBus.Publish(connection.AppTopicConsumerConnectionState, connection.StateEvent{
+		State: connection.Connected,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Consumer.Connection.State == connection.Connected
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	keeper := NewKeeper(&natStatusProviderMock{statusToReturn: mockNATStatus}, eventBus, &serviceListerMock{}, &serviceSessionStorageMock{}, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Nil(t, keeper.GetState().Consumer.Connection.Statistics)
+
+	// when
+	eventBus.Publish(connection.AppTopicConsumerStatistics, connection.SessionStatsEvent{
+		Stats: connection.Statistics{
+			At:            time.Now(),
+			BytesReceived: 10 * datasize.MiB.Bytes(),
+			BytesSent:     500 * datasize.KiB.Bytes(),
+		},
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		stats := keeper.GetState().Consumer.Connection.Statistics
+		if stats == nil {
+			return false
+		}
+		return stats.BytesReceived == 10*datasize.MiB.Bytes() &&
+			stats.BytesSent == 500*datasize.KiB.Bytes()
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func Test_getServiceByID(t *testing.T) {

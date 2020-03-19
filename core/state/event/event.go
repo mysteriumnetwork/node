@@ -20,7 +20,9 @@ package event
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // AppTopicState is the topic that we use to announce state changes to via the event bus
@@ -31,6 +33,26 @@ type State struct {
 	NATStatus NATStatus        `json:"natStatus"`
 	Services  []ServiceInfo    `json:"serviceInfo"`
 	Sessions  []ServiceSession `json:"sessions"`
+	Consumer  ConsumerState    `json:"consumer"`
+}
+
+// ConsumerState represents consumer state.
+type ConsumerState struct {
+	Connection ConsumerConnection `json:"connection"`
+}
+
+// ConsumerConnection represents connection state.
+type ConsumerConnection struct {
+	State      connection.State        `json:"state"`
+	Statistics *connection.Statistics  `json:"statistics,omitempty"`
+	Session    *ConsumerSession        `json:"session,omitempty"`
+	Proposal   *market.ServiceProposal `json:"proposal,omitempty"`
+}
+
+// ConsumerSession represents current session.
+type ConsumerSession struct {
+	SessionID session.ID `json:"id"`
+	StartedAt time.Time  `json:"startedAt"`
 }
 
 // NATStatus stores the nat status related information

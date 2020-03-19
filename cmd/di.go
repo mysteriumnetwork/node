@@ -47,7 +47,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
-	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -72,7 +71,6 @@ import (
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -147,7 +145,6 @@ type Dependencies struct {
 	Authenticator     *auth.Authenticator
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
-	SSEHandler        *sse.Handler
 	Transactor        *registry.Transactor
 	BCHelper          *pingpong.BlockchainWithRetries
 	ProviderRegistrar *registry.ProviderRegistrar
@@ -225,10 +222,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapSSEHandler(); err != nil {
-		return err
-	}
-
 	if err := di.bootstrapQualityComponents(nodeOptions.BindAddress, nodeOptions.Quality); err != nil {
 		return err
 	}
@@ -275,16 +268,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	tracker := nat.NewStatusTracker(lastStageName)
 
 	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
-
-	err := di.EventBus.SubscribeAsync(service.AppTopicServiceStatus, di.StateKeeper.ConsumeServiceStateEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(sessionevent.AppTopicSession, di.StateKeeper.ConsumeSessionStateEvent)
-	if err != nil {
-		return err
-	}
-	return di.EventBus.SubscribeAsync(event.AppTopicTraversal, di.StateKeeper.ConsumeNATEvent)
+	return di.StateKeeper.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -306,17 +290,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnection)
-}
-
-// bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
-func (di *Dependencies) bootstrapSSEHandler() error {
-	di.SSEHandler = sse.NewHandler(di.StateKeeper)
-	err := di.EventBus.Subscribe(nodevent.AppTopicNode, di.SSEHandler.ConsumeNodeEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(statevent.AppTopicState, di.SSEHandler.ConsumeStateEvent)
-	return err
 }
 
 // Shutdown stops container
@@ -537,15 +510,18 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 	di.Reporter = reporter
 
-	tequilapiHTTPServer := di.bootstrapTequilapi(nodeOptions, tequilaListener, channelImplementation)
+	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener, channelImplementation)
+	if err != nil {
+		return err
+	}
 
 	di.Node = node.NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
 	return nil
 }
 
-func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener, channelImplementation string) tequilapi.APIServer {
+func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener, channelImplementation string) (tequilapi.APIServer, error) {
 	if !nodeOptions.TequilapiEnabled {
-		return tequilapi.NewNoopAPIServer()
+		return tequilapi.NewNoopAPIServer(), nil
 	}
 
 	router := tequilapi.NewAPIRouter()
@@ -561,18 +537,23 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, services.SharedConfiguredOptions().AccessPolicyAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
-	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
+
+	sseHandler := sse.NewHandler(di.StateKeeper)
+	if err := sseHandler.Subscribe(di.EventBus); err != nil {
+		return nil, err
+	}
+	tequilapi_endpoints.AddRoutesForSSE(router, sseHandler)
 
 	if config.GetBool(config.FlagPProfEnable) {
 		tequilapi_endpoints.AddRoutesForPProf(router)
 	}
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
-	return tequilapi.NewServer(listener, router, corsPolicy)
+	return tequilapi.NewServer(listener, router, corsPolicy), nil
 }
 
 func newSessionManagerFactory(
