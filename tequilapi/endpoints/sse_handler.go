@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sse
+package endpoints
 
 import (
 	"encoding/json"
@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -64,8 +65,8 @@ type stateProvider interface {
 	GetState() stateEvent.State
 }
 
-// NewHandler returns a new instance of handler
-func NewHandler(stateProvider stateProvider) *Handler {
+// NewSSEHandler returns a new instance of handler
+func NewSSEHandler(stateProvider stateProvider) *Handler {
 	return &Handler{
 		clients:       make(map[chan string]struct{}),
 		newClients:    make(chan (chan string)),
@@ -203,10 +204,47 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 	}
 }
 
+type stateRes struct {
+	NATStatus stateEvent.NATStatus        `json:"natStatus"`
+	Services  []stateEvent.ServiceInfo    `json:"serviceInfo"`
+	Sessions  []stateEvent.ServiceSession `json:"sessions"`
+	Consumer  consumerStateRes            `json:"consumer"`
+}
+
+type consumerStateRes struct {
+	Connection consumerConnectionRes `json:"connection"`
+}
+
+type consumerConnectionRes struct {
+	State      connection.State            `json:"state"`
+	Statistics *connection.Statistics      `json:"statistics,omitempty"`
+	Session    *stateEvent.ConsumerSession `json:"session,omitempty"`
+	Proposal   *proposalDTO                `json:"proposal,omitempty"`
+}
+
+func mapState(event stateEvent.State) stateRes {
+	res := stateRes{
+		NATStatus: event.NATStatus,
+		Services:  event.Services,
+		Sessions:  event.Sessions,
+		Consumer: consumerStateRes{
+			Connection: consumerConnectionRes{
+				State:      event.Consumer.Connection.State,
+				Statistics: event.Consumer.Connection.Statistics,
+				Session:    event.Consumer.Connection.Session,
+			},
+		},
+	}
+	if event.Consumer.Connection.Proposal != nil && event.Consumer.Connection.Proposal.IsSupported() { // If none exists, conn manager still has empty proposal
+		res.Consumer.Connection.Proposal = proposalToRes(*event.Consumer.Connection.Proposal)
+	}
+	return res
+}
+
 // ConsumeStateEvent consumes the state change event
 func (h *Handler) ConsumeStateEvent(event stateEvent.State) {
 	h.send(Event{
 		Type:    StateChangeEvent,
-		Payload: event,
+		Payload: mapState(event),
 	})
 }

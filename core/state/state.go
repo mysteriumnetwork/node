@@ -279,6 +279,11 @@ func (k *Keeper) updateConnectionState(e interface{}) {
 		k.state.Consumer.Connection = stateEvent.ConsumerConnection{}
 	}
 	k.state.Consumer.Connection.State = evt.State
+	k.state.Consumer.Connection.Session = &stateEvent.ConsumerSession{
+		SessionID: evt.SessionInfo.SessionID,
+		StartedAt: time.Time{},
+	}
+	k.state.Consumer.Connection.Proposal = &evt.SessionInfo.Proposal
 	go k.announceStateChanges(nil)
 }
 

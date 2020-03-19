@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sse
+package endpoints
 
 import (
 	"bufio"
@@ -35,15 +35,15 @@ import (
 )
 
 type mockStateProvider struct {
-	stateToreturn stateEvent.State
+	stateToReturn stateEvent.State
 }
 
 func (msp *mockStateProvider) GetState() stateEvent.State {
-	return msp.stateToreturn
+	return msp.stateToReturn
 }
 
 func TestHandler_Stops(t *testing.T) {
-	h := NewHandler(&mockStateProvider{})
+	h := NewSSEHandler(&mockStateProvider{})
 
 	wait := make(chan struct{})
 	go func() {
@@ -56,7 +56,7 @@ func TestHandler_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
-	h := NewHandler(&mockStateProvider{})
+	h := NewSSEHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStopped,
 	}
@@ -65,7 +65,7 @@ func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
-	h := NewHandler(&mockStateProvider{})
+	h := NewSSEHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStarted,
 	}
@@ -81,7 +81,7 @@ func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
 
 func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	msp := &mockStateProvider{}
-	h := NewHandler(msp)
+	h := NewSSEHandler(msp)
 	go h.serve()
 	defer h.stop()
 	laddr := net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0}

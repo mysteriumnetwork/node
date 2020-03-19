@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/eventbus"
 )
 
 // SSEHandler represents the sse handler
@@ -29,6 +30,11 @@ type SSEHandler interface {
 }
 
 // AddRoutesForSSE adds route for sse
-func AddRoutesForSSE(router *httprouter.Router, handler SSEHandler) {
-	router.GET("/events/state", handler.Sub)
+func AddRoutesForSSE(router *httprouter.Router, stateProvider stateProvider, bus eventbus.EventBus) error {
+	sseHandler := NewSSEHandler(stateProvider)
+	if err := sseHandler.Subscribe(bus); err != nil {
+		return err
+	}
+	router.GET("/events/state", sseHandler.Sub)
+	return nil
 }
