@@ -21,11 +21,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
-
-type stateProvider func() stateEvent.State
 
 // NATEndpoint struct represents endpoints about NAT traversal
 type NATEndpoint struct {
@@ -50,7 +47,7 @@ func NewNATEndpoint(stateProvider stateProvider) *NATEndpoint {
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
 func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	utils.WriteAsJSON(ne.stateProvider().NATStatus, resp)
+	utils.WriteAsJSON(ne.stateProvider.GetState().NATStatus, resp)
 }
 
 // AddRoutesForNAT adds nat routes to given router
