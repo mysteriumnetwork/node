@@ -107,6 +107,8 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 	info("Channel address:", identityStatus.ChannelAddress)
 	info("Balance:", identityStatus.Balance)
 	info("Balance estimate:", identityStatus.BalanceEstimate)
+	info("Earnings:", identityStatus.Earnings)
+	info("Earnings total:", identityStatus.EarningsTotal)
 }
 
 const usageNewIdentity = "new [passphrase]"

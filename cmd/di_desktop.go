@@ -198,14 +198,19 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
-	cfg := pingpong.AccountantPromiseSettlerConfig{
-		AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
-		Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
-		MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
-	}
-	settler := pingpong.NewAccountantPromiseSettler(di.Transactor, di.AccountantPromiseStorage, di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
-	di.AccountantPromiseSettler = settler
-	return settler.Subscribe(di.EventBus)
+	di.AccountantPromiseSettler = pingpong.NewAccountantPromiseSettler(
+		di.Transactor,
+		di.AccountantPromiseStorage,
+		di.BCHelper,
+		di.IdentityRegistry,
+		di.Keystore,
+		pingpong.AccountantPromiseSettlerConfig{
+			AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
+			Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
+			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+		},
+	)
+	return di.AccountantPromiseSettler.Subscribe(di.EventBus)
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency

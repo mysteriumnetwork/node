@@ -32,37 +32,18 @@ import (
 )
 
 type balanceGetter func(id identity.Identity) uint64
-
 type balanceFetcher func(id string) (pingpong.ConsumerData, error)
+type earningsGetter func(id identity.Identity) uint64
+type earningsTotalGetter func(id identity.Identity) uint64
 
 type identitiesAPI struct {
-	idm                                           identity.Manager
-	selector                                      identity_selector.Handler
-	registry                                      registry.IdentityRegistry
-	registryAddress, channelImplementationAddress string
-	getBalance                                    balanceGetter
-	fetchBalance                                  balanceFetcher
-}
-
-//NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(
-	idm identity.Manager,
-	selector identity_selector.Handler,
-	registry registry.IdentityRegistry,
-	registryAddress,
-	channelImplementationAddress string,
-	getBalance balanceGetter,
-	fetchBalance balanceFetcher,
-) *identitiesAPI {
-	return &identitiesAPI{
-		idm:                          idm,
-		selector:                     selector,
-		registry:                     registry,
-		registryAddress:              registryAddress,
-		channelImplementationAddress: channelImplementationAddress,
-		getBalance:                   getBalance,
-		fetchBalance:                 fetchBalance,
-	}
+	idm              identity.Manager
+	selector         identity_selector.Handler
+	registry         registry.IdentityRegistry
+	getBalance       balanceGetter
+	fetchBalance     balanceFetcher
+	getEarnings      earningsGetter
+	getEarningsTotal earningsTotalGetter
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -300,6 +281,8 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
 		BalanceEstimate:    endpoint.getBalance(id),
+		Earnings:           endpoint.getEarnings(id),
+		EarningsTotal:      endpoint.getEarningsTotal(id),
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -349,12 +332,21 @@ func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
 	selector identity_selector.Handler,
-	identityRegistry registry.IdentityRegistry,
-	registryAddress, channelImplementationAddress string,
+	registry registry.IdentityRegistry,
 	getBalance balanceGetter,
 	fetchBalance balanceFetcher,
+	getEarnings earningsGetter,
+	getEarningsTotal earningsTotalGetter,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress, getBalance, fetchBalance)
+	idmEnd := &identitiesAPI{
+		idm:              idm,
+		selector:         selector,
+		registry:         registry,
+		getBalance:       getBalance,
+		fetchBalance:     fetchBalance,
+		getEarnings:      getEarnings,
+		getEarningsTotal: getEarningsTotal,
+	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id", idmEnd.Current)

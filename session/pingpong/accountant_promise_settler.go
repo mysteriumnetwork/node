@@ -54,7 +54,7 @@ type receivedPromise struct {
 type AccountantPromiseSettler struct {
 	bc                         providerChannelStatusProvider
 	config                     AccountantPromiseSettlerConfig
-	lock                       sync.Mutex
+	lock                       sync.RWMutex
 	accountantPromiseGetter    accountantPromiseGetter
 	registrationStatusProvider registrationStatusProvider
 	ks                         ks
@@ -75,10 +75,9 @@ type AccountantPromiseSettlerConfig struct {
 }
 
 // NewAccountantPromiseSettler creates a new instance of accountant promise settler.
-func NewAccountantPromiseSettler(transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, accountantPromiseGetter accountantPromiseGetter, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
+func NewAccountantPromiseSettler(transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
 	return &AccountantPromiseSettler{
 		bc:                         providerChannelStatusProvider,
-		accountantPromiseGetter:    accountantPromiseGetter,
 		ks:                         ks,
 		registrationStatusProvider: registrationStatusProvider,
 		config:                     config,
@@ -115,28 +114,50 @@ func (aps *AccountantPromiseSettler) loadInitialState(addr identity.Identity) er
 	return aps.resyncState(addr)
 }
 
+// BalanceTotal returns earnings of all history
+func (aps *AccountantPromiseSettler) BalanceTotal(id identity.Identity) uint64 {
+	aps.lock.RLock()
+	defer aps.lock.RUnlock()
+
+	if v, exist := aps.currentState[id]; exist {
+		return v.lastPromise.Amount
+	}
+	return 0
+}
+
+// Balance returns current unsettled earnings
+func (aps *AccountantPromiseSettler) Balance(id identity.Identity) uint64 {
+	aps.lock.RLock()
+	defer aps.lock.RUnlock()
+
+	if v, exist := aps.currentState[id]; exist {
+		return v.unsettledBalance
+	}
+	return 0
+}
+
 func (aps *AccountantPromiseSettler) resyncState(addr identity.Identity) error {
 	res, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, addr.ToCommonAddress())
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", addr))
 	}
 
-	accountantPromise, err := aps.accountantPromiseGetter.Get(addr, identity.FromAddress(aps.config.AccountantAddress.Hex()))
+	accountantPromise, err := aps.promiseStorage.Get(addr, identity.FromAddress(aps.config.AccountantAddress.Hex()))
 	if err != nil && err != ErrNotFound {
 		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", addr))
 	}
 
 	availableBalance := res.Balance.Uint64() + res.Settled.Uint64()
-	currentBalance := availableBalance - accountantPromise.Promise.Amount
 	s := state{
-		balance:          currentBalance,
+		balance:          availableBalance - accountantPromise.Promise.Amount,
 		availableBalance: availableBalance,
+		unsettledBalance: accountantPromise.Promise.Amount - res.Settled.Uint64(),
 		lastPromise:      accountantPromise.Promise,
 		registered:       true,
 	}
 
 	aps.currentState[addr] = s
-	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v ", addr, s.balance, s.availableBalance)
+	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", addr, s.balance, s.availableBalance, s.unsettledBalance)
 
 	return nil
 }
@@ -346,8 +367,8 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
 }
 
 func (aps *AccountantPromiseSettler) isSettling(id identity.Identity) bool {
-	aps.lock.Lock()
-	defer aps.lock.Unlock()
+	aps.lock.RLock()
+	defer aps.lock.RUnlock()
 	v, ok := aps.currentState[id]
 	if !ok {
 		return false
@@ -402,6 +423,7 @@ type state struct {
 	settleInProgress bool
 	balance          uint64
 	availableBalance uint64
+	unsettledBalance uint64
 	registered       bool
 	lastPromise      crypto.Promise
 }
@@ -432,6 +454,7 @@ func (s state) updateWithNewPromise(promise crypto.Promise) state {
 		settleInProgress: s.settleInProgress,
 		balance:          s.balance - diff,
 		availableBalance: s.availableBalance,
+		unsettledBalance: s.unsettledBalance,
 		registered:       s.registered,
 		lastPromise:      promise,
 	}
