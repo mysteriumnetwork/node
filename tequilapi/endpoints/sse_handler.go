@@ -145,7 +145,7 @@ func (h *Handler) Sub(resp http.ResponseWriter, req *http.Request, params httpro
 func (h *Handler) sendInitialState(messageChan chan string) error {
 	res, err := json.Marshal(Event{
 		Type:    StateChangeEvent,
-		Payload: h.stateProvider.GetState(),
+		Payload: mapState(h.stateProvider.GetState()),
 	})
 	if err != nil {
 		return err
