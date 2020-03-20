@@ -216,10 +216,9 @@ type consumerStateRes struct {
 }
 
 type consumerConnectionRes struct {
-	State      connection.State            `json:"state"`
-	Statistics *connection.Statistics      `json:"statistics,omitempty"`
-	Session    *stateEvent.ConsumerSession `json:"session,omitempty"`
-	Proposal   *proposalDTO                `json:"proposal,omitempty"`
+	State      connection.State                         `json:"state"`
+	Statistics *stateEvent.ConsumerConnectionStatistics `json:"statistics,omitempty"`
+	Proposal   *proposalDTO                             `json:"proposal,omitempty"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -231,7 +230,6 @@ func mapState(event stateEvent.State) stateRes {
 			Connection: consumerConnectionRes{
 				State:      event.Consumer.Connection.State,
 				Statistics: event.Consumer.Connection.Statistics,
-				Session:    event.Consumer.Connection.Session,
 			},
 		},
 	}

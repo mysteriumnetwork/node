@@ -41,6 +41,10 @@ type natStatusProvider interface {
 	ConsumeNATEvent(event natEvent.Event)
 }
 
+type sessionDurationProvider interface {
+	GetSessionDuration() time.Duration
+}
+
 type publisher interface {
 	Publish(topic string, data interface{})
 }
@@ -56,13 +60,14 @@ type serviceSessionStorage interface {
 // Keeper keeps track of state through eventual consistency.
 // This should become the de-facto place to get your info about node.
 type Keeper struct {
-	state                  *stateEvent.State
-	lock                   sync.RWMutex
-	natStatusProvider      natStatusProvider
-	publisher              publisher
-	serviceLister          serviceLister
-	serviceSessionStorage  serviceSessionStorage
-	sessionConnectionCount map[string]event.ConnectionStatistics
+	state                   *stateEvent.State
+	lock                    sync.RWMutex
+	natStatusProvider       natStatusProvider
+	publisher               publisher
+	serviceLister           serviceLister
+	serviceSessionStorage   serviceSessionStorage
+	sessionConnectionCount  map[string]event.ConnectionStatistics
+	sessionDurationProvider sessionDurationProvider
 
 	// provider
 	consumeServiceStateEvent          func(e interface{})
@@ -76,7 +81,14 @@ type Keeper struct {
 }
 
 // NewKeeper returns a new instance of the keeper
-func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, serviceLister serviceLister, serviceSessionStorage serviceSessionStorage, debounceDuration time.Duration) *Keeper {
+func NewKeeper(
+	natStatusProvider natStatusProvider,
+	publisher publisher,
+	serviceLister serviceLister,
+	serviceSessionStorage serviceSessionStorage,
+	debounceDuration time.Duration,
+	sessionDurationProvider sessionDurationProvider,
+) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
 			NATStatus: stateEvent.NATStatus{
@@ -94,6 +106,8 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 		serviceSessionStorage: serviceSessionStorage,
 
 		sessionConnectionCount: make(map[string]event.ConnectionStatistics),
+
+		sessionDurationProvider: sessionDurationProvider,
 	}
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
@@ -279,10 +293,6 @@ func (k *Keeper) updateConnectionState(e interface{}) {
 		k.state.Consumer.Connection = stateEvent.ConsumerConnection{}
 	}
 	k.state.Consumer.Connection.State = evt.State
-	k.state.Consumer.Connection.Session = &stateEvent.ConsumerSession{
-		SessionID: evt.SessionInfo.SessionID,
-		StartedAt: time.Time{},
-	}
 	k.state.Consumer.Connection.Proposal = &evt.SessionInfo.Proposal
 	go k.announceStateChanges(nil)
 }
@@ -294,7 +304,11 @@ func (k *Keeper) updateConnectionStatistics(e interface{}) {
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for connection statistics update")
 	}
-	k.state.Consumer.Connection.Statistics = &evt.Stats
+	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
+		Duration:      int(k.sessionDurationProvider.GetSessionDuration().Seconds()),
+		BytesSent:     evt.Stats.BytesSent,
+		BytesReceived: evt.Stats.BytesReceived,
+	}
 	go k.announceStateChanges(nil)
 }
 

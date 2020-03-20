@@ -217,10 +217,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 
-	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
-		return err
-	}
-
 	if err := di.bootstrapQualityComponents(nodeOptions.BindAddress, nodeOptions.Quality); err != nil {
 		return err
 	}
@@ -266,7 +262,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 
 	tracker := nat.NewStatusTracker(lastStageName)
 
-	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
+	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration, di.StatisticsTracker)
 	return di.StateKeeper.Subscribe(di.EventBus)
 }
 
@@ -508,6 +504,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 	di.Reporter = reporter
+
+	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
+		return err
+	}
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener, channelImplementation)
 	if err != nil {
