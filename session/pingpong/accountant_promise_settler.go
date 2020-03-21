@@ -131,13 +131,13 @@ func (aps *AccountantPromiseSettler) Balance(id identity.Identity) uint64 {
 	defer aps.lock.RUnlock()
 
 	if v, exist := aps.currentState[id]; exist {
-		return v.unsettledBalance
+		return v.unsettledBalance()
 	}
 	return 0
 }
 
 func (aps *AccountantPromiseSettler) resyncState(addr identity.Identity) error {
-	res, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, addr.ToCommonAddress())
+	channel, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, addr.ToCommonAddress())
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", addr))
 	}
@@ -147,17 +147,13 @@ func (aps *AccountantPromiseSettler) resyncState(addr identity.Identity) error {
 		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", addr))
 	}
 
-	availableBalance := res.Balance.Uint64() + res.Settled.Uint64()
 	s := state{
-		balance:          availableBalance - accountantPromise.Promise.Amount,
-		availableBalance: availableBalance,
-		unsettledBalance: accountantPromise.Promise.Amount - res.Settled.Uint64(),
-		lastPromise:      accountantPromise.Promise,
-		registered:       true,
+		channel:     channel,
+		lastPromise: accountantPromise.Promise,
+		registered:  true,
 	}
-
 	aps.currentState[addr] = s
-	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", addr, s.balance, s.availableBalance, s.unsettledBalance)
+	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", addr, s.balance(), s.availableBalance(), s.unsettledBalance())
 
 	return nil
 }
@@ -237,27 +233,26 @@ func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.Ap
 }
 
 func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
+	log.Info().Msgf("Received accountant promise for %q", apep.ProviderID)
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	log.Info().Msgf("Received accountant promise for %q", apep.ProviderID)
-
-	v, ok := aps.currentState[apep.ProviderID]
+	s, ok := aps.currentState[apep.ProviderID]
 	if !ok {
 		log.Error().Msgf("Have no info on provider %q, skipping", apep.ProviderID)
 		return
 	}
 
-	if !v.registered {
+	if !s.registered {
 		log.Error().Msgf("provider %q not registered, skipping", apep.ProviderID)
 		return
 	}
 
-	newState := v.updateWithNewPromise(apep.Promise)
-	aps.currentState[apep.ProviderID] = newState
+	s.lastPromise = apep.Promise
+	aps.currentState[apep.ProviderID] = s
 	log.Info().Msgf("Accountant promise state updated for provider %q", apep.ProviderID)
 
-	if newState.needsSettling(aps.config.Threshold) {
+	if s.needsSettling(aps.config.Threshold) {
 		aps.settleQueue <- receivedPromise{
 			provider: apep.ProviderID,
 			promise:  apep.Promise,
@@ -420,12 +415,23 @@ type accountantPromiseGetter interface {
 }
 
 type state struct {
+	channel     ProviderChannel
+	lastPromise crypto.Promise
+
 	settleInProgress bool
-	balance          uint64
-	availableBalance uint64
-	unsettledBalance uint64
 	registered       bool
-	lastPromise      crypto.Promise
+}
+
+func (s state) availableBalance() uint64 {
+	return s.channel.Balance.Uint64() + s.channel.Settled.Uint64()
+}
+
+func (s state) balance() uint64 {
+	return s.availableBalance() - s.lastPromise.Amount
+}
+
+func (s state) unsettledBalance() uint64 {
+	return s.lastPromise.Amount - s.channel.Settled.Uint64()
 }
 
 func (s state) needsSettling(threshold float64) bool {
@@ -437,27 +443,15 @@ func (s state) needsSettling(threshold float64) bool {
 		return false
 	}
 
-	if float64(s.balance) <= 0 {
+	if float64(s.balance()) <= 0 {
 		return true
 	}
 
-	if float64(s.balance) <= threshold*float64(s.availableBalance) {
+	if float64(s.balance()) <= threshold*float64(s.availableBalance()) {
 		return true
 	}
 
 	return false
-}
-
-func (s state) updateWithNewPromise(promise crypto.Promise) state {
-	diff := promise.Amount - s.lastPromise.Amount
-	return state{
-		settleInProgress: s.settleInProgress,
-		balance:          s.balance - diff,
-		availableBalance: s.availableBalance,
-		unsettledBalance: s.unsettledBalance,
-		registered:       s.registered,
-		lastPromise:      promise,
-	}
 }
 
 type ks interface {
