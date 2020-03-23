@@ -19,6 +19,8 @@ package pingpong
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -32,19 +34,33 @@ const invoiceMessageEndpoint = communication.MessageEndpoint(invoiceEndpoint)
 
 // InvoiceSender is responsible for sending the invoice messages.
 type InvoiceSender struct {
+	ch     *p2p.Channel
 	sender communication.Sender
 }
 
 // NewInvoiceSender returns a new instance of the invoice sender.
-func NewInvoiceSender(sender communication.Sender) *InvoiceSender {
+func NewInvoiceSender(sender communication.Sender, ch *p2p.Channel) *InvoiceSender {
 	return &InvoiceSender{
+		ch:     ch,
 		sender: sender,
 	}
 }
 
 // Send sends the given invoice.
 func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
-	return is.sender.Send(&invoiceMessageProducer{Invoice: invoice})
+	if is.ch == nil { // TODO this block should go away once p2p communication will replace communication dialog.
+		return is.sender.Send(&invoiceMessageProducer{Invoice: invoice})
+	}
+
+	pInvoice := p2p.ProtoMessage(&pb.Invoice{
+		AgreementID:    invoice.AgreementID,
+		AgreementTotal: invoice.AgreementTotal,
+		TransactorFee:  invoice.TransactorFee,
+		Hashlock:       invoice.Hashlock,
+		Provider:       invoice.Provider,
+	})
+	_, err := is.ch.Send(p2p.TopicPaymentInvoice, pInvoice)
+	return err
 }
 
 // InvoiceListener listens for invoices.
