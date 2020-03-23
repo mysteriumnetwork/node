@@ -26,54 +26,10 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/pkg/errors"
 )
-
-// swagger:model IdentityDTO
-type identityDto struct {
-	// identity in Ethereum address format
-	// required: true
-	// example: 0x0000000000000000000000000000000000000001
-	ID string `json:"id"`
-}
-
-// swagger:model IdentityList
-type identityList struct {
-	Identities []identityDto `json:"identities"`
-}
-
-// swagger:model CurrentIdentityDTO
-type currentIdentityDTO struct {
-	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model IdentityCreationDTO
-type identityCreationDto struct {
-	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model IdentityUnlockingDTO
-type identityUnlockingDto struct {
-	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model StatusDTO
-type statusDTO struct {
-	RegistrationStatus string `json:"registrationStatus"`
-	ChannelAddress     string `json:"channelAddress"`
-	Balance            uint64 `json:"balance"`
-	BalanceEstimate    uint64 `json:"balanceEstimate"`
-}
-
-// registrationDataDTO represents registration status and needed data for registering of given identity
-// swagger:model RegistrationDataDTO
-type registrationDataDTO struct {
-	Status string `json:"status"`
-	// Returns true if identity is registered in payments smart contract
-	Registered bool `json:"registered"`
-}
 
 type balanceGetter func(id identity.Identity) uint64
 
@@ -86,18 +42,6 @@ type identitiesAPI struct {
 	registryAddress, channelImplementationAddress string
 	getBalance                                    balanceGetter
 	fetchBalance                                  balanceFetcher
-}
-
-func idToDto(id identity.Identity) identityDto {
-	return identityDto{id.Address}
-}
-
-func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identityDto) (idDtoArry []identityDto) {
-	idDtoArry = make([]identityDto, len(idArry))
-	for i, id := range idArry {
-		idDtoArry[i] = f(id)
-	}
-	return
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
@@ -129,16 +73,15 @@ func NewIdentitiesEndpoint(
 //   200:
 //     description: List of identities
 //     schema:
-//       "$ref": "#/definitions/IdentityList"
+//       "$ref": "#/definitions/ListIdentitiesResponse"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	idArry := endpoint.idm.GetIdentities()
-	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
-
-	utils.WriteAsJSON(idsSerializable, resp)
+	ids := endpoint.idm.GetIdentities()
+	idsDTO := contract.NewIdentityListResponse(ids)
+	utils.WriteAsJSON(idsDTO, resp)
 }
 
 // swagger:operation PUT /identities/current Identity currentIdentity
@@ -175,13 +118,14 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 		address = ""
 	}
 
-	myIdentityRequest, err := toCurrentIdentityRequest(request)
+	var myIdentityRequest contract.IdentityGetCurrentRequest
+	err := json.NewDecoder(request.Body).Decode(&myIdentityRequest)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateCurrentIdentityRequest(myIdentityRequest)
+	errorMap := contract.ValidateIdentityGetCurrentRequest(myIdentityRequest)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
@@ -194,8 +138,8 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 		return
 	}
 
-	idDto := idToDto(id)
-	utils.WriteAsJSON(idDto, resp)
+	idDTO := contract.NewIdentityDTO(id)
+	utils.WriteAsJSON(idDTO, resp)
 }
 
 // swagger:operation POST /identities Identity createIdentity
@@ -226,13 +170,14 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	createReq, err := toCreateRequest(request)
+	var createReq contract.IdentityCreateRequest
+	err := json.NewDecoder(request.Body).Decode(&createReq)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateCreationRequest(createReq)
+	errorMap := contract.ValidateIdentityCreateRequest(createReq)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
@@ -244,8 +189,8 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	idDto := idToDto(id)
-	utils.WriteAsJSON(idDto, resp)
+	idDTO := contract.NewIdentityDTO(id)
+	utils.WriteAsJSON(idDTO, resp)
 }
 
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
@@ -286,13 +231,14 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	unlockReq, err := toUnlockRequest(request)
+	var unlockReq contract.IdentityUnlockRequest
+	err = json.NewDecoder(request.Body).Decode(&unlockReq)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateUnlockRequest(unlockReq)
+	errorMap := contract.ValidateIdentityUnlockRequest(unlockReq)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
@@ -329,7 +275,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		}
 	}
 
-	status := statusDTO{
+	status := contract.IdentityStatusDTO{
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
@@ -371,59 +317,11 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 		return
 	}
 
-	registrationDataDTO := &registrationDataDTO{
+	registrationDataDTO := &contract.IdentityRegistrationResponse{
 		Status:     regStatus.String(),
 		Registered: regStatus.Registered(),
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
-}
-
-func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
-	var identityCreationReq = &identityCreationDto{}
-	err := json.NewDecoder(req.Body).Decode(&identityCreationReq)
-	if err != nil {
-		return nil, err
-	}
-	return identityCreationReq, nil
-}
-
-func toCurrentIdentityRequest(req *http.Request) (*currentIdentityDTO, error) {
-	var currentIdentityReq = &currentIdentityDTO{}
-	err := json.NewDecoder(req.Body).Decode(&currentIdentityReq)
-	if err != nil {
-		return nil, err
-	}
-	return currentIdentityReq, nil
-}
-
-func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, err error) {
-	isUnlockingReq = identityUnlockingDto{}
-	err = json.NewDecoder(req.Body).Decode(&isUnlockingReq)
-	return
-}
-
-func validateCurrentIdentityRequest(unlockReq *currentIdentityDTO) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if unlockReq.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
-	}
-	return
-}
-
-func validateUnlockRequest(unlockReq identityUnlockingDto) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if unlockReq.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
-	}
-	return
-}
-
-func validateCreationRequest(createReq *identityCreationDto) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if createReq.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
-	}
-	return
 }
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
