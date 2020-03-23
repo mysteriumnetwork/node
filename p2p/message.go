@@ -22,6 +22,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	TopicSessionCreate      = "p2p-session-create"
+	TopicSessionAcknowledge = "p2p-session-acknowledge"
+	TopicSessionDestroy     = "p2p-session-destroy"
+
+	TopicPaymentMessage = "p2p-payment-message"
+	TopicPaymentInvoice = "p2p-payment-invoice"
+)
+
 // Message represent message with data bytes.
 type Message struct {
 	Data []byte

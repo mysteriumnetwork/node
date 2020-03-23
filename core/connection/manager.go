@@ -19,6 +19,7 @@ package connection
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"sync"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/pkg/errors"
@@ -91,7 +93,7 @@ type PaymentIssuer interface {
 
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
-	dialog communication.Dialog,
+	dialog communication.Dialog, channel *p2p.Channel,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
 type consumerBalanceGetter func(ID identity.Identity) uint64
@@ -107,7 +109,7 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 	statsReportInterval      time.Duration
 	consumerBalanceGetter    consumerBalanceGetter
-	p2pManager               p2p.Manager
+	p2pManager               *p2p.Manager
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -133,6 +135,7 @@ func NewManager(
 	ipCheckParams IPCheckParams,
 	statsReportInterval time.Duration,
 	consumerBalanceGetter consumerBalanceGetter,
+	p2pManager *p2p.Manager,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -146,6 +149,7 @@ func NewManager(
 		ipCheckParams:            ipCheckParams,
 		statsReportInterval:      statsReportInterval,
 		consumerBalanceGetter:    consumerBalanceGetter,
+		p2pManager:               p2pManager,
 	}
 }
 
@@ -172,11 +176,11 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	if err != nil {
 		return err
 	}
-	defer channel.Close()
+	// defer channel.Close()
+	// TODO: close p2p channel gracefully.
+
 	// TODO: This may not be needed and could work by only passing punched port. In such case Channel can expose method like NATSessionPort() etc.
 	var providerNATConn *net.UDPConn
-
-	// TODO: Use channel in all places there dialog is used.
 
 	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
@@ -188,13 +192,15 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, accountantID, proposal)
+	// TODO: Use old communication via broker if p2p channel failed.
+	sessionDTO, paymentInfo, err := manager.createP2PSession(connection, channel, consumerID, accountantID, proposal)
+
 	if err != nil {
 		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
-	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
+	err = manager.launchPayments(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
 	if err != nil {
 		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
@@ -293,8 +299,8 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
-	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID, accountantID, proposal, string(sessionID))
+func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel *p2p.Channel, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
 	}
@@ -347,6 +353,74 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
+func (manager *connectionManager) createP2PSession(c Connection, p2pChannel *p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+	sessionCreateConfig, err := c.GetConfig()
+	if err != nil {
+		return session.SessionDto{}, session.PaymentInfo{}, err
+	}
+
+	config, err := json.Marshal(sessionCreateConfig)
+	if err != nil {
+		return session.SessionDto{}, session.PaymentInfo{}, err
+	}
+
+	sessionRequest := p2p.ProtoMessage(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:             consumerID.Address,
+			AccountantID:   accountantID.Address,
+			PaymentVersion: string(session.PaymentVersionV3),
+		},
+		ProposalID: int64(proposal.ID),
+		Config:     config,
+	})
+
+	res, err := p2pChannel.Send(p2p.TopicSessionCreate, sessionRequest)
+	if err != nil {
+		return session.SessionDto{}, session.PaymentInfo{}, err
+	}
+
+	var sessionResponce pb.SessionResponse
+	err = res.UnmarshalProto(&sessionResponce)
+	if err != nil {
+		return session.SessionDto{}, session.PaymentInfo{}, err
+	}
+
+	sessionID := session.ID(sessionResponce.GetID())
+	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+		log.Trace().Msg("Cleaning: requesting session destroy")
+		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
+
+		sessionDestroy := p2p.ProtoMessage(&pb.SessionInfo{
+			ConsumerID: consumerID.Address,
+			SessionID:  sessionResponce.GetID(),
+		})
+
+		_, err := p2pChannel.Send(p2p.TopicSessionDestroy, sessionDestroy)
+		return err
+	})
+
+	manager.saveSessionInfo(SessionInfo{
+		SessionID:  sessionID,
+		ConsumerID: consumerID,
+		Proposal:   proposal,
+		acknowledge: func() {
+			pc := p2p.ProtoMessage(&pb.SessionInfo{
+				ConsumerID: consumerID.Address,
+				SessionID:  string(sessionID),
+			})
+			_, err := p2pChannel.Send(p2p.TopicSessionAcknowledge, pc)
+			if err != nil {
+				log.Warn().Err(err).Msg("Acknowledge failed")
+			}
+		},
+	})
+
+	return session.SessionDto{
+		ID:     sessionID,
+		Config: sessionResponce.GetConfig(),
+	}, session.PaymentInfo{sessionResponce.GetPaymentInfo()}, nil
+}
+
 func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
@@ -370,8 +444,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.RequestSessionDestroy(dialog, s.ID)
 	})
 
-	// set the session info for future use
-	sessionInfo := SessionInfo{
+	manager.saveSessionInfo(SessionInfo{
 		SessionID:  s.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
@@ -381,7 +454,12 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 				log.Warn().Err(err).Msg("Acknowledge failed")
 			}
 		},
-	}
+	})
+
+	return s, paymentInfo, nil
+}
+
+func (manager *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
 	manager.setCurrentSession(sessionInfo)
 
 	manager.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
@@ -399,7 +477,6 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return nil
 	})
 
-	return s, paymentInfo, nil
 }
 
 func (manager *connectionManager) startConnection(

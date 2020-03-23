@@ -72,7 +72,7 @@ require (
 	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
 	golang.zx2c4.com/wireguard v0.0.20191012
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
-	google.golang.org/appengine v1.6.5 // indirect
+	google.golang.org/appengine v1.6.5
 	google.golang.org/protobuf v1.20.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect

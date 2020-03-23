@@ -10,9 +10,11 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/requests"
 	nats_lib "github.com/nats-io/go-nats"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -24,6 +26,22 @@ type brokerConnector interface {
 }
 
 const pingMaxPorts = 10
+
+func NewManager(broker brokerConnector, address string, signer identity.SignerFactory) *Manager {
+	return &Manager{
+		broker:        broker,
+		brokerAddress: address,
+		log: func(msg ...interface{}) {
+			fmt.Println("CONSUMER", msg)
+		},
+		pendingConfigs: map[PublicKey]*p2pConnectConfig{},
+		ipResolver:     ip.NewResolver(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "0.0.0.0", "https://api.ipify.org/?format=json"),
+		signer:         signer,
+		verifier:       identity.NewVerifierSigned(),
+		portPool:       port.NewPool(),
+		pinger:         traversal.NewPinger(traversal.DefaultPingConfig(), eventbus.New()),
+	}
+}
 
 // Manager knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
 type Manager struct {
@@ -111,7 +129,7 @@ func (m *Manager) SubscribeChannel(providerID identity.Identity, channelHandler 
 
 		// Send ack so consumer can start pinging.
 		if err := brokerConn.Publish(msg.Reply, []byte("OK")); err != nil {
-			log.Err(err).Msg("Could publish exchange ack")
+			log.Err(err).Msg("Could not publish exchange ack")
 		}
 
 		var remotePort, localPort int
