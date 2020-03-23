@@ -35,7 +35,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Storage wraps AWS S3 client, configures for s3.mysterium.network
+// Storage wraps AWS S3 client, configures for s3-testnet.mysterium.network
 // and provides convenience methods
 type Storage struct {
 	*s3.Client
@@ -60,13 +60,13 @@ func init() {
 	}
 }
 
-// NewClient returns *s3.Client, configured to work with https://s3.mysterium.network storage
+// NewClient returns *s3.Client, configured to work with https://s3-testnet.mysterium.network storage
 func NewClient() (*Storage, error) {
 	cfg, err := awsExternal.LoadDefaultAWSConfig()
 	if err != nil {
 		return nil, err
 	}
-	cfg.EndpointResolver = aws.ResolveWithEndpointURL("https://s3.mysterium.network")
+	cfg.EndpointResolver = aws.ResolveWithEndpointURL("https://s3-testnet.mysterium.network")
 	cfg.Region = endpoints.EuCentral1RegionID
 	client := s3.New(cfg)
 	client.ForcePathStyle = true
