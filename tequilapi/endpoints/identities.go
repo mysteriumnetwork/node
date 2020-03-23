@@ -252,6 +252,25 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+// swagger:operation GET /identities/{id}/status Identity getIdentityStatus
+// ---
+// summary: Provide identity status
+// description: Returns identity's status
+// parameters:
+//   - in: path
+//     name: id
+//     description: hex address of identity
+//     type: string
+//     required: true
+// responses:
+//   200:
+//     description: Registration status and data
+//     schema:
+//       "$ref": "#/definitions/IdentityStatusDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
 	id, err := endpoint.idm.GetIdentity(address)
