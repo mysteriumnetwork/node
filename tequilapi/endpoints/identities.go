@@ -55,13 +55,13 @@ func NewIdentitiesEndpoint(
 	fetchBalance balanceFetcher,
 ) *identitiesAPI {
 	return &identitiesAPI{
-		idm,
-		selector,
-		registry,
-		registryAddress,
-		channelImplementationAddress,
-		getBalance,
-		fetchBalance,
+		idm:                          idm,
+		selector:                     selector,
+		registry:                     registry,
+		registryAddress:              registryAddress,
+		channelImplementationAddress: channelImplementationAddress,
+		getBalance:                   getBalance,
+		fetchBalance:                 fetchBalance,
 	}
 }
 

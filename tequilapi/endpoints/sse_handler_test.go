@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,8 +123,28 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 		}
 	}()
 
-	initialState := <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null,"consumer":{"connection":{"state":""}}},"type":"state-change"}`, initialState)
+	msg := <-results
+	assert.Regexp(t, "^data:\\s?{.*}$", msg)
+	msgJSON := strings.TrimPrefix(msg, "data: ")
+	expectJSON := `
+{
+  "payload": {
+    "natStatus": {
+      "status": "",
+      "error": ""
+    },
+    "serviceInfo": null,
+    "sessions": null,
+    "consumer": {
+      "connection": {
+        "state": ""
+      }
+    },
+    "identities": []
+  },
+  "type": "state-change"
+}`
+	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState := msp.GetState()
 	changedState.NATStatus = stateEvent.NATStatus{
@@ -132,15 +153,68 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	}
 	h.ConsumeStateEvent(changedState)
 
-	newState := <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"mass panic","error":"cookie prices rise drastically"},"serviceInfo":null,"sessions":null,"consumer":{"connection":{"state":""}}},"type":"state-change"}`, newState)
+	msg = <-results
+	assert.Regexp(t, "^data:\\s?{.*}$", msg)
+	msgJSON = strings.TrimPrefix(msg, "data: ")
+	expectJSON = `
+{
+  "payload": {
+    "natStatus": {
+      "status": "mass panic",
+      "error": "cookie prices rise drastically"
+    },
+    "serviceInfo": null,
+    "sessions": null,
+    "consumer": {
+      "connection": {
+        "state": ""
+      }
+    },
+    "identities": []
+  },
+  "type": "state-change"
+}`
+	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState = msp.GetState()
 	changedState.Consumer.Connection.State = connection.Connecting
+	changedState.Identities = []stateEvent.Identity{
+		{
+			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
+			RegistrationStatus: registry.RegisteredConsumer,
+			Balance:            50,
+		},
+	}
 	h.ConsumeStateEvent(changedState)
 
-	newState = <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null,"consumer":{"connection":{"state":"Connecting"}}},"type":"state-change"}`, newState)
+	msg = <-results
+	assert.Regexp(t, "^data:\\s?{.*}$", msg)
+	msgJSON = strings.TrimPrefix(msg, "data: ")
+	expectJSON = `
+{
+  "payload": {
+    "natStatus": {
+      "status": "",
+      "error": ""
+    },
+    "serviceInfo": null,
+    "sessions": null,
+    "consumer": {
+      "connection": {
+        "state": "Connecting"
+      }
+    },
+    "identities": [
+      {
+        "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
+        "registrationStatus": "RegisteredConsumer",
+        "balance": 50
+      }
+    ]
+  },
+  "type": "state-change"
+}`
+	assert.JSONEq(t, expectJSON, msgJSON)
 
 	cancel()
 	listener.Close()

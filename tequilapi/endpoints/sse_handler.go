@@ -28,6 +28,7 @@ import (
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -205,10 +206,11 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NATStatus stateEvent.NATStatus        `json:"natStatus"`
-	Services  []stateEvent.ServiceInfo    `json:"serviceInfo"`
-	Sessions  []stateEvent.ServiceSession `json:"sessions"`
-	Consumer  consumerStateRes            `json:"consumer"`
+	NATStatus  stateEvent.NATStatus        `json:"natStatus"`
+	Services   []stateEvent.ServiceInfo    `json:"serviceInfo"`
+	Sessions   []stateEvent.ServiceSession `json:"sessions"`
+	Consumer   consumerStateRes            `json:"consumer"`
+	Identities []contract.IdentityDTO      `json:"identities"`
 }
 
 type consumerStateRes struct {
@@ -222,6 +224,15 @@ type consumerConnectionRes struct {
 }
 
 func mapState(event stateEvent.State) stateRes {
+	identitiesRes := make([]contract.IdentityDTO, len(event.Identities))
+	for idx, identity := range event.Identities {
+		identityRes := contract.IdentityDTO{
+			Address:            identity.Address,
+			RegistrationStatus: identity.RegistrationStatus.String(),
+			Balance:            identity.Balance,
+		}
+		identitiesRes[idx] = identityRes
+	}
 	res := stateRes{
 		NATStatus: event.NATStatus,
 		Services:  event.Services,
@@ -232,6 +243,7 @@ func mapState(event stateEvent.State) stateRes {
 				Statistics: event.Consumer.Connection.Statistics,
 			},
 		},
+		Identities: identitiesRes,
 	}
 	if event.Consumer.Connection.Proposal != nil && event.Consumer.Connection.Proposal.IsSupported() { // If none exists, conn manager still has empty proposal
 		res.Consumer.Connection.Proposal = proposalToRes(*event.Consumer.Connection.Proposal)
