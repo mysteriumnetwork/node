@@ -49,7 +49,7 @@ type Session struct {
 	DataTransferred DataTransferred
 	TokensEarned    uint64
 	Last            bool
-	done            chan struct{}
+	Done            chan struct{}
 }
 
 // newSession creates a blank new session with an ID.

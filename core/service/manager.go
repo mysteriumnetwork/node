@@ -74,6 +74,8 @@ func NewManager(
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
+	p2pManager *p2p.Manager,
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel *p2p.Channel) *session.Manager,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -83,6 +85,8 @@ func NewManager(
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
 		policyOracle:         policyOracle,
+		p2pManager:           p2pManager,
+		sessionManager:       sessionManager,
 	}
 }
 
@@ -98,7 +102,8 @@ type Manager struct {
 	eventPublisher   Publisher
 	policyOracle     *policy.Oracle
 
-	p2pManager p2p.Manager
+	p2pManager     *p2p.Manager
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel *p2p.Channel) *session.Manager
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -140,7 +145,10 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 
 	err = manager.p2pManager.SubscribeChannel(providerID, func(ch *p2p.Channel) {
-		// TODO: Exchange session config via p2p and start actual session.
+		mng := manager.sessionManager(proposal, string(id), ch)
+		subscribeSessionCreate(mng, ch, service, id)
+		subscribeSessionAcknowledge(mng, ch)
+		subscribeSessionDestroy(mng, ch)
 	})
 
 	if err != nil {

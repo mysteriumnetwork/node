@@ -133,7 +133,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.ServiceType = manager.currentProposal.ServiceType
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
-	session.done = make(chan struct{})
+	session.Done = make(chan struct{})
 	session.Config = config
 	session.CreatedAt = time.Now().UTC()
 
@@ -145,7 +145,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 
 	// stop the balance tracker once the session is finished
 	go func() {
-		<-session.done
+		<-session.Done
 		engine.Stop()
 	}()
 
@@ -203,7 +203,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))
-	close(session.done)
+	close(session.Done)
 
 	return nil
 }

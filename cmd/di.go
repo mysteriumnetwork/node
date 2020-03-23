@@ -598,7 +598,7 @@ func newSessionManagerFactory(
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
-			dialog, pingpong.InvoiceSendPeriod,
+			dialog, nil, pingpong.InvoiceSendPeriod,
 			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
 			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
