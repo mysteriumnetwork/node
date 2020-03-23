@@ -18,12 +18,15 @@
 package pingpong
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -96,7 +99,16 @@ func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 	}
 	var resp ConsumerData
 	err = ac.doRequest(req, &resp)
-	return resp, errors.Wrap(err, "could not request consumer data accountant")
+	if err != nil {
+		return ConsumerData{}, errors.Wrap(err, "could not request consumer data from accountant")
+	}
+
+	err = resp.LatestPromise.isValid(id)
+	if err != nil {
+		return ConsumerData{}, errors.Wrap(err, "could not check promise validity")
+	}
+
+	return resp, nil
 }
 
 func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
@@ -154,6 +166,36 @@ type LatestPromise struct {
 	Hashlock  string      `json:"Hashlock"`
 	R         interface{} `json:"R"`
 	Signature string      `json:"Signature"`
+}
+
+// isValid checks if the promise is really issued by the given identity
+func (lp LatestPromise) isValid(id string) error {
+	decodedChannelID, err := hex.DecodeString(strings.TrimPrefix(lp.ChannelID, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode channel ID")
+	}
+	decodedHashlock, err := hex.DecodeString(strings.TrimPrefix(lp.Hashlock, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode hashlock")
+	}
+	decodedSignature, err := hex.DecodeString(strings.TrimPrefix(lp.Signature, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode hashlock")
+	}
+
+	p := crypto.Promise{
+		ChannelID: decodedChannelID,
+		Amount:    lp.Amount,
+		Fee:       lp.Fee,
+		Hashlock:  decodedHashlock,
+		Signature: decodedSignature,
+	}
+
+	if !p.IsPromiseValid(common.HexToAddress(id)) {
+		return errors.New("promise issued by wrong identity")
+	}
+
+	return nil
 }
 
 // RevealSuccess represents the reveal success response from accountant

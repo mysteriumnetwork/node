@@ -139,7 +139,7 @@ func TestAccountantGetConsumerData_OK(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewAccountantCaller(c, server.URL)
-	data, err := caller.GetConsumerData("something")
+	data, err := caller.GetConsumerData("0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b")
 	assert.Nil(t, err)
 	res, err := json.Marshal(data)
 	assert.Nil(t, err)
@@ -149,21 +149,104 @@ func TestAccountantGetConsumerData_OK(t *testing.T) {
 
 var mockConsumerData = `
 {
-	"Identity": "0x7a50ba299c6da1d82799f2a6221174b9c72e824f",
+	"Identity": "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
 	"Beneficiary": "0x0000000000000000000000000000000000000000",
-	"ChannelID": "MHhCZDk5ZEQyOTYxOUZCNDMyMjYxYTdjOUY4ODhFODU3OTNhODBFYjlC",
-	"Balance": 12400000000,
-	"Promised": 851866,
+	"ChannelID": "0x6295502615e5dDfd1FC7bD22EA5b78d65751A835",
+	"Balance": 12185543791,
+	"Promised": 217345248,
 	"Settled": 0,
 	"Stake": 0,
 	"LatestPromise": {
-	  "ChannelID": "vZndKWGftDImGnyfiI6FeTqA65s=",
-	  "Amount": 851866,
-	  "Fee": 100000000,
-	  "Hashlock": "H3y0u4B5kKSFgu1abk8NRLQYrd2x9/EFBOhFgRSQoeo=",
-	  "R": null,
-	  "Signature": "S4fonNmmxLh1bblPfs98I2iP/5UGYWwb7rxpnwkS0d41oOuXOGxvzLZWduwOinrS97t/ToRaY8vbq/0MfZ2qARs="
+	"ChannelID": "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
+	"Amount": 461730032,
+	"Fee": 0,
+	"R": null,
+	"Hashlock": "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
+	"Signature": "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b"
 	},
 	"LatestSettlement": "0001-01-01T00:00:00Z"
-}
+	}
 `
+
+func TestLatestPromise_isValid(t *testing.T) {
+	type fields struct {
+		ChannelID string
+		Amount    uint64
+		Fee       uint64
+		Hashlock  string
+		R         interface{}
+		Signature string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		id      string
+		wantErr bool
+	}{
+		{
+			name:    "returns no error for a valid promise",
+			wantErr: false,
+			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
+			fields: fields{
+				ChannelID: "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
+				Amount:    461730032,
+				Fee:       0,
+				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
+				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
+			},
+		},
+		{
+			name:    "returns no error for a valid promise with no prefix on identity",
+			wantErr: false,
+			id:      "75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
+			fields: fields{
+				ChannelID: "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
+				Amount:    461730032,
+				Fee:       0,
+				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
+				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
+			},
+		},
+		{
+			name:    "returns error for a invalid promise",
+			wantErr: true,
+			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
+			fields: fields{
+				ChannelID: "0x3295502615e5ddfd1fc7bd22ea5b78d65751a835",
+				Amount:    461730032,
+				Fee:       0,
+				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
+				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
+			},
+		},
+		{
+			name:    "returns error for a invalid hex value",
+			wantErr: true,
+			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
+			fields: fields{
+				ChannelID: "0x3295502615e5ddfd1fc7bd22ea5b78d65751a835",
+				Amount:    461730032,
+				Fee:       0,
+				Hashlock:  "0x0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
+				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lp := LatestPromise{
+				ChannelID: tt.fields.ChannelID,
+				Amount:    tt.fields.Amount,
+				Fee:       tt.fields.Fee,
+				Hashlock:  tt.fields.Hashlock,
+				R:         tt.fields.R,
+				Signature: tt.fields.Signature,
+			}
+			err := lp.isValid(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("LatestPromise.isValid() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
