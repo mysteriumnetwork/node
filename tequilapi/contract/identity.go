@@ -28,7 +28,11 @@ type IdentityDTO struct {
 	// identity in Ethereum address format
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
-	Address string `json:"id"`
+	Address            string `json:"id"`
+	RegistrationStatus string `json:"registrationStatus,omitempty"`
+	ChannelAddress     string `json:"channelAddress,omitempty"`
+	Balance            uint64 `json:"balance,omitempty"`
+	BalanceEstimate    uint64 `json:"balanceEstimate,omitempty"`
 }
 
 // NewIdentityDTO maps to API identity.
@@ -51,15 +55,6 @@ func NewIdentityListResponse(ids []identity.Identity) ListIdentitiesResponse {
 		result.Identities[i] = NewIdentityDTO(id)
 	}
 	return result
-}
-
-// IdentityStatusDTO holds identity status with balance.
-// swagger:model IdentityStatusDTO
-type IdentityStatusDTO struct {
-	RegistrationStatus string `json:"registrationStatus"`
-	ChannelAddress     string `json:"channelAddress"`
-	Balance            uint64 `json:"balance"`
-	BalanceEstimate    uint64 `json:"balanceEstimate"`
 }
 
 // IdentityGetCurrentRequest request to get/create an identity.

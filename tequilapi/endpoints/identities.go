@@ -266,7 +266,7 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 //   200:
 //     description: Registration status and data
 //     schema:
-//       "$ref": "#/definitions/IdentityStatusDTO"
+//       "$ref": "#/definitions/IdentityDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -294,7 +294,8 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		}
 	}
 
-	status := contract.IdentityStatusDTO{
+	status := contract.IdentityDTO{
+		Address:            address,
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,

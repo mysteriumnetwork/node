@@ -89,16 +89,16 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 }
 
 // GetIdentityStatus returns identity status with current balance
-func (client *Client) GetIdentityStatus(identityAddress string) (contract.IdentityStatusDTO, error) {
+func (client *Client) GetIdentityStatus(identityAddress string) (contract.IdentityDTO, error) {
 	path := fmt.Sprintf("identities/%s/status", identityAddress)
 
 	response, err := client.http.Get(path, nil)
 	if err != nil {
-		return contract.IdentityStatusDTO{}, err
+		return contract.IdentityDTO{}, err
 	}
 	defer response.Body.Close()
 
-	res := contract.IdentityStatusDTO{}
+	res := contract.IdentityDTO{}
 	err = parseResponseJSON(response, &res)
 	return res, err
 }
