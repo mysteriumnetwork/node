@@ -170,6 +170,12 @@ type LatestPromise struct {
 
 // isValid checks if the promise is really issued by the given identity
 func (lp LatestPromise) isValid(id string) error {
+	// if we've not promised anything, that's fine for us.
+	// handles the case when we've just registered the identity.
+	if lp.Amount == 0 {
+		return nil
+	}
+
 	decodedChannelID, err := hex.DecodeString(strings.TrimPrefix(lp.ChannelID, "0x"))
 	if err != nil {
 		return errors.Wrap(err, "could not decode channel ID")
