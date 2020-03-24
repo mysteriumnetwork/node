@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -35,8 +34,56 @@ import (
 
 // AccountantErrorResponse represents the errors that accountant returns
 type AccountantErrorResponse struct {
-	Cause   string `json:"cause"`
-	Message string `json:"message"`
+	CausedBy     string `json:"cause"`
+	ErrorMessage string `json:"message"`
+	ErrorData    string `json:"data"`
+	c            error
+}
+
+// Error returns the associated error
+func (aer AccountantErrorResponse) Error() string {
+	return aer.c.Error()
+}
+
+// Cause returns the associated cause
+func (aer AccountantErrorResponse) Cause() error {
+	return aer.c
+}
+
+// Data returns the associated data
+func (aer AccountantErrorResponse) Data() string {
+	return aer.ErrorData
+}
+
+// UnmarshalJSON unmarshals given data to AccountantErrorResponse
+func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
+	var s struct {
+		CausedBy     string `json:"cause"`
+		ErrorMessage string `json:"message"`
+		ErrorData    string `json:"data"`
+	}
+
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+
+	aer.CausedBy = s.CausedBy
+	aer.ErrorMessage = s.ErrorMessage
+	aer.ErrorData = s.ErrorData
+
+	if v, ok := accountantCauseToError[s.CausedBy]; ok {
+		aer.c = v
+		return nil
+	}
+
+	return errors.Wrap(errors.New(s.CausedBy), "received unknown error")
+}
+
+type accountantError interface {
+	Error() string
+	Cause() error
+	Data() string
 }
 
 // AccountantCaller represents the http caller for accountant.
@@ -69,6 +116,11 @@ func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, e
 
 	res := crypto.Promise{}
 	err = ac.doRequest(req, &res)
+	// avoid wrapping, as we'll lose type info and be unable to cast back if needed
+	if _, ok := err.(AccountantErrorResponse); ok {
+		return res, err
+	}
+
 	return res, errors.Wrap(err, "could not request promise")
 }
 
@@ -90,6 +142,10 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 		return errors.Wrap(err, "could not form reveal_r request")
 	}
 	err = ac.doRequest(req, &RevealSuccess{})
+	// avoid wrapping, as we'll lose type info and be unable to cast back if needed
+	if _, ok := err.(AccountantErrorResponse); ok {
+		return err
+	}
 	return errors.Wrap(err, "could not reveal R for accountant")
 }
 
@@ -101,6 +157,10 @@ func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 	}
 	var resp ConsumerData
 	err = ac.doRequest(req, &resp)
+	// avoid wrapping, as we'll lose type info and be unable to cast back if needed
+	if _, ok := err.(AccountantErrorResponse); ok {
+		return resp, err
+	}
 	if err != nil {
 		return ConsumerData{}, errors.Wrap(err, "could not request consumer data from accountant")
 	}
@@ -140,11 +200,7 @@ func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 		return errors.Wrap(err, "could not unmarshal error body")
 	}
 
-	if v, ok := accountantCauseToError[accountantError.Cause]; ok {
-		return errors.Wrap(v, accountantError.Message)
-	}
-
-	return errors.Wrap(errors.New(accountantError.Cause), "received unknown error")
+	return accountantError
 }
 
 // ConsumerData represents the consumer data
@@ -262,24 +318,7 @@ var accountantCauseToError = map[string]error{
 	ErrNeedsRRecovery.Error():                     ErrNeedsRRecovery,
 }
 
-var encryptedRRegexp = regexp.MustCompile(`Encrypted recovery data: "(?P<recoverydetails>[0-9a-f]+)"`)
-
 type rRecoveryDetails struct {
 	R           string `json:"r"`
 	AgreementID uint64 `json:"agreement_id"`
-}
-
-func parseErrNeedsRRecoveryDetails(in string) (string, error) {
-	if !encryptedRRegexp.MatchString(in) {
-		return "", errors.Wrap(errors.New("invalid error message"), in)
-	}
-
-	subs := encryptedRRegexp.FindAllStringSubmatch(in, -1)[0]
-	names := encryptedRRegexp.SubexpNames()
-	mapped := map[string]string{}
-	for i, v := range subs {
-		mapped[names[i]] = v
-	}
-
-	return mapped["recoverydetails"], nil
 }

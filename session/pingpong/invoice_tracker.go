@@ -509,14 +509,9 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
-func (it *InvoiceTracker) recoverR(err error) error {
+func (it *InvoiceTracker) recoverR(aerr accountantError) error {
 	log.Info().Msg("Recovering R...")
-	rDetails, err := parseErrNeedsRRecoveryDetails(err.Error())
-	if err != nil {
-		return errors.Wrap(err, "could not parse error details for R recovery")
-	}
-
-	decoded, err := hex.DecodeString(rDetails)
+	decoded, err := hex.DecodeString(aerr.Data())
 	if err != nil {
 		return errors.Wrap(err, "could not decode R recovery details")
 	}
@@ -532,10 +527,14 @@ func (it *InvoiceTracker) recoverR(err error) error {
 		return errors.Wrap(err, "could not unmarshal R details")
 	}
 
-	log.Info().Msg("R, recovered, will reveal...")
-
+	log.Info().Msg("R recovered, will reveal...")
 	err = it.deps.AccountantCaller.RevealR(res.R, it.deps.ProviderID.Address, res.AgreementID)
-	return errors.Wrap(err, "could not reveal R")
+	if err != nil {
+		return errors.Wrap(err, "could not reveal R")
+	}
+
+	log.Info().Msg("R recovered successfully")
+	return nil
 }
 
 func (it *InvoiceTracker) handleAccountantError(err error) error {
@@ -544,9 +543,14 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		return nil
 	}
 
+	log.Debug().Msg(err.Error())
 	switch errors.Cause(err) {
 	case ErrNeedsRRecovery:
-		return it.recoverR(err)
+		casted, ok := err.(accountantError)
+		if !ok {
+			return errors.New("could not cast errNeedsRecovery to accountantError")
+		}
+		return it.recoverR(casted)
 	case ErrAccountantHashlockMissmatch, ErrAccountantPreviousRNotRevealed:
 		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
 		// For now though, handle as ignorable.
