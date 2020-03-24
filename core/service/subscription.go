@@ -65,7 +65,7 @@ func subscribeSessionCreate(mng *session.Manager, ch *p2p.Channel, service Servi
 
 		data, err := json.Marshal(config.SessionServiceConfig)
 		if err != nil {
-			log.Error().Err(err).Msgf("Cannot pack session service config", string(session.ID))
+			log.Error().Err(err).Msgf("Cannot pack session %s service config", string(session.ID))
 			return err
 		}
 

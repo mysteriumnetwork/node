@@ -424,7 +424,7 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel *p2p
 	return session.SessionDto{
 		ID:     sessionID,
 		Config: sessionResponce.GetConfig(),
-	}, session.PaymentInfo{sessionResponce.GetPaymentInfo()}, nil
+	}, session.PaymentInfo{Supports: sessionResponce.GetPaymentInfo()}, nil
 }
 
 func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
@@ -482,7 +482,6 @@ func (manager *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
 		})
 		return nil
 	})
-
 }
 
 func (manager *connectionManager) startConnection(
@@ -528,7 +527,7 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	err = manager.waitForConnectedState(conn.State(), sessionDTO.ID)
+	err = manager.waitForConnectedState(conn.State())
 	if err != nil {
 		return err
 	}
@@ -599,7 +598,7 @@ func (manager *connectionManager) connectionWaiter(connection Connection) {
 	logDisconnectError(manager.Disconnect())
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State) error {
 	log.Debug().Msg("waiting for connected state")
 	for {
 		select {

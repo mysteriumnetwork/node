@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package p2p
 
 import (
@@ -25,6 +42,7 @@ type brokerConnector interface {
 
 const pingMaxPorts = 10
 
+// NewManager creates new p2p communication manager.
 func NewManager(broker brokerConnector, address string, signer identity.SignerFactory, ipResolver ip.Resolver, natPinger traversal.NATPinger) *Manager {
 	return &Manager{
 		broker:         broker,
@@ -101,6 +119,7 @@ func (m *Manager) CreateChannel(consumerID, providerID identity.Identity, timeou
 	return channel, nil
 }
 
+// SubscribeChannel subscribers to the provider communication channel and handles incoming requests.
 func (m *Manager) SubscribeChannel(providerID identity.Identity, channelHandler func(ch *Channel)) error {
 	brokerConn, err := m.broker.Connect(m.brokerAddress)
 	if err != nil {
