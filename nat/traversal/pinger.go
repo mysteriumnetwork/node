@@ -174,7 +174,7 @@ func (p *Pinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, init
 	stop := make(chan struct{})
 	defer close(stop)
 
-	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, stop)
+	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, n, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -192,6 +192,8 @@ func (p *Pinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, init
 			continue
 		}
 
+		sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
+
 		pings = append(pings, res)
 		if len(pings) == n {
 			waitAllConnACKSent(pings)
@@ -200,38 +202,6 @@ func (p *Pinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, init
 	}
 
 	return nil, errors.New("not enough connections")
-}
-
-func waitAllConnACKSent(pings []pingResponse) {
-	var wg sync.WaitGroup
-	wg.Add(len(pings))
-	for _, ping := range pings {
-		go func(conn *net.UDPConn) {
-			defer wg.Done()
-			if err := sendConnACK(conn); err != nil {
-				log.Warn().Err(err).Msg("Failed to send conn ACK to consumer")
-			}
-		}(ping.conn)
-	}
-	wg.Wait()
-}
-
-// sendConnACK notifies peer that we are using this connection
-// and waits for ack or returns timeout err.
-func sendConnACK(conn *net.UDPConn) error {
-	ackWaitErr := make(chan error)
-	go func() {
-		ackWaitErr <- waitMsg(conn, msgOKACK)
-	}()
-
-	for {
-		select {
-		case err := <-ackWaitErr:
-			return err
-		case <-time.After(sendConnACKInterval):
-			sendMsg(conn, msgOK)
-		}
-	}
 }
 
 // PingProviderPeer pings remote peer with a defined configuration
@@ -243,7 +213,7 @@ func (p *Pinger) PingProviderPeer(ip string, localPorts, remotePorts []int, init
 	stop := make(chan struct{})
 	defer close(stop)
 
-	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, stop)
+	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, n, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -287,6 +257,38 @@ func (p *Pinger) PingProviderPeer(ip string, localPorts, remotePorts []int, init
 			}
 		case <-timeout:
 			return nil, errNATPunchAttemptTimedOut
+		}
+	}
+}
+
+func waitAllConnACKSent(pings []pingResponse) {
+	var wg sync.WaitGroup
+	wg.Add(len(pings))
+	for _, ping := range pings {
+		go func(conn *net.UDPConn) {
+			defer wg.Done()
+			if err := sendConnACK(conn); err != nil {
+				log.Warn().Err(err).Msg("Failed to send conn ACK to consumer")
+			}
+		}(ping.conn)
+	}
+	wg.Wait()
+}
+
+// sendConnACK notifies peer that we are using this connection
+// and waits for ack or returns timeout err.
+func sendConnACK(conn *net.UDPConn) error {
+	ackWaitErr := make(chan error)
+	go func() {
+		ackWaitErr <- waitMsg(conn, msgOKACK)
+	}()
+
+	for {
+		select {
+		case err := <-ackWaitErr:
+			return err
+		case <-time.After(sendConnACKInterval):
+			sendMsg(conn, msgOK)
 		}
 	}
 }
@@ -348,7 +350,7 @@ func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop 
 			return nil
 
 		case <-time.After(p.pingConfig.Interval):
-			log.Debug().Msgf("Pinging %s from %s...", remoteAddr, conn.LocalAddr())
+			log.Debug().Msgf("Pinging %s from %s... with ttl %d", remoteAddr, conn.LocalAddr(), ttl)
 
 			_, err := conn.WriteToUDP([]byte("continuously pinging to "+remoteAddr.String()), remoteAddr)
 			if err != nil {
@@ -411,22 +413,32 @@ type pingResponse struct {
 	id   int
 }
 
-func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL int, stop <-chan struct{}) (<-chan pingResponse, error) {
+func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL int, n int, stop <-chan struct{}) (<-chan pingResponse, error) {
 	if len(localPorts) != len(remotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
 
 	var wg sync.WaitGroup
 	ch := make(chan pingResponse, len(localPorts))
+	ttl := initialTTL
+	resetTTL := initialTTL + (len(localPorts) / n)
 
 	for i := range localPorts {
 		wg.Add(1)
 
-		go func(i int) {
+		go func(i, ttl int) {
 			defer wg.Done()
-			conn, err := p.singlePing(ip, localPorts[i], remotePorts[i], initialTTL+i, stop)
+			conn, err := p.singlePing(ip, localPorts[i], remotePorts[i], ttl, stop)
 			ch <- pingResponse{conn: conn, err: err, id: i}
-		}(i)
+		}(i, ttl)
+
+		// TTL increase is only needed for provider side which starts with low TTL value.
+		if ttl < maxTTL {
+			ttl++
+		}
+		if ttl == resetTTL {
+			ttl = initialTTL
+		}
 	}
 
 	go func() { wg.Wait(); close(ch) }()

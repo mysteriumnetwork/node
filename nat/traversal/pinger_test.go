@@ -109,34 +109,30 @@ func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	provider := newPinger(pingConfig)
 	consumer := newPinger(pingConfig)
 	var pPorts, cPorts []int
-	ports, err := port.NewPool().AcquireMultiple(10)
+	ports, err := port.NewPool().AcquireMultiple(40)
 	assert.NoError(t, err)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 20; i++ {
 		pPorts = append(pPorts, ports[i].Num())
-		cPorts = append(cPorts, ports[5+i].Num())
+		cPorts = append(cPorts, ports[20+i].Num())
 	}
-	peerConns := make(chan *net.UDPConn, 3)
+	peerConns := make(chan *net.UDPConn, 2)
 	go func() {
-		conns, err := consumer.PingProviderPeer("127.0.0.1", cPorts, pPorts, 2, 3)
+		conns, err := consumer.PingProviderPeer("127.0.0.1", cPorts, pPorts, 128, 2)
 		assert.NoError(t, err)
-		assert.Len(t, conns, 3)
+		assert.Len(t, conns, 2)
 		peerConns <- conns[0]
 		peerConns <- conns[1]
-		peerConns <- conns[2]
 	}()
-	conns, err := provider.PingConsumerPeer("127.0.0.1", pPorts, cPorts, 2, 3)
+	conns, err := provider.PingConsumerPeer("127.0.0.1", pPorts, cPorts, 2, 2)
 	assert.NoError(t, err)
 
-	assert.Len(t, conns, 3)
+	assert.Len(t, conns, 2)
 	conn1 := conns[0]
 	conn2 := conns[1]
-	conn3 := conns[2]
 	peerConn1 := <-peerConns
 	peerConn2 := <-peerConns
-	peerConn3 := <-peerConns
 	assert.Equal(t, conn1.RemoteAddr().(*net.UDPAddr).Port, peerConn1.LocalAddr().(*net.UDPAddr).Port)
 	assert.Equal(t, conn2.RemoteAddr().(*net.UDPAddr).Port, peerConn2.LocalAddr().(*net.UDPAddr).Port)
-	assert.Equal(t, conn3.RemoteAddr().(*net.UDPAddr).Port, peerConn3.LocalAddr().(*net.UDPAddr).Port)
 }
 
 func TestPinger_PingPeer_Not_Enough_Connections_Timeout(t *testing.T) {
