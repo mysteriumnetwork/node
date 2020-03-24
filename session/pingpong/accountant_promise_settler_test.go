@@ -205,7 +205,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 	statusesWithNoChangeExpected := []string{string(servicestate.Starting), string(servicestate.NotRunning)}
 
 	for _, v := range statusesWithNoChangeExpected {
-		settler.handleServiceEvent(servicestate.EventPayload{
+		settler.handleServiceEvent(servicestate.AppEventServiceStatus{
 			ProviderID: mockID.Address,
 			Status:     v,
 		})
@@ -215,7 +215,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	settler.handleServiceEvent(servicestate.EventPayload{
+	settler.handleServiceEvent(servicestate.AppEventServiceStatus{
 		ProviderID: mockID.Address,
 		Status:     string(servicestate.Running),
 	})
@@ -285,7 +285,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// no receive on unknown provider
 	settler := NewAccountantPromiseSettler(&mockTransactor{}, nil, channelStatusProvider, mrsp, ks, mapg, cfg)
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 	})
@@ -293,7 +293,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// no receive should be gotten on a non registered provider
 	settler.currentState[mockID] = state{registered: false}
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 	})
@@ -309,7 +309,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		},
 	}
 
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 		Promise: crypto.Promise{
@@ -333,7 +333,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		},
 	}
 
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 		Promise: crypto.Promise{

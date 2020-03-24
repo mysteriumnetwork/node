@@ -104,12 +104,12 @@ func (cbt *ConsumerBalanceTracker) GetBalance(ID identity.Identity) uint64 {
 	return 0
 }
 
-func (cbt *ConsumerBalanceTracker) handleExchangeMessageEvent(event ExchangeMessageEventPayload) {
+func (cbt *ConsumerBalanceTracker) handleExchangeMessageEvent(event AppEventExchangeMessage) {
 	cbt.decreaseBalance(event.Identity, event.AmountPromised)
 }
 
 func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after uint64) {
-	cbt.publisher.Publish(AppTopicBalanceChanged, BalanceChangedEvent{
+	cbt.publisher.Publish(AppTopicBalanceChanged, AppEventBalanceChanged{
 		Identity: id,
 		Previous: before,
 		Current:  after,

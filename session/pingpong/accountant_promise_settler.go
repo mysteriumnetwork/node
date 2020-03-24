@@ -162,7 +162,7 @@ func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 
-func (aps *AccountantPromiseSettler) handleServiceEvent(event servicestate.EventPayload) {
+func (aps *AccountantPromiseSettler) handleServiceEvent(event servicestate.AppEventServiceStatus) {
 	switch event.Status {
 	case string(servicestate.Running):
 		err := aps.loadInitialState(identity.FromAddress(event.ProviderID))
@@ -215,7 +215,7 @@ func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.Ap
 	log.Info().Msgf("Identity registration event handled for provider %q", payload.ID)
 }
 
-func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AccountantPromiseEventPayload) {
+func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 

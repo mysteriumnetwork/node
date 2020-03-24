@@ -128,9 +128,9 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	assert.Equal(t, servicestate.AppTopicServiceStatus, eventBus.publishedTopic)
 
 	var matchFound bool
-	expectedPayload := servicestate.EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
+	expectedPayload := servicestate.AppEventServiceStatus{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
 	for i := range eventBus.publishedData {
-		e, ok := eventBus.publishedData[i].(servicestate.EventPayload)
+		e, ok := eventBus.publishedData[i].(servicestate.AppEventServiceStatus)
 		if !ok {
 			continue
 		}

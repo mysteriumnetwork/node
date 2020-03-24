@@ -570,7 +570,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.NoError(t, err)
 	ev := <-mp.publicationChan
 	assert.Equal(t, AppTopicExchangeMessage, ev.name)
-	assert.EqualValues(t, ExchangeMessageEventPayload{
+	assert.EqualValues(t, AppEventExchangeMessage{
 		Identity:       emt.deps.Identity,
 		AmountPromised: 5,
 	}, ev.value)

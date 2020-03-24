@@ -295,7 +295,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.consumeServiceStateEvent(servicestate.EventPayload{})
+		keeper.consumeServiceStateEvent(servicestate.AppEventServiceStatus{})
 	}
 
 	assert.Eventually(t, interacted(sl, 1), 2*time.Second, 10*time.Millisecond)
@@ -395,7 +395,7 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	assert.Zero(t, keeper.GetState().Identities[0].Balance)
 
 	// when
-	eventBus.Publish(pingpong.AppTopicBalanceChanged, pingpong.BalanceChangedEvent{
+	eventBus.Publish(pingpong.AppTopicBalanceChanged, pingpong.AppEventBalanceChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
 		Previous: 0,
 		Current:  999,

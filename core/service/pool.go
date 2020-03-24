@@ -202,8 +202,8 @@ func (i *Instance) setState(newState servicestate.State) {
 }
 
 // toEvent returns an event representation of the instance
-func (i *Instance) toEvent() servicestate.EventPayload {
-	return servicestate.EventPayload{
+func (i *Instance) toEvent() servicestate.AppEventServiceStatus {
+	return servicestate.AppEventServiceStatus{
 		ID:         string(i.id),
 		ProviderID: i.proposal.ProviderID,
 		Type:       i.proposal.ServiceType,

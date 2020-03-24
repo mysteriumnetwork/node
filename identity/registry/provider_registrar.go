@@ -52,7 +52,7 @@ type ProviderRegistrar struct {
 }
 
 type queuedEvent struct {
-	event   servicestate.EventPayload
+	event   servicestate.AppEventServiceStatus
 	retries int
 }
 
@@ -100,7 +100,7 @@ func (pr *ProviderRegistrar) handleNodeStartupEvents(e event.Payload) {
 	}
 }
 
-func (pr *ProviderRegistrar) consumeServiceEvent(event servicestate.EventPayload) {
+func (pr *ProviderRegistrar) consumeServiceEvent(event servicestate.AppEventServiceStatus) {
 	pr.queue <- queuedEvent{
 		event:   event,
 		retries: 0,

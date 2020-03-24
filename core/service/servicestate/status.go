@@ -20,8 +20,8 @@ package servicestate
 // AppTopicServiceStatus is used in event bus to announce the service status
 const AppTopicServiceStatus = "Service status"
 
-// EventPayload represents the service event related information
-type EventPayload struct {
+// AppEventServiceStatus represents the service event related information
+type AppEventServiceStatus struct {
 	ID         string `json:"id"`
 	ProviderID string `json:"providerId"`
 	Type       string `json:"type"`

@@ -347,7 +347,7 @@ func (k *Keeper) updateConnectionStatistics(e interface{}) {
 func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(pingpong.BalanceChangedEvent)
+	evt, ok := e.(pingpong.AppEventBalanceChanged)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for balance change")
 	}

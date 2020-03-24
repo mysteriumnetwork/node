@@ -62,7 +62,7 @@ func NewManager(nodeOptions node.Options,
 	callback := func(sbc bytecount.SessionByteCount) {
 		sessions := clientMap.GetClientSessions(sbc.ClientID)
 		if len(sessions) == 1 {
-			bus.Publish(event.AppTopicDataTransferred, event.DataTransferEventPayload{
+			bus.Publish(event.AppTopicDataTransferred, event.AppEventDataTransferred{
 				ID:   string(sessions[0]),
 				Up:   sbc.BytesOut,
 				Down: sbc.BytesIn,

@@ -50,7 +50,7 @@ func Test_Provider_Registrar_needsHandling(t *testing.T) {
 	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
-		event:   servicestate.EventPayload{},
+		event:   servicestate.AppEventServiceStatus{},
 		retries: 0,
 	}
 
@@ -71,7 +71,7 @@ func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
 	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
-		event: servicestate.EventPayload{
+		event: servicestate.AppEventServiceStatus{
 			Status:     "Running",
 			ProviderID: "0xsuchIDManyWow",
 		},
@@ -105,7 +105,7 @@ func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
-		event: servicestate.EventPayload{
+		event: servicestate.AppEventServiceStatus{
 			Status:     "Running",
 			ProviderID: "0xsuchIDManyWow",
 		},
