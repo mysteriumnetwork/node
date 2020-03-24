@@ -88,8 +88,8 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 	return id, err
 }
 
-// GetIdentityStatus returns identity status with current balance
-func (client *Client) GetIdentityStatus(identityAddress string) (contract.IdentityDTO, error) {
+// IdentityStatus returns identity status with current balance
+func (client *Client) IdentityStatus(identityAddress string) (contract.IdentityDTO, error) {
 	path := fmt.Sprintf("identities/%s/status", identityAddress)
 
 	response, err := client.http.Get(path, nil)
@@ -101,6 +101,19 @@ func (client *Client) GetIdentityStatus(identityAddress string) (contract.Identi
 	res := contract.IdentityDTO{}
 	err = parseResponseJSON(response, &res)
 	return res, err
+}
+
+// IdentityRegistrationStatus returns information of identity needed to register it on blockchain
+func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
+	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
+	if err != nil {
+		return RegistrationDataDTO{}, err
+	}
+	defer response.Body.Close()
+
+	status := RegistrationDataDTO{}
+	err = parseResponseJSON(response, &status)
+	return status, err
 }
 
 // GetTransactorFees returns the transactor fees
@@ -155,19 +168,6 @@ func (client *Client) TopUp(identity string) error {
 	}
 
 	return nil
-}
-
-// IdentityRegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
-	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
-	if err != nil {
-		return RegistrationDataDTO{}, err
-	}
-	defer response.Body.Close()
-
-	status := RegistrationDataDTO{}
-	err = parseResponseJSON(response, &status)
-	return status, err
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID

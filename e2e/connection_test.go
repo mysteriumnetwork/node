@@ -36,28 +36,28 @@ var (
 )
 
 func TestConsumerConnectsToProvider(t *testing.T) {
+	tequilapiProvider := newTequilapiProvider()
 	tequilapiConsumer := newTequilapiConsumer()
+	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
+		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
+	})
 
 	var consumerID string
 	// no need to register provider, as he will auto-register
 	t.Run("ConsumerCreatesAndRegistersIdentityFlow", func(t *testing.T) {
 		consumerID = identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
-		identityRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
+		consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
 	})
 
 	t.Run("ConsumerConnectFlow", func(t *testing.T) {
 		servicesInFlag := strings.Split(*consumerServices, ",")
-		for i, serviceType := range servicesInFlag {
+		for _, serviceType := range servicesInFlag {
 			if _, ok := serviceTypeAssertionMap[serviceType]; ok {
 				t.Run(serviceType, func(t *testing.T) {
 					proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
-					consumerConnectFlow(t, tequilapiConsumer, consumerID, accountantID, serviceType, proposal)
+					balanceSpent := consumerConnectFlow(t, tequilapiConsumer, consumerID, accountantID, serviceType, proposal)
+					providerEarnedTokens(t, tequilapiProvider, providerID, balanceSpent)
 				})
-			}
-
-			if i != len(servicesInFlag)-1 {
-				// this allows the nats to reconnect properly before starting a new service test
-				time.Sleep(time.Second * 10)
 			}
 		}
 	})
@@ -71,7 +71,20 @@ func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPass
 	return id.Address
 }
 
-func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
+func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
+	err := tequilapi.Unlock(id, idPassphrase)
+	assert.NoError(t, err)
+
+	idStatus, err := tequilapi.IdentityStatus(id)
+	assert.NoError(t, err)
+	assert.Equal(t, "RegisteredProvider", idStatus.RegistrationStatus)
+	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
+	assert.Equal(t, uint64(690000000), idStatus.Balance)
+	assert.Zero(t, idStatus.Earnings)
+	assert.Zero(t, idStatus.EarningsTotal)
+}
+
+func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
@@ -86,8 +99,14 @@ func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 		regStatus, err := tequilapi.IdentityRegistrationStatus(id)
 		return regStatus.Registered, err
 	})
-
 	assert.NoError(t, err)
+
+	idStatus, err := tequilapi.IdentityStatus(id)
+	assert.NoError(t, err)
+	assert.Equal(t, "RegisteredConsumer", idStatus.RegistrationStatus)
+	assert.Equal(t, uint64(690000000), idStatus.Balance)
+	assert.Zero(t, idStatus.Earnings)
+	assert.Zero(t, idStatus.EarningsTotal)
 }
 
 // expect exactly one proposal
@@ -108,7 +127,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal tequilapi_client.ProposalDTO) {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal tequilapi_client.ProposalDTO) uint64 {
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
 
@@ -148,9 +167,9 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se := sessionsDTO.Sessions[0]
-	assert.Equal(t, uint64(0), se.Duration)
-	assert.Equal(t, uint64(0), se.BytesSent)
-	assert.Equal(t, uint64(0), se.BytesReceived)
+	assert.Zero(t, se.Duration)
+	assert.Zero(t, se.BytesSent)
+	assert.Zero(t, se.BytesReceived)
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
@@ -181,6 +200,27 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	// call the custom asserter for the given service type
 	serviceTypeAssertionMap[serviceType](t, se)
+
+	consumerStatus, err := tequilapi.IdentityStatus(consumerID)
+	assert.NoError(t, err)
+	assert.True(t, consumerStatus.Balance < uint64(690000000), "balance should decrease but is %sd", consumerStatus.Balance)
+	assert.Zero(t, consumerStatus.Earnings)
+	assert.Zero(t, consumerStatus.EarningsTotal)
+
+	return uint64(690000000) - consumerStatus.Balance
+}
+
+func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) {
+	// Before settlement
+	providerStatus, err := tequilapi.IdentityStatus(id)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(690000000), providerStatus.Balance)
+	assert.Equal(t, earningsExpected, providerStatus.Earnings)
+	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal)
+	// TODO Compare with sessions stats + proposal price
+	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
+
+	// TODO Implement settlement test here
 }
 
 func sessionStatsReceived(tequilapi *tequilapi_client.Client) func() bool {
@@ -197,18 +237,18 @@ type sessionAsserter func(t *testing.T, session tequilapi_client.ConnectionSessi
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
 	"openvpn": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
-		assert.NotEqual(t, uint64(0), session.Duration)
-		assert.NotEqual(t, uint64(0), session.BytesSent)
-		assert.NotEqual(t, uint64(0), session.BytesReceived)
+		assert.NotZero(t, session.Duration)
+		assert.NotZero(t, session.BytesSent)
+		assert.NotZero(t, session.BytesReceived)
 	},
 	"noop": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
-		assert.NotEqual(t, uint64(0), session.Duration)
-		assert.Equal(t, uint64(0), session.BytesSent)
-		assert.Equal(t, uint64(0), session.BytesReceived)
+		assert.NotZero(t, session.Duration)
+		assert.Zero(t, session.BytesSent)
+		assert.Zero(t, session.BytesReceived)
 	},
 	"wireguard": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
-		assert.NotEqual(t, uint64(0), session.Duration)
-		assert.NotEqual(t, uint64(0), session.BytesSent)
-		assert.NotEqual(t, uint64(0), session.BytesReceived)
+		assert.NotZero(t, session.Duration)
+		assert.NotZero(t, session.BytesSent)
+		assert.NotZero(t, session.BytesReceived)
 	},
 }
