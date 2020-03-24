@@ -29,10 +29,13 @@ import (
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,13 +53,6 @@ type zeroDurationProvider struct {
 
 func (f zeroDurationProvider) GetSessionDuration() time.Duration {
 	return time.Duration(0)
-}
-
-type mockIdentityProvider struct {
-}
-
-func (m *mockIdentityProvider) GetIdentities() []identity.Identity {
-	return nil
 }
 
 func (dt *debounceTester) do(interface{}) {
@@ -173,7 +169,7 @@ func Test_ConsumesNATEvents(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -213,7 +209,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -252,7 +248,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	keeper.state.Services = []event.ServiceInfo{
@@ -292,7 +288,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -321,7 +317,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 		ServiceLister:           &serviceListerMock{},
 		ServiceSessionStorage:   &serviceSessionStorageMock{},
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -348,7 +344,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 		ServiceLister:           &serviceListerMock{},
 		ServiceSessionStorage:   &serviceSessionStorageMock{},
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -375,6 +371,41 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
+func Test_ConsumesBalanceChangeEvent(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	deps := KeeperDeps{
+		NATStatusProvider:       &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:               eventBus,
+		ServiceLister:           &serviceListerMock{},
+		ServiceSessionStorage:   &serviceSessionStorageMock{},
+		SessionDurationProvider: &zeroDurationProvider{},
+		IdentityProvider: &mocks.IdentityProvider{
+			Identities: []identity.Identity{
+				{Address: "0x000000000000000000000000000000000000000a"},
+			},
+		},
+		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
+		BalanceProvider:  &mocks.BalanceProvider{Balance: 0},
+	}
+	keeper := NewKeeper(deps, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Zero(t, keeper.GetState().Identities[0].Balance)
+
+	// when
+	eventBus.Publish(pingpong.AppTopicBalanceChanged, pingpong.BalanceChangedEvent{
+		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
+		Previous: 0,
+		Current:  999,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Identities[0].Balance == 999
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
 func Test_getServiceByID(t *testing.T) {
 
 	natProvider := &natStatusProviderMock{
@@ -394,7 +425,7 @@ func Test_getServiceByID(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -431,7 +462,7 @@ func Test_getSessionByID(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -472,7 +503,7 @@ func Test_incrementConnectionCount(t *testing.T) {
 		ServiceLister:           sl,
 		ServiceSessionStorage:   sessionStorage,
 		SessionDurationProvider: &zeroDurationProvider{},
-		IdentityProvider:        &mockIdentityProvider{},
+		IdentityProvider:        &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"

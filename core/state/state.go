@@ -32,6 +32,7 @@ import (
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/rs/zerolog/log"
 )
 
@@ -80,7 +81,6 @@ type Keeper struct {
 	consumeNATEvent                   func(e interface{})
 	consumeSessionStateEventDebounced func(e interface{})
 	// consumer
-	consumeConnectionStateEvent      func(interface{})
 	consumeConnectionStatisticsEvent func(interface{})
 
 	announceStateChanges func(e interface{})
@@ -122,7 +122,6 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStateEvent = k.updateConnectionState
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStatistics, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 
@@ -159,10 +158,13 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumeConnectionStateEvent); err != nil {
+	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumerConnectionStateEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(pingpong.AppTopicBalanceChanged, k.consumeBalanceChangedEvent); err != nil {
 		return err
 	}
 	return nil
@@ -304,7 +306,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) updateConnectionState(e interface{}) {
+func (k *Keeper) consumerConnectionStateEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	evt, ok := e.(connection.StateEvent)
@@ -335,6 +337,28 @@ func (k *Keeper) updateConnectionStatistics(e interface{}) {
 		BytesSent:     evt.Stats.BytesSent,
 		BytesReceived: evt.Stats.BytesReceived,
 	}
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(pingpong.BalanceChangedEvent)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for balance change")
+	}
+	var id *stateEvent.Identity
+	for i := range k.state.Identities {
+		if k.state.Identities[i].Address == evt.Identity.Address {
+			id = &k.state.Identities[i]
+			break
+		}
+	}
+	if id == nil {
+		log.Warn().Msgf("Couldn't find a matching identity for balance change: %s", evt.Identity.Address)
+		return
+	}
+	id.Balance = evt.Current
 	go k.announceStateChanges(nil)
 }
 
