@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -153,7 +153,7 @@ func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
 		return errors.Wrap(err, "could not subscribe to registration event")
 	}
 
-	err = sub.SubscribeAsync(service.AppTopicServiceStatus, aps.handleServiceEvent)
+	err = sub.SubscribeAsync(servicestate.AppTopicServiceStatus, aps.handleServiceEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to service status event")
 	}
@@ -162,9 +162,9 @@ func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 
-func (aps *AccountantPromiseSettler) handleServiceEvent(event service.EventPayload) {
+func (aps *AccountantPromiseSettler) handleServiceEvent(event servicestate.EventPayload) {
 	switch event.Status {
-	case string(service.Running):
+	case string(servicestate.Running):
 		err := aps.loadInitialState(identity.FromAddress(event.ProviderID))
 		// TODO: should we retry? should we signal that we need to cancel and abort?
 		// In any case, if we start exceeding our balances, the accountant will let us know.

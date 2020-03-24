@@ -23,6 +23,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
@@ -141,7 +142,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	instance := &Instance{
 		id:             id,
-		state:          Starting,
+		state:          servicestate.Starting,
 		options:        options,
 		service:        service,
 		proposal:       proposal,
@@ -154,7 +155,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	manager.servicePool.Add(instance)
 
 	go func() {
-		instance.setState(Running)
+		instance.setState(servicestate.Running)
 
 		serveErr := service.Serve(instance)
 		if serveErr != nil {

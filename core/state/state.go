@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -149,7 +150,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 
 // Subscribe subscribes to the event bus.
 func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.SubscribeAsync(service.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
+	if err := bus.SubscribeAsync(servicestate.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeSessionStateEvent); err != nil {

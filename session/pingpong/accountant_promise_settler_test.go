@@ -27,7 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
@@ -202,10 +202,10 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 
 	settler := NewAccountantPromiseSettler(&mockTransactor{}, nil, channelStatusProvider, mrsp, ks, mapg, cfg)
 
-	statusesWithNoChangeExpected := []string{string(service.Starting), string(service.NotRunning)}
+	statusesWithNoChangeExpected := []string{string(servicestate.Starting), string(servicestate.NotRunning)}
 
 	for _, v := range statusesWithNoChangeExpected {
-		settler.handleServiceEvent(service.EventPayload{
+		settler.handleServiceEvent(servicestate.EventPayload{
 			ProviderID: mockID.Address,
 			Status:     v,
 		})
@@ -215,9 +215,9 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	settler.handleServiceEvent(service.EventPayload{
+	settler.handleServiceEvent(servicestate.EventPayload{
 		ProviderID: mockID.Address,
-		Status:     string(service.Running),
+		Status:     string(servicestate.Running),
 	})
 
 	_, ok := settler.currentState[mockID]

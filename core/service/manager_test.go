@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -124,12 +125,12 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	eventBus.lock.Lock()
 	defer eventBus.lock.Unlock()
 
-	assert.Equal(t, AppTopicServiceStatus, eventBus.publishedTopic)
+	assert.Equal(t, servicestate.AppTopicServiceStatus, eventBus.publishedTopic)
 
 	var matchFound bool
-	expectedPayload := EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
+	expectedPayload := servicestate.EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
 	for i := range eventBus.publishedData {
-		e, ok := eventBus.publishedData[i].(EventPayload)
+		e, ok := eventBus.publishedData[i].(servicestate.EventPayload)
 		if !ok {
 			continue
 		}
