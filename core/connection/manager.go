@@ -176,7 +176,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	providerID := identity.FromAddress(proposal.ProviderID)
 	channel, err := manager.p2pManager.CreateChannel(consumerID, providerID, 10*time.Second)
 	if err != nil {
-		return err
+		log.Warn().Err(err).Msg("Failed to establish p2p channel")
 	}
 	// defer channel.Close()
 	// TODO: close p2p channel gracefully.
@@ -194,9 +194,13 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	// TODO: Use old communication via broker if p2p channel failed.
-	sessionDTO, paymentInfo, err := manager.createP2PSession(connection, channel, consumerID, accountantID, proposal)
-
+	var sessionDTO session.SessionDto
+	var paymentInfo session.PaymentInfo
+	if channel != nil {
+		sessionDTO, paymentInfo, err = manager.createP2PSession(connection, channel, consumerID, accountantID, proposal)
+	} else {
+		sessionDTO, paymentInfo, err = manager.createSession(connection, dialog, consumerID, accountantID, proposal)
+	}
 	if err != nil {
 		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
