@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	stdErr "errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -543,30 +544,30 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		return nil
 	}
 
-	log.Debug().Msg(err.Error())
-	switch errors.Cause(err) {
-	case ErrNeedsRRecovery:
-		casted, ok := err.(accountantError)
+	switch {
+	case stdErr.Is(err, ErrNeedsRRecovery):
+		var aer AccountantErrorResponse
+		ok := stdErr.As(err, &aer)
 		if !ok {
 			return errors.New("could not cast errNeedsRecovery to accountantError")
 		}
-		return it.recoverR(casted)
-	case ErrAccountantHashlockMissmatch, ErrAccountantPreviousRNotRevealed:
+		return it.recoverR(aer)
+	case stdErr.Is(err, ErrAccountantHashlockMissmatch), stdErr.Is(err, ErrAccountantPreviousRNotRevealed):
 		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
 		// For now though, handle as ignorable.
 		fallthrough
 	case
-		ErrAccountantInternal,
-		ErrAccountantNotFound,
-		ErrAccountantNoPreviousPromise,
-		ErrAccountantMalformedJSON:
+		stdErr.Is(err, ErrAccountantInternal),
+		stdErr.Is(err, ErrAccountantNotFound),
+		stdErr.Is(err, ErrAccountantNoPreviousPromise),
+		stdErr.Is(err, ErrAccountantMalformedJSON):
 		// these are ignorable, we'll eventually fail
 		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
 			return err
 		}
 		log.Warn().Err(err).Msg("accountant error, will retry")
 		return errHandled
-	case ErrAccountantProviderBalanceExhausted:
+	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
 		go func() {
 			settleErr := it.deps.Settler(it.deps.ProviderID, it.deps.AccountantID)
 			if settleErr != nil {
@@ -579,10 +580,10 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		log.Warn().Err(err).Msg("out of balance, will try settling")
 		return errHandled
 	case
-		ErrAccountantInvalidSignature,
-		ErrAccountantPaymentValueTooLow,
-		ErrAccountantPromiseValueTooLow,
-		ErrAccountantOverspend:
+		stdErr.Is(err, ErrAccountantInvalidSignature),
+		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
+		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
+		stdErr.Is(err, ErrAccountantOverspend):
 		// these are critical, return and cancel session
 		return err
 	default:

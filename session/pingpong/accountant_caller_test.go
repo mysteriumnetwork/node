@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +28,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -124,7 +124,7 @@ func TestAccountantCaller_UnmarshalsErrors(t *testing.T) {
 		c := requests.NewHTTPClient("0.0.0.0", time.Second)
 		caller := NewAccountantCaller(c, server.URL)
 		err := caller.RevealR("r", "provider", 1)
-		assert.Equal(t, v, errors.Cause(err))
+		assert.EqualError(t, errors.Unwrap(err), v.Error())
 		server.Close()
 	}
 }

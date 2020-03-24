@@ -20,6 +20,7 @@ package pingpong
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 )
 
 // AccountantErrorResponse represents the errors that accountant returns
@@ -50,6 +50,11 @@ func (aer AccountantErrorResponse) Cause() error {
 	return aer.c
 }
 
+// Unwrap unwraps the associated error
+func (aer AccountantErrorResponse) Unwrap() error {
+	return aer.c
+}
+
 // Data returns the associated data
 func (aer AccountantErrorResponse) Data() string {
 	return aer.ErrorData
@@ -65,7 +70,7 @@ func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &s)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not unmarshal error data %w", err)
 	}
 
 	aer.CausedBy = s.CausedBy
@@ -77,7 +82,7 @@ func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	return errors.Wrap(errors.New(s.CausedBy), "received unknown error")
+	return fmt.Errorf("received unknown error: %v", s.CausedBy)
 }
 
 type accountantError interface {
@@ -111,17 +116,16 @@ type RequestPromise struct {
 func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
 	req, err := requests.NewPostRequest(ac.accountantBaseURI, "request_promise", rp)
 	if err != nil {
-		return crypto.Promise{}, errors.Wrap(err, "could not form request_promise request")
+		return crypto.Promise{}, fmt.Errorf("could not form request_promise request: %w", err)
 	}
 
 	res := crypto.Promise{}
 	err = ac.doRequest(req, &res)
-	// avoid wrapping, as we'll lose type info and be unable to cast back if needed
-	if _, ok := err.(AccountantErrorResponse); ok {
-		return res, err
-	}
+	if err != nil {
+		return res, fmt.Errorf("could not request promise: %w", err)
 
-	return res, errors.Wrap(err, "could not request promise")
+	}
+	return res, nil
 }
 
 // RevealObject represents the reveal request object.
@@ -139,35 +143,31 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 		AgreementID: agreementID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not form reveal_r request")
+		return fmt.Errorf("could not form reveal_r request: %w", err)
 	}
 	err = ac.doRequest(req, &RevealSuccess{})
-	// avoid wrapping, as we'll lose type info and be unable to cast back if needed
-	if _, ok := err.(AccountantErrorResponse); ok {
-		return err
+	if err != nil {
+		return fmt.Errorf("could not reveal R for accountant: %w", err)
 	}
-	return errors.Wrap(err, "could not reveal R for accountant")
+
+	return nil
 }
 
 // GetConsumerData gets consumer data from accountant
 func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
-		return ConsumerData{}, errors.Wrap(err, "could not form consumer data request")
+		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
 	var resp ConsumerData
 	err = ac.doRequest(req, &resp)
-	// avoid wrapping, as we'll lose type info and be unable to cast back if needed
-	if _, ok := err.(AccountantErrorResponse); ok {
-		return resp, err
-	}
 	if err != nil {
-		return ConsumerData{}, errors.Wrap(err, "could not request consumer data from accountant")
+		return ConsumerData{}, fmt.Errorf("could not request consumer data from accountant: %w", err)
 	}
 
 	err = resp.LatestPromise.isValid(id)
 	if err != nil {
-		return ConsumerData{}, errors.Wrap(err, "could not check promise validity")
+		return ConsumerData{}, fmt.Errorf("could not check promise validity: %w", err)
 	}
 
 	return resp, nil
@@ -176,19 +176,19 @@ func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 	resp, err := ac.transport.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "could not execute request")
+		return fmt.Errorf("could not execute request: %w", err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "could not read response body")
+		return fmt.Errorf("could not read response body: %w", err)
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 300 {
 		// parse response
 		err = json.Unmarshal(body, &to)
 		if err != nil {
-			return errors.Wrap(err, "could not unmarshal response body")
+			return fmt.Errorf("could not unmarshal response body: %w", err)
 		}
 		return nil
 	}
@@ -197,7 +197,7 @@ func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 	accountantError := AccountantErrorResponse{}
 	err = json.Unmarshal(body, &accountantError)
 	if err != nil {
-		return errors.Wrap(err, "could not unmarshal error body")
+		return fmt.Errorf("could not unmarshal error body: %w", err)
 	}
 
 	return accountantError
@@ -236,15 +236,15 @@ func (lp LatestPromise) isValid(id string) error {
 
 	decodedChannelID, err := hex.DecodeString(strings.TrimPrefix(lp.ChannelID, "0x"))
 	if err != nil {
-		return errors.Wrap(err, "could not decode channel ID")
+		return fmt.Errorf("could not decode channel ID: %w", err)
 	}
 	decodedHashlock, err := hex.DecodeString(strings.TrimPrefix(lp.Hashlock, "0x"))
 	if err != nil {
-		return errors.Wrap(err, "could not decode hashlock")
+		return fmt.Errorf("could not decode hashlock: %w", err)
 	}
 	decodedSignature, err := hex.DecodeString(strings.TrimPrefix(lp.Signature, "0x"))
 	if err != nil {
-		return errors.Wrap(err, "could not decode hashlock")
+		return fmt.Errorf("could not decode hashlock: %w", err)
 	}
 
 	p := crypto.Promise{
@@ -256,7 +256,7 @@ func (lp LatestPromise) isValid(id string) error {
 	}
 
 	if !p.IsPromiseValid(common.HexToAddress(id)) {
-		return errors.New("promise issued by wrong identity")
+		return fmt.Errorf("promise issued by wrong identity. Expected %q", id)
 	}
 
 	return nil
