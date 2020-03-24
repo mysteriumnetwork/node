@@ -79,24 +79,6 @@ type ServiceLocationDTO struct {
 	Country string `json:"country"`
 }
 
-// IdentityDTO holds identity address
-type IdentityDTO struct {
-	Address string `json:"id"`
-}
-
-// IdentityStatusDTO holds identity status with balance
-type IdentityStatusDTO struct {
-	RegistrationStatus string `json:"registrationStatus"`
-	ChannelAddress     string `json:"channelAddress"`
-	Balance            uint64 `json:"balance"`
-	BalanceEstimate    uint64 `json:"balanceEstimate"`
-}
-
-// IdentityList holds returned list of identities
-type IdentityList struct {
-	Identities []IdentityDTO `json:"identities"`
-}
-
 // HealthcheckDTO holds returned healthcheck response
 type HealthcheckDTO struct {
 	Uptime    string       `json:"uptime"`

@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 )
 
@@ -44,27 +45,22 @@ type Client struct {
 }
 
 // GetIdentities returns a list of client identities
-func (client *Client) GetIdentities() (ids []IdentityDTO, err error) {
+func (client *Client) GetIdentities() (ids []contract.IdentityDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
 		return
 	}
 	defer response.Body.Close()
 
-	var list IdentityList
+	var list contract.ListIdentitiesResponse
 	err = parseResponseJSON(response, &list)
 
 	return list.Identities, err
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error) {
-	payload := struct {
-		Passphrase string `json:"passphrase"`
-	}{
-		passphrase,
-	}
-	response, err := client.http.Post("identities", payload)
+func (client *Client) NewIdentity(passphrase string) (id contract.IdentityDTO, err error) {
+	response, err := client.http.Post("identities", contract.IdentityRequest{Passphrase: &passphrase})
 	if err != nil {
 		return
 	}
@@ -75,19 +71,14 @@ func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error)
 }
 
 // CurrentIdentity unlocks and returns the last used, new or first identity
-func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityDTO, err error) {
+func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityDTO, err error) {
 	if len(identity) == 0 {
 		identity = "current"
 	}
 
 	path := fmt.Sprintf("identities/%s", identity)
-	payload := struct {
-		Passphrase string `json:"passphrase"`
-	}{
-		passphrase,
-	}
 
-	response, err := client.http.Put(path, payload)
+	response, err := client.http.Put(path, contract.IdentityRequest{Passphrase: &passphrase})
 	if err != nil {
 		return
 	}
@@ -98,16 +89,16 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 }
 
 // GetIdentityStatus returns identity status with current balance
-func (client *Client) GetIdentityStatus(identityAddress string) (IdentityStatusDTO, error) {
+func (client *Client) GetIdentityStatus(identityAddress string) (contract.IdentityDTO, error) {
 	path := fmt.Sprintf("identities/%s/status", identityAddress)
 
 	response, err := client.http.Get(path, nil)
 	if err != nil {
-		return IdentityStatusDTO{}, err
+		return contract.IdentityDTO{}, err
 	}
 	defer response.Body.Close()
 
-	res := IdentityStatusDTO{}
+	res := contract.IdentityDTO{}
 	err = parseResponseJSON(response, &res)
 	return res, err
 }
@@ -329,13 +320,8 @@ func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB ui
 // Unlock allows using identity in following commands
 func (client *Client) Unlock(identity, passphrase string) error {
 	path := fmt.Sprintf("identities/%s/unlock", identity)
-	payload := struct {
-		Passphrase string `json:"passphrase"`
-	}{
-		passphrase,
-	}
 
-	response, err := client.http.Put(path, payload)
+	response, err := client.http.Put(path, contract.IdentityRequest{Passphrase: &passphrase})
 	if err != nil {
 		return err
 	}
