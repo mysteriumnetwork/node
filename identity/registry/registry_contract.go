@@ -199,7 +199,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 		subscription, err := registry.filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
 		if err != nil {
-			registry.publisher.Publish(AppTopicRegistration, RegistrationEventPayload{
+			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,
 				Status: RegistrationError,
 			})
@@ -231,7 +231,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			}
 
 			log.Debug().Msgf("Sending registration success event for %v", identity)
-			registry.publisher.Publish(AppTopicRegistration, RegistrationEventPayload{
+			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,
 				Status: status,
 			})
@@ -244,7 +244,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 				log.Error().Err(err).Msg("Could not store registration status")
 			}
 		case err := <-subscription.Err():
-			registry.publisher.Publish(AppTopicRegistration, RegistrationEventPayload{
+			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,
 				Status: RegistrationError,
 			})

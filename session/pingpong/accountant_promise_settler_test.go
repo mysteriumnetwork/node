@@ -246,7 +246,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
-		settler.handleRegistrationEvent(registry.RegistrationEventPayload{
+		settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 			ID:     mockID,
 			Status: v,
 		})
@@ -256,7 +256,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	settler.handleRegistrationEvent(registry.RegistrationEventPayload{
+	settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 		ID:     mockID,
 		Status: registry.RegisteredProvider,
 	})

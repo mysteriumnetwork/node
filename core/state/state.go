@@ -165,6 +165,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
+	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, k.consumeIdentityRegistrationEvent); err != nil {
+		return err
+	}
 	if err := bus.SubscribeAsync(pingpong.AppTopicBalanceChanged, k.consumeBalanceChangedEvent); err != nil {
 		return err
 	}
@@ -360,6 +363,28 @@ func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 		return
 	}
 	id.Balance = evt.Current
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeIdentityRegistrationEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(registry.AppEventIdentityRegistration)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for identity registration")
+	}
+	var id *stateEvent.Identity
+	for i := range k.state.Identities {
+		if k.state.Identities[i].Address == evt.ID.Address {
+			id = &k.state.Identities[i]
+			break
+		}
+	}
+	if id == nil {
+		log.Warn().Msgf("Couldn't find a matching identity for balance change: %s", evt.ID.Address)
+		return
+	}
+	id.RegistrationStatus = evt.Status
 	go k.announceStateChanges(nil)
 }
 

@@ -75,7 +75,7 @@ type Balance struct {
 
 // Subscribe subscribes the consumer balance tracker to relevant events
 func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
-	err := bus.SubscribeAsync(registry.AppTopicRegistration, cbt.handleRegistrationEvent)
+	err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, cbt.handleRegistrationEvent)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 	}
 }
 
-func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.RegistrationEventPayload) {
+func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEventIdentityRegistration) {
 	switch event.Status {
 	case registry.RegisteredConsumer, registry.RegisteredProvider:
 		var boff backoff.BackOff

@@ -148,7 +148,7 @@ func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
 		return errors.Wrap(err, "could not subscribe to node status event")
 	}
 
-	err = sub.SubscribeAsync(registry.AppTopicRegistration, aps.handleRegistrationEvent)
+	err = sub.SubscribeAsync(registry.AppTopicIdentityRegistration, aps.handleRegistrationEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to registration event")
 	}
@@ -191,7 +191,7 @@ func (aps *AccountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.RegistrationEventPayload) {
+func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.AppEventIdentityRegistration) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 

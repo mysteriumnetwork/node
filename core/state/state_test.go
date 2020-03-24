@@ -407,6 +407,40 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
+func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	deps := KeeperDeps{
+		NATStatusProvider:       &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:               eventBus,
+		ServiceLister:           &serviceListerMock{},
+		ServiceSessionStorage:   &serviceSessionStorageMock{},
+		SessionDurationProvider: &zeroDurationProvider{},
+		IdentityProvider: &mocks.IdentityProvider{
+			Identities: []identity.Identity{
+				{Address: "0x000000000000000000000000000000000000000a"},
+			},
+		},
+		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.Unregistered},
+		BalanceProvider:  &mocks.BalanceProvider{Balance: 0},
+	}
+	keeper := NewKeeper(deps, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Equal(t, registry.Unregistered, keeper.GetState().Identities[0].RegistrationStatus)
+
+	// when
+	eventBus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
+		ID:     identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
+		Status: registry.RegisteredConsumer,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Identities[0].RegistrationStatus == registry.RegisteredConsumer
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
 func Test_getServiceByID(t *testing.T) {
 
 	natProvider := &natStatusProviderMock{
