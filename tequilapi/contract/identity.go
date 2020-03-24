@@ -22,7 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
-// IdentityDTO holds identity address.
+// IdentityDTO holds identity information.
 // swagger:model IdentityDTO
 type IdentityDTO struct {
 	// identity in Ethereum address format
