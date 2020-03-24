@@ -165,6 +165,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
+	if err := bus.SubscribeAsync(identity.AppTopicIdentityCreated, k.consumeIdentityCreatedEvent); err != nil {
+		return err
+	}
 	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, k.consumeIdentityRegistrationEvent); err != nil {
 		return err
 	}
@@ -363,6 +366,13 @@ func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 		return
 	}
 	id.Balance = evt.Current
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeIdentityCreatedEvent(_ interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	k.state.Identities = k.fetchIdentities()
 	go k.announceStateChanges(nil)
 }
 
