@@ -166,7 +166,7 @@ func (d *Discovery) stopLoop() {
 func (d *Discovery) handleRegistrationEvent(rep registry.AppEventIdentityRegistration) {
 	log.Debug().Msgf("Registration event received for %v", rep.ID.Address)
 	if rep.ID.Address != d.ownIdentity.Address {
-		log.Debug().Msgf("Identity missmatch for registration. Expected %v got %v", d.ownIdentity.Address, rep.ID.Address)
+		log.Debug().Msgf("Identity mismatch for registration. Expected %v got %v", d.ownIdentity.Address, rep.ID.Address)
 		return
 	}
 

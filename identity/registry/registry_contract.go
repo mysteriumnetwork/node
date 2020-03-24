@@ -170,6 +170,10 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 
 	ID := identity.FromAddress(ev.Identity)
 
+	go registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
+		ID:     ID,
+		Status: s,
+	})
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           ID,
 		RegistrationStatus: s,
