@@ -23,12 +23,18 @@ import (
 )
 
 const (
-	topicKeepAlive          = "p2p-keepalive"
-	TopicSessionCreate      = "p2p-session-create"
-	TopicSessionAcknowledge = "p2p-session-acknowledge"
-	TopicSessionDestroy     = "p2p-session-destroy"
+	topicKeepAlive = "p2p-keepalive"
 
+	// TopicSessionCreate is a session create endpoint for p2p communication.
+	TopicSessionCreate = "p2p-session-create"
+	// TopicSessionAcknowledge is a session acknowledge endpoint for p2p communication.
+	TopicSessionAcknowledge = "p2p-session-acknowledge"
+	// TopicSessionDestroy is a session destroy endpoint for p2p communication.
+	TopicSessionDestroy = "p2p-session-destroy"
+
+	// TopicPaymentMessage is a payment messages endpoint for p2p communication.
 	TopicPaymentMessage = "p2p-payment-message"
+	// TopicPaymentInvoice is a payment invoices endpoint for p2p communication.
 	TopicPaymentInvoice = "p2p-payment-invoice"
 )
 
