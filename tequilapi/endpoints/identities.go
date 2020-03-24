@@ -93,7 +93,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/CurrentIdentityDTO"
+//       $ref: "#/definitions/IdentityRequestDTO"
 // responses:
 //   200:
 //     description: Unlocked identity returned
@@ -118,14 +118,14 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 		address = ""
 	}
 
-	var myIdentityRequest contract.IdentityGetCurrentRequest
+	var myIdentityRequest contract.IdentityRequest
 	err := json.NewDecoder(request.Body).Decode(&myIdentityRequest)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityGetCurrentRequest(myIdentityRequest)
+	errorMap := contract.ValidateIdentityRequest(myIdentityRequest)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
@@ -151,7 +151,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/IdentityCreationDTO"
+//       $ref: "#/definitions/IdentityRequestDTO"
 // responses:
 //   200:
 //     description: Identity created
@@ -169,21 +169,21 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	var createReq contract.IdentityCreateRequest
-	err := json.NewDecoder(request.Body).Decode(&createReq)
+func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+	var req contract.IdentityRequest
+	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityCreateRequest(createReq)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	id, err := endpoint.idm.CreateNewIdentity(*createReq.Passphrase)
+	id, err := endpoint.idm.CreateNewIdentity(*req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -207,7 +207,7 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //   name: body
 //   description: Parameter in body (passphrase) required for unlocking identity
 //   schema:
-//     $ref: "#/definitions/IdentityUnlockingDTO"
+//     $ref: "#/definitions/IdentityRequestDTO"
 // responses:
 //   202:
 //     description: Identity unlocked
@@ -223,7 +223,7 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
 	id, err := endpoint.idm.GetIdentity(address)
 	if err != nil {
@@ -231,20 +231,20 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	var unlockReq contract.IdentityUnlockRequest
-	err = json.NewDecoder(request.Body).Decode(&unlockReq)
+	var req contract.IdentityRequest
+	err = json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityUnlockRequest(unlockReq)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	err = endpoint.idm.Unlock(id.Address, *unlockReq.Passphrase)
+	err = endpoint.idm.Unlock(id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
