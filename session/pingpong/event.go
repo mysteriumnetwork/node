@@ -50,3 +50,13 @@ type AppEventBalanceChanged struct {
 	Previous uint64
 	Current  uint64
 }
+
+// AppTopicEarningsChanged represents the earnings change topic
+const AppTopicEarningsChanged = "earnings_change"
+
+// AppEventEarningsChanged represents a balance change event
+type AppEventEarningsChanged struct {
+	Identity identity.Identity
+	Previous uint64
+	Current  uint64
+}

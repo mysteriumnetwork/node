@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
@@ -47,7 +48,7 @@ func TestPromiseSettler_resyncState_returns_errors(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	err = settler.resyncState(mockID)
 	assert.Equal(t, fmt.Sprintf("could not get provider channel for %v: %v", mockID, errMock.Error()), err.Error())
 
@@ -72,7 +73,7 @@ func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
 	id := identity.FromAddress("test")
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	err = settler.resyncState(id)
 	assert.NoError(t, err)
 
@@ -101,7 +102,7 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	err = settler.resyncState(mockID)
 	assert.NoError(t, err)
 
@@ -130,7 +131,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
 	settler.currentState[mockID] = state{}
 
@@ -200,7 +201,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
 	statusesWithNoChangeExpected := []string{string(servicestate.Starting), string(servicestate.NotRunning)}
 
@@ -242,7 +243,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
@@ -284,7 +285,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
 
 	// no receive on unknown provider
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
@@ -379,7 +380,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		},
 	}
 
-	settler := NewAccountantPromiseSettler(&mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
 	settler.handleNodeStart()
 
