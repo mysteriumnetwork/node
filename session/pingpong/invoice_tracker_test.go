@@ -56,14 +56,16 @@ func (mpis *MockPeerInvoiceSender) Send(invoice crypto.Invoice) error {
 	return mpis.mockError
 }
 
-type mockAccountantCaller struct{}
+type mockAccountantCaller struct {
+	errToReturn error
+}
 
 func (mac *mockAccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
-	return crypto.Promise{}, nil
+	return crypto.Promise{}, mac.errToReturn
 }
 
 func (mac *mockAccountantCaller) RevealR(r string, provider string, agreementID uint64) error {
-	return nil
+	return mac.errToReturn
 }
 
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
@@ -846,4 +848,94 @@ func (mpm *mockPaymentMethod) GetType() string {
 
 func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 	return mpm.rate
+}
+
+func TestInvoiceTracker_recoverR(t *testing.T) {
+	type fields struct {
+		deps InvoiceTrackerDeps
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		err     accountantError
+		wantErr bool
+	}{
+		{
+			name: "green path",
+			fields: fields{
+				deps: InvoiceTrackerDeps{
+					ProviderID:       identity.FromAddress("0x0"),
+					AccountantCaller: &mockAccountantCaller{},
+					Encryption:       &mockEncryptor{},
+				},
+			},
+			err: AccountantErrorResponse{
+				ErrorMessage: `Secret R for previous promise exchange (Encrypted recovery data: "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d"`,
+				CausedBy:     ErrNeedsRRecovery.Error(),
+				c:            ErrNeedsRRecovery,
+				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
+			},
+			wantErr: false,
+		},
+		{
+			name: "bubbles accountant errors",
+			fields: fields{
+				deps: InvoiceTrackerDeps{
+					ProviderID: identity.FromAddress("0x0"),
+					AccountantCaller: &mockAccountantCaller{
+						errToReturn: errors.New("explosions"),
+					},
+					Encryption: &mockEncryptor{},
+				},
+			},
+			err: AccountantErrorResponse{
+				ErrorMessage: `Secret R for previous promise exchange (Encrypted recovery data: "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d"`,
+				CausedBy:     ErrNeedsRRecovery.Error(),
+				c:            ErrNeedsRRecovery,
+				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
+			},
+			wantErr: true,
+		},
+		{
+			name: "bubbles decryptor errors",
+			fields: fields{
+				deps: InvoiceTrackerDeps{
+					ProviderID:       identity.FromAddress("0x0"),
+					AccountantCaller: &mockAccountantCaller{},
+					Encryption: &mockEncryptor{
+						errToReturn: errors.New("explosions"),
+					},
+				},
+			},
+			err: AccountantErrorResponse{
+				ErrorMessage: `Secret R for previous promise exchange (Encrypted recovery data: "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d"`,
+				CausedBy:     ErrNeedsRRecovery.Error(),
+				c:            ErrNeedsRRecovery,
+				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			it := &InvoiceTracker{
+				deps: tt.fields.deps,
+			}
+			if err := it.recoverR(tt.err); (err != nil) != tt.wantErr {
+				t.Errorf("InvoiceTracker.recoverR() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+type mockEncryptor struct {
+	errToReturn error
+}
+
+func (me *mockEncryptor) Decrypt(addr common.Address, encrypted []byte) ([]byte, error) {
+	return encrypted, me.errToReturn
+}
+
+func (me *mockEncryptor) Encrypt(addr common.Address, plaintext []byte) ([]byte, error) {
+	return plaintext, me.errToReturn
 }
