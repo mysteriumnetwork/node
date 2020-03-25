@@ -31,38 +31,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-type balanceGetter func(id identity.Identity) uint64
-
-type balanceFetcher func(id string) (pingpong.ConsumerData, error)
-
-type identitiesAPI struct {
-	idm                                           identity.Manager
-	selector                                      identity_selector.Handler
-	registry                                      registry.IdentityRegistry
-	registryAddress, channelImplementationAddress string
-	getBalance                                    balanceGetter
-	fetchBalance                                  balanceFetcher
+type consumerProvider interface {
+	GetConsumerData(idAddress string) (pingpong.ConsumerData, error)
 }
 
-//NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(
-	idm identity.Manager,
-	selector identity_selector.Handler,
-	registry registry.IdentityRegistry,
-	registryAddress,
-	channelImplementationAddress string,
-	getBalance balanceGetter,
-	fetchBalance balanceFetcher,
-) *identitiesAPI {
-	return &identitiesAPI{
-		idm:                          idm,
-		selector:                     selector,
-		registry:                     registry,
-		registryAddress:              registryAddress,
-		channelImplementationAddress: channelImplementationAddress,
-		getBalance:                   getBalance,
-		fetchBalance:                 fetchBalance,
-	}
+type balanceProvider interface {
+	GetBalance(id identity.Identity) uint64
+}
+
+type earningsProvider interface {
+	Balance(id identity.Identity) uint64
+	BalanceTotal(id identity.Identity) uint64
+}
+
+type identitiesAPI struct {
+	idm              identity.Manager
+	selector         identity_selector.Handler
+	registry         registry.IdentityRegistry
+	consumerProvider consumerProvider
+	balanceProvider  balanceProvider
+	earningsProvider earningsProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -287,7 +275,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 
 	var consumer pingpong.ConsumerData
 	if regStatus.Registered() {
-		consumer, err = endpoint.fetchBalance(id.Address)
+		consumer, err = endpoint.consumerProvider.GetConsumerData(id.Address)
 		if err != nil {
 			utils.SendError(resp, errors.Wrap(err, "failed to check balance status"), http.StatusInternalServerError)
 			return
@@ -299,7 +287,9 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
-		BalanceEstimate:    endpoint.getBalance(id),
+		BalanceEstimate:    endpoint.balanceProvider.GetBalance(id),
+		Earnings:           endpoint.earningsProvider.Balance(id),
+		EarningsTotal:      endpoint.earningsProvider.BalanceTotal(id),
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -349,12 +339,19 @@ func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
 	selector identity_selector.Handler,
-	identityRegistry registry.IdentityRegistry,
-	registryAddress, channelImplementationAddress string,
-	getBalance balanceGetter,
-	fetchBalance balanceFetcher,
+	registry registry.IdentityRegistry,
+	balanceProvider balanceProvider,
+	consumerFetcher consumerProvider,
+	earningsProvider earningsProvider,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress, getBalance, fetchBalance)
+	idmEnd := &identitiesAPI{
+		idm:              idm,
+		selector:         selector,
+		registry:         registry,
+		balanceProvider:  balanceProvider,
+		consumerProvider: consumerFetcher,
+		earningsProvider: earningsProvider,
+	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id", idmEnd.Current)

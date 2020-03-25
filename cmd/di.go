@@ -446,14 +446,12 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
-	channelImplementation := nodeOptions.Transactor.ChannelImplementation
-
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
 		nodeOptions.Accountant.AccountantID,
-		channelImplementation,
+		nodeOptions.Transactor.ChannelImplementation,
 		di.SignerFactory,
 		di.EventBus,
 	)
@@ -476,7 +474,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 		),
-		di.AccountantCaller.GetConsumerData,
+		di.AccountantCaller,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -517,7 +515,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener, channelImplementation)
+	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
 		return err
 	}
@@ -526,7 +524,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	return nil
 }
 
-func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener, channelImplementation string) (tequilapi.APIServer, error) {
+func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener) (tequilapi.APIServer, error) {
 	if !nodeOptions.TequilapiEnabled {
 		return tequilapi.NewNoopAPIServer(), nil
 	}
@@ -534,7 +532,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance, di.AccountantCaller.GetConsumerData)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AccountantCaller, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
