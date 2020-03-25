@@ -36,6 +36,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type providerChannelStatusProvider interface {
+	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error)
+}
+
+type accountantPromiseGetter interface {
+	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
+}
+
+type ks interface {
+	Accounts() []accounts.Account
+}
+
+type registrationStatusProvider interface {
+	GetRegistrationStatus(id identity.Identity) (registry.RegistrationStatus, error)
+}
+
 type transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 	SettleAndRebalance(id string, promise crypto.Promise) error
@@ -62,7 +79,7 @@ type AccountantPromiseSettler struct {
 	transactor                 transactor
 	promiseStorage             promiseStorage
 
-	currentState map[identity.Identity]state
+	currentState map[identity.Identity]SettlementState
 	settleQueue  chan receivedPromise
 	stop         chan struct{}
 	once         sync.Once
@@ -83,7 +100,7 @@ func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transact
 		ks:                         ks,
 		registrationStatusProvider: registrationStatusProvider,
 		config:                     config,
-		currentState:               make(map[identity.Identity]state),
+		currentState:               make(map[identity.Identity]SettlementState),
 		promiseStorage:             promiseStorage,
 
 		// defaulting to a queue of 5, in case we have a few active identities.
@@ -116,28 +133,6 @@ func (aps *AccountantPromiseSettler) loadInitialState(addr identity.Identity) er
 	return aps.resyncState(addr)
 }
 
-// BalanceTotal returns earnings of all history.
-func (aps *AccountantPromiseSettler) BalanceTotal(id identity.Identity) uint64 {
-	aps.lock.RLock()
-	defer aps.lock.RUnlock()
-
-	if v, exist := aps.currentState[id]; exist {
-		return v.lastPromise.Amount
-	}
-	return 0
-}
-
-// Balance returns current unsettled earnings.
-func (aps *AccountantPromiseSettler) Balance(id identity.Identity) uint64 {
-	aps.lock.RLock()
-	defer aps.lock.RUnlock()
-
-	if v, exist := aps.currentState[id]; exist {
-		return v.unsettledBalance()
-	}
-	return 0
-}
-
 func (aps *AccountantPromiseSettler) resyncState(id identity.Identity) error {
 	channel, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, id.ToCommonAddress())
 	if err != nil {
@@ -149,23 +144,23 @@ func (aps *AccountantPromiseSettler) resyncState(id identity.Identity) error {
 		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", id))
 	}
 
-	s := state{
-		channel:     channel,
-		lastPromise: accountantPromise.Promise,
+	s := SettlementState{
+		Channel:     channel,
+		LastPromise: accountantPromise.Promise,
 		registered:  true,
 	}
 
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[id] = s
-	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", id, s.balance(), s.availableBalance(), s.unsettledBalance())
+	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", id, s.balance(), s.availableBalance(), s.UnsettledBalance())
 	return nil
 }
 
-func (aps *AccountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after state) {
-	aps.eventBus.Publish(AppTopicEarningsChanged, AppEventBalanceChanged{
+func (aps *AccountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after SettlementState) {
+	aps.eventBus.Publish(AppTopicEarningsChanged, AppEventEarningsChanged{
 		Identity: id,
-		Previous: before.balance(),
-		Current:  after.balance(),
+		Previous: before,
+		Current:  after,
 	})
 }
 
@@ -258,7 +253,7 @@ func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AppEve
 		log.Error().Msgf("provider %q not registered, skipping", id)
 		return
 	}
-	s.lastPromise = apep.Promise
+	s.LastPromise = apep.Promise
 
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[apep.ProviderID] = s
@@ -286,6 +281,14 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 			go aps.settle(p)
 		}
 	}
+}
+
+// SettlementState returns current settlement status for given identity
+func (aps *AccountantPromiseSettler) SettlementState(id identity.Identity) SettlementState {
+	aps.lock.RLock()
+	defer aps.lock.RUnlock()
+
+	return aps.currentState[id]
 }
 
 // ErrNothingToSettle indicates that there is nothing to settle.
@@ -415,71 +418,4 @@ func (aps *AccountantPromiseSettler) handleNodeStop() {
 	aps.once.Do(func() {
 		close(aps.stop)
 	})
-}
-
-type providerChannelStatusProvider interface {
-	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
-	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error)
-}
-
-type accountantPromiseGetter interface {
-	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
-}
-
-type state struct {
-	channel     ProviderChannel
-	lastPromise crypto.Promise
-
-	settleInProgress bool
-	registered       bool
-}
-
-func (s state) availableBalance() uint64 {
-	balance := uint64(0)
-	if s.channel.Balance != nil {
-		balance = s.channel.Balance.Uint64()
-	}
-
-	settled := uint64(0)
-	if s.channel.Balance != nil {
-		settled = s.channel.Settled.Uint64()
-	}
-
-	return balance + settled
-}
-
-func (s state) balance() uint64 {
-	return s.availableBalance() - s.lastPromise.Amount
-}
-
-func (s state) unsettledBalance() uint64 {
-	return s.lastPromise.Amount - s.channel.Settled.Uint64()
-}
-
-func (s state) needsSettling(threshold float64) bool {
-	if !s.registered {
-		return false
-	}
-
-	if s.settleInProgress {
-		return false
-	}
-
-	if float64(s.balance()) <= 0 {
-		return true
-	}
-
-	if float64(s.balance()) <= threshold*float64(s.availableBalance()) {
-		return true
-	}
-
-	return false
-}
-
-type ks interface {
-	Accounts() []accounts.Account
-}
-
-type registrationStatusProvider interface {
-	GetRegistrationStatus(id identity.Identity) (registry.RegistrationStatus, error)
 }

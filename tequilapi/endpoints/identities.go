@@ -40,8 +40,7 @@ type balanceProvider interface {
 }
 
 type earningsProvider interface {
-	Balance(id identity.Identity) uint64
-	BalanceTotal(id identity.Identity) uint64
+	SettlementState(id identity.Identity) pingpong.SettlementState
 }
 
 type identitiesAPI struct {
@@ -282,14 +281,16 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		}
 	}
 
+	settlement := endpoint.earningsProvider.SettlementState(id)
+
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
 		BalanceEstimate:    endpoint.balanceProvider.GetBalance(id),
-		Earnings:           endpoint.earningsProvider.Balance(id),
-		EarningsTotal:      endpoint.earningsProvider.BalanceTotal(id),
+		Earnings:           settlement.UnsettledBalance(),
+		EarningsTotal:      settlement.LifetimeBalance(),
 	}
 	utils.WriteAsJSON(status, resp)
 }

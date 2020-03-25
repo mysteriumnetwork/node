@@ -57,6 +57,68 @@ const AppTopicEarningsChanged = "earnings_change"
 // AppEventEarningsChanged represents a balance change event
 type AppEventEarningsChanged struct {
 	Identity identity.Identity
-	Previous uint64
-	Current  uint64
+	Previous SettlementState
+	Current  SettlementState
+}
+
+// SettlementState represents current settling state with values of identity earnings
+type SettlementState struct {
+	Channel     ProviderChannel
+	LastPromise crypto.Promise
+
+	settleInProgress bool
+	registered       bool
+}
+
+// LifetimeBalance returns earnings of all history.
+func (ss SettlementState) LifetimeBalance() uint64 {
+	return ss.LastPromise.Amount
+}
+
+// UnsettledBalance returns current unsettled earnings.
+func (ss SettlementState) UnsettledBalance() uint64 {
+	settled := uint64(0)
+	if ss.Channel.Settled != nil {
+		settled = ss.Channel.Settled.Uint64()
+	}
+
+	return ss.LastPromise.Amount - settled
+}
+
+func (ss SettlementState) availableBalance() uint64 {
+	balance := uint64(0)
+	if ss.Channel.Balance != nil {
+		balance = ss.Channel.Balance.Uint64()
+	}
+
+	settled := uint64(0)
+	if ss.Channel.Settled != nil {
+		settled = ss.Channel.Settled.Uint64()
+	}
+
+	return balance + settled
+}
+
+func (ss SettlementState) balance() uint64 {
+	return ss.availableBalance() - ss.LastPromise.Amount
+}
+
+func (ss SettlementState) needsSettling(threshold float64) bool {
+	if !ss.registered {
+		return false
+	}
+
+	if ss.settleInProgress {
+		return false
+	}
+
+	if float64(ss.balance()) <= 0 {
+		return true
+	}
+
+	if float64(ss.balance()) <= threshold*float64(ss.availableBalance()) {
+		return true
+	}
+
+	return false
 }
