@@ -125,7 +125,8 @@ func ParseResponseJSON(response *http.Response, dto interface{}) error {
 // ParseResponseError parses http.Response error.
 func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return errors.Errorf("server response invalid: %s (%s)", response.Status, response.Request.URL)
+		body, _ := ioutil.ReadAll(response.Body)
+		return errors.Errorf("server response invalid: %s (%s)%s", response.Status, response.Request.URL, body)
 	}
 
 	return nil
