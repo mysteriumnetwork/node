@@ -38,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -435,7 +436,7 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 
 	// when
 	newSettlement := pingpong.SettlementState{
-		Channel:     pingpong.ProviderChannel{Balance: big.NewInt(100)},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(100)},
 		LastPromise: crypto.Promise{Amount: 30},
 	}
 	eventBus.Publish(pingpong.AppTopicEarningsChanged, pingpong.AppEventEarningsChanged{

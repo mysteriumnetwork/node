@@ -158,6 +158,7 @@ type Dependencies struct {
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
 	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
 	AccountantCaller         *pingpong.AccountantCaller
+	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 }
 
 // Bootstrap initiates all container dependencies
@@ -466,16 +467,20 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
+	di.ChannelAddressCalculator = pingpong.NewChannelAddressCalculator(
+		nodeOptions.Accountant.AccountantID,
+		nodeOptions.Transactor.ChannelImplementation,
+		nodeOptions.Transactor.RegistryAddress,
+	)
+
 	di.AccountantCaller = pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
+		common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
-		pingpong.NewChannelAddressCalculator(
-			nodeOptions.Accountant.AccountantID,
-			nodeOptions.Transactor.ChannelImplementation,
-			nodeOptions.Transactor.RegistryAddress,
-		),
+		di.ChannelAddressCalculator,
+		di.ConsumerTotalsStorage,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -533,7 +538,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AccountantCaller, di.AccountantPromiseSettler)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
