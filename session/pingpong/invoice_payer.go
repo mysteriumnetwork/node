@@ -45,7 +45,12 @@ var ErrWrongProvider = errors.New("wrong provider supplied")
 // ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
 
-const consumerInvoiceBasicTolerance = 1.05
+// consumerInvoiceBasicTolerance provider traffic amount compensation due to:
+//   - different MTU sizes
+//   - measurement timing inaccuracies
+//   - possible in-transit packet fragmentation
+//   - non-agreed traffic: traffic blocked / dropped / not reachable / failed retransmits on provider
+const consumerInvoiceBasicTolerance = 1.11
 
 // PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
