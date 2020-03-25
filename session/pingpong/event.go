@@ -25,8 +25,8 @@ import (
 // AppTopicAccountantPromise represents a topic to which we send accountant promise events.
 const AppTopicAccountantPromise = "accountant_promise_received"
 
-// AccountantPromiseEventPayload represents the payload that is sent on the AppTopicAccountantPromise.
-type AccountantPromiseEventPayload struct {
+// AppEventAccountantPromise represents the payload that is sent on the AppTopicAccountantPromise.
+type AppEventAccountantPromise struct {
 	Promise      crypto.Promise
 	AccountantID identity.Identity
 	ProviderID   identity.Identity
@@ -35,8 +35,8 @@ type AccountantPromiseEventPayload struct {
 // AppTopicExchangeMessage represents a topic where exchange messages are sent.
 const AppTopicExchangeMessage = "exchange_message_topic"
 
-// ExchangeMessageEventPayload represents the messages that are sent on the AppTopicExchangeMessage.
-type ExchangeMessageEventPayload struct {
+// AppEventExchangeMessage represents the messages that are sent on the AppTopicExchangeMessage.
+type AppEventExchangeMessage struct {
 	Identity       identity.Identity
 	AmountPromised uint64
 }
@@ -44,8 +44,8 @@ type ExchangeMessageEventPayload struct {
 // AppTopicBalanceChanged represents the balance change topic
 const AppTopicBalanceChanged = "balance_change"
 
-// BalanceChangedEvent represents a balance change event
-type BalanceChangedEvent struct {
+// AppEventBalanceChanged represents a balance change event
+type AppEventBalanceChanged struct {
 	Identity identity.Identity
 	Previous uint64
 	Current  uint64

@@ -163,10 +163,10 @@ func (d *Discovery) stopLoop() {
 	d.mu.RUnlock()
 }
 
-func (d *Discovery) handleRegistrationEvent(rep registry.RegistrationEventPayload) {
+func (d *Discovery) handleRegistrationEvent(rep registry.AppEventIdentityRegistration) {
 	log.Debug().Msgf("Registration event received for %v", rep.ID.Address)
 	if rep.ID.Address != d.ownIdentity.Address {
-		log.Debug().Msgf("Identity missmatch for registration. Expected %v got %v", d.ownIdentity.Address, rep.ID.Address)
+		log.Debug().Msgf("Identity mismatch for registration. Expected %v got %v", d.ownIdentity.Address, rep.ID.Address)
 		return
 	}
 
@@ -184,7 +184,7 @@ func (d *Discovery) handleRegistrationEvent(rep registry.RegistrationEventPayloa
 
 func (d *Discovery) registerIdentity() {
 	log.Info().Msg("Waiting for registration success event")
-	d.eventBus.Subscribe(registry.AppTopicRegistration, d.handleRegistrationEvent)
+	d.eventBus.Subscribe(registry.AppTopicIdentityRegistration, d.handleRegistrationEvent)
 	d.changeStatus(WaitingForRegistration)
 }
 

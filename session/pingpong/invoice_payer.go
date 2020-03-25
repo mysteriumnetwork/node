@@ -297,7 +297,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	defer ip.deps.EventBus.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
+	defer ip.deps.EventBus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
 		Identity:       ip.deps.Identity,
 		AmountPromised: diff,
 	})

@@ -27,7 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
@@ -202,10 +202,10 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 
 	settler := NewAccountantPromiseSettler(&mockTransactor{}, nil, channelStatusProvider, mrsp, ks, mapg, cfg)
 
-	statusesWithNoChangeExpected := []string{string(service.Starting), string(service.NotRunning)}
+	statusesWithNoChangeExpected := []string{string(servicestate.Starting), string(servicestate.NotRunning)}
 
 	for _, v := range statusesWithNoChangeExpected {
-		settler.handleServiceEvent(service.EventPayload{
+		settler.handleServiceEvent(servicestate.AppEventServiceStatus{
 			ProviderID: mockID.Address,
 			Status:     v,
 		})
@@ -215,9 +215,9 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	settler.handleServiceEvent(service.EventPayload{
+	settler.handleServiceEvent(servicestate.AppEventServiceStatus{
 		ProviderID: mockID.Address,
-		Status:     string(service.Running),
+		Status:     string(servicestate.Running),
 	})
 
 	_, ok := settler.currentState[mockID]
@@ -246,7 +246,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
-		settler.handleRegistrationEvent(registry.RegistrationEventPayload{
+		settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 			ID:     mockID,
 			Status: v,
 		})
@@ -256,7 +256,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	settler.handleRegistrationEvent(registry.RegistrationEventPayload{
+	settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 		ID:     mockID,
 		Status: registry.RegisteredProvider,
 	})
@@ -285,7 +285,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// no receive on unknown provider
 	settler := NewAccountantPromiseSettler(&mockTransactor{}, nil, channelStatusProvider, mrsp, ks, mapg, cfg)
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 	})
@@ -293,7 +293,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// no receive should be gotten on a non registered provider
 	settler.currentState[mockID] = state{registered: false}
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 	})
@@ -309,7 +309,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		},
 	}
 
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 		Promise: crypto.Promise{
@@ -333,7 +333,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		},
 	}
 
-	settler.handleAccountantPromiseReceived(AccountantPromiseEventPayload{
+	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 		Promise: crypto.Promise{

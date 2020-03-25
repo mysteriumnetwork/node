@@ -80,11 +80,11 @@ func (srs StoredRegistrationStatus) FromEvent(status RegistrationStatus, ev Iden
 	}
 }
 
-// AppTopicRegistration represents the registration event topic
-const AppTopicRegistration = "registration_event_topic"
+// AppTopicIdentityRegistration represents the registration event topic.
+const AppTopicIdentityRegistration = "registration_event_topic"
 
-// RegistrationEventPayload represents the registration event payload
-type RegistrationEventPayload struct {
+// AppEventIdentityRegistration represents the registration event payload.
+type AppEventIdentityRegistration struct {
 	ID     identity.Identity
 	Status RegistrationStatus
 }

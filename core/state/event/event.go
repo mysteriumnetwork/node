@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -29,10 +30,18 @@ const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
-	NATStatus NATStatus        `json:"natStatus"`
-	Services  []ServiceInfo    `json:"serviceInfo"`
-	Sessions  []ServiceSession `json:"sessions"`
-	Consumer  ConsumerState    `json:"consumer"`
+	NATStatus  NATStatus        `json:"natStatus"`
+	Services   []ServiceInfo    `json:"serviceInfo"`
+	Sessions   []ServiceSession `json:"sessions"`
+	Consumer   ConsumerState    `json:"consumer"`
+	Identities []Identity       `json:"identities"`
+}
+
+// Identity represents identity and its status.
+type Identity struct {
+	Address            string                      `json:"id"`
+	RegistrationStatus registry.RegistrationStatus `json:"registrationStatus,omitempty"`
+	Balance            uint64                      `json:"balance,omitempty"`
 }
 
 // ConsumerState represents consumer state.

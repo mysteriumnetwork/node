@@ -321,7 +321,7 @@ type BalanceChangeCallback interface {
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.BalanceChangedEvent) {
+	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.AppEventBalanceChanged) {
 		cb.OnChange(e.Identity.Address, int64(e.Current))
 	})
 }
@@ -333,7 +333,7 @@ type IdentityRegistrationChangeCallback interface {
 
 // RegisterIdentityRegistrationChangeCallback registers callback which is called on identity registration status change.
 func (mb *MobileNode) RegisterIdentityRegistrationChangeCallback(cb IdentityRegistrationChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(registry.AppTopicRegistration, func(e registry.RegistrationEventPayload) {
+	_ = mb.eventBus.SubscribeAsync(registry.AppTopicIdentityRegistration, func(e registry.AppEventIdentityRegistration) {
 		cb.OnChange(e.ID.Address, e.Status.String())
 	})
 }

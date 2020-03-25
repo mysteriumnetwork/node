@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package mocks
 
-import "github.com/mysteriumnetwork/node/core/service/servicestate"
+import (
+	"sync"
 
-// Cleaner cleans up when service is stopped
-type Cleaner struct {
-	SessionStorage SessionStorage
+	"github.com/mysteriumnetwork/node/identity"
+)
+
+// IdentityProvider is a fake identity provider.
+type IdentityProvider struct {
+	Identities []identity.Identity
+	lock       sync.Mutex
 }
 
-// SessionStorage keeps sessions and allows removing them by proposal id
-type SessionStorage interface {
-	RemoveForService(serviceID string)
-}
-
-// HandleServiceStatus removes sessions of stopped service
-func (cleaner *Cleaner) HandleServiceStatus(event servicestate.AppEventServiceStatus) {
-	if event.Status == string(servicestate.NotRunning) {
-		cleaner.SessionStorage.RemoveForService(event.ID)
-	}
+// GetIdentities returns a predefined set of identities.
+func (ip *IdentityProvider) GetIdentities() []identity.Identity {
+	ip.lock.Lock()
+	defer ip.lock.Unlock()
+	return ip.Identities
 }

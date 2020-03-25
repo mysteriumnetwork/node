@@ -66,7 +66,7 @@ func (ebs *EventBasedStorage) GetAll() []Session {
 	return ebs.storage.GetAll()
 }
 
-func (ebs *EventBasedStorage) consumeDataTransferredEvent(e event.DataTransferEventPayload) {
+func (ebs *EventBasedStorage) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
 	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
 	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
 	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.

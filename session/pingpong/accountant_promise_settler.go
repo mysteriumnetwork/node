@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -148,12 +148,12 @@ func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
 		return errors.Wrap(err, "could not subscribe to node status event")
 	}
 
-	err = sub.SubscribeAsync(registry.AppTopicRegistration, aps.handleRegistrationEvent)
+	err = sub.SubscribeAsync(registry.AppTopicIdentityRegistration, aps.handleRegistrationEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to registration event")
 	}
 
-	err = sub.SubscribeAsync(service.AppTopicServiceStatus, aps.handleServiceEvent)
+	err = sub.SubscribeAsync(servicestate.AppTopicServiceStatus, aps.handleServiceEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to service status event")
 	}
@@ -162,9 +162,9 @@ func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 
-func (aps *AccountantPromiseSettler) handleServiceEvent(event service.EventPayload) {
+func (aps *AccountantPromiseSettler) handleServiceEvent(event servicestate.AppEventServiceStatus) {
 	switch event.Status {
-	case string(service.Running):
+	case string(servicestate.Running):
 		err := aps.loadInitialState(identity.FromAddress(event.ProviderID))
 		// TODO: should we retry? should we signal that we need to cancel and abort?
 		// In any case, if we start exceeding our balances, the accountant will let us know.
@@ -191,7 +191,7 @@ func (aps *AccountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.RegistrationEventPayload) {
+func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.AppEventIdentityRegistration) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
@@ -215,7 +215,7 @@ func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.Re
 	log.Info().Msgf("Identity registration event handled for provider %q", payload.ID)
 }
 
-func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AccountantPromiseEventPayload) {
+func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 

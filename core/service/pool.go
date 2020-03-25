@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
@@ -103,7 +104,7 @@ func (p *Pool) stop(id ID) error {
 
 	p.del(id)
 
-	instance.setState(NotRunning)
+	instance.setState(servicestate.NotRunning)
 
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
@@ -137,7 +138,7 @@ func (p *Pool) Instance(id ID) *Instance {
 // NewInstance creates new instance of the service.
 func NewInstance(
 	options Options,
-	state State,
+	state servicestate.State,
 	service RunnableService,
 	proposal market.ServiceProposal,
 	policies *policy.Repository,
@@ -158,7 +159,7 @@ func NewInstance(
 // Instance represents a run service
 type Instance struct {
 	id             ID
-	state          State
+	state          servicestate.State
 	options        Options
 	service        RunnableService
 	proposal       market.ServiceProposal
@@ -186,23 +187,23 @@ func (i *Instance) Policies() *policy.Repository {
 }
 
 // State returns the service instance state.
-func (i *Instance) State() State {
+func (i *Instance) State() servicestate.State {
 	i.stateLock.RLock()
 	defer i.stateLock.RUnlock()
 	return i.state
 }
 
-func (i *Instance) setState(newState State) {
+func (i *Instance) setState(newState servicestate.State) {
 	i.stateLock.Lock()
 	defer i.stateLock.Unlock()
 	i.state = newState
 
-	i.eventPublisher.Publish(AppTopicServiceStatus, i.toEvent())
+	i.eventPublisher.Publish(servicestate.AppTopicServiceStatus, i.toEvent())
 }
 
 // toEvent returns an event representation of the instance
-func (i *Instance) toEvent() EventPayload {
-	return EventPayload{
+func (i *Instance) toEvent() servicestate.AppEventServiceStatus {
+	return servicestate.AppEventServiceStatus{
 		ID:         string(i.id),
 		ProviderID: i.proposal.ProviderID,
 		Type:       i.proposal.ServiceType,

@@ -20,7 +20,7 @@ package registry
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +50,7 @@ func Test_Provider_Registrar_needsHandling(t *testing.T) {
 	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
-		event:   service.EventPayload{},
+		event:   servicestate.AppEventServiceStatus{},
 		retries: 0,
 	}
 
@@ -71,7 +71,7 @@ func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
 	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
-		event: service.EventPayload{
+		event: servicestate.AppEventServiceStatus{
 			Status:     "Running",
 			ProviderID: "0xsuchIDManyWow",
 		},
@@ -105,7 +105,7 @@ func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
 
 	mockEvent := queuedEvent{
-		event: service.EventPayload{
+		event: servicestate.AppEventServiceStatus{
 			Status:     "Running",
 			ProviderID: "0xsuchIDManyWow",
 		},

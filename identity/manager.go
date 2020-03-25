@@ -31,8 +31,11 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
-// AppTopicIdentityUnlock is the channel name for identity unlock event
-const AppTopicIdentityUnlock = "identity-unlocked"
+// Identity events
+const (
+	AppTopicIdentityUnlock  = "identity-unlocked"
+	AppTopicIdentityCreated = "identity-created"
+)
 
 type identityManager struct {
 	keystoreManager keystore
@@ -80,7 +83,9 @@ func (idm *identityManager) CreateNewIdentity(passphrase string) (identity Ident
 		return identity, err
 	}
 
-	return accountToIdentity(account), nil
+	identity = accountToIdentity(account)
+	idm.eventBus.Publish(AppTopicIdentityCreated, identity.Address)
+	return identity, nil
 }
 
 func (idm *identityManager) GetIdentities() []Identity {

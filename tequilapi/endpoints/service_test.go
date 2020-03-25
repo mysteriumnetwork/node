@@ -28,6 +28,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -77,9 +78,9 @@ var (
 		PaymentMethodType: mocks.DefaultPaymentMethodType,
 		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
-	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil, nil)
-	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil, nil)
-	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposalWithAccessPolicy, nil, nil, nil)
+	mockServiceRunning                 = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposal, nil, nil, nil)
+	mockServiceStopped                 = service.NewInstance(mockServiceOptions, servicestate.NotRunning, nil, mockProposal, nil, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposalWithAccessPolicy, nil, nil, nil)
 )
 
 type fancyServiceOptions struct {

@@ -296,7 +296,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	}
 
 	promise.R = r
-	it.deps.EventBus.Publish(AppTopicAccountantPromise, AccountantPromiseEventPayload{
+	it.deps.EventBus.Publish(AppTopicAccountantPromise, AppEventAccountantPromise{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
@@ -594,7 +594,7 @@ func (it *InvoiceTracker) Stop() {
 	})
 }
 
-func (it *InvoiceTracker) consumeDataTransferredEvent(e event.DataTransferEventPayload) {
+func (it *InvoiceTracker) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(e.ID, it.deps.SessionID) {
 		return

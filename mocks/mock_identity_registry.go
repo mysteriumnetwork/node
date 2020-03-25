@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package mocks
 
-import "github.com/mysteriumnetwork/node/core/service/servicestate"
+import (
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+)
 
-// Cleaner cleans up when service is stopped
-type Cleaner struct {
-	SessionStorage SessionStorage
+// IdentityRegistry is a fake identity registry.
+type IdentityRegistry struct {
+	Status registry.RegistrationStatus
 }
 
-// SessionStorage keeps sessions and allows removing them by proposal id
-type SessionStorage interface {
-	RemoveForService(serviceID string)
+// Subscribe does nothing.
+func (i IdentityRegistry) Subscribe(_ eventbus.Subscriber) error {
+	return nil
 }
 
-// HandleServiceStatus removes sessions of stopped service
-func (cleaner *Cleaner) HandleServiceStatus(event servicestate.AppEventServiceStatus) {
-	if event.Status == string(servicestate.NotRunning) {
-		cleaner.SessionStorage.RemoveForService(event.ID)
-	}
+// GetRegistrationStatus returns a pre-defined RegistrationStatus.
+func (i IdentityRegistry) GetRegistrationStatus(identity.Identity) (registry.RegistrationStatus, error) {
+	return i.Status, nil
 }

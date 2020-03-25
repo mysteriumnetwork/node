@@ -19,6 +19,7 @@ package eventbus
 
 import (
 	asaskevichEventBus "github.com/asaskevich/EventBus"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -56,8 +57,24 @@ func (simplifiedBus simplifiedEventBus) SubscribeAsync(topic string, fn interfac
 	return simplifiedBus.bus.SubscribeAsync(topic, fn, false)
 }
 
+var logLevelsByTopic = map[string]zerolog.Level{
+	"ProposalAdded":   zerolog.Disabled,
+	"ProposalUpdated": zerolog.Disabled,
+	"ProposalRemoved": zerolog.Disabled,
+	"proposalEvent":   zerolog.Disabled,
+	"Statistics":      zerolog.Disabled,
+	"State change":    zerolog.TraceLevel,
+}
+
+func levelFor(topic string) zerolog.Level {
+	if level, exist := logLevelsByTopic[topic]; exist {
+		return level
+	}
+	return zerolog.DebugLevel
+}
+
 func (simplifiedBus simplifiedEventBus) Publish(topic string, data interface{}) {
-	log.Trace().Msgf("Published topic=%q event=%+v", topic, data)
+	log.WithLevel(levelFor(topic)).Msgf("Published topic=%q event=%+v", topic, data)
 	simplifiedBus.bus.Publish(topic, data)
 }
 

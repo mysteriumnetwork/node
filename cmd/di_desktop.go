@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -267,7 +268,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
-	if err := di.EventBus.Subscribe(service.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
+	if err := di.EventBus.Subscribe(servicestate.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
 		log.Error().Msg("Failed to subscribe service cleaner")
 	}
 
