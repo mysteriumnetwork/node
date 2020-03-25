@@ -746,127 +746,127 @@ func Test_estimateInvoiceTolerance(t *testing.T) {
 			args{
 				1 * time.Second,
 				dataTransferred{0, 0}},
-			1.5509756097560976},
+			1.6109756097560976},
 
 		{"1 sec, 2 000 bytes",
 			args{
 				1 * time.Second,
 				dataTransferred{1000, 1000}},
-			1.5500149009391526},
+			1.6100149009391526},
 
 		{"1 sec, 2 000 000 bytes",
 			args{
 				1 * time.Second,
 				dataTransferred{1000000, 1000000}},
-			1.5646823767314633},
+			1.6246823767314633},
 
 		{"1 sec, 20 000 000 bytes",
 			args{
 				1 * time.Second,
 				dataTransferred{10000000, 10000000}},
-			1.679686776347788},
+			1.7396867763477881},
 
 		{"1 sec, 200 000 000 bytes",
 			args{
 				1 * time.Second,
 				dataTransferred{100000000, 100000000}},
-			2.148412302054785},
+			2.2084123020547852},
 
 		{"2 min, 0 bytes",
 			args{
 				2 * time.Minute,
 				dataTransferred{0, 0}},
-			1.3843089430894309},
+			1.4443089430894309},
 
 		{"2 min, 2 000 bytes",
 			args{
 				2 * time.Minute,
 				dataTransferred{1000, 1000}},
-			1.3833334575096612},
+			1.4433334575096612},
 
 		{"2 min, 2 000 000 bytes",
 			args{
 				2 * time.Minute,
 				dataTransferred{1000000, 1000000}},
-			1.3834574942587659},
+			1.4434574942587659},
 
 		{"2 min, 20 000 000 bytes",
 			args{
 				2 * time.Minute,
 				dataTransferred{10000000, 10000000}},
-			1.3845735567021262},
+			1.4445735567021262},
 
 		{"2 min, 200 000 000 bytes",
 			args{
 				2 * time.Minute,
 				dataTransferred{100000000, 100000000}},
-			1.395598661303886},
+			1.455598661303886},
 
 		{"20 min, 0 bytes",
 			args{
 				20 * time.Minute,
 				dataTransferred{0, 0}},
-			1.0985946573751453},
+			1.1585946573751453},
 
 		{"20 min, 2 000 bytes",
 			args{
 				20 * time.Minute,
 				dataTransferred{1000, 1000}},
-			1.0976190600366817},
+			1.1576190600366817},
 
 		{"20 min, 2 000 000 bytes",
 			args{
 				20 * time.Minute,
 				dataTransferred{1000000, 1000000}},
-			1.09763146509918},
+			1.1576314650991801},
 
 		{"20 min, 20 000 000 bytes",
 			args{
 				20 * time.Minute,
 				dataTransferred{10000000, 10000000}},
-			1.09774320854448},
+			1.15774320854448},
 
 		{"20 min, 200 000 000 bytes",
 			args{
 				20 * time.Minute,
 				dataTransferred{100000000, 100000000}},
-			1.0988592709878404},
+			1.1588592709878404},
 
 		{"200 min, 200 000 000 bytes",
 			args{
 				200 * time.Minute,
 				dataTransferred{100000000, 100000000}},
-			1.055099285303542},
+			1.115099285303542},
 
 		{"1 min, 200 000 000 bytes",
 			args{
 				1 * time.Minute,
 				dataTransferred{50000000, 50000000}},
-			1.5622653279705525},
+			1.6222653279705525},
 
 		{"1 min, 2 000 000 000 bytes",
 			args{
 				1 * time.Minute,
 				dataTransferred{100000000, 100000000}},
-			1.5742334250351986},
+			1.6342334250351986},
 
 		{"1 min, 20 000 000 000 bytes",
 			args{
 				1 * time.Minute,
 				dataTransferred{1000000000, 1000000000}},
-			1.7489443281831476},
+			1.8089443281831476},
 
 		{"10 min, 20 000 000 000 bytes",
 			args{
 				10 * time.Minute,
 				dataTransferred{1000000000, 1000000000}},
-			1.1651425159442896},
+			1.2251425159442896},
 
 		{"6 hours, 20 000 000 000 bytes",
 			args{
 				6 * time.Hour,
 				dataTransferred{1000000000, 1000000000}},
-			1.0534594760857283},
+			1.1134594760857283},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
