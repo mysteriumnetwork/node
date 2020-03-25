@@ -69,6 +69,10 @@ type balanceProvider interface {
 	GetBalance(id identity.Identity) uint64
 }
 
+type earningsProvider interface {
+	SettlementState(id identity.Identity) pingpong.SettlementState
+}
+
 // Keeper keeps track of state through eventual consistency.
 // This should become the de-facto place to get your info about node.
 type Keeper struct {
@@ -97,6 +101,7 @@ type KeeperDeps struct {
 	IdentityProvider        identityProvider
 	IdentityRegistry        registry.IdentityRegistry
 	BalanceProvider         balanceProvider
+	EarningsProvider        earningsProvider
 }
 
 // NewKeeper returns a new instance of the keeper.
@@ -130,18 +135,21 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 }
 
 func (k *Keeper) fetchIdentities() []stateEvent.Identity {
-	providedIdentities := k.deps.IdentityProvider.GetIdentities()
-	identities := make([]event.Identity, len(providedIdentities))
-	for idx, providedIdentity := range providedIdentities {
-		status, err := k.deps.IdentityRegistry.GetRegistrationStatus(providedIdentity)
+	ids := k.deps.IdentityProvider.GetIdentities()
+	identities := make([]event.Identity, len(ids))
+	for idx, id := range ids {
+		status, err := k.deps.IdentityRegistry.GetRegistrationStatus(id)
 		if err != nil {
-			log.Warn().Err(err).Msgf("Could not get registration status for %s", providedIdentity.Address)
+			log.Warn().Err(err).Msgf("Could not get registration status for %s", id.Address)
 			status = registry.Unregistered
 		}
+		settlement := k.deps.EarningsProvider.SettlementState(id)
 		stateIdentity := event.Identity{
-			Address:            providedIdentity.Address,
+			Address:            id.Address,
 			RegistrationStatus: status,
-			Balance:            k.deps.BalanceProvider.GetBalance(providedIdentity),
+			Balance:            k.deps.BalanceProvider.GetBalance(id),
+			Earnings:           settlement.UnsettledBalance(),
+			EarningsTotal:      settlement.LifetimeBalance(),
 		}
 		identities[idx] = stateIdentity
 	}
@@ -172,6 +180,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(pingpong.AppTopicBalanceChanged, k.consumeBalanceChangedEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(pingpong.AppTopicEarningsChanged, k.consumeEarningsChangedEvent); err != nil {
 		return err
 	}
 	return nil
@@ -353,6 +364,7 @@ func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 	evt, ok := e.(pingpong.AppEventBalanceChanged)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for balance change")
+		return
 	}
 	var id *stateEvent.Identity
 	for i := range k.state.Identities {
@@ -366,6 +378,30 @@ func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 		return
 	}
 	id.Balance = evt.Current
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(pingpong.AppEventEarningsChanged)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for earnings change")
+		return
+	}
+	var id *stateEvent.Identity
+	for i := range k.state.Identities {
+		if k.state.Identities[i].Address == evt.Identity.Address {
+			id = &k.state.Identities[i]
+			break
+		}
+	}
+	if id == nil {
+		log.Warn().Msgf("Couldn't find a matching identity for earnings change: %s", evt.Identity.Address)
+		return
+	}
+	id.Earnings = evt.Current.UnsettledBalance()
+	id.EarningsTotal = evt.Current.LifetimeBalance()
 	go k.announceStateChanges(nil)
 }
 

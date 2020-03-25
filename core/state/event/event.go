@@ -42,6 +42,8 @@ type Identity struct {
 	Address            string                      `json:"id"`
 	RegistrationStatus registry.RegistrationStatus `json:"registrationStatus,omitempty"`
 	Balance            uint64                      `json:"balance,omitempty"`
+	Earnings           uint64                      `json:"earnings,omitempty"`
+	EarningsTotal      uint64                      `json:"earningsTotal,omitempty"`
 }
 
 // ConsumerState represents consumer state.

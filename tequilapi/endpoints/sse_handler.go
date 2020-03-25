@@ -226,12 +226,13 @@ type consumerConnectionRes struct {
 func mapState(event stateEvent.State) stateRes {
 	identitiesRes := make([]contract.IdentityDTO, len(event.Identities))
 	for idx, identity := range event.Identities {
-		identityRes := contract.IdentityDTO{
+		identitiesRes[idx] = contract.IdentityDTO{
 			Address:            identity.Address,
 			RegistrationStatus: identity.RegistrationStatus.String(),
 			Balance:            identity.Balance,
+			Earnings:           identity.Earnings,
+			EarningsTotal:      identity.EarningsTotal,
 		}
-		identitiesRes[idx] = identityRes
 	}
 	res := stateRes{
 		NATStatus: event.NATStatus,
