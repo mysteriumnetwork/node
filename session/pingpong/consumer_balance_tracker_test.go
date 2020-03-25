@@ -51,7 +51,7 @@ func TestConsumerBalanceTracker(t *testing.T) {
 		Promised: 0,
 	}}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, &bc, &calc, balanceFetcher.GetConsumerData)
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, &bc, &calc, balanceFetcher)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -103,8 +103,8 @@ func waitForBalance(balanceTracker *ConsumerBalanceTracker, id identity.Identity
 
 func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 	type fields struct {
-		balances                 map[identity.Identity]Balance
-		accountantBalanceFetcher func(id string) (ConsumerData, error)
+		balances         map[identity.Identity]Balance
+		consumerProvider consumerProvider
 	}
 	type args struct {
 		id identity.Identity
@@ -120,10 +120,10 @@ func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 			name: "set balance to an unknown identity",
 			fields: fields{
 				balances: make(map[identity.Identity]Balance),
-				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
-					return ConsumerData{
+				consumerProvider: &mockAccountantBalanceFetcher{
+					consumerData: ConsumerData{
 						Balance: 100,
-					}, nil
+					},
 				},
 			},
 			args: args{
@@ -141,10 +141,10 @@ func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 						CurrentEstimate: 1010,
 					},
 				},
-				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
-					return ConsumerData{
+				consumerProvider: &mockAccountantBalanceFetcher{
+					consumerData: ConsumerData{
 						Balance: 1100,
-					}, nil
+					},
 				},
 			},
 			args: args{
@@ -162,10 +162,10 @@ func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 						CurrentEstimate: 1010,
 					},
 				},
-				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
-					return ConsumerData{
+				consumerProvider: &mockAccountantBalanceFetcher{
+					consumerData: ConsumerData{
 						Balance: 1000,
-					}, nil
+					},
 				},
 			},
 			args: args{
@@ -178,8 +178,8 @@ func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 			name: "ignores errors, sets nothing",
 			fields: fields{
 				balances: make(map[identity.Identity]Balance),
-				accountantBalanceFetcher: func(id string) (ConsumerData, error) {
-					return ConsumerData{}, errors.New("explosions")
+				consumerProvider: &mockAccountantBalanceFetcher{
+					err: errors.New("explosions"),
 				},
 			},
 			args: args{
@@ -192,9 +192,9 @@ func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cbt := &ConsumerBalanceTracker{
-				balances:                 tt.fields.balances,
-				publisher:                eventbus.New(),
-				accountantBalanceFetcher: tt.fields.accountantBalanceFetcher,
+				balances:         tt.fields.balances,
+				publisher:        eventbus.New(),
+				consumerProvider: tt.fields.consumerProvider,
 			}
 
 			cbt.updateBalanceFromAccountant(tt.args.id)

@@ -31,19 +31,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-type balanceGetter func(id identity.Identity) uint64
-type balanceFetcher func(id string) (pingpong.ConsumerData, error)
-type earningsGetter func(id identity.Identity) uint64
-type earningsTotalGetter func(id identity.Identity) uint64
+type consumerProvider interface {
+	GetConsumerData(idAddress string) (pingpong.ConsumerData, error)
+}
+
+type balanceProvider interface {
+	GetBalance(id identity.Identity) uint64
+}
+
+type earningsProvider interface {
+	Balance(id identity.Identity) uint64
+	BalanceTotal(id identity.Identity) uint64
+}
 
 type identitiesAPI struct {
 	idm              identity.Manager
 	selector         identity_selector.Handler
 	registry         registry.IdentityRegistry
-	getBalance       balanceGetter
-	fetchBalance     balanceFetcher
-	getEarnings      earningsGetter
-	getEarningsTotal earningsTotalGetter
+	consumerProvider consumerProvider
+	balanceProvider  balanceProvider
+	earningsProvider earningsProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -268,7 +275,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 
 	var consumer pingpong.ConsumerData
 	if regStatus.Registered() {
-		consumer, err = endpoint.fetchBalance(id.Address)
+		consumer, err = endpoint.consumerProvider.GetConsumerData(id.Address)
 		if err != nil {
 			utils.SendError(resp, errors.Wrap(err, "failed to check balance status"), http.StatusInternalServerError)
 			return
@@ -280,9 +287,9 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     consumer.ChannelID,
 		Balance:            consumer.Balance,
-		BalanceEstimate:    endpoint.getBalance(id),
-		Earnings:           endpoint.getEarnings(id),
-		EarningsTotal:      endpoint.getEarningsTotal(id),
+		BalanceEstimate:    endpoint.balanceProvider.GetBalance(id),
+		Earnings:           endpoint.earningsProvider.Balance(id),
+		EarningsTotal:      endpoint.earningsProvider.BalanceTotal(id),
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -333,19 +340,17 @@ func AddRoutesForIdentities(
 	idm identity.Manager,
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
-	getBalance balanceGetter,
-	fetchBalance balanceFetcher,
-	getEarnings earningsGetter,
-	getEarningsTotal earningsTotalGetter,
+	balanceProvider balanceProvider,
+	consumerFetcher consumerProvider,
+	earningsProvider earningsProvider,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:              idm,
 		selector:         selector,
 		registry:         registry,
-		getBalance:       getBalance,
-		fetchBalance:     fetchBalance,
-		getEarnings:      getEarnings,
-		getEarningsTotal: getEarningsTotal,
+		balanceProvider:  balanceProvider,
+		consumerProvider: consumerFetcher,
+		earningsProvider: earningsProvider,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)

@@ -32,7 +32,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type accountantBalanceFetcher func(id string) (ConsumerData, error)
+type consumerProvider interface {
+	GetConsumerData(idAddress string) (ConsumerData, error)
+}
+
+type consumerBalanceChecker interface {
+	SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error)
+}
 
 // ConsumerBalanceTracker keeps track of consumer balances.
 // TODO: this needs to take into account the saved state.
@@ -43,7 +49,7 @@ type ConsumerBalanceTracker struct {
 	mystSCAddress            common.Address
 	consumerBalanceChecker   consumerBalanceChecker
 	channelAddressCalculator channelAddressCalculator
-	accountantBalanceFetcher accountantBalanceFetcher
+	consumerProvider         consumerProvider
 	publisher                eventbus.Publisher
 
 	stop chan struct{}
@@ -51,20 +57,16 @@ type ConsumerBalanceTracker struct {
 }
 
 // NewConsumerBalanceTracker creates a new instance
-func NewConsumerBalanceTracker(publisher eventbus.Publisher, mystSCAddress common.Address, consumerBalanceChecker consumerBalanceChecker, channelAddressCalculator channelAddressCalculator, accountantBalanceFetcher accountantBalanceFetcher) *ConsumerBalanceTracker {
+func NewConsumerBalanceTracker(publisher eventbus.Publisher, mystSCAddress common.Address, consumerBalanceChecker consumerBalanceChecker, channelAddressCalculator channelAddressCalculator, consumerProvider consumerProvider) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
 		balances:                 make(map[identity.Identity]Balance),
 		consumerBalanceChecker:   consumerBalanceChecker,
 		mystSCAddress:            mystSCAddress,
 		publisher:                publisher,
 		channelAddressCalculator: channelAddressCalculator,
-		accountantBalanceFetcher: accountantBalanceFetcher,
+		consumerProvider:         consumerProvider,
 		stop:                     make(chan struct{}),
 	}
-}
-
-type consumerBalanceChecker interface {
-	SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error)
 }
 
 // Balance represents the balance
@@ -116,9 +118,9 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
-	identity := identity.FromAddress(id)
-	cbt.updateBalanceFromAccountant(identity)
+func (cbt *ConsumerBalanceTracker) handleUnlockEvent(idAddress string) {
+	id := identity.FromAddress(idAddress)
+	cbt.updateBalanceFromAccountant(id)
 }
 
 func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
@@ -220,7 +222,7 @@ func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint6
 }
 
 func (cbt *ConsumerBalanceTracker) updateBalanceFromAccountant(id identity.Identity) error {
-	cb, err := cbt.accountantBalanceFetcher(id.Address)
+	cb, err := cbt.consumerProvider.GetConsumerData(id.Address)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get accountant balance")
 		return err
