@@ -75,6 +75,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -145,7 +146,7 @@ type Dependencies struct {
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
 	Transactor        *registry.Transactor
-	BCHelper          *pingpong.BlockchainWithRetries
+	BCHelper          *paymentClient.BlockchainWithRetries
 	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
@@ -475,7 +476,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 		),
-		di.AccountantCaller,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -569,7 +569,7 @@ func newSessionManagerFactory(
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
-	bcHelper *pingpong.BlockchainWithRetries,
+	bcHelper *paymentClient.BlockchainWithRetries,
 	transactor *registry.Transactor,
 	settler *pingpong.AccountantPromiseSettler,
 	httpClient *requests.HTTPClient,
@@ -667,8 +667,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	bc := pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
-	di.BCHelper = pingpong.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
+	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
+	di.BCHelper = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {

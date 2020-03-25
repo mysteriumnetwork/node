@@ -46,12 +46,7 @@ func TestConsumerBalanceTracker(t *testing.T) {
 	}
 	calc := mockChannelAddressCalculator{}
 
-	balanceFetcher := &mockAccountantBalanceFetcher{consumerData: ConsumerData{
-		Balance:  initialBalance,
-		Promised: 0,
-	}}
-
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, &bc, &calc, balanceFetcher)
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, &bc, &calc)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -99,110 +94,6 @@ func waitForBalance(balanceTracker *ConsumerBalanceTracker, id identity.Identity
 		}
 	}
 	return errors.New("did not get balance in time")
-}
-
-func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
-	type fields struct {
-		balances         map[identity.Identity]Balance
-		consumerProvider consumerProvider
-	}
-	type args struct {
-		id identity.Identity
-	}
-	tests := []struct {
-		name             string
-		fields           fields
-		args             args
-		expectedBalance  uint64
-		expectedEstimate uint64
-	}{
-		{
-			name: "set balance to an unknown identity",
-			fields: fields{
-				balances: make(map[identity.Identity]Balance),
-				consumerProvider: &mockAccountantBalanceFetcher{
-					consumerData: ConsumerData{
-						Balance: 100,
-					},
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  100,
-			expectedEstimate: 100,
-		},
-		{
-			name: "increases balance to an known identity",
-			fields: fields{
-				balances: map[identity.Identity]Balance{
-					mockID: Balance{
-						BCBalance:       1020,
-						CurrentEstimate: 1010,
-					},
-				},
-				consumerProvider: &mockAccountantBalanceFetcher{
-					consumerData: ConsumerData{
-						Balance: 1100,
-					},
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  1100,
-			expectedEstimate: 1090,
-		},
-		{
-			name: "decreases balance to an known identity",
-			fields: fields{
-				balances: map[identity.Identity]Balance{
-					mockID: Balance{
-						BCBalance:       1020,
-						CurrentEstimate: 1010,
-					},
-				},
-				consumerProvider: &mockAccountantBalanceFetcher{
-					consumerData: ConsumerData{
-						Balance: 1000,
-					},
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  1000,
-			expectedEstimate: 990,
-		},
-		{
-			name: "ignores errors, sets nothing",
-			fields: fields{
-				balances: make(map[identity.Identity]Balance),
-				consumerProvider: &mockAccountantBalanceFetcher{
-					err: errors.New("explosions"),
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  0,
-			expectedEstimate: 0,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cbt := &ConsumerBalanceTracker{
-				balances:         tt.fields.balances,
-				publisher:        eventbus.New(),
-				consumerProvider: tt.fields.consumerProvider,
-			}
-
-			cbt.updateBalanceFromAccountant(tt.args.id)
-			res := cbt.balances[tt.args.id]
-			assert.Equal(t, tt.expectedBalance, res.BCBalance)
-			assert.Equal(t, tt.expectedEstimate, res.CurrentEstimate)
-		})
-	}
 }
 
 func TestConsumerBalanceTracker_increaseBalance(t *testing.T) {
@@ -276,7 +167,7 @@ func (mcbc *mockConsumerBalanceChecker) GetConsumerBalance(channel, mystSCAddres
 	return mcbc.amountToReturn, mcbc.errToReturn
 }
 
-func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error) {
+func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error) {
 	return nil, nil, nil
 }
 

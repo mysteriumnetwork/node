@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -448,7 +449,7 @@ func TestPromiseSettlerState_balance(t *testing.T) {
 
 // mocks start here
 type mockProviderChannelStatusProvider struct {
-	channelToReturn    ProviderChannel
+	channelToReturn    client.ProviderChannel
 	channelReturnError error
 	sinkToReturn       chan *bindings.AccountantImplementationPromiseSettled
 	subCancel          func()
@@ -459,7 +460,7 @@ func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(p
 	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
 }
 
@@ -498,7 +499,7 @@ func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Id
 var errMock = errors.New("explosions everywhere")
 var mockID = identity.FromAddress("test")
 
-var mockProviderChannel = ProviderChannel{
+var mockProviderChannel = client.ProviderChannel{
 	Balance: big.NewInt(1000000000000),
 	Settled: big.NewInt(9000000),
 	Loan:    big.NewInt(12312323),

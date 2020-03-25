@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -38,7 +39,7 @@ import (
 
 type providerChannelStatusProvider interface {
 	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
-	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error)
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error)
 }
 
 type accountantPromiseGetter interface {
