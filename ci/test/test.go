@@ -29,7 +29,7 @@ func TestWithCoverage() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{"test", "-v", "-race", "-timeout", "3m", "-cover", "-coverprofile", "coverage.txt", "-covermode", "atomic"}, packages...)
+	args := append([]string{"test", "-v", "-race", "-timeout", "5m", "-cover", "-coverprofile", "coverage.txt", "-covermode", "atomic"}, packages...)
 	return sh.RunV("go", args...)
 }
 
@@ -39,7 +39,7 @@ func Test() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{"test", "-v", "-race", "-timeout", "3m"}, packages...)
+	args := append([]string{"test", "-v", "-race", "-timeout", "5m"}, packages...)
 	return sh.RunV("go", args...)
 }
 
