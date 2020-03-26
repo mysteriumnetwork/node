@@ -18,6 +18,7 @@
 package mapping
 
 import (
+	"errors"
 	"net"
 	"time"
 
@@ -69,7 +70,10 @@ type portMapper struct {
 
 func (p *portMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
 	if !p.routerIPPublic() {
-		log.Info().Msg("Router located in the private network. Port mapping is useless, skipping it.")
+		err := errors.New("failed to find router public IP")
+		log.Info().Err(err).Msg("Port mapping is useless, skipping it.")
+		p.notify(err)
+
 		return nil, false
 	}
 
