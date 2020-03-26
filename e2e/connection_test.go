@@ -75,7 +75,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	idStatus, err := tequilapi.IdentityStatus(id)
+	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "RegisteredProvider", idStatus.RegistrationStatus)
 	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
@@ -101,7 +101,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	})
 	assert.NoError(t, err)
 
-	idStatus, err := tequilapi.IdentityStatus(id)
+	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "RegisteredConsumer", idStatus.RegistrationStatus)
 	assert.Equal(t, uint64(690000000), idStatus.Balance)
@@ -201,7 +201,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	// call the custom asserter for the given service type
 	serviceTypeAssertionMap[serviceType](t, se)
 
-	consumerStatus, err := tequilapi.IdentityStatus(consumerID)
+	consumerStatus, err := tequilapi.Identity(consumerID)
 	assert.NoError(t, err)
 	assert.True(t, consumerStatus.Balance < uint64(690000000), "balance should decrease but is %sd", consumerStatus.Balance)
 	assert.Zero(t, consumerStatus.Earnings)
@@ -212,7 +212,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) {
 	// Before settlement
-	providerStatus, err := tequilapi.IdentityStatus(id)
+	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(690000000), providerStatus.Balance)
 	assert.Equal(t, earningsExpected, providerStatus.Earnings)

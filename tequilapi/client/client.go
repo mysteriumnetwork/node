@@ -88,9 +88,9 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 	return id, err
 }
 
-// IdentityStatus returns identity status with current balance
-func (client *Client) IdentityStatus(identityAddress string) (contract.IdentityDTO, error) {
-	path := fmt.Sprintf("identities/%s/status", identityAddress)
+// Identity returns identity status with current balance
+func (client *Client) Identity(identityAddress string) (contract.IdentityDTO, error) {
+	path := fmt.Sprintf("identities/%s", identityAddress)
 
 	response, err := client.http.Get(path, nil)
 	if err != nil {
