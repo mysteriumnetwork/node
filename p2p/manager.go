@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/pb"
 	nats_lib "github.com/nats-io/go-nats"
 	"github.com/rs/zerolog/log"
@@ -40,6 +39,14 @@ type brokerConnector interface {
 	Connect(serverURIs ...string) (nats.Connection, error)
 }
 
+type natConsumerPinger interface {
+	PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+}
+
+type natProviderPinger interface {
+	PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+}
+
 const (
 	pingMaxPorts       = 20
 	requiredConnLen    = 2
@@ -48,7 +55,7 @@ const (
 )
 
 // NewManager creates new p2p communication manager.
-func NewManager(broker brokerConnector, address string, signer identity.SignerFactory, ipResolver ip.Resolver, natPinger traversal.NATPinger) *Manager {
+func NewManager(broker brokerConnector, address string, signer identity.SignerFactory, ipResolver ip.Resolver, consumerPinger natConsumerPinger, providerPinger natProviderPinger) *Manager {
 	return &Manager{
 		broker:         broker,
 		brokerAddress:  address,
@@ -57,19 +64,21 @@ func NewManager(broker brokerConnector, address string, signer identity.SignerFa
 		signer:         signer,
 		verifier:       identity.NewVerifierSigned(),
 		portPool:       port.NewPool(),
-		pinger:         natPinger,
+		consumerPinger: consumerPinger,
+		providerPinger: providerPinger,
 	}
 }
 
 // Manager knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
 type Manager struct {
-	portPool      *port.Pool
-	broker        brokerConnector
-	pinger        traversal.NATPinger
-	signer        identity.SignerFactory
-	verifier      identity.Verifier
-	ipResolver    ip.Resolver
-	brokerAddress string
+	portPool       *port.Pool
+	broker         brokerConnector
+	consumerPinger natConsumerPinger
+	providerPinger natProviderPinger
+	signer         identity.SignerFactory
+	verifier       identity.Verifier
+	ipResolver     ip.Resolver
+	brokerAddress  string
 
 	// Keys holds pendingConfigs temporary configs for provider side since it
 	// need to handle key exchange in two steps.
@@ -101,7 +110,7 @@ func (m *Manager) CreateChannel(consumerID, providerID identity.Identity, timeou
 		remotePort = config.peerPorts[0]
 	} else {
 		log.Debug().Msgf("Pinging provider %s with public IP %s using ports %v:%v", providerID.Address, config.peerPublicIP, config.localPorts, config.peerPorts)
-		conns, err := m.pinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnLen)
+		conns, err := m.consumerPinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnLen)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}
@@ -159,7 +168,7 @@ func (m *Manager) SubscribeChannel(providerID identity.Identity, channelHandler 
 			remotePort = config.peerPorts[0]
 		} else {
 			log.Debug().Msgf("Pinging consumer with public IP %s using ports %v:%v", config.peerPublicIP, config.localPorts, config.peerPorts)
-			conns, err := m.pinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, providerInitialTTL, requiredConnLen)
+			conns, err := m.providerPinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, providerInitialTTL, requiredConnLen)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return

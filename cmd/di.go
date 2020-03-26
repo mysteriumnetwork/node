@@ -218,7 +218,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 
-	di.P2PManager = p2p.NewManager(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, di.IPResolver, di.NATPinger)
+	di.P2PManager = p2p.NewManager(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, di.IPResolver, di.NATPinger, di.NATPinger)
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
 		return err
 	}

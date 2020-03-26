@@ -28,9 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,17 +54,23 @@ func TestManagerExchangeAndCommunication(t *testing.T) {
 	defer brokerConn.Close()
 	mockBroker := &mockBroker{conn: brokerConn}
 
+	ports := acquirePorts(t, 2)
+	providerPort := ports[0]
+	consumerPort := ports[1]
+	providerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: providerPort}, &net.UDPAddr{Port: consumerPort})
+	assert.NoError(t, err)
+	consumerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: consumerPort}, &net.UDPAddr{Port: providerPort})
+	assert.NoError(t, err)
+	providerPinger := &mockProviderNATPinger{conns: []*net.UDPConn{consumerConn, nil}}
+	consumerPinger := &mockConsumerNATPinger{conns: []*net.UDPConn{providerConn, nil}}
+
 	ipResolver := ip.NewResolverMock("127.0.0.1")
-	pinger := traversal.NewPinger(&traversal.PingConfig{
-		Interval: 1 * time.Second,
-		Timeout:  3 * time.Second,
-	}, eventbus.New())
 
 	t.Run("Test provider subscribes to channels requests", func(t *testing.T) {
 		providerChannelSubscriber := Manager{
 			portPool:       port.NewPool(),
 			broker:         mockBroker,
-			pinger:         pinger,
+			providerPinger: providerPinger,
 			pendingConfigs: map[PublicKey]*p2pConnectConfig{},
 			signer:         signerFactory,
 			verifier:       verifier,
@@ -85,7 +89,7 @@ func TestManagerExchangeAndCommunication(t *testing.T) {
 		consumerChannelCreator := Manager{
 			portPool:       port.NewPool(),
 			broker:         mockBroker,
-			pinger:         pinger,
+			consumerPinger: consumerPinger,
 			pendingConfigs: map[PublicKey]*p2pConnectConfig{},
 			signer:         signerFactory,
 			verifier:       verifier,
@@ -103,17 +107,26 @@ func TestManagerExchangeAndCommunication(t *testing.T) {
 	})
 }
 
+type mockConsumerNATPinger struct {
+	conns []*net.UDPConn
+}
+
+func (m *mockConsumerNATPinger) PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	return m.conns, nil
+}
+
+type mockProviderNATPinger struct {
+	conns []*net.UDPConn
+}
+
+func (m *mockProviderNATPinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	return m.conns, nil
+}
+
 type mockBroker struct {
 	conn nats.Connection
 }
 
 func (m *mockBroker) Connect(serverURIs ...string) (nats.Connection, error) {
 	return m.conn, nil
-}
-
-type mockPinger struct {
-}
-
-func (m *mockPinger) PingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
-	return nil, nil
 }

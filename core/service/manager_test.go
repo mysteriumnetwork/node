@@ -154,12 +154,13 @@ func mockP2PManager() *p2p.Manager {
 	brokerConn := nats.StartConnectionMock()
 	mockBroker := &mockBroker{conn: brokerConn}
 
-	return p2p.NewManager(mockBroker, "", func(_ identity.Identity) identity.Signer {
-		return &identity.SignerFake{}
-	}, ip.NewResolverMock("127.0.0.1"), traversal.NewPinger(&traversal.PingConfig{
+	pinger := traversal.NewPinger(&traversal.PingConfig{
 		Interval: 1 * time.Second,
 		Timeout:  3 * time.Second,
-	}, eventbus.New()))
+	}, eventbus.New())
+	return p2p.NewManager(mockBroker, "", func(_ identity.Identity) identity.Signer {
+		return &identity.SignerFake{}
+	}, ip.NewResolverMock("127.0.0.1"), pinger, pinger)
 }
 
 type mockBroker struct {

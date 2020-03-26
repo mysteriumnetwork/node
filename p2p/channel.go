@@ -143,7 +143,7 @@ func (c *Channel) handleReply(msg *transportMsg) {
 	if s, ok := c.streams[msg.id]; ok {
 		s.resCh <- msg
 	} else {
-		log.Warn().Msgf("Stream %d not found", msg.id)
+		log.Warn().Msgf("Stream %d not found, message data: %s", msg.id, string(msg.data))
 	}
 }
 
@@ -168,8 +168,10 @@ func (c *Channel) handleRequest(msg *transportMsg) {
 	ctx := defaultContext{req: &Message{Data: msg.data}}
 	err := handler(&ctx)
 	if err != nil {
+		log.Err(err).Msgf("Handler %q internal error", msg.topic)
 		resMsg.statusCode = statusCodeInternalErr
 	} else if ctx.publicError != nil {
+		log.Err(ctx.publicError).Msgf("Handler %q public error", msg.topic)
 		resMsg.statusCode = statusCodePublicErr
 		resMsg.data = []byte(ctx.publicError.Error())
 	} else {

@@ -52,6 +52,7 @@ type Session struct {
 	done            chan struct{}
 }
 
+// Done returns readonly done channel.
 func (s *Session) Done() <-chan struct{} {
 	return s.done
 }

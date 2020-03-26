@@ -121,12 +121,15 @@ func (tc *testContext) SetupTest() {
 	brokerConn := nats.StartConnectionMock()
 	brokerConn.MockResponse("fake-node-1.p2p-config-exchange", []byte("123"))
 	mockBroker := &mockBroker{conn: brokerConn}
-	p2pManager := p2p.NewManager(mockBroker, "", func(_ identity.Identity) identity.Signer {
-		return &identity.SignerFake{}
-	}, ip.NewResolverMock("127.0.0.1"), traversal.NewPinger(&traversal.PingConfig{
+
+	pinger := traversal.NewPinger(&traversal.PingConfig{
 		Interval: 1 * time.Second,
 		Timeout:  3 * time.Second,
-	}, eventbus.New()))
+	}, eventbus.New())
+
+	p2pManager := p2p.NewManager(mockBroker, "", func(_ identity.Identity) identity.Signer {
+		return &identity.SignerFake{}
+	}, ip.NewResolverMock("127.0.0.1"), pinger, pinger)
 
 	tc.connManager = NewManager(
 		dialogCreator,
