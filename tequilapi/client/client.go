@@ -72,13 +72,10 @@ func (client *Client) NewIdentity(passphrase string) (id contract.IdentityRefDTO
 
 // CurrentIdentity unlocks and returns the last used, new or first identity
 func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityRefDTO, err error) {
-	if len(identity) == 0 {
-		identity = "current"
-	}
-
-	path := fmt.Sprintf("identities/%s", identity)
-
-	response, err := client.http.Put(path, contract.IdentityRequest{Passphrase: &passphrase})
+	response, err := client.http.Put("identities/current", contract.IdentityRequest{
+		Address:    &identity,
+		Passphrase: &passphrase,
+	})
 	if err != nil {
 		return
 	}

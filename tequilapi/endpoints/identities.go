@@ -97,20 +97,25 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	var myIdentityRequest contract.IdentityRequest
-	err := json.NewDecoder(request.Body).Decode(&myIdentityRequest)
+	var req contract.IdentityRequest
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityRequest(myIdentityRequest)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	id, err := endpoint.selector.UseOrCreate("", *myIdentityRequest.Passphrase)
+	idAddress := ""
+	if req.Address != nil {
+		idAddress = *req.Address
+	}
+	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase)
+
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

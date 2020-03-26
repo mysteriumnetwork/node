@@ -70,6 +70,7 @@ func NewIdentityListResponse(ids []identity.Identity) ListIdentitiesResponse {
 // IdentityRequest request used for identity actions.
 // swagger:model IdentityRequestDTO
 type IdentityRequest struct {
+	Address    *string `json:"id"`
 	Passphrase *string `json:"passphrase"`
 }
 
