@@ -106,7 +106,6 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 	info("Registration status:", identityStatus.RegistrationStatus)
 	info("Channel address:", identityStatus.ChannelAddress)
 	info("Balance:", identityStatus.Balance)
-	info("Balance estimate:", identityStatus.BalanceEstimate)
 	info("Earnings:", identityStatus.Earnings)
 	info("Earnings total:", identityStatus.EarningsTotal)
 }

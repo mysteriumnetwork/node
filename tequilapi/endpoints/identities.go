@@ -287,7 +287,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
-		BalanceEstimate:    balance,
+		Balance:            balance,
 		Earnings:           settlement.UnsettledBalance(),
 		EarningsTotal:      settlement.LifetimeBalance(),
 		ChannelAddress:     addr.Hex(),
