@@ -19,6 +19,7 @@ package state
 
 import (
 	"errors"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -37,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -387,7 +389,8 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 			},
 		},
 		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
-		BalanceProvider:  &mocks.BalanceProvider{Balance: 0},
+		BalanceProvider:  &mockBalanceProvider{Balance: 0},
+		EarningsProvider: &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -407,6 +410,48 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
+func Test_ConsumesEarningsChangeEvent(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	deps := KeeperDeps{
+		NATStatusProvider:       &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:               eventBus,
+		ServiceLister:           &serviceListerMock{},
+		ServiceSessionStorage:   &serviceSessionStorageMock{},
+		SessionDurationProvider: &zeroDurationProvider{},
+		IdentityProvider: &mocks.IdentityProvider{
+			Identities: []identity.Identity{
+				{Address: "0x000000000000000000000000000000000000000a"},
+			},
+		},
+		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.RegisteredProvider},
+		BalanceProvider:  &mockBalanceProvider{Balance: 0},
+		EarningsProvider: &mockEarningsProvider{},
+	}
+	keeper := NewKeeper(deps, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Zero(t, keeper.GetState().Identities[0].Balance)
+
+	// when
+	newSettlement := pingpong.SettlementState{
+		Channel:     pingpong.ProviderChannel{Balance: big.NewInt(100)},
+		LastPromise: crypto.Promise{Amount: 30},
+	}
+	eventBus.Publish(pingpong.AppTopicEarningsChanged, pingpong.AppEventEarningsChanged{
+		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
+		Previous: pingpong.SettlementState{},
+		Current:  newSettlement,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Identities[0].Earnings != 0 && keeper.GetState().Identities[0].EarningsTotal != 0
+	}, 2*time.Second, 10*time.Millisecond)
+	assert.Equal(t, newSettlement.UnsettledBalance(), keeper.GetState().Identities[0].Earnings)
+	assert.Equal(t, newSettlement.LifetimeBalance(), keeper.GetState().Identities[0].EarningsTotal)
+}
+
 func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
@@ -422,7 +467,8 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 			},
 		},
 		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.Unregistered},
-		BalanceProvider:  &mocks.BalanceProvider{Balance: 0},
+		BalanceProvider:  &mockBalanceProvider{Balance: 0},
+		EarningsProvider: &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -566,4 +612,22 @@ func interacted(c interactionCounter, times int) func() bool {
 	return func() bool {
 		return c.interactions() == times
 	}
+}
+
+type mockBalanceProvider struct {
+	Balance uint64
+}
+
+// GetBalance returns a pre-defined balance.
+func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) uint64 {
+	return mbp.Balance
+}
+
+type mockEarningsProvider struct {
+	State pingpong.SettlementState
+}
+
+// SettlementState returns a pre-defined settlement state.
+func (mep *mockEarningsProvider) SettlementState(_ identity.Identity) pingpong.SettlementState {
+	return mep.State
 }

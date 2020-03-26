@@ -199,6 +199,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
 	di.AccountantPromiseSettler = pingpong.NewAccountantPromiseSettler(
+		di.EventBus,
 		di.Transactor,
 		di.AccountantPromiseStorage,
 		di.BCHelper,
@@ -210,7 +211,7 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 		},
 	)
-	return di.AccountantPromiseSettler.Subscribe(di.EventBus)
+	return di.AccountantPromiseSettler.Subscribe()
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
