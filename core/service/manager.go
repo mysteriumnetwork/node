@@ -19,6 +19,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
@@ -153,7 +154,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	})
 
 	if err != nil {
-		return id, err
+		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
 	}
 
 	discovery := manager.discoveryFactory()

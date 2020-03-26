@@ -19,20 +19,21 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
 )
 
 func subscribeSessionCreate(mng *session.Manager, ch *p2p.Channel, service Service, id ID) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var sr pb.SessionRequest
-		proto.Unmarshal(c.Request().Data, &sr)
+		if err := c.Request().UnmarshalProto(&sr); err != nil {
+			return err
+		}
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
 		consumerConfig := sr.GetConfig()
@@ -43,35 +44,32 @@ func subscribeSessionCreate(mng *session.Manager, ch *p2p.Channel, service Servi
 		}
 
 		paymentVersion := string(session.PaymentVersionV3)
-		session := &session.Session{ID: session.ID(id)}
-		config, err := service.ProvideConfig(string(session.ID), consumerConfig)
+		sess := &session.Session{ID: session.ID(id)}
+		config, err := service.ProvideConfig(string(sess.ID), consumerConfig)
 		if err != nil {
-			log.Error().Err(err).Msgf("Cannot get provider config for session %s", string(session.ID))
-			return err
+			return fmt.Errorf("cannot get provider config for session %s: %v", string(sess.ID), err)
 		}
 
-		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()), config, traversal.Params{})
+		err = mng.Start(sess, consumerID, consumerInfo, int(sr.GetProposalID()), config, traversal.Params{})
 		if err != nil {
-			log.Error().Err(err).Msgf("Cannot start session %s", string(session.ID))
-			return err
+			return fmt.Errorf("cannot start session %s: %v", string(sess.ID), err)
 		}
 
 		if config.SessionDestroyCallback != nil {
 			go func() {
-				<-session.Done
+				<-sess.Done()
 				config.SessionDestroyCallback()
 			}()
 		}
 
 		data, err := json.Marshal(config.SessionServiceConfig)
 		if err != nil {
-			log.Error().Err(err).Msgf("Cannot pack session %s service config", string(session.ID))
-			return err
+			return fmt.Errorf("cannot pack session %s service config: %v", string(sess.ID), err)
 		}
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
-			ID:          string(session.ID),
-			DNSs:        "",
+			ID:          string(sess.ID),
+			DNSs:        "", // TODO: Fill this field or check if it's not in data already.
 			PaymentInfo: paymentVersion,
 			Config:      data,
 		})
@@ -83,15 +81,16 @@ func subscribeSessionCreate(mng *session.Manager, ch *p2p.Channel, service Servi
 func subscribeSessionDestroy(mng *session.Manager, ch *p2p.Channel) {
 	ch.Handle(p2p.TopicSessionDestroy, func(c p2p.Context) error {
 		var si pb.SessionInfo
-		proto.Unmarshal(c.Request().Data, &si)
+		if err := c.Request().UnmarshalProto(&si); err != nil {
+			return err
+		}
 
 		consumerID := identity.FromAddress(si.GetConsumerID())
 		sessionID := si.GetSessionID()
 
 		err := mng.Destroy(consumerID, sessionID)
 		if err != nil {
-			log.Error().Err(err).Msgf("Cannot destroy session %s", sessionID)
-			return err
+			return fmt.Errorf("cannot destroy session %s: %v", sessionID, err)
 		}
 
 		return c.OK()
@@ -101,17 +100,18 @@ func subscribeSessionDestroy(mng *session.Manager, ch *p2p.Channel) {
 func subscribeSessionAcknowledge(mng *session.Manager, ch *p2p.Channel) {
 	ch.Handle(p2p.TopicSessionAcknowledge, func(c p2p.Context) error {
 		var si pb.SessionInfo
-		proto.Unmarshal(c.Request().Data, &si)
+		if err := c.Request().UnmarshalProto(&si); err != nil {
+			return err
+		}
 
 		consumerID := identity.FromAddress(si.GetConsumerID())
 		sessionID := si.GetSessionID()
 
 		err := mng.Acknowledge(consumerID, sessionID)
 		if err != nil {
-			log.Error().Err(err).Msgf("Cannot acknowledge session %s", sessionID)
-			return err
+			return fmt.Errorf("cannot acknowledge session %s: %v", sessionID, err)
 		}
 
-		return nil
+		return c.OK()
 	})
 }

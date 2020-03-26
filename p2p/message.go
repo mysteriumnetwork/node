@@ -85,9 +85,9 @@ const (
 // transportMsg is internal structure for sending and receiving messages.
 type transportMsg struct {
 	// Header fields.
-	id         uint
+	id         uint64
+	statusCode uint64
 	topic      string
-	statusCode uint
 
 	// Data field.
 	data []byte
@@ -99,17 +99,17 @@ func (m *transportMsg) readFrom(conn *textproto.Conn) error {
 	if err != nil {
 		return err
 	}
-	id, err := strconv.Atoi(header.Get(headerFieldRequestID))
+	id, err := strconv.ParseUint(header.Get(headerFieldRequestID), 10, 64)
 	if err != nil {
 		return fmt.Errorf("could not parse request id: %w", err)
 	}
-	m.id = uint(id)
-	m.topic = header.Get(headerFieldTopic)
-	statusCode, err := strconv.Atoi(header.Get(headerStatusCode))
+	m.id = id
+	statusCode, err := strconv.ParseUint(header.Get(headerStatusCode), 10, 64)
 	if err != nil {
 		return fmt.Errorf("could not parse status code: %w", err)
 	}
-	m.statusCode = uint(statusCode)
+	m.statusCode = statusCode
+	m.topic = header.Get(headerFieldTopic)
 
 	// Read data.
 	data, err := conn.ReadDotBytes()

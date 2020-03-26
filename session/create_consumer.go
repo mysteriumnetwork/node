@@ -76,7 +76,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 
 	if sessionConfigParams.SessionDestroyCallback != nil {
 		go func() {
-			<-session.Done
+			<-session.done
 			sessionConfigParams.SessionDestroyCallback()
 		}()
 	}

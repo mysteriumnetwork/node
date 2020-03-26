@@ -20,6 +20,7 @@ package connection
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -360,12 +361,12 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 func (manager *connectionManager) createP2PSession(c Connection, p2pChannel *p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, err
+		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not get session config: %w", err)
 	}
 
 	config, err := json.Marshal(sessionCreateConfig)
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, err
+		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not marshal session config: %w", err)
 	}
 
 	sessionRequest := p2p.ProtoMessage(&pb.SessionRequest{
@@ -380,13 +381,13 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel *p2p
 
 	res, err := p2pChannel.Send(p2p.TopicSessionCreate, sessionRequest)
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, err
+		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
 
 	var sessionResponce pb.SessionResponse
 	err = res.UnmarshalProto(&sessionResponce)
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, err
+		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
 	}
 
 	sessionID := session.ID(sessionResponce.GetID())
@@ -400,7 +401,10 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel *p2p
 		})
 
 		_, err := p2pChannel.Send(p2p.TopicSessionDestroy, sessionDestroy)
-		return err
+		if err != nil {
+			return fmt.Errorf("could not send session destroy request: %w", err)
+		}
+		return nil
 	})
 
 	manager.saveSessionInfo(SessionInfo{

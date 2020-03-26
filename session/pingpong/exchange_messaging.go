@@ -46,7 +46,7 @@ func NewExchangeSender(sender communication.Sender, ch *p2p.Channel) *ExchangeSe
 	}
 }
 
-// Send send the given exchange message.
+// Send sends the given exchange message.
 func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	if es.ch == nil { // TODO this block should go away once p2p communication will replace communication dialog.
 		return es.sender.Send(&ExchangeMessageProducer{Message: em})

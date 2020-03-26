@@ -116,7 +116,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		wg.Wait()
 	})
 
-	t.Run("Test slow handlers are not blocking", func(t *testing.T) {
+	t.Run("Test slow topicHandlers are not blocking", func(t *testing.T) {
 		provider.Handle("slow", func(c Context) error {
 			time.Sleep(time.Hour)
 			return c.OK()

@@ -147,7 +147,7 @@ func (m *Manager) SubscribeChannel(providerID identity.Identity, channelHandler 
 		// providers router can think that consumer is sending DDoS packets.
 		go func(reply string) {
 			if err := brokerConn.Publish(reply, []byte("OK")); err != nil {
-				log.Err(err).Msg("Could publish exchange ack")
+				log.Err(err).Msg("Could not publish exchange ack")
 			}
 		}(msg.Reply)
 
@@ -192,7 +192,7 @@ func (m *Manager) providerStartConfigExchange(brokerConn nats.Connection, signer
 	// Get initial peer exchange with it's public key.
 	signedMsg, err := m.unpackSignedMsg(msg.Data)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not unpack signed msg: %w", err)
 	}
 	var peerExchangeMsg pb.P2PConfigExchangeMsg
 	if err := proto.Unmarshal(signedMsg.Data, &peerExchangeMsg); err != nil {
@@ -235,13 +235,7 @@ func (m *Manager) providerStartConfigExchange(brokerConn nats.Connection, signer
 		return err
 	}
 
-	m.pendingConfigsMu.Lock()
-	m.pendingConfigs[peerPubKey] = &p2pConnectConfig{
-		localPorts: localPorts,
-		privateKey: privateKey,
-		peerPubKey: peerPubKey,
-	}
-	m.pendingConfigsMu.Unlock()
+	m.setPendingConfig(peerPubKey, privateKey, localPorts)
 	return nil
 }
 
@@ -259,15 +253,8 @@ func (m *Manager) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConfi
 		return nil, err
 	}
 
-	defer func() {
-		m.pendingConfigsMu.Lock()
-		delete(m.pendingConfigs, peerPubKey)
-		m.pendingConfigsMu.Unlock()
-	}()
-
-	m.pendingConfigsMu.Lock()
-	config, ok := m.pendingConfigs[peerPubKey]
-	m.pendingConfigsMu.Unlock()
+	defer m.deletePendingConfig(peerPubKey)
+	config, ok := m.pendingConfig(peerPubKey)
 	if !ok {
 		return nil, fmt.Errorf("pending config not found for key %s", peerPubKey.Hex())
 	}
@@ -363,6 +350,29 @@ func (m *Manager) exchangeConsumerConfig(consumerID, providerID identity.Identit
 		peerPublicIP: peerConnConfig.PublicIP,
 		peerPorts:    int32ToIntSlice(peerConnConfig.Ports),
 	}, nil
+}
+
+func (m *Manager) pendingConfig(peerPubKey PublicKey) (*p2pConnectConfig, bool) {
+	m.pendingConfigsMu.Lock()
+	defer m.pendingConfigsMu.Unlock()
+	config, ok := m.pendingConfigs[peerPubKey]
+	return config, ok
+}
+
+func (m *Manager) setPendingConfig(peerPubKey PublicKey, privateKey PrivateKey, localPorts []int) {
+	m.pendingConfigsMu.Lock()
+	defer m.pendingConfigsMu.Unlock()
+	m.pendingConfigs[peerPubKey] = &p2pConnectConfig{
+		localPorts: localPorts,
+		privateKey: privateKey,
+		peerPubKey: peerPubKey,
+	}
+}
+
+func (m *Manager) deletePendingConfig(peerPubKey PublicKey) {
+	m.pendingConfigsMu.Lock()
+	defer m.pendingConfigsMu.Unlock()
+	delete(m.pendingConfigs, peerPubKey)
 }
 
 func (m *Manager) acquireLocalPorts() ([]int, error) {

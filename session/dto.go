@@ -49,7 +49,11 @@ type Session struct {
 	DataTransferred DataTransferred
 	TokensEarned    uint64
 	Last            bool
-	Done            chan struct{}
+	done            chan struct{}
+}
+
+func (s *Session) Done() <-chan struct{} {
+	return s.done
 }
 
 // newSession creates a blank new session with an ID.

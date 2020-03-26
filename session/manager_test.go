@@ -74,11 +74,11 @@ func TestManager_Start_StoresSession(t *testing.T) {
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.NoError(t, err)
-	expectedResult.Done = session.Done
+	expectedResult.done = session.done
 
 	assert.Equal(t, expectedResult.Config, session.Config)
 	assert.Equal(t, expectedResult.Last, session.Last)
-	assert.Equal(t, expectedResult.Done, session.Done)
+	assert.Equal(t, expectedResult.done, session.done)
 	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
 	assert.False(t, session.CreatedAt.IsZero())
 }

@@ -31,22 +31,20 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
-// Channel represents p2p communication channel which can send and received
+// Channel represents p2p communication channel which can send and receive
 // data over encrypted and reliable UDP transport.
 type Channel struct {
 	mu sync.RWMutex
 
 	conn                  *textproto.Conn
-	handlers              map[string]HandlerFunc
-	streams               map[uint]*stream
+	topicHandlers         map[string]HandlerFunc
+	streams               map[uint64]*stream
 	privateKey            PrivateKey
 	blockCrypt            kcp.BlockCrypt
 	sendTimeout           time.Duration
 	serviceConn           *net.UDPConn
 	keepAlivePingInterval time.Duration
-	stopKeepAlivePing     chan struct{}
-	stopSendLoop          chan struct{}
-	stopReadLoop          chan struct{}
+	stop                  chan struct{}
 	sendQueue             chan *transportMsg
 }
 
@@ -55,7 +53,7 @@ type HandlerFunc func(c Context) error
 
 // stream is used to associate request and reply messages.
 type stream struct {
-	id    uint
+	id    uint64
 	resCh chan *transportMsg
 }
 
@@ -74,16 +72,14 @@ func NewChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 
 	c := &Channel{
 		conn:                  textproto.NewConn(udpSession),
-		handlers:              make(map[string]HandlerFunc),
-		streams:               make(map[uint]*stream),
+		topicHandlers:         make(map[string]HandlerFunc),
+		streams:               make(map[uint64]*stream),
 		privateKey:            privateKey,
 		blockCrypt:            blockCrypt,
 		sendTimeout:           30 * time.Second,
 		keepAlivePingInterval: 2 * time.Second,
 		serviceConn:           nil,
-		stopKeepAlivePing:     make(chan struct{}, 1),
-		stopSendLoop:          make(chan struct{}, 1),
-		stopReadLoop:          make(chan struct{}, 1),
+		stop:                  make(chan struct{}, 1),
 		sendQueue:             make(chan *transportMsg, 100),
 	}
 
@@ -102,7 +98,7 @@ func NewChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 func (c *Channel) readLoop() {
 	for {
 		select {
-		case <-c.stopReadLoop:
+		case <-c.stop:
 			return
 		default:
 			var msg transportMsg
@@ -126,7 +122,7 @@ func (c *Channel) readLoop() {
 func (c *Channel) sendLoop() {
 	for {
 		select {
-		case <-c.stopSendLoop:
+		case <-c.stop:
 			return
 		case msg, more := <-c.sendQueue:
 			if !more {
@@ -154,7 +150,7 @@ func (c *Channel) handleReply(msg *transportMsg) {
 // handleRequest handles incoming request and schedules reply to send queue.
 func (c *Channel) handleRequest(msg *transportMsg) {
 	c.mu.RLock()
-	handler, ok := c.handlers[msg.topic]
+	handler, ok := c.topicHandlers[msg.topic]
 	c.mu.RUnlock()
 
 	var resMsg transportMsg
@@ -192,9 +188,7 @@ func (c *Channel) ServiceConn() *net.UDPConn {
 
 // Close closes channel.
 func (c *Channel) Close() error {
-	c.stopKeepAlivePing <- struct{}{}
-	c.stopReadLoop <- struct{}{}
-	c.stopSendLoop <- struct{}{}
+	close(c.stop)
 	return c.conn.Close()
 }
 
@@ -220,7 +214,7 @@ func (c *Channel) Handle(topic string, handler HandlerFunc) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.handlers[topic] = handler
+	c.topicHandlers[topic] = handler
 }
 
 // Start keepalive ping send loop.
@@ -228,20 +222,20 @@ func (c *Channel) sendKeepaliveLoop() {
 	go func() {
 		for {
 			select {
+			case <-c.stop:
+				return
 			case <-time.After(c.keepAlivePingInterval):
 				if _, err := c.Send(topicKeepAlive, &Message{Data: []byte("PING")}); err != nil {
 					log.Err(err).Msg("Failed to send P2P keepalive message")
 				}
-			case <-c.stopKeepAlivePing:
-				return
 			}
 		}
 	}()
 }
 
-// sendRequest sends data bytes via HTTP POST request and optionally reads response body.
+// sendRequest sends message to send queue and waits for response.
 func (c *Channel) sendRequest(ctx context.Context, topic string, m *Message) (*Message, error) {
-	s := &stream{id: c.conn.Next(), resCh: make(chan *transportMsg, 1)}
+	s := &stream{id: uint64(c.conn.Next()), resCh: make(chan *transportMsg, 1)}
 	c.mu.Lock()
 	c.streams[s.id] = s
 	c.mu.Unlock()
@@ -291,7 +285,7 @@ func dialUDPSession(rawConn *net.UDPConn, block kcp.BlockCrypt) (*kcp.UDPSession
 	}
 	conn, err := net.ListenUDP(network, rawConn.LocalAddr().(*net.UDPAddr))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not listen UDP: %w", err)
 	}
 	return kcp.NewConn3(1, raddr, block, 10, 3, conn)
 }
