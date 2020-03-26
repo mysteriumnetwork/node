@@ -98,7 +98,7 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 		default:
 		}
 		return false
-	}, time.Second, 10*time.Millisecond)
+	}, 2*time.Second, 50*time.Millisecond)
 }
 
 func TestPinger_PingPeer_N_Connections(t *testing.T) {
