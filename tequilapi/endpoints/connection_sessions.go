@@ -36,25 +36,25 @@ type connectionSessionsList struct {
 // swagger:model ConnectionSessionDTO
 type connectionSession struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	SessionID string `json:"sessionId"`
+	SessionID string `json:"session_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 
 	// example: openvpn
-	ServiceType string `json:"serviceType"`
+	ServiceType string `json:"service_type"`
 
 	// example: NL
-	ProviderCountry string `json:"providerCountry"`
+	ProviderCountry string `json:"provider_country"`
 
 	// example: 2018-10-29 16:22:05
-	DateStarted string `json:"dateStarted"`
+	DateStarted string `json:"date_started"`
 
 	// example: 1024
-	BytesSent uint64 `json:"bytesSent"`
+	BytesSent uint64 `json:"bytes_sent"`
 
 	// example: 1024
-	BytesReceived uint64 `json:"bytesReceived"`
+	BytesReceived uint64 `json:"bytes_received"`
 
 	// duration in seconds
 	// example: 120

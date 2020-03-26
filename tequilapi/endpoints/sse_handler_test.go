@@ -129,11 +129,11 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	expectJSON := `
 {
   "payload": {
-    "natStatus": {
+    "nat_status": {
       "status": "",
       "error": ""
     },
-    "serviceInfo": null,
+    "service_info": null,
     "sessions": null,
     "consumer": {
       "connection": {
@@ -159,11 +159,11 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	expectJSON = `
 {
   "payload": {
-    "natStatus": {
+    "nat_status": {
       "status": "mass panic",
       "error": "cookie prices rise drastically"
     },
-    "serviceInfo": null,
+    "service_info": null,
     "sessions": null,
     "consumer": {
       "connection": {
@@ -193,11 +193,11 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	expectJSON = `
 {
   "payload": {
-    "natStatus": {
+    "nat_status": {
       "status": "",
       "error": ""
     },
-    "serviceInfo": null,
+    "service_info": null,
     "sessions": null,
     "consumer": {
       "connection": {
@@ -207,7 +207,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     "identities": [
       {
         "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
-        "registrationStatus": "RegisteredConsumer",
+        "registration_status": "RegisteredConsumer",
         "balance": 50
       }
     ]

@@ -34,14 +34,14 @@ type payoutInfo struct {
 	// in Ethereum address format
 	// required: true
 	// example: 0x000000000000000000000000000000000000000a
-	EthAddress string `json:"ethAddress"`
+	EthAddress string `json:"eth_address"`
 }
 
 // swagger:model ReferralInfoDTO
 type referralInfo struct {
 	// required: true
 	// example: ABC123
-	ReferralCode string `json:"referralCode"`
+	ReferralCode string `json:"referral_code"`
 }
 
 // swagger:model EmailInfoDTO
@@ -51,8 +51,8 @@ type emailInfo struct {
 }
 
 type payoutInfoResponse struct {
-	EthAddress   string `json:"ethAddress"`
-	ReferralCode string `json:"referralCode"`
+	EthAddress   string `json:"eth_address"`
+	ReferralCode string `json:"referral_code"`
 	Email        string `json:"email"`
 }
 
@@ -103,7 +103,7 @@ func (endpoint *payoutEndpoint) GetPayoutInfo(resp http.ResponseWriter, request 
 //   required: true
 // - in: body
 //   name: body
-//   description: Parameter in body (ethAddress) is required
+//   description: Parameter in body (eth_address) is required
 //   schema:
 //     $ref: "#/definitions/PayoutInfoDTO"
 // responses:
@@ -266,7 +266,7 @@ func toReferralInfoRequest(req *http.Request) (*referralInfo, error) {
 func validatePayoutInfoRequest(req *payoutInfo) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	if req.EthAddress == "" {
-		errors.ForField("ethAddress").AddError("required", "Field is required")
+		errors.ForField("eth_address").AddError("required", "Field is required")
 	}
 	// TODO: implement validation of eth address
 	return
