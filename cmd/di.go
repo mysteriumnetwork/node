@@ -75,6 +75,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -145,7 +146,7 @@ type Dependencies struct {
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
 	Transactor        *registry.Transactor
-	BCHelper          *pingpong.BlockchainWithRetries
+	BCHelper          *paymentClient.BlockchainWithRetries
 	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
@@ -157,6 +158,7 @@ type Dependencies struct {
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
 	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
 	AccountantCaller         *pingpong.AccountantCaller
+	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 }
 
 // Bootstrap initiates all container dependencies
@@ -465,17 +467,20 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
+	di.ChannelAddressCalculator = pingpong.NewChannelAddressCalculator(
+		nodeOptions.Accountant.AccountantID,
+		nodeOptions.Transactor.ChannelImplementation,
+		nodeOptions.Transactor.RegistryAddress,
+	)
+
 	di.AccountantCaller = pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
+		common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
-		pingpong.NewChannelAddressCalculator(
-			nodeOptions.Accountant.AccountantID,
-			nodeOptions.Transactor.ChannelImplementation,
-			nodeOptions.Transactor.RegistryAddress,
-		),
-		di.AccountantCaller,
+		di.ChannelAddressCalculator,
+		di.ConsumerTotalsStorage,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -533,7 +538,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AccountantCaller, di.AccountantPromiseSettler)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -569,7 +574,7 @@ func newSessionManagerFactory(
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
-	bcHelper *pingpong.BlockchainWithRetries,
+	bcHelper *paymentClient.BlockchainWithRetries,
 	transactor *registry.Transactor,
 	settler *pingpong.AccountantPromiseSettler,
 	httpClient *requests.HTTPClient,
@@ -667,8 +672,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	bc := pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
-	di.BCHelper = pingpong.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
+	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
+	di.BCHelper = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {

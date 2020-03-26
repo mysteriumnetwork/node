@@ -19,8 +19,10 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -31,12 +33,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type consumerProvider interface {
-	GetConsumerData(idAddress string) (pingpong.ConsumerData, error)
+type channelAddressCalculator interface {
+	GetChannelAddress(id identity.Identity) (common.Address, error)
 }
 
 type balanceProvider interface {
 	GetBalance(id identity.Identity) uint64
+	ForceBalanceUpdate(id identity.Identity) uint64
 }
 
 type earningsProvider interface {
@@ -44,12 +47,12 @@ type earningsProvider interface {
 }
 
 type identitiesAPI struct {
-	idm              identity.Manager
-	selector         identity_selector.Handler
-	registry         registry.IdentityRegistry
-	consumerProvider consumerProvider
-	balanceProvider  balanceProvider
-	earningsProvider earningsProvider
+	idm                      identity.Manager
+	selector                 identity_selector.Handler
+	registry                 registry.IdentityRegistry
+	channelAddressCalculator channelAddressCalculator
+	balanceProvider          balanceProvider
+	earningsProvider         earningsProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -272,13 +275,11 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		return
 	}
 
-	var consumer pingpong.ConsumerData
-	if regStatus.Registered() {
-		consumer, err = endpoint.consumerProvider.GetConsumerData(id.Address)
-		if err != nil {
-			utils.SendError(resp, errors.Wrap(err, "failed to check balance status"), http.StatusInternalServerError)
-			return
-		}
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
+	addr, err := endpoint.channelAddressCalculator.GetChannelAddress(id)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
+		return
 	}
 
 	settlement := endpoint.earningsProvider.SettlementState(id)
@@ -286,11 +287,10 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
-		ChannelAddress:     consumer.ChannelID,
-		Balance:            consumer.Balance,
-		BalanceEstimate:    endpoint.balanceProvider.GetBalance(id),
+		Balance:            balance,
 		Earnings:           settlement.UnsettledBalance(),
 		EarningsTotal:      settlement.LifetimeBalance(),
+		ChannelAddress:     addr.Hex(),
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -342,16 +342,16 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
 	balanceProvider balanceProvider,
-	consumerFetcher consumerProvider,
+	channelAddressCalculator channelAddressCalculator,
 	earningsProvider earningsProvider,
 ) {
 	idmEnd := &identitiesAPI{
-		idm:              idm,
-		selector:         selector,
-		registry:         registry,
-		balanceProvider:  balanceProvider,
-		consumerProvider: consumerFetcher,
-		earningsProvider: earningsProvider,
+		idm:                      idm,
+		selector:                 selector,
+		registry:                 registry,
+		balanceProvider:          balanceProvider,
+		channelAddressCalculator: channelAddressCalculator,
+		earningsProvider:         earningsProvider,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)

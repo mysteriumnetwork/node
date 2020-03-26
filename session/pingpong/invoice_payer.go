@@ -133,6 +133,10 @@ func (ip *InvoicePayer) Start() error {
 		return fmt.Errorf("could not get balance from accountant: %w", err)
 	}
 
+	go ip.deps.EventBus.Publish(AppTopicGrandTotalRecovered, GrandTotalRecovered{
+		Identity: ip.deps.Identity,
+	})
+
 	ip.deps.TimeTracker.StartTracking()
 
 	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)

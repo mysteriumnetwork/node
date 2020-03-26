@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -304,7 +305,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// should receive on registered provider. Should also expect a recalculated balance to be added to the SettlementState
 	settler.currentState[mockID] = SettlementState{
-		Channel:     ProviderChannel{Balance: big.NewInt(10000)},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
 		LastPromise: crypto.Promise{Amount: 8999},
 		registered:  true,
 	}
@@ -322,7 +323,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// should not receive here due to balance being large and stake being small
 	settler.currentState[mockID] = SettlementState{
-		Channel:     ProviderChannel{Balance: big.NewInt(10)},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(10)},
 		LastPromise: crypto.Promise{Amount: 100000},
 		registered:  true,
 	}
@@ -391,14 +392,14 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 
 func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s := SettlementState{
-		Channel:     ProviderChannel{Balance: big.NewInt(100)},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(100)},
 		LastPromise: crypto.Promise{Amount: 100},
 		registered:  true,
 	}
 	assert.True(t, s.needsSettling(0.1), "should be true with zero balance left")
 
 	s = SettlementState{
-		Channel:     ProviderChannel{Balance: big.NewInt(10000)},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
 		LastPromise: crypto.Promise{Amount: 9000},
 		registered:  true,
 	}
@@ -411,7 +412,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	assert.False(t, s.needsSettling(0.1), "should be false with settle in progress")
 
 	s = SettlementState{
-		Channel:     ProviderChannel{Balance: big.NewInt(10000)},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
 		LastPromise: crypto.Promise{Amount: 8999},
 		registered:  true,
 	}
@@ -420,7 +421,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 
 func TestPromiseSettlerState_balance(t *testing.T) {
 	s := SettlementState{
-		Channel: ProviderChannel{
+		Channel: client.ProviderChannel{
 			Balance: big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
@@ -433,7 +434,7 @@ func TestPromiseSettlerState_balance(t *testing.T) {
 	assert.Equal(t, uint64(5), s.UnsettledBalance())
 
 	s = SettlementState{
-		Channel: ProviderChannel{
+		Channel: client.ProviderChannel{
 			Balance: big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
@@ -448,7 +449,7 @@ func TestPromiseSettlerState_balance(t *testing.T) {
 
 // mocks start here
 type mockProviderChannelStatusProvider struct {
-	channelToReturn    ProviderChannel
+	channelToReturn    client.ProviderChannel
 	channelReturnError error
 	sinkToReturn       chan *bindings.AccountantImplementationPromiseSettled
 	subCancel          func()
@@ -459,7 +460,7 @@ func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(p
 	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
 }
 
@@ -498,7 +499,7 @@ func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Id
 var errMock = errors.New("explosions everywhere")
 var mockID = identity.FromAddress("test")
 
-var mockProviderChannel = ProviderChannel{
+var mockProviderChannel = client.ProviderChannel{
 	Balance: big.NewInt(1000000000000),
 	Settled: big.NewInt(9000000),
 	Loan:    big.NewInt(12312323),

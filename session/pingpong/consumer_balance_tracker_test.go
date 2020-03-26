@@ -18,7 +18,7 @@
 package pingpong
 
 import (
-	"errors"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,23 +36,25 @@ var mockMystSCaddress = common.HexToAddress("0x0")
 
 const initialBalance = 100000000
 
-func TestConsumerBalanceTracker(t *testing.T) {
+var defaultWaitTime = time.Millisecond * 50
+var defaultWaitInterval = time.Millisecond
+
+func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	id2 := identity.FromAddress("0x000000002")
 	assert.NotEqual(t, id1.Address, id2.Address)
 
+	mcts := mockConsumerTotalsStorage{}
 	bus := eventbus.New()
 	bc := mockConsumerBalanceChecker{
-		amountToReturn: big.NewInt(initialBalance),
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
+		},
 	}
 	calc := mockChannelAddressCalculator{}
 
-	balanceFetcher := &mockAccountantBalanceFetcher{consumerData: ConsumerData{
-		Balance:  initialBalance,
-		Promised: 0,
-	}}
-
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, &bc, &calc, balanceFetcher)
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -65,16 +68,19 @@ func TestConsumerBalanceTracker(t *testing.T) {
 		Status: registry.RegistrationError,
 	})
 
-	err = waitForBalance(cbt, id1, initialBalance)
-	assert.Nil(t, err)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance
+	}, defaultWaitTime, defaultWaitInterval)
 
-	err = waitForBalance(cbt, id2, 0)
-	assert.Nil(t, err)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id2) == 0
+	}, defaultWaitTime, defaultWaitInterval)
 
 	bus.Publish(identity.AppTopicIdentityUnlock, id2.Address)
 
-	err = waitForBalance(cbt, id2, initialBalance)
-	assert.Nil(t, err)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id2) == initialBalance
+	}, defaultWaitTime, defaultWaitInterval)
 
 	var promised uint64 = 100
 	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
@@ -82,132 +88,134 @@ func TestConsumerBalanceTracker(t *testing.T) {
 		AmountPromised: promised,
 	})
 
-	err = waitForBalance(cbt, id1, initialBalance-promised)
-	assert.Nil(t, err)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-promised
+	}, defaultWaitTime, defaultWaitInterval)
 }
 
-func waitForBalance(balanceTracker *ConsumerBalanceTracker, id identity.Identity, balance uint64) error {
-	timer := time.NewTimer(time.Millisecond)
-	for i := 0; i < 20; i++ {
-		select {
-		case <-timer.C:
-			b := balanceTracker.GetBalance(id)
-			if b == balance {
-				return nil
-			}
-			timer.Reset(time.Millisecond)
-		}
+func TestConsumerBalanceTracker_Handles_RRecovery(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	mcts := mockConsumerTotalsStorage{}
+	bus := eventbus.New()
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
+		},
 	}
-	return errors.New("did not get balance in time")
+	calc := mockChannelAddressCalculator{}
+
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+
+	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance
+	}, defaultWaitTime, defaultWaitInterval)
+
+	var changedPromised uint64 = 232323
+	mcts.setResult(changedPromised)
+
+	bus.Publish(AppTopicGrandTotalRecovered, GrandTotalRecovered{
+		Identity: id1,
+	})
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-changedPromised
+	}, defaultWaitTime, defaultWaitInterval)
 }
 
-func TestConsumerBalanceTracker_UpdateAccountantBalance(t *testing.T) {
-	type fields struct {
-		balances         map[identity.Identity]Balance
-		consumerProvider consumerProvider
+func TestConsumerBalanceTracker_Handles_Promises(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	var grandTotalPromised uint64 = 100
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
 	}
-	type args struct {
-		id identity.Identity
-	}
-	tests := []struct {
-		name             string
-		fields           fields
-		args             args
-		expectedBalance  uint64
-		expectedEstimate uint64
-	}{
-		{
-			name: "set balance to an unknown identity",
-			fields: fields{
-				balances: make(map[identity.Identity]Balance),
-				consumerProvider: &mockAccountantBalanceFetcher{
-					consumerData: ConsumerData{
-						Balance: 100,
-					},
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  100,
-			expectedEstimate: 100,
-		},
-		{
-			name: "increases balance to an known identity",
-			fields: fields{
-				balances: map[identity.Identity]Balance{
-					mockID: Balance{
-						BCBalance:       1020,
-						CurrentEstimate: 1010,
-					},
-				},
-				consumerProvider: &mockAccountantBalanceFetcher{
-					consumerData: ConsumerData{
-						Balance: 1100,
-					},
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  1100,
-			expectedEstimate: 1090,
-		},
-		{
-			name: "decreases balance to an known identity",
-			fields: fields{
-				balances: map[identity.Identity]Balance{
-					mockID: Balance{
-						BCBalance:       1020,
-						CurrentEstimate: 1010,
-					},
-				},
-				consumerProvider: &mockAccountantBalanceFetcher{
-					consumerData: ConsumerData{
-						Balance: 1000,
-					},
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  1000,
-			expectedEstimate: 990,
-		},
-		{
-			name: "ignores errors, sets nothing",
-			fields: fields{
-				balances: make(map[identity.Identity]Balance),
-				consumerProvider: &mockAccountantBalanceFetcher{
-					err: errors.New("explosions"),
-				},
-			},
-			args: args{
-				id: mockID,
-			},
-			expectedBalance:  0,
-			expectedEstimate: 0,
+	bus := eventbus.New()
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cbt := &ConsumerBalanceTracker{
-				balances:         tt.fields.balances,
-				publisher:        eventbus.New(),
-				consumerProvider: tt.fields.consumerProvider,
-			}
+	calc := mockChannelAddressCalculator{}
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
 
-			cbt.updateBalanceFromAccountant(tt.args.id)
-			res := cbt.balances[tt.args.id]
-			assert.Equal(t, tt.expectedBalance, res.BCBalance)
-			assert.Equal(t, tt.expectedEstimate, res.CurrentEstimate)
-		})
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised
+	}, defaultWaitTime, defaultWaitInterval)
+
+	var diff uint64 = 1
+	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
+		Identity:       id1,
+		AmountPromised: diff,
+	})
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff
+	}, defaultWaitTime, defaultWaitInterval)
+
+	var diff2 uint64 = 4
+	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
+		Identity:       id1,
+		AmountPromised: diff2,
+	})
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff2-diff
+	}, defaultWaitTime, defaultWaitInterval)
+}
+
+func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	var grandTotalPromised uint64 = 100
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
 	}
+	bus := eventbus.New()
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
+		},
+		ch: make(chan *bindings.MystTokenTransfer),
+	}
+	calc := mockChannelAddressCalculator{}
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised
+	}, defaultWaitTime, defaultWaitInterval)
+
+	var diff uint64 = 1
+	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
+		Identity:       id1,
+		AmountPromised: diff,
+	})
+
+	bus.Publish(registry.AppTopicTransactorTopUp, id1.Address)
+	var topUpAmount uint64 = 123
+	bc.ch <- &bindings.MystTokenTransfer{
+		Value: big.NewInt(0).SetUint64(topUpAmount),
+	}
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff+topUpAmount
+	}, defaultWaitTime, defaultWaitInterval)
 }
 
 func TestConsumerBalanceTracker_increaseBalance(t *testing.T) {
 	type fields struct {
-		balances map[identity.Identity]Balance
+		balances map[identity.Identity]uint64
 	}
 	type args struct {
 		id identity.Identity
@@ -222,7 +230,7 @@ func TestConsumerBalanceTracker_increaseBalance(t *testing.T) {
 		{
 			name: "defaults to new balance",
 			fields: fields{
-				balances: make(map[identity.Identity]Balance),
+				balances: make(map[identity.Identity]uint64),
 			},
 			args: args{
 				id: mockID,
@@ -233,16 +241,24 @@ func TestConsumerBalanceTracker_increaseBalance(t *testing.T) {
 		{
 			name: "adds to existing balance",
 			fields: fields{
-				balances: map[identity.Identity]Balance{mockID: Balance{
-					BCBalance:       100000,
-					CurrentEstimate: 100000,
-				}},
+				balances: map[identity.Identity]uint64{mockID: 100000},
 			},
 			args: args{
 				id: mockID,
 				b:  100000,
 			},
 			expectedBalance: 200000,
+		},
+		{
+			name: "returns 0 on overflow",
+			fields: fields{
+				balances: map[identity.Identity]uint64{mockID: math.MaxUint64},
+			},
+			args: args{
+				id: mockID,
+				b:  1,
+			},
+			expectedBalance: 0,
 		},
 	}
 	for _, tt := range tests {
@@ -258,6 +274,66 @@ func TestConsumerBalanceTracker_increaseBalance(t *testing.T) {
 	}
 }
 
+func TestConsumerBalanceTracker_decreaseBalance(t *testing.T) {
+	type fields struct {
+		balances map[identity.Identity]uint64
+	}
+	type args struct {
+		id identity.Identity
+		b  uint64
+	}
+	tests := []struct {
+		name            string
+		fields          fields
+		args            args
+		expectedBalance uint64
+	}{
+		{
+			name: "returns 0 on underflow",
+			fields: fields{
+				balances: map[identity.Identity]uint64{identityOne: 1},
+			},
+			args: args{
+				id: identityOne,
+				b:  2,
+			},
+			expectedBalance: 0,
+		},
+		{
+			name: "handles non existing identity",
+			fields: fields{
+				balances: make(map[identity.Identity]uint64),
+			},
+			args: args{
+				id: identityOne,
+				b:  2,
+			},
+			expectedBalance: 0,
+		},
+		{
+			name: "subtracts correctly",
+			fields: fields{
+				balances: map[identity.Identity]uint64{identityOne: 100},
+			},
+			args: args{
+				id: identityOne,
+				b:  2,
+			},
+			expectedBalance: 98,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cbt := &ConsumerBalanceTracker{
+				balances:  tt.fields.balances,
+				publisher: eventbus.New(),
+			}
+			cbt.decreaseBalance(tt.args.id, tt.args.b)
+			assert.Equal(t, tt.expectedBalance, cbt.balances[tt.args.id])
+		})
+	}
+}
+
 type mockAccountantBalanceFetcher struct {
 	consumerData ConsumerData
 	err          error
@@ -268,16 +344,17 @@ func (mabf *mockAccountantBalanceFetcher) GetConsumerData(channel string) (Consu
 }
 
 type mockConsumerBalanceChecker struct {
-	amountToReturn *big.Int
-	errToReturn    error
+	channelToReturn client.ConsumerChannel
+	errToReturn     error
+	ch              chan *bindings.MystTokenTransfer
 }
 
-func (mcbc *mockConsumerBalanceChecker) GetConsumerBalance(channel, mystSCAddress common.Address) (*big.Int, error) {
-	return mcbc.amountToReturn, mcbc.errToReturn
+func (mcbc *mockConsumerBalanceChecker) GetConsumerChannel(addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error) {
+	return mcbc.channelToReturn, mcbc.errToReturn
 }
 
-func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address) (chan *bindings.MystTokenTransfer, func(), error) {
-	return nil, nil, nil
+func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error) {
+	return mcbc.ch, func() {}, nil
 }
 
 type mockChannelAddressCalculator struct {

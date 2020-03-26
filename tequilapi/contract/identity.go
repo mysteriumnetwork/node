@@ -32,7 +32,6 @@ type IdentityDTO struct {
 	RegistrationStatus string `json:"registrationStatus,omitempty"`
 	ChannelAddress     string `json:"channelAddress,omitempty"`
 	Balance            uint64 `json:"balance,omitempty"`
-	BalanceEstimate    uint64 `json:"balanceEstimate,omitempty"`
 	Earnings           uint64 `json:"earnings,omitempty"`
 	EarningsTotal      uint64 `json:"earningsTotal,omitempty"`
 }

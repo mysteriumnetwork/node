@@ -20,6 +20,7 @@ package pingpong
 import (
 	"io/ioutil"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -686,7 +687,9 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 }
 
 type mockConsumerTotalsStorage struct {
-	res        uint64
+	res     uint64
+	resLock sync.Mutex
+
 	err        error
 	calledWith uint64
 }
@@ -697,7 +700,15 @@ func (mcts *mockConsumerTotalsStorage) Store(providerAddress, accountantAddress 
 }
 
 func (mcts *mockConsumerTotalsStorage) Get(providerAddress, accountantAddress string) (uint64, error) {
+	mcts.resLock.Lock()
+	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err
+}
+
+func (mcts *mockConsumerTotalsStorage) setResult(in uint64) {
+	mcts.resLock.Lock()
+	defer mcts.resLock.Unlock()
+	mcts.res = in
 }
 
 type mockConsumerInvoiceStorage struct {

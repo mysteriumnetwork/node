@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -63,7 +64,7 @@ type AppEventEarningsChanged struct {
 
 // SettlementState represents current settling state with values of identity earnings
 type SettlementState struct {
-	Channel     ProviderChannel
+	Channel     client.ProviderChannel
 	LastPromise crypto.Promise
 
 	settleInProgress bool
@@ -121,4 +122,12 @@ func (ss SettlementState) needsSettling(threshold float64) bool {
 	}
 
 	return false
+}
+
+// AppTopicGrandTotalRecovered represents a topic to which we send grand total recovered messages.
+const AppTopicGrandTotalRecovered = "consumer_grand_total_recovered"
+
+// GrandTotalRecovered represents the AppTopicGrandTotalRecovered payload.
+type GrandTotalRecovered struct {
+	Identity identity.Identity
 }
