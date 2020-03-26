@@ -123,7 +123,7 @@ func (p *Pinger) Stop() {
 
 // PingProvider pings provider determined by destination provided in sessionConfig
 func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error) {
-	conns, err := p.PingProviderPeer(ip, localPorts, remotePorts, maxTTL, 1)
+	conns, err := p.pingPeer(ip, localPorts, remotePorts, maxTTL, 1)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to ping remote peer")
 	}
@@ -151,7 +151,7 @@ func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPor
 
 // PingConsumer pings consumer with increasing TTL for every connection.
 func (p *Pinger) PingConsumer(ip string, localPorts, remotePorts []int, mappingKey string) {
-	conns, err := p.PingConsumerPeer(ip, localPorts, remotePorts, 2, 1)
+	conns, err := p.pingPeer(ip, localPorts, remotePorts, 2, 1)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping remote peer")
 		return
@@ -165,6 +165,41 @@ func (p *Pinger) PingConsumer(ip string, localPorts, remotePorts []int, mappingK
 	go p.natProxy.handOff(mappingKey, conn)
 }
 
+// pingPeer pings remote peer with a defined configuration.
+// It returns n connections if possible or all available with error.
+func (p *Pinger) pingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	log.Info().Msg("NAT pinging to remote peer")
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, stop)
+	if err != nil {
+		log.Err(err).Msg("Failed to ping remote peer")
+		return nil, err
+	}
+
+	for res := range ch {
+		if res.err != nil {
+			log.Warn().Err(res.err).Msg("One of the pings has error")
+		} else {
+			if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
+				log.Warn().Err(res.err).Msg("Failed to set connection TTL")
+				continue
+			}
+
+			res.conn.Write([]byte("OK")) // notify peer that we are using this connection.
+
+			conns = append(conns, res.conn)
+			if len(conns) == n {
+				return conns, nil
+			}
+		}
+	}
+
+	return conns, errors.New("not enough connections")
+}
+
 // PingConsumerPeer pings remote peer with a defined configuration
 // and notifies peer which connections will be used.
 // It returns n connections if possible or error.
@@ -174,7 +209,7 @@ func (p *Pinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, init
 	stop := make(chan struct{})
 	defer close(stop)
 
-	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, n, stop)
+	ch, err := p.multiPingN(ip, localPorts, remotePorts, initialTTL, n, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -213,7 +248,7 @@ func (p *Pinger) PingProviderPeer(ip string, localPorts, remotePorts []int, init
 	stop := make(chan struct{})
 	defer close(stop)
 
-	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, n, stop)
+	ch, err := p.multiPingN(ip, localPorts, remotePorts, initialTTL, n, stop)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -413,7 +448,32 @@ type pingResponse struct {
 	id   int
 }
 
-func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL int, n int, stop <-chan struct{}) (<-chan pingResponse, error) {
+func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL int, stop <-chan struct{}) (<-chan pingResponse, error) {
+	if len(localPorts) != len(remotePorts) {
+		return nil, errors.New("number of local and remote ports does not match")
+	}
+
+	var wg sync.WaitGroup
+	ch := make(chan pingResponse, len(localPorts))
+
+	for i := range localPorts {
+		wg.Add(1)
+
+		go func(i int) {
+			conn, err := p.singlePing(ip, localPorts[i], remotePorts[i], initialTTL+i, stop)
+
+			ch <- pingResponse{id: i, conn: conn, err: err}
+
+			wg.Done()
+		}(i)
+	}
+
+	go func() { wg.Wait(); close(ch) }()
+
+	return ch, nil
+}
+
+func (p *Pinger) multiPingN(ip string, localPorts, remotePorts []int, initialTTL int, n int, stop <-chan struct{}) (<-chan pingResponse, error) {
 	if len(localPorts) != len(remotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
