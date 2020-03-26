@@ -27,6 +27,16 @@ func NewNoopPinger() NATPinger {
 	return &NoopPinger{}
 }
 
+// PingProviderPeer does nothing.
+func (np *NoopPinger) PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	return []*net.UDPConn{}, nil
+}
+
+// PingConsumerPeer does nothing.
+func (np *NoopPinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	return []*net.UDPConn{}, nil
+}
+
 // Valid returns that noop pinger is not a valid pinger
 func (np *NoopPinger) Valid() bool {
 	return false
