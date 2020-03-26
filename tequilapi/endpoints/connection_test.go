@@ -114,7 +114,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{"status": ""}`,
 		},
 		{
-			http.MethodPut, "/connection", `{"consumerId": "me", "providerId": "node1", "accountantId":"accountant", "serviceType": "noop"}`,
+			http.MethodPut, "/connection", `{"consumer_id": "me", "provider_id": "node1", "accountant_id":"accountant", "service_type": "noop"}`,
 			http.StatusCreated, `{"status": ""}`,
 		},
 		{
@@ -124,8 +124,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 		{
 			http.MethodGet, "/connection/statistics", "",
 			http.StatusOK, `{
-				"bytesSent": 0,
-				"bytesReceived": 0,
+				"bytes_sent": 0,
+				"bytes_received": 0,
 				"duration": 60
 			}`,
 		},
@@ -229,7 +229,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 		t,
 		`{
 			"status" : "Connected",
-			"sessionId" : "My-super-session"
+			"session_id" : "My-super-session"
 		}`,
 		resp.Body.String())
 
@@ -270,9 +270,9 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
-				"accountantId" : [ {"code" : "required" , "message" : "Field is required" } ],
-				"consumerId" : [ { "code" : "required" , "message" : "Field is required" } ],
-				"providerId" : [ {"code" : "required" , "message" : "Field is required" } ]
+				"accountant_id" : [ {"code" : "required" , "message" : "Field is required" } ],
+				"consumer_id" : [ { "code" : "required" , "message" : "Field is required" } ],
+				"provider_id" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`, resp.Body.String())
 }
@@ -287,9 +287,9 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId" : "accountant"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -316,9 +316,9 @@ func TestPutUnregisteredIdentityReturnsError(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId" : "accountant"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -345,9 +345,9 @@ func TestPutFailedRegistrationCheckReturnsError(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId" : "accountant"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -371,10 +371,10 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId": "accountant",
-				"serviceType": "noop"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id": "accountant",
+				"service_type": "noop"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -416,8 +416,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"bytesSent": 1,
-			"bytesReceived": 2,
+			"bytes_sent": 1,
+			"bytes_received": 2,
 			"duration": 60
 		}`,
 		resp.Body.String(),
@@ -437,8 +437,8 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 	assert.JSONEq(
 		t,
 		`{
-			"bytesSent": 1,
-			"bytesReceived": 2,
+			"bytes_sent": 1,
+			"bytes_received": 2,
 			"duration": 0
 		}`,
 		resp.Body.String(),
@@ -457,9 +457,9 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId" : "accountant"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -511,9 +511,9 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId" : "accountant"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -539,9 +539,9 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"consumerId" : "my-identity",
-				"providerId" : "required-node",
-				"accountantId" : "accountant"
+				"consumer_id" : "my-identity",
+				"provider_id" : "required-node",
+				"accountant_id" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 

@@ -89,7 +89,7 @@ func TestUpdatePayoutInfoWithoutAddress(t *testing.T) {
 		`{
 			"message": "validation_error",
 			"errors" : {
-				"ethAddress": [ {"code" : "required" , "message" : "Field is required" } ]
+				"eth_address": [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`,
 		resp.Body.String(),
@@ -101,7 +101,7 @@ func TestUpdatePayoutInfo(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
-		bytes.NewBufferString(`{"ethAddress": "1234payout", "referralCode": "1234referral"}`),
+		bytes.NewBufferString(`{"eth_address": "1234payout", "referral_code": "1234referral"}`),
 	)
 	assert.NoError(t, err)
 
@@ -121,7 +121,7 @@ func TestUpdateReferralInfo(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
-		bytes.NewBufferString(`{"referralCode": "1234referral"}`),
+		bytes.NewBufferString(`{"referral_code": "1234referral"}`),
 	)
 	assert.NoError(t, err)
 
@@ -158,8 +158,8 @@ func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(t, `{
-		"ethAddress": "mock eth address",
-		"referralCode": "mock referral code",
+		"eth_address": "mock eth address",
+		"referral_code": "mock referral code",
 		"email": ""
 	}`,
 		resp.Body.String())

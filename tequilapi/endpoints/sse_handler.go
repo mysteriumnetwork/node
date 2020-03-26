@@ -206,8 +206,8 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NATStatus  stateEvent.NATStatus        `json:"natStatus"`
-	Services   []stateEvent.ServiceInfo    `json:"serviceInfo"`
+	NATStatus  stateEvent.NATStatus        `json:"nat_status"`
+	Services   []stateEvent.ServiceInfo    `json:"service_info"`
 	Sessions   []stateEvent.ServiceSession `json:"sessions"`
 	Consumer   consumerStateRes            `json:"consumer"`
 	Identities []contract.IdentityDTO      `json:"identities"`

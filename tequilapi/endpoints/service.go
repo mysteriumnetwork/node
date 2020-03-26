@@ -36,7 +36,7 @@ type serviceRequest struct {
 	// provider identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: true
@@ -50,7 +50,7 @@ type serviceRequest struct {
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
-	AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
+	AccessPolicies accessPoliciesRequest `json:"access_policies"`
 }
 
 // accessPolicy represents the access controls
@@ -69,7 +69,7 @@ type serviceInfo struct {
 
 	// provider identity
 	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// example: openvpn
@@ -84,7 +84,7 @@ type serviceInfo struct {
 
 	Proposal proposalDTO `json:"proposal"`
 
-	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
+	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
 }
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
@@ -277,10 +277,10 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	jsonData := struct {
-		ProviderID     string                `json:"providerId"`
+		ProviderID     string                `json:"provider_id"`
 		Type           string                `json:"type"`
 		Options        *json.RawMessage      `json:"options"`
-		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
+		AccessPolicies accessPoliciesRequest `json:"access_policies"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
 			Ids: services.SharedConfiguredOptions().AccessPolicyList,
@@ -351,7 +351,7 @@ func toServiceListResponse(instances map[service.ID]*service.Instance) serviceLi
 func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if len(sr.ProviderID) == 0 {
-		errors.ForField("providerId").AddError("required", "Field is required")
+		errors.ForField("provider_id").AddError("required", "Field is required")
 	}
 	if sr.Type == "" {
 		errors.ForField("type").AddError("required", "Field is required")

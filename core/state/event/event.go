@@ -30,8 +30,8 @@ const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
-	NATStatus  NATStatus        `json:"natStatus"`
-	Services   []ServiceInfo    `json:"serviceInfo"`
+	NATStatus  NATStatus        `json:"nat_status"`
+	Services   []ServiceInfo    `json:"service_info"`
 	Sessions   []ServiceSession `json:"sessions"`
 	Consumer   ConsumerState    `json:"consumer"`
 	Identities []Identity       `json:"identities"`
@@ -40,7 +40,7 @@ type State struct {
 // Identity represents identity and its status.
 type Identity struct {
 	Address            string                      `json:"id"`
-	RegistrationStatus registry.RegistrationStatus `json:"registrationStatus,omitempty"`
+	RegistrationStatus registry.RegistrationStatus `json:"registration_status,omitempty"`
 	Balance            uint64                      `json:"balance,omitempty"`
 	Earnings           uint64                      `json:"earnings,omitempty"`
 	EarningsTotal      uint64                      `json:"earningsTotal,omitempty"`
@@ -61,8 +61,8 @@ type ConsumerConnection struct {
 // ConsumerConnectionStatistics represents current connection statistics.
 type ConsumerConnectionStatistics struct {
 	Duration      int    `json:"duration"`
-	BytesSent     uint64 `json:"bytesSent"`
-	BytesReceived uint64 `json:"bytesReceived"`
+	BytesSent     uint64 `json:"bytes_sent"`
+	BytesReceived uint64 `json:"bytes_received"`
 }
 
 // NATStatus stores the nat status related information
@@ -81,14 +81,14 @@ type ConnectionStatistics struct {
 // ServiceInfo stores the information about a service
 type ServiceInfo struct {
 	ID                   string                 `json:"id"`
-	ProviderID           string                 `json:"providerId"`
+	ProviderID           string                 `json:"provider_id"`
 	Type                 string                 `json:"type"`
 	Options              interface{}            `json:"options"`
 	Status               string                 `json:"status"`
 	Proposal             market.ServiceProposal `json:"proposal"`
-	AccessPolicies       *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
-	Sessions             []ServiceSession       `json:"serviceSession,omitempty"`
-	ConnectionStatistics ConnectionStatistics   `json:"connectionStatistics"`
+	AccessPolicies       *[]market.AccessPolicy `json:"access_policies,omitempty"`
+	Sessions             []ServiceSession       `json:"service_session,omitempty"`
+	ConnectionStatistics ConnectionStatistics   `json:"connection_statistics"`
 }
 
 // ServiceSession represents the session object
@@ -97,17 +97,17 @@ type ServiceSession struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	ID string `json:"id"`
 	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumerId"`
+	ConsumerID string `json:"consumer_id"`
 	// example: 2019-06-06T11:04:43.910035Z
-	CreatedAt time.Time `json:"createdAt"`
+	CreatedAt time.Time `json:"created_at"`
 	// example: 12345
-	BytesOut uint64 `json:"bytesOut"`
+	BytesOut uint64 `json:"bytes_out"`
 	// example: 23451
-	BytesIn uint64 `json:"bytesIn"`
+	BytesIn uint64 `json:"bytes_in"`
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	ServiceID string `json:"serviceId"`
+	ServiceID string `json:"service_id"`
 	// example: wireguard
-	ServiceType string `json:"serviceType"`
+	ServiceType string `json:"service_type"`
 	// example: 500000
-	TokensEarned uint64 `json:"tokensEarned"`
+	TokensEarned uint64 `json:"tokens_earned"`
 }

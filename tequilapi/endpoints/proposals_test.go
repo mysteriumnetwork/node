@@ -75,7 +75,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	assert.Nil(t, err)
 
 	query := req.URL.Query()
-	query.Set("providerId", "0xProviderId")
+	query.Set("provider_id", "0xProviderId")
 	setPricingBounds(query)
 	req.URL.RawQuery = query.Encode()
 
@@ -89,24 +89,24 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
             "proposals": [
                 {
                     "id": 1,
-                    "providerId": "0xProviderId",
-                    "serviceType": "testprotocol",
-                    "serviceDefinition": {
-                        "locationOriginate": {
+                    "provider_id": "0xProviderId",
+                    "service_type": "testprotocol",
+                    "service_definition": {
+                        "location_originate": {
                             "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
                     },
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount": 50000,
 							"currency": "MYST"
 						},
 						"rate": {
-							"perSeconds": 60,
-							"perBytes": 7669584
+							"per_seconds": 60,
+							"per_bytes": 7669584
 						}
 					}
                 }
@@ -143,8 +143,8 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	assert.Nil(t, err)
 
 	query := req.URL.Query()
-	query.Set("accessPolicyId", "accessPolicyId")
-	query.Set("accessPolicySource", "accessPolicySource")
+	query.Set("access_policy_id", "accessPolicyId")
+	query.Set("access_policy_source", "accessPolicySource")
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
@@ -157,24 +157,24 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
             "proposals": [
                 {
                     "id": 1,
-                    "providerId": "0xProviderId",
-                    "serviceType": "testprotocol",
-                    "serviceDefinition": {
-                        "locationOriginate": {
+                    "provider_id": "0xProviderId",
+                    "service_type": "testprotocol",
+                    "service_definition": {
+                        "location_originate": {
                             "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
                     },
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
                 }
@@ -214,47 +214,47 @@ func TestProposalsEndpointList(t *testing.T) {
             "proposals": [
                 {
                     "id": 1,
-                    "providerId": "0xProviderId",
-                    "serviceType": "testprotocol",
-                    "serviceDefinition": {
-                        "locationOriginate": {
+                    "provider_id": "0xProviderId",
+                    "service_type": "testprotocol",
+                    "service_definition": {
+                        "location_originate": {
                             "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
                     },
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
                 },
                 {
                     "id": 1,
-                    "providerId": "other_provider",
-                    "serviceType": "testprotocol",
-                    "serviceDefinition": {
-                        "locationOriginate": {
+                    "provider_id": "other_provider",
+                    "service_type": "testprotocol",
+                    "service_definition": {
+                        "location_originate": {
                             "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
                     },
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
                 }
@@ -270,7 +270,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	}
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant?fetchConnectCounts=true",
+		"/irrelevant?fetch_connect_counts=true",
 		nil,
 	)
 	assert.Nil(t, err)
@@ -286,28 +286,28 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 			"proposals": [
 				{
 					"id": 1,
-					"providerId": "0xProviderId",
-					"serviceType": "testprotocol",
-					"serviceDefinition": {
-						"locationOriginate": {
+					"provider_id": "0xProviderId",
+					"service_type": "testprotocol",
+					"service_definition": {
+						"location_originate": {
 							"asn": 123,
 							"country": "Lithuania",
 							"city": "Vilnius"
 						}
 					},
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					},
 					"metrics": {
-						"connectCount": {
+						"connect_count": {
 							"success": 5,
 							"fail": 3,
 							"timeout": 2
@@ -316,24 +316,24 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 				},
 				{
 					"id": 1,
-					"providerId": "other_provider",
-					"serviceType": "testprotocol",
-					"serviceDefinition": {
-						"locationOriginate": {
+					"provider_id": "other_provider",
+					"service_type": "testprotocol",
+					"service_definition": {
+						"location_originate": {
 							"asn": 123,
 							"country": "Lithuania",
 							"city": "Vilnius"
 						}
 					},
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
 				}
@@ -380,8 +380,8 @@ func (m *mockProposalRepository) Proposals(filter *proposal.Filter) ([]market.Se
 }
 
 func setPricingBounds(v url.Values) {
-	v.Add("upperTimePriceBound", fmt.Sprintf("%v", upperTimePriceBound))
-	v.Add("lowerTimePriceBound", fmt.Sprintf("%v", lowerTimePriceBound))
-	v.Add("upperGBPriceBound", fmt.Sprintf("%v", upperGBPriceBound))
-	v.Add("lowerGBPriceBound", fmt.Sprintf("%v", lowerGBPriceBound))
+	v.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTimePriceBound))
+	v.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTimePriceBound))
+	v.Add("upper_gb_price_bound", fmt.Sprintf("%v", upperGBPriceBound))
+	v.Add("lower_gb_price_bound", fmt.Sprintf("%v", lowerGBPriceBound))
 }

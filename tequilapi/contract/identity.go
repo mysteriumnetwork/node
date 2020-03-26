@@ -29,11 +29,11 @@ type IdentityDTO struct {
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
 	Address            string `json:"id"`
-	RegistrationStatus string `json:"registrationStatus,omitempty"`
-	ChannelAddress     string `json:"channelAddress,omitempty"`
+	RegistrationStatus string `json:"registration_status,omitempty"`
+	ChannelAddress     string `json:"channel_address,omitempty"`
 	Balance            uint64 `json:"balance,omitempty"`
 	Earnings           uint64 `json:"earnings,omitempty"`
-	EarningsTotal      uint64 `json:"earningsTotal,omitempty"`
+	EarningsTotal      uint64 `json:"earnings_total,omitempty"`
 }
 
 // NewIdentityDTO maps to API identity.

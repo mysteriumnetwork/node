@@ -173,11 +173,11 @@ func (client *Client) TopUp(identity string) error {
 // ConnectionCreate initiates a new connection to a host identified by providerID
 func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
 	payload := struct {
-		Identity     string         `json:"consumerId"`
-		ProviderID   string         `json:"providerId"`
-		AccountantID string         `json:"accountantId"`
-		ServiceType  string         `json:"serviceType"`
-		Options      ConnectOptions `json:"connectOptions"`
+		Identity     string         `json:"consumer_id"`
+		ProviderID   string         `json:"provider_id"`
+		AccountantID string         `json:"accountant_id"`
+		ServiceType  string         `json:"service_type"`
+		Options      ConnectOptions `json:"connect_options"`
 	}{
 		Identity:     consumerID,
 		ProviderID:   providerID,
@@ -286,7 +286,7 @@ func (client *Client) OriginLocation() (location LocationDTO, err error) {
 // ProposalsByType fetches proposals by given type
 func (client *Client) ProposalsByType(serviceType string) ([]ProposalDTO, error) {
 	queryParams := url.Values{}
-	queryParams.Add("serviceType", serviceType)
+	queryParams.Add("service_type", serviceType)
 	return client.proposals(queryParams)
 }
 
@@ -310,10 +310,10 @@ func (client *Client) proposals(query url.Values) ([]ProposalDTO, error) {
 // ProposalsByPrice returns all available proposals within the given price range
 func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]ProposalDTO, error) {
 	values := url.Values{}
-	values.Add("upperTimePriceBound", fmt.Sprintf("%v", upperTime))
-	values.Add("lowerTimePriceBound", fmt.Sprintf("%v", lowerTime))
-	values.Add("upperGBPriceBound", fmt.Sprintf("%v", upperGB))
-	values.Add("lowerGBPriceBound", fmt.Sprintf("%v", lowerGB))
+	values.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTime))
+	values.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTime))
+	values.Add("upper_gb_price_bound", fmt.Sprintf("%v", upperGB))
+	values.Add("lower_gb_price_bound", fmt.Sprintf("%v", lowerGB))
 	return client.proposals(values)
 }
 
@@ -334,7 +334,7 @@ func (client *Client) Unlock(identity, passphrase string) error {
 func (client *Client) Payout(identity, ethAddress string) error {
 	path := fmt.Sprintf("identities/%s/payout", identity)
 	payload := struct {
-		EthAddress string `json:"ethAddress"`
+		EthAddress string `json:"eth_address"`
 	}{
 		ethAddress,
 	}
@@ -419,10 +419,10 @@ func (client *Client) ServiceStart(providerID, serviceType string, options inter
 	}
 
 	payload := struct {
-		ProviderID     string                `json:"providerID"`
+		ProviderID     string                `json:"provider_id"`
 		Type           string                `json:"type"`
 		Options        json.RawMessage       `json:"options"`
-		AccessPolicies AccessPoliciesRequest `json:"accessPolicies"`
+		AccessPolicies AccessPoliciesRequest `json:"access_policies"`
 	}{
 		providerID,
 		serviceType,

@@ -36,7 +36,7 @@ type healthCheckData struct {
 
 	// example: 0.0.6
 	Version   string    `json:"version"`
-	BuildInfo buildInfo `json:"buildInfo"`
+	BuildInfo buildInfo `json:"build_info"`
 }
 
 // swagger:model BuildInfoDTO
@@ -48,7 +48,7 @@ type buildInfo struct {
 	Branch string `json:"branch"`
 
 	// example: dev-build
-	BuildNumber string `json:"buildNumber"`
+	BuildNumber string `json:"build_number"`
 }
 
 type healthCheckEndpoint struct {

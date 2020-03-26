@@ -101,7 +101,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"country": "LT",
 				"ip": "1.2.3.4",
 				"isp": "Telia Lietuva, AB",
-				"userType": "residential",
+				"user_type": "residential",
 				"node_type": "residential"
 			}`,
 		},
@@ -115,7 +115,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"country": "LT",
 				"ip": "1.2.3.1",
 				"isp": "Telia Lietuva, AB",
-				"userType": "residential",
+				"user_type": "residential",
 				"node_type": "residential"
 			}`,
 		},

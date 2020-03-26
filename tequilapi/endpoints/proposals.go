@@ -54,16 +54,16 @@ type locationRes struct {
 
 // swagger:model ServiceDefinitionDTO
 type serviceDefinitionRes struct {
-	LocationOriginate locationRes `json:"locationOriginate"`
+	LocationOriginate locationRes `json:"location_originate"`
 }
 
 type metricsRes struct {
-	ConnectCount quality.ConnectCount `json:"connectCount"`
+	ConnectCount quality.ConnectCount `json:"connect_count"`
 }
 
 type paymentRateRes struct {
-	PerSeconds uint64 `json:"perSeconds"`
-	PerBytes   uint64 `json:"perBytes"`
+	PerSeconds uint64 `json:"per_seconds"`
+	PerBytes   uint64 `json:"per_bytes"`
 }
 
 type paymentMethodRes struct {
@@ -80,23 +80,23 @@ type proposalDTO struct {
 
 	// provider who offers service
 	// example: 0x0000000000000000000000000000000000000001
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 
 	// type of service provider offers
 	// example: openvpn
-	ServiceType string `json:"serviceType"`
+	ServiceType string `json:"service_type"`
 
 	// qualitative service definition
-	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
+	ServiceDefinition serviceDefinitionRes `json:"service_definition"`
 
 	// Metrics of the service
 	Metrics *metricsRes `json:"metrics,omitempty"`
 
 	// AccessPolicies
-	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
+	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
 
 	// PaymentMethod
-	PaymentMethod paymentMethodRes `json:"paymentMethod"`
+	PaymentMethod paymentMethodRes `json:"payment_method"`
 }
 
 func proposalToRes(p market.ServiceProposal) *proposalDTO {
@@ -151,23 +151,23 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 // description: Returns list of proposals filtered by provider id
 // parameters:
 //   - in: query
-//     name: providerId
+//     name: provider_id
 //     description: id of provider proposals
 //     type: string
 //   - in: query
-//     name: serviceType
+//     name: service_type
 //     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
 //     type: string
 //   - in: query
-//     name: accessPolicyId
+//     name: access_policy_id
 //     description: the access policy id to filter the proposals by
 //     type: string
 //   - in: query
-//     name: accessPolicySource
+//     name: access_policy_source
 //     description: the access policy source to filter the proposals by
 //     type: string
 //   - in: query
-//     name: fetchConnectCounts
+//     name: fetch_connect_counts
 //     description: if set to true, fetches the connection success metrics for nodes. False by default.
 //     type: boolean
 // responses:
@@ -180,35 +180,35 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
+	fetchConnectCounts := req.URL.Query().Get("fetch_connect_counts")
 
-	upperTimePriceBound, err := parsePriceBound(req, "upperTimePriceBound")
+	upperTimePriceBound, err := parsePriceBound(req, "upper_time_price_bound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
-	lowerTimePriceBound, err := parsePriceBound(req, "lowerTimePriceBound")
+	lowerTimePriceBound, err := parsePriceBound(req, "lower_time_price_bound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	upperGBPriceBound, err := parsePriceBound(req, "upperGBPriceBound")
+	upperGBPriceBound, err := parsePriceBound(req, "upper_gb_price_bound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
-	lowerGBPriceBound, err := parsePriceBound(req, "lowerGBPriceBound")
+	lowerGBPriceBound, err := parsePriceBound(req, "lower_gb_price_bound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
 	proposals, err := pe.proposalRepository.Proposals(&proposal.Filter{
-		ProviderID:          req.URL.Query().Get("providerId"),
-		ServiceType:         req.URL.Query().Get("serviceType"),
-		AccessPolicyID:      req.URL.Query().Get("accessPolicyId"),
-		AccessPolicySource:  req.URL.Query().Get("accessPolicySource"),
+		ProviderID:          req.URL.Query().Get("provider_id"),
+		ServiceType:         req.URL.Query().Get("service_type"),
+		AccessPolicyID:      req.URL.Query().Get("access_policy_id"),
+		AccessPolicySource:  req.URL.Query().Get("access_policy_source"),
 		LowerGBPriceBound:   lowerGBPriceBound,
 		UpperGBPriceBound:   upperGBPriceBound,
 		LowerTimePriceBound: lowerTimePriceBound,

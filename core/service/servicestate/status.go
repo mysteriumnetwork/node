@@ -23,7 +23,7 @@ const AppTopicServiceStatus = "Service status"
 // AppEventServiceStatus represents the service event related information
 type AppEventServiceStatus struct {
 	ID         string `json:"id"`
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 	Type       string `json:"type"`
 	Status     string `json:"status"`
 }
