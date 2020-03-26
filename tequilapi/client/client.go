@@ -45,7 +45,7 @@ type Client struct {
 }
 
 // GetIdentities returns a list of client identities
-func (client *Client) GetIdentities() (ids []contract.IdentityDTO, err error) {
+func (client *Client) GetIdentities() (ids []contract.IdentityRefDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
 		return
@@ -59,7 +59,7 @@ func (client *Client) GetIdentities() (ids []contract.IdentityDTO, err error) {
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(passphrase string) (id contract.IdentityDTO, err error) {
+func (client *Client) NewIdentity(passphrase string) (id contract.IdentityRefDTO, err error) {
 	response, err := client.http.Post("identities", contract.IdentityRequest{Passphrase: &passphrase})
 	if err != nil {
 		return
@@ -71,7 +71,7 @@ func (client *Client) NewIdentity(passphrase string) (id contract.IdentityDTO, e
 }
 
 // CurrentIdentity unlocks and returns the last used, new or first identity
-func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityDTO, err error) {
+func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityRefDTO, err error) {
 	if len(identity) == 0 {
 		identity = "current"
 	}

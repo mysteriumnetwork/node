@@ -22,6 +22,15 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
+// IdentityRefDTO represents unique identity reference.
+// swagger:model IdentityRefDTO
+type IdentityRefDTO struct {
+	// identity in Ethereum address format
+	// required: true
+	// example: 0x0000000000000000000000000000000000000001
+	Address string `json:"id"`
+}
+
 // IdentityDTO holds identity information.
 // swagger:model IdentityDTO
 type IdentityDTO struct {
@@ -29,28 +38,28 @@ type IdentityDTO struct {
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
 	Address            string `json:"id"`
-	RegistrationStatus string `json:"registration_status,omitempty"`
-	ChannelAddress     string `json:"channel_address,omitempty"`
-	Balance            uint64 `json:"balance,omitempty"`
-	Earnings           uint64 `json:"earnings,omitempty"`
-	EarningsTotal      uint64 `json:"earnings_total,omitempty"`
+	RegistrationStatus string `json:"registration_status"`
+	ChannelAddress     string `json:"channel_address"`
+	Balance            uint64 `json:"balance"`
+	Earnings           uint64 `json:"earnings"`
+	EarningsTotal      uint64 `json:"earnings_total"`
 }
 
 // NewIdentityDTO maps to API identity.
-func NewIdentityDTO(id identity.Identity) IdentityDTO {
-	return IdentityDTO{Address: id.Address}
+func NewIdentityDTO(id identity.Identity) IdentityRefDTO {
+	return IdentityRefDTO{Address: id.Address}
 }
 
 // ListIdentitiesResponse holds list of identities.
 // swagger:model ListIdentitiesResponse
 type ListIdentitiesResponse struct {
-	Identities []IdentityDTO `json:"identities"`
+	Identities []IdentityRefDTO `json:"identities"`
 }
 
 // NewIdentityListResponse maps to API identity list.
 func NewIdentityListResponse(ids []identity.Identity) ListIdentitiesResponse {
 	result := ListIdentitiesResponse{
-		Identities: make([]IdentityDTO, len(ids)),
+		Identities: make([]IdentityRefDTO, len(ids)),
 	}
 	for i, id := range ids {
 		result.Identities[i] = NewIdentityDTO(id)

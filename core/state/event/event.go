@@ -40,12 +40,12 @@ type State struct {
 
 // Identity represents identity and its status.
 type Identity struct {
-	Address            string                      `json:"id"`
-	RegistrationStatus registry.RegistrationStatus `json:"registration_status,omitempty"`
-	ChannelAddress     common.Address              `json:"channel_address,omitempty"`
-	Balance            uint64                      `json:"balance,omitempty"`
-	Earnings           uint64                      `json:"earnings,omitempty"`
-	EarningsTotal      uint64                      `json:"earnings_total,omitempty"`
+	Address            string
+	RegistrationStatus registry.RegistrationStatus
+	ChannelAddress     common.Address
+	Balance            uint64
+	Earnings           uint64
+	EarningsTotal      uint64
 }
 
 // ConsumerState represents consumer state.

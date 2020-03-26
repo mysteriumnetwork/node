@@ -83,7 +83,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //   200:
 //     description: Unlocked identity returned
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
 //     description: Bad Request
 //     schema:
@@ -141,7 +141,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //   200:
 //     description: Identity created
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
 //     description: Bad Request
 //     schema:
@@ -251,7 +251,7 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 //   200:
 //     description: Registration status and data
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   500:
 //     description: Internal server error
 //     schema:
