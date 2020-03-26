@@ -389,9 +389,10 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
-		BalanceProvider:  &mockBalanceProvider{Balance: 0},
-		EarningsProvider: &mockEarningsProvider{},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
+		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
+		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -425,9 +426,10 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.RegisteredProvider},
-		BalanceProvider:  &mockBalanceProvider{Balance: 0},
-		EarningsProvider: &mockEarningsProvider{},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredProvider},
+		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
+		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -467,9 +469,10 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry: &mocks.IdentityRegistry{Status: registry.Unregistered},
-		BalanceProvider:  &mockBalanceProvider{Balance: 0},
-		EarningsProvider: &mockEarningsProvider{},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Unregistered},
+		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
+		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)

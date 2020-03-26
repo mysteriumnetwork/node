@@ -20,6 +20,7 @@ package event
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -41,9 +42,10 @@ type State struct {
 type Identity struct {
 	Address            string                      `json:"id"`
 	RegistrationStatus registry.RegistrationStatus `json:"registration_status,omitempty"`
+	ChannelAddress     common.Address              `json:"channel_address,omitempty"`
 	Balance            uint64                      `json:"balance,omitempty"`
 	Earnings           uint64                      `json:"earnings,omitempty"`
-	EarningsTotal      uint64                      `json:"earningsTotal,omitempty"`
+	EarningsTotal      uint64                      `json:"earnings_total,omitempty"`
 }
 
 // ConsumerState represents consumer state.

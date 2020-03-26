@@ -229,6 +229,7 @@ func mapState(event stateEvent.State) stateRes {
 		identitiesRes[idx] = contract.IdentityDTO{
 			Address:            identity.Address,
 			RegistrationStatus: identity.RegistrationStatus.String(),
+			ChannelAddress:     identity.ChannelAddress.Hex(),
 			Balance:            identity.Balance,
 			Earnings:           identity.Earnings,
 			EarningsTotal:      identity.EarningsTotal,
