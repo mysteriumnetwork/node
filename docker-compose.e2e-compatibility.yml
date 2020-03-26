@@ -106,8 +106,28 @@ services:
       -keystoreDir /keystore
       -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -boltPath /bolt.db
+      -MongoUser accountant
+      -MongoPass accountant
+      -MongoHost "mongodb:27017"
+      -MongoReplSet ""
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+
+  mongodb:
+    image: 'mongo:4.2.3'
+    environment:
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_DATABASE=accountant
+      - MONGO_NON_ROOT_USERNAME=accountant
+      - MONGO_NON_ROOT_PASSWORD=accountant
+    expose: 
+      - 27017
+      - 27018
+      - 27019
+    volumes:
+      - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
 
   myst-provider:
     image: mysteriumnetwork/myst:0.19.1-alpine

@@ -89,13 +89,14 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   accountant:
-    image: mysteriumnetwork/accountant:0.0.2
+    image: mysteriumnetwork/accountant:0.1.9
     environment:
       PORT: 8889
     expose:
       - 8889
     depends_on:
       - ganache
+      - mongodb
     command: >
       -identityPassphrase ""
       -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -106,8 +107,27 @@ services:
       -keystoreDir /keystore
       -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       -boltPath /bolt.db
+      -MongoUser accountant
+      -MongoPass accountant
+      -MongoHost "mongodb:27017"
+      -MongoReplSet ""
     volumes:
       - ./e2e/blockchain/keystore:/keystore
+  
+  mongodb:
+    image: 'mongo:4.2.3'
+    environment:
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_DATABASE=accountant
+      - MONGO_NON_ROOT_USERNAME=accountant
+      - MONGO_NON_ROOT_PASSWORD=accountant
+    expose: 
+      - 27017
+      - 27018
+      - 27019
+    volumes:
+      - ./e2e/mongo-init.e2e.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   myst-provider:
     build:

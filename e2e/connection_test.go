@@ -217,6 +217,7 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 	assert.Equal(t, uint64(690000000), providerStatus.Balance)
 	assert.Equal(t, earningsExpected, providerStatus.Earnings)
 	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal)
+	
 	// TODO Compare with sessions stats + proposal price
 	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
 
