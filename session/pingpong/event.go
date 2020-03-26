@@ -83,7 +83,7 @@ func (ss SettlementState) UnsettledBalance() uint64 {
 		settled = ss.Channel.Settled.Uint64()
 	}
 
-	return ss.LastPromise.Amount - settled
+	return safeSub(ss.LastPromise.Amount, settled)
 }
 
 func (ss SettlementState) availableBalance() uint64 {
@@ -101,7 +101,7 @@ func (ss SettlementState) availableBalance() uint64 {
 }
 
 func (ss SettlementState) balance() uint64 {
-	return ss.availableBalance() - ss.LastPromise.Amount
+	return safeSub(ss.availableBalance(), ss.LastPromise.Amount)
 }
 
 func (ss SettlementState) needsSettling(threshold float64) bool {

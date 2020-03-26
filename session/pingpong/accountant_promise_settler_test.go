@@ -306,7 +306,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	// should receive on registered provider. Should also expect a recalculated balance to be added to the SettlementState
 	settler.currentState[mockID] = SettlementState{
 		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
-		LastPromise: crypto.Promise{Amount: 8999},
+		LastPromise: crypto.Promise{Amount: 8900},
 		registered:  true,
 	}
 	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
@@ -323,15 +323,15 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// should not receive here due to balance being large and stake being small
 	settler.currentState[mockID] = SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(10)},
-		LastPromise: crypto.Promise{Amount: 100000},
+		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+		LastPromise: crypto.Promise{Amount: 8900},
 		registered:  true,
 	}
 	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
 		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
 		ProviderID:   mockID,
 		Promise: crypto.Promise{
-			Amount: 110000,
+			Amount: 8999,
 		},
 	})
 	assertNoReceive(t, settler.settleQueue)
