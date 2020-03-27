@@ -69,7 +69,7 @@ func NewConsumerBalanceTracker(
 }
 
 type consumerGrandTotalGetter interface {
-	Get(consumerAddress, accountantAddress string) (uint64, error)
+	Get(consumerAddress, accountantAddress identity.Identity) (uint64, error)
 }
 
 type consumerBalanceChecker interface {
@@ -178,7 +178,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 		return 0
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalGetter.Get(id.Address, identity.FromAddress(cbt.accountantAddress.Hex()).Address)
+	grandTotal, err := cbt.consumerGrandTotalGetter.Get(id, identity.FromAddress(cbt.accountantAddress.Hex()))
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
 		return 0

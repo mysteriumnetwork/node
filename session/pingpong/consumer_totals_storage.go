@@ -43,30 +43,30 @@ func NewConsumerTotalsStorage(bolt persistentStorage, bus eventbus.Publisher) *C
 }
 
 // Store stores the given amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Store(consumerAddress, accountantAddress string, amount uint64) error {
+func (cts *ConsumerTotalsStorage) Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 
-	err := cts.bolt.SetValue(consumerTotalStorageBucketName, consumerAddress+accountantAddress, amount)
+	err := cts.bolt.SetValue(consumerTotalStorageBucketName, consumerAddress.Address+accountantAddress.Address, amount)
 	if err != nil {
 		return err
 	}
 
 	go cts.bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
 		Current:      amount,
-		AccountantID: identity.FromAddress(accountantAddress),
-		ConsumerID:   identity.FromAddress(consumerAddress),
+		AccountantID: accountantAddress,
+		ConsumerID:   consumerAddress,
 	})
 
 	return nil
 }
 
 // Get fetches the amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Get(consumerAddress, accountantAddress string) (uint64, error) {
+func (cts *ConsumerTotalsStorage) Get(consumerAddress, accountantAddress identity.Identity) (uint64, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 	var res uint64
-	err := cts.bolt.GetValue(consumerTotalStorageBucketName, consumerAddress+accountantAddress, &res)
+	err := cts.bolt.GetValue(consumerTotalStorageBucketName, consumerAddress.Address+accountantAddress.Address, &res)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {
