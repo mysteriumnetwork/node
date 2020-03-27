@@ -279,7 +279,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		ServiceSessionStorage:     di.ServiceSessionStorage,
-		SessionDurationProvider:   di.StatisticsTracker,
+		ConnectionSessionProvider: di.StatisticsTracker,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
@@ -389,22 +389,24 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {
-	// state events
+	// Consumer current session store
 	err := di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsTracker.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.SessionStorage.ConsumeSessionEvent)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
 	if err != nil {
 		return err
 	}
 
-	// statistics events
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
+	// Consumer session history (API storage)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)
+	if err != nil {
+		return err
+	}
+
+	// Consumer session history (local storage)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.SessionStorage.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
@@ -436,13 +438,12 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
-
-	err = di.handleHTTPClientConnections()
+	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
 	if err != nil {
 		return err
 	}
 
-	return di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
+	return di.handleHTTPClientConnections()
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {

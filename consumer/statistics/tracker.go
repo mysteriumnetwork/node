@@ -45,15 +45,12 @@ func (sst *SessionStatisticsTracker) Retrieve() connection.Statistics {
 	return sst.sessionStats
 }
 
-// Reset resets session stats to 0
-func (sst *SessionStatisticsTracker) Reset() {
-	sst.sessionStats = connection.Statistics{}
-}
-
 // MarkSessionStart marks current time as session start time for statistics
 func (sst *SessionStatisticsTracker) markSessionStart() {
 	time := sst.timeGetter()
 	sst.sessionStart = &time
+	// reset the stats in preparation for a new session
+	sst.sessionStats = connection.Statistics{}
 }
 
 // GetSessionDuration returns elapsed time from marked session start

@@ -46,7 +46,8 @@ type natStatusProvider interface {
 	ConsumeNATEvent(event natEvent.Event)
 }
 
-type sessionDurationProvider interface {
+type connectionSessionProvider interface {
+	Retrieve() connection.Statistics
 	GetSessionDuration() time.Duration
 }
 
@@ -87,9 +88,9 @@ type Keeper struct {
 	deps                   KeeperDeps
 
 	// provider
-	consumeServiceStateEvent          func(e interface{})
-	consumeNATEvent                   func(e interface{})
-	consumeSessionStateEventDebounced func(e interface{})
+	consumeServiceStateEvent                 func(e interface{})
+	consumeNATEvent                          func(e interface{})
+	consumeServiceSessionStateEventDebounced func(e interface{})
 	// consumer
 	consumeConnectionStatisticsEvent func(interface{})
 
@@ -102,7 +103,7 @@ type KeeperDeps struct {
 	Publisher                 publisher
 	ServiceLister             serviceLister
 	ServiceSessionStorage     serviceSessionStorage
-	SessionDurationProvider   sessionDurationProvider
+	ConnectionSessionProvider connectionSessionProvider
 	IdentityProvider          identityProvider
 	IdentityRegistry          registry.IdentityRegistry
 	IdentityChannelCalculator channelAddressCalculator
@@ -131,7 +132,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
 	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
-	k.consumeSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
+	k.consumeServiceSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
 
 	// consumer
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStatistics, debounceDuration)
@@ -174,13 +175,13 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(servicestate.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeSessionStateEvent); err != nil {
+	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeServiceSessionStateEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumerConnectionStateEvent); err != nil {
+	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumeConnectionStateEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
@@ -214,17 +215,17 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-// consumeSessionStateEvent consumes the session change events
-func (k *Keeper) consumeSessionStateEvent(e sevent.Payload) {
+// consumeServiceSessionStateEvent consumes the session change events
+func (k *Keeper) consumeServiceSessionStateEvent(e sevent.Payload) {
 	if e.Action == sevent.Acknowledged {
-		k.consumeSessionAcknowledgeEvent(e)
+		k.consumeServiceSessionAcknowledgeEvent(e)
 		return
 	}
 
-	k.consumeSessionStateEventDebounced(e)
+	k.consumeServiceSessionStateEventDebounced(e)
 }
 
-func (k *Keeper) consumeSessionAcknowledgeEvent(e sevent.Payload) {
+func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.Payload) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	if e.Action != sevent.Acknowledged {
@@ -337,7 +338,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) consumerConnectionStateEvent(e interface{}) {
+func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	evt, ok := e.(connection.StateEvent)
@@ -359,14 +360,12 @@ func (k *Keeper) consumerConnectionStateEvent(e interface{}) {
 func (k *Keeper) updateConnectionStatistics(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(connection.SessionStatsEvent)
-	if !ok {
-		log.Warn().Msg("Received a wrong kind of event for connection statistics update")
-	}
+
+	dataStats := k.deps.ConnectionSessionProvider.Retrieve()
 	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
-		Duration:      int(k.deps.SessionDurationProvider.GetSessionDuration().Seconds()),
-		BytesSent:     evt.Stats.BytesSent,
-		BytesReceived: evt.Stats.BytesReceived,
+		Duration:      int(k.deps.ConnectionSessionProvider.GetSessionDuration().Seconds()),
+		BytesSent:     dataStats.BytesSent,
+		BytesReceived: dataStats.BytesReceived,
 	}
 	go k.announceStateChanges(nil)
 }
