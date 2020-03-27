@@ -217,20 +217,20 @@ func (it *InvoiceTracker) generateAgreementID() {
 	it.agreementID = rand.Uint64()
 }
 
-func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error {
-	invoice, ok := it.getMarkedInvoice(pm.Promise.Hashlock)
+func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error {
+	invoice, ok := it.getMarkedInvoice(em.Promise.Hashlock)
 	if !ok {
 		log.Debug().Msgf("consumer sent exchange message with missing expired hashlock %s, skipping", invoice.invoice.Hashlock)
 		return ErrInvoiceExpired
 	}
 
-	err := it.validateExchangeMessage(pm)
+	err := it.validateExchangeMessage(em)
 	if err != nil {
 		return err
 	}
 
-	it.lastExchangeMessage = pm
-	it.markInvoicePaid(pm.Promise.Hashlock)
+	it.lastExchangeMessage = em
+	it.markInvoicePaid(em.Promise.Hashlock)
 	it.resetNotReceivedExchangeMessageCount()
 
 	// incase of zero payment, we'll just skip going to the accountant
@@ -253,7 +253,7 @@ func (it *InvoiceTracker) handleExchangeMessage(pm crypto.ExchangeMessage) error
 		return errors.Wrap(err, fmt.Sprintf("could not store r: %s", hex.EncodeToString(invoice.r)))
 	}
 
-	err = it.requestPromise(invoice.r, pm)
+	err = it.requestPromise(invoice.r, em)
 	switch errors.Cause(err) {
 	case errHandled:
 		return nil
@@ -274,14 +274,14 @@ func (it *InvoiceTracker) updateFee() {
 	it.transactorFee = fees
 }
 
-func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) error {
+func (it *InvoiceTracker) requestPromise(r []byte, em crypto.ExchangeMessage) error {
 	if !it.transactorFee.IsValid() {
 		it.updateFee()
 	}
 
 	details := rRecoveryDetails{
 		R:           hex.EncodeToString(r),
-		AgreementID: pm.AgreementID,
+		AgreementID: em.AgreementID,
 	}
 
 	bytes, err := json.Marshal(details)
@@ -295,7 +295,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	}
 
 	request := RequestPromise{
-		ExchangeMessage: pm,
+		ExchangeMessage: em,
 		TransactorFee:   it.transactorFee.Fee,
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
@@ -326,9 +326,9 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 		ProviderID:   it.deps.ProviderID,
 	})
 	it.deps.EventBus.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
-		Consumer:    it.deps.Peer,
-		ServiceType: it.deps.Proposal.ServiceType,
-		Total:       it.lastExchangeMessage.AgreementTotal,
+		ProviderID: it.deps.ProviderID,
+		SessionID:  it.deps.SessionID,
+		Total:      em.AgreementTotal,
 	})
 	return nil
 }
