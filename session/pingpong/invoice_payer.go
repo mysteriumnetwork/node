@@ -65,8 +65,8 @@ type consumerInvoiceStorage interface {
 type getConsumerInfo func(id string) (ConsumerData, error)
 
 type consumerTotalsStorage interface {
-	Store(consumerAddress, accountantAddress string, amount uint64) error
-	Get(providerAddress, accountantAddress string) (uint64, error)
+	Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error
+	Get(providerAddress, accountantAddress identity.Identity) (uint64, error)
 }
 
 type timeTracker interface {
@@ -132,10 +132,6 @@ func (ip *InvoicePayer) Start() error {
 	if err = ip.recoverGrandTotalPromised(); err != nil {
 		return fmt.Errorf("could not get balance from accountant: %w", err)
 	}
-
-	go ip.deps.EventBus.Publish(AppTopicGrandTotalRecovered, GrandTotalRecovered{
-		Identity: ip.deps.Identity,
-	})
 
 	ip.deps.TimeTracker.StartTracking()
 
@@ -204,14 +200,14 @@ func (ip *InvoicePayer) recoverGrandTotalPromised() error {
 
 	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
 	return ip.deps.ConsumerTotalsStorage.Store(
-		ip.deps.Identity.Address,
-		ip.deps.AccountantAddress.Address,
+		ip.deps.Identity,
+		ip.deps.AccountantAddress,
 		data.LatestPromise.Amount,
 	)
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
-	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
+	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -219,7 +215,7 @@ func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address, res+amount)
+	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity, ip.deps.AccountantAddress, res+amount)
 }
 
 func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
@@ -274,7 +270,7 @@ func estimateInvoiceTolerance(elapsed time.Duration, transferred dataTransferred
 
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
 	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
-	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
+	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
 	if err != nil {
 		return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
 	}
@@ -305,11 +301,6 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
-
-	defer ip.deps.EventBus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
-		Identity:       ip.deps.Identity,
-		AmountPromised: diff,
-	})
 
 	// TODO: we'd probably want to check if we have enough balance here
 	err = ip.incrementGrandTotalPromised(diff)

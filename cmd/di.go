@@ -188,11 +188,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.bootstrapEventBus()
+
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
-
-	di.bootstrapEventBus()
 
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
@@ -375,7 +375,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
-	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage)
+	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	return nil
 }

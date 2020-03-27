@@ -23,6 +23,8 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,10 +37,10 @@ func TestConsumerTotalStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer bolt.Close()
 
-	consumerTotalsStorage := NewConsumerTotalsStorage(bolt)
+	consumerTotalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 
-	channelAddress := "someAddress"
-	accountantAddress := "someOtherAddress"
+	channelAddress := identity.FromAddress("someAddress")
+	accountantAddress := identity.FromAddress("someOtherAddress")
 	var amount uint64 = 12
 
 	// check if errors are wrapped correctly
@@ -62,7 +64,7 @@ func TestConsumerTotalStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
-	someOtherChannel := "someOtherChannel"
+	someOtherChannel := identity.FromAddress("someOtherChannel")
 	// store two amounts, check if both are gotten correctly
 	err = consumerTotalsStorage.Store(someOtherChannel, accountantAddress, amount)
 	assert.NoError(t, err)

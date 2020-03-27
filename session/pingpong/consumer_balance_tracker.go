@@ -35,7 +35,7 @@ import (
 // TODO: this needs to take into account the saved state.
 type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
-	balances     map[identity.Identity]uint64
+	balances     map[identity.Identity]ConsumerBalance
 
 	accountantAddress        common.Address
 	mystSCAddress            common.Address
@@ -57,7 +57,7 @@ func NewConsumerBalanceTracker(
 	consumerGrandTotalGetter consumerGrandTotalGetter,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
-		balances:                 make(map[identity.Identity]uint64),
+		balances:                 make(map[identity.Identity]ConsumerBalance),
 		consumerBalanceChecker:   consumerBalanceChecker,
 		mystSCAddress:            mystSCAddress,
 		accountantAddress:        accountantAddress,
@@ -69,7 +69,7 @@ func NewConsumerBalanceTracker(
 }
 
 type consumerGrandTotalGetter interface {
-	Get(consumerAddress, accountantAddress string) (uint64, error)
+	Get(consumerAddress, accountantAddress identity.Identity) (uint64, error)
 }
 
 type consumerBalanceChecker interface {
@@ -91,11 +91,7 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(AppTopicExchangeMessage, cbt.handleExchangeMessageEvent)
-	if err != nil {
-		return err
-	}
-	err = bus.SubscribeAsync(AppTopicGrandTotalRecovered, cbt.handleGrandTotalRecovered)
+	err = bus.SubscribeAsync(AppTopicGrandTotalChanged, cbt.handleGrandTotalChanged)
 	if err != nil {
 		return err
 	}
@@ -107,16 +103,16 @@ func (cbt *ConsumerBalanceTracker) GetBalance(ID identity.Identity) uint64 {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 	if v, ok := cbt.balances[ID]; ok {
-		return v
+		return v.GetBalance()
 	}
 	return 0
 }
 
-func (cbt *ConsumerBalanceTracker) handleExchangeMessageEvent(event AppEventExchangeMessage) {
-	cbt.decreaseBalance(event.Identity, event.AmountPromised)
-}
-
 func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after uint64) {
+	if before == after {
+		return
+	}
+
 	cbt.publisher.Publish(AppTopicBalanceChanged, AppEventBalanceChanged{
 		Identity: id,
 		Previous: before,
@@ -129,8 +125,13 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 	cbt.ForceBalanceUpdate(identity)
 }
 
-func (cbt *ConsumerBalanceTracker) handleGrandTotalRecovered(ev GrandTotalRecovered) {
-	cbt.ForceBalanceUpdate(ev.Identity)
+func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev AppEventGrandTotalChanged) {
+	if _, ok := cbt.balances[ev.ConsumerID]; !ok {
+		cbt.ForceBalanceUpdate(ev.ConsumerID)
+		return
+	}
+
+	cbt.updateGrandTotal(ev.ConsumerID, ev.Current)
 }
 
 func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
@@ -157,7 +158,7 @@ func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 			return
 		}
 		updated = true
-		cbt.increaseBalance(identity.FromAddress(id), ev.Value.Uint64())
+		cbt.increaseBCBalance(identity.FromAddress(id), ev.Value.Uint64())
 	case <-cbt.stop:
 		return
 	}
@@ -177,7 +178,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 		return 0
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalGetter.Get(id.Address, identity.FromAddress(cbt.accountantAddress.Hex()).Address)
+	grandTotal, err := cbt.consumerGrandTotalGetter.Get(id, identity.FromAddress(cbt.accountantAddress.Hex()))
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
 		return 0
@@ -186,17 +187,18 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 
-	// Balance (to spend) = BCBalance - (accountantPromised - BCSettled)
-	diff := safeSub(grandTotal, cc.Settled.Uint64())
-
-	currentBalance := safeSub(cc.Balance.Uint64(), diff)
-
 	var before uint64
 	if v, ok := cbt.balances[id]; ok {
-		before = v
+		before = v.GetBalance()
 	}
 
-	cbt.balances[id] = currentBalance
+	cbt.balances[id] = ConsumerBalance{
+		BCBalance:          cc.Balance.Uint64(),
+		BCSettled:          cc.Settled.Uint64(),
+		GrandTotalPromised: grandTotal,
+	}
+
+	currentBalance := cbt.balances[id].GetBalance()
 	go cbt.publishChangeEvent(id, before, currentBalance)
 	return currentBalance
 }
@@ -214,34 +216,36 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) increaseBalance(id identity.Identity, b uint64) {
+func (cbt *ConsumerBalanceTracker) increaseBCBalance(id identity.Identity, diff uint64) {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 
 	var before uint64
 	if v, ok := cbt.balances[id]; ok {
-		before = v
+		before = v.GetBalance()
+		v.BCBalance = safeAdd(v.BCBalance, diff)
+		cbt.balances[id] = v
+	} else {
+		cbt.ForceBalanceUpdate(id)
 	}
 
-	current := safeAdd(before, b)
-	cbt.balances[id] = current
-
-	go cbt.publishChangeEvent(id, before, current)
+	go cbt.publishChangeEvent(id, before, cbt.balances[id].GetBalance())
 }
 
-func (cbt *ConsumerBalanceTracker) decreaseBalance(id identity.Identity, b uint64) {
+func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, current uint64) {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 
 	var before uint64
 	if v, ok := cbt.balances[id]; ok {
-		before = v
+		before = v.GetBalance()
+		v.GrandTotalPromised = current
+		cbt.balances[id] = v
+	} else {
+		cbt.ForceBalanceUpdate(id)
 	}
 
-	current := safeSub(before, b)
-	cbt.balances[id] = current
-
-	go cbt.publishChangeEvent(id, before, current)
+	go cbt.publishChangeEvent(id, before, cbt.balances[id].GetBalance())
 }
 
 func safeSub(a, b uint64) uint64 {
@@ -257,4 +261,17 @@ func safeAdd(a, b uint64) uint64 {
 		return c
 	}
 	return 0
+}
+
+// ConsumerBalance represents the consumer balance
+type ConsumerBalance struct {
+	BCBalance          uint64
+	BCSettled          uint64
+	GrandTotalPromised uint64
+}
+
+// GetBalance returns the current balance
+func (cb ConsumerBalance) GetBalance() uint64 {
+	// Balance (to spend) = BCBalance - (accountantPromised - BCSettled)
+	return safeSub(cb.BCBalance, safeSub(cb.GrandTotalPromised, cb.BCSettled))
 }

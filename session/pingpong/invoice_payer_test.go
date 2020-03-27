@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -67,7 +68,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt)
+	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -121,7 +122,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt)
+	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -200,7 +201,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt)
+	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -265,7 +266,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	defer bolt.Close()
 
 	tracker := session.NewTracker(mbtime.Now)
-	totalsStorage := NewConsumerTotalsStorage(bolt)
+	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		EventBus:                  mocks.NewEventBus(),
@@ -398,6 +399,7 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 			name: "returns the error from storage",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					bus: eventbus.New(),
 					err: errors.New("some error"),
 				},
 			},
@@ -407,6 +409,7 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 			name: "adds to zero if not found",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					bus: eventbus.New(),
 					err: ErrNotFound,
 				},
 			},
@@ -420,6 +423,7 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 			name: "adds to value if found",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					bus: eventbus.New(),
 					res: 15,
 				},
 			},
@@ -554,11 +558,12 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 			PeerExchangeMessageSender: &MockPeerExchangeMessageSender{
 				chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 			},
-			ConsumerTotalsStorage: &mockConsumerTotalsStorage{},
-			Peer:                  peerID,
-			Ks:                    ks,
-			Identity:              identity.FromAddress(acc.Address.Hex()),
-			EventBus:              mp,
+			ConsumerTotalsStorage: &mockConsumerTotalsStorage{
+				bus: mp,
+			},
+			Peer:     peerID,
+			Ks:       ks,
+			Identity: identity.FromAddress(acc.Address.Hex()),
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -570,10 +575,10 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	ev := <-mp.publicationChan
-	assert.Equal(t, AppTopicExchangeMessage, ev.name)
-	assert.EqualValues(t, AppEventExchangeMessage{
-		Identity:       emt.deps.Identity,
-		AmountPromised: 5,
+	assert.Equal(t, AppTopicGrandTotalChanged, ev.name)
+	assert.EqualValues(t, AppEventGrandTotalChanged{
+		ConsumerID: emt.deps.Identity,
+		Current:    5,
 	}, ev.value)
 }
 
@@ -618,7 +623,9 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 				peerExchangeMessageSender: &MockPeerExchangeMessageSender{
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 				},
-				consumerTotalsStorage: &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					bus: eventbus.New(),
+				},
 			},
 			wantErr: true,
 		},
@@ -632,7 +639,9 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 					mockError:     errors.New("explosions everywhere"),
 				},
-				consumerTotalsStorage: &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					bus: eventbus.New(),
+				},
 			},
 			wantErr: false,
 		},
@@ -645,7 +654,9 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 				peerExchangeMessageSender: &MockPeerExchangeMessageSender{
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 				},
-				consumerTotalsStorage: &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					bus: eventbus.New(),
+				},
 			},
 			args: args{
 				invoice: crypto.Invoice{
@@ -689,17 +700,23 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 type mockConsumerTotalsStorage struct {
 	res     uint64
 	resLock sync.Mutex
+	bus     eventbus.Publisher
 
 	err        error
 	calledWith uint64
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(providerAddress, accountantAddress string, amount uint64) error {
+func (mcts *mockConsumerTotalsStorage) Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error {
 	mcts.calledWith = amount
+	go mcts.bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+		Current:      amount,
+		AccountantID: accountantAddress,
+		ConsumerID:   consumerAddress,
+	})
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(providerAddress, accountantAddress string) (uint64, error) {
+func (mcts *mockConsumerTotalsStorage) Get(providerAddress, accountantAddress identity.Identity) (uint64, error) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err
@@ -709,21 +726,6 @@ func (mcts *mockConsumerTotalsStorage) setResult(in uint64) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	mcts.res = in
-}
-
-type mockConsumerInvoiceStorage struct {
-	res        crypto.Invoice
-	err        error
-	calledWith crypto.Invoice
-}
-
-func (mcis *mockConsumerInvoiceStorage) Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error {
-	mcis.calledWith = invoice
-	return nil
-}
-
-func (mcis *mockConsumerInvoiceStorage) Get(consumerIdentity, providerAddress identity.Identity) (crypto.Invoice, error) {
-	return mcis.res, mcis.err
 }
 
 type mockTimeTracker struct {

@@ -18,7 +18,6 @@
 package pingpong
 
 import (
-	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -44,8 +43,10 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id2 := identity.FromAddress("0x000000002")
 	assert.NotEqual(t, id1.Address, id2.Address)
 
-	mcts := mockConsumerTotalsStorage{}
 	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{
+		bus: bus,
+	}
 	bc := mockConsumerBalanceChecker{
 		channelToReturn: client.ConsumerChannel{
 			Balance: big.NewInt(initialBalance),
@@ -83,9 +84,9 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var promised uint64 = 100
-	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
-		Identity:       id1,
-		AmountPromised: promised,
+	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+		ConsumerID: id1,
+		Current:    promised,
 	})
 
 	assert.Eventually(t, func() bool {
@@ -93,48 +94,15 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
-func TestConsumerBalanceTracker_Handles_RRecovery(t *testing.T) {
-	id1 := identity.FromAddress("0x000000001")
-	mcts := mockConsumerTotalsStorage{}
-	bus := eventbus.New()
-	bc := mockConsumerBalanceChecker{
-		channelToReturn: client.ConsumerChannel{
-			Balance: big.NewInt(initialBalance),
-			Settled: big.NewInt(0),
-		},
-	}
-	calc := mockChannelAddressCalculator{}
-
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
-
-	err := cbt.Subscribe(bus)
-	assert.NoError(t, err)
-
-	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
-
-	assert.Eventually(t, func() bool {
-		return cbt.GetBalance(id1) == initialBalance
-	}, defaultWaitTime, defaultWaitInterval)
-
-	var changedPromised uint64 = 232323
-	mcts.setResult(changedPromised)
-
-	bus.Publish(AppTopicGrandTotalRecovered, GrandTotalRecovered{
-		Identity: id1,
-	})
-
-	assert.Eventually(t, func() bool {
-		return cbt.GetBalance(id1) == initialBalance-changedPromised
-	}, defaultWaitTime, defaultWaitInterval)
-}
-
-func TestConsumerBalanceTracker_Handles_Promises(t *testing.T) {
+func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	var grandTotalPromised uint64 = 100
+	bus := eventbus.New()
+
 	mcts := mockConsumerTotalsStorage{
 		res: grandTotalPromised,
+		bus: bus,
 	}
-	bus := eventbus.New()
 	bc := mockConsumerBalanceChecker{
 		channelToReturn: client.ConsumerChannel{
 			Balance: big.NewInt(initialBalance),
@@ -151,34 +119,35 @@ func TestConsumerBalanceTracker_Handles_Promises(t *testing.T) {
 		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised
 	}, defaultWaitTime, defaultWaitInterval)
 
-	var diff uint64 = 1
-	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
-		Identity:       id1,
-		AmountPromised: diff,
+	var diff uint64 = 10
+	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+		ConsumerID: id1,
+		Current:    grandTotalPromised + diff,
 	})
 
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff
 	}, defaultWaitTime, defaultWaitInterval)
 
-	var diff2 uint64 = 4
-	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
-		Identity:       id1,
-		AmountPromised: diff2,
+	var diff2 uint64 = 20
+	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+		ConsumerID: id1,
+		Current:    grandTotalPromised + diff2,
 	})
 
 	assert.Eventually(t, func() bool {
-		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff2-diff
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff2
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
 func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	var grandTotalPromised uint64 = 100
+	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{
 		res: grandTotalPromised,
+		bus: bus,
 	}
-	bus := eventbus.New()
 	bc := mockConsumerBalanceChecker{
 		channelToReturn: client.ConsumerChannel{
 			Balance: big.NewInt(initialBalance),
@@ -196,12 +165,6 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised
 	}, defaultWaitTime, defaultWaitInterval)
 
-	var diff uint64 = 1
-	bus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
-		Identity:       id1,
-		AmountPromised: diff,
-	})
-
 	bus.Publish(registry.AppTopicTransactorTopUp, id1.Address)
 	var topUpAmount uint64 = 123
 	bc.ch <- &bindings.MystTokenTransfer{
@@ -209,129 +172,8 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	}
 
 	assert.Eventually(t, func() bool {
-		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised-diff+topUpAmount
+		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised+topUpAmount
 	}, defaultWaitTime, defaultWaitInterval)
-}
-
-func TestConsumerBalanceTracker_increaseBalance(t *testing.T) {
-	type fields struct {
-		balances map[identity.Identity]uint64
-	}
-	type args struct {
-		id identity.Identity
-		b  uint64
-	}
-	tests := []struct {
-		name            string
-		fields          fields
-		args            args
-		expectedBalance uint64
-	}{
-		{
-			name: "defaults to new balance",
-			fields: fields{
-				balances: make(map[identity.Identity]uint64),
-			},
-			args: args{
-				id: mockID,
-				b:  100000,
-			},
-			expectedBalance: 100000,
-		},
-		{
-			name: "adds to existing balance",
-			fields: fields{
-				balances: map[identity.Identity]uint64{mockID: 100000},
-			},
-			args: args{
-				id: mockID,
-				b:  100000,
-			},
-			expectedBalance: 200000,
-		},
-		{
-			name: "returns 0 on overflow",
-			fields: fields{
-				balances: map[identity.Identity]uint64{mockID: math.MaxUint64},
-			},
-			args: args{
-				id: mockID,
-				b:  1,
-			},
-			expectedBalance: 0,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cbt := &ConsumerBalanceTracker{
-				balances:  tt.fields.balances,
-				publisher: eventbus.New(),
-			}
-			cbt.increaseBalance(tt.args.id, tt.args.b)
-			res := cbt.GetBalance(tt.args.id)
-			assert.Equal(t, tt.expectedBalance, res)
-		})
-	}
-}
-
-func TestConsumerBalanceTracker_decreaseBalance(t *testing.T) {
-	type fields struct {
-		balances map[identity.Identity]uint64
-	}
-	type args struct {
-		id identity.Identity
-		b  uint64
-	}
-	tests := []struct {
-		name            string
-		fields          fields
-		args            args
-		expectedBalance uint64
-	}{
-		{
-			name: "returns 0 on underflow",
-			fields: fields{
-				balances: map[identity.Identity]uint64{identityOne: 1},
-			},
-			args: args{
-				id: identityOne,
-				b:  2,
-			},
-			expectedBalance: 0,
-		},
-		{
-			name: "handles non existing identity",
-			fields: fields{
-				balances: make(map[identity.Identity]uint64),
-			},
-			args: args{
-				id: identityOne,
-				b:  2,
-			},
-			expectedBalance: 0,
-		},
-		{
-			name: "subtracts correctly",
-			fields: fields{
-				balances: map[identity.Identity]uint64{identityOne: 100},
-			},
-			args: args{
-				id: identityOne,
-				b:  2,
-			},
-			expectedBalance: 98,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cbt := &ConsumerBalanceTracker{
-				balances:  tt.fields.balances,
-				publisher: eventbus.New(),
-			}
-			cbt.decreaseBalance(tt.args.id, tt.args.b)
-			assert.Equal(t, tt.expectedBalance, cbt.balances[tt.args.id])
-		})
-	}
 }
 
 type mockAccountantBalanceFetcher struct {
@@ -364,4 +206,57 @@ type mockChannelAddressCalculator struct {
 
 func (mcac *mockChannelAddressCalculator) GetChannelAddress(id identity.Identity) (common.Address, error) {
 	return mcac.addrToReturn, mcac.errToReturn
+}
+
+func TestConsumerBalance_GetBalance(t *testing.T) {
+	type fields struct {
+		BCBalance          uint64
+		BCSettled          uint64
+		GrandTotalPromised uint64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   uint64
+	}{
+		{
+			name: "handles bc balance underflow",
+			fields: fields{
+				BCBalance:          0,
+				BCSettled:          0,
+				GrandTotalPromised: 1,
+			},
+			want: 0,
+		},
+		{
+			name: "handles grand total underflow",
+			fields: fields{
+				BCBalance:          0,
+				BCSettled:          1,
+				GrandTotalPromised: 0,
+			},
+			want: 0,
+		},
+		{
+			name: "calculates balance correctly",
+			fields: fields{
+				BCBalance:          3,
+				BCSettled:          1,
+				GrandTotalPromised: 2,
+			},
+			want: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cb := ConsumerBalance{
+				BCBalance:          tt.fields.BCBalance,
+				BCSettled:          tt.fields.BCSettled,
+				GrandTotalPromised: tt.fields.GrandTotalPromised,
+			}
+			if got := cb.GetBalance(); got != tt.want {
+				t.Errorf("ConsumerBalance.GetBalance() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
