@@ -20,6 +20,8 @@ package pingpong
 import (
 	"sync"
 
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 )
 
@@ -29,12 +31,14 @@ const consumerTotalStorageBucketName = "consumer_promised_totals"
 type ConsumerTotalsStorage struct {
 	bolt persistentStorage
 	lock sync.Mutex
+	bus  eventbus.Publisher
 }
 
 // NewConsumerTotalsStorage creates a new instance of consumer totals storage.
-func NewConsumerTotalsStorage(bolt persistentStorage) *ConsumerTotalsStorage {
+func NewConsumerTotalsStorage(bolt persistentStorage, bus eventbus.Publisher) *ConsumerTotalsStorage {
 	return &ConsumerTotalsStorage{
 		bolt: bolt,
+		bus:  bus,
 	}
 }
 
@@ -42,7 +46,19 @@ func NewConsumerTotalsStorage(bolt persistentStorage) *ConsumerTotalsStorage {
 func (cts *ConsumerTotalsStorage) Store(consumerAddress, accountantAddress string, amount uint64) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
-	return cts.bolt.SetValue(consumerTotalStorageBucketName, consumerAddress+accountantAddress, amount)
+
+	err := cts.bolt.SetValue(consumerTotalStorageBucketName, consumerAddress+accountantAddress, amount)
+	if err != nil {
+		return err
+	}
+
+	go cts.bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+		Current:      amount,
+		AccountantID: identity.FromAddress(accountantAddress),
+		ConsumerID:   identity.FromAddress(consumerAddress),
+	})
+
+	return nil
 }
 
 // Get fetches the amount as promised for the given channel.

@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +36,7 @@ func TestConsumerTotalStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer bolt.Close()
 
-	consumerTotalsStorage := NewConsumerTotalsStorage(bolt)
+	consumerTotalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 
 	channelAddress := "someAddress"
 	accountantAddress := "someOtherAddress"

@@ -33,15 +33,6 @@ type AppEventAccountantPromise struct {
 	ProviderID   identity.Identity
 }
 
-// AppTopicExchangeMessage represents a topic where exchange messages are sent.
-const AppTopicExchangeMessage = "exchange_message_topic"
-
-// AppEventExchangeMessage represents the messages that are sent on the AppTopicExchangeMessage.
-type AppEventExchangeMessage struct {
-	Identity       identity.Identity
-	AmountPromised uint64
-}
-
 // AppTopicBalanceChanged represents the balance change topic
 const AppTopicBalanceChanged = "balance_change"
 
@@ -124,10 +115,12 @@ func (ss SettlementState) needsSettling(threshold float64) bool {
 	return false
 }
 
-// AppTopicGrandTotalRecovered represents a topic to which we send grand total recovered messages.
-const AppTopicGrandTotalRecovered = "consumer_grand_total_recovered"
+// AppTopicGrandTotalChanged represents a topic to which we send grand total change messages.
+const AppTopicGrandTotalChanged = "consumer_grand_total_change"
 
-// GrandTotalRecovered represents the AppTopicGrandTotalRecovered payload.
-type GrandTotalRecovered struct {
-	Identity identity.Identity
+// AppEventGrandTotalChanged represents the grand total changed event.
+type AppEventGrandTotalChanged struct {
+	Current      uint64
+	AccountantID identity.Identity
+	ConsumerID   identity.Identity
 }

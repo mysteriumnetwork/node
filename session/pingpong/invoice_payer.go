@@ -133,10 +133,6 @@ func (ip *InvoicePayer) Start() error {
 		return fmt.Errorf("could not get balance from accountant: %w", err)
 	}
 
-	go ip.deps.EventBus.Publish(AppTopicGrandTotalRecovered, GrandTotalRecovered{
-		Identity: ip.deps.Identity,
-	})
-
 	ip.deps.TimeTracker.StartTracking()
 
 	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
@@ -305,11 +301,6 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
-
-	defer ip.deps.EventBus.Publish(AppTopicExchangeMessage, AppEventExchangeMessage{
-		Identity:       ip.deps.Identity,
-		AmountPromised: diff,
-	})
 
 	// TODO: we'd probably want to check if we have enough balance here
 	err = ip.incrementGrandTotalPromised(diff)
