@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
@@ -182,7 +183,10 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 		{
 			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
 			RegistrationStatus: registry.RegisteredConsumer,
+			ChannelAddress:     common.HexToAddress("0x000000000000000000000000000000000000000a"),
 			Balance:            50,
+			Earnings:           1,
+			EarningsTotal:      100,
 		},
 	}
 	h.ConsumeStateEvent(changedState)
@@ -208,7 +212,10 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       {
         "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
         "registration_status": "RegisteredConsumer",
-        "balance": 50
+        "channel_address": "0x000000000000000000000000000000000000000A",
+        "balance": 50,
+        "earnings": 1,
+        "earnings_total": 100
       }
     ]
   },

@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/cmd"
@@ -67,6 +66,7 @@ type MobileNode struct {
 	feedbackReporter             *feedback.Reporter
 	transactor                   *registry.Transactor
 	identityRegistry             registry.IdentityRegistry
+	identityChannelCalculator    *pingpong.ChannelAddressCalculator
 	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
 	registryAddress              string
 	channelImplementationAddress string
@@ -407,24 +407,24 @@ type GetIdentityResponse struct {
 // GetIdentity finds first identity and unlocks it.
 // If there is no identity default one will be created.
 func (mb *MobileNode) GetIdentity() (*GetIdentityResponse, error) {
-	unlockedIdentity, err := mb.identitySelector.UseOrCreate("", "")
+	id, err := mb.identitySelector.UseOrCreate("", "")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}
 
-	channelAddress, err := pc.GenerateChannelAddress(unlockedIdentity.Address, metadata.TestnetDefinition.AccountantID, mb.registryAddress, mb.channelImplementationAddress)
+	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate channel address")
 	}
 
-	status, err := mb.identityRegistry.GetRegistrationStatus(identity.FromAddress(unlockedIdentity.Address))
+	status, err := mb.identityRegistry.GetRegistrationStatus(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get identity registration status")
 	}
 
 	return &GetIdentityResponse{
-		IdentityAddress:    unlockedIdentity.Address,
-		ChannelAddress:     channelAddress,
+		IdentityAddress:    id.Address,
+		ChannelAddress:     channelAddress.Hex(),
 		RegistrationStatus: status.String(),
 	}, nil
 }

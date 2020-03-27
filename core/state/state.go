@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -65,6 +66,10 @@ type identityProvider interface {
 	GetIdentities() []identity.Identity
 }
 
+type channelAddressCalculator interface {
+	GetChannelAddress(id identity.Identity) (common.Address, error)
+}
+
 type balanceProvider interface {
 	GetBalance(id identity.Identity) uint64
 }
@@ -93,15 +98,16 @@ type Keeper struct {
 
 // KeeperDeps to construct the state.Keeper.
 type KeeperDeps struct {
-	NATStatusProvider       natStatusProvider
-	Publisher               publisher
-	ServiceLister           serviceLister
-	ServiceSessionStorage   serviceSessionStorage
-	SessionDurationProvider sessionDurationProvider
-	IdentityProvider        identityProvider
-	IdentityRegistry        registry.IdentityRegistry
-	BalanceProvider         balanceProvider
-	EarningsProvider        earningsProvider
+	NATStatusProvider         natStatusProvider
+	Publisher                 publisher
+	ServiceLister             serviceLister
+	ServiceSessionStorage     serviceSessionStorage
+	SessionDurationProvider   sessionDurationProvider
+	IdentityProvider          identityProvider
+	IdentityRegistry          registry.IdentityRegistry
+	IdentityChannelCalculator channelAddressCalculator
+	BalanceProvider           balanceProvider
+	EarningsProvider          earningsProvider
 }
 
 // NewKeeper returns a new instance of the keeper.
@@ -143,10 +149,17 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			log.Warn().Err(err).Msgf("Could not get registration status for %s", id.Address)
 			status = registry.Unregistered
 		}
+
+		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(id)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
+		}
+
 		settlement := k.deps.EarningsProvider.SettlementState(id)
 		stateIdentity := event.Identity{
 			Address:            id.Address,
 			RegistrationStatus: status,
+			ChannelAddress:     channelAddress,
 			Balance:            k.deps.BalanceProvider.GetBalance(id),
 			Earnings:           settlement.UnsettledBalance(),
 			EarningsTotal:      settlement.LifetimeBalance(),

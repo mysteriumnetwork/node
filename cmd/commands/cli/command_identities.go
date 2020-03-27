@@ -98,7 +98,7 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 	}
 
 	address := actionArgs[0]
-	identityStatus, err := c.tequilapi.IdentityStatus(address)
+	identityStatus, err := c.tequilapi.Identity(address)
 	if err != nil {
 		warn(err)
 		return

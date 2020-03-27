@@ -45,7 +45,7 @@ type Client struct {
 }
 
 // GetIdentities returns a list of client identities
-func (client *Client) GetIdentities() (ids []contract.IdentityDTO, err error) {
+func (client *Client) GetIdentities() (ids []contract.IdentityRefDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
 		return
@@ -59,7 +59,7 @@ func (client *Client) GetIdentities() (ids []contract.IdentityDTO, err error) {
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(passphrase string) (id contract.IdentityDTO, err error) {
+func (client *Client) NewIdentity(passphrase string) (id contract.IdentityRefDTO, err error) {
 	response, err := client.http.Post("identities", contract.IdentityRequest{Passphrase: &passphrase})
 	if err != nil {
 		return
@@ -71,14 +71,11 @@ func (client *Client) NewIdentity(passphrase string) (id contract.IdentityDTO, e
 }
 
 // CurrentIdentity unlocks and returns the last used, new or first identity
-func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityDTO, err error) {
-	if len(identity) == 0 {
-		identity = "current"
-	}
-
-	path := fmt.Sprintf("identities/%s", identity)
-
-	response, err := client.http.Put(path, contract.IdentityRequest{Passphrase: &passphrase})
+func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityRefDTO, err error) {
+	response, err := client.http.Put("identities/current", contract.IdentityRequest{
+		Address:    &identity,
+		Passphrase: &passphrase,
+	})
 	if err != nil {
 		return
 	}
@@ -88,9 +85,9 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 	return id, err
 }
 
-// IdentityStatus returns identity status with current balance
-func (client *Client) IdentityStatus(identityAddress string) (contract.IdentityDTO, error) {
-	path := fmt.Sprintf("identities/%s/status", identityAddress)
+// Identity returns identity status with current balance
+func (client *Client) Identity(identityAddress string) (contract.IdentityDTO, error) {
+	path := fmt.Sprintf("identities/%s", identityAddress)
 
 	response, err := client.http.Get(path, nil)
 	if err != nil {

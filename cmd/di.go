@@ -267,15 +267,16 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	}
 
 	deps := state.KeeperDeps{
-		NATStatusProvider:       nat.NewStatusTracker(lastStageName),
-		Publisher:               di.EventBus,
-		ServiceLister:           di.ServicesManager,
-		ServiceSessionStorage:   di.ServiceSessionStorage,
-		SessionDurationProvider: di.StatisticsTracker,
-		IdentityProvider:        di.IdentityManager,
-		IdentityRegistry:        di.IdentityRegistry,
-		BalanceProvider:         di.ConsumerBalanceTracker,
-		EarningsProvider:        di.AccountantPromiseSettler,
+		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
+		Publisher:                 di.EventBus,
+		ServiceLister:             di.ServicesManager,
+		ServiceSessionStorage:     di.ServiceSessionStorage,
+		SessionDurationProvider:   di.StatisticsTracker,
+		IdentityProvider:          di.IdentityManager,
+		IdentityRegistry:          di.IdentityRegistry,
+		IdentityChannelCalculator: di.ChannelAddressCalculator,
+		BalanceProvider:           di.ConsumerBalanceTracker,
+		EarningsProvider:          di.AccountantPromiseSettler,
 	}
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)

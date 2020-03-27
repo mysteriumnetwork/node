@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -32,10 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
 )
-
-type channelAddressCalculator interface {
-	GetChannelAddress(id identity.Identity) (common.Address, error)
-}
 
 type balanceProvider interface {
 	GetBalance(id identity.Identity) uint64
@@ -47,12 +42,12 @@ type earningsProvider interface {
 }
 
 type identitiesAPI struct {
-	idm                      identity.Manager
-	selector                 identity_selector.Handler
-	registry                 registry.IdentityRegistry
-	channelAddressCalculator channelAddressCalculator
-	balanceProvider          balanceProvider
-	earningsProvider         earningsProvider
+	idm               identity.Manager
+	selector          identity_selector.Handler
+	registry          registry.IdentityRegistry
+	channelCalculator *pingpong.ChannelAddressCalculator
+	balanceProvider   balanceProvider
+	earningsProvider  earningsProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -88,7 +83,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //   200:
 //     description: Unlocked identity returned
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
 //     description: Bad Request
 //     schema:
@@ -102,26 +97,24 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: remove this hack when we replace our router
-	address := params.ByName("id")
-	if address == "current" {
-		address = ""
-	}
-
-	var myIdentityRequest contract.IdentityRequest
-	err := json.NewDecoder(request.Body).Decode(&myIdentityRequest)
+	var req contract.IdentityRequest
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityRequest(myIdentityRequest)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	id, err := endpoint.selector.UseOrCreate(address, *myIdentityRequest.Passphrase)
+	idAddress := ""
+	if req.Address != nil {
+		idAddress = *req.Address
+	}
+	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -146,7 +139,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //   200:
 //     description: Identity created
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
 //     description: Bad Request
 //     schema:
@@ -242,10 +235,10 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-// swagger:operation GET /identities/{id}/status Identity getIdentityStatus
+// swagger:operation GET /identities/{id} Identity getIdentity
 // ---
-// summary: Provide identity status
-// description: Returns identity's status
+// summary: Get identity
+// description: Provide identity details
 // parameters:
 //   - in: path
 //     name: id
@@ -254,14 +247,14 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 //     required: true
 // responses:
 //   200:
-//     description: Registration status and data
+//     description: Identity retrieved
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
 	id, err := endpoint.idm.GetIdentity(address)
 	if err != nil {
@@ -275,22 +268,21 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 		return
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
-	addr, err := endpoint.channelAddressCalculator.GetChannelAddress(id)
+	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(id)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
 		return
 	}
 
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
 	settlement := endpoint.earningsProvider.SettlementState(id)
-
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
+		ChannelAddress:     channelAddress.Hex(),
 		Balance:            balance,
 		Earnings:           settlement.UnsettledBalance(),
 		EarningsTotal:      settlement.LifetimeBalance(),
-		ChannelAddress:     addr.Hex(),
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -307,7 +299,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, _ *http.Request,
 //     required: true
 // responses:
 //   200:
-//     description: Registration status and data
+//     description: Status retrieved
 //     schema:
 //       "$ref": "#/definitions/RegistrationDataDTO"
 //   500:
@@ -342,21 +334,30 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
 	balanceProvider balanceProvider,
-	channelAddressCalculator channelAddressCalculator,
+	channelAddressCalculator *pingpong.ChannelAddressCalculator,
 	earningsProvider earningsProvider,
 ) {
 	idmEnd := &identitiesAPI{
-		idm:                      idm,
-		selector:                 selector,
-		registry:                 registry,
-		balanceProvider:          balanceProvider,
-		channelAddressCalculator: channelAddressCalculator,
-		earningsProvider:         earningsProvider,
+		idm:               idm,
+		selector:          selector,
+		registry:          registry,
+		balanceProvider:   balanceProvider,
+		channelCalculator: channelAddressCalculator,
+		earningsProvider:  earningsProvider,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
-	router.PUT("/identities/:id", idmEnd.Current)
+	router.PUT("/identities/:id", func(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+		// TODO: remove this hack when we replace our router
+		switch params.ByName("id") {
+		case "current":
+			idmEnd.Current(resp, request, params)
+		default:
+			http.NotFound(resp, request)
+		}
+	})
+	router.GET("/identities/:id", idmEnd.Get)
+	router.GET("/identities/:id/status", idmEnd.Get)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
-	router.GET("/identities/:id/status", idmEnd.Status)
 	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 }
