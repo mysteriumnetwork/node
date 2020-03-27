@@ -22,15 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
@@ -58,7 +54,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
-		mockP2PManager(), nil,
+		&mockP2PListener{}, nil,
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -84,7 +80,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
-		mockP2PManager(), nil,
+		&mockP2PListener{}, nil,
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -112,7 +108,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		discoveryFactory,
 		eventBus,
 		mockPolicyOracle,
-		mockP2PManager(), nil,
+		&mockP2PListener{}, nil,
 	)
 
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
@@ -150,23 +146,9 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	assert.True(t, matchFound)
 }
 
-func mockP2PManager() *p2p.Manager {
-	brokerConn := nats.StartConnectionMock()
-	mockBroker := &mockBroker{conn: brokerConn}
-
-	pinger := traversal.NewPinger(&traversal.PingConfig{
-		Interval: 1 * time.Second,
-		Timeout:  3 * time.Second,
-	}, eventbus.New())
-	return p2p.NewManager(mockBroker, "", func(_ identity.Identity) identity.Signer {
-		return &identity.SignerFake{}
-	}, ip.NewResolverMock("127.0.0.1"), pinger, pinger)
+type mockP2PListener struct {
 }
 
-type mockBroker struct {
-	conn nats.Connection
-}
-
-func (m *mockBroker) Connect(serverURIs ...string) (nats.Connection, error) {
-	return m.conn, nil
+func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) error {
+	return nil
 }

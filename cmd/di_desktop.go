@@ -240,7 +240,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			policy.ValidateAllowedIdentity(policies),
 		), nil
 	}
-	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel *p2p.Channel) *session.Manager {
+	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(nil,
 			channel, pingpong.InvoiceSendPeriod,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
@@ -302,7 +302,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		di.DiscoveryFactory,
 		di.EventBus,
 		di.PolicyOracle,
-		di.P2PManager,
+		di.P2PListener,
 		newP2PSessionHandler,
 	)
 
