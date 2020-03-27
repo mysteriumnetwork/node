@@ -28,7 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch *p2p.Channel, service Service, id ID) {
+func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, id ID) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var sr pb.SessionRequest
 		if err := c.Request().UnmarshalProto(&sr); err != nil {
@@ -78,7 +78,7 @@ func subscribeSessionCreate(mng *session.Manager, ch *p2p.Channel, service Servi
 	})
 }
 
-func subscribeSessionDestroy(mng *session.Manager, ch *p2p.Channel) {
+func subscribeSessionDestroy(mng *session.Manager, ch p2p.Channel) {
 	ch.Handle(p2p.TopicSessionDestroy, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
@@ -97,7 +97,7 @@ func subscribeSessionDestroy(mng *session.Manager, ch *p2p.Channel) {
 	})
 }
 
-func subscribeSessionAcknowledge(mng *session.Manager, ch *p2p.Channel) {
+func subscribeSessionAcknowledge(mng *session.Manager, ch p2p.Channel) {
 	ch.Handle(p2p.TopicSessionAcknowledge, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
