@@ -40,6 +40,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -239,6 +240,35 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			policy.ValidateAllowedIdentity(policies),
 		), nil
 	}
+	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel *p2p.Channel) *session.Manager {
+		paymentEngineFactory := pingpong.InvoiceFactoryCreator(nil,
+			channel, pingpong.InvoiceSendPeriod,
+			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
+			pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress),
+			di.AccountantPromiseStorage,
+			nodeOptions.Transactor.RegistryAddress,
+			nodeOptions.Transactor.ChannelImplementation,
+			pingpong.DefaultAccountantFailureCount,
+			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
+			nodeOptions.Payments.MaxRRecoveryLength,
+			di.BCHelper,
+			di.EventBus,
+			di.Transactor,
+			proposal,
+			di.AccountantPromiseSettler.ForceSettle,
+			di.Keystore,
+		)
+		return session.NewManager(
+			proposal,
+			di.ServiceSessionStorage,
+			paymentEngineFactory,
+			di.NATPinger,
+			di.NATTracker,
+			serviceID,
+			di.EventBus,
+		)
+	}
+
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
 		sessionManagerFactory := newSessionManagerFactory(
 			nodeOptions,
@@ -272,6 +302,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		di.DiscoveryFactory,
 		di.EventBus,
 		di.PolicyOracle,
+		di.P2PManager,
+		newP2PSessionHandler,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}

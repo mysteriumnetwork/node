@@ -1,0 +1,29 @@
+syntax = "proto3";
+package pb;
+
+option go_package = ".;pb";
+
+message Invoice {
+  uint64 AgreementID = 1;
+  uint64 AgreementTotal = 2;
+  uint64 TransactorFee = 3;
+  string Hashlock = 4;
+  string Provider = 5;
+}
+
+message ExchangeMessage {
+  Promise Promise = 1;
+  uint64 AgreementID = 2;
+  uint64 AgreementTotal = 3;
+  string Provider = 4;
+  string Signature = 5;
+}
+
+message Promise {
+  bytes ChannelID = 1;
+  uint64 Amount = 2;
+  uint64 Fee = 3;
+  bytes Hashlock = 4;
+  bytes R = 5;
+  bytes Signature = 6;
+}

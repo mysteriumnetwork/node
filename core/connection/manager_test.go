@@ -24,10 +24,14 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/stretchr/testify/assert"
@@ -114,10 +118,23 @@ func (tc *testContext) SetupTest() {
 	tc.fakeResolver = ip.NewResolverMock("ip")
 	tc.statsReportInterval = 1 * time.Millisecond
 
+	brokerConn := nats.StartConnectionMock()
+	brokerConn.MockResponse("fake-node-1.p2p-config-exchange", []byte("123"))
+	mockBroker := &mockBroker{conn: brokerConn}
+
+	pinger := traversal.NewPinger(&traversal.PingConfig{
+		Interval: 1 * time.Second,
+		Timeout:  3 * time.Second,
+	}, eventbus.New())
+
+	p2pManager := p2p.NewManager(mockBroker, "", func(_ identity.Identity) identity.Signer {
+		return &identity.SignerFake{}
+	}, ip.NewResolverMock("127.0.0.1"), pinger, pinger)
+
 	tc.connManager = NewManager(
 		dialogCreator,
 		func(paymentInfo session.PaymentInfo,
-			dialog communication.Dialog,
+			dialog communication.Dialog, channel *p2p.Channel,
 			consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				initialState:      paymentInfo,
@@ -133,6 +150,7 @@ func (tc *testContext) SetupTest() {
 		tc.ipCheckParams,
 		tc.statsReportInterval,
 		func(ID identity.Identity) uint64 { return 0 },
+		p2pManager,
 	)
 }
 
@@ -579,4 +597,12 @@ func (mpm *mockPaymentMethod) GetType() string {
 
 func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 	return mpm.rate
+}
+
+type mockBroker struct {
+	conn nats.Connection
+}
+
+func (m *mockBroker) Connect(serverURIs ...string) (nats.Connection, error) {
+	return m.conn, nil
 }

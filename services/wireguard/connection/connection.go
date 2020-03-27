@@ -120,8 +120,10 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	c.stateCh <- connection.Connecting
 
-	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
-	if config.LocalPort > 0 || len(config.Ports) > 0 {
+	if options.ProviderNATConn != nil {
+		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
+		config.LocalPort = options.ProviderNATConn.LocalAddr().(*net.UDPAddr).Port
+	} else if config.LocalPort > 0 || len(config.Ports) > 0 { // TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
 		if len(config.Ports) == 0 || len(c.ports) == 0 {
 			c.ports = []int{config.LocalPort}
 			config.Ports = []int{config.RemotePort}

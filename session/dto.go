@@ -52,6 +52,11 @@ type Session struct {
 	done            chan struct{}
 }
 
+// Done returns readonly done channel.
+func (s *Session) Done() <-chan struct{} {
+	return s.done
+}
+
 // newSession creates a blank new session with an ID.
 func newSession() (*Session, error) {
 	uid, err := uuid.NewV4()

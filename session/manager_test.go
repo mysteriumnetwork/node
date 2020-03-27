@@ -57,7 +57,7 @@ func (m mockBalanceTracker) Stop() {
 
 }
 
-func mockPaymentEngineFactory(providerID, accountant identity.Identity, sessionID string) (PaymentEngine, error) {
+func mockPaymentEngineFactory(providerID, consumerID, accountant identity.Identity, sessionID string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
 

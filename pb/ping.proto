@@ -1,7 +1,6 @@
 syntax = "proto3";
 package pb;
 
-// option go_package = "github.com/mysteriumnetwork/node/pb";
 option go_package = ".;pb";
 
 message PingPong {
