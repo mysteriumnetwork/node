@@ -169,8 +169,8 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	manager.setStatus(statusConnecting())
 	defer func() {
 		if err != nil {
-			manager.publishStateEvent(NotConnected)
 			manager.setStatus(statusNotConnected())
+			manager.publishStateEvent(NotConnected)
 		}
 	}()
 
@@ -482,6 +482,7 @@ func (manager *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
 			Status:      SessionEndedStatus,
 			SessionInfo: manager.getCurrentSession(),
 		})
+		manager.setCurrentSession(SessionInfo{})
 		return nil
 	})
 }
