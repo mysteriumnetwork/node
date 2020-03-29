@@ -19,6 +19,8 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -239,7 +241,7 @@ func (m *Manager) Stop() error {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
 	if m.vpnServerPort == 0 {
 		return nil, errors.New("Service port not initialized")
 	}
@@ -264,48 +266,75 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 	}
 	vpnConfig.Ports = []int{} // TODO This line will not be required once we will have unique VPN config for every connection.
 
-	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
-	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
-		var consumerConfig openvpn_service.ConsumerConfig
-		err := json.Unmarshal(sessionConfig, &consumerConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not parse consumer config")
-		}
-
-		if len(consumerConfig.Ports) == 0 {
-			cp, err := m.natPingerPorts.Acquire()
+	// TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
+	if conn == nil {
+		// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
+		if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
+			var consumerConfig openvpn_service.ConsumerConfig
+			err := json.Unmarshal(sessionConfig, &consumerConfig)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not parse consumer config")
 			}
 
-			consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
-			vpnConfig.LocalPort = cp.Num()
-		}
-
-		if m.behindNAT(publicIP) && m.portMappingFailed() {
-			for range consumerConfig.Ports {
-				pp, err := m.natPingerPorts.Acquire()
+			if len(consumerConfig.Ports) == 0 {
+				cp, err := m.natPingerPorts.Acquire()
 				if err != nil {
 					return nil, err
 				}
 
-				vpnConfig.Ports = append(vpnConfig.Ports, pp.Num())
-				vpnConfig.RemotePort = pp.Num()
+				consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
+				vpnConfig.LocalPort = cp.Num()
 			}
 
-			// For OpenVPN only one running NAT proxy required.
-			if consumerConfig.IP == "" {
-				return nil, errors.New("remote party does not support NAT Hole punching, public IP is missing")
-			}
+			if m.behindNAT(publicIP) && m.portMappingFailed() {
+				for range consumerConfig.Ports {
+					pp, err := m.natPingerPorts.Acquire()
+					if err != nil {
+						return nil, err
+					}
 
-			traversalParams.IP = consumerConfig.IP
-			traversalParams.LocalPorts = vpnConfig.Ports
-			traversalParams.RemotePorts = consumerConfig.Ports
-			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
+					vpnConfig.Ports = append(vpnConfig.Ports, pp.Num())
+					vpnConfig.RemotePort = pp.Num()
+				}
+
+				// For OpenVPN only one running NAT proxy required.
+				if consumerConfig.IP == "" {
+					return nil, errors.New("remote party does not support NAT Hole punching, public IP is missing")
+				}
+
+				traversalParams.IP = consumerConfig.IP
+				traversalParams.LocalPorts = vpnConfig.Ports
+				traversalParams.RemotePorts = consumerConfig.Ports
+				traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
+			}
 		}
-	}
+	} else {
+		localPort, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", m.vpnServerPort))
+		if err != nil {
+			return nil, err
+		}
 
+		openVPNProxy, _ := net.DialUDP("udp", nil, localPort)
+		go copyStreams(openVPNProxy, conn)
+		go copyStreams(conn, openVPNProxy)
+	}
 	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
+}
+
+func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
+	const bufferLen = 2048 * 1024
+	buf := make([]byte, bufferLen)
+
+	defer dstConn.Close()
+	defer srcConn.Close()
+	totalBytes, err := io.CopyBuffer(dstConn, srcConn, buf)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to write/read a stream to/from natProxy")
+	}
+	log.Debug().Msgf("Total bytes transferred from %s to %s: %d",
+		srcConn.RemoteAddr().String(),
+		dstConn.RemoteAddr().String(),
+		totalBytes)
 }
 
 func (m *Manager) startServer(stateChannel chan openvpn.State) error {
