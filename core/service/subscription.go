@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -44,31 +43,31 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		}
 
 		paymentVersion := string(session.PaymentVersionV3)
-		sess := &session.Session{ID: session.ID(id)}
-		config, err := service.ProvideConfig(string(sess.ID), consumerConfig)
+		session := &session.Session{ID: session.ID(id)}
+		config, err := service.ProvideConfig(string(session.ID), consumerConfig)
 		if err != nil {
-			return fmt.Errorf("cannot get provider config for session %s: %v", string(sess.ID), err)
+			return fmt.Errorf("cannot get provider config for session %s: %v", string(session.ID), err)
 		}
 
-		err = mng.Start(sess, consumerID, consumerInfo, int(sr.GetProposalID()), config, traversal.Params{})
+		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()), config, nil)
 		if err != nil {
-			return fmt.Errorf("cannot start session %s: %v", string(sess.ID), err)
+			return fmt.Errorf("cannot start session %s: %v", string(session.ID), err)
 		}
 
 		if config.SessionDestroyCallback != nil {
 			go func() {
-				<-sess.Done()
+				<-session.Done()
 				config.SessionDestroyCallback()
 			}()
 		}
 
 		data, err := json.Marshal(config.SessionServiceConfig)
 		if err != nil {
-			return fmt.Errorf("cannot pack session %s service config: %v", string(sess.ID), err)
+			return fmt.Errorf("cannot pack session %s service config: %v", string(session.ID), err)
 		}
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
-			ID:          string(sess.ID),
+			ID:          string(session.ID),
 			DNSs:        "", // TODO: Fill this field or check if it's not in data already.
 			PaymentInfo: paymentVersion,
 			Config:      data,
