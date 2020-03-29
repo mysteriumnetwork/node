@@ -19,6 +19,7 @@ package noop
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 	"time"
 
@@ -47,7 +48,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the session configuration
-func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage) (*session.ConfigParams, error) {
+func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
 	return &session.ConfigParams{TraversalParams: traversal.Params{}}, nil
 }
 

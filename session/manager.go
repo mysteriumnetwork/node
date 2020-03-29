@@ -19,6 +19,7 @@ package session
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 	"time"
 
@@ -56,7 +57,7 @@ type publisher interface {
 
 // ConfigProvider is able to handle config negotiations
 type ConfigProvider interface {
-	ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*ConfigParams, error)
+	ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*ConfigParams, error)
 }
 
 // DestroyCallback cleanups session

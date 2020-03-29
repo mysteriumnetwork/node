@@ -60,7 +60,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 
 	// Pass given consumer config to provider's service config provider.
-	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(string(session.ID), request.Config)
+	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(string(session.ID), request.Config, nil)
 	if err != nil {
 		return responseInternalError, errors.Wrap(err, "could not get provider session config")
 	}

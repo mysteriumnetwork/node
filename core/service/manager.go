@@ -18,7 +18,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/gofrs/uuid"
@@ -46,7 +45,7 @@ var (
 type Service interface {
 	Serve(instance *Instance) error
 	Stop() error
-	ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error)
+	session.ConfigProvider
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs

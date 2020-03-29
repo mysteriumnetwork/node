@@ -44,7 +44,7 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		paymentVersion := string(session.PaymentVersionV3)
 		session := &session.Session{ID: session.ID(id)}
-		config, err := service.ProvideConfig(string(session.ID), consumerConfig)
+		config, err := service.ProvideConfig(string(session.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
 			return fmt.Errorf("cannot get provider config for session %s: %v", string(session.ID), err)
 		}
@@ -58,6 +58,7 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 			go func() {
 				<-session.Done()
 				config.SessionDestroyCallback()
+				ch.Close()
 			}()
 		}
 
