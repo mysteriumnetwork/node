@@ -55,7 +55,7 @@ type interactionCounter interface {
 type zeroDurationProvider struct {
 }
 
-func (f zeroDurationProvider) Retrieve() connection.Statistics {
+func (f zeroDurationProvider) GetDataStats() connection.Statistics {
 	return connection.Statistics{
 		At:            time.Now(),
 		BytesReceived: 10 * datasize.MiB.Bytes(),
@@ -63,7 +63,7 @@ func (f zeroDurationProvider) Retrieve() connection.Statistics {
 	}
 }
 
-func (f zeroDurationProvider) GetSessionDuration() time.Duration {
+func (f zeroDurationProvider) GetDuration() time.Duration {
 	return time.Duration(0)
 }
 

@@ -40,9 +40,18 @@ func NewSessionStatisticsTracker(timeGetter TimeGetter) *SessionStatisticsTracke
 	return &SessionStatisticsTracker{timeGetter: timeGetter}
 }
 
-// Retrieve retrieves session stats from statisticsTracker
-func (sst *SessionStatisticsTracker) Retrieve() connection.Statistics {
+// GetDataStats returns session data stats
+func (sst *SessionStatisticsTracker) GetDataStats() connection.Statistics {
 	return sst.sessionStats
+}
+
+// GetDuration returns elapsed time from marked session start
+func (sst *SessionStatisticsTracker) GetDuration() time.Duration {
+	if sst.sessionStart == nil {
+		return time.Duration(0)
+	}
+	duration := sst.timeGetter().Sub(*sst.sessionStart)
+	return duration
 }
 
 // MarkSessionStart marks current time as session start time for statistics
@@ -51,15 +60,6 @@ func (sst *SessionStatisticsTracker) markSessionStart() {
 	sst.sessionStart = &time
 	// reset the stats in preparation for a new session
 	sst.sessionStats = connection.Statistics{}
-}
-
-// GetSessionDuration returns elapsed time from marked session start
-func (sst *SessionStatisticsTracker) GetSessionDuration() time.Duration {
-	if sst.sessionStart == nil {
-		return time.Duration(0)
-	}
-	duration := sst.timeGetter().Sub(*sst.sessionStart)
-	return duration
 }
 
 // MarkSessionEnd stops counting session duration

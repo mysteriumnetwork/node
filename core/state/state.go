@@ -47,8 +47,8 @@ type natStatusProvider interface {
 }
 
 type connectionSessionProvider interface {
-	Retrieve() connection.Statistics
-	GetSessionDuration() time.Duration
+	GetDataStats() connection.Statistics
+	GetDuration() time.Duration
 }
 
 type publisher interface {
@@ -361,9 +361,9 @@ func (k *Keeper) updateConnectionStatistics(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	dataStats := k.deps.ConnectionSessionProvider.Retrieve()
+	dataStats := k.deps.ConnectionSessionProvider.GetDataStats()
 	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
-		Duration:      int(k.deps.ConnectionSessionProvider.GetSessionDuration().Seconds()),
+		Duration:      int(k.deps.ConnectionSessionProvider.GetDuration().Seconds()),
 		BytesSent:     dataStats.BytesSent,
 		BytesReceived: dataStats.BytesReceived,
 	}

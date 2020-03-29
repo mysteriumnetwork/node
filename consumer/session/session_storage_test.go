@@ -143,7 +143,7 @@ type StubRetriever struct {
 	Value connection.Statistics
 }
 
-func (sr *StubRetriever) Retrieve() connection.Statistics {
+func (sr *StubRetriever) GetDataStats() connection.Statistics {
 	return sr.Value
 }
 

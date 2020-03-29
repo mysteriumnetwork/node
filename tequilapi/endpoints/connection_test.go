@@ -71,11 +71,11 @@ type StubStatisticsTracker struct {
 	stats    connection.Statistics
 }
 
-func (ssk *StubStatisticsTracker) Retrieve() connection.Statistics {
+func (ssk *StubStatisticsTracker) GetDataStats() connection.Statistics {
 	return ssk.stats
 }
 
-func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
+func (ssk *StubStatisticsTracker) GetDuration() time.Duration {
 	return ssk.duration
 }
 

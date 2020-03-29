@@ -118,8 +118,8 @@ type statisticsResponse struct {
 
 // SessionStatisticsTracker represents the session stat keeper
 type SessionStatisticsTracker interface {
-	Retrieve() connection.Statistics
-	GetSessionDuration() time.Duration
+	GetDataStats() connection.Statistics
+	GetDuration() time.Duration
 }
 
 // ProposalGetter defines interface to fetch currently active service proposal by id
@@ -312,9 +312,9 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	st := ce.statisticsTracker.Retrieve()
+	st := ce.statisticsTracker.GetDataStats()
 
-	duration := ce.statisticsTracker.GetSessionDuration()
+	duration := ce.statisticsTracker.GetDuration()
 
 	response := statisticsResponse{
 		BytesSent:     st.BytesSent,
