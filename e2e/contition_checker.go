@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type conditionChecker func() (bool, error)
@@ -36,7 +37,7 @@ func waitForConditionFor(duration time.Duration, checkFunc conditionChecker) err
 		durationWait := time.Since(timeBegin)
 		switch {
 		case err != nil:
-			return err
+			log.Warn().Err(err).Msg("Error on waiting for condition.")
 		case state:
 			return nil
 		case durationWait > duration:
