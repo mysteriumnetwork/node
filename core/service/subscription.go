@@ -69,7 +69,6 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
 			ID:          string(session.ID),
-			DNSs:        "", // TODO: Fill this field or check if it's not in data already.
 			PaymentInfo: paymentVersion,
 			Config:      data,
 		})
