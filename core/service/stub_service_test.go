@@ -19,6 +19,7 @@ package service
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -55,7 +56,7 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage) (*session.ConfigParams, error) {
+func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
 	return &session.ConfigParams{TraversalParams: traversal.Params{}}, nil
 }
 

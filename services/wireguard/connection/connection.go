@@ -147,7 +147,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 	c.connectionEndpoint = conn
 
-	log.Info().Msgf("Adding connection peer %s", config.Provider.Endpoint)
+	log.Info().Msgf("Adding connection peer %s", config.Provider.Endpoint.String())
 
 	if err := c.addProviderPeer(conn, config.Provider.Endpoint, config.Provider.PublicKey); err != nil {
 		return errors.Wrap(err, "failed to add peer to the connection endpoint")

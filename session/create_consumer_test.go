@@ -20,6 +20,7 @@ package session
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -137,7 +138,7 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 type mockConfigProvider struct {
 }
 
-func (mockConfigProvider) ProvideConfig(_ string, _ json.RawMessage) (*ConfigParams, error) {
+func (mockConfigProvider) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*ConfigParams, error) {
 	return &ConfigParams{SessionServiceConfig: config, TraversalParams: traversal.Params{}}, nil
 }
 
@@ -151,7 +152,7 @@ type managerFake struct {
 }
 
 // Start function creates and returns fake session
-func (manager *managerFake) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams traversal.Params) error {
+func (manager *managerFake) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) error {
 	session.ID = manager.fakeSession.ID
 	session.ConsumerID = manager.fakeSession.ConsumerID
 	manager.lastConsumerID = consumerID
