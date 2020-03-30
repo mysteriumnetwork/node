@@ -139,7 +139,7 @@ func (tc *testContext) SetupTest() {
 		tc.fakeResolver,
 		tc.ipCheckParams,
 		tc.statsReportInterval,
-		func(ID identity.Identity) uint64 { return 0 },
+		&mockValidator{},
 		&mockP2PDialer{},
 	)
 }
@@ -465,43 +465,6 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 
 	assert.Equal(tc.T(), expectedStatusMsg, tc.statusSender.getSentMsg())
 }
-
-func (tc *testContext) TestConnectReturnsInsufficientBalanceError() {
-	proposal := market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{price: money.Money{
-			Amount:   100,
-			Currency: "MYSTT",
-		}},
-		PaymentMethodType: "PER_MINUTE",
-	}
-
-	err := tc.connManager.Connect(consumerID, accountantID, proposal, ConnectParams{})
-
-	assert.Error(tc.T(), err, ErrInsufficientBalance)
-}
-
-func (tc *testContext) TestConnectReturnsSuccessWhenBalanceIsSufficient() {
-	proposal := market.ServiceProposal{
-		ProviderID:        activeProviderID.Address,
-		ProviderContacts:  []market.Contact{activeProviderContact},
-		ServiceType:       activeServiceType,
-		ServiceDefinition: &fakeServiceDefinition{},
-		PaymentMethod: &mockPaymentMethod{price: money.Money{
-			Amount:   100,
-			Currency: "MYSTT",
-		}},
-		PaymentMethodType: "PER_MINUTE",
-	}
-
-	tc.connManager.consumerBalanceGetter = func(ID identity.Identity) uint64 {
-		return 101
-	}
-
-	err := tc.connManager.Connect(consumerID, accountantID, proposal, ConnectParams{})
-
-	assert.NoError(tc.T(), err)
-}
-
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(testContext))
 }
@@ -618,4 +581,12 @@ func (m mockP2PChannel) ServiceConn() *net.UDPConn {
 
 func (m mockP2PChannel) Close() error {
 	return nil
+}
+
+type mockValidator struct {
+	errorToReturn error
+}
+
+func (mv *mockValidator) Validate(consumerID identity.Identity, proposal market.ServiceProposal) error {
+	return mv.errorToReturn
 }

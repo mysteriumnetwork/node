@@ -25,4 +25,5 @@ type Manager interface {
 	GetIdentity(address string) (Identity, error)
 	HasIdentity(address string) bool
 	Unlock(address string, passphrase string) error
+	IsUnlocked(address string) bool
 }
