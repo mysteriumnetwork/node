@@ -143,7 +143,8 @@ type Dependencies struct {
 
 	StateKeeper *state.Keeper
 
-	P2PManager *p2p.Manager
+	P2PDialer   p2p.Dialer
+	P2PListener p2p.Listener
 
 	Authenticator     *auth.Authenticator
 	JWTAuthenticator  *auth.JWTAuthenticator
@@ -218,7 +219,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 
-	di.P2PManager = p2p.NewManager(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, di.IPResolver, di.NATPinger, di.NATPinger)
+	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger)
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
 		return err
 	}
@@ -513,7 +515,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		connection.DefaultIPCheckParams(),
 		connection.DefaultStatsReportInterval,
 		di.ConsumerBalanceTracker.GetBalance,
-		di.P2PManager,
+		di.P2PDialer,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)

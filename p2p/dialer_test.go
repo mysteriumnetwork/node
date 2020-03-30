@@ -27,13 +27,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestManagerExchangeAndCommunication(t *testing.T) {
-	dir, err := ioutil.TempDir("", "p2pManagerTest")
+func TestDialerExchangeAndCommunication(t *testing.T) {
+	dir, err := ioutil.TempDir("", "p2pDialerTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -66,18 +65,9 @@ func TestManagerExchangeAndCommunication(t *testing.T) {
 
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
-	t.Run("Test provider subscribes to channels requests", func(t *testing.T) {
-		providerChannelSubscriber := Manager{
-			portPool:       port.NewPool(),
-			broker:         mockBroker,
-			providerPinger: providerPinger,
-			pendingConfigs: map[PublicKey]*p2pConnectConfig{},
-			signer:         signerFactory,
-			verifier:       verifier,
-			ipResolver:     ipResolver,
-			brokerAddress:  "mock",
-		}
-		err = providerChannelSubscriber.SubscribeChannel(providerID, func(ch *Channel) {
+	t.Run("Test provider listens to peer", func(t *testing.T) {
+		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger)
+		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
 			})
@@ -85,21 +75,11 @@ func TestManagerExchangeAndCommunication(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Test consumer exchanges config and sends message via channel", func(t *testing.T) {
-		consumerChannelCreator := Manager{
-			portPool:       port.NewPool(),
-			broker:         mockBroker,
-			consumerPinger: consumerPinger,
-			pendingConfigs: map[PublicKey]*p2pConnectConfig{},
-			signer:         signerFactory,
-			verifier:       verifier,
-			ipResolver:     ipResolver,
-			brokerAddress:  "mock",
-		}
+	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
+		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger)
 
-		consumerChannel, err := consumerChannelCreator.CreateChannel(consumerID, providerID, 5*time.Second)
+		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
 		assert.NoError(t, err)
-		consumerChannel.SetSendTimeout(5 * time.Second)
 
 		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
 		assert.NoError(t, err)

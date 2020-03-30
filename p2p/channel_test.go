@@ -172,7 +172,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 	})
 }
 
-func createTestChannels(t *testing.T) (*Channel, *Channel) {
+func createTestChannels(t *testing.T) (Channel, Channel) {
 	ports := acquirePorts(t, 2)
 	providerPort := ports[0]
 	consumerPort := ports[1]
@@ -188,10 +188,10 @@ func createTestChannels(t *testing.T) (*Channel, *Channel) {
 	consumerPublicKey, consumerPrivateKey, err := GenerateKey()
 	assert.NoError(t, err)
 
-	provider, err := NewChannel(providerConn, providerPrivateKey, consumerPublicKey)
+	provider, err := newChannel(providerConn, providerPrivateKey, consumerPublicKey)
 	assert.NoError(t, err)
 
-	consumer, err := NewChannel(consumerConn, consumerPrivateKey, providerPublicKey)
+	consumer, err := newChannel(consumerConn, consumerPrivateKey, providerPublicKey)
 	assert.NoError(t, err)
 
 	return provider, consumer

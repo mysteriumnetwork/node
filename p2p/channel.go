@@ -31,9 +31,25 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
-// Channel represents p2p communication channel which can send and receive
-// data over encrypted and reliable UDP transport.
-type Channel struct {
+// Channel represents p2p communication channel which can send and receive data over encrypted and reliable UDP transport.
+type Channel interface {
+	// Send sends data to given topic. Peer listening to topic will receive message.
+	Send(topic string, msg *Message) (*Message, error)
+	// Handle registers handler for given topic which handles peer request.
+	Handle(topic string, handler HandlerFunc)
+}
+
+// HandlerFunc is channel request handler func signature.
+type HandlerFunc func(c Context) error
+
+// stream is used to associate request and reply messages.
+type stream struct {
+	id    uint64
+	resCh chan *transportMsg
+}
+
+// channel implements Channel interface.
+type channel struct {
 	mu sync.RWMutex
 
 	conn                  *textproto.Conn
@@ -48,18 +64,9 @@ type Channel struct {
 	sendQueue             chan *transportMsg
 }
 
-// HandlerFunc is channel request handler func signature.
-type HandlerFunc func(c Context) error
-
-// stream is used to associate request and reply messages.
-type stream struct {
-	id    uint64
-	resCh chan *transportMsg
-}
-
-// NewChannel creates new p2p channel with initialized crypto primitives for data encryption
+// newChannel creates new p2p channel with initialized crypto primitives for data encryption
 // and starts listening for connections.
-func NewChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey) (*Channel, error) {
+func newChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey) (*channel, error) {
 	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create block crypt: %w", err)
@@ -70,7 +77,7 @@ func NewChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 		return nil, fmt.Errorf("could not create UDP session: %w", err)
 	}
 
-	c := &Channel{
+	c := &channel{
 		conn:                  textproto.NewConn(udpSession),
 		topicHandlers:         make(map[string]HandlerFunc),
 		streams:               make(map[uint64]*stream),
@@ -95,7 +102,7 @@ func NewChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 }
 
 // readLoop reads incoming requests or replies to initiated requests.
-func (c *Channel) readLoop() {
+func (c *channel) readLoop() {
 	for {
 		select {
 		case <-c.stop:
@@ -119,7 +126,7 @@ func (c *Channel) readLoop() {
 }
 
 // sendLoop sends data to underlying network.
-func (c *Channel) sendLoop() {
+func (c *channel) sendLoop() {
 	for {
 		select {
 		case <-c.stop:
@@ -137,7 +144,7 @@ func (c *Channel) sendLoop() {
 }
 
 // handleReply forwards reply message to associated stream result channel.
-func (c *Channel) handleReply(msg *transportMsg) {
+func (c *channel) handleReply(msg *transportMsg) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if s, ok := c.streams[msg.id]; ok {
@@ -148,7 +155,7 @@ func (c *Channel) handleReply(msg *transportMsg) {
 }
 
 // handleRequest handles incoming request and schedules reply to send queue.
-func (c *Channel) handleRequest(msg *transportMsg) {
+func (c *channel) handleRequest(msg *transportMsg) {
 	c.mu.RLock()
 	handler, ok := c.topicHandlers[msg.topic]
 	c.mu.RUnlock()
@@ -184,23 +191,23 @@ func (c *Channel) handleRequest(msg *transportMsg) {
 }
 
 // ServiceConn returns UDP connection which can be used for services.
-func (c *Channel) ServiceConn() *net.UDPConn {
+func (c *channel) ServiceConn() *net.UDPConn {
 	return c.serviceConn
 }
 
 // Close closes channel.
-func (c *Channel) Close() error {
+func (c *channel) Close() error {
 	close(c.stop)
 	return c.conn.Close()
 }
 
 // SetSendTimeout overrides default send timeout.
-func (c *Channel) SetSendTimeout(t time.Duration) {
+func (c *channel) SetSendTimeout(t time.Duration) {
 	c.sendTimeout = t
 }
 
 // Send sends data to given topic. Peer listening to topic will receive message.
-func (c *Channel) Send(topic string, msg *Message) (*Message, error) {
+func (c *channel) Send(topic string, msg *Message) (*Message, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.sendTimeout)
 	defer cancel()
 
@@ -211,8 +218,8 @@ func (c *Channel) Send(topic string, msg *Message) (*Message, error) {
 	return reply, nil
 }
 
-// Handle registers handler for given topic. Handle should be called before listen similar as with HTTP server.
-func (c *Channel) Handle(topic string, handler HandlerFunc) {
+// Handle registers handler for given topic which handles peer request.
+func (c *channel) Handle(topic string, handler HandlerFunc) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -220,7 +227,7 @@ func (c *Channel) Handle(topic string, handler HandlerFunc) {
 }
 
 // Start keepalive ping send loop.
-func (c *Channel) sendKeepaliveLoop() {
+func (c *channel) sendKeepaliveLoop() {
 	go func() {
 		for {
 			select {
@@ -236,7 +243,7 @@ func (c *Channel) sendKeepaliveLoop() {
 }
 
 // sendRequest sends message to send queue and waits for response.
-func (c *Channel) sendRequest(ctx context.Context, topic string, m *Message) (*Message, error) {
+func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*Message, error) {
 	s := &stream{id: uint64(c.conn.Next()), resCh: make(chan *transportMsg, 1)}
 	c.mu.Lock()
 	c.streams[s.id] = s

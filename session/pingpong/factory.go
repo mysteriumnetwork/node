@@ -85,7 +85,7 @@ func (pm PaymentMethod) GetRate() market.PaymentRate {
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	dialog communication.Dialog,
-	channel *p2p.Channel,
+	channel p2p.Channel,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
 	accountantCaller accountantCaller,
@@ -138,7 +138,7 @@ func InvoiceFactoryCreator(
 	}
 }
 
-func exchangeMessageReceiver(dialog communication.Dialog, channel *p2p.Channel) (chan crypto.ExchangeMessage, error) {
+func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.Channel) (chan crypto.ExchangeMessage, error) {
 	exchangeChan := make(chan crypto.ExchangeMessage, 1)
 
 	if channel == nil { // TODO this block should go away once p2p communication will replace communication dialog.
@@ -185,10 +185,10 @@ func ExchangeFactoryFunc(
 	eventBus eventbus.EventBus,
 	getConsumerInfo getConsumerInfo,
 	dataLeewayMegabytes uint64) func(paymentInfo session.PaymentInfo,
-	dialog communication.Dialog, channel *p2p.Channel,
+	dialog communication.Dialog, channel p2p.Channel,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 	return func(paymentInfo session.PaymentInfo,
-		dialog communication.Dialog, channel *p2p.Channel,
+		dialog communication.Dialog, channel p2p.Channel,
 		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 
 		if paymentInfo.Supports != string(session.PaymentVersionV3) {
@@ -222,7 +222,7 @@ func ExchangeFactoryFunc(
 	}
 }
 
-func invoiceReceiver(dialog communication.Dialog, channel *p2p.Channel) (chan crypto.Invoice, error) {
+func invoiceReceiver(dialog communication.Dialog, channel p2p.Channel) (chan crypto.Invoice, error) {
 	invoices := make(chan crypto.Invoice)
 	if channel == nil { // TODO this block should go away once p2p communication will replace communication dialog.
 		listener := NewInvoiceListener(invoices)

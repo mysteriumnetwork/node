@@ -94,7 +94,7 @@ type PaymentIssuer interface {
 
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
-	dialog communication.Dialog, channel *p2p.Channel,
+	dialog communication.Dialog, channel p2p.Channel,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
 type consumerBalanceGetter func(ID identity.Identity) uint64
@@ -110,7 +110,7 @@ type connectionManager struct {
 	ipCheckParams            IPCheckParams
 	statsReportInterval      time.Duration
 	consumerBalanceGetter    consumerBalanceGetter
-	p2pManager               *p2p.Manager
+	p2pDialer                p2p.Dialer
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
@@ -136,7 +136,7 @@ func NewManager(
 	ipCheckParams IPCheckParams,
 	statsReportInterval time.Duration,
 	consumerBalanceGetter consumerBalanceGetter,
-	p2pManager *p2p.Manager,
+	p2pDialer p2p.Dialer,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:                dialogCreator,
@@ -150,7 +150,7 @@ func NewManager(
 		ipCheckParams:            ipCheckParams,
 		statsReportInterval:      statsReportInterval,
 		consumerBalanceGetter:    consumerBalanceGetter,
-		p2pManager:               p2pManager,
+		p2pDialer:                p2pDialer,
 	}
 }
 
@@ -175,9 +175,9 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
-	var channel *p2p.Channel
+	var channel p2p.Channel
 	// TODO: P2P will be enabled in separate PR.
-	//channel, err := manager.p2pManager.CreateChannel(consumerID, providerID, 10*time.Second)
+	//channel, err := manager.p2pDialer.Dial(consumerID, providerID, proposal.ServiceType, 10*time.Second)
 	//if err != nil {
 	//	log.Warn().Err(err).Msg("Failed to establish p2p channel")
 	//}
@@ -304,7 +304,7 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel *p2p.Channel, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel p2p.Channel, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
 	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
@@ -358,7 +358,7 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createP2PSession(c Connection, p2pChannel *p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not get session config: %w", err)
