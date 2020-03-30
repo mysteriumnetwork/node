@@ -160,7 +160,7 @@ type Dependencies struct {
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
-	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
+	AccountantPromiseSettler pingpong.AccountantPromiseSettlerInterface
 	AccountantCaller         *pingpong.AccountantCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 }
@@ -584,7 +584,7 @@ func newSessionManagerFactory(
 	eventbus eventbus.EventBus,
 	bcHelper *paymentClient.BlockchainWithRetries,
 	transactor *registry.Transactor,
-	settler *pingpong.AccountantPromiseSettler,
+	settler pingpong.AccountantPromiseSettlerInterface,
 	httpClient *requests.HTTPClient,
 	keystore *identity.Keystore,
 ) session.ManagerFactory {

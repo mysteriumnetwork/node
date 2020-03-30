@@ -158,6 +158,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			ConsumerLowerGBPriceBound:          0,
 			ConsumerUpperGBPriceBound:          7000000,
 		},
+		MobileConsumer: true,
 	}
 
 	err := di.Bootstrap(options)

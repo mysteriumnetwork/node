@@ -68,6 +68,13 @@ type receivedPromise struct {
 	promise  crypto.Promise
 }
 
+// AccountantPromiseSettlerInterface is responsible for settling the accountant promises.
+type AccountantPromiseSettlerInterface interface {
+	SettlementState(id identity.Identity) SettlementState
+	ForceSettle(providerID, accountantID identity.Identity) error
+	Subscribe() error
+}
+
 // AccountantPromiseSettler is responsible for settling the accountant promises.
 type AccountantPromiseSettler struct {
 	eventBus                   eventbus.EventBus
