@@ -19,6 +19,7 @@ package service
 
 import (
 	"encoding/json"
+	"net"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -61,16 +62,15 @@ func NewManager(
 }
 
 // Manager represents an instance of Wireguard service
-type Manager struct {
-}
+type Manager struct{}
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
 	return nil, errors.New("not implemented")
 }
 
 // Serve starts service - does block
-func (manager *Manager) Serve(instance *service.Instance) error {
+func (manager *Manager) Serve(_ *service.Instance) error {
 	return errors.New("not implemented")
 }
 
