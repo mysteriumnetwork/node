@@ -88,7 +88,7 @@ func newChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 		privateKey:            privateKey,
 		blockCrypt:            blockCrypt,
 		sendTimeout:           30 * time.Second,
-		keepAlivePingInterval: 2 * time.Second,
+		keepAlivePingInterval: 20 * time.Second,
 		serviceConn:           nil,
 		stop:                  make(chan struct{}, 1),
 		sendQueue:             make(chan *transportMsg, 100),
