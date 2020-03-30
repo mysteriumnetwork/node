@@ -19,6 +19,7 @@ package connection
 
 import (
 	"errors"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/stretchr/testify/assert"
@@ -330,7 +332,7 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 }
 
 func (tc *testContext) Test_ManagerSetsPaymentInfo() {
-	paymentInfo = session.PaymentInfo{}
+	paymentInfo := session.PaymentInfo{}
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Nil(tc.T(), err)
 	assert.Exactly(tc.T(), paymentInfo, tc.MockPaymentIssuer.initialState)
@@ -598,8 +600,22 @@ type mockP2PChannel struct {
 }
 
 func (m mockP2PChannel) Send(topic string, msg *p2p.Message) (*p2p.Message, error) {
-	return nil, nil
+	res := &pb.SessionResponse{
+		ID:          string(establishedSessionID),
+		PaymentInfo: string(paymentInfo.Supports),
+	}
+	return p2p.ProtoMessage(res), nil
 }
 
 func (m mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
+}
+
+func (m mockP2PChannel) ServiceConn() *net.UDPConn {
+	raddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12345")
+	conn, _ := net.DialUDP("udp", nil, raddr)
+	return conn
+}
+
+func (m mockP2PChannel) Close() error {
+	return nil
 }
