@@ -273,6 +273,8 @@ services:
     build:
       context: .
       dockerfile: ./e2e/gorunner/Dockerfile
+    cap_add:
+      - NET_ADMIN
     volumes:
       - ./:/node
       - $GOPATH/pkg/mod:/go/pkg/mod

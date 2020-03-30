@@ -271,6 +271,8 @@ services:
       - $GOPATH/pkg/mod:/go/pkg/mod
     working_dir: /node
     dns: 172.30.0.254
+    cap_add:
+      - NET_ADMIN
     networks:
       public0:
         ipv4_address: 172.30.0.222
