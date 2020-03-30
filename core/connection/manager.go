@@ -183,10 +183,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	channel, err := manager.p2pDialer.Dial(consumerID, providerID, proposal.ServiceType, 10*time.Second)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to establish p2p channel")
-	}
+	channel := manager.createP2PChannel(consumerID, providerID, proposal)
 
 	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
@@ -366,6 +363,22 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
+func (manager *connectionManager) createP2PChannel(consumerID, providerID identity.Identity, proposal market.ServiceProposal) *p2p.Channel {
+	channel, err := manager.p2pDialer.Dial(consumerID, providerID, proposal.ServiceType, 10*time.Second)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to establish p2p channel")
+	} else {
+		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+			log.Trace().Msg("Cleaning: closing P2P communication channel")
+			defer log.Trace().Msg("Cleaning: P2P communication channel DONE")
+
+			return channel.Close()
+		})
+	}
+
+	return channel
+}
+
 func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
@@ -413,7 +426,6 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 			return fmt.Errorf("could not send session destroy request: %w", err)
 		}
 
-		p2pChannel.Close()
 		return nil
 	})
 
