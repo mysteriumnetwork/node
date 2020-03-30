@@ -75,10 +75,17 @@ type Creator func(serviceType string) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
-	SessionID   session.ID
-	ConsumerID  identity.Identity
-	Proposal    market.ServiceProposal
-	acknowledge func()
+	SessionID  session.ID
+	ConsumerID identity.Identity
+	Proposal   market.ServiceProposal
+	ack        func()
+}
+
+// Acknowledge calls ack if it's set
+func (s SessionInfo) Acknowledge() {
+	if s.ack != nil {
+		s.ack()
+	}
 }
 
 // IsActive checks if session is active
@@ -411,7 +418,7 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		SessionID:  sessionID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
-		acknowledge: func() {
+		ack: func() {
 			pc := p2p.ProtoMessage(&pb.SessionInfo{
 				ConsumerID: consumerID.Address,
 				SessionID:  string(sessionID),
@@ -456,7 +463,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		SessionID:  s.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
-		acknowledge: func() {
+		ack: func() {
 			err := session.AcknowledgeSession(dialog, string(s.ID))
 			if err != nil {
 				log.Warn().Err(err).Msg("Acknowledge failed")
@@ -613,7 +620,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 			switch state {
 			case Connected:
 				log.Debug().Msg("Connected started event received")
-				go manager.getCurrentSession().acknowledge()
+				go manager.getCurrentSession().Acknowledge()
 				manager.onStateChanged(state)
 				return nil
 			default:
