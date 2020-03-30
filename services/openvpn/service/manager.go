@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -298,32 +297,11 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *n
 			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
 		}
 	} else {
-		localPort, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", m.vpnServerPort))
-		if err != nil {
-			return nil, err
+		if err := proxyOpenVPN(conn, m.vpnServerPort); err != nil {
+			return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
 		}
-
-		openVPNProxy, _ := net.DialUDP("udp", nil, localPort)
-		go copyStreams(openVPNProxy, conn)
-		go copyStreams(conn, openVPNProxy)
 	}
 	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
-}
-
-func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
-	const bufferLen = 2048 * 1024
-	buf := make([]byte, bufferLen)
-
-	defer dstConn.Close()
-	defer srcConn.Close()
-	totalBytes, err := io.CopyBuffer(dstConn, srcConn, buf)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to write/read a stream to/from natProxy")
-	}
-	log.Debug().Msgf("Total bytes transferred from %s to %s: %d",
-		srcConn.RemoteAddr().String(),
-		dstConn.RemoteAddr().String(),
-		totalBytes)
 }
 
 func (m *Manager) startServer(stateChannel chan openvpn.State) error {
