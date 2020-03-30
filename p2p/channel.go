@@ -98,7 +98,7 @@ func newChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 	go c.sendLoop()
 	go c.sendKeepaliveLoop()
 	c.Handle(topicKeepAlive, func(c Context) error {
-		log.Debug().Msg("Received P2P keep alive ping")
+		log.Debug().Msgf("Received P2P keep alive ping, peer public key: %s", peerPubKey.Hex())
 		return c.OK()
 	})
 

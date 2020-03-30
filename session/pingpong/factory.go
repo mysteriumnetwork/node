@@ -34,7 +34,6 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
 )
 
 // PromiseWaitTimeout is the time that the provider waits for the promise to arrive
@@ -152,7 +151,10 @@ func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.Channel) (
 
 	channel.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
 		var msg pb.ExchangeMessage
-		proto.Unmarshal(c.Request().Data, &msg)
+		if err := c.Request().UnmarshalProto(&msg); err != nil {
+			return err
+		}
+		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
 
 		exchangeChan <- crypto.ExchangeMessage{
 			Promise: crypto.Promise{
@@ -235,7 +237,10 @@ func invoiceReceiver(dialog communication.Dialog, channel p2p.Channel) (chan cry
 
 	channel.Handle(p2p.TopicPaymentInvoice, func(c p2p.Context) error {
 		var msg pb.Invoice
-		proto.Unmarshal(c.Request().Data, &msg)
+		if err := c.Request().UnmarshalProto(&msg); err != nil {
+			return err
+		}
+		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentInvoice, msg.String())
 
 		invoices <- crypto.Invoice{
 			AgreementID:    msg.GetAgreementID(),

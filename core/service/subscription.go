@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/rs/zerolog/log"
 )
 
 func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, id ID) {
@@ -33,6 +34,7 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		if err := c.Request().UnmarshalProto(&sr); err != nil {
 			return err
 		}
+		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
 		consumerConfig := sr.GetConfig()
@@ -83,6 +85,7 @@ func subscribeSessionDestroy(mng *session.Manager, ch p2p.Channel) {
 		if err := c.Request().UnmarshalProto(&si); err != nil {
 			return err
 		}
+		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicSessionDestroy, si.String())
 
 		consumerID := identity.FromAddress(si.GetConsumerID())
 		sessionID := si.GetSessionID()
@@ -102,7 +105,7 @@ func subscribeSessionAcknowledge(mng *session.Manager, ch p2p.Channel) {
 		if err := c.Request().UnmarshalProto(&si); err != nil {
 			return err
 		}
-
+		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicSessionAcknowledge, si.String())
 		consumerID := identity.FromAddress(si.GetConsumerID())
 		sessionID := si.GetSessionID()
 
