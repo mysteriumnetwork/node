@@ -22,6 +22,7 @@ package cmd
 import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node"
+	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui/noop"
 )
 
@@ -47,5 +48,5 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
-	return nil
+	return pingpong_noop.NoopAccountantPromiseSettler{}
 }
