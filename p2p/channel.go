@@ -31,9 +31,9 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
-// Channel represents p2p communication channel which can send and receive data over encrypted and reliable UDP transport.
+// Channel represents p2p communication channel which can send and receive messages over encrypted and reliable UDP transport.
 type Channel interface {
-	// Send sends data to given topic. Peer listening to topic will receive message.
+	// Send sends message to given topic. Peer listening to topic will receive message.
 	Send(topic string, msg *Message) (*Message, error)
 	// Handle registers handler for given topic which handles peer request.
 	Handle(topic string, handler HandlerFunc)
@@ -210,7 +210,7 @@ func (c *channel) SetSendTimeout(t time.Duration) {
 	c.sendTimeout = t
 }
 
-// Send sends data to given topic. Peer listening to topic will receive message.
+// Send sends message to given topic. Peer listening to topic will receive message.
 func (c *channel) Send(topic string, msg *Message) (*Message, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.sendTimeout)
 	defer cancel()

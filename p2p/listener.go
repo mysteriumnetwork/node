@@ -116,7 +116,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			remotePort = config.peerPorts[0]
 		} else {
 			log.Debug().Msgf("Pinging consumer with public IP %s using ports %v:%v", config.peerPublicIP, config.localPorts, config.peerPorts)
-			conns, err := m.providerPinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, providerInitialTTL, requiredConnLen)
+			conns, err := m.providerPinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, providerInitialTTL, requiredConnAmount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
@@ -164,11 +164,11 @@ func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signe
 	// Send reply with encrypted exchange config.
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get public IP: %v", err)
 	}
 	localPorts, err := acquireLocalPorts(m.portPool)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not acquire local ports: %v", err)
 	}
 	config := pb.P2PConnectConfig{
 		PublicIP: publicIP,
@@ -176,7 +176,7 @@ func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signe
 	}
 	configCiphertext, err := encryptConnConfigMsg(&config, privateKey, peerPubKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not encrypt config msg: %v", err)
 	}
 	exchangeMsg := pb.P2PConfigExchangeMsg{
 		PublicKey:        pubKey.Hex(),
@@ -185,11 +185,11 @@ func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signe
 	log.Debug().Msgf("Sending reply with public key %s and encrypted config to consumer", exchangeMsg.PublicKey)
 	packedMsg, err := packSignedMsg(m.signer, signerID, &exchangeMsg)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not pack signed message: %v", err)
 	}
 	err = brokerConn.Publish(msg.Reply, packedMsg)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not publish message via broker: %v", err)
 	}
 
 	m.setPendingConfig(peerPubKey, privateKey, localPorts)

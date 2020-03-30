@@ -78,7 +78,7 @@ func (m *dialer) Dial(consumerID, providerID identity.Identity, serviceType stri
 		remotePort = config.peerPorts[0]
 	} else {
 		log.Debug().Msgf("Pinging provider %s with public IP %s using ports %v:%v", providerID.Address, config.peerPublicIP, config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnLen)
+		conns, err := m.consumerPinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnAmount)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}
@@ -145,11 +145,11 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	// Finally send consumer encrypted and signed connect config in ack message.
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get public IP: %v", err)
 	}
 	localPorts, err := acquireLocalPorts(m.portPool)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not acquire local ports: %v", err)
 	}
 	connConfig := &pb.P2PConnectConfig{
 		PublicIP: publicIP,
@@ -157,7 +157,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	}
 	connConfigCiphertext, err := encryptConnConfigMsg(connConfig, privateKey, peerPubKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not encrypt config msg: %v", err)
 	}
 	endExchangeMsg := &pb.P2PConfigExchangeMsg{
 		PublicKey:        pubKey.Hex(),
@@ -170,7 +170,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	}
 	_, err = m.sendSignedMsg(brokerConn, configExchangeACKSubject(providerID, serviceType), packedMsg, timeout)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}
 
 	return &p2pConnectConfig{
