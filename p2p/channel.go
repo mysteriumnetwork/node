@@ -31,9 +31,9 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
-// Channel represents p2p communication channel which can send and receive data over encrypted and reliable UDP transport.
+// Channel represents p2p communication channel which can send and receive messages over encrypted and reliable UDP transport.
 type Channel interface {
-	// Send sends data to given topic. Peer listening to topic will receive message.
+	// Send sends message to given topic. Peer listening to topic will receive message.
 	Send(topic string, msg *Message) (*Message, error)
 	// Handle registers handler for given topic which handles peer request.
 	Handle(topic string, handler HandlerFunc)
@@ -88,7 +88,7 @@ func newChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 		privateKey:            privateKey,
 		blockCrypt:            blockCrypt,
 		sendTimeout:           30 * time.Second,
-		keepAlivePingInterval: 2 * time.Second,
+		keepAlivePingInterval: 20 * time.Second,
 		serviceConn:           nil,
 		stop:                  make(chan struct{}, 1),
 		sendQueue:             make(chan *transportMsg, 100),
@@ -98,7 +98,7 @@ func newChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 	go c.sendLoop()
 	go c.sendKeepaliveLoop()
 	c.Handle(topicKeepAlive, func(c Context) error {
-		log.Debug().Msg("Received P2P keep alive ping")
+		log.Debug().Msgf("Received P2P keep alive ping, peer public key: %s", peerPubKey.Hex())
 		return c.OK()
 	})
 
@@ -210,7 +210,7 @@ func (c *channel) SetSendTimeout(t time.Duration) {
 	c.sendTimeout = t
 }
 
-// Send sends data to given topic. Peer listening to topic will receive message.
+// Send sends message to given topic. Peer listening to topic will receive message.
 func (c *channel) Send(topic string, msg *Message) (*Message, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.sendTimeout)
 	defer cancel()
