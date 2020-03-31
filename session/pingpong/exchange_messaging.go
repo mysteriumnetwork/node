@@ -22,6 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/rs/zerolog/log"
 )
 
 // ExchangeRequest structure represents message from service consumer to send a an exchange message.
@@ -51,7 +52,7 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	if es.ch == nil { // TODO this block should go away once p2p communication will replace communication dialog.
 		return es.sender.Send(&ExchangeMessageProducer{Message: em})
 	}
-	pMessage := p2p.ProtoMessage(&pb.ExchangeMessage{
+	pMessage := &pb.ExchangeMessage{
 		Promise: &pb.Promise{
 			ChannelID: em.Promise.ChannelID,
 			Amount:    em.Promise.Amount,
@@ -64,8 +65,9 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 		AgreementTotal: em.AgreementTotal,
 		Provider:       em.Provider,
 		Signature:      em.Signature,
-	})
-	_, err := es.ch.Send(p2p.TopicPaymentMessage, pMessage)
+	}
+	log.Info().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
+	_, err := es.ch.Send(p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
 	return err
 }
 

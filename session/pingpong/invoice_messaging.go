@@ -22,6 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/rs/zerolog/log"
 )
 
 // InvoiceRequest structure represents the invoice message that the provider sends to the consumer.
@@ -52,14 +53,15 @@ func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 		return is.sender.Send(&invoiceMessageProducer{Invoice: invoice})
 	}
 
-	pInvoice := p2p.ProtoMessage(&pb.Invoice{
+	pInvoice := &pb.Invoice{
 		AgreementID:    invoice.AgreementID,
 		AgreementTotal: invoice.AgreementTotal,
 		TransactorFee:  invoice.TransactorFee,
 		Hashlock:       invoice.Hashlock,
 		Provider:       invoice.Provider,
-	})
-	_, err := is.ch.Send(p2p.TopicPaymentInvoice, pInvoice)
+	}
+	log.Info().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pInvoice.String())
+	_, err := is.ch.Send(p2p.TopicPaymentMessage, p2p.ProtoMessage(pInvoice))
 	return err
 }
 

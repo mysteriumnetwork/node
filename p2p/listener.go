@@ -125,6 +125,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			localPort = conn0.LocalAddr().(*net.UDPAddr).Port
 			remotePort = conn0.RemoteAddr().(*net.UDPAddr).Port
 			serviceConn = conns[1]
+			log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", serviceConn.LocalAddr().(*net.UDPAddr).Port, serviceConn.RemoteAddr().(*net.UDPAddr).Port)
 		}
 
 		log.Debug().Msgf("Creating channel with listen port: %d, peer port: %d", localPort, remotePort)
