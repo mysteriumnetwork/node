@@ -66,7 +66,7 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 		Provider:       em.Provider,
 		Signature:      em.Signature,
 	}
-	log.Info().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
+	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
 	_, err := es.ch.Send(p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
 	return err
 }

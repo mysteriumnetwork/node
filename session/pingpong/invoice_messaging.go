@@ -60,7 +60,7 @@ func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 		Hashlock:       invoice.Hashlock,
 		Provider:       invoice.Provider,
 	}
-	log.Info().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentInvoice, pInvoice.String())
+	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentInvoice, pInvoice.String())
 	_, err := is.ch.Send(p2p.TopicPaymentInvoice, p2p.ProtoMessage(pInvoice))
 	return err
 }
