@@ -94,18 +94,6 @@ func DefaultConfig() Config {
 // Creator creates new connection by given options and uses state channel to report state changes
 type Creator func(serviceType string) (Connection, error)
 
-// SessionInfo contains all the relevant info of the current session
-type SessionInfo struct {
-	SessionID  session.ID
-	ConsumerID identity.Identity
-	Proposal   market.ServiceProposal
-}
-
-// IsActive checks if session is active
-func (s *SessionInfo) IsActive() bool {
-	return s.SessionID != ""
-}
-
 // PaymentIssuer handles the payments for service
 type PaymentIssuer interface {
 	Start() error
@@ -115,6 +103,9 @@ type PaymentIssuer interface {
 type validator interface {
 	Validate(consumerID identity.Identity, proposal market.ServiceProposal) error
 }
+
+// TimeGetter function returns current time
+type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
@@ -133,14 +124,13 @@ type connectionManager struct {
 	statsReportInterval      time.Duration
 	validator                validator
 	p2pDialer                p2p.Dialer
+	timeGetter               TimeGetter
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
 	ctxLock                sync.RWMutex
 	status                 Status
 	statusLock             sync.RWMutex
-	sessionInfo            SessionInfo
-	sessionInfoMu          sync.Mutex
 	cleanupLock            sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
@@ -166,7 +156,7 @@ func NewManager(
 	return &connectionManager{
 		newDialog:                dialogCreator,
 		newConnection:            connectionCreator,
-		status:                   statusNotConnected(),
+		status:                   Status{State: NotConnected},
 		eventPublisher:           eventPublisher,
 		paymentEngineFactory:     paymentEngineFactory,
 		connectivityStatusSender: connectivityStatusSender,
@@ -176,6 +166,7 @@ func NewManager(
 		statsReportInterval:      statsReportInterval,
 		validator:                validator,
 		p2pDialer:                p2pDialer,
+		timeGetter:               time.Now,
 	}
 }
 
@@ -193,8 +184,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
-	m.publishStateEvent(Connecting)
-	m.setStatus(statusConnecting())
+	m.statusConnecting(consumerID, proposal)
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -505,11 +495,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	})
 
 	sessionID := session.ID(sessionResponse.GetID())
-	m.saveSessionInfo(SessionInfo{
-		SessionID:  sessionID,
-		ConsumerID: consumerID,
-		Proposal:   proposal,
-	})
+	m.publishSessionCreate(sessionID)
 
 	return session.CreateResponse{
 		Session: session.SessionDto{
@@ -556,21 +542,19 @@ func (m *connectionManager) createSession(c Connection, dialog communication.Dia
 		return session.RequestSessionDestroy(dialog, sessionResponse.Session.ID)
 	})
 
-	m.saveSessionInfo(SessionInfo{
-		SessionID:  sessionResponse.Session.ID,
-		ConsumerID: consumerID,
-		Proposal:   proposal,
-	})
+	m.publishSessionCreate(sessionResponse.Session.ID)
 
 	return sessionResponse, nil
 }
 
-func (m *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
-	m.setCurrentSession(sessionInfo)
+func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
+	m.setStatus(func(status *Status) {
+		status.SessionID = sessionID
+	})
 
 	m.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
 		Status:      SessionCreatedStatus,
-		SessionInfo: m.getCurrentSession(),
+		SessionInfo: m.Status(),
 	})
 
 	m.addCleanup(func() error {
@@ -578,9 +562,8 @@ func (m *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
 		m.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
 			Status:      SessionEndedStatus,
-			SessionInfo: m.getCurrentSession(),
+			SessionInfo: m.Status(),
 		})
-		m.setCurrentSession(SessionInfo{})
 		return nil
 	})
 }
@@ -597,7 +580,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	})
 
 	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
-	go statsPublisher.start(m.getCurrentSession(), conn)
+	go statsPublisher.start(m, conn)
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
 		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
@@ -627,17 +610,64 @@ func (m *connectionManager) Status() Status {
 	return m.status
 }
 
-func (m *connectionManager) setStatus(cs Status) {
+func (m *connectionManager) setStatus(delta func(status *Status)) {
 	m.statusLock.Lock()
-	log.Info().Msgf("Connection state: %v → %v", m.status.State, cs.State)
-	m.status = cs
+	stateWas := m.status.State
+
+	delta(&m.status)
+
+	state := m.status.State
 	m.statusLock.Unlock()
+
+	if state != stateWas {
+		log.Info().Msgf("Connection state: %v -> %v", stateWas, state)
+		m.publishStateEvent(m.status.State)
+	}
+}
+
+func (m *connectionManager) statusConnecting(consumerID identity.Identity, proposal market.ServiceProposal) {
+	m.setStatus(func(status *Status) {
+		*status = Status{
+			StartedAt:  m.timeGetter(),
+			ConsumerID: consumerID,
+			Proposal:   proposal,
+			State:      Connecting,
+		}
+	})
+}
+
+func (m *connectionManager) statusConnected() {
+	m.setStatus(func(status *Status) {
+		status.State = Connected
+	})
+}
+
+func (m *connectionManager) statusReconnecting() {
+	m.setStatus(func(status *Status) {
+		status.State = Reconnecting
+	})
+}
+
+func (m *connectionManager) statusNotConnected() {
+	m.setStatus(func(status *Status) {
+		status.State = NotConnected
+	})
+}
+
+func (m *connectionManager) statusDisconnecting() {
+	m.setStatus(func(status *Status) {
+		status.State = Disconnecting
+	})
+}
+
+func (m *connectionManager) statusCanceled() {
+	m.setStatus(func(status *Status) {
+		status.State = Canceled
+	})
 }
 
 func (m *connectionManager) Cancel() {
-	status := statusCanceled()
-	m.setStatus(status)
-	m.onStateChanged(status.State)
+	m.statusCanceled()
 	logDisconnectError(m.Disconnect())
 }
 
@@ -646,7 +676,7 @@ func (m *connectionManager) Disconnect() error {
 		return ErrNoConnection
 	}
 
-	m.setStatus(statusDisconnecting())
+	m.statusDisconnecting()
 	m.disconnect()
 
 	return nil
@@ -661,9 +691,7 @@ func (m *connectionManager) disconnect() {
 	m.ctxLock.Unlock()
 
 	m.cleanConnection()
-
-	m.setStatus(statusNotConnected())
-	m.publishStateEvent(NotConnected)
+	m.statusNotConnected()
 
 	m.cleanAfterDisconnect()
 }
@@ -726,15 +754,15 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
 }
 
 func (m *connectionManager) onStateChanged(state State) {
-	log.Debug().Msg("onStateChanged called")
+	log.Debug().Msgf("Connection state received: %s", state)
 	m.publishStateEvent(state)
 
+	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
 	switch state {
 	case Connected:
-		sessionInfo := m.getCurrentSession()
-		m.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal, sessionInfo.ConsumerID))
+		m.statusConnected()
 	case Reconnecting:
-		m.setStatus(statusReconnecting())
+		m.statusReconnecting()
 	}
 }
 
@@ -764,22 +792,8 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 func (m *connectionManager) publishStateEvent(state State) {
 	m.eventPublisher.Publish(AppTopicConsumerConnectionState, StateEvent{
 		State:       state,
-		SessionInfo: m.getCurrentSession(),
+		SessionInfo: m.Status(),
 	})
-}
-
-func (m *connectionManager) setCurrentSession(info SessionInfo) {
-	m.sessionInfoMu.Lock()
-	defer m.sessionInfoMu.Unlock()
-
-	m.sessionInfo = info
-}
-
-func (m *connectionManager) getCurrentSession() SessionInfo {
-	m.sessionInfoMu.Lock()
-	defer m.sessionInfoMu.Unlock()
-
-	return m.sessionInfo
 }
 
 func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {

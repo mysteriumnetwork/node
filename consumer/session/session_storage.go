@@ -88,7 +88,7 @@ func (repo *Storage) handleEndedEvent(sessionID session.ID) {
 	}
 }
 
-func (repo *Storage) handleCreatedEvent(sessionInfo connection.SessionInfo) {
+func (repo *Storage) handleCreatedEvent(sessionInfo connection.Status) {
 	se := NewHistory(
 		sessionInfo.SessionID,
 		sessionInfo.Proposal,

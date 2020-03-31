@@ -33,7 +33,7 @@ import (
 
 var mockSessionEvent = connection.SessionEvent{
 	Status: connection.SessionCreatedStatus,
-	SessionInfo: connection.SessionInfo{
+	SessionInfo: connection.Status{
 		ConsumerID: identity.FromAddress("0x000"),
 		SessionID:  session.ID("test"),
 		Proposal: market.ServiceProposal{

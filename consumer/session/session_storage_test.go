@@ -40,7 +40,7 @@ var (
 
 	mockPayload = connection.SessionEvent{
 		Status: connection.SessionCreatedStatus,
-		SessionInfo: connection.SessionInfo{
+		SessionInfo: connection.Status{
 			SessionID:  sessionID,
 			ConsumerID: consumerID,
 			Proposal: market.ServiceProposal{

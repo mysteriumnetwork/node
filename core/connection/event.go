@@ -17,6 +17,14 @@
 
 package connection
 
+import (
+	"time"
+
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session"
+)
+
 // Topic represents the different topics a consumer can subscribe to
 const (
 	// AppTopicConsumerConnectionState represents the connection state change topic
@@ -30,7 +38,53 @@ const (
 // StateEvent is the struct we'll emit on a StateEvent topic event
 type StateEvent struct {
 	State       State
-	SessionInfo SessionInfo
+	SessionInfo Status
+}
+
+// State represents list of possible connection states
+type State string
+
+const (
+	// NotConnected means no connection exists
+	NotConnected = State("NotConnected")
+	// Connecting means that connection is startCalled but not yet fully established
+	Connecting = State("Connecting")
+	// Connected means that fully established connection exists
+	Connected = State("Connected")
+	// Disconnecting means that connection close is in progress
+	Disconnecting = State("Disconnecting")
+	// Reconnecting means that connection is lost but underlying service is trying to reestablish it
+	Reconnecting = State("Reconnecting")
+	// Unknown means that we could not map the underlying transport state to our state
+	Unknown = State("Unknown")
+	// Canceled means that connection initialization was started, but failed never reaching Connected state
+	Canceled = State("Canceled")
+	// StateIPNotChanged means that consumer ip not changed after connection is created
+	StateIPNotChanged = State("IPNotChanged")
+	// StateConnectionFailed means that underlying connection is failed
+	StateConnectionFailed = State("ConnectionFailed")
+)
+
+// Status holds connection state, session id and proposal of the connection
+type Status struct {
+	StartedAt  time.Time
+	ConsumerID identity.Identity
+	State      State
+	SessionID  session.ID
+	Proposal   market.ServiceProposal
+}
+
+// IsActive checks if session is active
+func (s *Status) IsActive() bool {
+	return s.SessionID != ""
+}
+
+// Duration returns elapsed time from marked session start
+func (s *Status) Duration() time.Duration {
+	if s.StartedAt.IsZero() {
+		return time.Duration(0)
+	}
+	return time.Now().Sub(s.StartedAt)
 }
 
 const (
@@ -43,11 +97,11 @@ const (
 // SessionEvent represents a session related event
 type SessionEvent struct {
 	Status      string
-	SessionInfo SessionInfo
+	SessionInfo Status
 }
 
 // SessionStatsEvent represents a session statistics event
 type SessionStatsEvent struct {
 	Stats       Statistics
-	SessionInfo SessionInfo
+	SessionInfo Status
 }
