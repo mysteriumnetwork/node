@@ -68,15 +68,15 @@ type receivedPromise struct {
 	promise  crypto.Promise
 }
 
-// AccountantPromiseSettlerInterface is responsible for settling the accountant promises.
-type AccountantPromiseSettlerInterface interface {
+// AccountantPromiseSettler is responsible for settling the accountant promises.
+type AccountantPromiseSettler interface {
 	SettlementState(id identity.Identity) SettlementState
 	ForceSettle(providerID, accountantID identity.Identity) error
 	Subscribe() error
 }
 
-// AccountantPromiseSettler is responsible for settling the accountant promises.
-type AccountantPromiseSettler struct {
+// accountantPromiseSettler is responsible for settling the accountant promises.
+type accountantPromiseSettler struct {
 	eventBus                   eventbus.EventBus
 	bc                         providerChannelStatusProvider
 	config                     AccountantPromiseSettlerConfig
@@ -101,8 +101,8 @@ type AccountantPromiseSettlerConfig struct {
 }
 
 // NewAccountantPromiseSettler creates a new instance of accountant promise settler.
-func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
-	return &AccountantPromiseSettler{
+func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, config AccountantPromiseSettlerConfig) *accountantPromiseSettler {
+	return &accountantPromiseSettler{
 		eventBus:                   eventBus,
 		bc:                         providerChannelStatusProvider,
 		ks:                         ks,
@@ -119,7 +119,7 @@ func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transact
 }
 
 // loadInitialState loads the initial state for the given identity. Inteded to be called on service start.
-func (aps *AccountantPromiseSettler) loadInitialState(addr identity.Identity) error {
+func (aps *accountantPromiseSettler) loadInitialState(addr identity.Identity) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
@@ -141,7 +141,7 @@ func (aps *AccountantPromiseSettler) loadInitialState(addr identity.Identity) er
 	return aps.resyncState(addr)
 }
 
-func (aps *AccountantPromiseSettler) resyncState(id identity.Identity) error {
+func (aps *accountantPromiseSettler) resyncState(id identity.Identity) error {
 	channel, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, id.ToCommonAddress())
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", id))
@@ -164,7 +164,7 @@ func (aps *AccountantPromiseSettler) resyncState(id identity.Identity) error {
 	return nil
 }
 
-func (aps *AccountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after SettlementState) {
+func (aps *accountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after SettlementState) {
 	aps.eventBus.Publish(AppTopicEarningsChanged, AppEventEarningsChanged{
 		Identity: id,
 		Previous: before,
@@ -173,7 +173,7 @@ func (aps *AccountantPromiseSettler) publishChangeEvent(id identity.Identity, be
 }
 
 // Subscribe subscribes the accountant promise settler to the appropriate events
-func (aps *AccountantPromiseSettler) Subscribe() error {
+func (aps *accountantPromiseSettler) Subscribe() error {
 	err := aps.eventBus.SubscribeAsync(nodevent.AppTopicNode, aps.handleNodeEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to node status event")
@@ -193,7 +193,7 @@ func (aps *AccountantPromiseSettler) Subscribe() error {
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 
-func (aps *AccountantPromiseSettler) handleServiceEvent(event servicestate.AppEventServiceStatus) {
+func (aps *accountantPromiseSettler) handleServiceEvent(event servicestate.AppEventServiceStatus) {
 	switch event.Status {
 	case string(servicestate.Running):
 		err := aps.loadInitialState(identity.FromAddress(event.ProviderID))
@@ -210,7 +210,7 @@ func (aps *AccountantPromiseSettler) handleServiceEvent(event servicestate.AppEv
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
+func (aps *accountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
 	if payload.Status == nodevent.StatusStarted {
 		aps.handleNodeStart()
 		return
@@ -222,7 +222,7 @@ func (aps *AccountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.AppEventIdentityRegistration) {
+func (aps *accountantPromiseSettler) handleRegistrationEvent(payload registry.AppEventIdentityRegistration) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
@@ -246,7 +246,7 @@ func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.Ap
 	log.Info().Msgf("Identity registration event handled for provider %q", payload.ID)
 }
 
-func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
+func (aps *accountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
 	id := apep.ProviderID
 	log.Info().Msgf("Received accountant promise for %q", id)
 	aps.lock.Lock()
@@ -275,7 +275,7 @@ func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AppEve
 	}
 }
 
-func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
+func (aps *accountantPromiseSettler) listenForSettlementRequests() {
 	log.Info().Msg("Listening for settlement events")
 	defer func() {
 		log.Info().Msg("Stopped listening for settlement events")
@@ -292,7 +292,7 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 }
 
 // SettlementState returns current settlement status for given identity
-func (aps *AccountantPromiseSettler) SettlementState(id identity.Identity) SettlementState {
+func (aps *accountantPromiseSettler) SettlementState(id identity.Identity) SettlementState {
 	aps.lock.RLock()
 	defer aps.lock.RUnlock()
 
@@ -303,7 +303,7 @@ func (aps *AccountantPromiseSettler) SettlementState(id identity.Identity) Settl
 var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
-func (aps *AccountantPromiseSettler) ForceSettle(providerID, accountantID identity.Identity) error {
+func (aps *accountantPromiseSettler) ForceSettle(providerID, accountantID identity.Identity) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
@@ -327,7 +327,7 @@ func (aps *AccountantPromiseSettler) ForceSettle(providerID, accountantID identi
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
-func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
+func (aps *accountantPromiseSettler) settle(p receivedPromise) error {
 	if aps.isSettling(p.provider) {
 		return errors.New("provider already has settlement in progress")
 	}
@@ -384,7 +384,7 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
 	return <-errCh
 }
 
-func (aps *AccountantPromiseSettler) isSettling(id identity.Identity) bool {
+func (aps *accountantPromiseSettler) isSettling(id identity.Identity) bool {
 	aps.lock.RLock()
 	defer aps.lock.RUnlock()
 	v, ok := aps.currentState[id]
@@ -395,7 +395,7 @@ func (aps *AccountantPromiseSettler) isSettling(id identity.Identity) bool {
 	return v.settleInProgress
 }
 
-func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling bool) {
+func (aps *accountantPromiseSettler) setSettling(id identity.Identity, settling bool) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	v := aps.currentState[id]
@@ -403,7 +403,7 @@ func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling 
 	aps.currentState[id] = v
 }
 
-func (aps *AccountantPromiseSettler) handleNodeStart() {
+func (aps *accountantPromiseSettler) handleNodeStart() {
 	go aps.listenForSettlementRequests()
 
 	for _, v := range aps.ks.Accounts() {
@@ -422,7 +422,7 @@ func (aps *AccountantPromiseSettler) handleNodeStart() {
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleNodeStop() {
+func (aps *accountantPromiseSettler) handleNodeStop() {
 	aps.once.Do(func() {
 		close(aps.stop)
 	})
