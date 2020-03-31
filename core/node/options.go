@@ -75,6 +75,8 @@ type Options struct {
 	Firewall OptionsFirewall
 
 	Payments OptionsPayments
+
+	MobileConsumer bool
 }
 
 // GetOptions retrieves node options from the app configuration.

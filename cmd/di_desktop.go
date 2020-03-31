@@ -1,5 +1,3 @@
-// +build darwin windows linux,!android
-
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -53,6 +51,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 	"github.com/rs/zerolog/log"
@@ -62,6 +61,10 @@ import (
 
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
+	if nodeOptions.MobileConsumer {
+		return nil
+	}
+
 	err := di.bootstrapServiceComponents(nodeOptions, servicesOptions)
 	if err != nil {
 		return errors.Wrap(err, "service bootstrap failed")
@@ -187,6 +190,10 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
+	if nodeOptions.MobileConsumer {
+		return nil
+	}
+
 	cfg := registry.ProviderRegistrarConfig{
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
@@ -199,6 +206,11 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
+	if nodeOptions.MobileConsumer {
+		di.AccountantPromiseSettler = &pingpong_noop.NoopAccountantPromiseSettler{}
+		return nil
+	}
+
 	di.AccountantPromiseSettler = pingpong.NewAccountantPromiseSettler(
 		di.EventBus,
 		di.Transactor,
@@ -315,6 +327,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
+	if nodeOptions.MobileConsumer {
+		di.registerNoopConnection()
+		return
+	}
+
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
 	di.registerWireguardConnection(nodeOptions)

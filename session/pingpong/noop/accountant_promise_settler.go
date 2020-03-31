@@ -28,6 +28,11 @@ import (
 type NoopAccountantPromiseSettler struct {
 }
 
+// Subscribe does nothing.
+func (n *NoopAccountantPromiseSettler) Subscribe() error {
+	return nil
+}
+
 // SettlementState returns an empty state.
 func (n *NoopAccountantPromiseSettler) SettlementState(id identity.Identity) pingpong.SettlementState {
 	return pingpong.SettlementState{
