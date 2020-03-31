@@ -60,8 +60,8 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	assert.NoError(t, err)
 	consumerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: consumerPort}, &net.UDPAddr{Port: providerPort})
 	assert.NoError(t, err)
-	providerPinger := &mockProviderNATPinger{conns: []*net.UDPConn{consumerConn, nil}}
-	consumerPinger := &mockConsumerNATPinger{conns: []*net.UDPConn{providerConn, nil}}
+	providerPinger := &mockProviderNATPinger{conns: []*net.UDPConn{consumerConn, consumerConn}}
+	consumerPinger := &mockConsumerNATPinger{conns: []*net.UDPConn{providerConn, providerConn}}
 
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
