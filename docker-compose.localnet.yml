@@ -101,7 +101,7 @@ services:
   mysterium-api:
     image: mysteriumnetwork/mysterium-api:0.5.22
     expose:
-      - 80
+      - 8001
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -110,7 +110,7 @@ services:
       - net.ipv4.conf.eth0.rp_filter=0
       - net.ipv4.conf.eth1.rp_filter=0
     environment:
-      APP_PORT: 80
+      APP_PORT: 8001
       DB_HOST: db
       DB_NAME: myst_api
       DB_USER: myst_api
