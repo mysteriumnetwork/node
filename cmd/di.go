@@ -514,7 +514,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
 		connection.DefaultStatsReportInterval,
-		di.ConsumerBalanceTracker.GetBalance,
+		connection.NewValidator(
+			di.ConsumerBalanceTracker,
+			di.IdentityManager,
+		),
 		di.P2PDialer,
 	)
 

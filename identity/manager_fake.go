@@ -25,12 +25,17 @@ type idmFake struct {
 	existingIdentities   []Identity
 	newIdentity          Identity
 	unlockFails          bool
+	isUnlocked           bool
 }
 
 // NewIdentityManagerFake creates fake identity manager for testing purposes
 // TODO each caller should use it's own mocked manager part instead of global one
 func NewIdentityManagerFake(existingIdentities []Identity, newIdentity Identity) *idmFake {
-	return &idmFake{"", "", existingIdentities, newIdentity, false}
+	return &idmFake{"", "", existingIdentities, newIdentity, false, true}
+}
+
+func (fakeIdm *idmFake) IsUnlocked(id string) bool {
+	return fakeIdm.isUnlocked
 }
 
 func (fakeIdm *idmFake) MarkUnlockToFail() {

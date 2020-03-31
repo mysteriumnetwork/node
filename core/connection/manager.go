@@ -52,6 +52,8 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 	// ErrInsufficientBalance indicates consumer has insufficient balance to connect to selected proposal
 	ErrInsufficientBalance = errors.New("insufficient balance")
+	// ErrUnlockRequired indicates that the consumer identity has not been unlocked yet
+	ErrUnlockRequired = errors.New("unlock required")
 )
 
 // IPCheckParams contains common params for connection ip check.
@@ -99,12 +101,14 @@ type PaymentIssuer interface {
 	Stop()
 }
 
+type validator interface {
+	Validate(consumerID identity.Identity, proposal market.ServiceProposal) error
+}
+
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog, channel p2p.Channel,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
-
-type consumerBalanceGetter func(ID identity.Identity) uint64
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -116,7 +120,7 @@ type connectionManager struct {
 	ipResolver               ip.Resolver
 	ipCheckParams            IPCheckParams
 	statsReportInterval      time.Duration
-	consumerBalanceGetter    consumerBalanceGetter
+	validator                validator
 	p2pDialer                p2p.Dialer
 
 	// These are populated by Connect at runtime.
@@ -142,7 +146,7 @@ func NewManager(
 	ipResolver ip.Resolver,
 	ipCheckParams IPCheckParams,
 	statsReportInterval time.Duration,
-	consumerBalanceGetter consumerBalanceGetter,
+	validator validator,
 	p2pDialer p2p.Dialer,
 ) *connectionManager {
 	return &connectionManager{
@@ -156,7 +160,7 @@ func NewManager(
 		ipResolver:               ipResolver,
 		ipCheckParams:            ipCheckParams,
 		statsReportInterval:      statsReportInterval,
-		consumerBalanceGetter:    consumerBalanceGetter,
+		validator:                validator,
 		p2pDialer:                p2pDialer,
 	}
 }
@@ -166,8 +170,9 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return ErrAlreadyExists
 	}
 
-	if ok := manager.validateBalance(consumerID, proposal); !ok {
-		return ErrInsufficientBalance
+	err = manager.validator.Validate(consumerID, proposal)
+	if err != nil {
+		return err
 	}
 
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
@@ -242,17 +247,6 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}()
 
 	return nil
-}
-
-// validateBalance checks if consumer has enough money for given proposal.
-func (manager *connectionManager) validateBalance(consumerID identity.Identity, proposal market.ServiceProposal) bool {
-	if proposal.PaymentMethodType == "" || proposal.PaymentMethod == nil {
-		return true
-	}
-
-	proposalPrice := proposal.PaymentMethod.GetPrice()
-	balance := manager.consumerBalanceGetter(consumerID)
-	return balance >= proposalPrice.Amount
 }
 
 // checkSessionIP checks if IP has changed after connection was established.

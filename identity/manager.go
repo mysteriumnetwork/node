@@ -62,6 +62,14 @@ func NewIdentityManager(keystore keystore, eventBus eventbus.EventBus) *identity
 	}
 }
 
+// IsUnlocked checks if the given identity is unlocked or not
+func (idm *identityManager) IsUnlocked(identity string) bool {
+	idm.unlockedMu.Lock()
+	defer idm.unlockedMu.Unlock()
+	_, ok := idm.unlocked[identity]
+	return ok
+}
+
 func accountToIdentity(account accounts.Account) Identity {
 	identity := FromAddress(account.Address.Hex())
 	return identity
