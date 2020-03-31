@@ -70,11 +70,20 @@ type listener struct {
 }
 
 type p2pConnectConfig struct {
+	publicIP     string
 	peerPublicIP string
 	peerPorts    []int
 	localPorts   []int
 	privateKey   PrivateKey
 	peerPubKey   PublicKey
+}
+
+func (c *p2pConnectConfig) pingIP() string {
+	if c.publicIP == c.peerPublicIP {
+		// Assume that both peers are on the same network.
+		return "127.0.0.1"
+	}
+	return c.peerPublicIP
 }
 
 // Listen listens for incoming peer connections to establish new p2p channels.
@@ -115,8 +124,8 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			localPort = config.localPorts[0]
 			remotePort = config.peerPorts[0]
 		} else {
-			log.Debug().Msgf("Pinging consumer with public IP %s using ports %v:%v", config.peerPublicIP, config.localPorts, config.peerPorts)
-			conns, err := m.providerPinger.PingConsumerPeer(config.peerPublicIP, config.localPorts, config.peerPorts, providerInitialTTL, requiredConnAmount)
+			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v", config.pingIP(), config.localPorts, config.peerPorts)
+			conns, err := m.providerPinger.PingConsumerPeer(config.pingIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnAmount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
@@ -193,7 +202,7 @@ func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signe
 		return fmt.Errorf("could not publish message via broker: %v", err)
 	}
 
-	m.setPendingConfig(peerPubKey, privateKey, localPorts)
+	m.setPendingConfig(publicIP, peerPubKey, privateKey, localPorts)
 	return nil
 }
 
@@ -240,10 +249,11 @@ func (m *listener) pendingConfig(peerPubKey PublicKey) (*p2pConnectConfig, bool)
 	return config, ok
 }
 
-func (m *listener) setPendingConfig(peerPubKey PublicKey, privateKey PrivateKey, localPorts []int) {
+func (m *listener) setPendingConfig(publicIP string, peerPubKey PublicKey, privateKey PrivateKey, localPorts []int) {
 	m.pendingConfigsMu.Lock()
 	defer m.pendingConfigsMu.Unlock()
 	m.pendingConfigs[peerPubKey] = &p2pConnectConfig{
+		publicIP:   publicIP,
 		localPorts: localPorts,
 		privateKey: privateKey,
 		peerPubKey: peerPubKey,

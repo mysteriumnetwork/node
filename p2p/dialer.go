@@ -77,8 +77,8 @@ func (m *dialer) Dial(consumerID, providerID identity.Identity, serviceType stri
 		localPort = config.localPorts[0]
 		remotePort = config.peerPorts[0]
 	} else {
-		log.Debug().Msgf("Pinging provider %s with public IP %s using ports %v:%v", providerID.Address, config.peerPublicIP, config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(config.peerPublicIP, config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnAmount)
+		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
+		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnAmount)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}
@@ -175,6 +175,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	}
 
 	return &p2pConnectConfig{
+		publicIP:     publicIP,
 		privateKey:   privateKey,
 		localPorts:   localPorts,
 		peerPubKey:   peerPubKey,
