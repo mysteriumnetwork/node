@@ -830,7 +830,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 		return err
 	}
 
-	di.ServiceFirewall = firewall.NewIncomingTrafficFirewall()
+	di.ServiceFirewall = firewall.NewIncomingTrafficFirewall(config.GetBool(config.FlagIncomingFirewall))
 	if err := di.ServiceFirewall.Setup(); err != nil {
 		return err
 	}

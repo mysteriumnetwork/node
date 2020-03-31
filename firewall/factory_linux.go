@@ -28,6 +28,10 @@ func NewOutgoingTrafficFirewall() OutgoingTrafficFirewall {
 }
 
 // NewIncomingTrafficFirewall creates firewall instance for incoming traffic.
-func NewIncomingTrafficFirewall() IncomingTrafficFirewall {
-	return &incomingFirewallIptables{}
+func NewIncomingTrafficFirewall(enabled bool) IncomingTrafficFirewall {
+	if enabled {
+		return &incomingFirewallIptables{}
+	}
+
+	return &incomingFirewallNoop{}
 }
