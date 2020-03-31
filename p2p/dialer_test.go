@@ -100,7 +100,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	providerPinger := &mockProviderNATPinger{conns: []*net.UDPConn{consumerConn, consumerConn}}
 	consumerPinger := &mockConsumerNATPinger{conns: []*net.UDPConn{providerConn, providerConn}}
 	// Simulate behind NAT behaviour with different IP's.
-	ipResolver := ip.NewResolverMock("127.0.0.1", "1.1.1.1")
+	ipResolver := ip.NewResolverMockMultiple("127.0.0.1", "1.1.1.1")
 
 	t.Run("Test provider listens to peer", func(t *testing.T) {
 		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool, mockPortMapper)
@@ -142,7 +142,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT_With_Upnp_En
 	providerPinger := &mockProviderNATPinger{}
 	consumerPinger := &mockConsumerNATPinger{}
 	// Simulate behind NAT behaviour with different IP's.
-	ipResolver := ip.NewResolverMock("127.0.0.1", "0.0.0.0")
+	ipResolver := ip.NewResolverMockMultiple("127.0.0.1", "0.0.0.0")
 
 	t.Run("Test provider listens to peer", func(t *testing.T) {
 		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool, mockPortMapper)

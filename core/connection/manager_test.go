@@ -449,7 +449,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	}
 
 	// Simulate IP change.
-	tc.connManager.ipResolver = ip.NewResolverMock("10.0.0.4", "10.0.5")
+	tc.connManager.ipResolver = ip.NewResolverMockMultiple("127.0.0.1", "10.0.0.4", "10.0.5")
 
 	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
