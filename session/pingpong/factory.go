@@ -154,7 +154,7 @@ func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.Channel) (
 		if err := c.Request().UnmarshalProto(&msg); err != nil {
 			return err
 		}
-		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
+		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
 
 		exchangeChan <- crypto.ExchangeMessage{
 			Promise: crypto.Promise{
@@ -240,7 +240,7 @@ func invoiceReceiver(dialog communication.Dialog, channel p2p.Channel) (chan cry
 		if err := c.Request().UnmarshalProto(&msg); err != nil {
 			return err
 		}
-		log.Info().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentInvoice, msg.String())
+		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentInvoice, msg.String())
 
 		invoices <- crypto.Invoice{
 			AgreementID:    msg.GetAgreementID(),

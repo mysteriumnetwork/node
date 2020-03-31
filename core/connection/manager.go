@@ -384,7 +384,7 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not marshal session config: %w", err)
 	}
 
-	sessionRequest := p2p.ProtoMessage(&pb.SessionRequest{
+	sessionRequest := &pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:             consumerID.Address,
 			AccountantID:   accountantID.Address,
@@ -392,9 +392,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		},
 		ProposalID: int64(proposal.ID),
 		Config:     config,
-	})
-
-	res, err := p2pChannel.Send(p2p.TopicSessionCreate, sessionRequest)
+	}
+	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
+	res, err := p2pChannel.Send(p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
@@ -410,12 +410,13 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 
-		sessionDestroy := p2p.ProtoMessage(&pb.SessionInfo{
+		sessionDestroy := &pb.SessionInfo{
 			ConsumerID: consumerID.Address,
 			SessionID:  sessionResponce.GetID(),
-		})
+		}
 
-		_, err := p2pChannel.Send(p2p.TopicSessionDestroy, sessionDestroy)
+		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
+		_, err := p2pChannel.Send(p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
 		if err != nil {
 			return fmt.Errorf("could not send session destroy request: %w", err)
 		}
@@ -428,11 +429,12 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		ConsumerID: consumerID,
 		Proposal:   proposal,
 		ack: func() {
-			pc := p2p.ProtoMessage(&pb.SessionInfo{
+			pc := &pb.SessionInfo{
 				ConsumerID: consumerID.Address,
 				SessionID:  string(sessionID),
-			})
-			_, err := p2pChannel.Send(p2p.TopicSessionAcknowledge, pc)
+			}
+			log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionAcknowledge, pc.String())
+			_, err := p2pChannel.Send(p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
 			if err != nil {
 				log.Warn().Err(err).Msg("Acknowledge failed")
 			}
