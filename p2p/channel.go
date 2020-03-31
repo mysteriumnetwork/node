@@ -37,6 +37,10 @@ type Channel interface {
 	Send(topic string, msg *Message) (*Message, error)
 	// Handle registers handler for given topic which handles peer request.
 	Handle(topic string, handler HandlerFunc)
+	// ServiceConn returns UDP connection which can be used for services.
+	ServiceConn() *net.UDPConn
+	// Close closes p2p communication channel.
+	Close() error
 }
 
 // HandlerFunc is channel request handler func signature.

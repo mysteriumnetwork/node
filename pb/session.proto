@@ -11,9 +11,8 @@ message SessionRequest {
 
 message SessionResponse {
   string ID = 1;
-  string DNSs = 2;
-  string PaymentInfo = 3;
-  bytes config = 4;
+  string PaymentInfo = 2;
+  bytes config = 3;
 }
 
 message SessionInfo {

@@ -19,6 +19,7 @@ package session
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 	"time"
 
@@ -56,7 +57,7 @@ type publisher interface {
 
 // ConfigProvider is able to handle config negotiations
 type ConfigProvider interface {
-	ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*ConfigParams, error)
+	ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*ConfigParams, error)
 }
 
 // DestroyCallback cleanups session
@@ -121,7 +122,7 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams traversal.Params) (err error) {
+func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -160,7 +161,11 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 		}
 	}()
 
-	go manager.natPinger.PingConsumer(pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
+	// TODO pingerParams is a backward compatibility limitation. Remove it once most of the clients will be updated.
+	if pingerParams != nil {
+		go manager.natPinger.PingConsumer(pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
+	}
+
 	manager.sessionStorage.Add(*session)
 	return nil
 }

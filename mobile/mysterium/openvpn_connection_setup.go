@@ -54,7 +54,7 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 	}
 
 	sessionFactory := func(options connection.ConnectOptions, sessionConfig openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", connection.DNSOptionAuto)
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", options)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -153,8 +153,8 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 		return err
 	}
 
-	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
-	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
+	// TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
+	if len(sessionConfig.Ports) > 0 {
 		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
 			c.ports = []int{sessionConfig.LocalPort}
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
@@ -169,12 +169,10 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 			sessionConfig.LocalPort = port.Num()
 		}
 
-		ip := sessionConfig.RemoteIP
-		localPorts := c.ports
-		remotePorts := sessionConfig.Ports
-
 		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
-		_, _, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
+
+		ip := sessionConfig.RemoteIP
+		_, _, err := c.natPinger.PingProvider(ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
@@ -211,6 +209,7 @@ func (c *openvpnConnection) Wait() error {
 }
 
 func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
+	// TODO the whole content of this function needs to be removed once we will migrate to the p2p communication.
 	switch c.natPinger.(type) {
 	case *traversal.NoopPinger:
 		log.Info().Msg("Noop pinger detected, returning nil client config.")

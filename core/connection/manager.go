@@ -182,13 +182,8 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
-	var channel p2p.Channel
-	// TODO: P2P will be enabled in separate PR.
-	//channel, err := manager.p2pDialer.Dial(consumerID, providerID, proposal.ServiceType, 10*time.Second)
-	//if err != nil {
-	//	log.Warn().Err(err).Msg("Failed to establish p2p channel")
-	//}
-	//var providerNATConn *net.UDPConn
+
+	channel := manager.createP2PChannel(consumerID, providerID, proposal)
 
 	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
@@ -200,9 +195,12 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	var sessionDTO session.SessionDto
 	var paymentInfo session.PaymentInfo
+	var sessionDTO session.SessionDto
+	var transport *net.UDPConn
+
 	if channel != nil {
+		transport = channel.ServiceConn()
 		sessionDTO, paymentInfo, err = manager.createP2PSession(connection, channel, consumerID, accountantID, proposal)
 	} else {
 		sessionDTO, paymentInfo, err = manager.createSession(connection, dialog, consumerID, accountantID, proposal)
@@ -220,7 +218,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, nil)
+	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, transport)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -365,6 +363,22 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
+func (manager *connectionManager) createP2PChannel(consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
+	channel, err := manager.p2pDialer.Dial(consumerID, providerID, proposal.ServiceType, 10*time.Second)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to establish p2p channel")
+	} else {
+		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+			log.Trace().Msg("Cleaning: closing P2P communication channel")
+			defer log.Trace().Msg("Cleaning: P2P communication channel DONE")
+
+			return channel.Close()
+		})
+	}
+
+	return channel
+}
+
 func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
@@ -411,6 +425,7 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		if err != nil {
 			return fmt.Errorf("could not send session destroy request: %w", err)
 		}
+
 		return nil
 	})
 

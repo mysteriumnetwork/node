@@ -69,7 +69,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
-	pingerParams := traversal.Params{}
+	pingerParams := &traversal.Params{}
 	session, err := newSession()
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
@@ -89,7 +89,7 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
-	pingerParams := traversal.Params{}
+	pingerParams := &traversal.Params{}
 	session, err := newSession()
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
@@ -119,7 +119,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
-	pingerParams := traversal.Params{}
+	pingerParams := &traversal.Params{}
 	session, err := newSession()
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)
@@ -135,7 +135,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	manager := NewManager(currentProposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
 		&MockNatEventTracker{}, "test service id", mp)
 
-	pingerParams := traversal.Params{}
+	pingerParams := &traversal.Params{}
 	session, err := newSession()
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)

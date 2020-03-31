@@ -126,7 +126,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
-func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, remoteConn *net.UDPConn) (*session.ConfigParams, error) {
 	log.Info().Msg("Accepting new WireGuard connection")
 	consumerConfig := wg.ConsumerConfig{}
 	err := json.Unmarshal(sessionConfig, &consumerConfig)
@@ -139,27 +139,37 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not allocate provider IP NET")
 	}
-	providerConfig.ListenPort, err = m.resourcesAllocator.AllocatePort()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not allocate provider listen port")
+
+	var traversalParams traversal.Params
+	var releasePortMapping func()
+	var natPingerEnabled bool
+	if remoteConn == nil { // TODO this block needs to be removed once most of the nodes migrated to the p2p communication
+		providerConfig.ListenPort, err = m.resourcesAllocator.AllocatePort()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not allocate provider listen port")
+		}
+
+		var portMappingOK bool
+		releasePortMapping, portMappingOK = m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
+		natPingerEnabled = !portMappingOK && m.natPinger.Valid() && m.behindNAT(providerConfig.PublicIP)
+
+		traversalParams, err = m.newTraversalParams(natPingerEnabled, consumerConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create traversal params")
+		}
+	} else {
+		remoteConn.Close()
+		providerConfig.ListenPort = remoteConn.LocalAddr().(*net.UDPAddr).Port
 	}
+
 	providerConfig.PublicIP, err = m.ipResolver.GetPublicIP()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get public IP")
 	}
 
-	releasePortMapping, portMappingOk := m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
-
 	conn, err := m.startNewConnection(providerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start new connection")
-	}
-
-	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.behindNAT(providerConfig.PublicIP)
-
-	traversalParams, err := m.newTraversalParams(natPingerEnabled, consumerConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create traversal params")
 	}
 
 	config, err := conn.Config()
