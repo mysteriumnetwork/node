@@ -22,7 +22,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -34,7 +33,7 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 

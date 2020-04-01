@@ -49,6 +49,8 @@ type ks interface {
 func NewKeystoreFilesystem(directory string, lightweight bool) *Keystore {
 	var ks ks
 	var keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)
+
+	// In test scenarios, we'll skip the real ethereum keystore and prefer a memory one instead.
 	if flag.Lookup("test.v") != nil {
 		ks = NewMockKeystore(mockKeys)
 		keyDecryptFunc = mockDecryptFunc

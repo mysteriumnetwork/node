@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
@@ -73,7 +72,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -128,7 +127,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -183,7 +182,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -239,7 +238,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -295,7 +294,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -351,7 +350,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -414,7 +413,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 	mockSender := &MockPeerInvoiceSender{
@@ -472,7 +471,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 	mockSender := &MockPeerInvoiceSender{
@@ -533,7 +532,7 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, true)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 

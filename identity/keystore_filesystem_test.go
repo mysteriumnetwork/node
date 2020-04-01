@@ -63,7 +63,7 @@ func Test_DerivedEncryption(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEqual(t, []byte(secretMessage), encrypted)
 
-		encrypted[1] = 0x1
+		encrypted[len(encrypted)-1] = ^encrypted[len(encrypted)-1]
 		_, err = ks.Decrypt(acc.Address, encrypted)
 		assert.Error(t, err)
 	})
