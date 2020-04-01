@@ -543,7 +543,7 @@ func (manager *connectionManager) startConnection(
 
 	if channel != nil {
 		connectOptions.ProviderNATConn = channel.ServiceConn()
-		connectOptions.P2PFd = channel.Fd()
+		connectOptions.ChannelConn = channel.Conn()
 	}
 
 	if err = conn.Start(connectOptions); err != nil {

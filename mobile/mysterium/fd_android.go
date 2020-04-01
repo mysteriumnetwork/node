@@ -1,4 +1,5 @@
 // +build android
+
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -18,8 +19,26 @@
 
 package mysterium
 
-import "golang.zx2c4.com/wireguard/device"
+import (
+	"net"
+
+	"golang.zx2c4.com/wireguard/device"
+)
 
 func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
 	return d.PeekLookAtSocketFd4()
+}
+
+func peekLookAtSocketFd4From(conn *net.UDPConn) (fd int, err error) {
+	sysconn, err := conn.SyscallConn()
+	if err != nil {
+		return
+	}
+	err = sysconn.Control(func(f uintptr) {
+		fd = int(f)
+	})
+	if err != nil {
+		return
+	}
+	return
 }

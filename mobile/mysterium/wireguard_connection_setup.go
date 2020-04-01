@@ -142,7 +142,7 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		config.Provider.Endpoint.Port = rPort
 	}
 
-	if err := c.device.Start(c.privateKey, config, options.P2PFd); err != nil {
+	if err := c.device.Start(c.privateKey, config, options.ChannelConn); err != nil {
 		return errors.Wrap(err, "could not start device")
 	}
 
@@ -213,7 +213,7 @@ func (c *wireguardConnection) isNoopPinger() bool {
 }
 
 type wireguardDevice interface {
-	Start(privateKey string, config wireguard.ServiceConfig, p2pFd int) error
+	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error
 	Stop()
 	Stats() (*wireguard.Stats, error)
 }
@@ -228,7 +228,7 @@ type wireguardDeviceImpl struct {
 	device *device.Device
 }
 
-func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, p2pFd int) error {
+func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error {
 	log.Debug().Msg("Creating tunnel device")
 	tunDevice, err := w.newTunnDevice(w.tunnelSetup, config)
 	if err != nil {
@@ -250,10 +250,17 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 	if err != nil {
 		return errors.Wrap(err, "could not protect socket")
 	}
-	err = w.tunnelSetup.Protect(p2pFd)
+
+	// Exclude p2p channel traffic from VPN tunnel.
+	channelSocket, err := peekLookAtSocketFd4From(channelConn)
+	if err != nil {
+		return fmt.Errorf("could not get channel socket: %w", err)
+	}
+	err = w.tunnelSetup.Protect(channelSocket)
 	if err != nil {
 		return fmt.Errorf("could not protect p2p socket: %w", err)
 	}
+
 	return nil
 }
 

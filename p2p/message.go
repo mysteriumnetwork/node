@@ -95,7 +95,7 @@ type transportMsg struct {
 	data []byte
 }
 
-func (m *transportMsg) readFrom(conn *textproto.Conn) error {
+func (m *transportMsg) readFrom(conn *textproto.Reader) error {
 	// Read header.
 	header, err := conn.ReadMIMEHeader()
 	if err != nil {
@@ -124,7 +124,7 @@ func (m *transportMsg) readFrom(conn *textproto.Conn) error {
 	return nil
 }
 
-func (m *transportMsg) writeTo(conn *textproto.Conn) error {
+func (m *transportMsg) writeTo(conn *textproto.Writer) error {
 	w := conn.DotWriter()
 	var header bytes.Buffer
 	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerFieldRequestID, m.id))
