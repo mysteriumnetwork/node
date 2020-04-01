@@ -221,6 +221,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger)
 	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger)
+	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
+
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
 		return err
 	}
@@ -454,7 +456,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		time.Minute,
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
-	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
