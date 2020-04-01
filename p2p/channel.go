@@ -150,6 +150,10 @@ func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publ
 
 // readLoop reads incoming requests or replies to initiated requests.
 func (c *channel) readLoop() {
+	var readErrCount int
+	maxReadErrCount := 5
+	sleepAfterReadErr := 100 * time.Millisecond
+
 	for {
 		select {
 		case <-c.stop:
@@ -157,9 +161,15 @@ func (c *channel) readLoop() {
 		default:
 			var msg transportMsg
 			if err := msg.readFrom(c.tr.Reader); err != nil {
-				log.Debug().Err(err).Msg("Closing p2p read loop")
-				return
+				time.Sleep(sleepAfterReadErr)
+				readErrCount++
+				if readErrCount == maxReadErrCount {
+					log.Debug().Err(err).Msg("Read loop reached max read errors count")
+					return
+				}
+				continue
 			}
+			readErrCount = 0
 
 			if debugTransport {
 				log.Debug().Msgf("recv: %+v", msg)
