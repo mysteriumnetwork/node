@@ -130,7 +130,7 @@ func newServiceConfig() wg.ServiceConfig {
 type mockWireGuardDevice struct {
 }
 
-func (m mockWireGuardDevice) Start(privateKey string, config wg.ServiceConfig) error {
+func (m mockWireGuardDevice) Start(_ string, _ wg.ServiceConfig, _ int) error {
 	return nil
 }
 

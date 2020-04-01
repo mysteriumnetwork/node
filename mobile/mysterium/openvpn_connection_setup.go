@@ -170,6 +170,7 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 		}
 
 		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
+		c.tunnelSetup.SocketProtect(options.P2PFd)
 
 		ip := sessionConfig.RemoteIP
 		_, _, err := c.natPinger.PingProvider(ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)

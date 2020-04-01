@@ -568,6 +568,10 @@ type mockP2PChannel struct {
 	lock   sync.Mutex
 }
 
+func (m *mockP2PChannel) Fd() int {
+	return 0
+}
+
 func (m *mockP2PChannel) getSentMsg() connectivity.StatusMessage {
 	m.lock.Lock()
 	defer m.lock.Unlock()

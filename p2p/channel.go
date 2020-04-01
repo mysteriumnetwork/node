@@ -51,6 +51,8 @@ type Channel interface {
 	ServiceConn() *net.UDPConn
 	// Close closes p2p communication channel.
 	Close() error
+	// Fd returns underlying connection file descriptor which can be used to protect it from VPN tunnel.
+	Fd() int
 }
 
 // HandlerFunc is channel request handler func signature.
@@ -67,6 +69,7 @@ type channel struct {
 	mu sync.RWMutex
 
 	conn                  *textproto.Conn
+	fd                    uintptr
 	topicHandlers         map[string]HandlerFunc
 	streams               map[uint64]*stream
 	privateKey            PrivateKey
@@ -86,13 +89,24 @@ func newChannel(rawConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKe
 		return nil, fmt.Errorf("could not create block crypt: %w", err)
 	}
 
-	udpSession, err := dialUDPSession(rawConn, blockCrypt)
+	udpConn, err := listenUDP(rawConn)
+	if err != nil {
+		return nil, fmt.Errorf("could not create UDP conn: %w", err)
+	}
+
+	udpConnFile, err := udpConn.File()
+	if err != nil {
+		return nil, fmt.Errorf("could not get UDP conn file: %w", err)
+	}
+
+	udpSession, err := kcp.NewConn3(1, rawConn.RemoteAddr().(*net.UDPAddr), blockCrypt, 10, 3, udpConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not create UDP session: %w", err)
 	}
 
 	c := &channel{
 		conn:                  textproto.NewConn(udpSession),
+		fd:                    udpConnFile.Fd(),
 		topicHandlers:         make(map[string]HandlerFunc),
 		streams:               make(map[uint64]*stream),
 		privateKey:            privateKey,
@@ -124,7 +138,8 @@ func (c *channel) readLoop() {
 		default:
 			var msg transportMsg
 			if err := msg.readFrom(c.conn); err != nil {
-				continue
+				log.Debug().Err(err).Msg("Closing p2p read loop")
+				return
 			}
 
 			// If message contains topic it means that peer is making a request
@@ -215,6 +230,11 @@ func (c *channel) Close() error {
 	return c.conn.Close()
 }
 
+// Fd returns underlying connection file descriptor which can be used to protect it from VPN tunnel.
+func (c *channel) Fd() int {
+	return int(c.fd)
+}
+
 // SetSendTimeout overrides default send timeout.
 func (c *channel) SetSendTimeout(t time.Duration) {
 	c.sendTimeout = t
@@ -275,7 +295,7 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 	// Wait for response.
 	select {
 	case <-ctx.Done():
-		return nil, errors.New("send timeout")
+		return nil, fmt.Errorf("timeout waiting for reply to %q", topic)
 	case res := <-s.resCh:
 		if res.statusCode != statusCodeOK {
 			if res.statusCode == statusCodePublicErr {
@@ -298,7 +318,7 @@ func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCry
 	return blockCrypt, nil
 }
 
-func dialUDPSession(rawConn *net.UDPConn, block kcp.BlockCrypt) (*kcp.UDPSession, error) {
+func listenUDP(rawConn *net.UDPConn) (*net.UDPConn, error) {
 	rawConn.Close()
 
 	raddr := rawConn.RemoteAddr().(*net.UDPAddr)
@@ -310,5 +330,5 @@ func dialUDPSession(rawConn *net.UDPConn, block kcp.BlockCrypt) (*kcp.UDPSession
 	if err != nil {
 		return nil, fmt.Errorf("could not listen UDP: %w", err)
 	}
-	return kcp.NewConn3(1, raddr, block, 10, 3, conn)
+	return conn, nil
 }

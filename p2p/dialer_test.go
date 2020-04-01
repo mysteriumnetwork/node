@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDialerExchangeAndCommunication(t *testing.T) {
@@ -72,17 +73,17 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
 			})
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
 		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger)
 
 		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "pong", string(res.Data))
 	})
 }

@@ -20,6 +20,7 @@ package mysterium
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
 	"sync"
@@ -141,7 +142,7 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		config.Provider.Endpoint.Port = rPort
 	}
 
-	if err := c.device.Start(c.privateKey, config); err != nil {
+	if err := c.device.Start(c.privateKey, config, options.P2PFd); err != nil {
 		return errors.Wrap(err, "could not start device")
 	}
 
@@ -212,7 +213,7 @@ func (c *wireguardConnection) isNoopPinger() bool {
 }
 
 type wireguardDevice interface {
-	Start(privateKey string, config wireguard.ServiceConfig) error
+	Start(privateKey string, config wireguard.ServiceConfig, p2pFd int) error
 	Stop()
 	Stats() (*wireguard.Stats, error)
 }
@@ -227,7 +228,7 @@ type wireguardDeviceImpl struct {
 	device *device.Device
 }
 
-func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig) error {
+func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, p2pFd int) error {
 	log.Debug().Msg("Creating tunnel device")
 	tunDevice, err := w.newTunnDevice(w.tunnelSetup, config)
 	if err != nil {
@@ -248,6 +249,10 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 	err = w.tunnelSetup.Protect(socket)
 	if err != nil {
 		return errors.Wrap(err, "could not protect socket")
+	}
+	err = w.tunnelSetup.Protect(p2pFd)
+	if err != nil {
+		return fmt.Errorf("could not protect p2p socket: %w", err)
 	}
 	return nil
 }
