@@ -151,7 +151,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	err = manager.p2pManager.Listen(providerID, serviceType, func(ch p2p.Channel) {
 		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service, id)
+		subscribeSessionCreate(mng, ch, service)
 		subscribeSessionStatus(mng, ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch)

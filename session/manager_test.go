@@ -70,7 +70,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := &traversal.Params{}
-	session, err := newSession()
+	session, err := NewSession()
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.NoError(t, err)
@@ -90,7 +90,7 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := &traversal.Params{}
-	session, err := newSession()
+	session, err := NewSession()
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
 	assert.Exactly(t, err, ErrorInvalidProposal)
@@ -120,7 +120,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 		&MockNatEventTracker{}, "test service id", mocks.NewEventBus())
 
 	pingerParams := &traversal.Params{}
-	session, err := newSession()
+	session, err := NewSession()
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)
 
@@ -136,7 +136,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 		&MockNatEventTracker{}, "test service id", mp)
 
 	pingerParams := &traversal.Params{}
-	session, err := newSession()
+	session, err := NewSession()
 	assert.NoError(t, err)
 	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)

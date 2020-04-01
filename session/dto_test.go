@@ -24,7 +24,7 @@ import (
 )
 
 func TestSessionIdLength(t *testing.T) {
-	session, err := newSession()
+	session, err := NewSession()
 	assert.Nil(t, err)
 	assert.Len(t, session.ID, 36)
 }
