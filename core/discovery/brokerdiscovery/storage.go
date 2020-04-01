@@ -57,7 +57,11 @@ func (s *ProposalStorage) Proposals() []market.ServiceProposal {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	return s.proposals
+	proposals := make([]market.ServiceProposal, 0)
+	for _, p := range s.proposals {
+		proposals = append(proposals, p)
+	}
+	return proposals
 }
 
 // MatchProposals fetches currently active service proposals from storage by match function
