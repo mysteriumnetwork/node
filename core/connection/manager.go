@@ -190,10 +190,12 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	channel := manager.createP2PChannel(consumerID, providerID, proposal)
 
-	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
-	if err != nil {
-		return err
-	}
+	var dialog communication.Dialog
+	if channel == nil {
+		dialog, err = manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
+		if err != nil {
+			return err
+		}
 
 	connection, err := manager.newConnection(proposal.ServiceType)
 	if err != nil {
