@@ -30,5 +30,8 @@ func nanotime() (uint64, error) {
 			}
 		}
 	}
-	return uint64(ts.Sec*1e9 + ts.Nsec), nil
+	// explicit cast prevents overflow on 32 bit systems
+	castedSec := uint64(ts.Sec)
+	castedNsec := uint64(ts.Nsec)
+	return castedSec*1e9 + castedNsec, nil
 }
