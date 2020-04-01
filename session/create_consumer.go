@@ -54,7 +54,7 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	session, err := newSession()
+	session, err := NewSession()
 	if err != nil {
 		return responseInternalError, errors.Wrap(err, "could not initialize new session")
 	}
