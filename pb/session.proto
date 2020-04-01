@@ -25,3 +25,10 @@ message ConsumerInfo {
   string accountantID = 2;
   string paymentVersion = 3;
 }
+
+message SessionStatus {
+  string ConsumerID = 1;
+  string SessionID = 2;
+  uint32 Code = 3;
+  string Message = 4;
+}

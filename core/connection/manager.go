@@ -190,9 +190,12 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	channel := manager.createP2PChannel(consumerID, providerID, proposal)
 
-	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
-	if err != nil {
-		return err
+	var dialog communication.Dialog
+	if channel == nil {
+		dialog, err = manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
+		if err != nil {
+			return err
+		}
 	}
 
 	connection, err := manager.newConnection(proposal.ServiceType)
@@ -211,13 +214,13 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		sessionDTO, paymentInfo, err = manager.createSession(connection, dialog, consumerID, accountantID, proposal)
 	}
 	if err != nil {
-		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
+		manager.sendSessionStatus(dialog, channel, consumerID, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
 	err = manager.launchPayments(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
 	if err != nil {
-		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
+		manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
 	}
 
@@ -230,7 +233,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		}
 
 		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
-			return manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+			return manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
 		})
 		manager.publishStateEvent(StateConnectionFailed)
 
@@ -239,7 +242,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	go manager.checkSessionIP(dialog, sessionDTO.ID, originalPublicIP)
+	go manager.checkSessionIP(dialog, channel, consumerID, sessionDTO.ID, originalPublicIP)
 
 	go func() {
 		<-manager.ipCheckParams.Done
@@ -250,7 +253,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
-func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, originalPublicIP string) {
+func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
 	defer func() {
 		// Notify that check is done.
 		manager.ipCheckParams.Done <- struct{}{}
@@ -266,13 +269,13 @@ func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, se
 
 		// If ip is changed notify peer that connection is successful.
 		if originalPublicIP != newPublicIP {
-			manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
+			manager.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusConnectionOk, nil)
 			return
 		}
 
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
 		if i == manager.ipCheckParams.MaxAttempts {
-			manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
+			manager.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
 			manager.publishStateEvent(StateIPNotChanged)
 			return
 		}
@@ -282,16 +285,35 @@ func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, se
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
-func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
+func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
 	var errDetailsMsg string
 	if errDetails != nil {
 		errDetailsMsg = errDetails.Error()
 	}
-	return manager.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
+
+	if channel == nil {
+		return manager.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
+			SessionID:  string(sessionID),
+			StatusCode: code,
+			Message:    errDetailsMsg,
+		})
+	}
+
+	sessionStatus := &pb.SessionStatus{
+		ConsumerID: consumerID.Address,
 		SessionID:  string(sessionID),
-		StatusCode: code,
+		Code:       uint32(code),
 		Message:    errDetailsMsg,
-	})
+	}
+
+	log.Debug().Msgf("Sending session status P2P message to %q: %s", p2p.TopicSessionStatus, sessionStatus.String())
+
+	_, err := channel.Send(p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
+	if err != nil {
+		return fmt.Errorf("could not send p2p session status message: %w", err)
+	}
+
+	return nil
 }
 
 func (manager *connectionManager) getPublicIP() string {

@@ -20,11 +20,13 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/rs/zerolog/log"
 )
 
@@ -76,6 +78,27 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		})
 
 		return c.OkWithReply(pc)
+	})
+}
+
+func subscribeSessionStatus(mng *session.Manager, ch p2p.Channel, statusStorage connectivity.StatusStorage) {
+	ch.Handle(p2p.TopicSessionStatus, func(c p2p.Context) error {
+		var ss pb.SessionStatus
+		if err := c.Request().UnmarshalProto(&ss); err != nil {
+			return err
+		}
+		log.Debug().Msgf("Received P2P session status message for %q: %s", p2p.TopicSessionStatus, ss.String())
+
+		entry := connectivity.StatusEntry{
+			PeerID:       identity.FromAddress(ss.GetConsumerID()),
+			StatusCode:   connectivity.StatusCode(ss.GetCode()),
+			SessionID:    ss.GetSessionID(),
+			Message:      ss.GetMessage(),
+			CreatedAtUTC: time.Now().UTC(),
+		}
+		statusStorage.AddStatusEntry(entry)
+
+		return c.OK()
 	})
 }
 

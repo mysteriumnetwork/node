@@ -316,6 +316,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		di.PolicyOracle,
 		di.P2PListener,
 		newP2PSessionHandler,
+		di.SessionConnectivityStatusStorage,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}

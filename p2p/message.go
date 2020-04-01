@@ -41,6 +41,8 @@ const (
 	TopicSessionCreate = "p2p-session-create"
 	// TopicSessionAcknowledge is a session acknowledge endpoint for p2p communication.
 	TopicSessionAcknowledge = "p2p-session-acknowledge"
+	// TopicSessionStatus is a session status notification for p2p communication.
+	TopicSessionStatus = "p2p-session-connectivity-status"
 	// TopicSessionDestroy is a session destroy endpoint for p2p communication.
 	TopicSessionDestroy = "p2p-session-destroy"
 
