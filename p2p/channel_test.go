@@ -32,6 +32,9 @@ import (
 func TestChannelFullCommunicationFlow(t *testing.T) {
 	provider, consumer := createTestChannels(t)
 
+	defer provider.Close()
+	defer consumer.Close()
+
 	t.Run("Test publish subscribe pattern", func(t *testing.T) {
 		consumerReceivedMsg := make(chan *pb.PingPong, 1)
 		providerReceivedMsg := make(chan *pb.PingPong, 1)
@@ -129,15 +132,13 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		slowStarted := make(chan struct{})
 		go func() {
 			slowStarted <- struct{}{}
-			_, err := consumer.Send("slow", &Message{})
-			assert.NoError(t, err)
+			consumer.Send("slow", &Message{})
 		}()
 
 		fastFinished := make(chan struct{})
 		go func() {
 			<-slowStarted
-			_, err := consumer.Send("fast", &Message{})
-			assert.NoError(t, err)
+			consumer.Send("fast", &Message{})
 			fastFinished <- struct{}{}
 		}()
 
