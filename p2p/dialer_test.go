@@ -27,8 +27,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDialerExchangeAndCommunication(t *testing.T) {
@@ -53,6 +55,8 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	defer brokerConn.Close()
 	mockBroker := &mockBroker{conn: brokerConn}
 
+	mockPortPool := &mockPortPool{}
+
 	ports := acquirePorts(t, 2)
 	providerPort := ports[0]
 	consumerPort := ports[1]
@@ -65,24 +69,29 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
+	providerChannelReady := make(chan struct{}, 1)
 	t.Run("Test provider listens to peer", func(t *testing.T) {
-		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger)
+		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, mockPortPool)
 		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
 			})
+			providerChannelReady <- struct{}{}
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
-		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger)
+		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, mockPortPool)
 
 		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
-		assert.NoError(t, err)
+		require.NoError(t, err)
+
+		// TODO: This should be removed and fixed with https://github.com/mysteriumnetwork/node/issues/1987
+		<-providerChannelReady
 
 		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "pong", string(res.Data))
 	})
 }
@@ -109,4 +118,18 @@ type mockBroker struct {
 
 func (m *mockBroker) Connect(serverURIs ...string) (nats.Connection, error) {
 	return m.conn, nil
+}
+
+type mockPortPool struct {
+}
+
+func (m mockPortPool) Acquire() (port.Port, error) {
+	return port.Port(0), nil
+}
+
+func (m mockPortPool) AcquireMultiple(n int) (ports []port.Port, err error) {
+	for i := 0; i < n; i++ {
+		ports = append(ports, port.Port(i))
+	}
+	return
 }

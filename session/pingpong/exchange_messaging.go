@@ -36,11 +36,11 @@ const messageEndpointExchange = communication.MessageEndpoint(endpointExchange)
 // ExchangeSender is responsible for sending the exchange messages.
 type ExchangeSender struct {
 	sender communication.Sender
-	ch     p2p.Channel
+	ch     p2p.ChannelSender
 }
 
 // NewExchangeSender returns a new instance of exchange message sender.
-func NewExchangeSender(sender communication.Sender, ch p2p.Channel) *ExchangeSender {
+func NewExchangeSender(sender communication.Sender, ch p2p.ChannelSender) *ExchangeSender {
 	return &ExchangeSender{
 		ch:     ch,
 		sender: sender,

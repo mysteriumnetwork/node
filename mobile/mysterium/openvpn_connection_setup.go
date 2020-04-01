@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -161,18 +162,25 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 		}
 
 		if sessionConfig.LocalPort == 0 {
-			port, err := port.NewPool().Acquire()
+			lport, err := port.NewPool().Acquire()
 			if err != nil {
 				return errors.Wrap(err, "failed to acquire free port")
 			}
 
-			sessionConfig.LocalPort = port.Num()
+			sessionConfig.LocalPort = lport.Num()
 		}
 
 		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
 
-		ip := sessionConfig.RemoteIP
-		_, _, err := c.natPinger.PingProvider(ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
+		// Exclude p2p channel traffic from VPN tunnel.
+		channelSocket, err := peekLookAtSocketFd4From(options.ChannelConn)
+		if err != nil {
+			return fmt.Errorf("could not get channel socket: %w", err)
+		}
+		c.tunnelSetup.SocketProtect(channelSocket)
+
+		remoteIP := sessionConfig.RemoteIP
+		_, _, err = c.natPinger.PingProvider(remoteIP, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}

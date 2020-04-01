@@ -50,21 +50,25 @@ func init() {
 }
 
 var (
-	proposalFirst = market.ServiceProposal{
-		ProviderID:        "0x1",
-		ServiceType:       "mock_service",
-		ServiceDefinition: mockServiceDefinition{},
-		PaymentMethodType: "mock_payment",
-		PaymentMethod:     mockPaymentMethod{},
-		ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
+	proposalFirst = func() market.ServiceProposal {
+		return market.ServiceProposal{
+			ProviderID:        "0x1",
+			ServiceType:       "mock_service",
+			ServiceDefinition: mockServiceDefinition{},
+			PaymentMethodType: "mock_payment",
+			PaymentMethod:     mockPaymentMethod{},
+			ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
+		}
 	}
-	proposalSecond = market.ServiceProposal{
-		ProviderID:        "0x2",
-		ServiceType:       "mock_service",
-		ServiceDefinition: mockServiceDefinition{},
-		PaymentMethodType: "mock_payment",
-		PaymentMethod:     mockPaymentMethod{},
-		ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
+	proposalSecond = func() market.ServiceProposal {
+		return market.ServiceProposal{
+			ProviderID:        "0x2",
+			ServiceType:       "mock_service",
+			ServiceDefinition: mockServiceDefinition{},
+			PaymentMethodType: "mock_payment",
+			PaymentMethod:     mockPaymentMethod{},
+			ProviderContacts:  []market.Contact{market.Contact{Type: "mock_contact", Definition: mockContact{}}},
+		}
 	}
 )
 
@@ -82,7 +86,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst()}, repo.storage.Proposals())
 }
 
 func Test_Subscriber_SkipUnsupportedProposal(t *testing.T) {
@@ -136,7 +140,9 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
-	assert.Exactly(t, []market.ServiceProposal{proposalFirst}, repo.storage.Proposals())
+	expected := []market.ServiceProposal{proposalFirst()}
+	actual := repo.storage.Proposals()
+	assert.Exactly(t, expected, actual)
 }
 
 func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
@@ -144,7 +150,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	defer connection.Close()
 
 	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Millisecond)
-	repo.storage.AddProposal(proposalFirst, proposalSecond)
+	repo.storage.AddProposal(proposalFirst(), proposalSecond())
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
@@ -154,7 +160,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	}`)
 
 	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
-	assert.Exactly(t, []market.ServiceProposal{proposalSecond}, repo.storage.Proposals())
+	assert.Exactly(t, []market.ServiceProposal{proposalSecond()}, repo.storage.Proposals())
 }
 
 func proposalRegister(connection nats.Connection, payload string) {

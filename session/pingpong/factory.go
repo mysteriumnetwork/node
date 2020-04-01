@@ -137,7 +137,7 @@ func InvoiceFactoryCreator(
 	}
 }
 
-func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.Channel) (chan crypto.ExchangeMessage, error) {
+func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
 	exchangeChan := make(chan crypto.ExchangeMessage, 1)
 
 	if channel == nil { // TODO this block should go away once p2p communication will replace communication dialog.
@@ -224,7 +224,7 @@ func ExchangeFactoryFunc(
 	}
 }
 
-func invoiceReceiver(dialog communication.Dialog, channel p2p.Channel) (chan crypto.Invoice, error) {
+func invoiceReceiver(dialog communication.Dialog, channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
 	invoices := make(chan crypto.Invoice)
 	if channel == nil { // TODO this block should go away once p2p communication will replace communication dialog.
 		listener := NewInvoiceListener(invoices)

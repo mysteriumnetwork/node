@@ -35,12 +35,12 @@ const invoiceMessageEndpoint = communication.MessageEndpoint(invoiceEndpoint)
 
 // InvoiceSender is responsible for sending the invoice messages.
 type InvoiceSender struct {
-	ch     p2p.Channel
+	ch     p2p.ChannelSender
 	sender communication.Sender
 }
 
 // NewInvoiceSender returns a new instance of the invoice sender.
-func NewInvoiceSender(sender communication.Sender, ch p2p.Channel) *InvoiceSender {
+func NewInvoiceSender(sender communication.Sender, ch p2p.ChannelSender) *InvoiceSender {
 	return &InvoiceSender{
 		ch:     ch,
 		sender: sender,

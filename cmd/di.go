@@ -44,6 +44,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
@@ -138,6 +139,7 @@ type Dependencies struct {
 	NATPinger      traversal.NATPinger
 	NATTracker     *event.Tracker
 	NATEventSender *event.Sender
+	PortPool       *port.Pool
 
 	BandwidthTracker *bandwidth.Tracker
 
@@ -219,8 +221,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger)
+	di.PortPool = port.NewPool()
+	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {

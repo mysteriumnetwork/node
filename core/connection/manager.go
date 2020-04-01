@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
@@ -205,10 +204,8 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	var paymentInfo session.PaymentInfo
 	var sessionDTO session.SessionDto
-	var transport *net.UDPConn
 
 	if channel != nil {
-		transport = channel.ServiceConn()
 		sessionDTO, paymentInfo, err = manager.createP2PSession(connection, channel, consumerID, accountantID, proposal)
 	} else {
 		sessionDTO, paymentInfo, err = manager.createSession(connection, dialog, consumerID, accountantID, proposal)
@@ -226,7 +223,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, transport)
+	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, channel)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -285,7 +282,7 @@ func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, ch
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
-func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
+func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, channel p2p.ChannelSender, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
 	var errDetailsMsg string
 	if errDetails != nil {
 		errDetailsMsg = errDetails.Error()
@@ -395,7 +392,7 @@ func (manager *connectionManager) createP2PChannel(consumerID, providerID identi
 	return channel
 }
 
-func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.Channel, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not get session config: %w", err)
@@ -533,16 +530,20 @@ func (manager *connectionManager) startConnection(
 	proposal market.ServiceProposal,
 	params ConnectParams,
 	sessionDTO session.SessionDto,
-	providerNATConn *net.UDPConn,
+	channel p2p.Channel,
 ) (err error) {
 	connectOptions := ConnectOptions{
-		SessionID:       sessionDTO.ID,
-		SessionConfig:   sessionDTO.Config,
-		DNS:             params.DNS,
-		ConsumerID:      consumerID,
-		ProviderID:      identity.FromAddress(proposal.ProviderID),
-		Proposal:        proposal,
-		ProviderNATConn: providerNATConn,
+		SessionID:     sessionDTO.ID,
+		SessionConfig: sessionDTO.Config,
+		DNS:           params.DNS,
+		ConsumerID:    consumerID,
+		ProviderID:    identity.FromAddress(proposal.ProviderID),
+		Proposal:      proposal,
+	}
+
+	if channel != nil {
+		connectOptions.ProviderNATConn = channel.ServiceConn()
+		connectOptions.ChannelConn = channel.Conn()
 	}
 
 	if err = conn.Start(connectOptions); err != nil {

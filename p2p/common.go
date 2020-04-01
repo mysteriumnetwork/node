@@ -56,7 +56,7 @@ func configExchangeACKSubject(providerID identity.Identity, serviceType string) 
 	return fmt.Sprintf("%s.%s.p2p-config-exchange-ack", providerID.Address, serviceType)
 }
 
-func acquireLocalPorts(portPool *port.Pool) ([]int, error) {
+func acquireLocalPorts(portPool port.ServicePortSupplier) ([]int, error) {
 	ports, err := portPool.AcquireMultiple(pingMaxPorts)
 	if err != nil {
 		return nil, err

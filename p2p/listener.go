@@ -40,7 +40,7 @@ type Listener interface {
 }
 
 // NewListener creates new p2p communication listener which is used on provider side.
-func NewListener(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger) Listener {
+func NewListener(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier) Listener {
 	return &listener{
 		broker:         broker,
 		brokerAddress:  address,
@@ -48,14 +48,14 @@ func NewListener(broker brokerConnector, address string, signer identity.SignerF
 		ipResolver:     ipResolver,
 		signer:         signer,
 		verifier:       verifier,
-		portPool:       port.NewPool(),
+		portPool:       portPool,
 		providerPinger: providerPinger,
 	}
 }
 
 // listener implements Listener interface.
 type listener struct {
-	portPool       *port.Pool
+	portPool       port.ServicePortSupplier
 	broker         brokerConnector
 	providerPinger natProviderPinger
 	signer         identity.SignerFactory

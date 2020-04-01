@@ -42,4 +42,5 @@ type ConnectOptions struct {
 	DNS             DNSOption
 	SessionConfig   []byte
 	ProviderNATConn *net.UDPConn
+	ChannelConn     *net.UDPConn
 }
