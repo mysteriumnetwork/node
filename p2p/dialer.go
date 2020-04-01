@@ -39,21 +39,21 @@ type Dialer interface {
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
-func NewDialer(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger) Dialer {
+func NewDialer(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) Dialer {
 	return &dialer{
 		broker:         broker,
 		brokerAddress:  address,
 		ipResolver:     ipResolver,
 		signer:         signer,
 		verifier:       verifier,
-		portPool:       port.NewPool(),
+		portPool:       portPool,
 		consumerPinger: consumerPinger,
 	}
 }
 
 // dialer implements Dialer interface.
 type dialer struct {
-	portPool       *port.Pool
+	portPool       port.ServicePortSupplier
 	broker         brokerConnector
 	consumerPinger natConsumerPinger
 	signer         identity.SignerFactory
