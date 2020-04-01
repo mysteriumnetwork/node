@@ -50,6 +50,7 @@ type testContext struct {
 	ipCheckParams         IPCheckParams
 	statusSender          *mockStatusSender
 	statsReportInterval   time.Duration
+	mockP2P               *mockP2PDialer
 	sync.RWMutex
 }
 
@@ -121,6 +122,8 @@ func (tc *testContext) SetupTest() {
 	brokerConn := nats.StartConnectionMock()
 	brokerConn.MockResponse("fake-node-1.p2p-config-exchange", []byte("123"))
 
+	tc.mockP2P = &mockP2PDialer{&mockP2PChannel{}}
+
 	tc.connManager = NewManager(
 		dialogCreator,
 		func(paymentInfo session.PaymentInfo,
@@ -140,7 +143,7 @@ func (tc *testContext) SetupTest() {
 		tc.ipCheckParams,
 		tc.statsReportInterval,
 		&mockValidator{},
-		&mockP2PDialer{},
+		tc.mockP2P,
 	)
 }
 
@@ -427,8 +430,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 		StatusCode: connectivity.StatusSessionIPNotChanged,
 		Message:    "",
 	}
-	assert.NotNil(tc.T(), tc.statusSender.sentMsg)
-	assert.Equal(tc.T(), &expectedStatusMsg, tc.statusSender.sentMsg)
+	assert.Equal(tc.T(), expectedStatusMsg, tc.mockP2P.ch.getSentMsg())
 }
 
 func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
@@ -463,8 +465,9 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 		Message:    "",
 	}
 
-	assert.Equal(tc.T(), expectedStatusMsg, tc.statusSender.getSentMsg())
+	assert.Equal(tc.T(), expectedStatusMsg, tc.mockP2P.ch.getSentMsg())
 }
+
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(testContext))
 }
@@ -553,33 +556,62 @@ func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 }
 
 type mockP2PDialer struct {
+	ch *mockP2PChannel
 }
 
 func (m mockP2PDialer) Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (p2p.Channel, error) {
-	return &mockP2PChannel{}, nil
+	return m.ch, nil
 }
 
 type mockP2PChannel struct {
+	status connectivity.StatusMessage
+	lock   sync.Mutex
 }
 
-func (m mockP2PChannel) Send(topic string, msg *p2p.Message) (*p2p.Message, error) {
-	res := &pb.SessionResponse{
-		ID:          string(establishedSessionID),
-		PaymentInfo: string(paymentInfo.Supports),
+func (m *mockP2PChannel) getSentMsg() connectivity.StatusMessage {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	return m.status
+}
+
+func (m *mockP2PChannel) Send(topic string, msg *p2p.Message) (*p2p.Message, error) {
+	switch topic {
+	case p2p.TopicSessionCreate:
+		res := &pb.SessionResponse{
+			ID:          string(establishedSessionID),
+			PaymentInfo: string(paymentInfo.Supports),
+		}
+		return p2p.ProtoMessage(res), nil
+	case p2p.TopicSessionStatus:
+		var res pb.SessionStatus
+		msg.UnmarshalProto(&res)
+
+		m.lock.Lock()
+		m.status = connectivity.StatusMessage{
+			SessionID:  res.GetSessionID(),
+			StatusCode: connectivity.StatusCode(res.GetCode()),
+			Message:    res.GetMessage(),
+		}
+		m.lock.Unlock()
+
+		return p2p.ProtoMessage(&res), nil
+	case p2p.TopicSessionAcknowledge:
+		return nil, nil
 	}
-	return p2p.ProtoMessage(res), nil
+
+	return nil, errors.New("unexpected error")
 }
 
-func (m mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
+func (m *mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
 }
 
-func (m mockP2PChannel) ServiceConn() *net.UDPConn {
+func (m *mockP2PChannel) ServiceConn() *net.UDPConn {
 	raddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12345")
 	conn, _ := net.DialUDP("udp", nil, raddr)
 	return conn
 }
 
-func (m mockP2PChannel) Close() error {
+func (m *mockP2PChannel) Close() error {
 	return nil
 }
 

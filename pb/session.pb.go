@@ -269,6 +269,77 @@ func (x *ConsumerInfo) GetPaymentVersion() string {
 	return ""
 }
 
+type SessionStatus struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ConsumerID string `protobuf:"bytes,1,opt,name=ConsumerID,proto3" json:"ConsumerID,omitempty"`
+	SessionID  string `protobuf:"bytes,2,opt,name=SessionID,proto3" json:"SessionID,omitempty"`
+	Code       uint32 `protobuf:"varint,3,opt,name=Code,proto3" json:"Code,omitempty"`
+	Message    string `protobuf:"bytes,4,opt,name=Message,proto3" json:"Message,omitempty"`
+}
+
+func (x *SessionStatus) Reset() {
+	*x = SessionStatus{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pb_session_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SessionStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionStatus) ProtoMessage() {}
+
+func (x *SessionStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_session_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionStatus.ProtoReflect.Descriptor instead.
+func (*SessionStatus) Descriptor() ([]byte, []int) {
+	return file_pb_session_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SessionStatus) GetConsumerID() string {
+	if x != nil {
+		return x.ConsumerID
+	}
+	return ""
+}
+
+func (x *SessionStatus) GetSessionID() string {
+	if x != nil {
+		return x.SessionID
+	}
+	return ""
+}
+
+func (x *SessionStatus) GetCode() uint32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *SessionStatus) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_pb_session_proto protoreflect.FileDescriptor
 
 var file_pb_session_proto_rawDesc = []byte{
@@ -298,8 +369,16 @@ var file_pb_session_proto_rawDesc = []byte{
 	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x61, 0x6e, 0x74, 0x49, 0x44, 0x12, 0x26, 0x0a, 0x0e,
 	0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x56, 0x65, 0x72,
-	0x73, 0x69, 0x6f, 0x6e, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x69, 0x6f, 0x6e, 0x22, 0x7b, 0x0a, 0x0d, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x53,
+	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x43, 0x6f, 0x6e, 0x73, 0x75, 0x6d, 0x65,
+	0x72, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x43, 0x6f, 0x6e, 0x73, 0x75,
+	0x6d, 0x65, 0x72, 0x49, 0x44, 0x12, 0x1c, 0x0a, 0x09, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e,
+	0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f,
+	0x6e, 0x49, 0x44, 0x12, 0x12, 0x0a, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0d, 0x52, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x4d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x42, 0x06, 0x5a, 0x04, 0x2e, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -314,12 +393,13 @@ func file_pb_session_proto_rawDescGZIP() []byte {
 	return file_pb_session_proto_rawDescData
 }
 
-var file_pb_session_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_pb_session_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_pb_session_proto_goTypes = []interface{}{
 	(*SessionRequest)(nil),  // 0: pb.SessionRequest
 	(*SessionResponse)(nil), // 1: pb.SessionResponse
 	(*SessionInfo)(nil),     // 2: pb.SessionInfo
 	(*ConsumerInfo)(nil),    // 3: pb.ConsumerInfo
+	(*SessionStatus)(nil),   // 4: pb.SessionStatus
 }
 var file_pb_session_proto_depIdxs = []int32{
 	3, // 0: pb.SessionRequest.consumer:type_name -> pb.ConsumerInfo
@@ -384,6 +464,18 @@ func file_pb_session_proto_init() {
 				return nil
 			}
 		}
+		file_pb_session_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SessionStatus); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -391,7 +483,7 @@ func file_pb_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_pb_session_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -77,6 +78,7 @@ func NewManager(
 	policyOracle *policy.Oracle,
 	p2pListener p2p.Listener,
 	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager,
+	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -88,6 +90,7 @@ func NewManager(
 		policyOracle:         policyOracle,
 		p2pManager:           p2pListener,
 		sessionManager:       sessionManager,
+		statusStorage:        statusStorage,
 	}
 }
 
@@ -105,6 +108,7 @@ type Manager struct {
 
 	p2pManager     p2p.Listener
 	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
+	statusStorage  connectivity.StatusStorage
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -148,6 +152,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	err = manager.p2pManager.Listen(providerID, serviceType, func(ch p2p.Channel) {
 		mng := manager.sessionManager(proposal, string(id), ch)
 		subscribeSessionCreate(mng, ch, service, id)
+		subscribeSessionStatus(mng, ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch)
 	})
