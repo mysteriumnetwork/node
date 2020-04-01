@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package identity
 
 import (
@@ -12,22 +29,19 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// type ks interface {
-// 	SignHash(a accounts.Account, hash []byte) ([]byte, error)
-// }
-
 type mockKeystore struct {
 	keys map[common.Address]MockKey
 	lock sync.Mutex
 }
 
-var mockKeys map[common.Address]MockKey = map[common.Address]MockKey{
+var mockKeys = map[common.Address]MockKey{
 	common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"): MockKey{
 		PkHex: "6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657",
 		Pass:  "",
 	},
 }
 
+// NewMockKeystore returns a new mock keystore
 func NewMockKeystore(keys map[common.Address]MockKey) *mockKeystore {
 	copied := make(map[common.Address]MockKey)
 	for key, value := range keys {
@@ -38,6 +52,7 @@ func NewMockKeystore(keys map[common.Address]MockKey) *mockKeystore {
 	}
 }
 
+// MockKey represents a mocked key
 type MockKey struct {
 	PkHex      string
 	Pass       string
