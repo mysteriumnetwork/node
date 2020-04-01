@@ -31,12 +31,22 @@ import (
 	"golang.org/x/crypto/nacl/box"
 )
 
-// Channel represents p2p communication channel which can send and receive messages over encrypted and reliable UDP transport.
-type Channel interface {
+// ChannelSender is used to send messages.
+type ChannelSender interface {
 	// Send sends message to given topic. Peer listening to topic will receive message.
 	Send(topic string, msg *Message) (*Message, error)
+}
+
+// ChannelHandler is used to handle messages.
+type ChannelHandler interface {
 	// Handle registers handler for given topic which handles peer request.
 	Handle(topic string, handler HandlerFunc)
+}
+
+// Channel represents p2p communication channel which can send and receive messages over encrypted and reliable UDP transport.
+type Channel interface {
+	ChannelSender
+	ChannelHandler
 	// ServiceConn returns UDP connection which can be used for services.
 	ServiceConn() *net.UDPConn
 	// Close closes p2p communication channel.
