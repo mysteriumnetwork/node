@@ -455,14 +455,10 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
-			identityStatus, err := c.tequilapi.Identity(status.ConsumerID)
-			if err != nil {
-				warn(err)
-			}
-			info("Balance:", identityStatus.Balance)
 			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)
+			info("Spent:", statistics.TokensSpent)
 		}
 	}
 }

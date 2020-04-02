@@ -65,6 +65,8 @@ type ConsumerConnectionStatistics struct {
 	Duration      int    `json:"duration"`
 	BytesSent     uint64 `json:"bytes_sent"`
 	BytesReceived uint64 `json:"bytes_received"`
+	// example: 500000
+	TokensSpent uint64 `json:"tokens_spent"`
 }
 
 // NATStatus stores the nat status related information

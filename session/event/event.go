@@ -17,7 +17,9 @@
 
 package event
 
-import "github.com/mysteriumnetwork/node/identity"
+import (
+	"github.com/mysteriumnetwork/node/identity"
+)
 
 const (
 	// AppTopicSession represents the session change topic.
@@ -36,9 +38,9 @@ type AppEventDataTransferred struct {
 
 // AppEventSessionTokensEarned is an update on tokens earned during current session
 type AppEventSessionTokensEarned struct {
-	Consumer    identity.Identity
-	ServiceType string
-	Total       uint64
+	ProviderID identity.Identity
+	SessionID  string
+	Total      uint64
 }
 
 // Action represents the different actions that might happen on a session

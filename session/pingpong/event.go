@@ -115,6 +115,16 @@ func (ss SettlementState) needsSettling(threshold float64) bool {
 	return false
 }
 
+// AppTopicInvoicePaid is a topic for publish events exchange message send to provider as a consumer.
+const AppTopicInvoicePaid = "invoice_paid"
+
+// AppEventInvoicePaid is an update on paid invoices during current session
+type AppEventInvoicePaid struct {
+	ConsumerID identity.Identity
+	SessionID  string
+	Invoice    crypto.Invoice
+}
+
 // AppTopicGrandTotalChanged represents a topic to which we send grand total change messages.
 const AppTopicGrandTotalChanged = "consumer_grand_total_change"
 

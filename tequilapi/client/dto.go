@@ -43,6 +43,7 @@ type StatisticsDTO struct {
 	BytesSent     uint64 `json:"bytes_sent"`
 	BytesReceived uint64 `json:"bytes_received"`
 	Duration      int    `json:"duration"`
+	TokensSpent   uint64 `json:"tokens_spent"`
 }
 
 // ProposalList describes list of proposals

@@ -19,7 +19,6 @@ package session
 
 import (
 	"github.com/mysteriumnetwork/node/session/event"
-	"github.com/rs/zerolog/log"
 )
 
 type eventPublisher interface {
@@ -74,17 +73,9 @@ func (ebs *EventBasedStorage) consumeDataTransferredEvent(e event.AppEventDataTr
 }
 
 func (ebs *EventBasedStorage) consumeTokensEarnedEvent(e event.AppEventSessionTokensEarned) {
-	sessionID, ok := ebs.storage.FindBy(FindOpts{
-		Peer:        &e.Consumer,
-		ServiceType: e.ServiceType,
-	})
-	if !ok {
-		log.Warn().Msgf("Could not update tokens earned because session was not found: %+v", e)
-		return
-	}
-	ebs.storage.UpdateEarnings(sessionID, e.Total)
+	ebs.storage.UpdateEarnings(ID(e.SessionID), e.Total)
 	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
-		ID:     string(sessionID),
+		ID:     e.SessionID,
 		Action: event.Updated,
 	})
 }

@@ -35,8 +35,7 @@ var ErrSessionNotStarted = errors.New("session not started")
 
 // StatsTracker allows for retrieval and resetting of statistics
 type StatsTracker interface {
-	Retrieve() connection.Statistics
-	Reset()
+	GetDataStats() connection.Statistics
 }
 
 // Reporter defines method for sending stats outside
@@ -100,8 +99,6 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 				} else {
 					log.Debug().Msg("Final stats sent")
 				}
-				// reset the stats in preparation for a new session
-				sr.statisticsTracker.Reset()
 				return
 			case <-time.After(sr.sendInterval):
 				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
@@ -132,13 +129,13 @@ func (sr *SessionStatisticsReporter) stop() {
 }
 
 func (sr *SessionStatisticsReporter) send(serviceType, providerID, country string, sessionID session.ID, signer identity.Signer) error {
-	sessionStats := sr.statisticsTracker.Retrieve()
+	dataStats := sr.statisticsTracker.GetDataStats()
 	return sr.remoteReporter.SendSessionStats(
 		sessionID,
 		mysterium.SessionStats{
 			ServiceType:     serviceType,
-			BytesSent:       sessionStats.BytesSent,
-			BytesReceived:   sessionStats.BytesReceived,
+			BytesSent:       dataStats.BytesSent,
+			BytesReceived:   dataStats.BytesReceived,
 			ProviderID:      providerID,
 			ConsumerCountry: country,
 		},
