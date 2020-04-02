@@ -100,7 +100,7 @@ func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 		pingConfig:     pingConfig,
 		stop:           make(chan struct{}),
 		stopNATProxy:   make(chan struct{}),
-		natProxy:       newNATProxy(),
+		natProxy:       NewNATProxy(),
 		eventPublisher: publisher,
 	}
 }
@@ -141,7 +141,7 @@ func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPor
 		consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
 		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
 
-		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
+		p.stopNATProxy = p.natProxy.ConsumerHandOff(consumerAddr, conn)
 	} else {
 		conn.Close()
 	}
@@ -434,7 +434,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) (*net.UDP
 
 // SetProtectSocketCallback sets socket protection callback to be called when new socket is created in consumer NATProxy
 func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
-	p.natProxy.setProtectSocketCallback(socketProtect)
+	p.natProxy.SetProtectSocketCallback(socketProtect)
 }
 
 // Valid returns that this pinger is a valid pinger

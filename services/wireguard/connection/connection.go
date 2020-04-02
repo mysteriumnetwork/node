@@ -121,7 +121,6 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.stateCh <- connection.Connecting
 
 	if options.ProviderNATConn != nil {
-
 		options.ProviderNATConn.Close()
 		config.LocalPort = options.ProviderNATConn.LocalAddr().(*net.UDPAddr).Port
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
