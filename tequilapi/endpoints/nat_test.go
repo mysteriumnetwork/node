@@ -28,16 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockStateProvider struct {
-	stateToReturn stateEvent.State
-}
-
-func (msp *mockStateProvider) Get() stateEvent.State {
-	return msp.stateToReturn
-}
-
 func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
-	provider := mockStateProvider{stateToReturn: stateEvent.State{
+	provider := &mockStateProvider{stateToReturn: stateEvent.State{
 		NATStatus: stateEvent.NATStatus{
 			Status: "something",
 			Error:  "maybe",
@@ -51,7 +43,7 @@ func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 	router := httprouter.New()
-	AddRoutesForNAT(router, provider.Get)
+	AddRoutesForNAT(router, provider)
 
 	router.ServeHTTP(resp, req)
 

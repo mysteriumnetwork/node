@@ -10,6 +10,7 @@ require (
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm v2.1.2+incompatible
+	github.com/awnumar/memguard v0.21.0
 	github.com/aws/aws-sdk-go-v2 v0.15.0
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/cheggaaa/pb/v3 v3.0.1
@@ -23,7 +24,7 @@ require (
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.0-rc.2
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/gateway v1.0.5
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
@@ -37,18 +38,19 @@ require (
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.34
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.36
 	github.com/mysteriumnetwork/go-openvpn v0.0.22
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
-	github.com/mysteriumnetwork/payments v0.0.11-0.20191120103343-ed922e3051db
+	github.com/mysteriumnetwork/payments v0.0.11-0.20200325083835-89ffae399efa
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/nats-server v1.4.1
 	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
-	github.com/onsi/ginkgo v1.10.2 // indirect
+	github.com/onsi/ginkgo v1.11.0 // indirect
+	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
 	github.com/pierrec/lz4 v2.4.1+incompatible // indirect
@@ -64,14 +66,15 @@ require (
 	github.com/stretchr/testify v1.4.1-0.20200130210847-518a1491c713
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	golang.org/x/crypto v0.0.0-20200210222208-86ce3cb69678
+	github.com/xtaci/kcp-go/v5 v5.5.8
+	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
-	golang.zx2c4.com/wireguard v0.0.20191012
-	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20190515223858-5ec88494b814
+	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
+	golang.zx2c4.com/wireguard v0.0.20200121
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/appengine v1.6.5 // indirect
+	google.golang.org/protobuf v1.20.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
-	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 

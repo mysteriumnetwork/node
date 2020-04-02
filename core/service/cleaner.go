@@ -17,6 +17,8 @@
 
 package service
 
+import "github.com/mysteriumnetwork/node/core/service/servicestate"
+
 // Cleaner cleans up when service is stopped
 type Cleaner struct {
 	SessionStorage SessionStorage
@@ -28,8 +30,8 @@ type SessionStorage interface {
 }
 
 // HandleServiceStatus removes sessions of stopped service
-func (cleaner *Cleaner) HandleServiceStatus(event EventPayload) {
-	if event.Status == string(NotRunning) {
+func (cleaner *Cleaner) HandleServiceStatus(event servicestate.AppEventServiceStatus) {
+	if event.Status == string(servicestate.NotRunning) {
 		cleaner.SessionStorage.RemoveForService(event.ID)
 	}
 }

@@ -45,10 +45,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
-	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -67,18 +67,18 @@ import (
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/upnp"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-	"github.com/mysteriumnetwork/node/tequilapi/sse"
 	"github.com/mysteriumnetwork/node/utils"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -104,7 +104,7 @@ type Dependencies struct {
 
 	NATService       nat.NATService
 	Storage          *boltdb.Bolt
-	Keystore         *keystore.KeyStore
+	Keystore         *identity.Keystore
 	IdentityManager  identity.Manager
 	SignerFactory    identity.SignerFactory
 	IdentityRegistry identity_registry.IdentityRegistry
@@ -140,17 +140,20 @@ type Dependencies struct {
 	NATPinger      traversal.NATPinger
 	NATTracker     *event.Tracker
 	NATEventSender *event.Sender
+	PortPool       *port.Pool
 
 	BandwidthTracker *bandwidth.Tracker
 
 	StateKeeper *state.Keeper
 
+	P2PDialer   p2p.Dialer
+	P2PListener p2p.Listener
+
 	Authenticator     *auth.Authenticator
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
-	SSEHandler        *sse.Handler
 	Transactor        *registry.Transactor
-	BCHelper          *pingpong.BlockchainWithRetries
+	BCHelper          *paymentClient.BlockchainWithRetries
 	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
@@ -160,7 +163,9 @@ type Dependencies struct {
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
-	AccountantPromiseSettler *pingpong.AccountantPromiseSettler
+	AccountantPromiseSettler pingpong.AccountantPromiseSettler
+	AccountantCaller         *pingpong.AccountantCaller
+	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 }
 
 // Bootstrap initiates all container dependencies
@@ -187,11 +192,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.bootstrapEventBus()
+
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
-
-	di.bootstrapEventBus()
 
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
@@ -215,17 +220,14 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
-		return err
-	}
-
 	di.bootstrapNATComponents(nodeOptions)
 
-	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
-		return err
-	}
+	di.PortPool = port.NewPool()
+	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
-	if err := di.bootstrapSSEHandler(); err != nil {
+	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
 		return err
 	}
 
@@ -272,19 +274,20 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		lastStageName = mapping.StageName
 	}
 
-	tracker := nat.NewStatusTracker(lastStageName)
-
-	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
-
-	err := di.EventBus.SubscribeAsync(service.AppTopicServiceStatus, di.StateKeeper.ConsumeServiceStateEvent)
-	if err != nil {
-		return err
+	deps := state.KeeperDeps{
+		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
+		Publisher:                 di.EventBus,
+		ServiceLister:             di.ServicesManager,
+		ServiceSessionStorage:     di.ServiceSessionStorage,
+		SessionDurationProvider:   di.StatisticsTracker,
+		IdentityProvider:          di.IdentityManager,
+		IdentityRegistry:          di.IdentityRegistry,
+		IdentityChannelCalculator: di.ChannelAddressCalculator,
+		BalanceProvider:           di.ConsumerBalanceTracker,
+		EarningsProvider:          di.AccountantPromiseSettler,
 	}
-	err = di.EventBus.SubscribeAsync(sessionevent.AppTopicSession, di.StateKeeper.ConsumeSessionStateEvent)
-	if err != nil {
-		return err
-	}
-	return di.EventBus.SubscribeAsync(event.AppTopicTraversal, di.StateKeeper.ConsumeNATEvent)
+	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
+	return di.StateKeeper.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -306,17 +309,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnection)
-}
-
-// bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
-func (di *Dependencies) bootstrapSSEHandler() error {
-	di.SSEHandler = sse.NewHandler(di.StateKeeper)
-	err := di.EventBus.Subscribe(nodevent.AppTopicNode, di.SSEHandler.ConsumeNodeEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(statevent.AppTopicState, di.SSEHandler.ConsumeStateEvent)
-	return err
 }
 
 // Shutdown stops container
@@ -391,7 +383,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
-	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage)
+	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	return nil
 }
@@ -468,16 +460,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		time.Minute,
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
-	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
-
-	channelImplementation := nodeOptions.Transactor.ChannelImplementation
 
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
 		nodeOptions.Accountant.AccountantID,
-		channelImplementation,
+		nodeOptions.Transactor.ChannelImplementation,
 		di.SignerFactory,
 		di.EventBus,
 	)
@@ -490,17 +479,20 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	consumerDataGetter := pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress).GetConsumerData
+	di.ChannelAddressCalculator = pingpong.NewChannelAddressCalculator(
+		nodeOptions.Accountant.AccountantID,
+		nodeOptions.Transactor.ChannelImplementation,
+		nodeOptions.Transactor.RegistryAddress,
+	)
+
+	di.AccountantCaller = pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
+		common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
-		pingpong.NewChannelAddressCalculator(
-			nodeOptions.Accountant.AccountantID,
-			nodeOptions.Transactor.ChannelImplementation,
-			nodeOptions.Transactor.RegistryAddress,
-		),
-		consumerDataGetter,
+		di.ChannelAddressCalculator,
+		di.ConsumerTotalsStorage,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -513,13 +505,12 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		dialogFactory,
 		pingpong.ExchangeFactoryFunc(
 			di.Keystore,
-			nodeOptions,
 			di.SignerFactory,
 			di.ConsumerTotalsStorage,
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 			di.EventBus,
-			consumerDataGetter,
+			di.AccountantCaller.GetConsumerData,
 			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
 		),
 		di.ConnectionRegistry.CreateConnection,
@@ -528,7 +519,11 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.IPResolver,
 		connection.DefaultIPCheckParams(),
 		connection.DefaultStatsReportInterval,
-		di.ConsumerBalanceTracker.GetBalance,
+		connection.NewValidator(
+			di.ConsumerBalanceTracker,
+			di.IdentityManager,
+		),
+		di.P2PDialer,
 	)
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
@@ -538,21 +533,28 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 	di.Reporter = reporter
 
-	tequilapiHTTPServer := di.bootstrapTequilapi(nodeOptions, tequilaListener, channelImplementation)
+	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
+		return err
+	}
+
+	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
+	if err != nil {
+		return err
+	}
 
 	di.Node = node.NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
 	return nil
 }
 
-func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener, channelImplementation string) tequilapi.APIServer {
+func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener net.Listener) (tequilapi.APIServer, error) {
 	if !nodeOptions.TequilapiEnabled {
-		return tequilapi.NewNoopAPIServer()
+		return tequilapi.NewNoopAPIServer(), nil
 	}
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, nodeOptions.Transactor.RegistryAddress, channelImplementation, di.ConsumerBalanceTracker.GetBalance)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -561,20 +563,21 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, services.SharedConfiguredOptions().AccessPolicyAddress)
-	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
-	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
+	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
-	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
+	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
+		return nil, err
+	}
 
 	if config.GetBool(config.FlagPProfEnable) {
 		tequilapi_endpoints.AddRoutesForPProf(router)
 	}
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
-	return tequilapi.NewServer(listener, router, corsPolicy)
+	return tequilapi.NewServer(listener, router, corsPolicy), nil
 }
 
 func newSessionManagerFactory(
@@ -583,18 +586,19 @@ func newSessionManagerFactory(
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
 	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
-	natPingerChan func(traversal.Params),
+	natPingerChan traversal.NATPinger,
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
-	bcHelper *pingpong.BlockchainWithRetries,
+	bcHelper *paymentClient.BlockchainWithRetries,
 	transactor *registry.Transactor,
-	settler *pingpong.AccountantPromiseSettler,
+	settler pingpong.AccountantPromiseSettler,
 	httpClient *requests.HTTPClient,
+	keystore *identity.Keystore,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
-			dialog, pingpong.InvoiceSendPeriod,
+			dialog, nil, pingpong.InvoiceSendPeriod,
 			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
 			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
@@ -608,6 +612,7 @@ func newSessionManagerFactory(
 			transactor,
 			proposal,
 			settler.ForceSettle,
+			keystore,
 		)
 		return session.NewManager(
 			proposal,
@@ -683,8 +688,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	bc := pingpong.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
-	di.BCHelper = pingpong.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
+	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
+	di.BCHelper = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {
@@ -699,7 +704,16 @@ func (di *Dependencies) bootstrapEventBus() {
 }
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
-	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, options.Keystore.UseLightweight)
+	var ks *keystore.KeyStore
+	if options.Keystore.UseLightweight {
+		log.Debug().Msg("Using lightweight keystore")
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	} else {
+		log.Debug().Msg("Using heavyweight keystore")
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.LightScryptN, keystore.LightScryptP)
+	}
+
+	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks, keystore.DecryptKey)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
@@ -833,7 +847,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 		return err
 	}
 
-	di.ServiceFirewall = firewall.NewIncomingTrafficFirewall()
+	di.ServiceFirewall = firewall.NewIncomingTrafficFirewall(config.GetBool(config.FlagIncomingFirewall))
 	if err := di.ServiceFirewall.Setup(); err != nil {
 		return err
 	}

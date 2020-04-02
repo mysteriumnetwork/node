@@ -28,8 +28,8 @@ const (
 	AppTopicSessionTokensEarned = "SessionTokensEarned"
 )
 
-// DataTransferEventPayload represents the data transfer event
-type DataTransferEventPayload struct {
+// AppEventDataTransferred represents the data transfer event
+type AppEventDataTransferred struct {
 	ID       string
 	Up, Down uint64
 }

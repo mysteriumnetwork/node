@@ -21,13 +21,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,6 +44,10 @@ const DefaultDebounceDuration = time.Millisecond * 200
 type natStatusProvider interface {
 	Status() nat.Status
 	ConsumeNATEvent(event natEvent.Event)
+}
+
+type sessionDurationProvider interface {
+	GetSessionDuration() time.Duration
 }
 
 type publisher interface {
@@ -51,49 +62,149 @@ type serviceSessionStorage interface {
 	GetAll() []session.Session
 }
 
+type identityProvider interface {
+	GetIdentities() []identity.Identity
+}
+
+type channelAddressCalculator interface {
+	GetChannelAddress(id identity.Identity) (common.Address, error)
+}
+
+type balanceProvider interface {
+	GetBalance(id identity.Identity) uint64
+}
+
+type earningsProvider interface {
+	SettlementState(id identity.Identity) pingpong.SettlementState
+}
+
 // Keeper keeps track of state through eventual consistency.
 // This should become the de-facto place to get your info about node.
 type Keeper struct {
 	state                  *stateEvent.State
 	lock                   sync.RWMutex
-	natStatusProvider      natStatusProvider
-	publisher              publisher
-	serviceLister          serviceLister
-	serviceSessionStorage  serviceSessionStorage
 	sessionConnectionCount map[string]event.ConnectionStatistics
+	deps                   KeeperDeps
 
-	ConsumeServiceStateEvent     func(e interface{})
-	ConsumeNATEvent              func(e interface{})
-	consumeSessionEventDebounced func(e interface{})
-	announceStateChanges         func(e interface{})
+	// provider
+	consumeServiceStateEvent          func(e interface{})
+	consumeNATEvent                   func(e interface{})
+	consumeSessionStateEventDebounced func(e interface{})
+	// consumer
+	consumeConnectionStatisticsEvent func(interface{})
+
+	announceStateChanges func(e interface{})
 }
 
-// NewKeeper returns a new instance of the keeper
-func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, serviceLister serviceLister, serviceSessionStorage serviceSessionStorage, debounceDuration time.Duration) *Keeper {
+// KeeperDeps to construct the state.Keeper.
+type KeeperDeps struct {
+	NATStatusProvider         natStatusProvider
+	Publisher                 publisher
+	ServiceLister             serviceLister
+	ServiceSessionStorage     serviceSessionStorage
+	SessionDurationProvider   sessionDurationProvider
+	IdentityProvider          identityProvider
+	IdentityRegistry          registry.IdentityRegistry
+	IdentityChannelCalculator channelAddressCalculator
+	BalanceProvider           balanceProvider
+	EarningsProvider          earningsProvider
+}
+
+// NewKeeper returns a new instance of the keeper.
+func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
 			NATStatus: stateEvent.NATStatus{
 				Status: "not_finished",
 			},
+			Consumer: stateEvent.ConsumerState{
+				Connection: stateEvent.ConsumerConnection{
+					State: connection.NotConnected,
+				},
+			},
 		},
-		natStatusProvider:     natStatusProvider,
-		publisher:             publisher,
-		serviceLister:         serviceLister,
-		serviceSessionStorage: serviceSessionStorage,
-
+		deps:                   deps,
 		sessionConnectionCount: make(map[string]event.ConnectionStatistics),
 	}
-	k.ConsumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
-	k.ConsumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
-	k.consumeSessionEventDebounced = debounce(k.updateSessionState, debounceDuration)
+	k.state.Identities = k.fetchIdentities()
+
+	// provider
+	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
+	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
+	k.consumeSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
+
+	// consumer
+	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStatistics, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
+
 	return k
+}
+
+func (k *Keeper) fetchIdentities() []stateEvent.Identity {
+	ids := k.deps.IdentityProvider.GetIdentities()
+	identities := make([]event.Identity, len(ids))
+	for idx, id := range ids {
+		status, err := k.deps.IdentityRegistry.GetRegistrationStatus(id)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Could not get registration status for %s", id.Address)
+			status = registry.Unregistered
+		}
+
+		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(id)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
+		}
+
+		settlement := k.deps.EarningsProvider.SettlementState(id)
+		stateIdentity := event.Identity{
+			Address:            id.Address,
+			RegistrationStatus: status,
+			ChannelAddress:     channelAddress,
+			Balance:            k.deps.BalanceProvider.GetBalance(id),
+			Earnings:           settlement.UnsettledBalance(),
+			EarningsTotal:      settlement.LifetimeBalance(),
+		}
+		identities[idx] = stateIdentity
+	}
+	return identities
+}
+
+// Subscribe subscribes to the event bus.
+func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.SubscribeAsync(servicestate.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeSessionStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumerConnectionStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(identity.AppTopicIdentityCreated, k.consumeIdentityCreatedEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, k.consumeIdentityRegistrationEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(pingpong.AppTopicBalanceChanged, k.consumeBalanceChangedEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(pingpong.AppTopicEarningsChanged, k.consumeEarningsChangedEvent); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (k *Keeper) announceState(_ interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	k.publisher.Publish(stateEvent.AppTopicState, *k.state)
+	k.deps.Publisher.Publish(stateEvent.AppTopicState, *k.state)
 }
 
 func (k *Keeper) updateServiceState(_ interface{}) {
@@ -103,14 +214,14 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-// ConsumeSessionStateEvent consumes the session change events
-func (k *Keeper) ConsumeSessionStateEvent(e sevent.Payload) {
+// consumeSessionStateEvent consumes the session change events
+func (k *Keeper) consumeSessionStateEvent(e sevent.Payload) {
 	if e.Action == sevent.Acknowledged {
 		k.consumeSessionAcknowledgeEvent(e)
 		return
 	}
 
-	k.consumeSessionEventDebounced(e)
+	k.consumeSessionStateEventDebounced(e)
 }
 
 func (k *Keeper) consumeSessionAcknowledgeEvent(e sevent.Payload) {
@@ -135,7 +246,7 @@ func (k *Keeper) consumeSessionAcknowledgeEvent(e sevent.Payload) {
 }
 
 func (k *Keeper) updateServices() {
-	services := k.serviceLister.List()
+	services := k.deps.ServiceLister.List()
 	result := make([]stateEvent.ServiceInfo, len(services))
 
 	i := 0
@@ -181,8 +292,8 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 		return
 	}
 
-	k.natStatusProvider.ConsumeNATEvent(event)
-	status := k.natStatusProvider.Status()
+	k.deps.NATStatusProvider.ConsumeNATEvent(event)
+	status := k.deps.NATStatusProvider.Status()
 	k.state.NATStatus = stateEvent.NATStatus{Status: status.Status}
 	if status.Error != nil {
 		k.state.NATStatus.Error = status.Error.Error()
@@ -195,7 +306,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	sessions := k.serviceSessionStorage.GetAll()
+	sessions := k.deps.ServiceSessionStorage.GetAll()
 	newSessions := make([]stateEvent.ServiceSession, 0)
 	result := make([]stateEvent.ServiceSession, len(sessions))
 	for i := range sessions {
@@ -223,6 +334,116 @@ func (k *Keeper) updateSessionState(e interface{}) {
 
 	k.state.Sessions = result
 
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumerConnectionStateEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(connection.StateEvent)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		return
+	}
+	if k.state.Consumer.Connection.State == evt.State {
+		return
+	}
+	if evt.State == connection.NotConnected {
+		k.state.Consumer.Connection = stateEvent.ConsumerConnection{}
+	}
+	k.state.Consumer.Connection.State = evt.State
+	k.state.Consumer.Connection.Proposal = &evt.SessionInfo.Proposal
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) updateConnectionStatistics(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(connection.SessionStatsEvent)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection statistics update")
+	}
+	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
+		Duration:      int(k.deps.SessionDurationProvider.GetSessionDuration().Seconds()),
+		BytesSent:     evt.Stats.BytesSent,
+		BytesReceived: evt.Stats.BytesReceived,
+	}
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(pingpong.AppEventBalanceChanged)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for balance change")
+		return
+	}
+	var id *stateEvent.Identity
+	for i := range k.state.Identities {
+		if k.state.Identities[i].Address == evt.Identity.Address {
+			id = &k.state.Identities[i]
+			break
+		}
+	}
+	if id == nil {
+		log.Warn().Msgf("Couldn't find a matching identity for balance change: %s", evt.Identity.Address)
+		return
+	}
+	id.Balance = evt.Current
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(pingpong.AppEventEarningsChanged)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for earnings change")
+		return
+	}
+	var id *stateEvent.Identity
+	for i := range k.state.Identities {
+		if k.state.Identities[i].Address == evt.Identity.Address {
+			id = &k.state.Identities[i]
+			break
+		}
+	}
+	if id == nil {
+		log.Warn().Msgf("Couldn't find a matching identity for earnings change: %s", evt.Identity.Address)
+		return
+	}
+	id.Earnings = evt.Current.UnsettledBalance()
+	id.EarningsTotal = evt.Current.LifetimeBalance()
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeIdentityCreatedEvent(_ interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	k.state.Identities = k.fetchIdentities()
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeIdentityRegistrationEvent(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(registry.AppEventIdentityRegistration)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for identity registration")
+	}
+	var id *stateEvent.Identity
+	for i := range k.state.Identities {
+		if k.state.Identities[i].Address == evt.ID.Address {
+			id = &k.state.Identities[i]
+			break
+		}
+	}
+	if id == nil {
+		log.Warn().Msgf("Couldn't find a matching identity for balance change: %s", evt.ID.Address)
+		return
+	}
+	id.RegistrationStatus = evt.Status
 	go k.announceStateChanges(nil)
 }
 

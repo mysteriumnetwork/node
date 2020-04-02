@@ -41,6 +41,7 @@ const (
 	RegistrationError
 )
 
+// String converts registration to human readable notation
 func (rs RegistrationStatus) String() string {
 	return [...]string{
 		"RegisteredConsumer",
@@ -50,6 +51,16 @@ func (rs RegistrationStatus) String() string {
 		"Promoting",
 		"RegistrationError",
 	}[rs]
+}
+
+// Registered returns flag if registration is in successful status
+func (rs RegistrationStatus) Registered() bool {
+	switch rs {
+	case RegisteredConsumer, Promoting, RegisteredProvider:
+		return true
+	default:
+		return false
+	}
 }
 
 // StoredRegistrationStatus represents a registration status that is being stored in our local DB
@@ -69,11 +80,11 @@ func (srs StoredRegistrationStatus) FromEvent(status RegistrationStatus, ev Iden
 	}
 }
 
-// AppTopicRegistration represents the registration event topic
-const AppTopicRegistration = "registration_event_topic"
+// AppTopicIdentityRegistration represents the registration event topic.
+const AppTopicIdentityRegistration = "registration_event_topic"
 
-// RegistrationEventPayload represents the registration event payload
-type RegistrationEventPayload struct {
+// AppEventIdentityRegistration represents the registration event payload.
+type AppEventIdentityRegistration struct {
 	ID     identity.Identity
 	Status RegistrationStatus
 }

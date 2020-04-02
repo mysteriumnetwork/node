@@ -18,84 +18,54 @@
 package identity
 
 import (
-	"errors"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
-func newManager(accountValue string, bus eventbus.EventBus) *identityManager {
-	return &identityManager{
-		keystoreManager: &keyStoreFake{
-			AccountsMock: []accounts.Account{
-				addressToAccount(accountValue),
-			},
-		},
-		eventBus: bus,
-		unlocked: map[string]bool{},
+func Test_IdentityManager(t *testing.T) {
+	ks := NewKeystoreFilesystem("dir", NewMockKeystore(MockKeys), MockDecryptFunc)
+	idm := &identityManager{
+		keystoreManager: ks,
+		eventBus:        eventbus.New(),
+		unlocked:        map[string]bool{},
 	}
-}
 
-func newManagerWithError(errorMock error) *identityManager {
-	return &identityManager{
-		keystoreManager: &keyStoreFake{
-			ErrorMock: errorMock,
-		},
-	}
-}
+	t.Run("gets existing identities", func(t *testing.T) {
+		identities := idm.GetIdentities()
+		assert.Len(t, identities, 1)
+		assert.Equal(t, FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"), identities[0])
+	})
 
-func TestManager_CreateNewIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
-	identity, err := manager.CreateNewIdentity("")
+	var newID Identity
+	t.Run("creates a new identity", func(t *testing.T) {
+		id, err := idm.CreateNewIdentity("")
+		assert.NoError(t, err)
+		assert.Len(t, idm.keystoreManager.Accounts(), 2)
+		assert.True(t, common.IsHexAddress(id.Address))
+		newID = id
+	})
 
-	assert.NoError(t, err)
-	assert.Equal(t, identity, Identity{"0x000000000000000000000000000000000000beef"})
-	assert.Len(t, manager.keystoreManager.Accounts(), 2)
-}
+	t.Run("gets identity", func(t *testing.T) {
+		identity, err := idm.GetIdentity("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68")
+		assert.NoError(t, err)
+		assert.Exactly(t, Identity{"0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"}, identity)
 
-func TestManager_CreateNewIdentityError(t *testing.T) {
-	im := newManagerWithError(errors.New("identity create failed"))
-	identity, err := im.CreateNewIdentity("")
+		identity, err = idm.GetIdentity(newID.Address)
+		assert.NoError(t, err)
+		assert.Exactly(t, newID, identity)
 
-	assert.EqualError(t, err, "identity create failed")
-	assert.Empty(t, identity.Address)
-}
+		identity, err = idm.GetIdentity("0x000000000000000000000000000000000000000B")
+		assert.EqualError(t, err, "identity not found")
+		assert.Exactly(t, Identity{}, identity)
+	})
 
-func TestManager_GetIdentities(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
-
-	assert.Equal(
-		t,
-		[]Identity{
-			{"0x000000000000000000000000000000000000000a"},
-		},
-		manager.GetIdentities(),
-	)
-}
-
-func TestManager_GetIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
-
-	identity, err := manager.GetIdentity("0x000000000000000000000000000000000000000A")
-	assert.NoError(t, err)
-	assert.Exactly(t, Identity{"0x000000000000000000000000000000000000000a"}, identity)
-
-	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000a")
-	assert.NoError(t, err)
-	assert.Exactly(t, Identity{"0x000000000000000000000000000000000000000a"}, identity)
-
-	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000B")
-	assert.EqualError(t, err, "identity not found")
-	assert.Exactly(t, Identity{}, identity)
-}
-
-func TestManager_HasIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
-
-	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000A"))
-	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000a"))
-	assert.False(t, manager.HasIdentity("0x000000000000000000000000000000000000000B"))
+	t.Run("has identity", func(t *testing.T) {
+		assert.True(t, idm.HasIdentity("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
+		assert.True(t, idm.HasIdentity(newID.Address))
+		assert.False(t, idm.HasIdentity("0x000000000000000000000000000000000000000B"))
+	})
 }

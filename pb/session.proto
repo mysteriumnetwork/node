@@ -1,0 +1,34 @@
+syntax = "proto3";
+package pb;
+
+option go_package = ".;pb";
+
+message SessionRequest {
+  ConsumerInfo consumer = 1;
+  int64 proposalID = 2;
+  bytes config = 3;
+}
+
+message SessionResponse {
+  string ID = 1;
+  string PaymentInfo = 2;
+  bytes config = 3;
+}
+
+message SessionInfo {
+  string consumerID = 1;
+  string sessionID = 2;
+}
+
+message ConsumerInfo {
+  string id = 1;
+  string accountantID = 2;
+  string paymentVersion = 3;
+}
+
+message SessionStatus {
+  string ConsumerID = 1;
+  string SessionID = 2;
+  uint32 Code = 3;
+  string Message = 4;
+}

@@ -18,21 +18,77 @@
 package pingpong
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 )
 
 // AccountantErrorResponse represents the errors that accountant returns
 type AccountantErrorResponse struct {
-	Cause   string `json:"cause"`
-	Message string `json:"message"`
+	CausedBy     string `json:"cause"`
+	ErrorMessage string `json:"message"`
+	ErrorData    string `json:"data"`
+	c            error
+}
+
+// Error returns the associated error
+func (aer AccountantErrorResponse) Error() string {
+	return aer.c.Error()
+}
+
+// Cause returns the associated cause
+func (aer AccountantErrorResponse) Cause() error {
+	return aer.c
+}
+
+// Unwrap unwraps the associated error
+func (aer AccountantErrorResponse) Unwrap() error {
+	return aer.c
+}
+
+// Data returns the associated data
+func (aer AccountantErrorResponse) Data() string {
+	return aer.ErrorData
+}
+
+// UnmarshalJSON unmarshals given data to AccountantErrorResponse
+func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
+	var s struct {
+		CausedBy     string `json:"cause"`
+		ErrorMessage string `json:"message"`
+		ErrorData    string `json:"data"`
+	}
+
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal error data %w", err)
+	}
+
+	aer.CausedBy = s.CausedBy
+	aer.ErrorMessage = s.ErrorMessage
+	aer.ErrorData = s.ErrorData
+
+	if v, ok := accountantCauseToError[s.CausedBy]; ok {
+		aer.c = v
+		return nil
+	}
+
+	return fmt.Errorf("received unknown error: %v", s.CausedBy)
+}
+
+type accountantError interface {
+	Error() string
+	Cause() error
+	Data() string
 }
 
 // AccountantCaller represents the http caller for accountant.
@@ -53,18 +109,23 @@ func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI strin
 type RequestPromise struct {
 	ExchangeMessage crypto.ExchangeMessage `json:"exchange_message"`
 	TransactorFee   uint64                 `json:"transactor_fee"`
+	RRecoveryData   string                 `json:"r_recovery_data"`
 }
 
 // RequestPromise requests a promise from accountant.
 func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
 	req, err := requests.NewPostRequest(ac.accountantBaseURI, "request_promise", rp)
 	if err != nil {
-		return crypto.Promise{}, errors.Wrap(err, "could not form request_promise request")
+		return crypto.Promise{}, fmt.Errorf("could not form request_promise request: %w", err)
 	}
 
 	res := crypto.Promise{}
 	err = ac.doRequest(req, &res)
-	return res, errors.Wrap(err, "could not request promise")
+	if err != nil {
+		return res, fmt.Errorf("could not request promise: %w", err)
+
+	}
+	return res, nil
 }
 
 // RevealObject represents the reveal request object.
@@ -82,39 +143,52 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 		AgreementID: agreementID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not form reveal_r request")
+		return fmt.Errorf("could not form reveal_r request: %w", err)
 	}
 	err = ac.doRequest(req, &RevealSuccess{})
-	return errors.Wrap(err, "could not reveal R for accountant")
+	if err != nil {
+		return fmt.Errorf("could not reveal R for accountant: %w", err)
+	}
+
+	return nil
 }
 
 // GetConsumerData gets consumer data from accountant
 func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
-		return ConsumerData{}, errors.Wrap(err, "could not form consumer data request")
+		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
 	var resp ConsumerData
 	err = ac.doRequest(req, &resp)
-	return resp, errors.Wrap(err, "could not request consumer data accountant")
+	if err != nil {
+		return ConsumerData{}, fmt.Errorf("could not request consumer data from accountant: %w", err)
+	}
+
+	err = resp.LatestPromise.isValid(id)
+	if err != nil {
+		return ConsumerData{}, fmt.Errorf("could not check promise validity: %w", err)
+	}
+
+	return resp, nil
 }
 
 func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 	resp, err := ac.transport.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "could not execute request")
+		return fmt.Errorf("could not execute request: %w", err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "could not read response body")
+		return fmt.Errorf("could not read response body: %w", err)
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 300 {
 		// parse response
 		err = json.Unmarshal(body, &to)
 		if err != nil {
-			return errors.Wrap(err, "could not unmarshal response body")
+			return fmt.Errorf("could not unmarshal response body: %w", err)
 		}
 		return nil
 	}
@@ -123,14 +197,10 @@ func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 	accountantError := AccountantErrorResponse{}
 	err = json.Unmarshal(body, &accountantError)
 	if err != nil {
-		return errors.Wrap(err, "could not unmarshal error body")
+		return fmt.Errorf("could not unmarshal error body: %w", err)
 	}
 
-	if v, ok := accountantCauseToError[accountantError.Cause]; ok {
-		return errors.Wrap(v, accountantError.Message)
-	}
-
-	return errors.Wrap(errors.New(accountantError.Cause), "received unknown error")
+	return accountantError
 }
 
 // ConsumerData represents the consumer data
@@ -154,6 +224,42 @@ type LatestPromise struct {
 	Hashlock  string      `json:"Hashlock"`
 	R         interface{} `json:"R"`
 	Signature string      `json:"Signature"`
+}
+
+// isValid checks if the promise is really issued by the given identity
+func (lp LatestPromise) isValid(id string) error {
+	// if we've not promised anything, that's fine for us.
+	// handles the case when we've just registered the identity.
+	if lp.Amount == 0 {
+		return nil
+	}
+
+	decodedChannelID, err := hex.DecodeString(strings.TrimPrefix(lp.ChannelID, "0x"))
+	if err != nil {
+		return fmt.Errorf("could not decode channel ID: %w", err)
+	}
+	decodedHashlock, err := hex.DecodeString(strings.TrimPrefix(lp.Hashlock, "0x"))
+	if err != nil {
+		return fmt.Errorf("could not decode hashlock: %w", err)
+	}
+	decodedSignature, err := hex.DecodeString(strings.TrimPrefix(lp.Signature, "0x"))
+	if err != nil {
+		return fmt.Errorf("could not decode hashlock: %w", err)
+	}
+
+	p := crypto.Promise{
+		ChannelID: decodedChannelID,
+		Amount:    lp.Amount,
+		Fee:       lp.Fee,
+		Hashlock:  decodedHashlock,
+		Signature: decodedSignature,
+	}
+
+	if !p.IsPromiseValid(common.HexToAddress(id)) {
+		return fmt.Errorf("promise issued by wrong identity. Expected %q", id)
+	}
+
+	return nil
 }
 
 // RevealSuccess represents the reveal success response from accountant
@@ -185,6 +291,9 @@ var ErrAccountantOverspend = errors.New("consumer does not have enough balance a
 // ErrAccountantMalformedJSON indicates that the provider has sent an invalid json in the request.
 var ErrAccountantMalformedJSON = errors.New("malformed json")
 
+// ErrNeedsRRecovery indicates that we need to recover R.
+var ErrNeedsRRecovery = errors.New("r recovery required")
+
 // ErrAccountantNoPreviousPromise indicates that we have no previous knowledge of a promise for the provider.
 var ErrAccountantNoPreviousPromise = errors.New("no previous promise found")
 
@@ -206,4 +315,10 @@ var accountantCauseToError = map[string]error{
 	ErrAccountantNoPreviousPromise.Error():        ErrAccountantNoPreviousPromise,
 	ErrAccountantHashlockMissmatch.Error():        ErrAccountantHashlockMissmatch,
 	ErrAccountantNotFound.Error():                 ErrAccountantNotFound,
+	ErrNeedsRRecovery.Error():                     ErrNeedsRRecovery,
+}
+
+type rRecoveryDetails struct {
+	R           string `json:"r"`
+	AgreementID uint64 `json:"agreement_id"`
 }

@@ -120,18 +120,13 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	c.stateCh <- connection.Connecting
 
-	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
-	if config.LocalPort > 0 || len(config.Ports) > 0 {
-		if len(config.Ports) == 0 || len(c.ports) == 0 {
-			c.ports = []int{config.LocalPort}
-			config.Ports = []int{config.RemotePort}
-		}
-
+	if options.ProviderNATConn != nil {
+		options.ProviderNATConn.Close()
+		config.LocalPort = options.ProviderNATConn.LocalAddr().(*net.UDPAddr).Port
+		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
+	} else if len(config.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we migrate to the p2p communication.
 		ip := config.Provider.Endpoint.IP.String()
-		localPorts := c.ports
-		remotePorts := config.Ports
-
-		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, 0)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, c.ports, config.Ports, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
@@ -151,7 +146,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 	c.connectionEndpoint = conn
 
-	log.Info().Msg("Adding connection peer")
+	log.Info().Msgf("Adding connection peer %s", config.Provider.Endpoint.String())
 
 	if err := c.addProviderPeer(conn, config.Provider.Endpoint, config.Provider.PublicKey); err != nil {
 		return errors.Wrap(err, "failed to add peer to the connection endpoint")
@@ -218,21 +213,23 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 	}
 
 	var publicIP string
-	if !c.isNoopPinger() {
-		var err error
-		publicIP, err = c.ipResolver.GetPublicIP()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get consumer public IP")
+	{ // TODO this is backward compatibility block. It needs to be removed once most of the nodes migrated to the p2p communication.
+		if !c.isNoopPinger() {
+			var err error
+			publicIP, err = c.ipResolver.GetPublicIP()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get consumer public IP")
+			}
 		}
-	}
 
-	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
-	if err != nil {
-		return nil, err
-	}
+		ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
+		if err != nil {
+			return nil, err
+		}
 
-	for _, p := range ports {
-		c.ports = append(c.ports, p.Num())
+		for _, p := range ports {
+			c.ports = append(c.ports, p.Num())
+		}
 	}
 
 	return wg.ConsumerConfig{

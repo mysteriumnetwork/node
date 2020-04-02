@@ -51,7 +51,7 @@ type locationResponse struct {
 
 	// User type (data_center, residential, etc.)
 	// example: residential
-	UserType string `json:"userType"`
+	UserType string `json:"user_type"`
 	// User type (DEPRECATED)
 	// example: residential
 	NodeType string `json:"node_type"`

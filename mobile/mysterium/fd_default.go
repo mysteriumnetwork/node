@@ -21,10 +21,15 @@ package mysterium
 
 import (
 	"errors"
+	"net"
 
 	"golang.zx2c4.com/wireguard/device"
 )
 
 func peekLookAtSocketFd4(d *device.Device) (fd int, err error) {
+	return 0, errors.New("not implemented")
+}
+
+func peekLookAtSocketFd4From(conn *net.UDPConn) (fd int, err error) {
 	return 0, errors.New("not implemented")
 }

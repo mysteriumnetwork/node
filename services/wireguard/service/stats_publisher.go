@@ -53,7 +53,7 @@ func (s statsPublisher) start(sessionID string, supplier statsSupplier) {
 				log.Warn().Err(err).Msg("Could not get peer statistics")
 				continue
 			}
-			s.bus.Publish(event.AppTopicDataTransferred, event.DataTransferEventPayload{
+			s.bus.Publish(event.AppTopicDataTransferred, event.AppEventDataTransferred{
 				ID:   sessionID,
 				Up:   stats.BytesSent,
 				Down: stats.BytesReceived,

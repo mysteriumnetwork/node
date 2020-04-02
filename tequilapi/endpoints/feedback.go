@@ -46,7 +46,7 @@ type ReportIssueRequest struct {
 // ReportIssueSuccess successful issue report
 // swagger:model
 type ReportIssueSuccess struct {
-	IssueID string `json:"issueId"`
+	IssueID string `json:"issue_id"`
 }
 
 // ReportIssueError issue report error

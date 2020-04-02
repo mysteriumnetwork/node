@@ -19,7 +19,10 @@ package pingpong
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/rs/zerolog/log"
 )
 
 // ExchangeRequest structure represents message from service consumer to send a an exchange message.
@@ -33,18 +36,39 @@ const messageEndpointExchange = communication.MessageEndpoint(endpointExchange)
 // ExchangeSender is responsible for sending the exchange messages.
 type ExchangeSender struct {
 	sender communication.Sender
+	ch     p2p.ChannelSender
 }
 
 // NewExchangeSender returns a new instance of exchange message sender.
-func NewExchangeSender(sender communication.Sender) *ExchangeSender {
+func NewExchangeSender(sender communication.Sender, ch p2p.ChannelSender) *ExchangeSender {
 	return &ExchangeSender{
+		ch:     ch,
 		sender: sender,
 	}
 }
 
-// Send send the given exchange message.
+// Send sends the given exchange message.
 func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
-	return es.sender.Send(&ExchangeMessageProducer{Message: em})
+	if es.ch == nil { // TODO this block should go away once p2p communication will replace communication dialog.
+		return es.sender.Send(&ExchangeMessageProducer{Message: em})
+	}
+	pMessage := &pb.ExchangeMessage{
+		Promise: &pb.Promise{
+			ChannelID: em.Promise.ChannelID,
+			Amount:    em.Promise.Amount,
+			Fee:       em.Promise.Fee,
+			Hashlock:  em.Promise.Hashlock,
+			R:         em.Promise.R,
+			Signature: em.Promise.Signature,
+		},
+		AgreementID:    em.AgreementID,
+		AgreementTotal: em.AgreementTotal,
+		Provider:       em.Provider,
+		Signature:      em.Signature,
+	}
+	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
+	_, err := es.ch.Send(p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
+	return err
 }
 
 // ExchangeListener listens for exchange messages.

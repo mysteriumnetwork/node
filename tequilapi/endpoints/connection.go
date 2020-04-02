@@ -45,7 +45,7 @@ type ConnectOptions struct {
 	// kill switch option restricting communication only through VPN
 	// required: false
 	// example: true
-	DisableKillSwitch bool `json:"killSwitch"`
+	DisableKillSwitch bool `json:"kill_switch"`
 	// DNS to use
 	// required: false
 	// default: auto
@@ -58,41 +58,41 @@ type connectionRequest struct {
 	// consumer identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumerId"`
+	ConsumerID string `json:"consumer_id"`
 
 	// provider identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 
 	// accountant identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000003
-	AccountantID string `json:"accountantId"`
+	AccountantID string `json:"accountant_id"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
 	// default: openvpn
 	// example: openvpn
-	ServiceType string `json:"serviceType"`
+	ServiceType string `json:"service_type"`
 
 	// connect options
 	// required: false
-	ConnectOptions ConnectOptions `json:"connectOptions,omitempty"`
+	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
 }
 
 // swagger:model ConnectionStatusDTO
 type connectionResponse struct {
 	// example: 0x00
-	ConsumerID string `json:"consumerId,omitempty"`
+	ConsumerID string `json:"consumer_id,omitempty"`
 
 	// example: Connected
 	Status string `json:"status"`
 
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	SessionID string `json:"sessionId,omitempty"`
+	SessionID string `json:"session_id,omitempty"`
 
-	// example: {"id":1,"providerId":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","serviceType":"openvpn","serviceDefinition":{"locationOriginate":{"asn":"","country":"CA"}}}
+	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
 	Proposal *proposalDTO `json:"proposal,omitempty"`
 }
 
@@ -106,10 +106,10 @@ type ipResponse struct {
 // swagger:model ConnectionStatisticsDTO
 type statisticsResponse struct {
 	// example: 1024
-	BytesSent uint64 `json:"bytesSent"`
+	BytesSent uint64 `json:"bytes_sent"`
 
 	// example: 1024
-	BytesReceived uint64 `json:"bytesReceived"`
+	BytesReceived uint64 `json:"bytes_received"`
 
 	// connection duration in seconds
 	// example: 60
@@ -177,7 +177,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 // parameters:
 //   - in: body
 //     name: body
-//     description: Parameters in body (consumerId, providerId, serviceType) required for creating new connection
+//     description: Parameters in body (consumer_id, provider_id, service_type) required for creating new connection
 //     schema:
 //       $ref: "#/definitions/ConnectionRequestDTO"
 // responses:
@@ -362,13 +362,13 @@ func getConnectOptions(cr *connectionRequest) connection.ConnectParams {
 func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
-		errs.ForField("consumerId").AddError("required", "Field is required")
+		errs.ForField("consumer_id").AddError("required", "Field is required")
 	}
 	if len(cr.ProviderID) == 0 {
-		errs.ForField("providerId").AddError("required", "Field is required")
+		errs.ForField("provider_id").AddError("required", "Field is required")
 	}
 	if len(cr.AccountantID) == 0 {
-		errs.ForField("accountantId").AddError("required", "Field is required")
+		errs.ForField("accountant_id").AddError("required", "Field is required")
 	}
 	return errs
 }

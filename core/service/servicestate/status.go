@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,15 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package servicestate
 
 // AppTopicServiceStatus is used in event bus to announce the service status
 const AppTopicServiceStatus = "Service status"
 
-// EventPayload represents the service event related information
-type EventPayload struct {
+// AppEventServiceStatus represents the service event related information
+type AppEventServiceStatus struct {
 	ID         string `json:"id"`
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 	Type       string `json:"type"`
 	Status     string `json:"status"`
 }

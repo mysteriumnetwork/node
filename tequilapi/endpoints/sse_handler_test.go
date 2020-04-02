@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package sse
+package endpoints
 
 import (
 	"bufio"
@@ -27,22 +27,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockStateProvider struct {
-	stateToreturn stateEvent.State
+	stateToReturn stateEvent.State
 }
 
 func (msp *mockStateProvider) GetState() stateEvent.State {
-	return msp.stateToreturn
+	return msp.stateToReturn
 }
 
 func TestHandler_Stops(t *testing.T) {
-	h := NewHandler(&mockStateProvider{})
+	h := NewSSEHandler(&mockStateProvider{})
 
 	wait := make(chan struct{})
 	go func() {
@@ -55,7 +58,7 @@ func TestHandler_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
-	h := NewHandler(&mockStateProvider{})
+	h := NewSSEHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStopped,
 	}
@@ -64,7 +67,7 @@ func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
-	h := NewHandler(&mockStateProvider{})
+	h := NewSSEHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStarted,
 	}
@@ -80,7 +83,7 @@ func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
 
 func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	msp := &mockStateProvider{}
-	h := NewHandler(msp)
+	h := NewSSEHandler(msp)
 	go h.serve()
 	defer h.stop()
 	laddr := net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0}
@@ -121,8 +124,28 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 		}
 	}()
 
-	initialState := <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null},"type":"state-change"}`, initialState)
+	msg := <-results
+	assert.Regexp(t, "^data:\\s?{.*}$", msg)
+	msgJSON := strings.TrimPrefix(msg, "data: ")
+	expectJSON := `
+{
+  "payload": {
+    "nat_status": {
+      "status": "",
+      "error": ""
+    },
+    "service_info": null,
+    "sessions": null,
+    "consumer": {
+      "connection": {
+        "state": ""
+      }
+    },
+    "identities": []
+  },
+  "type": "state-change"
+}`
+	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState := msp.GetState()
 	changedState.NATStatus = stateEvent.NATStatus{
@@ -131,8 +154,75 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	}
 	h.ConsumeStateEvent(changedState)
 
-	newState := <-results
-	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"mass panic","error":"cookie prices rise drastically"},"serviceInfo":null,"sessions":null},"type":"state-change"}`, newState)
+	msg = <-results
+	assert.Regexp(t, "^data:\\s?{.*}$", msg)
+	msgJSON = strings.TrimPrefix(msg, "data: ")
+	expectJSON = `
+{
+  "payload": {
+    "nat_status": {
+      "status": "mass panic",
+      "error": "cookie prices rise drastically"
+    },
+    "service_info": null,
+    "sessions": null,
+    "consumer": {
+      "connection": {
+        "state": ""
+      }
+    },
+    "identities": []
+  },
+  "type": "state-change"
+}`
+	assert.JSONEq(t, expectJSON, msgJSON)
+
+	changedState = msp.GetState()
+	changedState.Consumer.Connection.State = connection.Connecting
+	changedState.Identities = []stateEvent.Identity{
+		{
+			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
+			RegistrationStatus: registry.RegisteredConsumer,
+			ChannelAddress:     common.HexToAddress("0x000000000000000000000000000000000000000a"),
+			Balance:            50,
+			Earnings:           1,
+			EarningsTotal:      100,
+		},
+	}
+	h.ConsumeStateEvent(changedState)
+
+	msg = <-results
+	assert.Regexp(t, "^data:\\s?{.*}$", msg)
+	msgJSON = strings.TrimPrefix(msg, "data: ")
+	expectJSON = `
+{
+  "payload": {
+    "nat_status": {
+      "status": "",
+      "error": ""
+    },
+    "service_info": null,
+    "sessions": null,
+    "consumer": {
+      "connection": {
+        "state": "Connecting"
+      }
+    },
+    "identities": [
+      {
+        "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
+        "registration_status": "RegisteredConsumer",
+        "channel_address": "0x000000000000000000000000000000000000000A",
+        "balance": 50,
+        "earnings": 1,
+        "earnings_total": 100
+      }
+    ]
+  },
+  "type": "state-change"
+}`
+	assert.JSONEq(t, expectJSON, msgJSON)
+
 	cancel()
 	listener.Close()
 

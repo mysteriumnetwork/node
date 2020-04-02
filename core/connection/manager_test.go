@@ -19,15 +19,19 @@ package connection
 
 import (
 	"errors"
+	"net"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/stretchr/testify/assert"
@@ -46,6 +50,7 @@ type testContext struct {
 	ipCheckParams         IPCheckParams
 	statusSender          *mockStatusSender
 	statsReportInterval   time.Duration
+	mockP2P               *mockP2PDialer
 	sync.RWMutex
 }
 
@@ -114,10 +119,15 @@ func (tc *testContext) SetupTest() {
 	tc.fakeResolver = ip.NewResolverMock("ip")
 	tc.statsReportInterval = 1 * time.Millisecond
 
+	brokerConn := nats.StartConnectionMock()
+	brokerConn.MockResponse("fake-node-1.p2p-config-exchange", []byte("123"))
+
+	tc.mockP2P = &mockP2PDialer{&mockP2PChannel{}}
+
 	tc.connManager = NewManager(
 		dialogCreator,
 		func(paymentInfo session.PaymentInfo,
-			dialog communication.Dialog,
+			dialog communication.Dialog, channel p2p.Channel,
 			consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				initialState:      paymentInfo,
@@ -132,7 +142,8 @@ func (tc *testContext) SetupTest() {
 		tc.fakeResolver,
 		tc.ipCheckParams,
 		tc.statsReportInterval,
-		func(ID identity.Identity) uint64 { return 0 },
+		&mockValidator{},
+		tc.mockP2P,
 	)
 }
 
@@ -324,7 +335,7 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 }
 
 func (tc *testContext) Test_ManagerSetsPaymentInfo() {
-	paymentInfo = session.PaymentInfo{}
+	paymentInfo := session.PaymentInfo{}
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.Nil(tc.T(), err)
 	assert.Exactly(tc.T(), paymentInfo, tc.MockPaymentIssuer.initialState)
@@ -419,8 +430,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 		StatusCode: connectivity.StatusSessionIPNotChanged,
 		Message:    "",
 	}
-	assert.NotNil(tc.T(), tc.statusSender.sentMsg)
-	assert.Equal(tc.T(), &expectedStatusMsg, tc.statusSender.sentMsg)
+	assert.Equal(tc.T(), expectedStatusMsg, tc.mockP2P.ch.getSentMsg())
 }
 
 func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
@@ -455,43 +465,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 		Message:    "",
 	}
 
-	assert.Equal(tc.T(), expectedStatusMsg, tc.statusSender.getSentMsg())
-}
-
-func (tc *testContext) TestConnectReturnsInsufficientBalanceError() {
-	proposal := market.ServiceProposal{
-		PaymentMethod: &mockPaymentMethod{price: money.Money{
-			Amount:   100,
-			Currency: "MYSTT",
-		}},
-		PaymentMethodType: "PER_MINUTE",
-	}
-
-	err := tc.connManager.Connect(consumerID, accountantID, proposal, ConnectParams{})
-
-	assert.Error(tc.T(), err, ErrInsufficientBalance)
-}
-
-func (tc *testContext) TestConnectReturnsSuccessWhenBalanceIsSufficient() {
-	proposal := market.ServiceProposal{
-		ProviderID:        activeProviderID.Address,
-		ProviderContacts:  []market.Contact{activeProviderContact},
-		ServiceType:       activeServiceType,
-		ServiceDefinition: &fakeServiceDefinition{},
-		PaymentMethod: &mockPaymentMethod{price: money.Money{
-			Amount:   100,
-			Currency: "MYSTT",
-		}},
-		PaymentMethodType: "PER_MINUTE",
-	}
-
-	tc.connManager.consumerBalanceGetter = func(ID identity.Identity) uint64 {
-		return 101
-	}
-
-	err := tc.connManager.Connect(consumerID, accountantID, proposal, ConnectParams{})
-
-	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), expectedStatusMsg, tc.mockP2P.ch.getSentMsg())
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -579,4 +553,76 @@ func (mpm *mockPaymentMethod) GetType() string {
 
 func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 	return mpm.rate
+}
+
+type mockP2PDialer struct {
+	ch *mockP2PChannel
+}
+
+func (m mockP2PDialer) Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (p2p.Channel, error) {
+	return m.ch, nil
+}
+
+type mockP2PChannel struct {
+	status connectivity.StatusMessage
+	lock   sync.Mutex
+}
+
+func (m *mockP2PChannel) Conn() *net.UDPConn {
+	return &net.UDPConn{}
+}
+
+func (m *mockP2PChannel) getSentMsg() connectivity.StatusMessage {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	return m.status
+}
+
+func (m *mockP2PChannel) Send(topic string, msg *p2p.Message) (*p2p.Message, error) {
+	switch topic {
+	case p2p.TopicSessionCreate:
+		res := &pb.SessionResponse{
+			ID:          string(establishedSessionID),
+			PaymentInfo: string(paymentInfo.Supports),
+		}
+		return p2p.ProtoMessage(res), nil
+	case p2p.TopicSessionStatus:
+		var res pb.SessionStatus
+		msg.UnmarshalProto(&res)
+
+		m.lock.Lock()
+		m.status = connectivity.StatusMessage{
+			SessionID:  res.GetSessionID(),
+			StatusCode: connectivity.StatusCode(res.GetCode()),
+			Message:    res.GetMessage(),
+		}
+		m.lock.Unlock()
+
+		return p2p.ProtoMessage(&res), nil
+	case p2p.TopicSessionAcknowledge:
+		return nil, nil
+	}
+
+	return nil, errors.New("unexpected error")
+}
+
+func (m *mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
+}
+
+func (m *mockP2PChannel) ServiceConn() *net.UDPConn {
+	raddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12345")
+	conn, _ := net.DialUDP("udp", nil, raddr)
+	return conn
+}
+
+func (m *mockP2PChannel) Close() error {
+	return nil
+}
+
+type mockValidator struct {
+	errorToReturn error
+}
+
+func (mv *mockValidator) Validate(consumerID identity.Identity, proposal market.ServiceProposal) error {
+	return mv.errorToReturn
 }

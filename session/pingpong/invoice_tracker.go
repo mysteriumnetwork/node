@@ -20,6 +20,8 @@ package pingpong
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	stdErr "errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -128,6 +130,11 @@ type InvoiceTracker struct {
 	dataTransferredLock sync.Mutex
 }
 
+type encryption interface {
+	Decrypt(addr common.Address, encrypted []byte) ([]byte, error)
+	Encrypt(addr common.Address, plaintext []byte) ([]byte, error)
+}
+
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
 type InvoiceTrackerDeps struct {
 	Proposal                   market.ServiceProposal
@@ -152,6 +159,7 @@ type InvoiceTrackerDeps struct {
 	ChannelAddressCalculator   channelAddressCalculator
 	Settler                    settler
 	SessionID                  string
+	Encryption                 encryption
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -271,9 +279,25 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 		it.updateFee()
 	}
 
+	details := rRecoveryDetails{
+		R:           hex.EncodeToString(r),
+		AgreementID: pm.AgreementID,
+	}
+
+	bytes, err := json.Marshal(details)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal R recovery details")
+	}
+
+	encrypted, err := it.deps.Encryption.Encrypt(it.deps.ProviderID.ToCommonAddress(), bytes)
+	if err != nil {
+		return errors.Wrap(err, "could not encrypt R")
+	}
+
 	request := RequestPromise{
 		ExchangeMessage: pm,
 		TransactorFee:   it.transactorFee.Fee,
+		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
 	promise, err := it.deps.AccountantCaller.RequestPromise(request)
@@ -296,7 +320,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, pm crypto.ExchangeMessage) er
 	}
 
 	promise.R = r
-	it.deps.EventBus.Publish(AppTopicAccountantPromise, AccountantPromiseEventPayload{
+	it.deps.EventBus.Publish(AppTopicAccountantPromise, AppEventAccountantPromise{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
@@ -486,30 +510,64 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
+func (it *InvoiceTracker) recoverR(aerr accountantError) error {
+	log.Info().Msg("Recovering R...")
+	decoded, err := hex.DecodeString(aerr.Data())
+	if err != nil {
+		return errors.Wrap(err, "could not decode R recovery details")
+	}
+
+	decrypted, err := it.deps.Encryption.Decrypt(it.deps.ProviderID.ToCommonAddress(), decoded)
+	if err != nil {
+		return errors.Wrap(err, "could not decrypt R details")
+	}
+
+	res := rRecoveryDetails{}
+	err = json.Unmarshal(decrypted, &res)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal R details")
+	}
+
+	log.Info().Msg("R recovered, will reveal...")
+	err = it.deps.AccountantCaller.RevealR(res.R, it.deps.ProviderID.Address, res.AgreementID)
+	if err != nil {
+		return errors.Wrap(err, "could not reveal R")
+	}
+
+	log.Info().Msg("R recovered successfully")
+	return nil
+}
+
 func (it *InvoiceTracker) handleAccountantError(err error) error {
 	if err == nil {
 		it.resetAccountantFailureCount()
 		return nil
 	}
 
-	switch errors.Cause(err) {
-	case ErrAccountantHashlockMissmatch, ErrAccountantPreviousRNotRevealed:
-		// These need to trigger some sort of R recovery.
-		// The mechanism should be implemented under https://github.com/mysteriumnetwork/node/issues/1585
+	switch {
+	case stdErr.Is(err, ErrNeedsRRecovery):
+		var aer AccountantErrorResponse
+		ok := stdErr.As(err, &aer)
+		if !ok {
+			return errors.New("could not cast errNeedsRecovery to accountantError")
+		}
+		return it.recoverR(aer)
+	case stdErr.Is(err, ErrAccountantHashlockMissmatch), stdErr.Is(err, ErrAccountantPreviousRNotRevealed):
+		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
 		// For now though, handle as ignorable.
 		fallthrough
 	case
-		ErrAccountantInternal,
-		ErrAccountantNotFound,
-		ErrAccountantNoPreviousPromise,
-		ErrAccountantMalformedJSON:
+		stdErr.Is(err, ErrAccountantInternal),
+		stdErr.Is(err, ErrAccountantNotFound),
+		stdErr.Is(err, ErrAccountantNoPreviousPromise),
+		stdErr.Is(err, ErrAccountantMalformedJSON):
 		// these are ignorable, we'll eventually fail
 		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
 			return err
 		}
 		log.Warn().Err(err).Msg("accountant error, will retry")
 		return errHandled
-	case ErrAccountantProviderBalanceExhausted:
+	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
 		go func() {
 			settleErr := it.deps.Settler(it.deps.ProviderID, it.deps.AccountantID)
 			if settleErr != nil {
@@ -522,10 +580,10 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		log.Warn().Err(err).Msg("out of balance, will try settling")
 		return errHandled
 	case
-		ErrAccountantInvalidSignature,
-		ErrAccountantPaymentValueTooLow,
-		ErrAccountantPromiseValueTooLow,
-		ErrAccountantOverspend:
+		stdErr.Is(err, ErrAccountantInvalidSignature),
+		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
+		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
+		stdErr.Is(err, ErrAccountantOverspend):
 		// these are critical, return and cancel session
 		return err
 	default:
@@ -594,7 +652,7 @@ func (it *InvoiceTracker) Stop() {
 	})
 }
 
-func (it *InvoiceTracker) consumeDataTransferredEvent(e event.DataTransferEventPayload) {
+func (it *InvoiceTracker) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(e.ID, it.deps.SessionID) {
 		return

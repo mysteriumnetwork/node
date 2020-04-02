@@ -28,6 +28,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -77,9 +78,9 @@ var (
 		PaymentMethodType: mocks.DefaultPaymentMethodType,
 		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
-	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil, nil)
-	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil, nil)
-	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposalWithAccessPolicy, nil, nil, nil)
+	mockServiceRunning                 = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposal, nil, nil, nil)
+	mockServiceStopped                 = service.NewInstance(mockServiceOptions, servicestate.NotRunning, nil, mockProposal, nil, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposalWithAccessPolicy, nil, nil, nil)
 )
 
 type fancyServiceOptions struct {
@@ -141,26 +142,26 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			http.StatusOK,
 			`[{
 				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
-				"providerId": "0xProviderId",
+				"provider_id": "0xProviderId",
 				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
 					"id": 1,
-					"providerId": "0xProviderId",
-					"serviceType": "testprotocol",
-					"serviceDefinition": {
-						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					"provider_id": "0xProviderId",
+					"service_type": "testprotocol",
+					"service_definition": {
+						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 					},
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
 				}
@@ -169,30 +170,30 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		{
 			http.MethodPost,
 			"/services",
-			`{"providerId": "node1", "type": "testprotocol"}`,
+			`{"provider_id": "node1", "type": "testprotocol"}`,
 			http.StatusCreated,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-				"providerId": "0xProviderId",
+				"provider_id": "0xProviderId",
 				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
 					"id": 1,
-					"providerId": "0xProviderId",
-					"serviceType": "testprotocol",
-					"serviceDefinition": {
-						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					"provider_id": "0xProviderId",
+					"service_type": "testprotocol",
+					"service_definition": {
+						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 					},
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
 				}
@@ -205,26 +206,26 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			http.StatusOK,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-				"providerId": "0xProviderId",
+				"provider_id": "0xProviderId",
 				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
 					"id": 1,
-					"providerId": "0xProviderId",
-					"serviceType": "testprotocol",
-					"serviceDefinition": {
-						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+					"provider_id": "0xProviderId",
+					"service_type": "testprotocol",
+					"service_definition": {
+						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 					},
-					"paymentMethod": {
+					"payment_method": {
 						"type": "BYTES_TRANSFERRED_WITH_TIME",
 						"price": {
 							"amount":50000,
 							"currency":"MYST"
 						},
 						"rate":{
-							"perSeconds":60,
-							"perBytes":7669584
+							"per_seconds":60,
+							"per_bytes":7669584
 						}
 					}
 				}
@@ -262,7 +263,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "openvpn",
-			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"options": {}
 		}`),
 	)
@@ -291,7 +292,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "openvpn",
-			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"options": {}
 		}`),
 	)
@@ -320,7 +321,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "errorprotocol",
-			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"options": {}
 		}`),
 	)
@@ -349,7 +350,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "testprotocol",
-			"providerId": "0xProviderId",
+			"provider_id": "0xProviderId",
 			"options": {}
 		}`),
 	)
@@ -389,30 +390,30 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		t,
 		`{
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-			"providerId": "0xProviderId",
+			"provider_id": "0xProviderId",
 			"type": "testprotocol",
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,
-				"providerId": "0xProviderId",
-				"serviceType": "testprotocol",
-				"serviceDefinition": {
-					"locationOriginate": {
+				"provider_id": "0xProviderId",
+				"service_type": "testprotocol",
+				"service_definition": {
+					"location_originate": {
 						"asn": 123,
 						"country": "Lithuania",
 						"city": "Vilnius"
 					}
 				},
-				"paymentMethod": {
+				"payment_method": {
 					"type": "BYTES_TRANSFERRED_WITH_TIME",
 					"price": {
 						"amount":50000,
 						"currency":"MYST"
 					},
 					"rate":{
-						"perSeconds":60,
-						"perBytes":7669584
+						"per_seconds":60,
+						"per_bytes":7669584
 					}
 				}
 			}
@@ -451,7 +452,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 		`{
 			"message": "validation_error",
 			"errors": {
-				"providerId": [ {"code": "required", "message": "Field is required"} ],
+				"provider_id": [ {"code": "required", "message": "Field is required"} ],
 				"type": [ {"code": "required", "message": "Field is required"} ]
 			}
 		}`,
@@ -467,8 +468,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
-			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"accessPolicies": {
+			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"access_policies": {
 				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
 			}
 		}`),
@@ -482,29 +483,29 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		t,
 		`{
 			"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c9",
-			"providerId": "0xProviderId",
+			"provider_id": "0xProviderId",
 			"type": "mockAccessPolicyService",
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,
-				"providerId": "0xProviderId",
-				"serviceType": "mockAccessPolicyService",
-				"serviceDefinition": {
-					"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+				"provider_id": "0xProviderId",
+				"service_type": "mockAccessPolicyService",
+				"service_definition": {
+					"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 				},
-				"paymentMethod": {
+				"payment_method": {
 					"type": "BYTES_TRANSFERRED_WITH_TIME",
 					"price": {
 						"amount":50000,
 						"currency":"MYST"
 					},
 					"rate":{
-						"perSeconds":60,
-						"perBytes":7669584
+						"per_seconds":60,
+						"per_bytes":7669584
 					}
 				},
-				"accessPolicies": [
+				"access_policies": [
 					{
 						"id":"verified-traffic",
 						"source": "https://some.domain/api/v1/lists/verified-traffic"
@@ -536,8 +537,8 @@ func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
-			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"accessPolicy": {
+			"provider_id": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"access_policy": {
 				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
 			}
 		}`),
@@ -549,7 +550,7 @@ func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	assert.JSONEq(
 		t,
-		`{"message": "json: unknown field \"accessPolicy\""}`,
+		`{"message": "json: unknown field \"access_policy\""}`,
 		resp.Body.String(),
 	)
 }

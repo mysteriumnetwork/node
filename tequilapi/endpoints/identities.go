@@ -19,80 +19,35 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	pc "github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/pkg/errors"
 )
 
-// swagger:model IdentityDTO
-type identityDto struct {
-	// identity in Ethereum address format
-	// required: true
-	// example: 0x0000000000000000000000000000000000000001
-	ID string `json:"id"`
+type balanceProvider interface {
+	GetBalance(id identity.Identity) uint64
+	ForceBalanceUpdate(id identity.Identity) uint64
 }
 
-// swagger:model IdentityList
-type identityList struct {
-	Identities []identityDto `json:"identities"`
+type earningsProvider interface {
+	SettlementState(id identity.Identity) pingpong.SettlementState
 }
-
-// swagger:model CurrentIdentityDTO
-type currentIdentityDTO struct {
-	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model IdentityCreationDTO
-type identityCreationDto struct {
-	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model IdentityUnlockingDTO
-type identityUnlockingDto struct {
-	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model StatusDTO
-type statusDTO struct {
-	ChannelAddress string `json:"channel_address"`
-	IsRegistered   bool   `json:"is_registered"`
-	Balance        uint64 `json:"balance"`
-}
-
-type balanceGetter func(ID identity.Identity) uint64
 
 type identitiesAPI struct {
-	idm                                           identity.Manager
-	selector                                      identity_selector.Handler
-	registry                                      registry.IdentityRegistry
-	registryAddress, channelImplementationAddress string
-	balanceGetter                                 balanceGetter
-}
-
-func idToDto(id identity.Identity) identityDto {
-	return identityDto{id.Address}
-}
-
-func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identityDto) (idDtoArry []identityDto) {
-	idDtoArry = make([]identityDto, len(idArry))
-	for i, id := range idArry {
-		idDtoArry[i] = f(id)
-	}
-	return
-}
-
-//NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry, registryAddress, channelImplementationAddress string, balanceGetter balanceGetter) *identitiesAPI {
-	return &identitiesAPI{idm, selector, registry, registryAddress, channelImplementationAddress, balanceGetter}
+	idm               identity.Manager
+	selector          identity_selector.Handler
+	registry          registry.IdentityRegistry
+	channelCalculator *pingpong.ChannelAddressCalculator
+	balanceProvider   balanceProvider
+	earningsProvider  earningsProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -103,16 +58,15 @@ func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Hand
 //   200:
 //     description: List of identities
 //     schema:
-//       "$ref": "#/definitions/IdentityList"
+//       "$ref": "#/definitions/ListIdentitiesResponse"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	idArry := endpoint.idm.GetIdentities()
-	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
-
-	utils.WriteAsJSON(idsSerializable, resp)
+func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	ids := endpoint.idm.GetIdentities()
+	idsDTO := contract.NewIdentityListResponse(ids)
+	utils.WriteAsJSON(idsDTO, resp)
 }
 
 // swagger:operation PUT /identities/current Identity currentIdentity
@@ -124,12 +78,12 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/CurrentIdentityDTO"
+//       $ref: "#/definitions/IdentityRequestDTO"
 // responses:
 //   200:
 //     description: Unlocked identity returned
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
 //     description: Bad Request
 //     schema:
@@ -143,33 +97,32 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: remove this hack when we replace our router
-	address := params.ByName("id")
-	if address == "current" {
-		address = ""
-	}
-
-	myIdentityRequest, err := toCurrentIdentityRequest(request)
+	var req contract.IdentityRequest
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateCurrentIdentityRequest(myIdentityRequest)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	id, err := endpoint.selector.UseOrCreate(address, *myIdentityRequest.Passphrase)
+	idAddress := ""
+	if req.Address != nil {
+		idAddress = *req.Address
+	}
+	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	idDto := idToDto(id)
-	utils.WriteAsJSON(idDto, resp)
+	idDTO := contract.NewIdentityDTO(id)
+	utils.WriteAsJSON(idDTO, resp)
 }
 
 // swagger:operation POST /identities Identity createIdentity
@@ -181,12 +134,12 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/IdentityCreationDTO"
+//       $ref: "#/definitions/IdentityRequestDTO"
 // responses:
 //   200:
 //     description: Identity created
 //     schema:
-//       "$ref": "#/definitions/IdentityDTO"
+//       "$ref": "#/definitions/IdentityRefDTO"
 //   400:
 //     description: Bad Request
 //     schema:
@@ -199,27 +152,28 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	createReq, err := toCreateRequest(request)
+func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+	var req contract.IdentityRequest
+	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateCreationRequest(createReq)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	id, err := endpoint.idm.CreateNewIdentity(*createReq.Passphrase)
+	id, err := endpoint.idm.CreateNewIdentity(*req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	idDto := idToDto(id)
-	utils.WriteAsJSON(idDto, resp)
+	idDTO := contract.NewIdentityDTO(id)
+	utils.WriteAsJSON(idDTO, resp)
 }
 
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
@@ -236,7 +190,7 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //   name: body
 //   description: Parameter in body (passphrase) required for unlocking identity
 //   schema:
-//     $ref: "#/definitions/IdentityUnlockingDTO"
+//     $ref: "#/definitions/IdentityRequestDTO"
 // responses:
 //   202:
 //     description: Identity unlocked
@@ -252,21 +206,28 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := params.ByName("id")
-	unlockReq, err := toUnlockRequest(request)
+func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	id, err := endpoint.idm.GetIdentity(address)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
+	}
+
+	var req contract.IdentityRequest
+	err = json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateUnlockRequest(unlockReq)
+	errorMap := contract.ValidateIdentityRequest(req)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	err = endpoint.idm.Unlock(id, *unlockReq.Passphrase)
+	err = endpoint.idm.Unlock(id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
@@ -274,97 +235,129 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	// TODO: remove this hack when we replace our router
-	identityAddress := params.ByName("id")
-	if identityAddress == "current" {
-		identityAddress = ""
-	}
-
-	// TODO: pass in accountant id
-	channelAddress, err := pc.GenerateChannelAddress(identityAddress, metadata.TestnetDefinition.AccountantID, endpoint.registryAddress, endpoint.channelImplementationAddress)
+// swagger:operation GET /identities/{id} Identity getIdentity
+// ---
+// summary: Get identity
+// description: Provide identity details
+// parameters:
+//   - in: path
+//     name: id
+//     description: hex address of identity
+//     type: string
+//     required: true
+// responses:
+//   200:
+//     description: Identity retrieved
+//     schema:
+//       "$ref": "#/definitions/IdentityRefDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	id, err := endpoint.idm.GetIdentity(address)
 	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to calculate channel address"), http.StatusInternalServerError)
+		utils.SendError(resp, err, http.StatusNotFound)
 		return
 	}
 
-	s, err := endpoint.registry.GetRegistrationStatus(identity.FromAddress(identityAddress))
+	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
 
-	isRegistered := false
-	switch s {
-	case registry.RegisteredConsumer, registry.Promoting, registry.RegisteredProvider:
-		isRegistered = true
+	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(id)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
+		return
 	}
-	balance := endpoint.balanceGetter(identity.FromAddress(identityAddress))
-	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered, Balance: balance}
+
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
+	settlement := endpoint.earningsProvider.SettlementState(id)
+	status := contract.IdentityDTO{
+		Address:            address,
+		RegistrationStatus: regStatus.String(),
+		ChannelAddress:     channelAddress.Hex(),
+		Balance:            balance,
+		Earnings:           settlement.UnsettledBalance(),
+		EarningsTotal:      settlement.LifetimeBalance(),
+	}
 	utils.WriteAsJSON(status, resp)
 }
 
-func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
-	var identityCreationReq = &identityCreationDto{}
-	err := json.NewDecoder(req.Body).Decode(&identityCreationReq)
+// swagger:operation GET /identities/{id}/registration Identity identityRegistration
+// ---
+// summary: Provide identity registration status
+// description: Provides registration status for given identity, if identity is not registered - provides additional data required for identity registration
+// parameters:
+//   - in: path
+//     name: id
+//     description: hex address of identity
+//     type: string
+//     required: true
+// responses:
+//   200:
+//     description: Status retrieved
+//     schema:
+//       "$ref": "#/definitions/RegistrationDataDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	id, err := endpoint.idm.GetIdentity(address)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
 	}
-	return identityCreationReq, nil
-}
 
-func toCurrentIdentityRequest(req *http.Request) (*currentIdentityDTO, error) {
-	var currentIdentityReq = &currentIdentityDTO{}
-	err := json.NewDecoder(req.Body).Decode(&currentIdentityReq)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
 	if err != nil {
-		return nil, err
+		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
+		return
 	}
-	return currentIdentityReq, nil
-}
 
-func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, err error) {
-	isUnlockingReq = identityUnlockingDto{}
-	err = json.NewDecoder(req.Body).Decode(&isUnlockingReq)
-	return
-}
-
-func validateCurrentIdentityRequest(unlockReq *currentIdentityDTO) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if unlockReq.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+	registrationDataDTO := &contract.IdentityRegistrationResponse{
+		Status:     regStatus.String(),
+		Registered: regStatus.Registered(),
 	}
-	return
+	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
-func validateUnlockRequest(unlockReq identityUnlockingDto) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if unlockReq.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
-	}
-	return
-}
-
-func validateCreationRequest(createReq *identityCreationDto) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if createReq.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
-	}
-	return
-}
-
-//AddRoutesForIdentities creates /identities endpoint on tequilapi service
+// AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
 	selector identity_selector.Handler,
-	identityRegistry registry.IdentityRegistry,
-	registryAddress, channelImplementationAddress string,
-	balanceGetter balanceGetter,
+	registry registry.IdentityRegistry,
+	balanceProvider balanceProvider,
+	channelAddressCalculator *pingpong.ChannelAddressCalculator,
+	earningsProvider earningsProvider,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress, balanceGetter)
+	idmEnd := &identitiesAPI{
+		idm:               idm,
+		selector:          selector,
+		registry:          registry,
+		balanceProvider:   balanceProvider,
+		channelCalculator: channelAddressCalculator,
+		earningsProvider:  earningsProvider,
+	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
-	router.PUT("/identities/:id", idmEnd.Current)
+	router.PUT("/identities/:id", func(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+		// TODO: remove this hack when we replace our router
+		switch params.ByName("id") {
+		case "current":
+			idmEnd.Current(resp, request, params)
+		default:
+			http.NotFound(resp, request)
+		}
+	})
+	router.GET("/identities/:id", idmEnd.Get)
+	router.GET("/identities/:id/status", idmEnd.Get)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
-	router.GET("/identities/:id/status", idmEnd.Status)
+	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 }

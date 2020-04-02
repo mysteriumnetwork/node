@@ -26,15 +26,33 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
+
+type providerChannelStatusProvider interface {
+	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error)
+}
+
+type accountantPromiseGetter interface {
+	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
+}
+
+type ks interface {
+	Accounts() []accounts.Account
+}
+
+type registrationStatusProvider interface {
+	GetRegistrationStatus(id identity.Identity) (registry.RegistrationStatus, error)
+}
 
 type transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
@@ -51,17 +69,25 @@ type receivedPromise struct {
 }
 
 // AccountantPromiseSettler is responsible for settling the accountant promises.
-type AccountantPromiseSettler struct {
+type AccountantPromiseSettler interface {
+	SettlementState(id identity.Identity) SettlementState
+	ForceSettle(providerID, accountantID identity.Identity) error
+	Subscribe() error
+}
+
+// accountantPromiseSettler is responsible for settling the accountant promises.
+type accountantPromiseSettler struct {
+	eventBus                   eventbus.EventBus
 	bc                         providerChannelStatusProvider
 	config                     AccountantPromiseSettlerConfig
-	lock                       sync.Mutex
+	lock                       sync.RWMutex
 	accountantPromiseGetter    accountantPromiseGetter
 	registrationStatusProvider registrationStatusProvider
 	ks                         ks
 	transactor                 transactor
 	promiseStorage             promiseStorage
 
-	currentState map[identity.Identity]state
+	currentState map[identity.Identity]SettlementState
 	settleQueue  chan receivedPromise
 	stop         chan struct{}
 	once         sync.Once
@@ -75,14 +101,14 @@ type AccountantPromiseSettlerConfig struct {
 }
 
 // NewAccountantPromiseSettler creates a new instance of accountant promise settler.
-func NewAccountantPromiseSettler(transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, accountantPromiseGetter accountantPromiseGetter, config AccountantPromiseSettlerConfig) *AccountantPromiseSettler {
-	return &AccountantPromiseSettler{
+func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, config AccountantPromiseSettlerConfig) *accountantPromiseSettler {
+	return &accountantPromiseSettler{
+		eventBus:                   eventBus,
 		bc:                         providerChannelStatusProvider,
-		accountantPromiseGetter:    accountantPromiseGetter,
 		ks:                         ks,
 		registrationStatusProvider: registrationStatusProvider,
 		config:                     config,
-		currentState:               make(map[identity.Identity]state),
+		currentState:               make(map[identity.Identity]SettlementState),
 		promiseStorage:             promiseStorage,
 
 		// defaulting to a queue of 5, in case we have a few active identities.
@@ -93,7 +119,7 @@ func NewAccountantPromiseSettler(transactor transactor, promiseStorage promiseSt
 }
 
 // loadInitialState loads the initial state for the given identity. Inteded to be called on service start.
-func (aps *AccountantPromiseSettler) loadInitialState(addr identity.Identity) error {
+func (aps *accountantPromiseSettler) loadInitialState(addr identity.Identity) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
@@ -115,56 +141,61 @@ func (aps *AccountantPromiseSettler) loadInitialState(addr identity.Identity) er
 	return aps.resyncState(addr)
 }
 
-func (aps *AccountantPromiseSettler) resyncState(addr identity.Identity) error {
-	res, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, addr.ToCommonAddress())
+func (aps *accountantPromiseSettler) resyncState(id identity.Identity) error {
+	channel, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, id.ToCommonAddress())
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", addr))
+		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", id))
 	}
 
-	accountantPromise, err := aps.accountantPromiseGetter.Get(addr, identity.FromAddress(aps.config.AccountantAddress.Hex()))
+	accountantPromise, err := aps.promiseStorage.Get(id, identity.FromAddress(aps.config.AccountantAddress.Hex()))
 	if err != nil && err != ErrNotFound {
-		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", addr))
+		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", id))
 	}
 
-	availableBalance := res.Balance.Uint64() + res.Settled.Uint64()
-	currentBalance := availableBalance - accountantPromise.Promise.Amount
-	s := state{
-		balance:          currentBalance,
-		availableBalance: availableBalance,
-		lastPromise:      accountantPromise.Promise,
-		registered:       true,
+	s := SettlementState{
+		Channel:     channel,
+		LastPromise: accountantPromise.Promise,
+		registered:  true,
 	}
 
-	aps.currentState[addr] = s
-	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v ", addr, s.balance, s.availableBalance)
-
+	go aps.publishChangeEvent(id, aps.currentState[id], s)
+	aps.currentState[id] = s
+	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", id, s.balance(), s.availableBalance(), s.UnsettledBalance())
 	return nil
 }
 
+func (aps *accountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after SettlementState) {
+	aps.eventBus.Publish(AppTopicEarningsChanged, AppEventEarningsChanged{
+		Identity: id,
+		Previous: before,
+		Current:  after,
+	})
+}
+
 // Subscribe subscribes the accountant promise settler to the appropriate events
-func (aps *AccountantPromiseSettler) Subscribe(sub eventbus.Subscriber) error {
-	err := sub.SubscribeAsync(nodevent.AppTopicNode, aps.handleNodeEvent)
+func (aps *accountantPromiseSettler) Subscribe() error {
+	err := aps.eventBus.SubscribeAsync(nodevent.AppTopicNode, aps.handleNodeEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to node status event")
 	}
 
-	err = sub.SubscribeAsync(registry.AppTopicRegistration, aps.handleRegistrationEvent)
+	err = aps.eventBus.SubscribeAsync(registry.AppTopicIdentityRegistration, aps.handleRegistrationEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to registration event")
 	}
 
-	err = sub.SubscribeAsync(service.AppTopicServiceStatus, aps.handleServiceEvent)
+	err = aps.eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, aps.handleServiceEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to service status event")
 	}
 
-	err = sub.SubscribeAsync(AppTopicAccountantPromise, aps.handleAccountantPromiseReceived)
+	err = aps.eventBus.SubscribeAsync(AppTopicAccountantPromise, aps.handleAccountantPromiseReceived)
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 
-func (aps *AccountantPromiseSettler) handleServiceEvent(event service.EventPayload) {
+func (aps *accountantPromiseSettler) handleServiceEvent(event servicestate.AppEventServiceStatus) {
 	switch event.Status {
-	case string(service.Running):
+	case string(servicestate.Running):
 		err := aps.loadInitialState(identity.FromAddress(event.ProviderID))
 		// TODO: should we retry? should we signal that we need to cancel and abort?
 		// In any case, if we start exceeding our balances, the accountant will let us know.
@@ -179,7 +210,7 @@ func (aps *AccountantPromiseSettler) handleServiceEvent(event service.EventPaylo
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
+func (aps *accountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
 	if payload.Status == nodevent.StatusStarted {
 		aps.handleNodeStart()
 		return
@@ -191,7 +222,7 @@ func (aps *AccountantPromiseSettler) handleNodeEvent(payload nodevent.Payload) {
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.RegistrationEventPayload) {
+func (aps *accountantPromiseSettler) handleRegistrationEvent(payload registry.AppEventIdentityRegistration) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
@@ -215,28 +246,28 @@ func (aps *AccountantPromiseSettler) handleRegistrationEvent(payload registry.Re
 	log.Info().Msgf("Identity registration event handled for provider %q", payload.ID)
 }
 
-func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep AccountantPromiseEventPayload) {
+func (aps *accountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
+	id := apep.ProviderID
+	log.Info().Msgf("Received accountant promise for %q", id)
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	log.Info().Msgf("Received accountant promise for %q", apep.ProviderID)
-
-	v, ok := aps.currentState[apep.ProviderID]
+	s, ok := aps.currentState[apep.ProviderID]
 	if !ok {
-		log.Error().Msgf("Have no info on provider %q, skipping", apep.ProviderID)
+		log.Error().Msgf("Have no info on provider %q, skipping", id)
 		return
 	}
-
-	if !v.registered {
-		log.Error().Msgf("provider %q not registered, skipping", apep.ProviderID)
+	if !s.registered {
+		log.Error().Msgf("provider %q not registered, skipping", id)
 		return
 	}
+	s.LastPromise = apep.Promise
 
-	newState := v.updateWithNewPromise(apep.Promise)
-	aps.currentState[apep.ProviderID] = newState
-	log.Info().Msgf("Accountant promise state updated for provider %q", apep.ProviderID)
+	go aps.publishChangeEvent(id, aps.currentState[id], s)
+	aps.currentState[apep.ProviderID] = s
+	log.Info().Msgf("Accountant promise state updated for provider %q", id)
 
-	if newState.needsSettling(aps.config.Threshold) {
+	if s.needsSettling(aps.config.Threshold) {
 		aps.settleQueue <- receivedPromise{
 			provider: apep.ProviderID,
 			promise:  apep.Promise,
@@ -244,7 +275,7 @@ func (aps *AccountantPromiseSettler) handleAccountantPromiseReceived(apep Accoun
 	}
 }
 
-func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
+func (aps *accountantPromiseSettler) listenForSettlementRequests() {
 	log.Info().Msg("Listening for settlement events")
 	defer func() {
 		log.Info().Msg("Stopped listening for settlement events")
@@ -260,11 +291,19 @@ func (aps *AccountantPromiseSettler) listenForSettlementRequests() {
 	}
 }
 
+// SettlementState returns current settlement status for given identity
+func (aps *accountantPromiseSettler) SettlementState(id identity.Identity) SettlementState {
+	aps.lock.RLock()
+	defer aps.lock.RUnlock()
+
+	return aps.currentState[id]
+}
+
 // ErrNothingToSettle indicates that there is nothing to settle.
 var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
-func (aps *AccountantPromiseSettler) ForceSettle(providerID, accountantID identity.Identity) error {
+func (aps *accountantPromiseSettler) ForceSettle(providerID, accountantID identity.Identity) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
@@ -288,7 +327,7 @@ func (aps *AccountantPromiseSettler) ForceSettle(providerID, accountantID identi
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
-func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
+func (aps *accountantPromiseSettler) settle(p receivedPromise) error {
 	if aps.isSettling(p.provider) {
 		return errors.New("provider already has settlement in progress")
 	}
@@ -345,9 +384,9 @@ func (aps *AccountantPromiseSettler) settle(p receivedPromise) error {
 	return <-errCh
 }
 
-func (aps *AccountantPromiseSettler) isSettling(id identity.Identity) bool {
-	aps.lock.Lock()
-	defer aps.lock.Unlock()
+func (aps *accountantPromiseSettler) isSettling(id identity.Identity) bool {
+	aps.lock.RLock()
+	defer aps.lock.RUnlock()
 	v, ok := aps.currentState[id]
 	if !ok {
 		return false
@@ -356,7 +395,7 @@ func (aps *AccountantPromiseSettler) isSettling(id identity.Identity) bool {
 	return v.settleInProgress
 }
 
-func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling bool) {
+func (aps *accountantPromiseSettler) setSettling(id identity.Identity, settling bool) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	v := aps.currentState[id]
@@ -364,7 +403,7 @@ func (aps *AccountantPromiseSettler) setSettling(id identity.Identity, settling 
 	aps.currentState[id] = v
 }
 
-func (aps *AccountantPromiseSettler) handleNodeStart() {
+func (aps *accountantPromiseSettler) handleNodeStart() {
 	go aps.listenForSettlementRequests()
 
 	for _, v := range aps.ks.Accounts() {
@@ -383,64 +422,8 @@ func (aps *AccountantPromiseSettler) handleNodeStart() {
 	}
 }
 
-func (aps *AccountantPromiseSettler) handleNodeStop() {
+func (aps *accountantPromiseSettler) handleNodeStop() {
 	aps.once.Do(func() {
 		close(aps.stop)
 	})
-}
-
-type providerChannelStatusProvider interface {
-	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
-	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (ProviderChannel, error)
-}
-
-type accountantPromiseGetter interface {
-	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
-}
-
-type state struct {
-	settleInProgress bool
-	balance          uint64
-	availableBalance uint64
-	registered       bool
-	lastPromise      crypto.Promise
-}
-
-func (s state) needsSettling(threshold float64) bool {
-	if !s.registered {
-		return false
-	}
-
-	if s.settleInProgress {
-		return false
-	}
-
-	if float64(s.balance) <= 0 {
-		return true
-	}
-
-	if float64(s.balance) <= threshold*float64(s.availableBalance) {
-		return true
-	}
-
-	return false
-}
-
-func (s state) updateWithNewPromise(promise crypto.Promise) state {
-	diff := promise.Amount - s.lastPromise.Amount
-	return state{
-		settleInProgress: s.settleInProgress,
-		balance:          s.balance - diff,
-		availableBalance: s.availableBalance,
-		registered:       s.registered,
-		lastPromise:      promise,
-	}
-}
-
-type ks interface {
-	Accounts() []accounts.Account
-}
-
-type registrationStatusProvider interface {
-	GetRegistrationStatus(id identity.Identity) (registry.RegistrationStatus, error)
 }

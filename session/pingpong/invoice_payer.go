@@ -26,14 +26,14 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -45,9 +45,12 @@ var ErrWrongProvider = errors.New("wrong provider supplied")
 // ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
 
-const consumerFirstInvoiceTolerance = 1.35
-const consumerInvoiceTolerance = 1.05
-const dataLeeway = datasize.MiB * 20
+// consumerInvoiceBasicTolerance provider traffic amount compensation due to:
+//   - different MTU sizes
+//   - measurement timing inaccuracies
+//   - possible in-transit packet fragmentation
+//   - non-agreed traffic: traffic blocked / dropped / not reachable / failed retransmits on provider
+const consumerInvoiceBasicTolerance = 1.11
 
 // PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
@@ -62,8 +65,8 @@ type consumerInvoiceStorage interface {
 type getConsumerInfo func(id string) (ConsumerData, error)
 
 type consumerTotalsStorage interface {
-	Store(consumerAddress, accountantAddress string, amount uint64) error
-	Get(providerAddress, accountantAddress string) (uint64, error)
+	Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error
+	Get(providerAddress, accountantAddress identity.Identity) (uint64, error)
 }
 
 type timeTracker interface {
@@ -80,7 +83,6 @@ type InvoicePayer struct {
 	stop           chan struct{}
 	once           sync.Once
 	channelAddress identity.Identity
-	receivedFirst  bool
 
 	lastInvoice crypto.Invoice
 	deps        InvoicePayerDeps
@@ -95,7 +97,7 @@ type InvoicePayerDeps struct {
 	PeerExchangeMessageSender PeerExchangeMessageSender
 	ConsumerTotalsStorage     consumerTotalsStorage
 	TimeTracker               timeTracker
-	Ks                        *keystore.KeyStore
+	Ks                        *identity.Keystore
 	Identity, Peer            identity.Identity
 	Proposal                  market.ServiceProposal
 	SessionID                 string
@@ -198,14 +200,14 @@ func (ip *InvoicePayer) recoverGrandTotalPromised() error {
 
 	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
 	return ip.deps.ConsumerTotalsStorage.Store(
-		ip.deps.Identity.Address,
-		ip.deps.AccountantAddress.Address,
+		ip.deps.Identity,
+		ip.deps.AccountantAddress,
 		data.LatestPromise.Amount,
 	)
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
-	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
+	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -213,7 +215,7 @@ func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address, res+amount)
+	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity, ip.deps.AccountantAddress, res+amount)
 }
 
 func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
@@ -221,30 +223,54 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	transfered := ip.getDataTransferred()
-	transfered.up += ip.deps.DataLeeway.Bytes()
+	transferred := ip.getDataTransferred()
+	transferred.up += ip.deps.DataLeeway.Bytes()
 
-	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transfered, ip.deps.Proposal.PaymentMethod)
+	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
+	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transferred)
 
-	upperBound := uint64(math.Trunc(float64(shouldBe) * consumerInvoiceTolerance))
-	if !ip.receivedFirst {
-		upperBound = uint64(math.Trunc(float64(shouldBe) * consumerFirstInvoiceTolerance))
-	}
+	upperBound := uint64(math.Trunc(float64(shouldBe) * estimatedTolerance))
 
-	log.Debug().Msgf("Upper bound %v", upperBound)
+	log.Debug().Msgf("Estimated tolerance %.4v, upper bound %v", estimatedTolerance, upperBound)
 
 	if invoice.AgreementTotal > upperBound {
 		log.Warn().Msg("Provider trying to overcharge")
 		return ErrProviderOvercharge
 	}
 
-	ip.receivedFirst = true
 	return nil
+}
+
+func estimateInvoiceTolerance(elapsed time.Duration, transferred dataTransferred) float64 {
+	if elapsed.Seconds() < 1 {
+		return 3
+	}
+
+	totalMiBytesTransferred := float64(transferred.sum()) / (1024 * 1024)
+	avgSpeedInMiBits := totalMiBytesTransferred / elapsed.Seconds() * 8
+
+	// correction calculation based on total session duration.
+	durInMinutes := elapsed.Minutes()
+
+	if elapsed.Minutes() < 1 {
+		durInMinutes = 1
+	}
+
+	durationComponent := 1 - durInMinutes/(1+durInMinutes)
+
+	// correction calculation based on average session speed.
+	if avgSpeedInMiBits == 0 {
+		avgSpeedInMiBits = 1
+	}
+
+	avgSpeedComponent := 1 - 1/(1+avgSpeedInMiBits/1024)
+
+	return durationComponent + avgSpeedComponent + consumerInvoiceBasicTolerance
 }
 
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
 	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
-	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity.Address, ip.deps.AccountantAddress.Address)
+	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
 	if err != nil {
 		return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
 	}
@@ -275,11 +301,6 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
-
-	defer ip.deps.EventBus.Publish(AppTopicExchangeMessage, ExchangeMessageEventPayload{
-		Identity:       ip.deps.Identity,
-		AmountPromised: diff,
-	})
 
 	// TODO: we'd probably want to check if we have enough balance here
 	err = ip.incrementGrandTotalPromised(diff)

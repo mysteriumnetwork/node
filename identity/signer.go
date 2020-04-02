@@ -31,12 +31,12 @@ type Signer interface {
 }
 
 type keystoreSigner struct {
-	keystore Keystore
+	keystore keystore
 	account  accounts.Account
 }
 
 // NewSigner returns new instance of Signer
-func NewSigner(keystore Keystore, identity Identity) Signer {
+func NewSigner(keystore keystore, identity Identity) Signer {
 	account := identityToAccount(identity)
 
 	return &keystoreSigner{

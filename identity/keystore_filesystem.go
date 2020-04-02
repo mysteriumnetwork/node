@@ -18,17 +18,194 @@
 package identity
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/rs/zerolog/log"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha512"
+	"errors"
+	"io"
+	"sync"
+
+	"github.com/awnumar/memguard"
+	"github.com/ethereum/go-ethereum/accounts"
+	ethKs "github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"golang.org/x/crypto/hkdf"
 )
 
-// NewKeystoreFilesystem create new keystore, which keeps keys in filesystem
-func NewKeystoreFilesystem(directory string, lightweight bool) *keystore.KeyStore {
-	if lightweight {
-		log.Debug().Msg("Using lightweight keystore")
-		return keystore.NewKeyStore(directory, keystore.LightScryptN, keystore.LightScryptP)
+type ks interface {
+	Accounts() []accounts.Account
+	NewAccount(passphrase string) (accounts.Account, error)
+	Find(a accounts.Account) (accounts.Account, error)
+	Unlock(a accounts.Account, passphrase string) error
+	Lock(addr common.Address) error
+	SignHash(a accounts.Account, hash []byte) ([]byte, error)
+	Export(a accounts.Account, passphrase, newPassphrase string) (keyJSON []byte, err error)
+}
+
+// NewKeystoreFilesystem create new keystore, which keeps keys in filesystem.
+func NewKeystoreFilesystem(directory string, ks ks, keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)) *Keystore {
+	return &Keystore{
+		ethKeystore:    ks,
+		keyDecryptFunc: keyDecryptFunc,
+		derivedKeys:    make(map[common.Address]*memguard.Enclave),
+	}
+}
+
+// Keystore handles everything that's related to eth accounts.
+type Keystore struct {
+	ethKeystore    ks
+	keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)
+
+	derivedKeys    map[common.Address]*memguard.Enclave
+	derivedKeyLock sync.Mutex
+}
+
+// Accounts returns all accounts.
+func (ks *Keystore) Accounts() []accounts.Account {
+	return ks.ethKeystore.Accounts()
+}
+
+// NewAccount creates a new account.
+func (ks *Keystore) NewAccount(passphrase string) (accounts.Account, error) {
+	return ks.ethKeystore.NewAccount(passphrase)
+}
+
+// Find finds an account.
+func (ks *Keystore) Find(a accounts.Account) (accounts.Account, error) {
+	return ks.ethKeystore.Find(a)
+}
+
+// Unlock unlocks an account.
+func (ks *Keystore) Unlock(a accounts.Account, passphrase string) error {
+	err := ks.ethKeystore.Unlock(a, passphrase)
+	if err != nil {
+		return err
 	}
 
-	log.Debug().Msg("using heavyweight keystore")
-	return keystore.NewKeyStore(directory, keystore.StandardScryptN, keystore.StandardScryptP)
+	derived, err := ks.deriveKey(a, passphrase)
+	if err != nil {
+		return err
+	}
+
+	ks.rememberDerivedKey(a.Address, derived)
+	return nil
+}
+
+// Lock locks an account.
+func (ks *Keystore) Lock(addr common.Address) error {
+	defer ks.forgetDerivedKey(addr)
+	return ks.ethKeystore.Lock(addr)
+}
+
+func (ks *Keystore) rememberDerivedKey(a common.Address, key []byte) {
+	ks.derivedKeyLock.Lock()
+	defer ks.derivedKeyLock.Unlock()
+	enclave := memguard.NewEnclave(key)
+	ks.derivedKeys[a] = enclave
+}
+
+func (ks *Keystore) forgetDerivedKey(a common.Address) {
+	ks.derivedKeyLock.Lock()
+	defer ks.derivedKeyLock.Unlock()
+	delete(ks.derivedKeys, a)
+}
+
+func (ks *Keystore) getDerivedKey(a common.Address) ([]byte, error) {
+	ks.derivedKeyLock.Lock()
+	defer ks.derivedKeyLock.Unlock()
+
+	if _, ok := ks.derivedKeys[a]; !ok {
+		return nil, errors.New("no key found")
+	}
+
+	enclave := ks.derivedKeys[a]
+	buffer, err := enclave.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer buffer.Destroy()
+
+	bytes := buffer.Bytes()
+
+	copied := make([]byte, len(bytes))
+	copy(copied, bytes)
+	return copied, nil
+}
+
+func (ks *Keystore) deriveKey(a accounts.Account, passphrase string) ([]byte, error) {
+	kjson, err := ks.ethKeystore.Export(a, passphrase, passphrase)
+	if err != nil {
+		return nil, err
+	}
+
+	k, err := ks.keyDecryptFunc(kjson, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	defer memguard.WipeBytes(k.PrivateKey.D.Bytes())
+
+	hashFunc := sha512.New
+	hkdfDeriver := hkdf.New(hashFunc, k.PrivateKey.D.Bytes(), nil, nil)
+	key := make([]byte, 32)
+	_, err = io.ReadFull(hkdfDeriver, key)
+	return key, err
+}
+
+// Encrypt takes a derived key for the given address and encrypts the plaintext.
+func (ks *Keystore) Encrypt(addr common.Address, plaintext []byte) ([]byte, error) {
+	key, err := ks.getDerivedKey(addr)
+	if err != nil {
+		return nil, err
+	}
+	defer memguard.WipeBytes(key)
+
+	c, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+
+	return gcm.Seal(nonce, nonce, plaintext, nil), nil
+}
+
+// Decrypt takes a derived key for the given address and decrypts the encrypted message.
+func (ks *Keystore) Decrypt(addr common.Address, encrypted []byte) ([]byte, error) {
+	key, err := ks.getDerivedKey(addr)
+	if err != nil {
+		return nil, err
+	}
+	defer memguard.WipeBytes(key)
+
+	c, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(encrypted) < nonceSize {
+		return nil, errors.New("ciphertext too short")
+	}
+
+	nonce, encrypted := encrypted[:nonceSize], encrypted[nonceSize:]
+	return gcm.Open(nil, nonce, encrypted, nil)
+}
+
+// SignHash signs the given hash.
+func (ks *Keystore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
+	return ks.ethKeystore.SignHash(a, hash)
 }

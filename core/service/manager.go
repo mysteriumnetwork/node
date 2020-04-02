@@ -18,14 +18,17 @@
 package service
 
 import (
-	"encoding/json"
+	"fmt"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -43,7 +46,7 @@ var (
 type Service interface {
 	Serve(instance *Instance) error
 	Stop() error
-	ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error)
+	session.ConfigProvider
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
@@ -73,6 +76,9 @@ func NewManager(
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
+	p2pListener p2p.Listener,
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager,
+	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -82,6 +88,9 @@ func NewManager(
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
 		policyOracle:         policyOracle,
+		p2pManager:           p2pListener,
+		sessionManager:       sessionManager,
+		statusStorage:        statusStorage,
 	}
 }
 
@@ -96,6 +105,10 @@ type Manager struct {
 	discoveryFactory DiscoveryFactory
 	eventPublisher   Publisher
 	policyOracle     *policy.Oracle
+
+	p2pManager     p2p.Listener
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
+	statusStorage  connectivity.StatusStorage
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -136,12 +149,24 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
+	err = manager.p2pManager.Listen(providerID, serviceType, func(ch p2p.Channel) {
+		mng := manager.sessionManager(proposal, string(id), ch)
+		subscribeSessionCreate(mng, ch, service)
+		subscribeSessionStatus(mng, ch, manager.statusStorage)
+		subscribeSessionAcknowledge(mng, ch)
+		subscribeSessionDestroy(mng, ch)
+	})
+
+	if err != nil {
+		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
+	}
+
 	discovery := manager.discoveryFactory()
 	discovery.Start(providerID, proposal)
 
 	instance := &Instance{
 		id:             id,
-		state:          Starting,
+		state:          servicestate.Starting,
 		options:        options,
 		service:        service,
 		proposal:       proposal,
@@ -154,7 +179,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	manager.servicePool.Add(instance)
 
 	go func() {
-		instance.setState(Running)
+		instance.setState(servicestate.Running)
 
 		serveErr := service.Serve(instance)
 		if serveErr != nil {

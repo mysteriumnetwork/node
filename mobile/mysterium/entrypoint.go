@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/cmd"
@@ -67,27 +66,55 @@ type MobileNode struct {
 	feedbackReporter             *feedback.Reporter
 	transactor                   *registry.Transactor
 	identityRegistry             registry.IdentityRegistry
+	identityChannelCalculator    *pingpong.ChannelAddressCalculator
 	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
 	registryAddress              string
 	channelImplementationAddress string
 }
 
-// MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
-type MobileNetworkOptions node.OptionsNetwork
+// MobileNodeOptions contains common mobile node options.
+type MobileNodeOptions struct {
+	Testnet                         bool
+	Localnet                        bool
+	ExperimentNATPunching           bool
+	MysteriumAPIAddress             string
+	BrokerAddress                   string
+	EtherClientRPC                  string
+	FeedbackURL                     string
+	QualityOracleURL                string
+	IPDetectorURL                   string
+	LocationDetectorURL             string
+	TransactorEndpointAddress       string
+	TransactorRegistryAddress       string
+	TransactorChannelImplementation string
+	AccountantEndpointAddress       string
+	AccountantID                    string
+	MystSCAddress                   string
+}
 
-// DefaultNetworkOptions returns default network options to connect with
-func DefaultNetworkOptions() *MobileNetworkOptions {
-	return &MobileNetworkOptions{
-		Testnet:               true,
-		ExperimentNATPunching: true,
-		MysteriumAPIAddress:   metadata.TestnetDefinition.MysteriumAPIAddress,
-		BrokerAddress:         metadata.TestnetDefinition.BrokerAddress,
-		EtherClientRPC:        metadata.TestnetDefinition.EtherClientRPC,
+// DefaultNodeOptions returns default options.
+func DefaultNodeOptions() *MobileNodeOptions {
+	return &MobileNodeOptions{
+		Testnet:                         true,
+		ExperimentNATPunching:           true,
+		MysteriumAPIAddress:             metadata.TestnetDefinition.MysteriumAPIAddress,
+		BrokerAddress:                   metadata.TestnetDefinition.BrokerAddress,
+		EtherClientRPC:                  metadata.TestnetDefinition.EtherClientRPC,
+		FeedbackURL:                     "https://feedback.mysterium.network",
+		QualityOracleURL:                "https://quality.mysterium.network/api/v1",
+		IPDetectorURL:                   "https://api.ipify.org/?format=json",
+		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:       metadata.TestnetDefinition.TransactorAddress,
+		TransactorRegistryAddress:       metadata.TestnetDefinition.RegistryAddress,
+		TransactorChannelImplementation: metadata.TestnetDefinition.ChannelImplAddress,
+		AccountantEndpointAddress:       metadata.TestnetDefinition.AccountantAddress,
+		AccountantID:                    metadata.TestnetDefinition.AccountantID,
+		MystSCAddress:                   "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
 	}
 }
 
 // NewNode function creates new Node
-func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
+func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	if appPath == "" {
@@ -96,14 +123,21 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 	dataDir := filepath.Join(appPath, ".mysterium")
 	currentDir := appPath
 
-	network := node.OptionsNetwork(*optionsNetwork)
+	network := node.OptionsNetwork{
+		Testnet:               options.Testnet,
+		Localnet:              options.Localnet,
+		ExperimentNATPunching: options.ExperimentNATPunching,
+		MysteriumAPIAddress:   options.MysteriumAPIAddress,
+		BrokerAddress:         options.BrokerAddress,
+		EtherClientRPC:        options.EtherClientRPC,
+	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,
 		LogHTTP:  false,
 		Filepath: filepath.Join(dataDir, "mysterium-node"),
 	}
 
-	options := node.Options{
+	nodeOptions := node.Options{
 		LogOptions: logOptions,
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
@@ -119,11 +153,17 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},
-		FeedbackURL:    "https://feedback.mysterium.network",
+		UI: node.OptionsUI{
+			UIEnabled: false,
+		},
+		MMN: node.OptionsMMN{
+			Enabled: false,
+		},
+		FeedbackURL:    options.FeedbackURL,
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
-			Address: "https://quality.mysterium.network/api/v1",
+			Address: options.QualityOracleURL,
 		},
 		Discovery: node.OptionsDiscovery{
 			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker},
@@ -131,36 +171,37 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			FetchEnabled: false,
 		},
 		Location: node.OptionsLocation{
-			IPDetectorURL: "https://api.ipify.org/?format=json",
+			IPDetectorURL: options.IPDetectorURL,
 			Type:          node.LocationTypeOracle,
-			Address:       "https://testnet-location.mysterium.network/api/v1/location",
+			Address:       options.LocationDetectorURL,
 		},
 		Transactor: node.OptionsTransactor{
-			TransactorEndpointAddress:       metadata.TestnetDefinition.TransactorAddress,
-			RegistryAddress:                 metadata.TestnetDefinition.RegistryAddress,
-			ChannelImplementation:           metadata.TestnetDefinition.ChannelImplAddress,
+			TransactorEndpointAddress:       options.TransactorEndpointAddress,
+			RegistryAddress:                 options.TransactorRegistryAddress,
+			ChannelImplementation:           options.TransactorChannelImplementation,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
 			ProviderRegistrationStake:       6200000000,
 		},
 		Accountant: node.OptionsAccountant{
-			AccountantEndpointAddress: metadata.TestnetDefinition.AccountantAddress,
-			AccountantID:              metadata.TestnetDefinition.AccountantID,
+			AccountantEndpointAddress: options.AccountantEndpointAddress,
+			AccountantID:              options.AccountantID,
 		},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:        1500,
 			BCTimeout:                          time.Second * 30,
 			AccountantPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:                  time.Hour * 2,
-			MystSCAddress:                      "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+			MystSCAddress:                      options.MystSCAddress,
 			ConsumerLowerMinutePriceBound:      0,
 			ConsumerUpperMinutePriceBound:      50000,
 			ConsumerLowerGBPriceBound:          0,
 			ConsumerUpperGBPriceBound:          7000000,
 		},
+		MobileConsumer: true,
 	}
 
-	err := di.Bootstrap(options)
+	err := di.Bootstrap(nodeOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not bootstrap dependencies")
 	}
@@ -177,22 +218,23 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
 		statisticsTracker:            di.StatisticsTracker,
-		accountant:                   identity.FromAddress(options.Accountant.AccountantID),
+		accountant:                   identity.FromAddress(nodeOptions.Accountant.AccountantID),
 		feedbackReporter:             di.Reporter,
 		transactor:                   di.Transactor,
 		identityRegistry:             di.IdentityRegistry,
 		consumerBalanceTracker:       di.ConsumerBalanceTracker,
-		channelImplementationAddress: options.Transactor.ChannelImplementation,
-		registryAddress:              options.Transactor.RegistryAddress,
+		identityChannelCalculator:    di.ChannelAddressCalculator,
+		channelImplementationAddress: nodeOptions.Transactor.ChannelImplementation,
+		registryAddress:              nodeOptions.Transactor.RegistryAddress,
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
 			&proposal.Filter{
-				UpperTimePriceBound: &options.Payments.ConsumerUpperMinutePriceBound,
-				LowerTimePriceBound: &options.Payments.ConsumerLowerMinutePriceBound,
-				UpperGBPriceBound:   &options.Payments.ConsumerUpperGBPriceBound,
-				LowerGBPriceBound:   &options.Payments.ConsumerLowerGBPriceBound,
+				UpperTimePriceBound: &nodeOptions.Payments.ConsumerUpperMinutePriceBound,
+				LowerTimePriceBound: &nodeOptions.Payments.ConsumerLowerMinutePriceBound,
+				UpperGBPriceBound:   &nodeOptions.Payments.ConsumerUpperGBPriceBound,
+				LowerGBPriceBound:   &nodeOptions.Payments.ConsumerLowerGBPriceBound,
 				ExcludeUnsupported:  true,
 			},
 		),
@@ -321,7 +363,7 @@ type BalanceChangeCallback interface {
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.BalanceChangedEvent) {
+	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.AppEventBalanceChanged) {
 		cb.OnChange(e.Identity.Address, int64(e.Current))
 	})
 }
@@ -333,7 +375,7 @@ type IdentityRegistrationChangeCallback interface {
 
 // RegisterIdentityRegistrationChangeCallback registers callback which is called on identity registration status change.
 func (mb *MobileNode) RegisterIdentityRegistrationChangeCallback(cb IdentityRegistrationChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(registry.AppTopicRegistration, func(e registry.RegistrationEventPayload) {
+	_ = mb.eventBus.SubscribeAsync(registry.AppTopicIdentityRegistration, func(e registry.AppEventIdentityRegistration) {
 		cb.OnChange(e.ID.Address, e.Status.String())
 	})
 }
@@ -386,7 +428,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 			ErrorMessage: err.Error(),
 		}
 	}
-	return nil
+	return &ConnectResponse{}
 }
 
 // Disconnect disconnects or cancels current connection.
@@ -407,24 +449,24 @@ type GetIdentityResponse struct {
 // GetIdentity finds first identity and unlocks it.
 // If there is no identity default one will be created.
 func (mb *MobileNode) GetIdentity() (*GetIdentityResponse, error) {
-	unlockedIdentity, err := mb.identitySelector.UseOrCreate("", "")
+	id, err := mb.identitySelector.UseOrCreate("", "")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}
 
-	channelAddress, err := pc.GenerateChannelAddress(unlockedIdentity.Address, metadata.TestnetDefinition.AccountantID, mb.registryAddress, mb.channelImplementationAddress)
+	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate channel address")
 	}
 
-	status, err := mb.identityRegistry.GetRegistrationStatus(identity.FromAddress(unlockedIdentity.Address))
+	status, err := mb.identityRegistry.GetRegistrationStatus(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get identity registration status")
 	}
 
 	return &GetIdentityResponse{
-		IdentityAddress:    unlockedIdentity.Address,
-		ChannelAddress:     channelAddress,
+		IdentityAddress:    id.Address,
+		ChannelAddress:     channelAddress.Hex(),
 		RegistrationStatus: status.String(),
 	}, nil
 }

@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 
@@ -51,7 +51,7 @@ func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	}
 
 	err = eventBus.SubscribeAsync(
-		service.AppTopicServiceStatus,
+		servicestate.AppTopicServiceStatus,
 		m.handleProvider,
 	)
 	if err != nil {

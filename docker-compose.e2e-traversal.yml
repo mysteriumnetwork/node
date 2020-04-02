@@ -101,7 +101,7 @@ services:
   mysterium-api:
     image: mysteriumnetwork/mysterium-api:latest
     expose:
-      - 80
+      - 8001
     cap_add:
       - NET_ADMIN
     sysctls:
@@ -110,7 +110,7 @@ services:
       - net.ipv4.conf.eth0.rp_filter=0
       - net.ipv4.conf.eth1.rp_filter=0
     environment:
-      APP_PORT: 80
+      APP_PORT: 8001
       DB_HOST: db
       DB_NAME: myst_api
       DB_USER: myst_api
@@ -236,7 +236,7 @@ services:
       --log-level=debug
       --broker-address=broker
       --tequilapi.address=0.0.0.0
-      --api.address=http://mysterium-api/v1
+      --api.address=http://mysterium-api:8001/v1
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -283,7 +283,7 @@ services:
       --broker-address=broker
       --tequilapi.address=0.0.0.0
       --firewall.protected.networks=""
-      --api.address=http://mysterium-api/v1
+      --api.address=http://mysterium-api:8001/v1
       --ether.client.rpc=ws://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -312,6 +312,8 @@ services:
       - $GOPATH/pkg/mod:/go/pkg/mod
     working_dir: /node
     dns: 172.30.0.254
+    cap_add:
+      - NET_ADMIN
     networks:
       public0:
         ipv4_address: 172.30.0.222

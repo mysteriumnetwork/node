@@ -18,6 +18,8 @@
 package connection
 
 import (
+	"net"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
@@ -33,10 +35,12 @@ type ConnectParams struct {
 
 // ConnectOptions represents the params we need to ensure a successful connection
 type ConnectOptions struct {
-	ConsumerID    identity.Identity
-	ProviderID    identity.Identity
-	Proposal      market.ServiceProposal
-	SessionID     session.ID
-	DNS           DNSOption
-	SessionConfig []byte
+	ConsumerID      identity.Identity
+	ProviderID      identity.Identity
+	Proposal        market.ServiceProposal
+	SessionID       session.ID
+	DNS             DNSOption
+	SessionConfig   []byte
+	ProviderNATConn *net.UDPConn
+	ChannelConn     *net.UDPConn
 }

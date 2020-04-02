@@ -254,6 +254,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 
 	err = te.transactor.RegisterIdentity(identity, regReqDTO)
 	if err != nil {
+		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, regReqDTO)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
 	}

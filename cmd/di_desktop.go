@@ -1,5 +1,3 @@
-// +build darwin windows linux,!android
-
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -32,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -39,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -51,6 +51,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 	"github.com/rs/zerolog/log"
@@ -60,6 +61,10 @@ import (
 
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
+	if nodeOptions.MobileConsumer {
+		return nil
+	}
+
 	err := di.bootstrapServiceComponents(nodeOptions, servicesOptions)
 	if err != nil {
 		return errors.Wrap(err, "service bootstrap failed")
@@ -185,6 +190,10 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
+	if nodeOptions.MobileConsumer {
+		return nil
+	}
+
 	cfg := registry.ProviderRegistrarConfig{
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
@@ -197,14 +206,25 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
-	cfg := pingpong.AccountantPromiseSettlerConfig{
-		AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
-		Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
-		MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+	if nodeOptions.MobileConsumer {
+		di.AccountantPromiseSettler = &pingpong_noop.NoopAccountantPromiseSettler{}
+		return nil
 	}
-	settler := pingpong.NewAccountantPromiseSettler(di.Transactor, di.AccountantPromiseStorage, di.BCHelper, di.IdentityRegistry, di.Keystore, di.AccountantPromiseStorage, cfg)
-	di.AccountantPromiseSettler = settler
-	return settler.Subscribe(di.EventBus)
+
+	di.AccountantPromiseSettler = pingpong.NewAccountantPromiseSettler(
+		di.EventBus,
+		di.Transactor,
+		di.AccountantPromiseStorage,
+		di.BCHelper,
+		di.IdentityRegistry,
+		di.Keystore,
+		pingpong.AccountantPromiseSettlerConfig{
+			AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
+			Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
+			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+		},
+	)
+	return di.AccountantPromiseSettler.Subscribe()
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
@@ -232,6 +252,35 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			policy.ValidateAllowedIdentity(policies),
 		), nil
 	}
+	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
+		paymentEngineFactory := pingpong.InvoiceFactoryCreator(nil,
+			channel, pingpong.InvoiceSendPeriod,
+			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
+			pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress),
+			di.AccountantPromiseStorage,
+			nodeOptions.Transactor.RegistryAddress,
+			nodeOptions.Transactor.ChannelImplementation,
+			pingpong.DefaultAccountantFailureCount,
+			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
+			nodeOptions.Payments.MaxRRecoveryLength,
+			di.BCHelper,
+			di.EventBus,
+			di.Transactor,
+			proposal,
+			di.AccountantPromiseSettler.ForceSettle,
+			di.Keystore,
+		)
+		return session.NewManager(
+			proposal,
+			di.ServiceSessionStorage,
+			paymentEngineFactory,
+			di.NATPinger,
+			di.NATTracker,
+			serviceID,
+			di.EventBus,
+		)
+	}
+
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
 		sessionManagerFactory := newSessionManagerFactory(
 			nodeOptions,
@@ -239,7 +288,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
 			di.AccountantPromiseStorage,
-			di.NATPinger.PingTarget,
+			di.NATPinger,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
@@ -247,6 +296,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.Transactor,
 			di.AccountantPromiseSettler,
 			di.HTTPClient,
+			di.Keystore,
 		)
 
 		return session.NewDialogHandler(
@@ -264,10 +314,13 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		di.DiscoveryFactory,
 		di.EventBus,
 		di.PolicyOracle,
+		di.P2PListener,
+		newP2PSessionHandler,
+		di.SessionConnectivityStatusStorage,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
-	if err := di.EventBus.Subscribe(service.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
+	if err := di.EventBus.Subscribe(servicestate.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
 		log.Error().Msg("Failed to subscribe service cleaner")
 	}
 
@@ -275,6 +328,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
+	if nodeOptions.MobileConsumer {
+		di.registerNoopConnection()
+		return
+	}
+
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
 	di.registerWireguardConnection(nodeOptions)

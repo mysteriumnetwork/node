@@ -56,9 +56,21 @@ func (t Time) Nano() time.Duration {
 	return t.ns
 }
 
+const (
+	minDuration time.Duration = -1 << 63
+	maxDuration time.Duration = 1<<63 - 1
+)
+
 // Sub returns the duration t-u.
 func (t Time) Sub(u Time) time.Duration {
-	return t.ns - u.ns
+	d := t.ns - u.ns
+	if d < 0 && t.ns > u.ns {
+		return maxDuration // t - u is positive out of range
+	}
+	if d > 0 && t.ns < u.ns {
+		return minDuration // t - u is negative out of range
+	}
+	return d
 }
 
 // String returns time formatted time string.

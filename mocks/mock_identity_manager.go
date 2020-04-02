@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,15 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package identity
+package mocks
 
-import "github.com/ethereum/go-ethereum/accounts"
+import (
+	"sync"
 
-// Keystore allows actions with accounts (listing, creating, unlocking, signing)
-type Keystore interface {
-	Accounts() []accounts.Account
-	NewAccount(passphrase string) (accounts.Account, error)
-	Find(a accounts.Account) (accounts.Account, error)
-	Unlock(a accounts.Account, passphrase string) error
-	SignHash(a accounts.Account, hash []byte) ([]byte, error)
+	"github.com/mysteriumnetwork/node/identity"
+)
+
+// IdentityProvider is a fake identity provider.
+type IdentityProvider struct {
+	Identities []identity.Identity
+	lock       sync.Mutex
+}
+
+// GetIdentities returns a predefined set of identities.
+func (ip *IdentityProvider) GetIdentities() []identity.Identity {
+	ip.lock.Lock()
+	defer ip.lock.Unlock()
+	return ip.Identities
 }

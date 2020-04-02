@@ -19,6 +19,8 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -40,7 +42,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/mysteriumnetwork/node/utils/stringutil"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -103,7 +104,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 			dnsHandler = dns.WhitelistAnswers(dnsHandler, m.trafficFirewall, instance.Policies())
 			removeRule, err := m.trafficFirewall.BlockIncomingTraffic(m.vpnNetwork)
 			if err != nil {
-				return errors.Wrap(err, "failed to enable traffic blocking")
+				return fmt.Errorf("failed to enable traffic blocking: %w", err)
 			}
 			defer func() {
 				if err := removeRule(); err != nil {
@@ -125,18 +126,18 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 
 	servicePort, err := m.ports.Acquire()
 	if err != nil {
-		return errors.Wrap(err, "failed to acquire an unused port")
+		return fmt.Errorf("failed to acquire an unused port: %w", err)
 	}
 	m.vpnServerPort = servicePort.Num()
 
 	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
 	if err != nil {
-		return errors.Wrap(err, "could not get outbound IP")
+		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
 	pubIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
-		return errors.Wrap(err, "could not get public IP")
+		return fmt.Errorf("could not get public IP: %w", err)
 	}
 
 	if m.behindNAT(pubIP) {
@@ -181,7 +182,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 
 	log.Info().Msgf("Starting OpenVPN server on port: %d", m.vpnServerPort)
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
-		return errors.Wrap(err, "failed to add firewall rule")
+		return fmt.Errorf("failed to add firewall rule: %w", err)
 	}
 	defer func() {
 		if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
@@ -190,7 +191,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	}()
 
 	if err := m.startServer(stateChannel); err != nil {
-		return errors.Wrap(err, "failed to start Openvpn server")
+		return fmt.Errorf("failed to start Openvpn server: %w", err)
 	}
 
 	if _, err := m.natService.Setup(nat.Options{
@@ -200,7 +201,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		DNSIP:             m.dnsIP,
 		DNSPort:           dnsPort,
 	}); err != nil {
-		return errors.Wrap(err, "failed to setup NAT/firewall rules")
+		return fmt.Errorf("failed to setup NAT/firewall rules: %w", err)
 	}
 
 	s := shaper.New(m.eventListener)
@@ -231,7 +232,7 @@ func (m *Manager) Stop() error {
 
 	if m.dnsProxy != nil {
 		if err := m.dnsProxy.Stop(); err != nil {
-			return errors.Wrap(err, "could not stop DNS proxy")
+			return fmt.Errorf("could not stop DNS proxy: %w", err)
 		}
 	}
 
@@ -239,16 +240,16 @@ func (m *Manager) Stop() error {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
 	if m.vpnServerPort == 0 {
-		return nil, errors.New("Service port not initialized")
+		return nil, errors.New("service port not initialized")
 	}
 
 	traversalParams := traversal.Params{}
 
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get public IP")
+		return nil, fmt.Errorf("could not get public IP: %w", err)
 	}
 
 	serverIP := vpnServerIP(m.serviceOptions.Port, m.outboundIP, publicIP, m.nodeOptions.OptionsNetwork.Localnet)
@@ -262,24 +263,16 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 	if m.dnsOK {
 		vpnConfig.DNSIPs = m.dnsIP.String()
 	}
-	vpnConfig.Ports = []int{} // TODO This line will not be required once we will have unique VPN config for every connection.
 
-	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
-	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
+	if conn == nil { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
+		if !m.natPinger.Valid() {
+			return &session.ConfigParams{SessionServiceConfig: vpnConfig}, nil
+		}
+
 		var consumerConfig openvpn_service.ConsumerConfig
 		err := json.Unmarshal(sessionConfig, &consumerConfig)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not parse consumer config")
-		}
-
-		if len(consumerConfig.Ports) == 0 {
-			cp, err := m.natPingerPorts.Acquire()
-			if err != nil {
-				return nil, err
-			}
-
-			consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
-			vpnConfig.LocalPort = cp.Num()
+			return nil, fmt.Errorf("could not parse consumer config: %w", err)
 		}
 
 		if m.behindNAT(publicIP) && m.portMappingFailed() {
@@ -303,8 +296,11 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage) (*sessi
 			traversalParams.RemotePorts = consumerConfig.Ports
 			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
 		}
+	} else {
+		if err := proxyOpenVPN(conn, m.vpnServerPort); err != nil {
+			return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
+		}
 	}
-
 	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
 }
 

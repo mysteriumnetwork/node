@@ -20,13 +20,12 @@ package identity
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_UnlockAndSignAndVerify(t *testing.T) {
-	ks := NewKeystoreFilesystem("test_data", true)
+	ks := NewKeystoreFilesystem("dir", NewMockKeystore(MockKeys), MockDecryptFunc)
 
 	manager := NewIdentityManager(ks, eventbus.New())
 	err := manager.Unlock("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68", "")

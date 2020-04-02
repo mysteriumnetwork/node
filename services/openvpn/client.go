@@ -65,7 +65,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	}
 
 	procFactory := func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error) {
-		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, configDirectory, runtimeDirectory, options.DNS)
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, configDirectory, runtimeDirectory, options)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -130,18 +130,10 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 		return errors.Wrap(err, "failed to add allowed IP address")
 	}
 
-	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
-	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
-		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
-			c.ports = []int{sessionConfig.LocalPort}
-			sessionConfig.Ports = []int{sessionConfig.RemotePort}
-		}
-
+	// TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
+	if len(sessionConfig.Ports) > 0 {
 		ip := sessionConfig.RemoteIP
-		localPorts := c.ports
-		remotePorts := sessionConfig.Ports
-
-		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
 		if err != nil {
 			c.removeAllowedIPRule()
 			return errors.Wrap(err, "could not ping provider")
@@ -196,6 +188,7 @@ func (c *Client) OnStats(cnt openvpn_bytescount.Bytecount) error {
 
 // GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
+	// TODO the whole content of this function needs to be removed once we will migrate to the p2p communication.
 	switch c.natPinger.(type) {
 	case *traversal.NoopPinger:
 		log.Info().Msg("Noop pinger detected, returning nil client config.")

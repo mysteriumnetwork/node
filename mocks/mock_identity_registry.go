@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,22 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package identity
+package mocks
 
 import (
-	"context"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
-// Balance provides amount of money that identity have on the balance in the blockchain
-type Balance func(Identity) (uint64, error)
+// IdentityRegistry is a fake identity registry.
+type IdentityRegistry struct {
+	Status registry.RegistrationStatus
+}
 
-// NewBalance creates new balance registry
-func NewBalance(etherClient *ethclient.Client) Balance {
-	return func(identity Identity) (uint64, error) {
-		balance, err := etherClient.BalanceAt(context.Background(), common.HexToAddress(identity.Address), nil)
-		return balance.Uint64(), err
-	}
+// Subscribe does nothing.
+func (i IdentityRegistry) Subscribe(_ eventbus.Subscriber) error {
+	return nil
+}
+
+// GetRegistrationStatus returns a pre-defined RegistrationStatus.
+func (i IdentityRegistry) GetRegistrationStatus(identity.Identity) (registry.RegistrationStatus, error) {
+	return i.Status, nil
 }

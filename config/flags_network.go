@@ -69,6 +69,12 @@ var (
 		Usage: "Max number of devices to try pass for NAT hole punching",
 		Value: 10,
 	}
+	// FlagIncomingFirewall enables incoming traffic filtering.
+	FlagIncomingFirewall = cli.BoolFlag{
+		Name:  "incoming-firewall",
+		Usage: "Enables incoming traffic filtering",
+		Value: false,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -83,6 +89,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagAPIAddress,
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
+		&FlagIncomingFirewall,
 	)
 }
 
@@ -96,4 +103,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
 	Current.ParseIntFlag(ctx, FlagNATPunchingMaxTTL)
+	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 }

@@ -19,34 +19,108 @@ package pingpong
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // AppTopicAccountantPromise represents a topic to which we send accountant promise events.
 const AppTopicAccountantPromise = "accountant_promise_received"
 
-// AccountantPromiseEventPayload represents the payload that is sent on the AppTopicAccountantPromise.
-type AccountantPromiseEventPayload struct {
+// AppEventAccountantPromise represents the payload that is sent on the AppTopicAccountantPromise.
+type AppEventAccountantPromise struct {
 	Promise      crypto.Promise
 	AccountantID identity.Identity
 	ProviderID   identity.Identity
 }
 
-// AppTopicExchangeMessage represents a topic where exchange messages are sent.
-const AppTopicExchangeMessage = "exchange_message_topic"
-
-// ExchangeMessageEventPayload represents the messages that are sent on the AppTopicExchangeMessage.
-type ExchangeMessageEventPayload struct {
-	Identity       identity.Identity
-	AmountPromised uint64
-}
-
 // AppTopicBalanceChanged represents the balance change topic
 const AppTopicBalanceChanged = "balance_change"
 
-// BalanceChangedEvent represents a balance change event
-type BalanceChangedEvent struct {
+// AppEventBalanceChanged represents a balance change event
+type AppEventBalanceChanged struct {
 	Identity identity.Identity
 	Previous uint64
 	Current  uint64
+}
+
+// AppTopicEarningsChanged represents the earnings change topic
+const AppTopicEarningsChanged = "earnings_change"
+
+// AppEventEarningsChanged represents a balance change event
+type AppEventEarningsChanged struct {
+	Identity identity.Identity
+	Previous SettlementState
+	Current  SettlementState
+}
+
+// SettlementState represents current settling state with values of identity earnings
+type SettlementState struct {
+	Channel     client.ProviderChannel
+	LastPromise crypto.Promise
+
+	settleInProgress bool
+	registered       bool
+}
+
+// LifetimeBalance returns earnings of all history.
+func (ss SettlementState) LifetimeBalance() uint64 {
+	return ss.LastPromise.Amount
+}
+
+// UnsettledBalance returns current unsettled earnings.
+func (ss SettlementState) UnsettledBalance() uint64 {
+	settled := uint64(0)
+	if ss.Channel.Settled != nil {
+		settled = ss.Channel.Settled.Uint64()
+	}
+
+	return safeSub(ss.LastPromise.Amount, settled)
+}
+
+func (ss SettlementState) availableBalance() uint64 {
+	balance := uint64(0)
+	if ss.Channel.Balance != nil {
+		balance = ss.Channel.Balance.Uint64()
+	}
+
+	settled := uint64(0)
+	if ss.Channel.Settled != nil {
+		settled = ss.Channel.Settled.Uint64()
+	}
+
+	return balance + settled
+}
+
+func (ss SettlementState) balance() uint64 {
+	return safeSub(ss.availableBalance(), ss.LastPromise.Amount)
+}
+
+func (ss SettlementState) needsSettling(threshold float64) bool {
+	if !ss.registered {
+		return false
+	}
+
+	if ss.settleInProgress {
+		return false
+	}
+
+	if float64(ss.balance()) <= 0 {
+		return true
+	}
+
+	if float64(ss.balance()) <= threshold*float64(ss.availableBalance()) {
+		return true
+	}
+
+	return false
+}
+
+// AppTopicGrandTotalChanged represents a topic to which we send grand total change messages.
+const AppTopicGrandTotalChanged = "consumer_grand_total_change"
+
+// AppEventGrandTotalChanged represents the grand total changed event.
+type AppEventGrandTotalChanged struct {
+	Current      uint64
+	AccountantID identity.Identity
+	ConsumerID   identity.Identity
 }

@@ -20,6 +20,8 @@ package mysterium
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -125,18 +127,13 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		}
 	}()
 
-	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
-	if config.LocalPort > 0 || len(config.Ports) > 0 {
-		if len(config.Ports) == 0 || len(c.ports) == 0 {
-			c.ports = []int{config.LocalPort}
-			config.Ports = []int{config.RemotePort}
-		}
-
+	if options.ProviderNATConn != nil {
+		options.ProviderNATConn.Close()
+		config.LocalPort = options.ProviderNATConn.LocalAddr().(*net.UDPAddr).Port
+		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
+	} else if len(config.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we migrate to the p2p communication.
 		ip := config.Provider.Endpoint.IP.String()
-		localPorts := c.ports
-		remotePorts := config.Ports
-
-		lPort, rPort, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, 0)
+		lPort, rPort, err := c.natPinger.PingProvider(ip, c.ports, config.Ports, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
@@ -145,7 +142,7 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		config.Provider.Endpoint.Port = rPort
 	}
 
-	if err := c.device.Start(c.privateKey, config); err != nil {
+	if err := c.device.Start(c.privateKey, config, options.ChannelConn); err != nil {
 		return errors.Wrap(err, "could not start device")
 	}
 
@@ -184,20 +181,22 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 	}
 
 	var publicIP string
-	if !c.isNoopPinger() {
-		var err error
-		publicIP, err = c.ipResolver.GetPublicIP()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get consumer public IP")
-		}
+	{ // TODO this is backward compatibility block. It needs to be removed once most of the nodes migrated to the p2p communication.
+		if !c.isNoopPinger() {
+			var err error
+			publicIP, err = c.ipResolver.GetPublicIP()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get consumer public IP")
+			}
 
-		ports, err := port.NewPool().AcquireMultiple(natPunchingMaxTTL)
-		if err != nil {
-			return nil, err
-		}
+			ports, err := port.NewPool().AcquireMultiple(natPunchingMaxTTL)
+			if err != nil {
+				return nil, err
+			}
 
-		for _, p := range ports {
-			c.ports = append(c.ports, p.Num())
+			for _, p := range ports {
+				c.ports = append(c.ports, p.Num())
+			}
 		}
 	}
 
@@ -214,7 +213,7 @@ func (c *wireguardConnection) isNoopPinger() bool {
 }
 
 type wireguardDevice interface {
-	Start(privateKey string, config wireguard.ServiceConfig) error
+	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error
 	Stop()
 	Stats() (*wireguard.Stats, error)
 }
@@ -229,7 +228,7 @@ type wireguardDeviceImpl struct {
 	device *device.Device
 }
 
-func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig) error {
+func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error {
 	log.Debug().Msg("Creating tunnel device")
 	tunDevice, err := w.newTunnDevice(w.tunnelSetup, config)
 	if err != nil {
@@ -251,6 +250,17 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 	if err != nil {
 		return errors.Wrap(err, "could not protect socket")
 	}
+
+	// Exclude p2p channel traffic from VPN tunnel.
+	channelSocket, err := peekLookAtSocketFd4From(channelConn)
+	if err != nil {
+		return fmt.Errorf("could not get channel socket: %w", err)
+	}
+	err = w.tunnelSetup.Protect(channelSocket)
+	if err != nil {
+		return fmt.Errorf("could not protect p2p socket: %w", err)
+	}
+
 	return nil
 }
 

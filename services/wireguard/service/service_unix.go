@@ -126,7 +126,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
-func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, remoteConn *net.UDPConn) (*session.ConfigParams, error) {
 	log.Info().Msg("Accepting new WireGuard connection")
 	consumerConfig := wg.ConsumerConfig{}
 	err := json.Unmarshal(sessionConfig, &consumerConfig)
@@ -139,27 +139,37 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not allocate provider IP NET")
 	}
-	providerConfig.ListenPort, err = m.resourcesAllocator.AllocatePort()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not allocate provider listen port")
+
+	var traversalParams traversal.Params
+	var releasePortMapping func()
+	var natPingerEnabled bool
+	if remoteConn == nil { // TODO this block needs to be removed once most of the nodes migrated to the p2p communication
+		providerConfig.ListenPort, err = m.resourcesAllocator.AllocatePort()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not allocate provider listen port")
+		}
+
+		var portMappingOK bool
+		releasePortMapping, portMappingOK = m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
+		natPingerEnabled = !portMappingOK && m.natPinger.Valid() && m.behindNAT(providerConfig.PublicIP)
+
+		traversalParams, err = m.newTraversalParams(natPingerEnabled, consumerConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create traversal params")
+		}
+	} else {
+		remoteConn.Close()
+		providerConfig.ListenPort = remoteConn.LocalAddr().(*net.UDPAddr).Port
 	}
+
 	providerConfig.PublicIP, err = m.ipResolver.GetPublicIP()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get public IP")
 	}
 
-	releasePortMapping, portMappingOk := m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
-
 	conn, err := m.startNewConnection(providerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start new connection")
-	}
-
-	natPingerEnabled := !portMappingOk && m.natPinger.Valid() && m.behindNAT(providerConfig.PublicIP)
-
-	traversalParams, err := m.newTraversalParams(natPingerEnabled, consumerConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create traversal params")
 	}
 
 	config, err := conn.Config()
@@ -305,13 +315,6 @@ func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams tr
 	// There is no need to add any connect delay when port mapping failed.
 	config.Consumer.ConnectDelay = 0
 
-	// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
-	if len(traversalParams.RemotePorts) > 0 && len(traversalParams.LocalPorts) > 0 {
-		config.LocalPort = traversalParams.RemotePorts[len(traversalParams.RemotePorts)-1]
-		config.RemotePort = traversalParams.LocalPorts[len(traversalParams.LocalPorts)-1]
-		config.Provider.Endpoint.Port = config.RemotePort
-	}
-
 	return config, nil
 }
 
@@ -320,23 +323,13 @@ func (m *Manager) newTraversalParams(natPingerEnabled bool, consumerConfig wg.Co
 		return params, nil
 	}
 
-	if len(consumerConfig.Ports) == 0 {
-		cp, err := m.natPingerPorts.Acquire()
-		if err != nil {
-			return params, err
-		}
-
-		// TODO this backward compatibility block needs to be removed once we will start using port ranges for all peers.
-		consumerConfig.Ports = []int{cp.Num(), cp.Num(), cp.Num(), cp.Num()}
+	ports, err := m.natPingerPorts.AcquireMultiple(len(consumerConfig.Ports))
+	if err != nil {
+		return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
 	}
 
-	for range consumerConfig.Ports {
-		pp, err := m.natPingerPorts.Acquire()
-		if err != nil {
-			return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
-		}
-
-		params.LocalPorts = append(params.LocalPorts, pp.Num())
+	for _, p := range ports {
+		params.LocalPorts = append(params.LocalPorts, p.Num())
 	}
 
 	if consumerConfig.IP == "" {

@@ -31,23 +31,43 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
-// AppTopicIdentityUnlock is the channel name for identity unlock event
-const AppTopicIdentityUnlock = "identity-unlocked"
+// Identity events
+const (
+	AppTopicIdentityUnlock  = "identity-unlocked"
+	AppTopicIdentityCreated = "identity-created"
+)
 
 type identityManager struct {
-	keystoreManager Keystore
+	keystoreManager keystore
 	unlocked        map[string]bool // Currently unlocked addresses
 	unlockedMu      sync.RWMutex
 	eventBus        eventbus.EventBus
 }
 
+// keystore allows actions with accounts (listing, creating, unlocking, signing)
+type keystore interface {
+	Accounts() []accounts.Account
+	NewAccount(passphrase string) (accounts.Account, error)
+	Find(a accounts.Account) (accounts.Account, error)
+	Unlock(a accounts.Account, passphrase string) error
+	SignHash(a accounts.Account, hash []byte) ([]byte, error)
+}
+
 // NewIdentityManager creates and returns new identityManager
-func NewIdentityManager(keystore Keystore, eventBus eventbus.EventBus) *identityManager {
+func NewIdentityManager(keystore keystore, eventBus eventbus.EventBus) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
 		unlocked:        map[string]bool{},
 		eventBus:        eventBus,
 	}
+}
+
+// IsUnlocked checks if the given identity is unlocked or not
+func (idm *identityManager) IsUnlocked(identity string) bool {
+	idm.unlockedMu.Lock()
+	defer idm.unlockedMu.Unlock()
+	_, ok := idm.unlocked[identity]
+	return ok
 }
 
 func accountToIdentity(account accounts.Account) Identity {
@@ -71,7 +91,9 @@ func (idm *identityManager) CreateNewIdentity(passphrase string) (identity Ident
 		return identity, err
 	}
 
-	return accountToIdentity(account), nil
+	identity = accountToIdentity(account)
+	idm.eventBus.Publish(AppTopicIdentityCreated, identity.Address)
+	return identity, nil
 }
 
 func (idm *identityManager) GetIdentities() []Identity {

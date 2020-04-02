@@ -23,9 +23,11 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,6 +54,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
+		&mockP2PListener{}, nil, nil,
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -77,6 +80,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
+		&mockP2PListener{}, nil, nil,
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -104,6 +108,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		discoveryFactory,
 		eventBus,
 		mockPolicyOracle,
+		&mockP2PListener{}, nil, nil,
 	)
 
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
@@ -124,12 +129,12 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	eventBus.lock.Lock()
 	defer eventBus.lock.Unlock()
 
-	assert.Equal(t, AppTopicServiceStatus, eventBus.publishedTopic)
+	assert.Equal(t, servicestate.AppTopicServiceStatus, eventBus.publishedTopic)
 
 	var matchFound bool
-	expectedPayload := EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
+	expectedPayload := servicestate.AppEventServiceStatus{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
 	for i := range eventBus.publishedData {
-		e, ok := eventBus.publishedData[i].(EventPayload)
+		e, ok := eventBus.publishedData[i].(servicestate.AppEventServiceStatus)
 		if !ok {
 			continue
 		}
@@ -139,4 +144,11 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		}
 	}
 	assert.True(t, matchFound)
+}
+
+type mockP2PListener struct {
+}
+
+func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) error {
+	return nil
 }

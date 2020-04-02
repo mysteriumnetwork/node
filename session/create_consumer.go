@@ -36,7 +36,7 @@ type createConsumer struct {
 
 // Starter starts the session.
 type Starter interface {
-	Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams traversal.Params) error
+	Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) error
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
@@ -54,13 +54,13 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	session, err := newSession()
+	session, err := NewSession()
 	if err != nil {
 		return responseInternalError, errors.Wrap(err, "could not initialize new session")
 	}
 
 	// Pass given consumer config to provider's service config provider.
-	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(string(session.ID), request.Config)
+	sessionConfigParams, err := consumer.providerConfigProvider.ProvideConfig(string(session.ID), request.Config, nil)
 	if err != nil {
 		return responseInternalError, errors.Wrap(err, "could not get provider session config")
 	}
@@ -69,7 +69,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		return responseUnsupportedVersion, nil
 	}
 
-	err = consumer.sessionStarter.Start(session, consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
+	err = consumer.sessionStarter.Start(session, consumer.peerID, *request.ConsumerInfo, request.ProposalID, sessionConfigParams.SessionServiceConfig, &sessionConfigParams.TraversalParams)
 	if err != nil {
 		return createErrorResponse(err), nil
 	}

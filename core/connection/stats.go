@@ -26,8 +26,9 @@ import (
 
 // Statistics represents connection statistics.
 type Statistics struct {
-	At                       time.Time
-	BytesSent, BytesReceived uint64
+	At            time.Time
+	BytesSent     uint64
+	BytesReceived uint64
 }
 
 // Diff calculates the difference in bytes between the old stats and new.

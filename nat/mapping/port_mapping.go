@@ -18,6 +18,8 @@
 package mapping
 
 import (
+	"errors"
+	"net"
 	"time"
 
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
@@ -67,6 +69,14 @@ type portMapper struct {
 }
 
 func (p *portMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
+	if !p.routerIPPublic() {
+		err := errors.New("failed to find router public IP")
+		log.Info().Err(err).Msg("Port mapping is useless, skipping it.")
+		p.notify(err)
+
+		return nil, false
+	}
+
 	// Try add mapping first to determine if it is supported and
 	// if permanent lease only is supported.
 	permanent, err := p.addMapping(protocol, port, port, name)
@@ -97,6 +107,25 @@ func (p *portMapper) Map(protocol string, port int, name string) (release func()
 		p.deleteMapping(protocol, port, port)
 		close(stopUpdate)
 	}, true
+}
+
+func (p *portMapper) routerIPPublic() bool {
+	ip, err := p.config.MapInterface.ExternalIP()
+	if err != nil {
+		log.Warn().Err(err).Msg("Couldn't detect router IP address")
+		return false
+	}
+
+	log.Debug().Msgf("Detected router public IP address: %s", ip)
+
+	for _, s := range []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"} {
+		_, subnet, _ := net.ParseCIDR(s)
+		if subnet.Contains(ip) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *portMapper) notify(err error) {

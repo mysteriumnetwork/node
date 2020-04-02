@@ -35,13 +35,13 @@ type natProxy struct {
 }
 
 // NewNATProxy constructs an instance of natProxy
-func newNATProxy() *natProxy {
+func NewNATProxy() *natProxy {
 	return &natProxy{
 		servicePorts: make(map[string]int),
 	}
 }
 
-func (np *natProxy) consumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {
+func (np *natProxy) ConsumerHandOff(consumerAddr string, remoteConn *net.UDPConn) chan struct{} {
 	stop := make(chan struct{})
 	if np.socketProtect == nil {
 		// shutdown pinger session since openvpn client will connect directly (without natProxy)
@@ -204,6 +204,6 @@ func (np *natProxy) isAvailable(key string) bool {
 	return np.servicePorts[key] > 0
 }
 
-func (np *natProxy) setProtectSocketCallback(socketProtect func(socket int) bool) {
+func (np *natProxy) SetProtectSocketCallback(socketProtect func(socket int) bool) {
 	np.socketProtect = socketProtect
 }

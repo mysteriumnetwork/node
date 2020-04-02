@@ -18,7 +18,9 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"time"
 
 	"github.com/magefile/mage/sh"
@@ -83,6 +85,8 @@ func (r *Runner) Test(providerHost, consumerHost string) error {
 
 func (r *Runner) cleanup() {
 	log.Info().Msg("Cleaning up")
+	r.replaceOpenvpnConnectionSetupPkg("github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3", "github.com/mysteriumnetwork/go-openvpn/openvpn3")
+
 	_ = r.compose("logs")
 	if err := r.compose("down", "--volumes", "--remove-orphans", "--timeout", "30"); err != nil {
 		log.Warn().Err(err).Msg("Cleanup error")
@@ -91,6 +95,10 @@ func (r *Runner) cleanup() {
 
 // Init starts provider and consumer node dependencies.
 func (r *Runner) Init() error {
+	if err := r.replaceOpenvpnConnectionSetupPkg("github.com/mysteriumnetwork/go-openvpn/openvpn3", "github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3"); err != nil {
+		return err
+	}
+
 	log.Info().Msg("Starting other services")
 	if err := r.compose("pull"); err != nil {
 		return errors.Wrap(err, "could not pull images")
@@ -171,4 +179,16 @@ func (r *Runner) stopProviderConsumerNodes(providerHost, consumerHost string) er
 		return errors.Wrap(err, "stopping containers failed!")
 	}
 	return nil
+}
+
+// replaceOpenvpnConnectionSetupPkg replaces openvpn_connection_setup.go go-openvpn pacakges
+// for mobile entry e2e tests so we don't need to include any C++ dependencies.
+func (r *Runner) replaceOpenvpnConnectionSetupPkg(from, to string) error {
+	path := "./mobile/mysterium/openvpn_connection_setup.go"
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	content = bytes.Replace(content, []byte(from), []byte(to), 1)
+	return ioutil.WriteFile(path, content, 0600)
 }

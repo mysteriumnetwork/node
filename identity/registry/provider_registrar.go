@@ -23,7 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
@@ -52,7 +52,7 @@ type ProviderRegistrar struct {
 }
 
 type queuedEvent struct {
-	event   service.EventPayload
+	event   servicestate.AppEventServiceStatus
 	retries int
 }
 
@@ -83,7 +83,7 @@ func (pr *ProviderRegistrar) Subscribe(eb eventbus.EventBus) error {
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to node events")
 	}
-	return eb.SubscribeAsync(service.AppTopicServiceStatus, pr.consumeServiceEvent)
+	return eb.SubscribeAsync(servicestate.AppTopicServiceStatus, pr.consumeServiceEvent)
 }
 
 func (pr *ProviderRegistrar) handleNodeStartupEvents(e event.Payload) {
@@ -100,7 +100,7 @@ func (pr *ProviderRegistrar) handleNodeStartupEvents(e event.Payload) {
 	}
 }
 
-func (pr *ProviderRegistrar) consumeServiceEvent(event service.EventPayload) {
+func (pr *ProviderRegistrar) consumeServiceEvent(event servicestate.AppEventServiceStatus) {
 	pr.queue <- queuedEvent{
 		event:   event,
 		retries: 0,
@@ -108,7 +108,7 @@ func (pr *ProviderRegistrar) consumeServiceEvent(event service.EventPayload) {
 }
 
 func (pr *ProviderRegistrar) needsHandling(qe queuedEvent) bool {
-	if qe.event.Status != string(service.Running) {
+	if qe.event.Status != string(servicestate.Running) {
 		log.Debug().Msgf("Received %q service event, ignoring", qe.event.Status)
 		return false
 	}

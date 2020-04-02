@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -54,7 +55,7 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 	}
 
 	sessionFactory := func(options connection.ConnectOptions, sessionConfig openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", connection.DNSOptionAuto)
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", options)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -103,6 +104,7 @@ type openvpnConnection struct {
 	natPinger     natPinger
 	ipResolver    ip.Resolver
 	stopOnce      sync.Once
+	stopProxy     chan struct{}
 }
 
 var _ connection.Connection = &openvpnConnection{}
@@ -153,28 +155,48 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 		return err
 	}
 
-	// TODO this backward compatibility check needs to be removed once we will start using port ranges for all peers.
-	if sessionConfig.LocalPort > 0 || len(sessionConfig.Ports) > 0 {
+	if options.ProviderNATConn != nil {
+		port, err := port.NewPool().Acquire()
+		if err != nil {
+			return errors.Wrap(err, "failed to acquire free port")
+		}
+
+		sessionConfig.LocalPort = port.Num()
+		sessionConfig.RemoteIP = "127.0.0.1"
+		sessionConfig.RemotePort = sessionConfig.LocalPort
+
+		// Exclude p2p channel traffic from VPN tunnel.
+		channelSocket, err := peekLookAtSocketFd4From(options.ChannelConn)
+		if err != nil {
+			return fmt.Errorf("could not get channel socket: %w", err)
+		}
+
+		proxy := traversal.NewNATProxy()
+
+		c.tunnelSetup.SocketProtect(channelSocket)
+		proxy.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
+
+		localAddr := fmt.Sprintf("127.0.0.1:%d", sessionConfig.LocalPort)
+		c.stopProxy = proxy.ConsumerHandOff(localAddr, options.ProviderNATConn)
+	} else if len(sessionConfig.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
 		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
 			c.ports = []int{sessionConfig.LocalPort}
 			sessionConfig.Ports = []int{sessionConfig.RemotePort}
 		}
 
 		if sessionConfig.LocalPort == 0 {
-			port, err := port.NewPool().Acquire()
+			lport, err := port.NewPool().Acquire()
 			if err != nil {
 				return errors.Wrap(err, "failed to acquire free port")
 			}
 
-			sessionConfig.LocalPort = port.Num()
+			sessionConfig.LocalPort = lport.Num()
 		}
 
-		ip := sessionConfig.RemoteIP
-		localPorts := c.ports
-		remotePorts := sessionConfig.Ports
-
 		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
-		_, _, err := c.natPinger.PingProvider(ip, localPorts, remotePorts, sessionConfig.LocalPort)
+
+		remoteIP := sessionConfig.RemoteIP
+		_, _, err = c.natPinger.PingProvider(remoteIP, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
@@ -200,6 +222,10 @@ func (c *openvpnConnection) Stop() {
 		if c.session != nil {
 			c.session.Stop()
 		}
+
+		if c.stopProxy != nil {
+			close(c.stopProxy)
+		}
 	})
 }
 
@@ -211,6 +237,7 @@ func (c *openvpnConnection) Wait() error {
 }
 
 func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
+	// TODO the whole content of this function needs to be removed once we will migrate to the p2p communication.
 	switch c.natPinger.(type) {
 	case *traversal.NoopPinger:
 		log.Info().Msg("Noop pinger detected, returning nil client config.")
