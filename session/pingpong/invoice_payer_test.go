@@ -549,6 +549,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Nil(t, err)
 
 	peerID := identity.FromAddress("0x01")
+	sessionID := "100"
 
 	mp := &mockPublisher{
 		publicationChan: make(chan testEvent, 10),
@@ -561,9 +562,11 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 			ConsumerTotalsStorage: &mockConsumerTotalsStorage{
 				bus: mp,
 			},
-			Peer:     peerID,
-			Ks:       ks,
-			Identity: identity.FromAddress(acc.Address.Hex()),
+			Ks:        ks,
+			EventBus:  mp,
+			Identity:  identity.FromAddress(acc.Address.Hex()),
+			Peer:      peerID,
+			SessionID: sessionID,
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -574,7 +577,19 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 	})
 	assert.NoError(t, err)
+
 	ev := <-mp.publicationChan
+	assert.Equal(t, AppTopicInvoicePaid, ev.name)
+	assert.EqualValues(t, AppEventInvoicePaid{
+		ConsumerID: emt.deps.Identity,
+		SessionID:  sessionID,
+		Invoice: crypto.Invoice{
+			AgreementTotal: 15,
+			Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
+		},
+	}, ev.value)
+
+	ev = <-mp.publicationChan
 	assert.Equal(t, AppTopicGrandTotalChanged, ev.name)
 	assert.EqualValues(t, AppEventGrandTotalChanged{
 		ConsumerID: emt.deps.Identity,
