@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -114,12 +115,16 @@ type statisticsResponse struct {
 	// connection duration in seconds
 	// example: 60
 	Duration int `json:"duration"`
+
+	// example: 500000
+	TokensSpent uint64 `json:"tokens_spent"`
 }
 
 // SessionStatisticsTracker represents the session stat keeper
 type SessionStatisticsTracker interface {
 	GetDataStats() connection.Statistics
 	GetDuration() time.Duration
+	GetInvoice() crypto.Invoice
 }
 
 // ProposalGetter defines interface to fetch currently active service proposal by id
@@ -312,14 +317,12 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	st := ce.statisticsTracker.GetDataStats()
-
-	duration := ce.statisticsTracker.GetDuration()
-
+	dataStats := ce.statisticsTracker.GetDataStats()
 	response := statisticsResponse{
-		BytesSent:     st.BytesSent,
-		BytesReceived: st.BytesReceived,
-		Duration:      int(duration.Seconds()),
+		BytesSent:     dataStats.BytesSent,
+		BytesReceived: dataStats.BytesReceived,
+		Duration:      int(ce.statisticsTracker.GetDuration().Seconds()),
+		TokensSpent:   ce.statisticsTracker.GetInvoice().AgreementTotal,
 	}
 
 	utils.WriteAsJSON(response, writer)

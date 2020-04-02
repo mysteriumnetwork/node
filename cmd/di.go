@@ -398,6 +398,10 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
+	err = di.EventBus.Subscribe(pingpong.AppTopicInvoicePaid, di.StatisticsTracker.ConsumeInvoiceEvent)
+	if err != nil {
+		return err
+	}
 
 	// Consumer session history (API storage)
 	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)

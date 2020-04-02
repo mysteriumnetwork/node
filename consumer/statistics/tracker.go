@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,6 +31,7 @@ type TimeGetter func() time.Time
 
 // SessionStatisticsTracker keeps the session stats safe and sound
 type SessionStatisticsTracker struct {
+	lastInvoice  crypto.Invoice
 	lastStats    connection.Statistics
 	sessionStats connection.Statistics
 	timeGetter   TimeGetter
@@ -52,6 +55,11 @@ func (sst *SessionStatisticsTracker) GetDuration() time.Duration {
 	}
 	duration := sst.timeGetter().Sub(*sst.sessionStart)
 	return duration
+}
+
+// GetInvoice retrieves session payment stats
+func (sst *SessionStatisticsTracker) GetInvoice() crypto.Invoice {
+	return sst.lastInvoice
 }
 
 // MarkSessionStart marks current time as session start time for statistics
@@ -82,4 +90,9 @@ func (sst *SessionStatisticsTracker) ConsumeSessionEvent(sessionEvent connection
 	case connection.SessionCreatedStatus:
 		sst.markSessionStart()
 	}
+}
+
+// ConsumeInvoiceEvent handles the connection statistics changes
+func (sst *SessionStatisticsTracker) ConsumeInvoiceEvent(e pingpong.AppEventInvoicePaid) {
+	sst.lastInvoice = e.Invoice
 }

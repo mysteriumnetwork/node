@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -49,6 +50,7 @@ type natStatusProvider interface {
 type connectionSessionProvider interface {
 	GetDataStats() connection.Statistics
 	GetDuration() time.Duration
+	GetInvoice() crypto.Invoice
 }
 
 type publisher interface {
@@ -93,6 +95,7 @@ type Keeper struct {
 	consumeServiceSessionStateEventDebounced func(e interface{})
 	// consumer
 	consumeConnectionStatisticsEvent func(interface{})
+	consumeConnectionSpendingEvent   func(interface{})
 
 	announceStateChanges func(e interface{})
 }
@@ -135,7 +138,8 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeServiceSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStatistics, debounceDuration)
+	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionState, debounceDuration)
+	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionState, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 
 	return k
@@ -185,6 +189,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(pingpong.AppTopicInvoicePaid, k.consumeConnectionSpendingEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(identity.AppTopicIdentityCreated, k.consumeIdentityCreatedEvent); err != nil {
@@ -357,7 +364,21 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) updateConnectionStatistics(e interface{}) {
+func (k *Keeper) updateConnectionState(_ interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	dataStats := k.deps.ConnectionSessionProvider.GetDataStats()
+	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
+		Duration:      int(k.deps.ConnectionSessionProvider.GetDuration().Seconds()),
+		BytesSent:     dataStats.BytesSent,
+		BytesReceived: dataStats.BytesReceived,
+		TokensSpent:   k.deps.ConnectionSessionProvider.GetInvoice().AgreementTotal,
+	}
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) updateConnectionTokens(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 

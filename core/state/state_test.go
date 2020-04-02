@@ -67,6 +67,14 @@ func (f zeroDurationProvider) GetDuration() time.Duration {
 	return time.Duration(0)
 }
 
+func (f *zeroDurationProvider) GetInvoice() crypto.Invoice {
+	return crypto.Invoice{
+		AgreementID:    1,
+		AgreementTotal: 1001,
+		TransactorFee:  10,
+	}
+}
+
 func (dt *debounceTester) do(interface{}) {
 	dt.lock.Lock()
 	dt.numInteractions++
@@ -374,6 +382,35 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 		}
 		return stats.BytesReceived == 10*datasize.MiB.Bytes() &&
 			stats.BytesSent == 500*datasize.KiB.Bytes()
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	deps := KeeperDeps{
+		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:                 eventBus,
+		ServiceLister:             &serviceListerMock{},
+		ServiceSessionStorage:     &serviceSessionStorageMock{},
+		ConnectionSessionProvider: &zeroDurationProvider{},
+		IdentityProvider:          &mocks.IdentityProvider{},
+	}
+	keeper := NewKeeper(deps, time.Millisecond)
+	err := keeper.Subscribe(eventBus)
+	assert.NoError(t, err)
+	assert.Nil(t, keeper.GetState().Consumer.Connection.Statistics)
+
+	// when
+	eventBus.Publish(pingpong.AppTopicInvoicePaid, pingpong.AppEventInvoicePaid{})
+
+	// then
+	assert.Eventually(t, func() bool {
+		stats := keeper.GetState().Consumer.Connection.Statistics
+		if stats == nil {
+			return false
+		}
+		return stats.TokensSpent == 1001
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
