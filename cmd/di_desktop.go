@@ -278,6 +278,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
+			channel,
+			session.DefaultConfig(),
 		)
 	}
 

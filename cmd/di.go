@@ -517,7 +517,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.EventBus,
 		connectivity.NewStatusSender(),
 		di.IPResolver,
-		connection.DefaultIPCheckParams(),
+		connection.DefaultConfig(),
 		connection.DefaultStatsReportInterval,
 		connection.NewValidator(
 			di.ConsumerBalanceTracker,
@@ -622,6 +622,8 @@ func newSessionManagerFactory(
 			natTracker,
 			serviceID,
 			eventbus,
+			nil,
+			session.DefaultConfig(),
 		)
 	}
 }
