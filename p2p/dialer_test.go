@@ -68,14 +68,12 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
-	providerChannelReady := make(chan struct{}, 1)
 	t.Run("Test provider listens to peer", func(t *testing.T) {
 		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, mockPortPool)
 		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
 			})
-			providerChannelReady <- struct{}{}
 		})
 		require.NoError(t, err)
 	})
@@ -85,9 +83,6 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 
 		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
 		require.NoError(t, err)
-
-		// TODO: This should be removed and fixed with https://github.com/mysteriumnetwork/node/issues/1987
-		<-providerChannelReady
 
 		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
 		require.NoError(t, err)
