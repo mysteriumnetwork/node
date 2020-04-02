@@ -33,7 +33,7 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 

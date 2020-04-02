@@ -23,7 +23,6 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"errors"
-	"flag"
 	"io"
 	"sync"
 
@@ -31,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	ethKs "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -46,24 +44,7 @@ type ks interface {
 }
 
 // NewKeystoreFilesystem create new keystore, which keeps keys in filesystem.
-func NewKeystoreFilesystem(directory string, lightweight bool) *Keystore {
-	var ks ks
-	var keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)
-
-	// In test scenarios, we'll skip the real ethereum keystore and prefer a memory one instead.
-	if flag.Lookup("test.v") != nil {
-		ks = NewMockKeystore(mockKeys)
-		keyDecryptFunc = mockDecryptFunc
-	} else if lightweight {
-		log.Debug().Msg("Using lightweight keystore")
-		ks = ethKs.NewKeyStore(directory, ethKs.LightScryptN, ethKs.LightScryptP)
-		keyDecryptFunc = ethKs.DecryptKey
-	} else {
-		log.Debug().Msg("using heavyweight keystore")
-		ks = ethKs.NewKeyStore(directory, ethKs.StandardScryptN, ethKs.StandardScryptP)
-		keyDecryptFunc = ethKs.DecryptKey
-	}
-
+func NewKeystoreFilesystem(directory string, ks ks, keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)) *Keystore {
 	return &Keystore{
 		ethKeystore:    ks,
 		keyDecryptFunc: keyDecryptFunc,

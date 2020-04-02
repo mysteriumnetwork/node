@@ -34,7 +34,8 @@ type mockKeystore struct {
 	lock sync.Mutex
 }
 
-var mockKeys = map[common.Address]MockKey{
+// MockKeys represents the mocked keys
+var MockKeys = map[common.Address]MockKey{
 	common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"): MockKey{
 		PkHex: "6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657",
 		Pass:  "",
@@ -166,7 +167,8 @@ func (mk *mockKeystore) Find(a accounts.Account) (accounts.Account, error) {
 	return accounts.Account{}, ethKs.ErrNoMatch
 }
 
-var mockDecryptFunc = func(keyjson []byte, auth string) (*ethKs.Key, error) {
+// MockDecryptFunc represents the mock decrypt func
+var MockDecryptFunc = func(keyjson []byte, auth string) (*ethKs.Key, error) {
 	pk, err := crypto.HexToECDSA(common.Bytes2Hex(keyjson))
 	if err != nil {
 		return nil, err

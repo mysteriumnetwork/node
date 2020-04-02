@@ -54,7 +54,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -105,7 +105,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -184,7 +184,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -252,7 +252,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -541,7 +541,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -587,7 +587,7 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 

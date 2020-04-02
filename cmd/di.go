@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/communication"
@@ -703,7 +704,16 @@ func (di *Dependencies) bootstrapEventBus() {
 }
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
-	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, options.Keystore.UseLightweight)
+	var ks *keystore.KeyStore
+	if options.Keystore.UseLightweight {
+		log.Debug().Msg("Using lightweight keystore")
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	} else {
+		log.Debug().Msg("Using heavyweight keystore")
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.LightScryptN, keystore.LightScryptP)
+	}
+
+	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks, keystore.DecryptKey)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)

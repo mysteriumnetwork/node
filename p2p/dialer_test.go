@@ -37,7 +37,7 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	consumerAcc, err := ks.NewAccount("")
 	assert.NoError(t, err)
 	ks.Unlock(consumerAcc, "")

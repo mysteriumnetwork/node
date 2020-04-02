@@ -46,7 +46,7 @@ func TestPromiseSettler_resyncState_returns_errors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	err = settler.resyncState(mockID)
@@ -70,7 +70,7 @@ func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	id := identity.FromAddress("test")
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
@@ -100,7 +100,7 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	err = settler.resyncState(mockID)
@@ -129,7 +129,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
@@ -199,7 +199,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
@@ -241,7 +241,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
@@ -282,7 +282,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	// no receive on unknown provider
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
@@ -356,7 +356,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, true)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 
 	acc1, err := ks.NewAccount("")
 	assert.NoError(t, err)
