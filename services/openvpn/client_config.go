@@ -100,11 +100,11 @@ func NewClientConfigFromSession(vpnConfig VPNConfig, configDir string, runtimeDi
 	}
 
 	var remotePort, localPort int
-	if options.ProviderNATConn != nil {
+	if options.ProviderNATConn != nil && vpnConfig.RemoteIP != "127.0.0.1" {
 		options.ProviderNATConn.Close()
 		remotePort = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
 		localPort = options.ProviderNATConn.LocalAddr().(*net.UDPAddr).Port
-	} else { // TODO this block needs to be removed once most of the nodes will be using p2p communication.
+	} else {
 		remotePort = vpnConfig.RemotePort
 		localPort = vpnConfig.LocalPort
 	}
