@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -38,7 +37,7 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := keystore.NewKeyStore(dir, keystore.LightScryptN, keystore.LightScryptP)
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
 	consumerAcc, err := ks.NewAccount("")
 	assert.NoError(t, err)
 	ks.Unlock(consumerAcc, "")

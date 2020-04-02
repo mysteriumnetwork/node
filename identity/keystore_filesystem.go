@@ -30,30 +30,32 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	ethKs "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/hkdf"
 )
 
-// NewKeystoreFilesystem create new keystore, which keeps keys in filesystem.
-func NewKeystoreFilesystem(directory string, lightweight bool) *Keystore {
-	var ks *ethKs.KeyStore
-	if lightweight {
-		log.Debug().Msg("Using lightweight keystore")
-		ks = ethKs.NewKeyStore(directory, ethKs.LightScryptN, ethKs.LightScryptP)
-	} else {
-		log.Debug().Msg("using heavyweight keystore")
-		ks = ethKs.NewKeyStore(directory, ethKs.StandardScryptN, ethKs.StandardScryptP)
-	}
+type ks interface {
+	Accounts() []accounts.Account
+	NewAccount(passphrase string) (accounts.Account, error)
+	Find(a accounts.Account) (accounts.Account, error)
+	Unlock(a accounts.Account, passphrase string) error
+	Lock(addr common.Address) error
+	SignHash(a accounts.Account, hash []byte) ([]byte, error)
+	Export(a accounts.Account, passphrase, newPassphrase string) (keyJSON []byte, err error)
+}
 
+// NewKeystoreFilesystem create new keystore, which keeps keys in filesystem.
+func NewKeystoreFilesystem(directory string, ks ks, keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)) *Keystore {
 	return &Keystore{
-		ethKeystore: ks,
-		derivedKeys: make(map[common.Address]*memguard.Enclave),
+		ethKeystore:    ks,
+		keyDecryptFunc: keyDecryptFunc,
+		derivedKeys:    make(map[common.Address]*memguard.Enclave),
 	}
 }
 
 // Keystore handles everything that's related to eth accounts.
 type Keystore struct {
-	ethKeystore *ethKs.KeyStore
+	ethKeystore    ks
+	keyDecryptFunc func(keyjson []byte, auth string) (*ethKs.Key, error)
 
 	derivedKeys    map[common.Address]*memguard.Enclave
 	derivedKeyLock sync.Mutex
@@ -137,7 +139,7 @@ func (ks *Keystore) deriveKey(a accounts.Account, passphrase string) ([]byte, er
 		return nil, err
 	}
 
-	k, err := ethKs.DecryptKey(kjson, passphrase)
+	k, err := ks.keyDecryptFunc(kjson, passphrase)
 	if err != nil {
 		return nil, err
 	}
