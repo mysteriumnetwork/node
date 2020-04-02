@@ -18,15 +18,19 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
+
+	nats_lib "github.com/nats-io/go-nats"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
@@ -110,6 +114,15 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	}
 	defer brokerConn.Close()
 
+	ready := make(chan bool)
+	_, err = brokerConn.Subscribe(channelHandlersReadySubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+		defer close(ready)
+		if err := m.channelHandlersReady(msg); err != nil {
+			log.Err(err).Msg("Channel handlers ready handler setup failed")
+			return
+		}
+	})
+
 	// Send initial exchange with signed consumer public key.
 	beginExchangeMsg := &pb.P2PConfigExchangeMsg{
 		PublicKey: pubKey.Hex(),
@@ -174,6 +187,16 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}
 
+	// TODO: put this under feature set check when its available
+	// wait until provider confirms that channel handlers are ready
+	select {
+	case <- ready:
+		log.Debug().Msg("Received handlers ready message from provider")
+	// NOTE: We can make this timeout much larger when all providers migrate to handlers ready message
+	case <- time.After(1*time.Second):
+		log.Debug().Msg("Failed to receive handlers ready message from provider - continuing")
+	}
+
 	return &p2pConnectConfig{
 		publicIP:     publicIP,
 		privateKey:   privateKey,
@@ -190,4 +213,16 @@ func (m *dialer) sendSignedMsg(brokerConn nats.Connection, subject string, msg [
 		return nil, fmt.Errorf("could send broker request to subject %s: %v", subject, err)
 	}
 	return reply.Data, nil
+}
+
+func (m *dialer) channelHandlersReady(msg *nats_lib.Msg) error {
+	var handlersReady pb.P2PChannelHandlersReady
+	if err := proto.Unmarshal(msg.Data, &handlersReady); err != nil {
+		return fmt.Errorf("failed to unmarshal handlers ready message %w", err)
+	}
+	if handlersReady.Value != "HANDLERS READY" {
+		return errors.New("incorrect handlers ready message value")
+	}
+
+	return nil
 }

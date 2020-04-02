@@ -18,6 +18,7 @@
 package nats
 
 import (
+	"sync"
 	"time"
 
 	"github.com/nats-io/go-nats"
@@ -51,6 +52,8 @@ type ConnectionMock struct {
 	messageLast *nats.Msg
 	requestLast *nats.Msg
 	errorMock   error
+
+	m sync.Mutex
 }
 
 // GetLastMessageSubject returns the last message subject
@@ -101,6 +104,9 @@ func (conn *ConnectionMock) MessageWait(waitChannel chan interface{}) (interface
 
 // Publish publishes a new message
 func (conn *ConnectionMock) Publish(subject string, payload []byte) error {
+	conn.m.Lock()
+	defer conn.m.Unlock()
+
 	if conn.errorMock != nil {
 		return conn.errorMock
 	}

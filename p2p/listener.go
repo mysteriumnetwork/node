@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+
 	nats_lib "github.com/nats-io/go-nats"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -35,7 +36,8 @@ import (
 
 // Listener knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
 type Listener interface {
-	// Listen listens for incoming peer connections to establish new p2p channels.
+	// Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
+	// to channelHandlers
 	Listen(providerID identity.Identity, serviceType string, channelHandler func(ch Channel)) error
 }
 
@@ -86,22 +88,23 @@ func (c *p2pConnectConfig) pingIP() string {
 	return c.peerPublicIP
 }
 
-// Listen listens for incoming peer connections to establish new p2p channels.
-func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch Channel)) error {
+// Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
+// to channelHandlers
+func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) error {
 	brokerConn, err := m.broker.Connect(m.brokerAddress)
 	if err != nil {
 		return err
 	}
 	// TODO: Expose func to close broker conn.
 
-	_, err = brokerConn.Subscribe(fmt.Sprintf("%s.%s.p2p-config-exchange", providerID.Address, serviceType), func(msg *nats_lib.Msg) {
+	_, err = brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
 		if err := m.providerStartConfigExchange(brokerConn, providerID, msg); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
 	})
 
-	_, err = brokerConn.Subscribe(fmt.Sprintf("%s.%s.p2p-config-exchange-ack", providerID.Address, serviceType), func(msg *nats_lib.Msg) {
+	_, err = brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
 		config, err := m.providerAckConfigExchange(msg)
 		if err != nil {
 			log.Err(err).Msg("Could not handle exchange ack")
@@ -145,8 +148,15 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		}
 		channel.serviceConn = serviceConn
 
-		channelHandler(channel)
+		channelHandlers(channel)
+
+		// Send handlers ready to consumer
+		if err := m.providerChannelHandlersReady(brokerConn, providerID, serviceType); err != nil {
+			log.Err(err).Msg("Could not handle channel handlers ready")
+			return
+		}
 	})
+
 	return err
 }
 
@@ -240,6 +250,19 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 		peerPublicIP: peerConfig.PublicIP,
 		peerPorts:    int32ToIntSlice(peerConfig.Ports),
 	}, nil
+}
+
+
+func (m *listener) providerChannelHandlersReady(brokerConn nats.Connection, providerID identity.Identity, serviceType string) error {
+	handlersReadyMsg := pb.P2PChannelHandlersReady{Value:"HANDLERS READY"}
+
+	message, err := proto.Marshal(&handlersReadyMsg);
+	if err != nil {
+		return fmt.Errorf("could not marshal exchange msg: %w", err)
+	}
+
+	log.Debug().Msgf("Sending handlers ready message")
+	return brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
 }
 
 func (m *listener) pendingConfig(peerPubKey PublicKey) (*p2pConnectConfig, bool) {
