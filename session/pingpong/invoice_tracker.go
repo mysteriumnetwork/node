@@ -151,7 +151,6 @@ type InvoiceTrackerDeps struct {
 	AccountantPromiseStorage   accountantPromiseStorage
 	Registry                   string
 	MaxAccountantFailureCount  uint64
-	MaxRRecoveryLength         uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
 	EventBus                   eventbus.EventBus

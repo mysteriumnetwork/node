@@ -611,7 +611,6 @@ func newSessionManagerFactory(
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
-			nodeOptions.Payments.MaxRRecoveryLength,
 			bcHelper,
 			eventbus,
 			transactor,
