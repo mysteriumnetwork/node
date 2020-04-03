@@ -26,7 +26,6 @@ type OptionsPayments struct {
 	AccountantPromiseSettlingThreshold float64
 	SettlementTimeout                  time.Duration
 	MystSCAddress                      string
-	MaxRRecoveryLength                 uint64
 	ConsumerUpperGBPriceBound          uint64
 	ConsumerLowerGBPriceBound          uint64
 	ConsumerUpperMinutePriceBound      uint64
