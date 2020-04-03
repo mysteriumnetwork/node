@@ -35,7 +35,8 @@ func init() {
 }
 
 const (
-	topicKeepAlive = "p2p-keepalive"
+	// TopicKeepAlive is keep alive endpoint.
+	TopicKeepAlive = "p2p-keepalive"
 
 	// TopicSessionCreate is a session create endpoint for p2p communication.
 	TopicSessionCreate = "p2p-session-create"

@@ -47,7 +47,7 @@ type testContext struct {
 	stubPublisher         *StubPublisher
 	mockStatistics        Statistics
 	fakeResolver          ip.Resolver
-	ipCheckParams         IPCheckParams
+	config                Config
 	statusSender          *mockStatusSender
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
@@ -109,12 +109,16 @@ func (tc *testContext) SetupTest() {
 		},
 	}
 
-	tc.ipCheckParams = IPCheckParams{
-		MaxAttempts:             3,
-		SleepDurationAfterCheck: 1 * time.Millisecond,
-		Done:                    make(chan struct{}, 1),
+	tc.config = Config{
+		IPCheck: IPCheckConfig{
+			MaxAttempts:             3,
+			SleepDurationAfterCheck: 1 * time.Millisecond,
+		},
+		KeepAlive: KeepAliveConfig{
+			SendInterval:    100 * time.Millisecond,
+			MaxSendErrCount: 5,
+		},
 	}
-
 	tc.statusSender = &mockStatusSender{}
 	tc.fakeResolver = ip.NewResolverMock("ip")
 	tc.statsReportInterval = 1 * time.Millisecond
@@ -140,7 +144,7 @@ func (tc *testContext) SetupTest() {
 		tc.stubPublisher,
 		tc.statusSender,
 		tc.fakeResolver,
-		tc.ipCheckParams,
+		tc.config,
 		tc.statsReportInterval,
 		&mockValidator{},
 		tc.mockP2P,
