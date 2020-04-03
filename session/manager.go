@@ -18,6 +18,7 @@
 package session
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"sync"
@@ -60,6 +61,7 @@ type publisher interface {
 // KeepAliveConfig contains keep alive options.
 type KeepAliveConfig struct {
 	SendInterval    time.Duration
+	SendTimeout     time.Duration
 	MaxSendErrCount int
 }
 
@@ -72,7 +74,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		KeepAlive: KeepAliveConfig{
-			SendInterval:    20 * time.Second,
+			SendInterval:    3 * time.Minute,
+			SendTimeout:     5 * time.Second,
 			MaxSendErrCount: 5,
 		},
 	}
@@ -265,11 +268,7 @@ func (manager *Manager) keepAliveLoop(sess *Session, channel p2p.Channel) {
 		case <-sess.done:
 			return
 		case <-time.After(manager.config.KeepAlive.SendInterval):
-			msg := &pb.P2PKeepAlivePing{
-				SessionID: string(sess.ID),
-			}
-			_, err := channel.Send(p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
-			if err != nil {
+			if err := manager.sendKeepAlivePing(channel, sess.ID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sess.ID)
 				errCount++
 				if errCount == manager.config.KeepAlive.MaxSendErrCount {
@@ -282,4 +281,14 @@ func (manager *Manager) keepAliveLoop(sess *Session, channel p2p.Channel) {
 			}
 		}
 	}
+}
+
+func (manager *Manager) sendKeepAlivePing(channel p2p.Channel, sessionID ID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
+	defer cancel()
+	msg := &pb.P2PKeepAlivePing{
+		SessionID: string(sessionID),
+	}
+	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	return err
 }

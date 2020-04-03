@@ -583,7 +583,7 @@ func (m *mockP2PChannel) getSentMsg() connectivity.StatusMessage {
 	return m.status
 }
 
-func (m *mockP2PChannel) Send(topic string, msg *p2p.Message) (*p2p.Message, error) {
+func (m *mockP2PChannel) Send(_ context.Context, topic string, msg *p2p.Message) (*p2p.Message, error) {
 	switch topic {
 	case p2p.TopicSessionCreate:
 		res := &pb.SessionResponse{
