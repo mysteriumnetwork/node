@@ -28,7 +28,7 @@ import (
 
 func TestStatsSavingWorks(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	e := connection.SessionStatsEvent{
+	e := connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{BytesSent: 1, BytesReceived: 2},
 	}
 
@@ -70,7 +70,7 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 
 func TestStatisticsTrackerConsumeSessionEventCreated(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
+	statisticsTracker.ConsumeSessionEvent(connection.AppEventConnectionSession{
 		Status: connection.SessionCreatedStatus,
 	})
 	assert.NotNil(t, statisticsTracker.sessionStart)
@@ -80,7 +80,7 @@ func TestStatisticsTrackerConsumeSessionEventEnded(t *testing.T) {
 	now := time.Now()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.sessionStart = &now
-	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
+	statisticsTracker.ConsumeSessionEvent(connection.AppEventConnectionSession{
 		Status: connection.SessionEndedStatus,
 	})
 	assert.Nil(t, statisticsTracker.sessionStart)
@@ -90,7 +90,7 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 	sst := &SessionStatisticsTracker{
 		timeGetter: time.Now,
 	}
-	e := connection.SessionStatsEvent{
+	e := connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{
 			BytesReceived: 1,
 			BytesSent:     1,
@@ -105,7 +105,7 @@ func TestConsumeStatisticsEventChain(t *testing.T) {
 	assert.EqualValues(t, e.Stats, sst.lastStats)
 	assert.EqualValues(t, e.Stats, sst.sessionStats)
 
-	e2 := connection.SessionStatsEvent{
+	e2 := connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{
 			BytesReceived: 2,
 			BytesSent:     2,

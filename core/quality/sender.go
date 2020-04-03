@@ -102,7 +102,7 @@ type sessionContext struct {
 }
 
 // SendSessionData sends transferred information about session.
-func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
+func (sender *Sender) SendSessionData(e connection.AppEventConnectionStatistics) {
 	if !e.SessionInfo.IsActive() {
 		return
 	}
@@ -122,7 +122,7 @@ func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
 }
 
 // SendConnStateEvent sends session update events.
-func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
+func (sender *Sender) SendConnStateEvent(e connection.AppEventConnectionState) {
 	if !e.SessionInfo.IsActive() {
 		return
 	}
@@ -140,7 +140,7 @@ func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
 }
 
 // SendSessionEvent sends session update events.
-func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
+func (sender *Sender) SendSessionEvent(e connection.AppEventConnectionSession) {
 	if !e.SessionInfo.IsActive() {
 		return
 	}

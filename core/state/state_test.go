@@ -345,7 +345,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	assert.Equal(t, connection.NotConnected, keeper.GetState().Consumer.Connection.State)
 
 	// when
-	eventBus.Publish(connection.AppTopicConsumerConnectionState, connection.StateEvent{
+	eventBus.Publish(connection.AppTopicConnectionState, connection.AppEventConnectionState{
 		State: connection.Connected,
 	})
 
@@ -372,7 +372,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	assert.Nil(t, keeper.GetState().Consumer.Connection.Statistics)
 
 	// when
-	eventBus.Publish(connection.AppTopicConsumerStatistics, connection.SessionStatsEvent{})
+	eventBus.Publish(connection.AppTopicConnectionStatistics, connection.AppEventConnectionStatistics{})
 
 	// then
 	assert.Eventually(t, func() bool {

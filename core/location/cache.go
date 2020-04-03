@@ -79,7 +79,7 @@ func (c *Cache) DetectLocation() (Location, error) {
 
 // HandleConnectionEvent handles connection state change and fetches the location info accordingly.
 // On the consumer side, we'll need to re-fetch the location once the user is connected or disconnected from a service.
-func (c *Cache) HandleConnectionEvent(se connection.StateEvent) {
+func (c *Cache) HandleConnectionEvent(se connection.AppEventConnectionState) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if se.State != connection.Connected && se.State != connection.NotConnected {

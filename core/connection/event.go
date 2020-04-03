@@ -27,16 +27,16 @@ import (
 
 // Topic represents the different topics a consumer can subscribe to
 const (
-	// AppTopicConsumerConnectionState represents the connection state change topic
-	AppTopicConsumerConnectionState = "State"
-	// AppTopicConsumerStatistics represents the connection stats topic
-	AppTopicConsumerStatistics = "Statistics"
-	// AppTopicConsumerSession represents the session event
-	AppTopicConsumerSession = "Session"
+	// AppTopicConnectionState represents the session state change topic
+	AppTopicConnectionState = "State"
+	// AppTopicConnectionStatistics represents the session stats topic
+	AppTopicConnectionStatistics = "Statistics"
+	// AppTopicConnectionSession represents the session lifetime changes
+	AppTopicConnectionSession = "Session"
 )
 
-// StateEvent is the struct we'll emit on a StateEvent topic event
-type StateEvent struct {
+// AppEventConnectionState is the struct we'll emit on a AppEventConnectionState topic event
+type AppEventConnectionState struct {
 	State       State
 	SessionInfo Status
 }
@@ -94,14 +94,14 @@ const (
 	SessionEndedStatus = "Ended"
 )
 
-// SessionEvent represents a session related event
-type SessionEvent struct {
+// AppEventConnectionSession represents a session related event
+type AppEventConnectionSession struct {
 	Status      string
 	SessionInfo Status
 }
 
-// SessionStatsEvent represents a session statistics event
-type SessionStatsEvent struct {
+// AppEventConnectionStatistics represents a session statistics event
+type AppEventConnectionStatistics struct {
 	Stats       Statistics
 	SessionInfo Status
 }

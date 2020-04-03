@@ -185,10 +185,10 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConsumerConnectionState, k.consumeConnectionStateEvent); err != nil {
+	if err := bus.SubscribeAsync(connection.AppTopicConnectionState, k.consumeConnectionStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConsumerStatistics, k.consumeConnectionStatisticsEvent); err != nil {
+	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, k.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(pingpong.AppTopicInvoicePaid, k.consumeConnectionSpendingEvent); err != nil {
@@ -348,7 +348,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(connection.StateEvent)
+	evt, ok := e.(connection.AppEventConnectionState)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return

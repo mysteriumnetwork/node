@@ -125,7 +125,7 @@ func (ip *InvoicePayer) Start() error {
 
 	ip.deps.TimeTracker.StartTracking()
 
-	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
+	err = ip.deps.EventBus.Subscribe(connection.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to data transfer events")
 	}
@@ -262,12 +262,12 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 func (ip *InvoicePayer) Stop() {
 	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
+		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 		close(ip.stop)
 	})
 }
 
-func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.SessionStatsEvent) {
+func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.AppEventConnectionStatistics) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(string(e.SessionInfo.SessionID), ip.deps.SessionID) {
 		return

@@ -38,7 +38,7 @@ var (
 	providerID  = identity.FromAddress("providerID")
 	serviceType = "serviceType"
 
-	mockPayload = connection.SessionEvent{
+	mockPayload = connection.AppEventConnectionSession{
 		Status: connection.SessionCreatedStatus,
 		SessionInfo: connection.Status{
 			SessionID:  sessionID,
@@ -76,7 +76,7 @@ func TestSessionStorageConsumeEventEndedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeSessionEvent(connection.SessionEvent{
+	storage.ConsumeSessionEvent(connection.AppEventConnectionSession{
 		Status: connection.SessionEndedStatus,
 	})
 	assert.True(t, storer.UpdateCalled)
@@ -89,7 +89,7 @@ func TestSessionStorageConsumeEventEndedErrors(t *testing.T) {
 
 	storage := NewSessionStorage(storer, stubRetriever)
 	assert.NotPanics(t, func() {
-		storage.ConsumeSessionEvent(connection.SessionEvent{Status: connection.SessionEndedStatus})
+		storage.ConsumeSessionEvent(connection.AppEventConnectionSession{Status: connection.SessionEndedStatus})
 	})
 
 	assert.True(t, storer.UpdateCalled)

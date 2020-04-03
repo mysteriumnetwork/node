@@ -54,7 +54,7 @@ func (s statsPublisher) start(sessionSupplier *connectionManager, statsSupplier 
 				log.Warn().Err(err).Msg("Could not get connection statistics")
 				continue
 			}
-			s.bus.Publish(AppTopicConsumerStatistics, SessionStatsEvent{
+			s.bus.Publish(AppTopicConnectionStatistics, AppEventConnectionStatistics{
 				Stats:       stats,
 				SessionInfo: sessionSupplier.Status(),
 			})

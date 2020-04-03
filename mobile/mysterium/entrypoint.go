@@ -337,7 +337,7 @@ type StatisticsChangeCallback interface {
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, func(e connection.SessionStatsEvent) {
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
 		duration := mb.statisticsTracker.GetDuration()
 		cb.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
 	})
@@ -351,7 +351,7 @@ type ConnectionStatusChangeCallback interface {
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, func(e connection.StateEvent) {
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
 		cb.OnChange(string(e.State))
 	})
 }
@@ -579,7 +579,7 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 			mb.ipResolver,
 		)
 	}
-	_ = mb.eventBus.Subscribe(connection.AppTopicConsumerConnectionState, st.handleState)
+	_ = mb.eventBus.Subscribe(connection.AppTopicConnectionState, st.handleState)
 	mb.connectionRegistry.Register("openvpn", factory)
 	return st
 }

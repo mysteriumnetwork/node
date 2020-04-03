@@ -60,7 +60,7 @@ func (t *Tracker) Get() CurrentSpeed {
 const consumeCooldown = 500 * time.Millisecond
 
 // ConsumeStatisticsEvent handles the connection statistics changes
-func (t *Tracker) ConsumeStatisticsEvent(evt connection.SessionStatsEvent) {
+func (t *Tracker) ConsumeStatisticsEvent(evt connection.AppEventConnectionStatistics) {
 	t.lock.Lock()
 	defer func() {
 		t.lock.Unlock()
@@ -92,7 +92,7 @@ func (t *Tracker) ConsumeStatisticsEvent(evt connection.SessionStatsEvent) {
 }
 
 // ConsumeSessionEvent handles the session state changes
-func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
+func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	switch sessionEvent.Status {

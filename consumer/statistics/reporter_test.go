@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockSessionEvent = connection.SessionEvent{
+var mockSessionEvent = connection.AppEventConnectionSession{
 	Status: connection.SessionCreatedStatus,
 	SessionInfo: connection.Status{
 		ConsumerID: identity.FromAddress("0x000"),

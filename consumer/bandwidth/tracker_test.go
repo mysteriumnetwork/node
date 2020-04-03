@@ -40,7 +40,7 @@ func Test_ConsumeSessionEvent_ResetsOnConnect(t *testing.T) {
 			BytesSent:     1,
 		},
 	}
-	tracker.ConsumeSessionEvent(connection.SessionEvent{
+	tracker.ConsumeSessionEvent(connection.AppEventConnectionSession{
 		Status: connection.SessionCreatedStatus,
 	})
 
@@ -57,7 +57,7 @@ func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 			BytesSent:     1,
 		},
 	}
-	tracker.ConsumeSessionEvent(connection.SessionEvent{
+	tracker.ConsumeSessionEvent(connection.AppEventConnectionSession{
 		Status: connection.SessionEndedStatus,
 	})
 
@@ -68,7 +68,7 @@ func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 
 func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	tracker := Tracker{}
-	e := connection.SessionStatsEvent{
+	e := connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{
 			At:            time.Now(),
 			BytesReceived: 1,
@@ -84,14 +84,14 @@ func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 
 func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T) {
 	tracker := Tracker{}
-	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+	tracker.ConsumeStatisticsEvent(connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{
 			At:            time.Now(),
 			BytesSent:     0,
 			BytesReceived: 0,
 		},
 	})
-	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+	tracker.ConsumeStatisticsEvent(connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{
 			At:            time.Now(),
 			BytesSent:     2048,
@@ -102,7 +102,7 @@ func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T
 	assert.Zero(t, down.Bytes())
 
 	time.Sleep(time.Second)
-	tracker.ConsumeStatisticsEvent(connection.SessionStatsEvent{
+	tracker.ConsumeStatisticsEvent(connection.AppEventConnectionStatistics{
 		Stats: connection.Statistics{
 			At:            time.Now(),
 			BytesSent:     4096,

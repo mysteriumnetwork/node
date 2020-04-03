@@ -552,7 +552,7 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 		status.SessionID = sessionID
 	})
 
-	m.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
+	m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
 		Status:      SessionCreatedStatus,
 		SessionInfo: m.Status(),
 	})
@@ -560,7 +560,7 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		m.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
+		m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
 			Status:      SessionEndedStatus,
 			SessionInfo: m.Status(),
 		})
@@ -790,7 +790,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 }
 
 func (m *connectionManager) publishStateEvent(state State) {
-	m.eventPublisher.Publish(AppTopicConsumerConnectionState, StateEvent{
+	m.eventPublisher.Publish(AppTopicConnectionState, AppEventConnectionState{
 		State:       state,
 		SessionInfo: m.Status(),
 	})

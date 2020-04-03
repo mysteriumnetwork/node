@@ -399,8 +399,8 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	found := false
 
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerSession {
-			event := v.calledWithData.(SessionEvent)
+		if v.calledWithTopic == AppTopicConnectionSession {
+			event := v.calledWithData.(AppEventConnectionSession)
 			if event.Status == SessionEndedStatus {
 				found = true
 
@@ -439,7 +439,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.True(tc.T(), len(history) >= 4)
 
 	// Check if published to all expected topics.
-	expectedTopics := [...]string{AppTopicConsumerStatistics, AppTopicConsumerConnectionState, AppTopicConsumerSession}
+	expectedTopics := [...]string{AppTopicConnectionStatistics, AppTopicConnectionState, AppTopicConnectionSession}
 	for _, v := range expectedTopics {
 		var published bool
 		for _, h := range history {
@@ -452,29 +452,29 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	// Check received events data.
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerStatistics {
-			event := v.calledWithData.(SessionStatsEvent)
+		if v.calledWithTopic == AppTopicConnectionStatistics {
+			event := v.calledWithData.(AppEventConnectionStatistics)
 			assert.True(tc.T(), event.Stats.BytesReceived == tc.mockStatistics.BytesReceived)
 			assert.True(tc.T(), event.Stats.BytesSent == tc.mockStatistics.BytesSent)
 		}
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == Connected {
-			event := v.calledWithData.(StateEvent)
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == Connected {
+			event := v.calledWithData.(AppEventConnectionState)
 			assert.Equal(tc.T(), Connected, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == StateIPNotChanged {
-			event := v.calledWithData.(StateEvent)
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
+			event := v.calledWithData.(AppEventConnectionState)
 			assert.Equal(tc.T(), StateIPNotChanged, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == AppTopicConsumerSession {
-			event := v.calledWithData.(SessionEvent)
+		if v.calledWithTopic == AppTopicConnectionSession {
+			event := v.calledWithData.(AppEventConnectionSession)
 			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
@@ -500,7 +500,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 	history := tc.stubPublisher.GetEventHistory()
 	var ipNotChangedEvent *StubPublisherEvent
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
 			ipNotChangedEvent = &v
 		}
 	}
@@ -534,7 +534,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	history := tc.stubPublisher.GetEventHistory()
 	var ipNotChangedEvent *StubPublisherEvent
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
 			ipNotChangedEvent = &v
 		}
 	}
