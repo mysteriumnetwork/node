@@ -363,6 +363,8 @@ func (k *Keeper) updateConnectionStats(e interface{}) {
 	}
 
 	k.state.MainConnection.Statistics = evt.Stats
+	log.Trace().Msg(k.state.MainConnection.String())
+
 	go k.announceStateChanges(nil)
 }
 
@@ -376,6 +378,8 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 	}
 
 	k.state.MainConnection.Invoice = evt.Invoice
+	log.Trace().Msg(k.state.MainConnection.String())
+
 	go k.announceStateChanges(nil)
 }
 

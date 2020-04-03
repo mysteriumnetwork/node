@@ -120,7 +120,6 @@ type Dependencies struct {
 
 	PolicyOracle *policy.Oracle
 
-	StatisticsTracker                *statistics.SessionStatisticsTracker
 	StatisticsReporter               *statistics.SessionStatisticsReporter
 	SessionStorage                   *consumer_session.Storage
 	SessionConnectivityStatusStorage connectivity.StatusStorage
@@ -243,8 +242,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.registerConnections(nodeOptions)
-
-	if err = di.subscribeEventConsumers(); err != nil {
+	if err = di.handleHTTPClientConnections(); err != nil {
 		return err
 	}
 	if err := di.Node.Start(); err != nil {
@@ -391,31 +389,11 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
-func (di *Dependencies) subscribeEventConsumers() error {
-	// Consumer current session store
-	err := di.EventBus.Subscribe(connection.AppTopicConnectionSession, di.StatisticsTracker.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(connection.AppTopicConnectionStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(pingpong.AppTopicInvoicePaid, di.StatisticsTracker.ConsumeInvoiceEvent)
-	if err != nil {
-		return err
-	}
-
-	return di.handleHTTPClientConnections()
-}
-
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID), di.BrokerConnector)
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
-
-	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 
 	// Consumer current session bandwidth
 	bandwidthTracker := &bandwidth.Tracker{}

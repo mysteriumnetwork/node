@@ -18,12 +18,15 @@
 package event
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -54,6 +57,16 @@ type Connection struct {
 	Session    connection.Status
 	Statistics connection.Statistics
 	Invoice    crypto.Invoice
+}
+
+func (c Connection) String() string {
+	return fmt.Sprintf(
+		"duration: %s received: %s, sent: %s, spent: %s",
+		c.Session.Duration(),
+		datasize.FromBytes(c.Statistics.BytesReceived),
+		datasize.FromBytes(c.Statistics.BytesSent),
+		money.NewMoney(c.Invoice.AgreementTotal, money.CurrencyMyst),
+	)
 }
 
 // NATStatus stores the nat status related information
