@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+
 	"google.golang.org/protobuf/proto"
 )
 
@@ -54,6 +55,10 @@ func configExchangeSubject(providerID identity.Identity, serviceType string) str
 
 func configExchangeACKSubject(providerID identity.Identity, serviceType string) string {
 	return fmt.Sprintf("%s.%s.p2p-config-exchange-ack", providerID.Address, serviceType)
+}
+
+func channelHandlersReadySubject(providerID identity.Identity, serviceType string) string {
+	return fmt.Sprintf("%s.%s.p2p-channel-handlers-ready", providerID.Address, serviceType)
 }
 
 func acquireLocalPorts(portPool port.ServicePortSupplier) ([]int, error) {

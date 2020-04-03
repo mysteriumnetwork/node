@@ -21,3 +21,7 @@ message P2PConnectConfig {
 message P2PKeepAlivePing {
     string sessionID = 1;
 }
+
+message P2PChannelHandlersReady {
+    string value = 1;
+}

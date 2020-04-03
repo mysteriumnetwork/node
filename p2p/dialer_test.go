@@ -18,6 +18,7 @@
 package p2p
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"os"
@@ -68,14 +69,12 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
-	providerChannelReady := make(chan struct{}, 1)
 	t.Run("Test provider listens to peer", func(t *testing.T) {
 		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, mockPortPool)
 		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
 			})
-			providerChannelReady <- struct{}{}
 		})
 		require.NoError(t, err)
 	})
@@ -83,11 +82,10 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
 		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, mockPortPool)
 
-		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
 		require.NoError(t, err)
-
-		// TODO: This should be removed and fixed with https://github.com/mysteriumnetwork/node/issues/1987
-		<-providerChannelReady
 
 		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
 		require.NoError(t, err)
