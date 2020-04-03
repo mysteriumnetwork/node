@@ -18,6 +18,8 @@
 package e2e
 
 import (
+	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +27,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
@@ -33,6 +39,10 @@ var (
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
 	accountantID       = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
+)
+
+const (
+	initialBalance uint64 = 690000000
 )
 
 func TestConsumerConnectsToProvider(t *testing.T) {
@@ -50,17 +60,74 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("ConsumerConnectFlow", func(t *testing.T) {
+		var providerEarnedForService uint64
 		servicesInFlag := strings.Split(*consumerServices, ",")
 		for _, serviceType := range servicesInFlag {
 			if _, ok := serviceTypeAssertionMap[serviceType]; ok {
 				t.Run(serviceType, func(t *testing.T) {
 					proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
 					balanceSpent := consumerConnectFlow(t, tequilapiConsumer, consumerID, accountantID, serviceType, proposal)
-					providerEarnedTokens(t, tequilapiProvider, providerID, balanceSpent)
+					providerEarnings := providerEarnedTokens(t, tequilapiProvider, providerID, balanceSpent)
+					forThisService := providerEarnings - providerEarnedForService
+					providerEarnedForService += forThisService
+					validateProviderEarnings(t, proposal, forThisService, tequilapiConsumer)
 				})
 			}
 		}
 	})
+
+	t.Run("Provider settlement flow", func(t *testing.T) {
+		providerStatus, err := tequilapiProvider.Identity(providerID)
+		assert.NoError(t, err)
+		assert.Equal(t, initialBalance, providerStatus.Balance)
+
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(accountantID), true)
+		assert.NoError(t, err)
+
+		providerStatus, err = tequilapiProvider.Identity(providerID)
+		assert.NoError(t, err)
+
+		fees, err := tequilapiProvider.GetTransactorFees()
+		assert.NoError(t, err)
+
+		accountantFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
+		accountantFeeUint := uint64(math.Trunc(accountantFee))
+		expected := initialBalance + providerStatus.EarningsTotal - fees.Settlement - accountantFeeUint
+
+		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
+		assert.InDelta(t, expected, providerStatus.Balance, 2)
+	})
+}
+
+func validateProviderEarnings(t *testing.T, proposal client.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
+	sessions, err := consumerTequila.ConnectionSessions()
+	assert.NoError(t, err)
+
+	var session *client.ConnectionSessionDTO
+	for _, s := range sessions.Sessions {
+		if s.ServiceType == proposal.ServiceType && s.ProviderID == proposal.ProviderID {
+			session = &s
+		}
+	}
+	assert.NotNil(t, session)
+
+	total := pingpong.DataTransferred{
+		Up:   session.BytesReceived,
+		Down: session.BytesSent,
+	}
+	method := pingpong.PaymentMethod{
+		Duration: time.Duration(proposal.PaymentMethod.Rate.PerSeconds) * time.Second,
+		Price:    money.NewMoney(proposal.PaymentMethod.Price.Amount, money.CurrencyMyst),
+		Bytes:    proposal.PaymentMethod.Rate.PerBytes,
+		Type:     proposal.PaymentMethodType,
+	}
+
+	// we're running the tests for 30 secs, but due to the initial handshakes this could take longer.
+	lowerEstimate := pingpong.CalculatePaymentAmount(time.Second*30, total, method)
+	upperEstimate := pingpong.CalculatePaymentAmount(time.Second*45, total, method)
+	delta := upperEstimate - lowerEstimate
+	msg := fmt.Sprintf("expected providerEarnings to be within [%d:%d], is %d", lowerEstimate, upperEstimate, providerEarnings)
+	assert.InDelta(t, float64(upperEstimate), float64(providerEarnings), float64(delta), msg)
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
@@ -79,7 +146,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	assert.NoError(t, err)
 	assert.Equal(t, "RegisteredProvider", idStatus.RegistrationStatus)
 	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
-	assert.Equal(t, uint64(690000000), idStatus.Balance)
+	assert.Equal(t, initialBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings)
 	assert.Zero(t, idStatus.EarningsTotal)
 }
@@ -104,7 +171,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "RegisteredConsumer", idStatus.RegistrationStatus)
-	assert.Equal(t, uint64(690000000), idStatus.Balance)
+	assert.Equal(t, initialBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings)
 	assert.Zero(t, idStatus.EarningsTotal)
 }
@@ -177,9 +244,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, "New", se.Status)
 
 	// Wait some time for session to collect stats.
-	if serviceType != "noop" {
-		assert.Eventually(t, sessionStatsReceived(tequilapi), 30*time.Second, 1*time.Second)
-	}
+	assert.Eventually(t, sessionStatsReceived(tequilapi, serviceType), 40*time.Second, 1*time.Second, serviceType)
 
 	err = tequilapi.ConnectionDestroy()
 	assert.NoError(t, err)
@@ -210,27 +275,35 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	return uint64(690000000) - consumerStatus.Balance
 }
 
-func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) {
+func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) uint64 {
 	// Before settlement
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(690000000), providerStatus.Balance)
 	assert.Equal(t, earningsExpected, providerStatus.Earnings)
 	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal)
-	
-	// TODO Compare with sessions stats + proposal price
 	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
-
-	// TODO Implement settlement test here
+	return providerStatus.Earnings
 }
 
-func sessionStatsReceived(tequilapi *tequilapi_client.Client) func() bool {
+func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string) func() bool {
+	var delegate func(stats client.StatisticsDTO) bool
+	if serviceType != "noop" {
+		delegate = func(stats client.StatisticsDTO) bool {
+			return stats.BytesReceived > 0 && stats.BytesSent > 0 && stats.Duration > 30
+		}
+	} else {
+		delegate = func(stats client.StatisticsDTO) bool {
+			return stats.Duration > 30
+		}
+	}
+
 	return func() bool {
 		stats, err := tequilapi.ConnectionStatistics()
 		if err != nil {
 			return false
 		}
-		return stats.BytesReceived > 0 && stats.BytesSent > 0
+		return delegate(stats)
 	}
 }
 

@@ -54,6 +54,12 @@ var (
 		Value: "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
 		Usage: "The address of myst token smart contract",
 	}
+	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
+	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
+		Name:  "payments.provider.invoice-frequency",
+		Value: time.Minute,
+		Usage: "Determines how often the provider sends invoices.",
+	}
 	// FlagPaymentsConsumerPricePerMinuteUpperBound sets the upper price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.Uint64Flag{
 		Name:  "payments.consumer.price-perminute-max",
@@ -95,6 +101,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsAccountantPromiseSettleThreshold,
 		&FlagPaymentsAccountantPromiseSettleTimeout,
 		&FlagPaymentsMystSCAddress,
+		&FlagPaymentsProviderInvoiceFrequency,
 		&FlagPaymentsConsumerPricePerMinuteUpperBound,
 		&FlagPaymentsConsumerPricePerMinuteLowerBound,
 		&FlagPaymentsConsumerPricePerGBUpperBound,
@@ -110,6 +117,7 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsAccountantPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsAccountantPromiseSettleTimeout)
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
+	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)
