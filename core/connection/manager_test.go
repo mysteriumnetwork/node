@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"net"
 	"sync"
@@ -563,7 +564,7 @@ type mockP2PDialer struct {
 	ch *mockP2PChannel
 }
 
-func (m mockP2PDialer) Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (p2p.Channel, error) {
+func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (p2p.Channel, error) {
 	return m.ch, nil
 }
 

@@ -252,11 +252,10 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	}, nil
 }
 
-
 func (m *listener) providerChannelHandlersReady(brokerConn nats.Connection, providerID identity.Identity, serviceType string) error {
-	handlersReadyMsg := pb.P2PChannelHandlersReady{Value:"HANDLERS READY"}
+	handlersReadyMsg := pb.P2PChannelHandlersReady{Value: "HANDLERS READY"}
 
-	message, err := proto.Marshal(&handlersReadyMsg);
+	message, err := proto.Marshal(&handlersReadyMsg)
 	if err != nil {
 		return fmt.Errorf("could not marshal exchange msg: %w", err)
 	}

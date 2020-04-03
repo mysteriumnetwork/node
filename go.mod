@@ -67,7 +67,6 @@ require (
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xtaci/kcp-go/v5 v5.5.8
-	golang.org/dl v0.0.0-20200319204010-bf12898a6070 // indirect
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
