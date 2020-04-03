@@ -18,6 +18,9 @@
 package pingpong
 
 import (
+	"context"
+	"time"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
@@ -61,7 +64,9 @@ func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 		Provider:       invoice.Provider,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentInvoice, pInvoice.String())
-	_, err := is.ch.Send(p2p.TopicPaymentInvoice, p2p.ProtoMessage(pInvoice))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	_, err := is.ch.Send(ctx, p2p.TopicPaymentInvoice, p2p.ProtoMessage(pInvoice))
 	return err
 }
 

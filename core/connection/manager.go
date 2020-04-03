@@ -64,6 +64,7 @@ type IPCheckConfig struct {
 // KeepAliveConfig contains keep alive options.
 type KeepAliveConfig struct {
 	SendInterval    time.Duration
+	SendTimeout     time.Duration
 	MaxSendErrCount int
 }
 
@@ -82,6 +83,7 @@ func DefaultConfig() Config {
 		},
 		KeepAlive: KeepAliveConfig{
 			SendInterval:    20 * time.Second,
+			SendTimeout:     5 * time.Second,
 			MaxSendErrCount: 5,
 		},
 	}
@@ -312,7 +314,9 @@ func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog,
 
 	log.Debug().Msgf("Sending session status P2P message to %q: %s", p2p.TopicSessionStatus, sessionStatus.String())
 
-	_, err := channel.Send(p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	_, err := channel.Send(ctx, p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
 	if err != nil {
 		return fmt.Errorf("could not send p2p session status message: %w", err)
 	}
@@ -421,7 +425,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		Config:     config,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
-	res, err := p2pChannel.Send(p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	res, err := p2pChannel.Send(ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
@@ -443,7 +449,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		}
 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
-		_, err := p2pChannel.Send(p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err := p2pChannel.Send(ctx, p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
 		if err != nil {
 			return fmt.Errorf("could not send session destroy request: %w", err)
 		}
@@ -461,7 +469,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 				SessionID:  string(sessionID),
 			}
 			log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionAcknowledge, pc.String())
-			_, err := p2pChannel.Send(p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			_, err := p2pChannel.Send(ctx, p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
 			if err != nil {
 				log.Warn().Err(err).Msg("Acknowledge failed")
 			}
@@ -764,16 +774,11 @@ func (manager *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID s
 		case <-manager.ctx.Done():
 			return
 		case <-time.After(manager.config.KeepAlive.SendInterval):
-			sess := manager.getCurrentSession()
-			msg := &pb.P2PKeepAlivePing{
-				SessionID: string(sessionID),
-			}
-			_, err := channel.Send(p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
-			if err != nil {
-				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sess.SessionID)
+			if err := manager.sendKeepAlivePing(channel, sessionID); err != nil {
+				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
 				if errCount == manager.config.KeepAlive.MaxSendErrCount {
-					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sess.SessionID)
+					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
 					manager.Disconnect()
 					return
 				}
@@ -782,6 +787,16 @@ func (manager *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID s
 			}
 		}
 	}
+}
+
+func (manager *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
+	defer cancel()
+	msg := &pb.P2PKeepAlivePing{
+		SessionID: string(sessionID),
+	}
+	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	return err
 }
 
 func logDisconnectError(err error) {
