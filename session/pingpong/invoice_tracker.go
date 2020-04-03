@@ -552,6 +552,9 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 			return errors.New("could not cast errNeedsRecovery to accountantError")
 		}
 		return it.recoverR(aer)
+	case stdErr.Is(err, ErrAccountantNoPreviousPromise):
+		log.Info().Msg("no previous promise on accountant, will mark R as revealed")
+		return nil
 	case stdErr.Is(err, ErrAccountantHashlockMissmatch), stdErr.Is(err, ErrAccountantPreviousRNotRevealed):
 		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
 		// For now though, handle as ignorable.
@@ -559,7 +562,6 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 	case
 		stdErr.Is(err, ErrAccountantInternal),
 		stdErr.Is(err, ErrAccountantNotFound),
-		stdErr.Is(err, ErrAccountantNoPreviousPromise),
 		stdErr.Is(err, ErrAccountantMalformedJSON):
 		// these are ignorable, we'll eventually fail
 		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
