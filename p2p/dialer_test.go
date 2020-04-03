@@ -18,6 +18,7 @@
 package p2p
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"os"
@@ -81,7 +82,9 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
 		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, mockPortPool)
 
-		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
 		require.NoError(t, err)
 
 		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})

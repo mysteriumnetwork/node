@@ -18,6 +18,7 @@
 package nats
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -50,10 +51,9 @@ type ConnectionMock struct {
 	queueShutdown chan bool
 
 	messageLast *nats.Msg
+	m           sync.Mutex
 	requestLast *nats.Msg
 	errorMock   error
-
-	m sync.Mutex
 }
 
 // GetLastMessageSubject returns the last message subject
@@ -104,13 +104,12 @@ func (conn *ConnectionMock) MessageWait(waitChannel chan interface{}) (interface
 
 // Publish publishes a new message
 func (conn *ConnectionMock) Publish(subject string, payload []byte) error {
-	conn.m.Lock()
-	defer conn.m.Unlock()
-
 	if conn.errorMock != nil {
 		return conn.errorMock
 	}
 
+	conn.m.Lock()
+	defer conn.m.Unlock()
 	conn.messageLast = &nats.Msg{
 		Subject: subject,
 		Data:    payload,
@@ -154,6 +153,33 @@ func (conn *ConnectionMock) Request(subject string, payload []byte, timeout time
 	case response := <-responseCh:
 		return response, nil
 	case <-time.After(timeout):
+		return nil, errors.Errorf("request '%s' timeout", subject)
+	}
+}
+
+// RequestWithContext Request sends a new request with context
+func (conn *ConnectionMock) RequestWithContext(ctx context.Context, subject string, payload []byte) (*nats.Msg, error) {
+	if conn.errorMock != nil {
+		return nil, conn.errorMock
+	}
+
+	subjectReply := subject + "-reply"
+	responseCh := make(chan *nats.Msg)
+	conn.Subscribe(subjectReply, func(response *nats.Msg) {
+		responseCh <- response
+	})
+
+	conn.requestLast = &nats.Msg{
+		Subject: subject,
+		Reply:   subjectReply,
+		Data:    payload,
+	}
+	conn.queue <- conn.requestLast
+
+	select {
+	case response := <-responseCh:
+		return response, nil
+	case <-ctx.Done():
 		return nil, errors.Errorf("request '%s' timeout", subject)
 	}
 }

@@ -18,10 +18,11 @@
 package p2p
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
-	"time"
+	"sync"
 
 	nats_lib "github.com/nats-io/go-nats"
 
@@ -39,7 +40,7 @@ import (
 type Dialer interface {
 	// Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 	// and create p2p channel which is ready for communication.
-	Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (Channel, error)
+	Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error)
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
@@ -68,8 +69,8 @@ type dialer struct {
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
-func (m *dialer) Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (Channel, error) {
-	config, err := m.exchangeConfig(consumerID, providerID, serviceType, timeout)
+func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error) {
+	config, err := m.exchangeConfig(ctx, providerID, serviceType, consumerID)
 	if err != nil {
 		return nil, fmt.Errorf("could not exchange config: %w", err)
 	}
@@ -102,7 +103,7 @@ func (m *dialer) Dial(consumerID, providerID identity.Identity, serviceType stri
 	return channel, nil
 }
 
-func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (*p2pConnectConfig, error) {
+func (m *dialer) exchangeConfig(ctx context.Context, providerID identity.Identity, serviceType string, consumerID identity.Identity) (*p2pConnectConfig, error) {
 	pubKey, privateKey, err := GenerateKey()
 	if err != nil {
 		return nil, fmt.Errorf("could not generate consumer p2p keys: %w", err)
@@ -114,9 +115,10 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	}
 	defer brokerConn.Close()
 
-	ready := make(chan bool)
+	ready := make(chan struct{})
+	var once sync.Once
 	_, err = brokerConn.Subscribe(channelHandlersReadySubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		defer close(ready)
+		defer once.Do(func() { close(ready) })
 		if err := m.channelHandlersReady(msg); err != nil {
 			log.Err(err).Msg("Channel handlers ready handler setup failed")
 			return
@@ -132,7 +134,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	if err != nil {
 		return nil, fmt.Errorf("could not pack signed message: %v", err)
 	}
-	exchangeMsgBrokerReply, err := m.sendSignedMsg(brokerConn, configExchangeSubject(providerID, serviceType), packedMsg, timeout)
+	exchangeMsgBrokerReply, err := m.sendSignedMsg(ctx, configExchangeSubject(providerID, serviceType), packedMsg, brokerConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not send signed message: %w", err)
 	}
@@ -182,33 +184,30 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	if err != nil {
 		return nil, fmt.Errorf("could not pack signed message: %v", err)
 	}
-	_, err = m.sendSignedMsg(brokerConn, configExchangeACKSubject(providerID, serviceType), packedMsg, timeout)
+	_, err = m.sendSignedMsg(ctx, configExchangeACKSubject(providerID, serviceType), packedMsg, brokerConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}
 
-	// TODO: put this under feature set check when its available
-	// wait until provider confirms that channel handlers are ready
 	select {
-	case <- ready:
+	// Wait until provider confirms that channel handlers are ready
+	case <-ready:
 		log.Debug().Msg("Received handlers ready message from provider")
-	// NOTE: We can make this timeout much larger when all providers migrate to handlers ready message
-	case <- time.After(1*time.Second):
-		log.Debug().Msg("Failed to receive handlers ready message from provider - continuing")
+		return &p2pConnectConfig{
+			publicIP:     publicIP,
+			privateKey:   privateKey,
+			localPorts:   localPorts,
+			peerPubKey:   peerPubKey,
+			peerPublicIP: peerConnConfig.PublicIP,
+			peerPorts:    int32ToIntSlice(peerConnConfig.Ports),
+		}, nil
+	case <-ctx.Done():
+		return nil, errors.New("timeout while performing configuration exchange")
 	}
-
-	return &p2pConnectConfig{
-		publicIP:     publicIP,
-		privateKey:   privateKey,
-		localPorts:   localPorts,
-		peerPubKey:   peerPubKey,
-		peerPublicIP: peerConnConfig.PublicIP,
-		peerPorts:    int32ToIntSlice(peerConnConfig.Ports),
-	}, nil
 }
 
-func (m *dialer) sendSignedMsg(brokerConn nats.Connection, subject string, msg []byte, timeout time.Duration) ([]byte, error) {
-	reply, err := brokerConn.Request(subject, msg, timeout)
+func (m *dialer) sendSignedMsg(ctx context.Context, subject string, msg []byte, brokerConn nats.Connection) ([]byte, error) {
+	reply, err := brokerConn.RequestWithContext(ctx, subject, msg)
 	if err != nil {
 		return nil, fmt.Errorf("could send broker request to subject %s: %v", subject, err)
 	}
@@ -218,7 +217,7 @@ func (m *dialer) sendSignedMsg(brokerConn nats.Connection, subject string, msg [
 func (m *dialer) channelHandlersReady(msg *nats_lib.Msg) error {
 	var handlersReady pb.P2PChannelHandlersReady
 	if err := proto.Unmarshal(msg.Data, &handlersReady); err != nil {
-		return fmt.Errorf("failed to unmarshal handlers ready message %w", err)
+		return fmt.Errorf("failed to unmarshal handlers ready message: %w", err)
 	}
 	if handlersReady.Value != "HANDLERS READY" {
 		return errors.New("incorrect handlers ready message value")
