@@ -24,6 +24,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/firewall"
 	nats_lib "github.com/nats-io/go-nats"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
@@ -75,31 +76,36 @@ func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, service
 		return nil, fmt.Errorf("could not exchange config: %w", err)
 	}
 
-	var remotePort, localPort int
-	var conn0 *net.UDPConn
-	var serviceConn *net.UDPConn
-	if len(config.peerPorts) == 1 {
-		localPort = config.localPorts[0]
-		remotePort = config.peerPorts[0]
+	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
+		return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
+	}
+
+	var conn1, conn2 *net.UDPConn
+	if len(config.peerPorts) == requiredConnCount {
+		log.Debug().Msg("Skipping provider ping")
+		conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[0]})
+		if err != nil {
+			return nil, fmt.Errorf("could not create UDP conn for p2p channel: %w", err)
+		}
+		conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[1]})
+		if err != nil {
+			return nil, fmt.Errorf("could not create UDP conn for service: %w", err)
+		}
 	} else {
 		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnAmount)
+		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}
-		conn0 = conns[0]
-		localPort = conn0.LocalAddr().(*net.UDPAddr).Port
-		remotePort = conn0.RemoteAddr().(*net.UDPAddr).Port
-		serviceConn = conns[1]
-		log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", serviceConn.LocalAddr().(*net.UDPAddr).Port, serviceConn.RemoteAddr().(*net.UDPAddr).Port)
+		conn1 = conns[0]
+		conn2 = conns[1]
 	}
 
-	log.Debug().Msgf("Creating channel with listen port: %d, peer port: %d", localPort, remotePort)
-	channel, err := newChannel(conn0, config.privateKey, config.peerPubKey)
+	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create p2p channel: %w", err)
 	}
-	channel.serviceConn = serviceConn
+	channel.setServiceConn(conn2)
 	return channel, nil
 }
 
@@ -163,7 +169,7 @@ func (m *dialer) exchangeConfig(ctx context.Context, providerID identity.Identit
 	if err != nil {
 		return nil, fmt.Errorf("could not get public IP: %v", err)
 	}
-	localPorts, err := acquireLocalPorts(m.portPool)
+	localPorts, err := acquireLocalPorts(m.portPool, len(peerConnConfig.Ports))
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire local ports: %v", err)
 	}

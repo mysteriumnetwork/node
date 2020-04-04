@@ -32,7 +32,7 @@ import (
 
 const (
 	pingMaxPorts       = 20
-	requiredConnAmount = 2
+	requiredConnCount  = 2
 	consumerInitialTTL = 128
 	providerInitialTTL = 2
 )
@@ -61,8 +61,8 @@ func channelHandlersReadySubject(providerID identity.Identity, serviceType strin
 	return fmt.Sprintf("%s.%s.p2p-channel-handlers-ready", providerID.Address, serviceType)
 }
 
-func acquireLocalPorts(portPool port.ServicePortSupplier) ([]int, error) {
-	ports, err := portPool.AcquireMultiple(pingMaxPorts)
+func acquireLocalPorts(portPool port.ServicePortSupplier, n int) ([]int, error) {
+	ports, err := portPool.AcquireMultiple(n)
 	if err != nil {
 		return nil, err
 	}
