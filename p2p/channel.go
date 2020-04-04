@@ -102,6 +102,10 @@ type channel struct {
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
 // and starts listening for connections.
 func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey) (*channel, error) {
+	localPort := punchedConn.LocalAddr().(*net.UDPAddr).Port
+	remotePort := punchedConn.RemoteAddr().(*net.UDPAddr).Port
+	log.Debug().Msgf("Creating p2p channel with local port: %d, remote port: %d", localPort, remotePort)
+
 	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create block crypt: %w", err)
@@ -334,6 +338,11 @@ func (c *channel) deleteStream(id uint64) {
 	defer c.mu.Unlock()
 
 	delete(c.streams, id)
+}
+
+func (c *channel) setServiceConn(conn *net.UDPConn) {
+	log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", conn.LocalAddr().(*net.UDPAddr).Port, conn.RemoteAddr().(*net.UDPAddr).Port)
+	c.serviceConn = conn
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {
