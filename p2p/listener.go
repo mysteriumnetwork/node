@@ -97,8 +97,13 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	}
 	// TODO: Expose func to close broker conn.
 
+	outboundIP, err := m.ipResolver.GetOutboundIPAsString()
+	if err != nil {
+		return fmt.Errorf("could not get outbound IP: %w", err)
+	}
+
 	_, err = brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		if err := m.providerStartConfigExchange(brokerConn, providerID, msg); err != nil {
+		if err := m.providerStartConfigExchange(brokerConn, providerID, msg, outboundIP); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
@@ -120,33 +125,35 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			}
 		}(msg.Reply)
 
-		var remotePort, localPort int
-		var serviceConn *net.UDPConn
-		var conn0 *net.UDPConn
-		if len(config.peerPorts) == 1 {
-			localPort = config.localPorts[0]
-			remotePort = config.peerPorts[0]
+		var conn1, conn2 *net.UDPConn
+		if len(config.peerPorts) == requiredConnCount {
+			log.Debug().Msg("Skipping consumer ping")
+			conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[0]})
+			if err != nil {
+				log.Err(err).Msg("Could not create UDP conn for p2p channel")
+				return
+			}
+			conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[1]})
+			if err != nil {
+				log.Err(err).Msg("Could not create UDP conn for service")
+				return
+			}
 		} else {
 			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v", config.pingIP(), config.localPorts, config.peerPorts)
-			conns, err := m.providerPinger.PingConsumerPeer(config.pingIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnAmount)
+			conns, err := m.providerPinger.PingConsumerPeer(config.pingIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
 			}
-			conn0 = conns[0]
-			localPort = conn0.LocalAddr().(*net.UDPAddr).Port
-			remotePort = conn0.RemoteAddr().(*net.UDPAddr).Port
-			serviceConn = conns[1]
-			log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", serviceConn.LocalAddr().(*net.UDPAddr).Port, serviceConn.RemoteAddr().(*net.UDPAddr).Port)
+			conn1 = conns[0]
+			conn2 = conns[1]
 		}
-
-		log.Debug().Msgf("Creating channel with listen port: %d, peer port: %d", localPort, remotePort)
-		channel, err := newChannel(conn0, config.privateKey, config.peerPubKey)
+		channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
 		if err != nil {
 			log.Err(err).Msg("Could not create channel")
 			return
 		}
-		channel.serviceConn = serviceConn
+		channel.setServiceConn(conn2)
 
 		channelHandlers(channel)
 
@@ -160,7 +167,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	return err
 }
 
-func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signerID identity.Identity, msg *nats_lib.Msg) error {
+func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
 	pubKey, privateKey, err := GenerateKey()
 	if err != nil {
 		return fmt.Errorf("could not generate provider p2p keys: %w", err)
@@ -186,7 +193,11 @@ func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signe
 	if err != nil {
 		return fmt.Errorf("could not get public IP: %v", err)
 	}
-	localPorts, err := acquireLocalPorts(m.portPool)
+	portsCount := pingMaxPorts
+	if outboundIP == publicIP {
+		portsCount = requiredConnCount
+	}
+	localPorts, err := acquireLocalPorts(m.portPool, portsCount)
 	if err != nil {
 		return fmt.Errorf("could not acquire local ports: %v", err)
 	}
