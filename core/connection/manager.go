@@ -232,32 +232,31 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 	}
 
 	var serviceConn, channelConn *net.UDPConn
-	var paymentInfo session.PaymentInfo
-	var sessionDTO session.SessionDto
+	var sessionDTO session.CreateResponse
 
 	if channel != nil {
-		sessionDTO, paymentInfo, err = m.createP2PSession(m.currentCtx(), connection, channel, consumerID, accountantID, proposal)
+		sessionDTO, err = m.createP2PSession(m.currentCtx(), connection, channel, consumerID, accountantID, proposal)
 		serviceConn = channel.ServiceConn()
 		channelConn = channel.Conn()
 	} else {
-		sessionDTO, paymentInfo, err = m.createSession(connection, dialog, consumerID, accountantID, proposal)
+		sessionDTO, err = m.createSession(connection, dialog, consumerID, accountantID, proposal)
 	}
 	if err != nil {
-		m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusSessionEstablishmentFailed, err)
+		m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.Session.ID, connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
-	err = m.launchPayments(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
+	err = m.launchPayments(sessionDTO.PaymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, sessionDTO.Session.ID)
 	if err != nil {
-		m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
+		m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.Session.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
 	}
 
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
 	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
-		SessionID:       sessionDTO.ID,
-		SessionConfig:   sessionDTO.Config,
+		SessionID:       sessionDTO.Session.ID,
+		SessionConfig:   sessionDTO.Session.Config,
 		DNS:             params.DNS,
 		ConsumerID:      consumerID,
 		ProviderID:      providerID,
@@ -270,7 +269,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 			return ErrConnectionCancelled
 		}
 		m.addCleanupAfterDisconnect(func() error {
-			return m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+			return m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.Session.ID, connectivity.StatusConnectionFailed, err)
 		})
 		m.publishStateEvent(StateConnectionFailed)
 
@@ -279,8 +278,8 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 		return err
 	}
 
-	go m.keepAliveLoop(channel, sessionDTO.ID)
-	go m.checkSessionIP(dialog, channel, consumerID, sessionDTO.ID, originalPublicIP)
+	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
+	go m.checkSessionIP(dialog, channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
 
 	return err
 }
@@ -438,15 +437,15 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.CreateResponse, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not get session config: %w", err)
+		return session.CreateResponse{}, fmt.Errorf("could not get session config: %w", err)
 	}
 
 	config, err := json.Marshal(sessionCreateConfig)
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not marshal session config: %w", err)
+		return session.CreateResponse{}, fmt.Errorf("could not marshal session config: %w", err)
 	}
 
 	sessionRequest := &pb.SessionRequest{
@@ -463,19 +462,19 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	defer cancel()
 	res, err := p2pChannel.Send(ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not send p2p session create request: %w", err)
+		return session.CreateResponse{}, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
 
-	var sessionResponce pb.SessionResponse
-	err = res.UnmarshalProto(&sessionResponce)
+	var sessionResponse pb.SessionResponse
+	err = res.UnmarshalProto(&sessionResponse)
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
+		return session.CreateResponse{}, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
 	}
 
 	m.acknowledge = func() {
 		pc := &pb.SessionInfo{
 			ConsumerID: consumerID.Address,
-			SessionID:  sessionResponce.GetID(),
+			SessionID:  sessionResponse.GetID(),
 		}
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionAcknowledge, pc.String())
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -491,7 +490,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 
 		sessionDestroy := &pb.SessionInfo{
 			ConsumerID: consumerID.Address,
-			SessionID:  sessionResponce.GetID(),
+			SessionID:  sessionResponse.GetID(),
 		}
 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
@@ -505,38 +504,48 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 		return nil
 	})
 
-	sessionID := session.ID(sessionResponce.GetID())
+	sessionID := session.ID(sessionResponse.GetID())
 	m.saveSessionInfo(SessionInfo{
 		SessionID:  sessionID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
 	})
 
-	return session.SessionDto{
-		ID:     sessionID,
-		Config: sessionResponce.GetConfig(),
-	}, session.PaymentInfo{Supports: sessionResponce.GetPaymentInfo()}, nil
+	return session.CreateResponse{
+		Session: session.SessionDto{
+			ID:     sessionID,
+			Config: sessionResponse.GetConfig(),
+		},
+		PaymentInfo: session.PaymentInfo{Supports: sessionResponse.GetPaymentInfo()},
+	}, nil
 }
 
-func (m *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (m *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.CreateResponse, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, err
+		return session.CreateResponse{}, fmt.Errorf("could not get session config: %w", err)
 	}
 
-	consumerInfo := session.ConsumerInfo{
-		IssuerID:       consumerID,
-		AccountantID:   accountantID,
-		PaymentVersion: session.PaymentVersionV3,
-	}
-
-	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
+	config, err := json.Marshal(sessionCreateConfig)
 	if err != nil {
-		return session.SessionDto{}, session.PaymentInfo{}, err
+		return session.CreateResponse{}, fmt.Errorf("could not marshal session config: %w", err)
+	}
+
+	sessionResponse, err := session.RequestSessionCreate(dialog, session.CreateRequest{
+		ProposalID: proposal.ID,
+		Config:     config,
+		ConsumerInfo: &session.ConsumerInfo{
+			IssuerID:       consumerID,
+			AccountantID:   accountantID,
+			PaymentVersion: session.PaymentVersionV3,
+		},
+	})
+	if err != nil {
+		return session.CreateResponse{}, err
 	}
 
 	m.acknowledge = func() {
-		err := session.AcknowledgeSession(dialog, string(s.ID))
+		err := session.AcknowledgeSession(dialog, string(sessionResponse.Session.ID))
 		if err != nil {
 			log.Warn().Err(err).Msg("Acknowledge failed")
 		}
@@ -544,16 +553,16 @@ func (m *connectionManager) createSession(c Connection, dialog communication.Dia
 	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
-		return session.RequestSessionDestroy(dialog, s.ID)
+		return session.RequestSessionDestroy(dialog, sessionResponse.Session.ID)
 	})
 
 	m.saveSessionInfo(SessionInfo{
-		SessionID:  s.ID,
+		SessionID:  sessionResponse.Session.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
 	})
 
-	return s, paymentInfo, nil
+	return sessionResponse, nil
 }
 
 func (m *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
