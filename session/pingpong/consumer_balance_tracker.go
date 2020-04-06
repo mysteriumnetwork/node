@@ -137,7 +137,11 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev AppEventGrandTotalChanged) {
-	if _, ok := cbt.balances[ev.ConsumerID]; !ok {
+	cbt.balancesLock.Lock()
+	_, ok := cbt.balances[ev.ConsumerID]
+	cbt.balancesLock.Unlock()
+
+	if !ok {
 		cbt.ForceBalanceUpdate(ev.ConsumerID)
 		return
 	}
