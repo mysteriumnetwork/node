@@ -55,11 +55,10 @@ func (mld *mockLocationDetector) GetOrigin() (location.Location, error) {
 }
 
 func TestStatisticsReporterStartsAndStops(t *testing.T) {
-	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, &mockLocationDetector{}, time.Minute)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Minute)
 
-	reporter.ConsumeSessionEvent(mockSessionEvent)
+	reporter.consumeSessionEvent(mockSessionEvent)
 
 	reporter.start(mockSessionEvent.SessionInfo.ConsumerID, mockSessionEvent.SessionInfo.Proposal.ServiceType, mockSessionEvent.SessionInfo.Proposal.ProviderID, mockSessionEvent.SessionInfo.SessionID)
 	reporter.stop()
@@ -70,10 +69,9 @@ func TestStatisticsReporterStartsAndStops(t *testing.T) {
 
 func TestStatisticsReporterInterval(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
 
-	reporter.ConsumeSessionEvent(mockSessionEvent)
+	reporter.consumeSessionEvent(mockSessionEvent)
 
 	reporter.start(mockSessionEvent.SessionInfo.ConsumerID, mockSessionEvent.SessionInfo.Proposal.ServiceType, mockSessionEvent.SessionInfo.Proposal.ProviderID, mockSessionEvent.SessionInfo.SessionID)
 	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
@@ -83,14 +81,13 @@ func TestStatisticsReporterInterval(t *testing.T) {
 
 func TestStatisticsReporterConsumeSessionEvent(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
-	reporter.ConsumeSessionEvent(mockSessionEvent)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
+	reporter.consumeSessionEvent(mockSessionEvent)
 	<-mockSender.called
 	assert.True(t, reporter.started)
 	copy := mockSessionEvent
 	copy.Status = connection.SessionEndedStatus
-	reporter.ConsumeSessionEvent(copy)
+	reporter.consumeSessionEvent(copy)
 	assert.False(t, reporter.started)
 }
 

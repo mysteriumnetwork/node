@@ -413,12 +413,6 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 
-	// Consumer session history (API storage)
-	err = di.EventBus.Subscribe(connection.AppTopicConnectionSession, di.StatisticsReporter.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-
 	// Consumer session history (local storage)
 	err = di.EventBus.Subscribe(connection.AppTopicConnectionSession, di.SessionStorage.ConsumeSessionEvent)
 	if err != nil {
@@ -467,13 +461,18 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
+
+	// Consumer session history (API storage)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
-		di.StatisticsTracker,
 		di.MysteriumAPI,
 		di.SignerFactory,
 		di.LocationResolver,
 		time.Minute,
 	)
+	if err := di.StatisticsReporter.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
 
 	di.Transactor = registry.NewTransactor(
