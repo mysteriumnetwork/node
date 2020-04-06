@@ -71,7 +71,23 @@ type dialer struct {
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
 func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error) {
-	config, err := m.exchangeConfig(ctx, providerID, serviceType, consumerID)
+	brokerConn, err := m.broker.Connect(m.brokerAddress)
+	if err != nil {
+		return nil, fmt.Errorf("could not open broker conn: %w", err)
+	}
+	defer brokerConn.Close()
+
+	peerReady := make(chan struct{})
+	var once sync.Once
+	_, err = brokerConn.Subscribe(channelHandlersReadySubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+		defer once.Do(func() { close(peerReady) })
+		if err := m.channelHandlersReady(msg); err != nil {
+			log.Err(err).Msg("Channel handlers ready handler setup failed")
+			return
+		}
+	})
+
+	config, err := m.exchangeConfig(ctx, brokerConn, providerID, serviceType, consumerID)
 	if err != nil {
 		return nil, fmt.Errorf("could not exchange config: %w", err)
 	}
@@ -101,6 +117,14 @@ func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, service
 		conn2 = conns[1]
 	}
 
+	// Wait until provider confirms that channel handlers are ready.
+	select {
+	case <-peerReady:
+		log.Debug().Msg("Received handlers ready message from provider")
+	case <-ctx.Done():
+		return nil, errors.New("timeout while performing configuration exchange")
+	}
+
 	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create p2p channel: %w", err)
@@ -109,27 +133,11 @@ func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, service
 	return channel, nil
 }
 
-func (m *dialer) exchangeConfig(ctx context.Context, providerID identity.Identity, serviceType string, consumerID identity.Identity) (*p2pConnectConfig, error) {
+func (m *dialer) exchangeConfig(ctx context.Context, brokerConn nats.Connection, providerID identity.Identity, serviceType string, consumerID identity.Identity) (*p2pConnectConfig, error) {
 	pubKey, privateKey, err := GenerateKey()
 	if err != nil {
 		return nil, fmt.Errorf("could not generate consumer p2p keys: %w", err)
 	}
-
-	brokerConn, err := m.broker.Connect(m.brokerAddress)
-	if err != nil {
-		return nil, fmt.Errorf("could not open broker conn: %w", err)
-	}
-	defer brokerConn.Close()
-
-	ready := make(chan struct{})
-	var once sync.Once
-	_, err = brokerConn.Subscribe(channelHandlersReadySubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		defer once.Do(func() { close(ready) })
-		if err := m.channelHandlersReady(msg); err != nil {
-			log.Err(err).Msg("Channel handlers ready handler setup failed")
-			return
-		}
-	})
 
 	// Send initial exchange with signed consumer public key.
 	beginExchangeMsg := &pb.P2PConfigExchangeMsg{
@@ -195,21 +203,14 @@ func (m *dialer) exchangeConfig(ctx context.Context, providerID identity.Identit
 		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}
 
-	select {
-	// Wait until provider confirms that channel handlers are ready
-	case <-ready:
-		log.Debug().Msg("Received handlers ready message from provider")
-		return &p2pConnectConfig{
-			publicIP:     publicIP,
-			privateKey:   privateKey,
-			localPorts:   localPorts,
-			peerPubKey:   peerPubKey,
-			peerPublicIP: peerConnConfig.PublicIP,
-			peerPorts:    int32ToIntSlice(peerConnConfig.Ports),
-		}, nil
-	case <-ctx.Done():
-		return nil, errors.New("timeout while performing configuration exchange")
-	}
+	return &p2pConnectConfig{
+		publicIP:     publicIP,
+		privateKey:   privateKey,
+		localPorts:   localPorts,
+		peerPubKey:   peerPubKey,
+		peerPublicIP: peerConnConfig.PublicIP,
+		peerPorts:    int32ToIntSlice(peerConnConfig.Ports),
+	}, nil
 }
 
 func (m *dialer) sendSignedMsg(ctx context.Context, subject string, msg []byte, brokerConn nats.Connection) ([]byte, error) {
