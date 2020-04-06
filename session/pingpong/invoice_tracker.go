@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"bytes"
+	cryptoRand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	stdErr "errors"
@@ -452,7 +453,7 @@ func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
 
 func (it *InvoiceTracker) generateR() []byte {
 	r := make([]byte, 32)
-	rand.Read(r)
+	cryptoRand.Read(r)
 	return r
 }
 
