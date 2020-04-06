@@ -67,7 +67,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_With_PublicIP(t *testin
 		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
 		require.NoError(t, err)
 
-		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
+		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
 		require.NoError(t, err)
 		assert.Equal(t, "pong", string(res.Data))
 	})
@@ -87,7 +87,8 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	portPool := &mockPortPool{}
 
 	// Create mock NAT pinger.
-	ports := acquirePorts(t, 2)
+	ports, err := acquirePorts(2)
+	assert.NoError(t, err)
 	providerPort := ports[0]
 	consumerPort := ports[1]
 	providerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: providerPort}, &net.UDPAddr{Port: consumerPort})
@@ -117,7 +118,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
 		require.NoError(t, err)
 
-		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
+		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
 		require.NoError(t, err)
 		assert.Equal(t, "pong", string(res.Data))
 	})

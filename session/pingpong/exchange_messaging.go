@@ -18,6 +18,9 @@
 package pingpong
 
 import (
+	"context"
+	"time"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
@@ -67,7 +70,10 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 		Signature:      em.Signature,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
-	_, err := es.ch.Send(p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	_, err := es.ch.Send(ctx, p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
 	return err
 }
 

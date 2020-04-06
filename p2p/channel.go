@@ -36,12 +36,15 @@ import (
 var (
 	// If this env variable is set channel will log raw messages from send and receive loops.
 	debugTransport = os.Getenv("P2P_DEBUG_TRANSPORT") == "1"
+
+	// ErrSendTimeout represent send timeout error.
+	ErrSendTimeout = errors.New("p2p send timeout")
 )
 
 // ChannelSender is used to send messages.
 type ChannelSender interface {
 	// Send sends message to given topic. Peer listening to topic will receive message.
-	Send(topic string, msg *Message) (*Message, error)
+	Send(ctx context.Context, topic string, msg *Message) (*Message, error)
 }
 
 // ChannelHandler is used to handle messages.
@@ -93,8 +96,10 @@ type channel struct {
 	streams       map[uint64]*stream
 	nextStreamID  uint64
 	privateKey    PrivateKey
+	peerPubKey    PublicKey
+	peerAddr      *net.UDPAddr
+	localAddr     *net.UDPAddr
 	blockCrypt    kcp.BlockCrypt
-	sendTimeout   time.Duration
 	stop          chan struct{}
 	sendQueue     chan *transportMsg
 }
@@ -116,7 +121,8 @@ func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publ
 		return nil, fmt.Errorf("could not create UDP conn: %w", err)
 	}
 
-	udpSession, err := kcp.NewConn3(1, punchedConn.RemoteAddr().(*net.UDPAddr), blockCrypt, 10, 3, udpConn)
+	peerAddr := punchedConn.RemoteAddr().(*net.UDPAddr)
+	udpSession, err := kcp.NewConn3(1, peerAddr, blockCrypt, 10, 3, udpConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not create UDP session: %w", err)
 	}
@@ -133,8 +139,10 @@ func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publ
 		topicHandlers: make(map[string]HandlerFunc),
 		streams:       make(map[uint64]*stream),
 		privateKey:    privateKey,
+		peerPubKey:    peerPubKey,
+		peerAddr:      peerAddr,
+		localAddr:     udpConn.LocalAddr().(*net.UDPAddr),
 		blockCrypt:    blockCrypt,
-		sendTimeout:   30 * time.Second,
 		serviceConn:   nil,
 		stop:          make(chan struct{}, 1),
 		sendQueue:     make(chan *transportMsg, 100),
@@ -275,16 +283,8 @@ func (c *channel) Conn() *net.UDPConn {
 	return c.tr.conn
 }
 
-// SetSendTimeout overrides default send timeout.
-func (c *channel) SetSendTimeout(t time.Duration) {
-	c.sendTimeout = t
-}
-
 // Send sends message to given topic. Peer listening to topic will receive message.
-func (c *channel) Send(topic string, msg *Message) (*Message, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.sendTimeout)
-	defer cancel()
-
+func (c *channel) Send(ctx context.Context, topic string, msg *Message) (*Message, error) {
 	reply, err := c.sendRequest(ctx, topic, msg)
 	if err != nil {
 		return nil, err
@@ -311,7 +311,7 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 	// Wait for response.
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout waiting for reply to %q", topic)
+		return nil, fmt.Errorf("timeout waiting for reply to %q: %w", topic, ErrSendTimeout)
 	case res := <-s.resCh:
 		if res.statusCode != statusCodeOK {
 			if res.statusCode == statusCodePublicErr {
