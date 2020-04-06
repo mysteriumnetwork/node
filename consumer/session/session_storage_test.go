@@ -29,8 +29,7 @@ import (
 )
 
 var (
-	stubRetriever = &StubRetriever{}
-	stubLocation  = &StubServiceDefinition{}
+	stubLocation = &StubServiceDefinition{}
 
 	errMock     = errors.New("error")
 	sessionID   = node_session.ID("sessionID")
@@ -54,7 +53,7 @@ var (
 
 func TestSessionStorageGetAll(t *testing.T) {
 	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer, stubRetriever)
+	storage := NewSessionStorage(storer)
 	sessions, err := storage.GetAll()
 	assert.Nil(t, err)
 	assert.True(t, storer.GetAllCalled)
@@ -65,7 +64,7 @@ func TestSessionStorageGetAllReturnsError(t *testing.T) {
 	storer := &StubSessionStorer{
 		GetAllError: errMock,
 	}
-	storage := NewSessionStorage(storer, stubRetriever)
+	storage := NewSessionStorage(storer)
 	sessions, err := storage.GetAll()
 	assert.NotNil(t, err)
 	assert.True(t, storer.GetAllCalled)
@@ -75,8 +74,8 @@ func TestSessionStorageGetAllReturnsError(t *testing.T) {
 func TestSessionStorageConsumeEventEndedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeSessionEvent(connection.AppEventConnectionSession{
+	storage := NewSessionStorage(storer)
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
 		Status: connection.SessionEndedStatus,
 	})
 	assert.True(t, storer.UpdateCalled)
@@ -87,9 +86,9 @@ func TestSessionStorageConsumeEventEndedErrors(t *testing.T) {
 		UpdateError: errMock,
 	}
 
-	storage := NewSessionStorage(storer, stubRetriever)
+	storage := NewSessionStorage(storer)
 	assert.NotPanics(t, func() {
-		storage.ConsumeSessionEvent(connection.AppEventConnectionSession{Status: connection.SessionEndedStatus})
+		storage.consumeSessionEvent(connection.AppEventConnectionSession{Status: connection.SessionEndedStatus})
 	})
 
 	assert.True(t, storer.UpdateCalled)
@@ -98,8 +97,8 @@ func TestSessionStorageConsumeEventEndedErrors(t *testing.T) {
 func TestSessionStorageConsumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeSessionEvent(mockPayload)
+	storage := NewSessionStorage(storer)
+	storage.consumeSessionEvent(mockPayload)
 	assert.True(t, storer.SaveCalled)
 }
 
@@ -107,9 +106,9 @@ func TestSessionStorageConsumeEventConnectedError(t *testing.T) {
 	storer := &StubSessionStorer{
 		SaveError: errMock,
 	}
-	storage := NewSessionStorage(storer, stubRetriever)
+	storage := NewSessionStorage(storer)
 	assert.NotPanics(t, func() {
-		storage.ConsumeSessionEvent(mockPayload)
+		storage.consumeSessionEvent(mockPayload)
 	})
 	assert.True(t, storer.SaveCalled)
 }
@@ -137,14 +136,6 @@ func (sss *StubSessionStorer) Update(from string, object interface{}) error {
 func (sss *StubSessionStorer) GetAllFrom(from string, array interface{}) error {
 	sss.GetAllCalled = true
 	return sss.GetAllError
-}
-
-type StubRetriever struct {
-	Value connection.Statistics
-}
-
-func (sr *StubRetriever) GetDataStats() connection.Statistics {
-	return sr.Value
 }
 
 type StubServiceDefinition struct{}

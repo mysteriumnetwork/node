@@ -18,9 +18,11 @@
 package session
 
 import (
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/rs/zerolog/log"
 )
@@ -41,16 +43,24 @@ type Storer interface {
 
 // Storage contains functions for storing, getting session objects
 type Storage struct {
-	storage        Storer
-	statsRetriever StatsRetriever
+	storage      Storer
+	statistics   connection.Statistics
+	statisticsMu sync.RWMutex
 }
 
 // NewSessionStorage creates session repository with given dependencies
-func NewSessionStorage(storage Storer, statsRetriever StatsRetriever) *Storage {
+func NewSessionStorage(storage Storer) *Storage {
 	return &Storage{
-		storage:        storage,
-		statsRetriever: statsRetriever,
+		storage: storage,
 	}
+}
+
+// Subscribe subscribes to relevant events of event bus.
+func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.Subscribe(connection.AppTopicConnectionSession, repo.consumeSessionEvent); err != nil {
+		return err
+	}
+	return bus.Subscribe(connection.AppTopicConnectionStatistics, repo.consumeSessionStatisticsEvent)
 }
 
 // GetAll returns array of all sessions
@@ -63,21 +73,32 @@ func (repo *Storage) GetAll() ([]History, error) {
 	return sessions, nil
 }
 
-// ConsumeSessionEvent consumes the session state change events
-func (repo *Storage) ConsumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
+// consumeSessionEvent consumes the session state change events
+func (repo *Storage) consumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
 	switch sessionEvent.Status {
 	case connection.SessionEndedStatus:
 		repo.handleEndedEvent(sessionEvent.SessionInfo.SessionID)
 	case connection.SessionCreatedStatus:
+		repo.statistics = connection.Statistics{}
 		repo.handleCreatedEvent(sessionEvent.SessionInfo)
 	}
 }
 
+func (repo *Storage) consumeSessionStatisticsEvent(e connection.AppEventConnectionStatistics) {
+	repo.statisticsMu.Lock()
+	repo.statistics = e.Stats
+	repo.statisticsMu.Unlock()
+}
+
 func (repo *Storage) handleEndedEvent(sessionID session.ID) {
+	repo.statisticsMu.RLock()
+	dataStats := repo.statistics
+	repo.statisticsMu.RUnlock()
+
 	updatedSession := &History{
 		SessionID: sessionID,
 		Updated:   time.Now().UTC(),
-		DataStats: repo.statsRetriever.GetDataStats(),
+		DataStats: dataStats,
 		Status:    SessionStatusCompleted,
 	}
 	err := repo.storage.Update(sessionStorageBucketName, updatedSession)

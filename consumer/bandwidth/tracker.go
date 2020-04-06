@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
 
@@ -50,6 +51,14 @@ type Tracker struct {
 	lock         sync.RWMutex
 }
 
+// Subscribe subscribes to relevant events of event bus.
+func (t *Tracker) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, t.consumeSessionEvent); err != nil {
+		return err
+	}
+	return bus.SubscribeAsync(connection.AppTopicConnectionStatistics, t.consumeStatisticsEvent)
+}
+
 // Get returns the current upload and download speeds in bits per second
 func (t *Tracker) Get() CurrentSpeed {
 	t.lock.RLock()
@@ -59,8 +68,8 @@ func (t *Tracker) Get() CurrentSpeed {
 
 const consumeCooldown = 500 * time.Millisecond
 
-// ConsumeStatisticsEvent handles the connection statistics changes
-func (t *Tracker) ConsumeStatisticsEvent(evt connection.AppEventConnectionStatistics) {
+// consumeStatisticsEvent handles the connection statistics changes
+func (t *Tracker) consumeStatisticsEvent(evt connection.AppEventConnectionStatistics) {
 	t.lock.Lock()
 	defer func() {
 		t.lock.Unlock()
@@ -91,8 +100,8 @@ func (t *Tracker) ConsumeStatisticsEvent(evt connection.AppEventConnectionStatis
 	log.Trace().Msgf("Upload speed: %s", t.currentSpeed.Up)
 }
 
-// ConsumeSessionEvent handles the session state changes
-func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
+// consumeSessionEvent handles the session state changes
+func (t *Tracker) consumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	switch sessionEvent.Status {

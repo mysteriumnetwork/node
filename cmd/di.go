@@ -143,8 +143,6 @@ type Dependencies struct {
 	PortPool       *port.Pool
 	PortMapper     mapping.PortMapper
 
-	BandwidthTracker *bandwidth.Tracker
-
 	StateKeeper *state.Keeper
 
 	P2PDialer   p2p.Dialer
@@ -218,9 +216,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapUIServer(nodeOptions)
 	di.bootstrapMMN(nodeOptions)
-	if err := di.bootstrapBandwidthTracker(); err != nil {
-		return err
-	}
 
 	di.bootstrapNATComponents(nodeOptions)
 
@@ -395,7 +390,8 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
-	return nil
+	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
+	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {
@@ -409,12 +405,6 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 	err = di.EventBus.Subscribe(pingpong.AppTopicInvoicePaid, di.StatisticsTracker.ConsumeInvoiceEvent)
-	if err != nil {
-		return err
-	}
-
-	// Consumer session history (local storage)
-	err = di.EventBus.Subscribe(connection.AppTopicConnectionSession, di.SessionStorage.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
@@ -462,6 +452,12 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 
+	// Consumer current session bandwidth
+	bandwidthTracker := &bandwidth.Tracker{}
+	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	// Consumer session history (API storage)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
 		di.MysteriumAPI,
@@ -472,8 +468,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.StatisticsReporter.Subscribe(di.EventBus); err != nil {
 		return err
 	}
-
-	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
 
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
@@ -831,16 +825,6 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 	di.JWTAuthenticator = auth.NewJWTAuthenticator(key)
 
 	return nil
-}
-
-func (di *Dependencies) bootstrapBandwidthTracker() error {
-	di.BandwidthTracker = &bandwidth.Tracker{}
-	err := di.EventBus.SubscribeAsync(connection.AppTopicConnectionSession, di.BandwidthTracker.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-
-	return di.EventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, di.BandwidthTracker.ConsumeStatisticsEvent)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
