@@ -85,9 +85,6 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
-		ConsumerInfoGetter: func(string) (ConsumerData, error) {
-			return ConsumerData{}, nil
-		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -123,6 +120,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), identity.Identity{}, 10)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -138,13 +136,6 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 				price: money.NewMoney(10, money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
-		},
-		ConsumerInfoGetter: func(string) (ConsumerData, error) {
-			return ConsumerData{
-				LatestPromise: LatestPromise{
-					Amount: 10,
-				},
-			}, nil
 		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)
@@ -202,6 +193,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), identity.Identity{}, 0)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -212,9 +204,6 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
-		ConsumerInfoGetter: func(string) (ConsumerData, error) {
-			return ConsumerData{}, nil
-		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)
 
@@ -282,9 +271,6 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 				price: money.NewMoney(10, money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
-		},
-		ConsumerInfoGetter: func(string) (ConsumerData, error) {
-			return ConsumerData{}, nil
 		},
 	}
 	InvoicePayer := NewInvoicePayer(deps)

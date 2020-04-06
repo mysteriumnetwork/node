@@ -41,6 +41,7 @@ var defaultWaitInterval = time.Millisecond
 func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	id2 := identity.FromAddress("0x000000002")
+	accountantID := identity.FromAddress("0x000000acc")
 	assert.NotEqual(t, id1.Address, id2.Address)
 
 	bus := eventbus.New()
@@ -55,7 +56,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}
 	calc := mockChannelAddressCalculator{}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -96,6 +97,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 
 func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
+	accountantID := identity.FromAddress("0x000000acc")
 	var grandTotalPromised uint64 = 100
 	bus := eventbus.New()
 
@@ -110,7 +112,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 		},
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -142,6 +144,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
+	accountantID := identity.FromAddress("0x000000acc")
 	var grandTotalPromised uint64 = 100
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{
@@ -156,7 +159,7 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 		ch: make(chan *bindings.MystTokenTransfer),
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, mockMystSCaddress, &bc, &calc, &mcts)
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -206,6 +209,18 @@ type mockChannelAddressCalculator struct {
 
 func (mcac *mockChannelAddressCalculator) GetChannelAddress(id identity.Identity) (common.Address, error) {
 	return mcac.addrToReturn, mcac.errToReturn
+}
+
+type mockconsumerInfoGetter struct {
+	amount uint64
+}
+
+func (mcig *mockconsumerInfoGetter) GetConsumerData(_ string) (ConsumerData, error) {
+	return ConsumerData{
+		LatestPromise: LatestPromise{
+			Amount: mcig.amount,
+		},
+	}, nil
 }
 
 func TestConsumerBalance_GetBalance(t *testing.T) {
