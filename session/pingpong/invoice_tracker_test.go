@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"encoding/hex"
+	stdErrors "errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -101,6 +103,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -155,6 +158,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		EventBus:                   mocks.NewEventBus(),
 		ExchangeMessageWaitTimeout: time.Second,
@@ -212,6 +216,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		TimeTracker:                &tracker,
 		EventBus:                   mocks.NewEventBus(),
 		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -323,6 +328,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -378,6 +384,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Millisecond,
+		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -440,6 +447,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -464,6 +472,63 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 
 	invoiceTracker.Stop()
 	assert.NoError(t, <-errChan)
+}
+
+func Test_InvoiceTracker_SendsInvoice_Return_Max_Send_Error(t *testing.T) {
+	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+	mockSender := &MockPeerInvoiceSender{
+		mockError: p2p.ErrSendTimeout,
+	}
+
+	exchangeMessageChan := make(chan crypto.ExchangeMessage)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(mbtime.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         5 * time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		FeeProvider:                &mockTransactor{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		EventBus:                   mocks.NewEventBus(),
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+	defer invoiceTracker.Stop()
+
+	errChan := make(chan error)
+	go func() { errChan <- invoiceTracker.Start() }()
+
+	err = <-errChan
+
+	if !stdErrors.Is(err, ErrInvoiceSendMaxFailCountReached) {
+		t.Fatalf("expected err %v, got: %v", ErrInvoiceSendMaxFailCountReached, err)
+	}
 }
 
 func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
@@ -492,6 +557,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		InvoiceStorage:             invoiceStorage,
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Second,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
