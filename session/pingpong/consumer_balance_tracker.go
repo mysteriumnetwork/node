@@ -18,9 +18,11 @@
 package pingpong
 
 import (
+	"context"
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -37,12 +39,13 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[identity.Identity]ConsumerBalance
 
-	accountantAddress        common.Address
-	mystSCAddress            common.Address
-	consumerBalanceChecker   consumerBalanceChecker
-	channelAddressCalculator channelAddressCalculator
-	publisher                eventbus.Publisher
-	consumerGrandTotalGetter consumerGrandTotalGetter
+	accountantAddress          identity.Identity
+	mystSCAddress              common.Address
+	consumerBalanceChecker     consumerBalanceChecker
+	channelAddressCalculator   channelAddressCalculator
+	publisher                  eventbus.Publisher
+	consumerGrandTotalsStorage consumerTotalsStorage
+	consumerInfoGetter         consumerInfoGetter
 
 	stop chan struct{}
 	once sync.Once
@@ -51,25 +54,29 @@ type ConsumerBalanceTracker struct {
 // NewConsumerBalanceTracker creates a new instance
 func NewConsumerBalanceTracker(
 	publisher eventbus.Publisher,
-	mystSCAddress, accountantAddress common.Address,
+	mystSCAddress common.Address,
+	accountantAddress identity.Identity,
 	consumerBalanceChecker consumerBalanceChecker,
 	channelAddressCalculator channelAddressCalculator,
-	consumerGrandTotalGetter consumerGrandTotalGetter,
+	consumerGrandTotalsStorage consumerTotalsStorage,
+	consumerInfoGetter consumerInfoGetter,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
-		balances:                 make(map[identity.Identity]ConsumerBalance),
-		consumerBalanceChecker:   consumerBalanceChecker,
-		mystSCAddress:            mystSCAddress,
-		accountantAddress:        accountantAddress,
-		publisher:                publisher,
-		channelAddressCalculator: channelAddressCalculator,
-		consumerGrandTotalGetter: consumerGrandTotalGetter,
-		stop:                     make(chan struct{}),
+		balances:                   make(map[identity.Identity]ConsumerBalance),
+		consumerBalanceChecker:     consumerBalanceChecker,
+		mystSCAddress:              mystSCAddress,
+		accountantAddress:          accountantAddress,
+		publisher:                  publisher,
+		channelAddressCalculator:   channelAddressCalculator,
+		consumerGrandTotalsStorage: consumerGrandTotalsStorage,
+		consumerInfoGetter:         consumerInfoGetter,
+
+		stop: make(chan struct{}),
 	}
 }
 
-type consumerGrandTotalGetter interface {
-	Get(consumerAddress, accountantAddress identity.Identity) (uint64, error)
+type consumerInfoGetter interface {
+	GetConsumerData(id string) (ConsumerData, error)
 }
 
 type consumerBalanceChecker interface {
@@ -122,11 +129,19 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 
 func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 	identity := identity.FromAddress(id)
+	err := cbt.recoverGrandTotalPromised(identity)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
+	}
 	cbt.ForceBalanceUpdate(identity)
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev AppEventGrandTotalChanged) {
-	if _, ok := cbt.balances[ev.ConsumerID]; !ok {
+	cbt.balancesLock.Lock()
+	_, ok := cbt.balances[ev.ConsumerID]
+	cbt.balancesLock.Unlock()
+
+	if !ok {
 		cbt.ForceBalanceUpdate(ev.ConsumerID)
 		return
 	}
@@ -178,7 +193,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 		return 0
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalGetter.Get(id, identity.FromAddress(cbt.accountantAddress.Hex()))
+	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
 		return 0
@@ -208,6 +223,47 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEve
 	case registry.RegisteredConsumer, registry.RegisteredProvider:
 		cbt.ForceBalanceUpdate(event.ID)
 	}
+}
+
+func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.Identity) error {
+	var boff backoff.BackOff
+	eback := backoff.NewExponentialBackOff()
+	eback.MaxElapsedTime = time.Second * 20
+	eback.InitialInterval = time.Second * 2
+
+	boff = backoff.WithMaxRetries(eback, 10)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-cbt.stop:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	var data ConsumerData
+	boff = backoff.WithContext(boff, ctx)
+	toRetry := func() error {
+		d, err := cbt.consumerInfoGetter.GetConsumerData(identity.Address)
+		if err != nil {
+			if err != ErrAccountantNotFound {
+				return err
+			}
+			log.Debug().Msgf("No previous invoice grand total, assuming zero")
+			return nil
+		}
+		data = d
+		return nil
+	}
+
+	if err := backoff.Retry(toRetry, boff); err != nil {
+		return err
+	}
+
+	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
+	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.accountantAddress, data.LatestPromise.Amount)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
