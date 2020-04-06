@@ -246,10 +246,11 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-
+		manager.discoLock.Lock()
 		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
 			return manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
 		})
+		manager.discoLock.Unlock()
 		manager.publishStateEvent(StateConnectionFailed)
 
 		log.Info().Err(err).Msg("Cancelling connection initiation: ")
