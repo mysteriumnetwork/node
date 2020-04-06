@@ -37,7 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -114,8 +113,7 @@ type Dependencies struct {
 	ProposalRepository proposal.Repository
 	DiscoveryWorker    brokerdiscovery.Worker
 
-	QualityMetricsSender *quality.Sender
-	QualityClient        *quality.MysteriumMORQA
+	QualityClient *quality.MysteriumMORQA
 
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
@@ -137,11 +135,10 @@ type Dependencies struct {
 	ServiceSessionStorage *session.EventBasedStorage
 	ServiceFirewall       firewall.IncomingTrafficFirewall
 
-	NATPinger      traversal.NATPinger
-	NATTracker     *event.Tracker
-	NATEventSender *event.Sender
-	PortPool       *port.Pool
-	PortMapper     mapping.PortMapper
+	NATPinger  traversal.NATPinger
+	NATTracker *event.Tracker
+	PortPool   *port.Pool
+	PortMapper mapping.PortMapper
 
 	StateKeeper *state.Keeper
 
@@ -216,8 +213,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapUIServer(nodeOptions)
 	di.bootstrapMMN(nodeOptions)
-
-	di.bootstrapNATComponents(nodeOptions)
+	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
+		return err
+	}
 
 	// TODO: Add global services ports flag to support fixed range global ports pool.
 	di.PortPool = port.NewPool()
@@ -405,38 +403,6 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 	err = di.EventBus.Subscribe(pingpong.AppTopicInvoicePaid, di.StatisticsTracker.ConsumeInvoiceEvent)
-	if err != nil {
-		return err
-	}
-
-	// NAT events
-	err = di.EventBus.Subscribe(event.AppTopicTraversal, di.NATEventSender.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(event.AppTopicTraversal, di.NATTracker.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-
-	// Quality metrics
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConnectionState, di.QualityMetricsSender.SendConnStateEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConnectionSession, di.QualityMetricsSender.SendSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, di.QualityMetricsSender.SendSessionData)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(discovery.AppTopicProposalAnnounce, di.QualityMetricsSender.SendProposalEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
 	if err != nil {
 		return err
 	}
@@ -760,12 +726,21 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if err != nil {
 		return err
 	}
-	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+
+	// Quality metrics
+	qualitySender := quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+	if err := qualitySender.Subscribe(di.EventBus); err != nil {
+		return err
+	}
 
 	// warm up the loader as the load takes up to a couple of secs
 	loader := &upnp.GatewayLoader{}
 	go loader.Get()
-	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+	natSender := event.NewSender(qualitySender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+	if err := natSender.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -827,8 +802,12 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 	return nil
 }
 
-func (di *Dependencies) bootstrapNATComponents(options node.Options) {
+func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 	di.NATTracker = event.NewTracker()
+	if err := di.NATTracker.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	if options.ExperimentNATPunching {
 		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
@@ -838,6 +817,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
+	return nil
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
