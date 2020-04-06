@@ -54,12 +54,6 @@ var (
 		Value: "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
 		Usage: "The address of myst token smart contract",
 	}
-	// FlagPaymentsMaxRRecovery represents the max r recovery.
-	FlagPaymentsMaxRRecovery = cli.Uint64Flag{
-		Name:  "payments.max.R.Recovery",
-		Value: 150,
-		Usage: "The max number of invoices we'll go through and reveal R's in case of a dispute with the accountant",
-	}
 	// FlagPaymentsConsumerPricePerMinuteUpperBound sets the upper price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.Uint64Flag{
 		Name:  "payments.consumer.price-perminute-max",
@@ -101,7 +95,6 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsAccountantPromiseSettleThreshold,
 		&FlagPaymentsAccountantPromiseSettleTimeout,
 		&FlagPaymentsMystSCAddress,
-		&FlagPaymentsMaxRRecovery,
 		&FlagPaymentsConsumerPricePerMinuteUpperBound,
 		&FlagPaymentsConsumerPricePerMinuteLowerBound,
 		&FlagPaymentsConsumerPricePerGBUpperBound,
@@ -117,7 +110,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseFloat64Flag(ctx, FlagPaymentsAccountantPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsAccountantPromiseSettleTimeout)
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
-	Current.ParseUInt64Flag(ctx, FlagPaymentsMaxRRecovery)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)

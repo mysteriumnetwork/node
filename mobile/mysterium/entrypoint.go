@@ -338,7 +338,7 @@ type StatisticsChangeCallback interface {
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, func(e connection.SessionStatsEvent) {
-		duration := mb.statisticsTracker.GetSessionDuration()
+		duration := mb.statisticsTracker.GetDuration()
 		cb.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
 	})
 }

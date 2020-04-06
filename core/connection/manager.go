@@ -55,19 +55,37 @@ var (
 	ErrUnlockRequired = errors.New("unlock required")
 )
 
-// IPCheckParams contains common params for connection ip check.
-type IPCheckParams struct {
+// IPCheckConfig contains common params for connection ip check.
+type IPCheckConfig struct {
 	MaxAttempts             int
 	SleepDurationAfterCheck time.Duration
-	Done                    chan struct{}
 }
 
-// DefaultIPCheckParams returns default params.
-func DefaultIPCheckParams() IPCheckParams {
-	return IPCheckParams{
-		MaxAttempts:             6,
-		SleepDurationAfterCheck: 3 * time.Second,
-		Done:                    make(chan struct{}, 1),
+// KeepAliveConfig contains keep alive options.
+type KeepAliveConfig struct {
+	SendInterval    time.Duration
+	SendTimeout     time.Duration
+	MaxSendErrCount int
+}
+
+// Config contains common configuration options for connection manager.
+type Config struct {
+	IPCheck   IPCheckConfig
+	KeepAlive KeepAliveConfig
+}
+
+// DefaultConfig returns default params.
+func DefaultConfig() Config {
+	return Config{
+		IPCheck: IPCheckConfig{
+			MaxAttempts:             6,
+			SleepDurationAfterCheck: 3 * time.Second,
+		},
+		KeepAlive: KeepAliveConfig{
+			SendInterval:    20 * time.Second,
+			SendTimeout:     5 * time.Second,
+			MaxSendErrCount: 5,
+		},
 	}
 }
 
@@ -117,7 +135,7 @@ type connectionManager struct {
 	eventPublisher           eventbus.Publisher
 	connectivityStatusSender connectivity.StatusSender
 	ipResolver               ip.Resolver
-	ipCheckParams            IPCheckParams
+	config                   Config
 	statsReportInterval      time.Duration
 	validator                validator
 	p2pDialer                p2p.Dialer
@@ -143,7 +161,7 @@ func NewManager(
 	eventPublisher eventbus.Publisher,
 	connectivityStatusSender connectivity.StatusSender,
 	ipResolver ip.Resolver,
-	ipCheckParams IPCheckParams,
+	config Config,
 	statsReportInterval time.Duration,
 	validator validator,
 	p2pDialer p2p.Dialer,
@@ -157,7 +175,7 @@ func NewManager(
 		connectivityStatusSender: connectivityStatusSender,
 		cleanup:                  make([]func() error, 0),
 		ipResolver:               ipResolver,
-		ipCheckParams:            ipCheckParams,
+		config:                   config,
 		statsReportInterval:      statsReportInterval,
 		validator:                validator,
 		p2pDialer:                p2pDialer,
@@ -228,10 +246,11 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-
+		manager.discoLock.Lock()
 		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
 			return manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
 		})
+		manager.discoLock.Unlock()
 		manager.publishStateEvent(StateConnectionFailed)
 
 		log.Info().Err(err).Msg("Cancelling connection initiation: ")
@@ -239,24 +258,15 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
+	go manager.keepAliveLoop(channel, sessionDTO.ID)
 	go manager.checkSessionIP(dialog, channel, consumerID, sessionDTO.ID, originalPublicIP)
-
-	go func() {
-		<-manager.ipCheckParams.Done
-		log.Trace().Msgf("IP check is done for session %v", sessionDTO.ID)
-	}()
 
 	return nil
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
 func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
-	defer func() {
-		// Notify that check is done.
-		manager.ipCheckParams.Done <- struct{}{}
-	}()
-
-	for i := 1; i <= manager.ipCheckParams.MaxAttempts; i++ {
+	for i := 1; i <= manager.config.IPCheck.MaxAttempts; i++ {
 		// Skip check if not connected. This may happen when context was canceled via Disconnect.
 		if manager.Status().State != Connected {
 			return
@@ -271,13 +281,13 @@ func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, ch
 		}
 
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
-		if i == manager.ipCheckParams.MaxAttempts {
+		if i == manager.config.IPCheck.MaxAttempts {
 			manager.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
 			manager.publishStateEvent(StateIPNotChanged)
 			return
 		}
 
-		time.Sleep(manager.ipCheckParams.SleepDurationAfterCheck)
+		time.Sleep(manager.config.IPCheck.SleepDurationAfterCheck)
 	}
 }
 
@@ -305,7 +315,9 @@ func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog,
 
 	log.Debug().Msgf("Sending session status P2P message to %q: %s", p2p.TopicSessionStatus, sessionStatus.String())
 
-	_, err := channel.Send(p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	_, err := channel.Send(ctx, p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
 	if err != nil {
 		return fmt.Errorf("could not send p2p session status message: %w", err)
 	}
@@ -377,7 +389,9 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 }
 
 func (manager *connectionManager) createP2PChannel(consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
-	channel, err := manager.p2pDialer.Dial(consumerID, providerID, proposal.ServiceType, 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	channel, err := manager.p2pDialer.Dial(ctx, consumerID, proposal.ServiceType, providerID)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to establish p2p channel")
 	} else {
@@ -388,7 +402,6 @@ func (manager *connectionManager) createP2PChannel(consumerID, providerID identi
 			return channel.Close()
 		})
 	}
-
 	return channel
 }
 
@@ -413,7 +426,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		Config:     config,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
-	res, err := p2pChannel.Send(p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	res, err := p2pChannel.Send(ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
@@ -435,7 +450,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		}
 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
-		_, err := p2pChannel.Send(p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err := p2pChannel.Send(ctx, p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
 		if err != nil {
 			return fmt.Errorf("could not send session destroy request: %w", err)
 		}
@@ -453,7 +470,9 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 				SessionID:  string(sessionID),
 			}
 			log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionAcknowledge, pc.String())
-			_, err := p2pChannel.Send(p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			_, err := p2pChannel.Send(ctx, p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
 			if err != nil {
 				log.Warn().Err(err).Msg("Acknowledge failed")
 			}
@@ -730,6 +749,55 @@ func (manager *connectionManager) getCurrentSession() SessionInfo {
 	defer manager.sessionInfoMu.Unlock()
 
 	return manager.sessionInfo
+}
+
+func (manager *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {
+	// TODO: Remove this check once all provider migrates to p2p.
+	if channel == nil {
+		return
+	}
+
+	// Register handler for handling p2p keep alive pings from provider.
+	channel.Handle(p2p.TopicKeepAlive, func(c p2p.Context) error {
+		var ping pb.P2PKeepAlivePing
+		if err := c.Request().UnmarshalProto(&ping); err != nil {
+			return err
+		}
+
+		log.Debug().Msgf("Received p2p keepalive ping with SessionID=%s", ping.SessionID)
+		return c.OK()
+	})
+
+	// Send pings to provider.
+	var errCount int
+	for {
+		select {
+		case <-manager.ctx.Done():
+			return
+		case <-time.After(manager.config.KeepAlive.SendInterval):
+			if err := manager.sendKeepAlivePing(channel, sessionID); err != nil {
+				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
+				errCount++
+				if errCount == manager.config.KeepAlive.MaxSendErrCount {
+					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
+					manager.Disconnect()
+					return
+				}
+			} else {
+				errCount = 0
+			}
+		}
+	}
+}
+
+func (manager *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
+	defer cancel()
+	msg := &pb.P2PKeepAlivePing{
+		SessionID: string(sessionID),
+	}
+	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	return err
 }
 
 func logDisconnectError(err error) {

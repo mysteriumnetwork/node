@@ -149,13 +149,15 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	err = manager.p2pManager.Listen(providerID, serviceType, func(ch p2p.Channel) {
+	channelHandlers := func(ch p2p.Channel) {
 		mng := manager.sessionManager(proposal, string(id), ch)
 		subscribeSessionCreate(mng, ch, service)
 		subscribeSessionStatus(mng, ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch)
-	})
+	}
+
+	err = manager.p2pManager.Listen(providerID, serviceType, channelHandlers)
 
 	if err != nil {
 		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)

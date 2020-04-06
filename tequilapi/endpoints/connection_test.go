@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -69,14 +70,19 @@ func (cm *mockConnectionManager) Wait() error {
 type StubStatisticsTracker struct {
 	duration time.Duration
 	stats    connection.Statistics
+	invoice  crypto.Invoice
 }
 
-func (ssk *StubStatisticsTracker) Retrieve() connection.Statistics {
+func (ssk *StubStatisticsTracker) GetDataStats() connection.Statistics {
 	return ssk.stats
 }
 
-func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
+func (ssk *StubStatisticsTracker) GetDuration() time.Duration {
 	return ssk.duration
+}
+
+func (ssk *StubStatisticsTracker) GetInvoice() crypto.Invoice {
+	return ssk.invoice
 }
 
 func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRepository {
@@ -126,7 +132,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{
 				"bytes_sent": 0,
 				"bytes_received": 0,
-				"duration": 60
+				"duration": 60,
+				"tokens_spent": 0
 			}`,
 		},
 	}
@@ -406,6 +413,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	statsKeeper := &StubStatisticsTracker{
 		duration: time.Minute,
 		stats:    connection.Statistics{BytesSent: 1, BytesReceived: 2},
+		invoice:  crypto.Invoice{AgreementTotal: 10001},
 	}
 
 	manager := mockConnectionManager{}
@@ -418,7 +426,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 		`{
 			"bytes_sent": 1,
 			"bytes_received": 2,
-			"duration": 60
+			"duration": 60,
+			"tokens_spent": 10001
 		}`,
 		resp.Body.String(),
 	)
@@ -439,7 +448,8 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 		`{
 			"bytes_sent": 1,
 			"bytes_received": 2,
-			"duration": 0
+			"duration": 0,
+			"tokens_spent": 0
 		}`,
 		resp.Body.String(),
 	)

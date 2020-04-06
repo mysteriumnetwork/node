@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"net"
 	"sync"
@@ -47,7 +48,7 @@ type testContext struct {
 	stubPublisher         *StubPublisher
 	mockStatistics        Statistics
 	fakeResolver          ip.Resolver
-	ipCheckParams         IPCheckParams
+	config                Config
 	statusSender          *mockStatusSender
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
@@ -109,12 +110,16 @@ func (tc *testContext) SetupTest() {
 		},
 	}
 
-	tc.ipCheckParams = IPCheckParams{
-		MaxAttempts:             3,
-		SleepDurationAfterCheck: 1 * time.Millisecond,
-		Done:                    make(chan struct{}, 1),
+	tc.config = Config{
+		IPCheck: IPCheckConfig{
+			MaxAttempts:             3,
+			SleepDurationAfterCheck: 1 * time.Millisecond,
+		},
+		KeepAlive: KeepAliveConfig{
+			SendInterval:    100 * time.Millisecond,
+			MaxSendErrCount: 5,
+		},
 	}
-
 	tc.statusSender = &mockStatusSender{}
 	tc.fakeResolver = ip.NewResolverMock("ip")
 	tc.statsReportInterval = 1 * time.Millisecond
@@ -140,7 +145,7 @@ func (tc *testContext) SetupTest() {
 		tc.stubPublisher,
 		tc.statusSender,
 		tc.fakeResolver,
-		tc.ipCheckParams,
+		tc.config,
 		tc.statsReportInterval,
 		&mockValidator{},
 		tc.mockP2P,
@@ -559,7 +564,7 @@ type mockP2PDialer struct {
 	ch *mockP2PChannel
 }
 
-func (m mockP2PDialer) Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (p2p.Channel, error) {
+func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (p2p.Channel, error) {
 	return m.ch, nil
 }
 
@@ -578,7 +583,7 @@ func (m *mockP2PChannel) getSentMsg() connectivity.StatusMessage {
 	return m.status
 }
 
-func (m *mockP2PChannel) Send(topic string, msg *p2p.Message) (*p2p.Message, error) {
+func (m *mockP2PChannel) Send(_ context.Context, topic string, msg *p2p.Message) (*p2p.Message, error) {
 	switch topic {
 	case p2p.TopicSessionCreate:
 		res := &pb.SessionResponse{

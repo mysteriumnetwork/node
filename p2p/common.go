@@ -26,12 +26,13 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+
 	"google.golang.org/protobuf/proto"
 )
 
 const (
 	pingMaxPorts       = 20
-	requiredConnAmount = 2
+	requiredConnCount  = 2
 	consumerInitialTTL = 128
 	providerInitialTTL = 2
 )
@@ -56,8 +57,12 @@ func configExchangeACKSubject(providerID identity.Identity, serviceType string) 
 	return fmt.Sprintf("%s.%s.p2p-config-exchange-ack", providerID.Address, serviceType)
 }
 
-func acquireLocalPorts(portPool port.ServicePortSupplier) ([]int, error) {
-	ports, err := portPool.AcquireMultiple(pingMaxPorts)
+func channelHandlersReadySubject(providerID identity.Identity, serviceType string) string {
+	return fmt.Sprintf("%s.%s.p2p-channel-handlers-ready", providerID.Address, serviceType)
+}
+
+func acquireLocalPorts(portPool port.ServicePortSupplier, n int) ([]int, error) {
+	ports, err := portPool.AcquireMultiple(n)
 	if err != nil {
 		return nil, err
 	}

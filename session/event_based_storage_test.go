@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/mocks"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
@@ -76,9 +77,9 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 
 	// when
 	sessionStore.consumeTokensEarnedEvent(sessionEvent.AppEventSessionTokensEarned{
-		Consumer:    consumerID,
-		ServiceType: session.ServiceType,
-		Total:       500,
+		ProviderID: identity.FromAddress("0x1"),
+		SessionID:  string(session.ID),
+		Total:      500,
 	})
 	// then
 	storedSession, ok = sessionStore.Find(session.ID)

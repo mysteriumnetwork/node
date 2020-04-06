@@ -18,6 +18,7 @@
 package p2p
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"os"
@@ -32,20 +33,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDialerExchangeAndCommunication(t *testing.T) {
-	dir, err := ioutil.TempDir("", "p2pDialerTest")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+func TestDialer_Exchange_And_Communication_When_Provider_With_PublicIP(t *testing.T) {
+	consumerID, providerID, ks, cleanup := createTestIdentities(t)
+	defer cleanup()
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
-	consumerAcc, err := ks.NewAccount("")
-	assert.NoError(t, err)
-	ks.Unlock(consumerAcc, "")
-	consumerID := identity.FromAddress(consumerAcc.Address.Hex())
-	providerAcc, err := ks.NewAccount("")
-	assert.NoError(t, err)
-	ks.Unlock(providerAcc, "")
-	providerID := identity.FromAddress(providerAcc.Address.Hex())
 	signerFactory := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(ks, identity.FromAddress(id.Address))
 	}
@@ -53,10 +44,51 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	brokerConn := nats.StartConnectionMock()
 	defer brokerConn.Close()
 	mockBroker := &mockBroker{conn: brokerConn}
+	portPool := port.NewPool()
+	providerPinger := &mockProviderNATPinger{}
+	consumerPinger := &mockConsumerNATPinger{}
+	ipResolver := ip.NewResolverMock("127.0.0.1")
 
-	mockPortPool := &mockPortPool{}
+	t.Run("Test provider listens to peer", func(t *testing.T) {
+		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, portPool)
+		err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
+			ch.Handle("test", func(c Context) error {
+				return c.OkWithReply(&Message{Data: []byte("pong")})
+			})
+		})
+		require.NoError(t, err)
+	})
 
-	ports := acquirePorts(t, 2)
+	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
+		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, portPool)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
+		require.NoError(t, err)
+
+		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
+		require.NoError(t, err)
+		assert.Equal(t, "pong", string(res.Data))
+	})
+}
+
+func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T) {
+	consumerID, providerID, ks, cleanup := createTestIdentities(t)
+	defer cleanup()
+
+	signerFactory := func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(ks, identity.FromAddress(id.Address))
+	}
+	verifier := identity.NewVerifierSigned()
+	brokerConn := nats.StartConnectionMock()
+	defer brokerConn.Close()
+	mockBroker := &mockBroker{conn: brokerConn}
+	portPool := &mockPortPool{}
+
+	// Create mock NAT pinger.
+	ports, err := acquirePorts(2)
+	assert.NoError(t, err)
 	providerPort := ports[0]
 	consumerPort := ports[1]
 	providerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: providerPort}, &net.UDPAddr{Port: consumerPort})
@@ -65,34 +97,48 @@ func TestDialerExchangeAndCommunication(t *testing.T) {
 	assert.NoError(t, err)
 	providerPinger := &mockProviderNATPinger{conns: []*net.UDPConn{consumerConn, consumerConn}}
 	consumerPinger := &mockConsumerNATPinger{conns: []*net.UDPConn{providerConn, providerConn}}
+	// Simulate behind NAT behaviour with different IP's.
+	ipResolver := ip.NewResolverMock("127.0.0.1", "1.1.1.1")
 
-	ipResolver := ip.NewResolverMock("127.0.0.1")
-
-	providerChannelReady := make(chan struct{}, 1)
 	t.Run("Test provider listens to peer", func(t *testing.T) {
-		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, mockPortPool)
+		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, portPool)
 		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
 			})
-			providerChannelReady <- struct{}{}
 		})
 		require.NoError(t, err)
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
-		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, mockPortPool)
+		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, portPool)
 
-		consumerChannel, err := channelDialer.Dial(consumerID, providerID, "wireguard", 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
 		require.NoError(t, err)
 
-		// TODO: This should be removed and fixed with https://github.com/mysteriumnetwork/node/issues/1987
-		<-providerChannelReady
-
-		res, err := consumerChannel.Send("test", &Message{Data: []byte("ping")})
+		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
 		require.NoError(t, err)
 		assert.Equal(t, "pong", string(res.Data))
 	})
+}
+
+func createTestIdentities(t *testing.T) (consumerID identity.Identity, providerID identity.Identity, ks *identity.Keystore, cleanup func()) {
+	dir, err := ioutil.TempDir("", "p2pDialerTest")
+	assert.NoError(t, err)
+	cleanup = func() { os.RemoveAll(dir) }
+
+	ks = identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	consumerAcc, err := ks.NewAccount("")
+	assert.NoError(t, err)
+	ks.Unlock(consumerAcc, "")
+	consumerID = identity.FromAddress(consumerAcc.Address.Hex())
+	providerAcc, err := ks.NewAccount("")
+	assert.NoError(t, err)
+	ks.Unlock(providerAcc, "")
+	providerID = identity.FromAddress(providerAcc.Address.Hex())
+	return
 }
 
 type mockConsumerNATPinger struct {

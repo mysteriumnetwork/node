@@ -18,6 +18,7 @@
 package session
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"sync"
@@ -27,6 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -53,6 +56,29 @@ type ConfigParams struct {
 
 type publisher interface {
 	Publish(topic string, data interface{})
+}
+
+// KeepAliveConfig contains keep alive options.
+type KeepAliveConfig struct {
+	SendInterval    time.Duration
+	SendTimeout     time.Duration
+	MaxSendErrCount int
+}
+
+// Config contains common configuration options for session manager.
+type Config struct {
+	KeepAlive KeepAliveConfig
+}
+
+// DefaultConfig returns default params.
+func DefaultConfig() Config {
+	return Config{
+		KeepAlive: KeepAliveConfig{
+			SendInterval:    3 * time.Minute,
+			SendTimeout:     5 * time.Second,
+			MaxSendErrCount: 5,
+		},
+	}
 }
 
 // ConfigProvider is able to handle config negotiations
@@ -95,6 +121,8 @@ func NewManager(
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
+	channel p2p.Channel,
+	config Config,
 ) *Manager {
 	return &Manager{
 		currentProposal:      currentProposal,
@@ -104,7 +132,8 @@ func NewManager(
 		serviceId:            serviceId,
 		publisher:            publisher,
 		paymentEngineFactory: paymentEngineFactory,
-		creationLock:         sync.Mutex{},
+		channel:              channel,
+		config:               config,
 	}
 }
 
@@ -118,6 +147,8 @@ type Manager struct {
 	serviceId            string
 	publisher            publisher
 	creationLock         sync.Mutex
+	channel              p2p.Channel
+	config               Config
 }
 
 // Start starts a session on the provider side for the given consumer.
@@ -165,7 +196,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	if pingerParams != nil {
 		go manager.natPinger.PingConsumer(pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
 	}
-
+	go manager.keepAliveLoop(session, manager.channel)
 	manager.sessionStorage.Add(*session)
 	return nil
 }
@@ -211,4 +242,53 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	close(session.done)
 
 	return nil
+}
+
+func (manager *Manager) keepAliveLoop(sess *Session, channel p2p.Channel) {
+	// TODO: Remove this check once all provider migrates to p2p.
+	if channel == nil {
+		return
+	}
+
+	// Register handler for handling p2p keep alive pings from consumer.
+	channel.Handle(p2p.TopicKeepAlive, func(c p2p.Context) error {
+		var ping pb.P2PKeepAlivePing
+		if err := c.Request().UnmarshalProto(&ping); err != nil {
+			return err
+		}
+
+		log.Debug().Msgf("Received p2p keepalive ping with SessionID=%s", ping.SessionID)
+		return c.OK()
+	})
+
+	// Send pings to consumer.
+	var errCount int
+	for {
+		select {
+		case <-sess.done:
+			return
+		case <-time.After(manager.config.KeepAlive.SendInterval):
+			if err := manager.sendKeepAlivePing(channel, sess.ID); err != nil {
+				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sess.ID)
+				errCount++
+				if errCount == manager.config.KeepAlive.MaxSendErrCount {
+					log.Error().Msgf("Max p2p keepalive err count reached, closing p2p channel. SessionID=%s", sess.ID)
+					channel.Close()
+					return
+				}
+			} else {
+				errCount = 0
+			}
+		}
+	}
+}
+
+func (manager *Manager) sendKeepAlivePing(channel p2p.Channel, sessionID ID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
+	defer cancel()
+	msg := &pb.P2PKeepAlivePing{
+		SessionID: string(sessionID),
+	}
+	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	return err
 }

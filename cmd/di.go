@@ -279,7 +279,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		ServiceSessionStorage:     di.ServiceSessionStorage,
-		SessionDurationProvider:   di.StatisticsTracker,
+		ConnectionSessionProvider: di.StatisticsTracker,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
@@ -389,22 +389,28 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {
-	// state events
+	// Consumer current session store
 	err := di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsTracker.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.SessionStorage.ConsumeSessionEvent)
+	err = di.EventBus.Subscribe(pingpong.AppTopicInvoicePaid, di.StatisticsTracker.ConsumeInvoiceEvent)
 	if err != nil {
 		return err
 	}
 
-	// statistics events
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
+	// Consumer session history (API storage)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)
+	if err != nil {
+		return err
+	}
+
+	// Consumer session history (local storage)
+	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.SessionStorage.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
@@ -436,13 +442,12 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
-
-	err = di.handleHTTPClientConnections()
+	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
 	if err != nil {
 		return err
 	}
 
-	return di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
+	return di.handleHTTPClientConnections()
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
@@ -489,10 +494,11 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		identity.FromAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
+		di.AccountantCaller,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -510,14 +516,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 			di.EventBus,
-			di.AccountantCaller.GetConsumerData,
 			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
 		),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		connectivity.NewStatusSender(),
 		di.IPResolver,
-		connection.DefaultIPCheckParams(),
+		connection.DefaultConfig(),
 		connection.DefaultStatsReportInterval,
 		connection.NewValidator(
 			di.ConsumerBalanceTracker,
@@ -606,7 +611,6 @@ func newSessionManagerFactory(
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
-			nodeOptions.Payments.MaxRRecoveryLength,
 			bcHelper,
 			eventbus,
 			transactor,
@@ -622,6 +626,8 @@ func newSessionManagerFactory(
 			natTracker,
 			serviceID,
 			eventbus,
+			nil,
+			session.DefaultConfig(),
 		)
 	}
 }

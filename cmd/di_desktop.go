@@ -262,7 +262,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
-			nodeOptions.Payments.MaxRRecoveryLength,
 			di.BCHelper,
 			di.EventBus,
 			di.Transactor,
@@ -278,6 +277,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
+			channel,
+			session.DefaultConfig(),
 		)
 	}
 

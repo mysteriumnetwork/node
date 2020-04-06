@@ -18,15 +18,21 @@
 package p2p
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
-	"time"
+	"sync"
+
+	"github.com/mysteriumnetwork/node/firewall"
+	nats_lib "github.com/nats-io/go-nats"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
@@ -35,7 +41,7 @@ import (
 type Dialer interface {
 	// Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 	// and create p2p channel which is ready for communication.
-	Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (Channel, error)
+	Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error)
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
@@ -64,51 +70,74 @@ type dialer struct {
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
-func (m *dialer) Dial(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (Channel, error) {
-	config, err := m.exchangeConfig(consumerID, providerID, serviceType, timeout)
-	if err != nil {
-		return nil, fmt.Errorf("could not exchange config: %w", err)
-	}
-
-	var remotePort, localPort int
-	var conn0 *net.UDPConn
-	var serviceConn *net.UDPConn
-	if len(config.peerPorts) == 1 {
-		localPort = config.localPorts[0]
-		remotePort = config.peerPorts[0]
-	} else {
-		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnAmount)
-		if err != nil {
-			return nil, fmt.Errorf("could not ping peer: %w", err)
-		}
-		conn0 = conns[0]
-		localPort = conn0.LocalAddr().(*net.UDPAddr).Port
-		remotePort = conn0.RemoteAddr().(*net.UDPAddr).Port
-		serviceConn = conns[1]
-		log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", serviceConn.LocalAddr().(*net.UDPAddr).Port, serviceConn.RemoteAddr().(*net.UDPAddr).Port)
-	}
-
-	log.Debug().Msgf("Creating channel with listen port: %d, peer port: %d", localPort, remotePort)
-	channel, err := newChannel(conn0, config.privateKey, config.peerPubKey)
-	if err != nil {
-		return nil, fmt.Errorf("could not create p2p channel: %w", err)
-	}
-	channel.serviceConn = serviceConn
-	return channel, nil
-}
-
-func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, serviceType string, timeout time.Duration) (*p2pConnectConfig, error) {
-	pubKey, privateKey, err := GenerateKey()
-	if err != nil {
-		return nil, fmt.Errorf("could not generate consumer p2p keys: %w", err)
-	}
-
+func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error) {
 	brokerConn, err := m.broker.Connect(m.brokerAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not open broker conn: %w", err)
 	}
 	defer brokerConn.Close()
+
+	peerReady := make(chan struct{})
+	var once sync.Once
+	_, err = brokerConn.Subscribe(channelHandlersReadySubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+		defer once.Do(func() { close(peerReady) })
+		if err := m.channelHandlersReady(msg); err != nil {
+			log.Err(err).Msg("Channel handlers ready handler setup failed")
+			return
+		}
+	})
+
+	config, err := m.exchangeConfig(ctx, brokerConn, providerID, serviceType, consumerID)
+	if err != nil {
+		return nil, fmt.Errorf("could not exchange config: %w", err)
+	}
+
+	if _, err := firewall.AllowIPAccess(config.peerPublicIP); err != nil {
+		return nil, fmt.Errorf("could not add peer IP firewall rule: %w", err)
+	}
+
+	var conn1, conn2 *net.UDPConn
+	if len(config.peerPorts) == requiredConnCount {
+		log.Debug().Msg("Skipping provider ping")
+		conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[0]})
+		if err != nil {
+			return nil, fmt.Errorf("could not create UDP conn for p2p channel: %w", err)
+		}
+		conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[1]})
+		if err != nil {
+			return nil, fmt.Errorf("could not create UDP conn for service: %w", err)
+		}
+	} else {
+		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
+		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
+		if err != nil {
+			return nil, fmt.Errorf("could not ping peer: %w", err)
+		}
+		conn1 = conns[0]
+		conn2 = conns[1]
+	}
+
+	// Wait until provider confirms that channel handlers are ready.
+	select {
+	case <-peerReady:
+		log.Debug().Msg("Received handlers ready message from provider")
+	case <-ctx.Done():
+		return nil, errors.New("timeout while performing configuration exchange")
+	}
+
+	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not create p2p channel: %w", err)
+	}
+	channel.setServiceConn(conn2)
+	return channel, nil
+}
+
+func (m *dialer) exchangeConfig(ctx context.Context, brokerConn nats.Connection, providerID identity.Identity, serviceType string, consumerID identity.Identity) (*p2pConnectConfig, error) {
+	pubKey, privateKey, err := GenerateKey()
+	if err != nil {
+		return nil, fmt.Errorf("could not generate consumer p2p keys: %w", err)
+	}
 
 	// Send initial exchange with signed consumer public key.
 	beginExchangeMsg := &pb.P2PConfigExchangeMsg{
@@ -119,7 +148,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	if err != nil {
 		return nil, fmt.Errorf("could not pack signed message: %v", err)
 	}
-	exchangeMsgBrokerReply, err := m.sendSignedMsg(brokerConn, configExchangeSubject(providerID, serviceType), packedMsg, timeout)
+	exchangeMsgBrokerReply, err := m.sendSignedMsg(ctx, configExchangeSubject(providerID, serviceType), packedMsg, brokerConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not send signed message: %w", err)
 	}
@@ -148,7 +177,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	if err != nil {
 		return nil, fmt.Errorf("could not get public IP: %v", err)
 	}
-	localPorts, err := acquireLocalPorts(m.portPool)
+	localPorts, err := acquireLocalPorts(m.portPool, len(peerConnConfig.Ports))
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire local ports: %v", err)
 	}
@@ -169,7 +198,7 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	if err != nil {
 		return nil, fmt.Errorf("could not pack signed message: %v", err)
 	}
-	_, err = m.sendSignedMsg(brokerConn, configExchangeACKSubject(providerID, serviceType), packedMsg, timeout)
+	_, err = m.sendSignedMsg(ctx, configExchangeACKSubject(providerID, serviceType), packedMsg, brokerConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}
@@ -184,10 +213,22 @@ func (m *dialer) exchangeConfig(consumerID, providerID identity.Identity, servic
 	}, nil
 }
 
-func (m *dialer) sendSignedMsg(brokerConn nats.Connection, subject string, msg []byte, timeout time.Duration) ([]byte, error) {
-	reply, err := brokerConn.Request(subject, msg, timeout)
+func (m *dialer) sendSignedMsg(ctx context.Context, subject string, msg []byte, brokerConn nats.Connection) ([]byte, error) {
+	reply, err := brokerConn.RequestWithContext(ctx, subject, msg)
 	if err != nil {
 		return nil, fmt.Errorf("could send broker request to subject %s: %v", subject, err)
 	}
 	return reply.Data, nil
+}
+
+func (m *dialer) channelHandlersReady(msg *nats_lib.Msg) error {
+	var handlersReady pb.P2PChannelHandlersReady
+	if err := proto.Unmarshal(msg.Data, &handlersReady); err != nil {
+		return fmt.Errorf("failed to unmarshal handlers ready message: %w", err)
+	}
+	if handlersReady.Value != "HANDLERS READY" {
+		return errors.New("incorrect handlers ready message value")
+	}
+
+	return nil
 }

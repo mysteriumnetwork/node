@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,6 +31,7 @@ type TimeGetter func() time.Time
 
 // SessionStatisticsTracker keeps the session stats safe and sound
 type SessionStatisticsTracker struct {
+	lastInvoice  crypto.Invoice
 	lastStats    connection.Statistics
 	sessionStats connection.Statistics
 	timeGetter   TimeGetter
@@ -40,29 +43,31 @@ func NewSessionStatisticsTracker(timeGetter TimeGetter) *SessionStatisticsTracke
 	return &SessionStatisticsTracker{timeGetter: timeGetter}
 }
 
-// Retrieve retrieves session stats from statisticsTracker
-func (sst *SessionStatisticsTracker) Retrieve() connection.Statistics {
+// GetDataStats returns session data stats
+func (sst *SessionStatisticsTracker) GetDataStats() connection.Statistics {
 	return sst.sessionStats
 }
 
-// Reset resets session stats to 0
-func (sst *SessionStatisticsTracker) Reset() {
-	sst.sessionStats = connection.Statistics{}
+// GetDuration returns elapsed time from marked session start
+func (sst *SessionStatisticsTracker) GetDuration() time.Duration {
+	if sst.sessionStart == nil {
+		return time.Duration(0)
+	}
+	duration := sst.timeGetter().Sub(*sst.sessionStart)
+	return duration
+}
+
+// GetInvoice retrieves session payment stats
+func (sst *SessionStatisticsTracker) GetInvoice() crypto.Invoice {
+	return sst.lastInvoice
 }
 
 // MarkSessionStart marks current time as session start time for statistics
 func (sst *SessionStatisticsTracker) markSessionStart() {
 	time := sst.timeGetter()
 	sst.sessionStart = &time
-}
-
-// GetSessionDuration returns elapsed time from marked session start
-func (sst *SessionStatisticsTracker) GetSessionDuration() time.Duration {
-	if sst.sessionStart == nil {
-		return time.Duration(0)
-	}
-	duration := sst.timeGetter().Sub(*sst.sessionStart)
-	return duration
+	// reset the stats in preparation for a new session
+	sst.sessionStats = connection.Statistics{}
 }
 
 // MarkSessionEnd stops counting session duration
@@ -85,4 +90,9 @@ func (sst *SessionStatisticsTracker) ConsumeSessionEvent(sessionEvent connection
 	case connection.SessionCreatedStatus:
 		sst.markSessionStart()
 	}
+}
+
+// ConsumeInvoiceEvent handles the connection statistics changes
+func (sst *SessionStatisticsTracker) ConsumeInvoiceEvent(e pingpong.AppEventInvoicePaid) {
+	sst.lastInvoice = e.Invoice
 }

@@ -33,7 +33,7 @@ func TestStatsSavingWorks(t *testing.T) {
 	}
 
 	statisticsTracker.ConsumeStatisticsEvent(e)
-	assert.Equal(t, e.Stats, statisticsTracker.Retrieve())
+	assert.Equal(t, e.Stats, statisticsTracker.GetDataStats())
 }
 
 func TestGetSessionDurationReturnsFlooredDuration(t *testing.T) {
@@ -46,14 +46,14 @@ func TestGetSessionDurationReturnsFlooredDuration(t *testing.T) {
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
 	expectedDuration, err := time.ParseDuration("1s700000000ns")
 	assert.NoError(t, err)
-	duration := statisticsTracker.GetSessionDuration()
+	duration := statisticsTracker.GetDuration()
 	assert.Equal(t, expectedDuration, duration)
 }
 
 func TestGetSessionDurationFailsWhenSessionStartNotMarked(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 
-	assert.Equal(t, time.Duration(0), statisticsTracker.GetSessionDuration())
+	assert.Equal(t, time.Duration(0), statisticsTracker.GetDuration())
 }
 
 func TestStopSessionResetsSessionDuration(t *testing.T) {
@@ -65,7 +65,7 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
 	statisticsTracker.markSessionEnd()
-	assert.Equal(t, time.Duration(0), statisticsTracker.GetSessionDuration())
+	assert.Equal(t, time.Duration(0), statisticsTracker.GetDuration())
 }
 
 func TestStatisticsTrackerConsumeSessionEventCreated(t *testing.T) {

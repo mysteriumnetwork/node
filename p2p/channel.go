@@ -36,12 +36,15 @@ import (
 var (
 	// If this env variable is set channel will log raw messages from send and receive loops.
 	debugTransport = os.Getenv("P2P_DEBUG_TRANSPORT") == "1"
+
+	// ErrSendTimeout represent send timeout error.
+	ErrSendTimeout = errors.New("p2p send timeout")
 )
 
 // ChannelSender is used to send messages.
 type ChannelSender interface {
 	// Send sends message to given topic. Peer listening to topic will receive message.
-	Send(topic string, msg *Message) (*Message, error)
+	Send(ctx context.Context, topic string, msg *Message) (*Message, error)
 }
 
 // ChannelHandler is used to handle messages.
@@ -84,24 +87,30 @@ type transport struct {
 
 // channel implements Channel interface.
 type channel struct {
-	mu sync.RWMutex
+	mu   sync.RWMutex
+	once sync.Once
 
-	tr                    *transport
-	serviceConn           *net.UDPConn
-	topicHandlers         map[string]HandlerFunc
-	streams               map[uint64]*stream
-	nextStreamID          uint64
-	privateKey            PrivateKey
-	blockCrypt            kcp.BlockCrypt
-	sendTimeout           time.Duration
-	keepAlivePingInterval time.Duration
-	stop                  chan struct{}
-	sendQueue             chan *transportMsg
+	tr            *transport
+	serviceConn   *net.UDPConn
+	topicHandlers map[string]HandlerFunc
+	streams       map[uint64]*stream
+	nextStreamID  uint64
+	privateKey    PrivateKey
+	peerPubKey    PublicKey
+	peerAddr      *net.UDPAddr
+	localAddr     *net.UDPAddr
+	blockCrypt    kcp.BlockCrypt
+	stop          chan struct{}
+	sendQueue     chan *transportMsg
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
 // and starts listening for connections.
 func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey PublicKey) (*channel, error) {
+	localPort := punchedConn.LocalAddr().(*net.UDPAddr).Port
+	remotePort := punchedConn.RemoteAddr().(*net.UDPAddr).Port
+	log.Debug().Msgf("Creating p2p channel with local port: %d, remote port: %d", localPort, remotePort)
+
 	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create block crypt: %w", err)
@@ -112,7 +121,8 @@ func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publ
 		return nil, fmt.Errorf("could not create UDP conn: %w", err)
 	}
 
-	udpSession, err := kcp.NewConn3(1, punchedConn.RemoteAddr().(*net.UDPAddr), blockCrypt, 10, 3, udpConn)
+	peerAddr := punchedConn.RemoteAddr().(*net.UDPAddr)
+	udpSession, err := kcp.NewConn3(1, peerAddr, blockCrypt, 10, 3, udpConn)
 	if err != nil {
 		return nil, fmt.Errorf("could not create UDP session: %w", err)
 	}
@@ -125,25 +135,21 @@ func newChannel(punchedConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publ
 	}
 
 	c := channel{
-		tr:                    &tr,
-		topicHandlers:         make(map[string]HandlerFunc),
-		streams:               make(map[uint64]*stream),
-		privateKey:            privateKey,
-		blockCrypt:            blockCrypt,
-		sendTimeout:           30 * time.Second,
-		keepAlivePingInterval: 20 * time.Second,
-		serviceConn:           nil,
-		stop:                  make(chan struct{}, 1),
-		sendQueue:             make(chan *transportMsg, 100),
+		tr:            &tr,
+		topicHandlers: make(map[string]HandlerFunc),
+		streams:       make(map[uint64]*stream),
+		privateKey:    privateKey,
+		peerPubKey:    peerPubKey,
+		peerAddr:      peerAddr,
+		localAddr:     udpConn.LocalAddr().(*net.UDPAddr),
+		blockCrypt:    blockCrypt,
+		serviceConn:   nil,
+		stop:          make(chan struct{}, 1),
+		sendQueue:     make(chan *transportMsg, 100),
 	}
 
 	go c.readLoop()
 	go c.sendLoop()
-	go c.sendKeepaliveLoop()
-	c.Handle(topicKeepAlive, func(c Context) error {
-		log.Debug().Msgf("Received P2P keep alive ping, peer public key: %s", peerPubKey.Hex())
-		return c.OK()
-	})
 
 	return &c, nil
 }
@@ -263,8 +269,13 @@ func (c *channel) ServiceConn() *net.UDPConn {
 
 // Close closes channel.
 func (c *channel) Close() error {
-	close(c.stop)
-	return c.tr.session.Close()
+	c.once.Do(func() {
+		close(c.stop)
+	})
+	if err := c.tr.session.Close(); err != nil {
+		return fmt.Errorf("could not close p2p transport session: %w", err)
+	}
+	return nil
 }
 
 // Conn returns underlying channel's UDP connection.
@@ -272,16 +283,8 @@ func (c *channel) Conn() *net.UDPConn {
 	return c.tr.conn
 }
 
-// SetSendTimeout overrides default send timeout.
-func (c *channel) SetSendTimeout(t time.Duration) {
-	c.sendTimeout = t
-}
-
 // Send sends message to given topic. Peer listening to topic will receive message.
-func (c *channel) Send(topic string, msg *Message) (*Message, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.sendTimeout)
-	defer cancel()
-
+func (c *channel) Send(ctx context.Context, topic string, msg *Message) (*Message, error) {
 	reply, err := c.sendRequest(ctx, topic, msg)
 	if err != nil {
 		return nil, err
@@ -297,22 +300,6 @@ func (c *channel) Handle(topic string, handler HandlerFunc) {
 	c.topicHandlers[topic] = handler
 }
 
-// Start keepalive ping send loop.
-func (c *channel) sendKeepaliveLoop() {
-	go func() {
-		for {
-			select {
-			case <-c.stop:
-				return
-			case <-time.After(c.keepAlivePingInterval):
-				if _, err := c.Send(topicKeepAlive, &Message{Data: []byte("PING")}); err != nil {
-					log.Err(err).Msg("Failed to send P2P keepalive message")
-				}
-			}
-		}
-	}()
-}
-
 // sendRequest sends message to send queue and waits for response.
 func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*Message, error) {
 	s := c.addStream()
@@ -324,7 +311,7 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 	// Wait for response.
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout waiting for reply to %q", topic)
+		return nil, fmt.Errorf("timeout waiting for reply to %q: %w", topic, ErrSendTimeout)
 	case res := <-s.resCh:
 		if res.statusCode != statusCodeOK {
 			if res.statusCode == statusCodePublicErr {
@@ -351,6 +338,11 @@ func (c *channel) deleteStream(id uint64) {
 	defer c.mu.Unlock()
 
 	delete(c.streams, id)
+}
+
+func (c *channel) setServiceConn(conn *net.UDPConn) {
+	log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", conn.LocalAddr().(*net.UDPAddr).Port, conn.RemoteAddr().(*net.UDPAddr).Port)
+	c.serviceConn = conn
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {

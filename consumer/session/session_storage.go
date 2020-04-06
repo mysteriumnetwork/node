@@ -29,7 +29,7 @@ const sessionStorageBucketName = "session-history"
 
 // StatsRetriever can fetch current session stats
 type StatsRetriever interface {
-	Retrieve() connection.Statistics
+	GetDataStats() connection.Statistics
 }
 
 // Storer allows us to get all sessions, save and update them
@@ -77,7 +77,7 @@ func (repo *Storage) handleEndedEvent(sessionID session.ID) {
 	updatedSession := &History{
 		SessionID: sessionID,
 		Updated:   time.Now().UTC(),
-		DataStats: repo.statsRetriever.Retrieve(),
+		DataStats: repo.statsRetriever.GetDataStats(),
 		Status:    SessionStatusCompleted,
 	}
 	err := repo.storage.Update(sessionStorageBucketName, updatedSession)

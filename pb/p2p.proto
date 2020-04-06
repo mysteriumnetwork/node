@@ -17,3 +17,11 @@ message P2PConnectConfig {
     string publicIP = 1;
     repeated int32 ports = 2;
 }
+
+message P2PKeepAlivePing {
+    string sessionID = 1;
+}
+
+message P2PChannelHandlersReady {
+    string value = 1;
+}
