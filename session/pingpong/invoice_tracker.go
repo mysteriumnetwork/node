@@ -120,6 +120,7 @@ type InvoiceTracker struct {
 
 	maxNotReceivedExchangeMessages uint64
 	once                           sync.Once
+	rnd                            *rand.Rand
 	agreementID                    uint64
 	lastExchangeMessage            crypto.ExchangeMessage
 	transactorFee                  registry.FeesResponse
@@ -170,6 +171,7 @@ func NewInvoiceTracker(
 		deps:                           itd,
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, itd.ChargePeriod),
 		invoicesSent:                   make(map[string]sentInvoice),
+		rnd:                            rand.New(rand.NewSource(1)),
 	}
 }
 
@@ -213,8 +215,8 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 }
 
 func (it *InvoiceTracker) generateAgreementID() {
-	rand.Seed(time.Now().UnixNano())
-	it.agreementID = rand.Uint64()
+	it.rnd.Seed(time.Now().UnixNano())
+	it.agreementID = it.rnd.Uint64()
 }
 
 func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error {
