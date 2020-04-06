@@ -64,7 +64,7 @@ func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 		Provider:       invoice.Provider,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentInvoice, pInvoice.String())
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := is.ch.Send(ctx, p2p.TopicPaymentInvoice, p2p.ProtoMessage(pInvoice))
 	return err

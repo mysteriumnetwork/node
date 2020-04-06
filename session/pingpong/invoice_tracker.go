@@ -19,7 +19,7 @@ package pingpong
 
 import (
 	"bytes"
-	cryptoRand "crypto/rand"
+	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	stdErr "errors"
@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -52,6 +53,9 @@ var ErrInvoiceExpired = errors.New("invoice expired")
 
 // ErrExchangeWaitTimeout indicates that we did not get an exchange message in time.
 var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
+
+// ErrInvoiceSendMaxFailCountReached indicates that we did not sent an exchange message in time.
+var ErrInvoiceSendMaxFailCountReached = errors.New("did not sent a new exchange message")
 
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
@@ -94,8 +98,6 @@ type accountantCaller interface {
 
 type settler func(providerID, accountantID identity.Identity) error
 
-const chargePeriodLeeway = time.Minute * 15
-
 type sentInvoice struct {
 	invoice crypto.Invoice
 	r       []byte
@@ -116,9 +118,11 @@ type InvoiceTracker struct {
 	accountantFailureCountLock sync.Mutex
 
 	notReceivedExchangeMessageCount uint64
+	notSentExchangeMessageCount     uint64
 	exchangeMessageCountLock        sync.Mutex
 
 	maxNotReceivedExchangeMessages uint64
+	maxNotSentExchangeMessages     uint64
 	once                           sync.Once
 	rnd                            *rand.Rand
 	agreementID                    uint64
@@ -144,6 +148,7 @@ type InvoiceTrackerDeps struct {
 	PeerInvoiceSender          PeerInvoiceSender
 	InvoiceStorage             providerInvoiceStorage
 	TimeTracker                timeTracker
+	ChargePeriodLeeway         time.Duration
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
@@ -169,13 +174,18 @@ func NewInvoiceTracker(
 	return &InvoiceTracker{
 		stop:                           make(chan struct{}),
 		deps:                           itd,
-		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, itd.ChargePeriod),
+		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
+		maxNotSentExchangeMessages:     calculateMaxNotSentExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		invoicesSent:                   make(map[string]sentInvoice),
 		rnd:                            rand.New(rand.NewSource(1)),
 	}
 }
 
 func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time.Duration) uint64 {
+	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
+}
+
+func calculateMaxNotSentExchangeMessageCount(chargeLeeway, chargePeriod time.Duration) uint64 {
 	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
 }
 
@@ -234,6 +244,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 	it.lastExchangeMessage = em
 	it.markInvoicePaid(em.Promise.Hashlock)
 	it.resetNotReceivedExchangeMessageCount()
+	it.resetNotSentExchangeMessageCount()
 
 	// incase of zero payment, we'll just skip going to the accountant
 	if isServiceFree(it.deps.Proposal.PaymentMethod) {
@@ -424,7 +435,7 @@ func (it *InvoiceTracker) Start() error {
 		case <-time.After(it.deps.ChargePeriod):
 			err := it.sendInvoice()
 			if err != nil {
-				return errors.Wrap(err, "sending of invoice failed")
+				return fmt.Errorf("sending of invoice failed: %w", err)
 			}
 		case emErr := <-emErrors:
 			if emErr != nil {
@@ -440,10 +451,22 @@ func (it *InvoiceTracker) markExchangeMessageNotReceived() {
 	it.notReceivedExchangeMessageCount++
 }
 
+func (it *InvoiceTracker) markExchangeMessageNotSent() {
+	it.exchangeMessageCountLock.Lock()
+	defer it.exchangeMessageCountLock.Unlock()
+	it.notSentExchangeMessageCount++
+}
+
 func (it *InvoiceTracker) resetNotReceivedExchangeMessageCount() {
 	it.exchangeMessageCountLock.Lock()
 	defer it.exchangeMessageCountLock.Unlock()
 	it.notReceivedExchangeMessageCount = 0
+}
+
+func (it *InvoiceTracker) resetNotSentExchangeMessageCount() {
+	it.exchangeMessageCountLock.Lock()
+	defer it.exchangeMessageCountLock.Unlock()
+	it.notSentExchangeMessageCount = 0
 }
 
 func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
@@ -452,13 +475,23 @@ func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
 	return it.notReceivedExchangeMessageCount
 }
 
+func (it *InvoiceTracker) getNotSentExchangeMessageCount() uint64 {
+	it.exchangeMessageCountLock.Lock()
+	defer it.exchangeMessageCountLock.Unlock()
+	return it.notSentExchangeMessageCount
+}
+
 func (it *InvoiceTracker) generateR() []byte {
 	r := make([]byte, 32)
-	cryptoRand.Read(r)
+	crand.Read(r)
 	return r
 }
 
 func (it *InvoiceTracker) sendInvoice() error {
+	if it.getNotSentExchangeMessageCount() >= it.maxNotSentExchangeMessages {
+		return ErrInvoiceSendMaxFailCountReached
+	}
+
 	if it.getNotReceivedExchangeMessageCount() >= it.maxNotReceivedExchangeMessages {
 		return ErrExchangeWaitTimeout
 	}
@@ -479,6 +512,11 @@ func (it *InvoiceTracker) sendInvoice() error {
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
+		if stdErr.Is(err, p2p.ErrSendTimeout) {
+			log.Warn().Err(err).Msg("Marking invoice as not sent")
+			it.markExchangeMessageNotSent()
+			return nil
+		}
 		return err
 	}
 
