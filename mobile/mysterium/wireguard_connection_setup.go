@@ -252,13 +252,15 @@ func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceC
 	}
 
 	// Exclude p2p channel traffic from VPN tunnel.
-	channelSocket, err := peekLookAtSocketFd4From(channelConn)
-	if err != nil {
-		return fmt.Errorf("could not get channel socket: %w", err)
-	}
-	err = w.tunnelSetup.Protect(channelSocket)
-	if err != nil {
-		return fmt.Errorf("could not protect p2p socket: %w", err)
+	if channelConn != nil {
+		channelSocket, err := peekLookAtSocketFd4From(channelConn)
+		if err != nil {
+			return fmt.Errorf("could not get channel socket: %w", err)
+		}
+		err = w.tunnelSetup.Protect(channelSocket)
+		if err != nil {
+			return fmt.Errorf("could not protect p2p socket: %w", err)
+		}
 	}
 
 	return nil
