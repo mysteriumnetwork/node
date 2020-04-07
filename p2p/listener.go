@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/pb"
 
 	nats_lib "github.com/nats-io/go-nats"
@@ -40,13 +41,16 @@ type Listener interface {
 	// Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 	// to channelHandlers
 	Listen(providerID identity.Identity, serviceType string, channelHandler func(ch Channel)) error
+
+	// GetContact returns contract which is later can be added to proposal contacts definition so consumer can
+	// know how to connect to this p2p listener.
+	GetContact() market.Contact
 }
 
 // NewListener creates new p2p communication listener which is used on provider side.
-func NewListener(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier) Listener {
+func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier) Listener {
 	return &listener{
-		broker:         broker,
-		brokerAddress:  address,
+		brokerConn:     brokerConn,
 		pendingConfigs: map[PublicKey]*p2pConnectConfig{},
 		ipResolver:     ipResolver,
 		signer:         signer,
@@ -59,12 +63,11 @@ func NewListener(broker brokerConnector, address string, signer identity.SignerF
 // listener implements Listener interface.
 type listener struct {
 	portPool       port.ServicePortSupplier
-	broker         brokerConnector
+	brokerConn     nats.Connection
 	providerPinger natProviderPinger
 	signer         identity.SignerFactory
 	verifier       identity.Verifier
 	ipResolver     ip.Resolver
-	brokerAddress  string
 
 	// Keys holds pendingConfigs temporary configs for provider side since it
 	// need to handle key exchange in two steps.
@@ -89,28 +92,28 @@ func (c *p2pConnectConfig) pingIP() string {
 	return c.peerPublicIP
 }
 
+func (m *listener) GetContact() market.Contact {
+	return market.Contact{
+		Type:       ContactTypeV1,
+		Definition: ContactDefinition{BrokerAddresses: m.brokerConn.Servers()}}
+}
+
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 // to channelHandlers
 func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) error {
-	brokerConn, err := m.broker.Connect(m.brokerAddress)
-	if err != nil {
-		return err
-	}
-	// TODO: Expose func to close broker conn.
-
 	outboundIP, err := m.ipResolver.GetOutboundIPAsString()
 	if err != nil {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	_, err = brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		if err := m.providerStartConfigExchange(brokerConn, providerID, msg, outboundIP); err != nil {
+	_, err = m.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+		if err := m.providerStartConfigExchange(providerID, msg, outboundIP); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
 	})
 
-	_, err = brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+	_, err = m.brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
 		config, err := m.providerAckConfigExchange(msg)
 		if err != nil {
 			log.Err(err).Msg("Could not handle exchange ack")
@@ -121,7 +124,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		// It is important that provider starts sending pings first otherwise
 		// providers router can think that consumer is sending DDoS packets.
 		go func(reply string) {
-			if err := brokerConn.Publish(reply, []byte("OK")); err != nil {
+			if err := m.brokerConn.Publish(reply, []byte("OK")); err != nil {
 				log.Err(err).Msg("Could not publish exchange ack")
 			}
 		}(msg.Reply)
@@ -159,7 +162,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		channelHandlers(channel)
 
 		// Send handlers ready to consumer
-		if err := m.providerChannelHandlersReady(brokerConn, providerID, serviceType); err != nil {
+		if err := m.providerChannelHandlersReady(providerID, serviceType); err != nil {
 			log.Err(err).Msg("Could not handle channel handlers ready")
 			return
 		}
@@ -168,7 +171,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	return err
 }
 
-func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
+func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
 	pubKey, privateKey, err := GenerateKey()
 	if err != nil {
 		return fmt.Errorf("could not generate provider p2p keys: %w", err)
@@ -219,7 +222,7 @@ func (m *listener) providerStartConfigExchange(brokerConn nats.Connection, signe
 	if err != nil {
 		return fmt.Errorf("could not pack signed message: %v", err)
 	}
-	err = brokerConn.Publish(msg.Reply, packedMsg)
+	err = m.brokerConn.Publish(msg.Reply, packedMsg)
 	if err != nil {
 		return fmt.Errorf("could not publish message via broker: %v", err)
 	}
@@ -264,7 +267,7 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	}, nil
 }
 
-func (m *listener) providerChannelHandlersReady(brokerConn nats.Connection, providerID identity.Identity, serviceType string) error {
+func (m *listener) providerChannelHandlersReady(providerID identity.Identity, serviceType string) error {
 	handlersReadyMsg := pb.P2PChannelHandlersReady{Value: "HANDLERS READY"}
 
 	message, err := proto.Marshal(&handlersReadyMsg)
@@ -273,7 +276,7 @@ func (m *listener) providerChannelHandlersReady(brokerConn nats.Connection, prov
 	}
 
 	log.Debug().Msgf("Sending handlers ready message")
-	return brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
+	return m.brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
 }
 
 func (m *listener) pendingConfig(peerPubKey PublicKey) (*p2pConnectConfig, bool) {

@@ -38,7 +38,7 @@ var (
 
 func Test_ServiceProposal_SetProviderContact(t *testing.T) {
 	proposal := ServiceProposal{ID: 123, ProviderID: "123"}
-	proposal.SetProviderContact(providerID, providerContact)
+	proposal.SetProviderContacts(providerID, ContactList{providerContact})
 
 	assert.Exactly(
 		t,

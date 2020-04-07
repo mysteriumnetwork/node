@@ -50,7 +50,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_With_PublicIP(t *testin
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
 	t.Run("Test provider listens to peer", func(t *testing.T) {
-		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, portPool)
+		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool)
 		err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
@@ -60,11 +60,11 @@ func TestDialer_Exchange_And_Communication_When_Provider_With_PublicIP(t *testin
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
-		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, portPool)
+		channelDialer := NewDialer(mockBroker, signerFactory, verifier, ipResolver, consumerPinger, portPool)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
 		require.NoError(t, err)
 
 		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
@@ -101,7 +101,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	ipResolver := ip.NewResolverMock("127.0.0.1", "1.1.1.1")
 
 	t.Run("Test provider listens to peer", func(t *testing.T) {
-		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, portPool)
+		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool)
 		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
@@ -111,11 +111,11 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
-		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, portPool)
+		channelDialer := NewDialer(mockBroker, signerFactory, verifier, ipResolver, consumerPinger, portPool)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
 		require.NoError(t, err)
 
 		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})

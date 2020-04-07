@@ -41,14 +41,13 @@ import (
 type Dialer interface {
 	// Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 	// and create p2p channel which is ready for communication.
-	Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error)
+	Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition) (Channel, error)
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
-func NewDialer(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) Dialer {
+func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) Dialer {
 	return &dialer{
 		broker:         broker,
-		brokerAddress:  address,
 		ipResolver:     ipResolver,
 		signer:         signer,
 		verifier:       verifier,
@@ -65,13 +64,12 @@ type dialer struct {
 	signer         identity.SignerFactory
 	verifier       identity.Verifier
 	ipResolver     ip.Resolver
-	brokerAddress  string
 }
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
-func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error) {
-	brokerConn, err := m.broker.Connect(m.brokerAddress)
+func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition) (Channel, error) {
+	brokerConn, err := m.broker.Connect(contactDef.BrokerAddresses...)
 	if err != nil {
 		return nil, fmt.Errorf("could not open broker conn: %w", err)
 	}

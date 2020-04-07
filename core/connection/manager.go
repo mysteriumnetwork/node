@@ -20,6 +20,7 @@ package connection
 import (
 	"context"
 	"encoding/json"
+	stdErrors "errors"
 	"fmt"
 	"sync"
 	"time"
@@ -209,7 +210,19 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	channel := m.createP2PChannel(m.ctx, consumerID, providerID, proposal)
+	var channel p2p.Channel
+	if contact, err := p2p.ParseContact(proposal.ProviderContacts); err == nil {
+		channel, err = m.createP2PChannel(m.ctx, consumerID, providerID, proposal.ServiceType, contact)
+		if err != nil {
+			return fmt.Errorf("could not create p2p channel: %w", err)
+		}
+	} else {
+		if stdErrors.Is(err, p2p.ErrContactNotFound) {
+			log.Debug().Msgf("Provider %s doesn't support p2p, will fallback to dialog", providerID.Address)
+		} else {
+			return err
+		}
+	}
 
 	var dialog communication.Dialog
 	if channel == nil {
@@ -275,7 +288,6 @@ func (m *connectionManager) checkSessionIP(dialog communication.Dialog, channel 
 		}
 
 		newPublicIP := m.getPublicIP()
-
 		// If ip is changed notify peer that connection is successful.
 		if originalPublicIP != newPublicIP {
 			m.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusConnectionOk, nil)
@@ -317,7 +329,7 @@ func (m *connectionManager) sendSessionStatus(dialog communication.Dialog, chann
 
 	log.Debug().Msgf("Sending session status P2P message to %q: %s", p2p.TopicSessionStatus, sessionStatus.String())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(m.ctx, 20*time.Second)
 	defer cancel()
 	_, err := channel.Send(ctx, p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
 	if err != nil {
@@ -394,21 +406,18 @@ func (m *connectionManager) createDialog(consumerID, providerID identity.Identit
 	return dialog, err
 }
 
-func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	channel, err := m.p2pDialer.Dial(ctx, consumerID, proposal.ServiceType, providerID)
+func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
+	channel, err := m.p2pDialer.Dial(ctx, consumerID, providerID, serviceType, contactDef)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to establish p2p channel")
-	} else {
-		m.addCleanupAfterDisconnect(func() error {
-			log.Trace().Msg("Cleaning: closing P2P communication channel")
-			defer log.Trace().Msg("Cleaning: P2P communication channel DONE")
-
-			return channel.Close()
-		})
+		return nil, err
 	}
-	return channel
+	m.addCleanupAfterDisconnect(func() error {
+		log.Trace().Msg("Cleaning: closing P2P communication channel")
+		defer log.Trace().Msg("Cleaning: P2P communication channel DONE")
+
+		return channel.Close()
+	})
+	return channel, nil
 }
 
 func (m *connectionManager) addCleanupAfterDisconnect(fn func() error) {
