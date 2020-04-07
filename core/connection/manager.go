@@ -198,8 +198,8 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	manager.setStatus(statusConnecting())
 	defer func() {
 		if err != nil {
-			manager.setStatus(statusNotConnected())
-			manager.publishStateEvent(NotConnected)
+			log.Err(err).Msg("Connect failed, disconnecting")
+			manager.disconnect()
 		}
 	}()
 
@@ -261,7 +261,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	go manager.keepAliveLoop(channel, sessionDTO.ID)
 	go manager.checkSessionIP(dialog, channel, consumerID, sessionDTO.ID, originalPublicIP)
 
-	return nil
+	return err
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
@@ -623,21 +623,24 @@ func (manager *connectionManager) Cancel() {
 }
 
 func (manager *connectionManager) Disconnect() error {
-	manager.discoLock.Lock()
-	defer manager.discoLock.Unlock()
-
 	if manager.Status().State == NotConnected {
 		return ErrNoConnection
 	}
 
 	manager.setStatus(statusDisconnecting())
+	manager.disconnect()
+
+	return nil
+}
+
+func (manager *connectionManager) disconnect() {
+	manager.discoLock.Lock()
+	defer manager.discoLock.Unlock()
+
 	manager.cleanConnection()
 	manager.setStatus(statusNotConnected())
 	manager.publishStateEvent(NotConnected)
-
 	manager.cleanAfterDisconnect()
-
-	return nil
 }
 
 func (manager *connectionManager) payForService(payments PaymentIssuer) {
