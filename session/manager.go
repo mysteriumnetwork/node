@@ -194,7 +194,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 
 	// TODO pingerParams is a backward compatibility limitation. Remove it once most of the clients will be updated.
 	if pingerParams != nil {
-		go manager.natPinger.PingConsumer(pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
+		go manager.natPinger.PingConsumer(context.Background(), pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
 	}
 	go manager.keepAliveLoop(session, manager.channel)
 	manager.sessionStorage.Add(*session)

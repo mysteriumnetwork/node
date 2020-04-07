@@ -18,6 +18,8 @@
 package connection
 
 import (
+	"context"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -31,7 +33,7 @@ type ConsumerConfig interface{}
 
 // Connection represents a connection
 type Connection interface {
-	Start(ConnectOptions) error
+	Start(context.Context, ConnectOptions) error
 	Wait() error
 	Stop()
 	GetConfig() (ConsumerConfig, error)

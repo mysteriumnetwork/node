@@ -145,7 +145,7 @@ type mockConsumerNATPinger struct {
 	conns []*net.UDPConn
 }
 
-func (m *mockConsumerNATPinger) PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (m *mockConsumerNATPinger) PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return m.conns, nil
 }
 
@@ -153,7 +153,7 @@ type mockProviderNATPinger struct {
 	conns []*net.UDPConn
 }
 
-func (m *mockProviderNATPinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (m *mockProviderNATPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return m.conns, nil
 }
 

@@ -192,7 +192,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
-	manager.ctx, manager.cancel = context.WithCancel(context.Background())
+	manager.ctx, manager.cancel = context.WithTimeout(context.Background(), 60*time.Second)
 
 	manager.publishStateEvent(Connecting)
 	manager.setStatus(statusConnecting())
@@ -205,7 +205,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	channel := manager.createP2PChannel(consumerID, providerID, proposal)
+	channel := manager.createP2PChannel(manager.ctx, consumerID, providerID, proposal)
 
 	var dialog communication.Dialog
 	if channel == nil {
@@ -224,7 +224,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	var sessionDTO session.SessionDto
 
 	if channel != nil {
-		sessionDTO, paymentInfo, err = manager.createP2PSession(connection, channel, consumerID, accountantID, proposal)
+		sessionDTO, paymentInfo, err = manager.createP2PSession(manager.ctx, connection, channel, consumerID, accountantID, proposal)
 	} else {
 		sessionDTO, paymentInfo, err = manager.createSession(connection, dialog, consumerID, accountantID, proposal)
 	}
@@ -241,7 +241,7 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 
 	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, channel)
+	err = manager.startConnection(manager.ctx, connection, consumerID, proposal, params, sessionDTO, channel)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -388,8 +388,8 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createP2PChannel(consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (manager *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	channel, err := manager.p2pDialer.Dial(ctx, consumerID, proposal.ServiceType, providerID)
 	if err != nil {
@@ -405,7 +405,7 @@ func (manager *connectionManager) createP2PChannel(consumerID, providerID identi
 	return channel
 }
 
-func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (manager *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not get session config: %w", err)
@@ -426,7 +426,7 @@ func (manager *connectionManager) createP2PSession(c Connection, p2pChannel p2p.
 		Config:     config,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionCreate, sessionRequest.String())
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	res, err := p2pChannel.Send(ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
@@ -544,6 +544,7 @@ func (manager *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
 }
 
 func (manager *connectionManager) startConnection(
+	ctx context.Context,
 	conn Connection,
 	consumerID identity.Identity,
 	proposal market.ServiceProposal,
@@ -565,7 +566,7 @@ func (manager *connectionManager) startConnection(
 		connectOptions.ChannelConn = channel.Conn()
 	}
 
-	if err = conn.Start(connectOptions); err != nil {
+	if err = conn.Start(ctx, connectOptions); err != nil {
 		return err
 	}
 
