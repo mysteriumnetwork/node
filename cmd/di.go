@@ -528,7 +528,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.AccountantPromiseSettler)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository, di.QualityClient)

@@ -100,13 +100,12 @@ func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRep
 
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	fakeManager := mockConnectionManager{}
-	statsKeeper := &StubStatisticsTracker{
-		duration: time.Minute,
-	}
+	fakeManager := &mockConnectionManager{}
+	fakeState := &mockStateProvider{}
+	fakeState.stateToReturn.MainConnection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
 
 	mockedProposalProvider := mockRepositoryWithProposal("node1", "noop")
-	AddRoutesForConnection(router, &fakeManager, statsKeeper, mockedProposalProvider, mockIdentityRegistryInstance)
+	AddRoutesForConnection(router, fakeManager, fakeState, mockedProposalProvider, mockIdentityRegistryInstance)
 
 	tests := []struct {
 		method         string
@@ -130,9 +129,9 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 		{
 			http.MethodGet, "/connection/statistics", "",
 			http.StatusOK, `{
-				"bytes_sent": 0,
-				"bytes_received": 0,
-				"duration": 60,
+				"bytes_sent": 1,
+				"bytes_received": 2,
+				"duration": 0,
 				"tokens_spent": 0
 			}`,
 		},
@@ -410,36 +409,12 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	statsKeeper := &StubStatisticsTracker{
-		duration: time.Minute,
-		stats:    connection.Statistics{BytesSent: 1, BytesReceived: 2},
-		invoice:  crypto.Invoice{AgreementTotal: 10001},
-	}
+	fakeState := &mockStateProvider{}
+	fakeState.stateToReturn.MainConnection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.MainConnection.Invoice = crypto.Invoice{AgreementTotal: 10001}
 
 	manager := mockConnectionManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, statsKeeper, &mockProposalRepository{}, mockIdentityRegistryInstance)
-
-	resp := httptest.NewRecorder()
-	connEndpoint.GetStatistics(resp, nil, nil)
-	assert.JSONEq(
-		t,
-		`{
-			"bytes_sent": 1,
-			"bytes_received": 2,
-			"duration": 60,
-			"tokens_spent": 10001
-		}`,
-		resp.Body.String(),
-	)
-}
-
-func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
-	statsKeeper := &StubStatisticsTracker{
-		stats: connection.Statistics{BytesSent: 1, BytesReceived: 2},
-	}
-
-	manager := mockConnectionManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, statsKeeper, &mockProposalRepository{}, mockIdentityRegistryInstance)
+	connEndpoint := NewConnectionEndpoint(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance)
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -449,7 +424,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 			"bytes_sent": 1,
 			"bytes_received": 2,
 			"duration": 0,
-			"tokens_spent": 0
+			"tokens_spent": 10001
 		}`,
 		resp.Body.String(),
 	)

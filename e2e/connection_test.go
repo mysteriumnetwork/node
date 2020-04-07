@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
@@ -284,13 +285,13 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 }
 
 func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string) func() bool {
-	var delegate func(stats client.StatisticsDTO) bool
+	var delegate func(stats contract.ConnectionStatisticsDTO) bool
 	if serviceType != "noop" {
-		delegate = func(stats client.StatisticsDTO) bool {
+		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
 			return stats.BytesReceived > 0 && stats.BytesSent > 0 && stats.Duration > 30
 		}
 	} else {
-		delegate = func(stats client.StatisticsDTO) bool {
+		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
 			return stats.Duration > 30
 		}
 	}

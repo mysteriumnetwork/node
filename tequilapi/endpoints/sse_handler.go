@@ -218,18 +218,9 @@ type consumerStateRes struct {
 }
 
 type consumerConnectionRes struct {
-	State      connection.State              `json:"state"`
-	Statistics *consumerConnectionStatistics `json:"statistics,omitempty"`
-	Proposal   *proposalDTO                  `json:"proposal,omitempty"`
-}
-
-// consumerConnectionStatistics represents current connection statistics.
-type consumerConnectionStatistics struct {
-	Duration      int    `json:"duration"`
-	BytesSent     uint64 `json:"bytes_sent"`
-	BytesReceived uint64 `json:"bytes_received"`
-	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
+	State      connection.State                  `json:"state"`
+	Statistics *contract.ConnectionStatisticsDTO `json:"statistics,omitempty"`
+	Proposal   *proposalDTO                      `json:"proposal,omitempty"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -249,12 +240,8 @@ func mapState(event stateEvent.State) stateRes {
 		State: event.MainConnection.Session.State,
 	}
 	if !event.MainConnection.Statistics.At.IsZero() {
-		connectionRes.Statistics = &consumerConnectionStatistics{
-			Duration:      int(event.MainConnection.Session.Duration().Seconds()),
-			BytesSent:     event.MainConnection.Statistics.BytesSent,
-			BytesReceived: event.MainConnection.Statistics.BytesReceived,
-			TokensSpent:   event.MainConnection.Invoice.AgreementTotal,
-		}
+		statsRes := contract.NewConnectionStatisticsDTO(event.MainConnection.Session, event.MainConnection.Statistics, event.MainConnection.Invoice)
+		connectionRes.Statistics = &statsRes
 	}
 	// If none exists, conn manager still has empty proposal
 	if event.MainConnection.Session.Proposal.ProviderID != "" {
