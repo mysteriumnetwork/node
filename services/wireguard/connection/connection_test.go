@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -36,7 +37,7 @@ func TestConnectionStartStop(t *testing.T) {
 
 	// Start connection.
 	sessionConfig, _ := json.Marshal(newServiceConfig())
-	err := conn.Start(connection.ConnectOptions{
+	err := conn.Start(context.Background(), connection.ConnectOptions{
 		DNS:           "1.2.3.4",
 		SessionConfig: sessionConfig,
 	})
@@ -63,7 +64,7 @@ func TestConnectionStopAfterHandshakeError(t *testing.T) {
 	conn.handshakeWaiter = &mockHandshakeWaiter{err: handshakeTimeoutErr}
 	sessionConfig, _ := json.Marshal(newServiceConfig())
 
-	err := conn.Start(connection.ConnectOptions{SessionConfig: sessionConfig})
+	err := conn.Start(context.Background(), connection.ConnectOptions{SessionConfig: sessionConfig})
 	assert.Error(t, handshakeTimeoutErr, err)
 	assert.Equal(t, connection.Connecting, <-conn.State())
 	assert.Equal(t, connection.Disconnecting, <-conn.State())
@@ -76,7 +77,7 @@ func TestConnectionStopOnceAfterHandshakeErrorAndStopCall(t *testing.T) {
 	conn.handshakeWaiter = &mockHandshakeWaiter{err: handshakeTimeoutErr}
 	sessionConfig, _ := json.Marshal(newServiceConfig())
 
-	err := conn.Start(connection.ConnectOptions{SessionConfig: sessionConfig})
+	err := conn.Start(context.Background(), connection.ConnectOptions{SessionConfig: sessionConfig})
 
 	stopCh := make(chan struct{})
 	go func() {

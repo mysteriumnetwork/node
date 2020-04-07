@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -112,7 +113,7 @@ func (c *wireguardConnection) Statistics() (connection.Statistics, error) {
 	}, nil
 }
 
-func (c *wireguardConnection) Start(options connection.ConnectOptions) (err error) {
+func (c *wireguardConnection) Start(ctx context.Context, options connection.ConnectOptions) (err error) {
 	var config wireguard.ServiceConfig
 	err = json.Unmarshal(options.SessionConfig, &config)
 	if err != nil {
@@ -133,7 +134,7 @@ func (c *wireguardConnection) Start(options connection.ConnectOptions) (err erro
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
 	} else if len(config.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we migrate to the p2p communication.
 		ip := config.Provider.Endpoint.IP.String()
-		lPort, rPort, err := c.natPinger.PingProvider(ip, c.ports, config.Ports, 0)
+		lPort, rPort, err := c.natPinger.PingProvider(ctx, ip, c.ports, config.Ports, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}

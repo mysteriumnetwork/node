@@ -18,6 +18,7 @@
 package openvpn
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 	"time"
@@ -116,7 +117,7 @@ func (c *Client) Statistics() (connection.Statistics, error) {
 }
 
 // Start starts the connection
-func (c *Client) Start(options connection.ConnectOptions) error {
+func (c *Client) Start(ctx context.Context, options connection.ConnectOptions) error {
 	log.Info().Msg("Starting connection")
 
 	sessionConfig := VPNConfig{}
@@ -133,7 +134,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	// TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
 	if len(sessionConfig.Ports) > 0 {
 		ip := sessionConfig.RemoteIP
-		lPort, rPort, err := c.natPinger.PingProvider(ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
+		lPort, rPort, err := c.natPinger.PingProvider(ctx, ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
 		if err != nil {
 			c.removeAllowedIPRule()
 			return errors.Wrap(err, "could not ping provider")

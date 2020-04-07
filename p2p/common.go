@@ -18,6 +18,7 @@
 package p2p
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -42,11 +43,11 @@ type brokerConnector interface {
 }
 
 type natConsumerPinger interface {
-	PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 }
 
 type natProviderPinger interface {
-	PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 }
 
 func configExchangeSubject(providerID identity.Identity, serviceType string) string {

@@ -18,6 +18,7 @@
 package p2p
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -140,7 +141,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			}
 		} else {
 			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v", config.pingIP(), config.localPorts, config.peerPorts)
-			conns, err := m.providerPinger.PingConsumerPeer(config.pingIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
+			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), config.pingIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return

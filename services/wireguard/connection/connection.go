@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"sync"
@@ -100,7 +101,7 @@ func (c *Connection) Statistics() (connection.Statistics, error) {
 }
 
 // Start establish wireguard connection to the service provider.
-func (c *Connection) Start(options connection.ConnectOptions) (err error) {
+func (c *Connection) Start(ctx context.Context, options connection.ConnectOptions) (err error) {
 	var config wg.ServiceConfig
 	if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
 		return errors.Wrap(err, "failed to unmarshal connection config")
@@ -126,7 +127,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
 	} else if len(config.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we migrate to the p2p communication.
 		ip := config.Provider.Endpoint.IP.String()
-		lPort, rPort, err := c.natPinger.PingProvider(ip, c.ports, config.Ports, 0)
+		lPort, rPort, err := c.natPinger.PingProvider(ctx, ip, c.ports, config.Ports, 0)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}
