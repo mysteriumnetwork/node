@@ -86,10 +86,10 @@ func Test_isServiceFree(t *testing.T) {
 	}
 }
 
-func Test_calculatePaymentAmount(t *testing.T) {
+func Test_CalculatePaymentAmount(t *testing.T) {
 	type args struct {
 		timePassed       time.Duration
-		bytesTransferred dataTransferred
+		bytesTransferred DataTransferred
 		method           market.PaymentMethod
 	}
 	tests := []struct {
@@ -101,8 +101,8 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "returns zero on free service",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransferred: dataTransferred{
-					up: 100, down: 100,
+				bytesTransferred: DataTransferred{
+					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
 					price: money.NewMoney(0, money.CurrencyMyst),
@@ -115,8 +115,8 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates time only",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransferred: dataTransferred{
-					up: 100, down: 100,
+				bytesTransferred: DataTransferred{
+					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
 					price: money.NewMoney(50000, money.CurrencyMyst),
@@ -129,8 +129,8 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates time only with seconds",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransferred: dataTransferred{
-					up: 100, down: 100,
+				bytesTransferred: DataTransferred{
+					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
 					price: money.NewMoney(50000, money.CurrencyMyst),
@@ -143,8 +143,8 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates bytes only",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransferred: dataTransferred{
-					up: 1000000000 / 2, down: 1000000000 / 2,
+				bytesTransferred: DataTransferred{
+					Up: 1000000000 / 2, Down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
 					price: money.NewMoney(7000000, money.CurrencyMyst),
@@ -157,8 +157,8 @@ func Test_calculatePaymentAmount(t *testing.T) {
 			name: "calculates both",
 			args: args{
 				timePassed: time.Hour,
-				bytesTransferred: dataTransferred{
-					up: 1000000000 / 2, down: 1000000000 / 2,
+				bytesTransferred: DataTransferred{
+					Up: 1000000000 / 2, Down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
 					price: money.NewMoney(50000, money.CurrencyMyst),
@@ -172,8 +172,8 @@ func Test_calculatePaymentAmount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := calculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, tt.args.method); got != tt.want {
-				t.Errorf("calculatePaymentAmount() = %v, want %v", got, tt.want)
+			if got := CalculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, tt.args.method); got != tt.want {
+				t.Errorf("CalculatePaymentAmount() = %v, want %v", got, tt.want)
 			}
 		})
 	}

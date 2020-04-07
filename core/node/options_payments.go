@@ -31,4 +31,5 @@ type OptionsPayments struct {
 	ConsumerUpperMinutePriceBound      uint64
 	ConsumerLowerMinutePriceBound      uint64
 	ConsumerDataLeewayMegabytes        uint64
+	ProviderInvoiceFrequency           time.Duration
 }

@@ -126,7 +126,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	checkTxStatus(client, tx)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Approve(transactor, registryAddress, big.NewInt(10000000000))
+	tx, err = ts.Approve(transactor, registryAddress, big.NewInt(100000000000))
 	checkError("allow myst", err)
 	checkTxStatus(client, tx)
 
@@ -137,7 +137,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	tx, err = rt.RegisterAccountant(
 		transactor,
 		transactor.From,
-		big.NewInt(1000000),
+		big.NewInt(100000000000),
 		400,
 		big.NewInt(125000000000),
 	)
@@ -153,6 +153,11 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	}, transactor.From)
 	checkError("get accountant address", err)
 	fmt.Println("registered accountant", accs.Hex())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	tx, err = ts.Mint(transactor, accs, big.NewInt(125000000000000000))
+	checkError("mint myst for accountant", err)
+	checkTxStatus(client, tx)
 }
 
 func checkError(context string, err error) {

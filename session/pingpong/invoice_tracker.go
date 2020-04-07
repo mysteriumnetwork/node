@@ -103,12 +103,13 @@ type sentInvoice struct {
 	r       []byte
 }
 
-type dataTransferred struct {
-	up, down uint64
+// DataTransferred represents the data transfered in a session.
+type DataTransferred struct {
+	Up, Down uint64
 }
 
-func (dt dataTransferred) sum() uint64 {
-	return dt.up + dt.down
+func (dt DataTransferred) sum() uint64 {
+	return dt.Up + dt.Down
 }
 
 // InvoiceTracker keeps tab of invoices and sends them to the consumer.
@@ -132,7 +133,7 @@ type InvoiceTracker struct {
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
 
-	dataTransferred     dataTransferred
+	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
 }
 
@@ -496,7 +497,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 		return ErrExchangeWaitTimeout
 	}
 
-	shouldBe := calculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
+	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 
 	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
 	// This is due to the fact that both payment providers start at different times.
@@ -710,23 +711,23 @@ func (it *InvoiceTracker) updateDataTransfer(up, down uint64) {
 	it.dataTransferredLock.Lock()
 	defer it.dataTransferredLock.Unlock()
 
-	newUp := it.dataTransferred.up
-	if up > it.dataTransferred.up {
+	newUp := it.dataTransferred.Up
+	if up > it.dataTransferred.Up {
 		newUp = up
 	}
 
-	newDown := it.dataTransferred.down
-	if down > it.dataTransferred.down {
+	newDown := it.dataTransferred.Down
+	if down > it.dataTransferred.Down {
 		newDown = down
 	}
 
-	it.dataTransferred = dataTransferred{
-		up:   newUp,
-		down: newDown,
+	it.dataTransferred = DataTransferred{
+		Up:   newUp,
+		Down: newDown,
 	}
 }
 
-func (it *InvoiceTracker) getDataTransferred() dataTransferred {
+func (it *InvoiceTracker) getDataTransferred() DataTransferred {
 	it.dataTransferredLock.Lock()
 	defer it.dataTransferredLock.Unlock()
 
