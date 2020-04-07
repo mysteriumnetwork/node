@@ -218,9 +218,18 @@ type consumerStateRes struct {
 }
 
 type consumerConnectionRes struct {
-	State      connection.State                         `json:"state"`
-	Statistics *stateEvent.ConsumerConnectionStatistics `json:"statistics,omitempty"`
-	Proposal   *proposalDTO                             `json:"proposal,omitempty"`
+	State      connection.State              `json:"state"`
+	Statistics *consumerConnectionStatistics `json:"statistics,omitempty"`
+	Proposal   *proposalDTO                  `json:"proposal,omitempty"`
+}
+
+// consumerConnectionStatistics represents current connection statistics.
+type consumerConnectionStatistics struct {
+	Duration      int    `json:"duration"`
+	BytesSent     uint64 `json:"bytes_sent"`
+	BytesReceived uint64 `json:"bytes_received"`
+	// example: 500000
+	TokensSpent uint64 `json:"tokens_spent"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -235,20 +244,31 @@ func mapState(event stateEvent.State) stateRes {
 			EarningsTotal:      identity.EarningsTotal,
 		}
 	}
+
+	connectionRes := consumerConnectionRes{
+		State: event.MainConnection.Session.State,
+	}
+	if !event.MainConnection.Statistics.At.IsZero() {
+		connectionRes.Statistics = &consumerConnectionStatistics{
+			Duration:      int(event.MainConnection.Session.Duration().Seconds()),
+			BytesSent:     event.MainConnection.Statistics.BytesSent,
+			BytesReceived: event.MainConnection.Statistics.BytesReceived,
+			TokensSpent:   event.MainConnection.Invoice.AgreementTotal,
+		}
+	}
+	// If none exists, conn manager still has empty proposal
+	if event.MainConnection.Session.Proposal.ProviderID != "" {
+		connectionRes.Proposal = proposalToRes(event.MainConnection.Session.Proposal)
+	}
+
 	res := stateRes{
 		NATStatus: event.NATStatus,
 		Services:  event.Services,
 		Sessions:  event.Sessions,
 		Consumer: consumerStateRes{
-			Connection: consumerConnectionRes{
-				State:      event.Consumer.Connection.State,
-				Statistics: event.Consumer.Connection.Statistics,
-			},
+			Connection: connectionRes,
 		},
 		Identities: identitiesRes,
-	}
-	if event.Consumer.Connection.Proposal != nil && event.Consumer.Connection.Proposal.IsSupported() { // If none exists, conn manager still has empty proposal
-		res.Consumer.Connection.Proposal = proposalToRes(*event.Consumer.Connection.Proposal)
 	}
 	return res
 }

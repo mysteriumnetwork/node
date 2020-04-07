@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // AppTopicState is the topic that we use to announce state changes to via the event bus
@@ -31,11 +32,11 @@ const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
-	NATStatus  NATStatus        `json:"nat_status"`
-	Services   []ServiceInfo    `json:"service_info"`
-	Sessions   []ServiceSession `json:"sessions"`
-	Consumer   ConsumerState    `json:"consumer"`
-	Identities []Identity       `json:"identities"`
+	NATStatus      NATStatus
+	Services       []ServiceInfo
+	Sessions       []ServiceSession
+	MainConnection Connection
+	Identities     []Identity
 }
 
 // Identity represents identity and its status.
@@ -48,25 +49,11 @@ type Identity struct {
 	EarningsTotal      uint64
 }
 
-// ConsumerState represents consumer state.
-type ConsumerState struct {
-	Connection ConsumerConnection `json:"connection"`
-}
-
-// ConsumerConnection represents connection state.
-type ConsumerConnection struct {
-	State      connection.State              `json:"state"`
-	Statistics *ConsumerConnectionStatistics `json:"statistics,omitempty"`
-	Proposal   *market.ServiceProposal       `json:"proposal,omitempty"`
-}
-
-// ConsumerConnectionStatistics represents current connection statistics.
-type ConsumerConnectionStatistics struct {
-	Duration      int    `json:"duration"`
-	BytesSent     uint64 `json:"bytes_sent"`
-	BytesReceived uint64 `json:"bytes_received"`
-	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
+// Connection represents consumer connection state.
+type Connection struct {
+	Session    connection.Status
+	Statistics connection.Statistics
+	Invoice    crypto.Invoice
 }
 
 // NATStatus stores the nat status related information

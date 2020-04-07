@@ -35,7 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -45,12 +44,6 @@ const DefaultDebounceDuration = time.Millisecond * 200
 type natStatusProvider interface {
 	Status() nat.Status
 	ConsumeNATEvent(event natEvent.Event)
-}
-
-type connectionSessionProvider interface {
-	GetDataStats() connection.Statistics
-	GetDuration() time.Duration
-	GetInvoice() crypto.Invoice
 }
 
 type publisher interface {
@@ -106,7 +99,6 @@ type KeeperDeps struct {
 	Publisher                 publisher
 	ServiceLister             serviceLister
 	ServiceSessionStorage     serviceSessionStorage
-	ConnectionSessionProvider connectionSessionProvider
 	IdentityProvider          identityProvider
 	IdentityRegistry          registry.IdentityRegistry
 	IdentityChannelCalculator channelAddressCalculator
@@ -121,8 +113,8 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 			NATStatus: stateEvent.NATStatus{
 				Status: "not_finished",
 			},
-			Consumer: stateEvent.ConsumerState{
-				Connection: stateEvent.ConsumerConnection{
+			MainConnection: stateEvent.Connection{
+				Session: connection.Status{
 					State: connection.NotConnected,
 				},
 			},
@@ -138,8 +130,8 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k.consumeServiceSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
 
 	// consumer
-	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionState, debounceDuration)
-	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionState, debounceDuration)
+	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
+	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionSpending, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 
 	return k
@@ -353,41 +345,37 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return
 	}
-	if k.state.Consumer.Connection.State == evt.State {
+
+	if evt.State == connection.NotConnected {
+		k.state.MainConnection = stateEvent.Connection{}
+	}
+	k.state.MainConnection.Session = evt.SessionInfo
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) updateConnectionStats(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(connection.AppEventConnectionStatistics)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return
 	}
-	if evt.State == connection.NotConnected {
-		k.state.Consumer.Connection = stateEvent.ConsumerConnection{}
-	}
-	k.state.Consumer.Connection.State = evt.State
-	k.state.Consumer.Connection.Proposal = &evt.SessionInfo.Proposal
+
+	k.state.MainConnection.Statistics = evt.Stats
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) updateConnectionState(_ interface{}) {
+func (k *Keeper) updateConnectionSpending(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-
-	dataStats := k.deps.ConnectionSessionProvider.GetDataStats()
-	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
-		Duration:      int(k.deps.ConnectionSessionProvider.GetDuration().Seconds()),
-		BytesSent:     dataStats.BytesSent,
-		BytesReceived: dataStats.BytesReceived,
-		TokensSpent:   k.deps.ConnectionSessionProvider.GetInvoice().AgreementTotal,
+	evt, ok := e.(pingpong.AppEventInvoicePaid)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		return
 	}
-	go k.announceStateChanges(nil)
-}
 
-func (k *Keeper) updateConnectionTokens(e interface{}) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-
-	dataStats := k.deps.ConnectionSessionProvider.GetDataStats()
-	k.state.Consumer.Connection.Statistics = &stateEvent.ConsumerConnectionStatistics{
-		Duration:      int(k.deps.ConnectionSessionProvider.GetDuration().Seconds()),
-		BytesSent:     dataStats.BytesSent,
-		BytesReceived: dataStats.BytesReceived,
-	}
+	k.state.MainConnection.Invoice = evt.Invoice
 	go k.announceStateChanges(nil)
 }
 

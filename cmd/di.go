@@ -282,7 +282,6 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		ServiceSessionStorage:     di.ServiceSessionStorage,
-		ConnectionSessionProvider: di.StatisticsTracker,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,

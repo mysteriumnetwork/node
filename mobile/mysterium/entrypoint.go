@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -60,7 +59,6 @@ type MobileNode struct {
 	ipResolver                   ip.Resolver
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
-	statisticsTracker            *statistics.SessionStatisticsTracker
 	proposalsManager             *proposalsManager
 	accountant                   identity.Identity
 	feedbackReporter             *feedback.Reporter
@@ -217,7 +215,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
-		statisticsTracker:            di.StatisticsTracker,
 		accountant:                   identity.FromAddress(nodeOptions.Accountant.AccountantID),
 		feedbackReporter:             di.Reporter,
 		transactor:                   di.Transactor,
@@ -338,8 +335,7 @@ type StatisticsChangeCallback interface {
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
-		duration := mb.statisticsTracker.GetDuration()
-		cb.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
+		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
 	})
 }
 
