@@ -142,10 +142,12 @@ type connectionManager struct {
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
+	ctxLock                sync.Mutex
 	status                 Status
 	statusLock             sync.RWMutex
 	sessionInfo            SessionInfo
 	sessionInfoMu          sync.Mutex
+	cleanupLock            sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
 	cancel                 func()
@@ -192,7 +194,9 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		return err
 	}
 
+	manager.ctxLock.Lock()
 	manager.ctx, manager.cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	manager.ctxLock.Unlock()
 
 	manager.publishStateEvent(Connecting)
 	manager.setStatus(statusConnecting())
@@ -246,11 +250,9 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-		manager.discoLock.Lock()
-		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+		manager.addCleanupAfterDisconnect(func() error {
 			return manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
 		})
-		manager.discoLock.Unlock()
 		manager.publishStateEvent(StateConnectionFailed)
 
 		log.Info().Err(err).Msg("Cancelling connection initiation: ")
@@ -339,7 +341,7 @@ func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo
 	if err != nil {
 		return err
 	}
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: payments")
 		defer log.Trace().Msg("Cleaning: payments DONE")
 		payments.Stop()
@@ -351,7 +353,9 @@ func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo
 }
 
 func (manager *connectionManager) cleanConnection() {
-	manager.cancel()
+	manager.cleanupLock.Lock()
+	defer manager.cleanupLock.Unlock()
+
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
 		log.Trace().Msgf("Connection cleaning up: (%v/%v)", i+1, len(manager.cleanup))
 		err := manager.cleanup[i]()
@@ -363,7 +367,9 @@ func (manager *connectionManager) cleanConnection() {
 }
 
 func (manager *connectionManager) cleanAfterDisconnect() {
-	manager.cancel()
+	manager.cleanupLock.Lock()
+	defer manager.cleanupLock.Unlock()
+
 	for i := len(manager.cleanupAfterDisconnect) - 1; i >= 0; i-- {
 		log.Trace().Msgf("Connection cleaning up (after disconnect): (%v/%v)", i+1, len(manager.cleanupAfterDisconnect))
 		err := manager.cleanupAfterDisconnect[i]()
@@ -380,7 +386,7 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 		return nil, err
 	}
 
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	manager.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: closing dialog")
 		defer log.Trace().Msg("Cleaning: closing dialog DONE")
 		return dialog.Close()
@@ -395,7 +401,7 @@ func (manager *connectionManager) createP2PChannel(ctx context.Context, consumer
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to establish p2p channel")
 	} else {
-		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+		manager.addCleanupAfterDisconnect(func() error {
 			log.Trace().Msg("Cleaning: closing P2P communication channel")
 			defer log.Trace().Msg("Cleaning: P2P communication channel DONE")
 
@@ -403,6 +409,18 @@ func (manager *connectionManager) createP2PChannel(ctx context.Context, consumer
 		})
 	}
 	return channel
+}
+
+func (manager *connectionManager) addCleanupAfterDisconnect(fn func() error) {
+	manager.cleanupLock.Lock()
+	defer manager.cleanupLock.Unlock()
+	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, fn)
+}
+
+func (manager *connectionManager) addCleanup(fn func() error) {
+	manager.cleanupLock.Lock()
+	defer manager.cleanupLock.Unlock()
+	manager.cleanup = append(manager.cleanup, fn)
 }
 
 func (manager *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
@@ -440,7 +458,7 @@ func (manager *connectionManager) createP2PSession(ctx context.Context, c Connec
 	}
 
 	sessionID := session.ID(sessionResponce.GetID())
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	manager.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 
@@ -502,7 +520,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	manager.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 		return session.RequestSessionDestroy(dialog, s.ID)
@@ -531,7 +549,7 @@ func (manager *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
 		SessionInfo: manager.getCurrentSession(),
 	})
 
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
 		manager.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
@@ -573,13 +591,13 @@ func (manager *connectionManager) startConnection(
 	statsPublisher := newStatsPublisher(manager.eventPublisher, manager.statsReportInterval)
 	go statsPublisher.start(manager.getCurrentSession(), conn)
 
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
 		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
 		statsPublisher.stop()
 		return nil
 	})
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping connection")
 		defer log.Trace().Msg("Cleaning: stopping connection DONE")
 		conn.Stop()
@@ -637,9 +655,15 @@ func (manager *connectionManager) disconnect() {
 	manager.discoLock.Lock()
 	defer manager.discoLock.Unlock()
 
+	manager.ctxLock.Lock()
+	manager.cancel()
+	manager.ctxLock.Unlock()
+
 	manager.cleanConnection()
+
 	manager.setStatus(statusNotConnected())
 	manager.publishStateEvent(NotConnected)
+
 	manager.cleanAfterDisconnect()
 }
 
@@ -725,7 +749,7 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 	if err != nil {
 		return err
 	}
-	manager.cleanup = append(manager.cleanup, func() error {
+	manager.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: traffic block rule")
 		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
 		removeRule()
