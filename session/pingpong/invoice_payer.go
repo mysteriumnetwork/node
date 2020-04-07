@@ -18,14 +18,11 @@
 package pingpong
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/cenkalti/backoff/v4"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
@@ -61,8 +58,6 @@ type consumerInvoiceStorage interface {
 	Get(consumerIdentity, providerIdentity identity.Identity) (crypto.Invoice, error)
 	Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error
 }
-
-type getConsumerInfo func(id string) (ConsumerData, error)
 
 type consumerTotalsStorage interface {
 	Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error
@@ -104,7 +99,6 @@ type InvoicePayerDeps struct {
 	ChannelAddressCalculator  channelAddressCalculator
 	EventBus                  eventbus.EventBus
 	AccountantAddress         identity.Identity
-	ConsumerInfoGetter        getConsumerInfo
 	DataLeeway                datasize.BitSize
 }
 
@@ -128,10 +122,6 @@ func (ip *InvoicePayer) Start() error {
 		return errors.Wrap(err, "could not generate channel address")
 	}
 	ip.channelAddress = identity.FromAddress(addr.Hex())
-
-	if err = ip.recoverGrandTotalPromised(); err != nil {
-		return fmt.Errorf("could not get balance from accountant: %w", err)
-	}
 
 	ip.deps.TimeTracker.StartTracking()
 
@@ -159,51 +149,6 @@ func (ip *InvoicePayer) Start() error {
 			ip.lastInvoice = invoice
 		}
 	}
-}
-
-func (ip *InvoicePayer) recoverGrandTotalPromised() error {
-	var boff backoff.BackOff
-	eback := backoff.NewExponentialBackOff()
-	eback.MaxElapsedTime = time.Second * 20
-	eback.InitialInterval = time.Second * 2
-
-	boff = backoff.WithMaxRetries(eback, 10)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		select {
-		case <-ip.stop:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-
-	var data ConsumerData
-	boff = backoff.WithContext(boff, ctx)
-	toRetry := func() error {
-		d, err := ip.deps.ConsumerInfoGetter(ip.deps.Identity.Address)
-		if err != nil {
-			if err != ErrAccountantNotFound {
-				return err
-			}
-			log.Debug().Msgf("No previous invoice grand total, assuming zero")
-			return nil
-		}
-		data = d
-		return nil
-	}
-
-	if err := backoff.Retry(toRetry, boff); err != nil {
-		return err
-	}
-
-	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
-	return ip.deps.ConsumerTotalsStorage.Store(
-		ip.deps.Identity,
-		ip.deps.AccountantAddress,
-		data.LatestPromise.Amount,
-	)
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {

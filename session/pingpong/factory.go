@@ -186,7 +186,6 @@ func ExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string,
 	eventBus eventbus.EventBus,
-	getConsumerInfo getConsumerInfo,
 	dataLeewayMegabytes uint64) func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog, channel p2p.Channel,
 	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
@@ -217,7 +216,6 @@ func ExchangeFactoryFunc(
 			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
 			EventBus:                  eventBus,
 			AccountantAddress:         accountant,
-			ConsumerInfoGetter:        getConsumerInfo,
 			SessionID:                 sessionID,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
 		}

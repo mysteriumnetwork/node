@@ -489,10 +489,11 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		identity.FromAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
+		di.AccountantCaller,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -510,7 +511,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			nodeOptions.Transactor.ChannelImplementation,
 			nodeOptions.Transactor.RegistryAddress,
 			di.EventBus,
-			di.AccountantCaller.GetConsumerData,
 			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
 		),
 		di.ConnectionRegistry.CreateConnection,
