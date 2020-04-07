@@ -142,10 +142,12 @@ type connectionManager struct {
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
+	ctxLock                sync.Mutex
 	status                 Status
 	statusLock             sync.RWMutex
 	sessionInfo            SessionInfo
 	sessionInfoMu          sync.Mutex
+	cleanupLock            sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
 	cancel                 func()
@@ -182,40 +184,42 @@ func NewManager(
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
-	if manager.Status().State != NotConnected {
+func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
+	if m.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
 
-	err = manager.validator.Validate(consumerID, proposal)
+	err = m.validator.Validate(consumerID, proposal)
 	if err != nil {
 		return err
 	}
 
-	manager.ctx, manager.cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	m.ctxLock.Lock()
+	m.ctx, m.cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	m.ctxLock.Unlock()
 
-	manager.publishStateEvent(Connecting)
-	manager.setStatus(statusConnecting())
+	m.publishStateEvent(Connecting)
+	m.setStatus(statusConnecting())
 	defer func() {
 		if err != nil {
-			manager.setStatus(statusNotConnected())
-			manager.publishStateEvent(NotConnected)
+			log.Err(err).Msg("Connect failed, disconnecting")
+			m.disconnect()
 		}
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	channel := manager.createP2PChannel(manager.ctx, consumerID, providerID, proposal)
+	channel := m.createP2PChannel(m.ctx, consumerID, providerID, proposal)
 
 	var dialog communication.Dialog
 	if channel == nil {
-		dialog, err = manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
+		dialog, err = m.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 		if err != nil {
 			return err
 		}
 	}
 
-	connection, err := manager.newConnection(proposal.ServiceType)
+	connection, err := m.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
 	}
@@ -224,82 +228,80 @@ func (manager *connectionManager) Connect(consumerID, accountantID identity.Iden
 	var sessionDTO session.SessionDto
 
 	if channel != nil {
-		sessionDTO, paymentInfo, err = manager.createP2PSession(manager.ctx, connection, channel, consumerID, accountantID, proposal)
+		sessionDTO, paymentInfo, err = m.createP2PSession(m.ctx, connection, channel, consumerID, accountantID, proposal)
 	} else {
-		sessionDTO, paymentInfo, err = manager.createSession(connection, dialog, consumerID, accountantID, proposal)
+		sessionDTO, paymentInfo, err = m.createSession(connection, dialog, consumerID, accountantID, proposal)
 	}
 	if err != nil {
-		manager.sendSessionStatus(dialog, channel, consumerID, "", connectivity.StatusSessionEstablishmentFailed, err)
+		m.sendSessionStatus(dialog, channel, consumerID, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
-	err = manager.launchPayments(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
+	err = m.launchPayments(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, sessionDTO.ID)
 	if err != nil {
-		manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
+		m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
 	}
 
-	originalPublicIP := manager.getPublicIP()
+	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
-	err = manager.startConnection(manager.ctx, connection, consumerID, proposal, params, sessionDTO, channel)
+	err = m.startConnection(m.ctx, connection, consumerID, proposal, params, sessionDTO, channel)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-		manager.discoLock.Lock()
-		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
-			return manager.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+		m.addCleanupAfterDisconnect(func() error {
+			return m.sendSessionStatus(dialog, channel, consumerID, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
 		})
-		manager.discoLock.Unlock()
-		manager.publishStateEvent(StateConnectionFailed)
+		m.publishStateEvent(StateConnectionFailed)
 
 		log.Info().Err(err).Msg("Cancelling connection initiation: ")
-		manager.Cancel()
+		m.Cancel()
 		return err
 	}
 
-	go manager.keepAliveLoop(channel, sessionDTO.ID)
-	go manager.checkSessionIP(dialog, channel, consumerID, sessionDTO.ID, originalPublicIP)
+	go m.keepAliveLoop(channel, sessionDTO.ID)
+	go m.checkSessionIP(dialog, channel, consumerID, sessionDTO.ID, originalPublicIP)
 
-	return nil
+	return err
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
-func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
-	for i := 1; i <= manager.config.IPCheck.MaxAttempts; i++ {
+func (m *connectionManager) checkSessionIP(dialog communication.Dialog, channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
+	for i := 1; i <= m.config.IPCheck.MaxAttempts; i++ {
 		// Skip check if not connected. This may happen when context was canceled via Disconnect.
-		if manager.Status().State != Connected {
+		if m.Status().State != Connected {
 			return
 		}
 
-		newPublicIP := manager.getPublicIP()
+		newPublicIP := m.getPublicIP()
 
 		// If ip is changed notify peer that connection is successful.
 		if originalPublicIP != newPublicIP {
-			manager.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusConnectionOk, nil)
+			m.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusConnectionOk, nil)
 			return
 		}
 
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
-		if i == manager.config.IPCheck.MaxAttempts {
-			manager.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
-			manager.publishStateEvent(StateIPNotChanged)
+		if i == m.config.IPCheck.MaxAttempts {
+			m.sendSessionStatus(dialog, channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
+			m.publishStateEvent(StateIPNotChanged)
 			return
 		}
 
-		time.Sleep(manager.config.IPCheck.SleepDurationAfterCheck)
+		time.Sleep(m.config.IPCheck.SleepDurationAfterCheck)
 	}
 }
 
 // sendSessionStatus sends session connectivity status to other peer.
-func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, channel p2p.ChannelSender, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
+func (m *connectionManager) sendSessionStatus(dialog communication.Dialog, channel p2p.ChannelSender, consumerID identity.Identity, sessionID session.ID, code connectivity.StatusCode, errDetails error) error {
 	var errDetailsMsg string
 	if errDetails != nil {
 		errDetailsMsg = errDetails.Error()
 	}
 
 	if channel == nil {
-		return manager.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
+		return m.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
 			SessionID:  string(sessionID),
 			StatusCode: code,
 			Message:    errDetailsMsg,
@@ -325,8 +327,8 @@ func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog,
 	return nil
 }
 
-func (manager *connectionManager) getPublicIP() string {
-	currentPublicIP, err := manager.ipResolver.GetPublicIP()
+func (m *connectionManager) getPublicIP() string {
+	currentPublicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get current public IP")
 		return ""
@@ -334,53 +336,57 @@ func (manager *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel p2p.Channel, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
-	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, string(sessionID))
+func (m *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel p2p.Channel, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+	payments, err := m.paymentEngineFactory(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
 	}
-	manager.cleanup = append(manager.cleanup, func() error {
+	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: payments")
 		defer log.Trace().Msg("Cleaning: payments DONE")
 		payments.Stop()
 		return nil
 	})
 
-	go manager.payForService(payments)
+	go m.payForService(payments)
 	return nil
 }
 
-func (manager *connectionManager) cleanConnection() {
-	manager.cancel()
-	for i := len(manager.cleanup) - 1; i >= 0; i-- {
-		log.Trace().Msgf("Connection cleaning up: (%v/%v)", i+1, len(manager.cleanup))
-		err := manager.cleanup[i]()
+func (m *connectionManager) cleanConnection() {
+	m.cleanupLock.Lock()
+	defer m.cleanupLock.Unlock()
+
+	for i := len(m.cleanup) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Connection cleaning up: (%v/%v)", i+1, len(m.cleanup))
+		err := m.cleanup[i]()
 		if err != nil {
 			log.Warn().Err(err).Msg("Cleanup error")
 		}
 	}
-	manager.cleanup = nil
+	m.cleanup = nil
 }
 
-func (manager *connectionManager) cleanAfterDisconnect() {
-	manager.cancel()
-	for i := len(manager.cleanupAfterDisconnect) - 1; i >= 0; i-- {
-		log.Trace().Msgf("Connection cleaning up (after disconnect): (%v/%v)", i+1, len(manager.cleanupAfterDisconnect))
-		err := manager.cleanupAfterDisconnect[i]()
+func (m *connectionManager) cleanAfterDisconnect() {
+	m.cleanupLock.Lock()
+	defer m.cleanupLock.Unlock()
+
+	for i := len(m.cleanupAfterDisconnect) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Connection cleaning up (after disconnect): (%v/%v)", i+1, len(m.cleanupAfterDisconnect))
+		err := m.cleanupAfterDisconnect[i]()
 		if err != nil {
 			log.Warn().Err(err).Msg("Cleanup error")
 		}
 	}
-	manager.cleanupAfterDisconnect = nil
+	m.cleanupAfterDisconnect = nil
 }
 
-func (manager *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
-	dialog, err := manager.newDialog(consumerID, providerID, contact)
+func (m *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
+	dialog, err := m.newDialog(consumerID, providerID, contact)
 	if err != nil {
 		return nil, err
 	}
 
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: closing dialog")
 		defer log.Trace().Msg("Cleaning: closing dialog DONE")
 		return dialog.Close()
@@ -388,14 +394,14 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 	return dialog, err
 }
 
-func (manager *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
+func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, proposal market.ServiceProposal) p2p.Channel {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	channel, err := manager.p2pDialer.Dial(ctx, consumerID, proposal.ServiceType, providerID)
+	channel, err := m.p2pDialer.Dial(ctx, consumerID, proposal.ServiceType, providerID)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to establish p2p channel")
 	} else {
-		manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+		m.addCleanupAfterDisconnect(func() error {
 			log.Trace().Msg("Cleaning: closing P2P communication channel")
 			defer log.Trace().Msg("Cleaning: P2P communication channel DONE")
 
@@ -405,7 +411,19 @@ func (manager *connectionManager) createP2PChannel(ctx context.Context, consumer
 	return channel
 }
 
-func (manager *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (m *connectionManager) addCleanupAfterDisconnect(fn func() error) {
+	m.cleanupLock.Lock()
+	defer m.cleanupLock.Unlock()
+	m.cleanupAfterDisconnect = append(m.cleanupAfterDisconnect, fn)
+}
+
+func (m *connectionManager) addCleanup(fn func() error) {
+	m.cleanupLock.Lock()
+	defer m.cleanupLock.Unlock()
+	m.cleanup = append(m.cleanup, fn)
+}
+
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, fmt.Errorf("could not get session config: %w", err)
@@ -440,7 +458,7 @@ func (manager *connectionManager) createP2PSession(ctx context.Context, c Connec
 	}
 
 	sessionID := session.ID(sessionResponce.GetID())
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 
@@ -460,7 +478,7 @@ func (manager *connectionManager) createP2PSession(ctx context.Context, c Connec
 		return nil
 	})
 
-	manager.saveSessionInfo(SessionInfo{
+	m.saveSessionInfo(SessionInfo{
 		SessionID:  sessionID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
@@ -485,7 +503,7 @@ func (manager *connectionManager) createP2PSession(ctx context.Context, c Connec
 	}, session.PaymentInfo{Supports: sessionResponce.GetPaymentInfo()}, nil
 }
 
-func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
+func (m *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, session.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, session.PaymentInfo{}, err
@@ -502,13 +520,13 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, session.PaymentInfo{}, err
 	}
 
-	manager.cleanupAfterDisconnect = append(manager.cleanupAfterDisconnect, func() error {
+	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: requesting session destroy")
 		defer log.Trace().Msg("Cleaning: requesting session destroy DONE")
 		return session.RequestSessionDestroy(dialog, s.ID)
 	})
 
-	manager.saveSessionInfo(SessionInfo{
+	m.saveSessionInfo(SessionInfo{
 		SessionID:  s.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
@@ -523,27 +541,27 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	return s, paymentInfo, nil
 }
 
-func (manager *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
-	manager.setCurrentSession(sessionInfo)
+func (m *connectionManager) saveSessionInfo(sessionInfo SessionInfo) {
+	m.setCurrentSession(sessionInfo)
 
-	manager.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
+	m.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
 		Status:      SessionCreatedStatus,
-		SessionInfo: manager.getCurrentSession(),
+		SessionInfo: m.getCurrentSession(),
 	})
 
-	manager.cleanup = append(manager.cleanup, func() error {
+	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		manager.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
+		m.eventPublisher.Publish(AppTopicConsumerSession, SessionEvent{
 			Status:      SessionEndedStatus,
-			SessionInfo: manager.getCurrentSession(),
+			SessionInfo: m.getCurrentSession(),
 		})
-		manager.setCurrentSession(SessionInfo{})
+		m.setCurrentSession(SessionInfo{})
 		return nil
 	})
 }
 
-func (manager *connectionManager) startConnection(
+func (m *connectionManager) startConnection(
 	ctx context.Context,
 	conn Connection,
 	consumerID identity.Identity,
@@ -570,88 +588,97 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	statsPublisher := newStatsPublisher(manager.eventPublisher, manager.statsReportInterval)
-	go statsPublisher.start(manager.getCurrentSession(), conn)
+	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
+	go statsPublisher.start(m.getCurrentSession(), conn)
 
-	manager.cleanup = append(manager.cleanup, func() error {
+	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
 		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
 		statsPublisher.stop()
 		return nil
 	})
-	manager.cleanup = append(manager.cleanup, func() error {
+	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping connection")
 		defer log.Trace().Msg("Cleaning: stopping connection DONE")
 		conn.Stop()
 		return nil
 	})
 
-	err = manager.setupTrafficBlock(params.DisableKillSwitch)
+	err = m.setupTrafficBlock(params.DisableKillSwitch)
 	if err != nil {
 		return err
 	}
 
-	err = manager.waitForConnectedState(conn.State())
+	err = m.waitForConnectedState(conn.State())
 	if err != nil {
 		return err
 	}
 
-	go manager.consumeConnectionStates(conn.State())
-	go manager.connectionWaiter(conn)
+	go m.consumeConnectionStates(conn.State())
+	go m.connectionWaiter(conn)
 	return nil
 }
 
-func (manager *connectionManager) Status() Status {
-	manager.statusLock.RLock()
-	defer manager.statusLock.RUnlock()
+func (m *connectionManager) Status() Status {
+	m.statusLock.RLock()
+	defer m.statusLock.RUnlock()
 
-	return manager.status
+	return m.status
 }
 
-func (manager *connectionManager) setStatus(cs Status) {
-	manager.statusLock.Lock()
-	log.Info().Msgf("Connection state: %v → %v", manager.status.State, cs.State)
-	manager.status = cs
-	manager.statusLock.Unlock()
+func (m *connectionManager) setStatus(cs Status) {
+	m.statusLock.Lock()
+	log.Info().Msgf("Connection state: %v → %v", m.status.State, cs.State)
+	m.status = cs
+	m.statusLock.Unlock()
 }
 
-func (manager *connectionManager) Cancel() {
+func (m *connectionManager) Cancel() {
 	status := statusCanceled()
-	manager.setStatus(status)
-	manager.onStateChanged(status.State)
-	logDisconnectError(manager.Disconnect())
+	m.setStatus(status)
+	m.onStateChanged(status.State)
+	logDisconnectError(m.Disconnect())
 }
 
-func (manager *connectionManager) Disconnect() error {
-	manager.discoLock.Lock()
-	defer manager.discoLock.Unlock()
-
-	if manager.Status().State == NotConnected {
+func (m *connectionManager) Disconnect() error {
+	if m.Status().State == NotConnected {
 		return ErrNoConnection
 	}
 
-	manager.setStatus(statusDisconnecting())
-	manager.cleanConnection()
-	manager.setStatus(statusNotConnected())
-	manager.publishStateEvent(NotConnected)
-
-	manager.cleanAfterDisconnect()
+	m.setStatus(statusDisconnecting())
+	m.disconnect()
 
 	return nil
 }
 
-func (manager *connectionManager) payForService(payments PaymentIssuer) {
+func (m *connectionManager) disconnect() {
+	m.discoLock.Lock()
+	defer m.discoLock.Unlock()
+
+	m.ctxLock.Lock()
+	m.cancel()
+	m.ctxLock.Unlock()
+
+	m.cleanConnection()
+
+	m.setStatus(statusNotConnected())
+	m.publishStateEvent(NotConnected)
+
+	m.cleanAfterDisconnect()
+}
+
+func (m *connectionManager) payForService(payments PaymentIssuer) {
 	err := payments.Start()
 	if err != nil {
 		log.Error().Err(err).Msg("Payment error")
-		err = manager.Disconnect()
+		err = m.Disconnect()
 		if err != nil {
 			log.Error().Err(err).Msg("Could not disconnect gracefully")
 		}
 	}
 }
 
-func (manager *connectionManager) connectionWaiter(connection Connection) {
+func (m *connectionManager) connectionWaiter(connection Connection) {
 	err := connection.Wait()
 	if err != nil {
 		log.Warn().Err(err).Msg("Connection exited with error")
@@ -659,10 +686,10 @@ func (manager *connectionManager) connectionWaiter(connection Connection) {
 		log.Info().Msg("Connection exited")
 	}
 
-	logDisconnectError(manager.Disconnect())
+	logDisconnectError(m.Disconnect())
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State) error {
+func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) error {
 	log.Debug().Msg("waiting for connected state")
 	for {
 		select {
@@ -674,46 +701,46 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 			switch state {
 			case Connected:
 				log.Debug().Msg("Connected started event received")
-				go manager.getCurrentSession().Acknowledge()
-				manager.onStateChanged(state)
+				go m.getCurrentSession().Acknowledge()
+				m.onStateChanged(state)
 				return nil
 			default:
-				manager.onStateChanged(state)
+				m.onStateChanged(state)
 			}
-		case <-manager.ctx.Done():
-			return manager.ctx.Err()
+		case <-m.ctx.Done():
+			return m.ctx.Err()
 		}
 	}
 }
 
-func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
+func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
 	for state := range stateChannel {
-		manager.onStateChanged(state)
+		m.onStateChanged(state)
 	}
 
 	log.Debug().Msg("State updater stopCalled")
-	logDisconnectError(manager.Disconnect())
+	logDisconnectError(m.Disconnect())
 }
 
-func (manager *connectionManager) onStateChanged(state State) {
+func (m *connectionManager) onStateChanged(state State) {
 	log.Debug().Msg("onStateChanged called")
-	manager.publishStateEvent(state)
+	m.publishStateEvent(state)
 
 	switch state {
 	case Connected:
-		sessionInfo := manager.getCurrentSession()
-		manager.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal, sessionInfo.ConsumerID))
+		sessionInfo := m.getCurrentSession()
+		m.setStatus(statusConnected(sessionInfo.SessionID, sessionInfo.Proposal, sessionInfo.ConsumerID))
 	case Reconnecting:
-		manager.setStatus(statusReconnecting())
+		m.setStatus(statusReconnecting())
 	}
 }
 
-func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
+func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 	if disableKillSwitch {
 		return nil
 	}
 
-	outboundIP, err := manager.ipResolver.GetOutboundIPAsString()
+	outboundIP, err := m.ipResolver.GetOutboundIPAsString()
 	if err != nil {
 		return err
 	}
@@ -722,7 +749,7 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 	if err != nil {
 		return err
 	}
-	manager.cleanup = append(manager.cleanup, func() error {
+	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: traffic block rule")
 		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
 		removeRule()
@@ -731,28 +758,28 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 	return nil
 }
 
-func (manager *connectionManager) publishStateEvent(state State) {
-	manager.eventPublisher.Publish(AppTopicConsumerConnectionState, StateEvent{
+func (m *connectionManager) publishStateEvent(state State) {
+	m.eventPublisher.Publish(AppTopicConsumerConnectionState, StateEvent{
 		State:       state,
-		SessionInfo: manager.getCurrentSession(),
+		SessionInfo: m.getCurrentSession(),
 	})
 }
 
-func (manager *connectionManager) setCurrentSession(info SessionInfo) {
-	manager.sessionInfoMu.Lock()
-	defer manager.sessionInfoMu.Unlock()
+func (m *connectionManager) setCurrentSession(info SessionInfo) {
+	m.sessionInfoMu.Lock()
+	defer m.sessionInfoMu.Unlock()
 
-	manager.sessionInfo = info
+	m.sessionInfo = info
 }
 
-func (manager *connectionManager) getCurrentSession() SessionInfo {
-	manager.sessionInfoMu.Lock()
-	defer manager.sessionInfoMu.Unlock()
+func (m *connectionManager) getCurrentSession() SessionInfo {
+	m.sessionInfoMu.Lock()
+	defer m.sessionInfoMu.Unlock()
 
-	return manager.sessionInfo
+	return m.sessionInfo
 }
 
-func (manager *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {
+func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {
 	// TODO: Remove this check once all provider migrates to p2p.
 	if channel == nil {
 		return
@@ -773,15 +800,15 @@ func (manager *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID s
 	var errCount int
 	for {
 		select {
-		case <-manager.ctx.Done():
+		case <-m.ctx.Done():
 			return
-		case <-time.After(manager.config.KeepAlive.SendInterval):
-			if err := manager.sendKeepAlivePing(channel, sessionID); err != nil {
+		case <-time.After(m.config.KeepAlive.SendInterval):
+			if err := m.sendKeepAlivePing(channel, sessionID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
-				if errCount == manager.config.KeepAlive.MaxSendErrCount {
+				if errCount == m.config.KeepAlive.MaxSendErrCount {
 					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
-					manager.Disconnect()
+					m.Disconnect()
 					return
 				}
 			} else {
@@ -791,8 +818,8 @@ func (manager *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID s
 	}
 }
 
-func (manager *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
+func (m *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
 	defer cancel()
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
