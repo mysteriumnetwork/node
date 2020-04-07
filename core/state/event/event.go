@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -56,15 +57,20 @@ type Identity struct {
 type Connection struct {
 	Session    connection.Status
 	Statistics connection.Statistics
+	Throughput bandwidth.Throughput
 	Invoice    crypto.Invoice
 }
 
 func (c Connection) String() string {
 	return fmt.Sprintf(
-		"duration: %s received: %s, sent: %s, spent: %s",
+		"ID %s %s duration: %s data: %s/%s, throughput: %s/%s, spent: %s",
+		c.Session.SessionID,
+		c.Session.State,
 		c.Session.Duration(),
 		datasize.FromBytes(c.Statistics.BytesReceived),
 		datasize.FromBytes(c.Statistics.BytesSent),
+		c.Throughput.Down,
+		c.Throughput.Up,
 		money.NewMoney(c.Invoice.AgreementTotal, money.CurrencyMyst),
 	)
 }

@@ -29,26 +29,21 @@ import (
 
 const bitsInByte = 8
 
-// Throughput represents the throughput
-type Throughput struct {
-	BitsPerSecond float64
+type publisher interface {
+	Publish(topic string, data interface{})
 }
 
-// String returns human readable form of the throughput
-func (t Throughput) String() string {
-	return datasize.BitSize(t.BitsPerSecond).String() + "/s"
-}
-
-// CurrentSpeed represents the current(moment) download and upload speeds in bits per second
-type CurrentSpeed struct {
-	Up, Down Throughput
+// NewTracker creates instance of Tracker
+func NewTracker(publisher publisher) *Tracker {
+	return &Tracker{publisher: publisher}
 }
 
 // Tracker keeps track of current speed
 type Tracker struct {
-	previous     connection.Statistics
-	currentSpeed CurrentSpeed
-	lock         sync.RWMutex
+	publisher publisher
+
+	previous connection.Statistics
+	lock     sync.RWMutex
 }
 
 // Subscribe subscribes to relevant events of event bus.
@@ -57,13 +52,6 @@ func (t *Tracker) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	return bus.SubscribeAsync(connection.AppTopicConnectionStatistics, t.consumeStatisticsEvent)
-}
-
-// Get returns the current upload and download speeds in bits per second
-func (t *Tracker) Get() CurrentSpeed {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-	return t.currentSpeed
 }
 
 const consumeCooldown = 500 * time.Millisecond
@@ -90,14 +78,14 @@ func (t *Tracker) consumeStatisticsEvent(evt connection.AppEventConnectionStatis
 	byteDownDiff := evt.Stats.BytesReceived - t.previous.BytesReceived
 	byteUpDiff := evt.Stats.BytesSent - t.previous.BytesSent
 
-	t.currentSpeed = CurrentSpeed{
-		Up:   Throughput{BitsPerSecond: float64(byteUpDiff) / secondsSince * bitsInByte},
-		Down: Throughput{BitsPerSecond: float64(byteDownDiff) / secondsSince * bitsInByte},
-	}
+	t.publisher.Publish(AppTopicConnectionThroughput, AppEventConnectionThroughput{
+		Throughput: Throughput{
+			Up:   datasize.BitSpeed(float64(byteUpDiff) / secondsSince * bitsInByte),
+			Down: datasize.BitSpeed(float64(byteDownDiff) / secondsSince * bitsInByte),
+		},
+		SessionInfo: evt.SessionInfo,
+	})
 	t.previous = evt.Stats
-
-	log.Trace().Msgf("Download speed: %s", t.currentSpeed.Down)
-	log.Trace().Msgf("Upload speed: %s", t.currentSpeed.Up)
 }
 
 // consumeSessionEvent handles the session state changes
@@ -107,6 +95,5 @@ func (t *Tracker) consumeSessionEvent(sessionEvent connection.AppEventConnection
 	switch sessionEvent.Status {
 	case connection.SessionEndedStatus, connection.SessionCreatedStatus:
 		t.previous = connection.Statistics{}
-		t.currentSpeed = CurrentSpeed{}
 	}
 }

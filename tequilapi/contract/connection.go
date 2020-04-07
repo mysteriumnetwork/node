@@ -18,17 +18,21 @@
 package contract
 
 import (
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // NewConnectionStatisticsDTO maps consumer connection details.
-func NewConnectionStatisticsDTO(connection connection.Status, statistics connection.Statistics, invoice crypto.Invoice) ConnectionStatisticsDTO {
+func NewConnectionStatisticsDTO(connection connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
 	return ConnectionStatisticsDTO{
-		Duration:      int(connection.Duration().Seconds()),
-		BytesSent:     statistics.BytesSent,
-		BytesReceived: statistics.BytesReceived,
-		TokensSpent:   invoice.AgreementTotal,
+		Duration:           int(connection.Duration().Seconds()),
+		BytesSent:          statistics.BytesSent,
+		BytesReceived:      statistics.BytesReceived,
+		ThroughputSent:     datasize.BitSize(throughput.Up).Bits(),
+		ThroughputReceived: datasize.BitSize(throughput.Down).Bits(),
+		TokensSpent:        invoice.AgreementTotal,
 	}
 }
 
@@ -40,6 +44,14 @@ type ConnectionStatisticsDTO struct {
 
 	// example: 1024
 	BytesReceived uint64 `json:"bytes_received"`
+
+	// Upload speed in bits per second
+	// example: 1024
+	ThroughputSent uint64 `json:"throughput_sent"`
+
+	// Download speed in bits per second
+	// example: 1024
+	ThroughputReceived uint64 `json:"throughput_received"`
 
 	// connection duration in seconds
 	// example: 60

@@ -24,6 +24,7 @@ import (
 	stdlog "log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
@@ -32,7 +33,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -455,10 +458,10 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
-			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
-			info("Bytes sent:", statistics.BytesSent)
-			info("Bytes received:", statistics.BytesReceived)
-			info("Spent:", statistics.TokensSpent)
+			info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)))
+			info(fmt.Sprintf("Data: %s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
+			info(fmt.Sprintf("Throughput: %s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
+			info(fmt.Sprintf("Spent: %s", money.NewMoney(statistics.TokensSpent, money.CurrencyMyst)))
 		}
 	}
 }

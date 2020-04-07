@@ -240,7 +240,7 @@ func mapState(event stateEvent.State) stateRes {
 		State: event.MainConnection.Session.State,
 	}
 	if !event.MainConnection.Statistics.At.IsZero() {
-		statsRes := contract.NewConnectionStatisticsDTO(event.MainConnection.Session, event.MainConnection.Statistics, event.MainConnection.Invoice)
+		statsRes := contract.NewConnectionStatisticsDTO(event.MainConnection.Session, event.MainConnection.Statistics, event.MainConnection.Throughput, event.MainConnection.Invoice)
 		connectionRes.Statistics = &statsRes
 	}
 	// If none exists, conn manager still has empty proposal

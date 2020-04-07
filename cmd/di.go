@@ -396,7 +396,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 
 	// Consumer current session bandwidth
-	bandwidthTracker := &bandwidth.Tracker{}
+	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
 	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
 		return err
 	}

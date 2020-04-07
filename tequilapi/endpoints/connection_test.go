@@ -25,7 +25,9 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -131,6 +133,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{
 				"bytes_sent": 1,
 				"bytes_received": 2,
+				"throughput_received": 0,
+				"throughput_sent": 0,
 				"duration": 0,
 				"tokens_spent": 0
 			}`,
@@ -411,6 +415,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	fakeState := &mockStateProvider{}
 	fakeState.stateToReturn.MainConnection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.MainConnection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
 	fakeState.stateToReturn.MainConnection.Invoice = crypto.Invoice{AgreementTotal: 10001}
 
 	manager := mockConnectionManager{}
@@ -423,6 +428,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 		`{
 			"bytes_sent": 1,
 			"bytes_received": 2,
+			"throughput_sent": 1000,
+			"throughput_received": 2000,
 			"duration": 0,
 			"tokens_spent": 10001
 		}`,

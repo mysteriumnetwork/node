@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -88,6 +89,7 @@ type Keeper struct {
 	consumeServiceSessionStateEventDebounced func(e interface{})
 	// consumer
 	consumeConnectionStatisticsEvent func(interface{})
+	consumeConnectionThroughputEvent func(interface{})
 	consumeConnectionSpendingEvent   func(interface{})
 
 	announceStateChanges func(e interface{})
@@ -131,6 +133,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 
 	// consumer
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
+	k.consumeConnectionThroughputEvent = debounce(k.updateConnectionThroughput, debounceDuration)
 	k.consumeConnectionSpendingEvent = debounce(k.updateConnectionSpending, debounceDuration)
 	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 
@@ -181,6 +184,9 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, k.consumeConnectionStatisticsEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(bandwidth.AppTopicConnectionThroughput, k.consumeConnectionThroughputEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(pingpong.AppTopicInvoicePaid, k.consumeConnectionSpendingEvent); err != nil {
@@ -350,6 +356,8 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 		k.state.MainConnection = stateEvent.Connection{}
 	}
 	k.state.MainConnection.Session = evt.SessionInfo
+	log.Info().Msgf("Session %s", k.state.MainConnection.String())
+
 	go k.announceStateChanges(nil)
 }
 
@@ -363,7 +371,20 @@ func (k *Keeper) updateConnectionStats(e interface{}) {
 	}
 
 	k.state.MainConnection.Statistics = evt.Stats
-	log.Trace().Msg(k.state.MainConnection.String())
+
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) updateConnectionThroughput(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	evt, ok := e.(bandwidth.AppEventConnectionThroughput)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		return
+	}
+
+	k.state.MainConnection.Throughput = evt.Throughput
 
 	go k.announceStateChanges(nil)
 }
@@ -378,7 +399,7 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 	}
 
 	k.state.MainConnection.Invoice = evt.Invoice
-	log.Trace().Msg(k.state.MainConnection.String())
+	log.Info().Msgf("Session %s", k.state.MainConnection.String())
 
 	go k.announceStateChanges(nil)
 }
