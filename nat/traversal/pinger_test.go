@@ -18,6 +18,7 @@
 package traversal
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPinger_Multiple_Stop(t *testing.T) {
@@ -72,13 +74,13 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 	// Start pinging consumer.
 	go func() {
 		pinger.BindServicePort("wg1", providerProxyPort)
-		pinger.PingConsumer("127.0.0.1", []int{providerPort}, []int{consumerPort}, "wg1")
+		pinger.PingConsumer(context.Background(), "127.0.0.1", []int{providerPort}, []int{consumerPort}, "wg1")
 	}()
 
 	// Wait some time to simulate real network delay conditions.
 	time.Sleep(5 * pingConfig.Interval)
 
-	_, _, err = pinger.PingProvider("127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerPort+1)
+	_, _, err = pinger.PingProvider(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerPort+1)
 	assert.NoError(t, err)
 
 	laddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", consumerPort))
@@ -101,30 +103,30 @@ func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
 	}, 2*time.Second, 50*time.Millisecond)
 }
 
-// TODO: Fix test with https://github.com/mysteriumnetwork/node/issues/1931
-func XTestPinger_PingPeer_N_Connections(t *testing.T) {
+func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	pingConfig := &PingConfig{
-		Interval: 10 * time.Millisecond,
-		Timeout:  1 * time.Second,
+		Interval:            50 * time.Millisecond,
+		SendConnACKInterval: 50 * time.Millisecond,
+		Timeout:             5 * time.Second,
 	}
 	provider := newPinger(pingConfig)
 	consumer := newPinger(pingConfig)
 	var pPorts, cPorts []int
-	ports, err := port.NewPool().AcquireMultiple(40)
+	ports, err := port.NewPool().AcquireMultiple(20)
 	assert.NoError(t, err)
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 10; i++ {
 		pPorts = append(pPorts, ports[i].Num())
-		cPorts = append(cPorts, ports[20+i].Num())
+		cPorts = append(cPorts, ports[10+i].Num())
 	}
 	peerConns := make(chan *net.UDPConn, 2)
 	go func() {
-		conns, err := consumer.PingProviderPeer("127.0.0.1", cPorts, pPorts, 128, 2)
-		assert.NoError(t, err)
-		assert.Len(t, conns, 2)
+		conns, err := consumer.PingProviderPeer(context.Background(), "127.0.0.1", cPorts, pPorts, 128, 2)
+		require.NoError(t, err)
+		require.Len(t, conns, 2)
 		peerConns <- conns[0]
 		peerConns <- conns[1]
 	}()
-	conns, err := provider.PingConsumerPeer("127.0.0.1", pPorts, cPorts, 2, 2)
+	conns, err := provider.PingConsumerPeer(context.Background(), "127.0.0.1", pPorts, cPorts, 2, 2)
 	assert.NoError(t, err)
 
 	assert.Len(t, conns, 2)
@@ -156,15 +158,15 @@ func TestPinger_PingPeer_Not_Enough_Connections_Timeout(t *testing.T) {
 
 	consumerPingErr := make(chan error)
 	go func() {
-		_, err := consumer.PingProviderPeer("127.0.0.1", cPorts, pPorts, 2, 30)
+		_, err := consumer.PingProviderPeer(context.Background(), "127.0.0.1", cPorts, pPorts, 2, 30)
 		consumerPingErr <- err
 	}()
-	conns, err := provider.PingConsumerPeer("127.0.0.1", pPorts, cPorts, 2, 30)
-	assert.EqualError(t, err, "not enough connections")
+	conns, err := provider.PingConsumerPeer(context.Background(), "127.0.0.1", pPorts, cPorts, 2, 30)
+	assert.EqualError(t, err, "ping failed: context deadline exceeded")
 	assert.Len(t, conns, 0)
 
 	consumerErr := <-consumerPingErr
-	assert.EqualError(t, consumerErr, "NAT punch attempt timed out")
+	assert.EqualError(t, consumerErr, "ping failed: context deadline exceeded")
 }
 
 func TestPinger_PingProvider_Timeout(t *testing.T) {
@@ -185,9 +187,9 @@ func TestPinger_PingProvider_Timeout(t *testing.T) {
 		select {}
 	}()
 
-	_, _, err := pinger.PingProvider("127.0.0.1", []int{consumerPort}, []int{providerPort}, 0)
+	_, _, err := pinger.PingProvider(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, 0)
 
-	assert.Error(t, errNATPunchAttemptTimedOut, err)
+	assert.EqualError(t, err, "failed to ping remote peer: context deadline exceeded")
 }
 
 func TestPinger_PingConsumerPeer_Timeout(t *testing.T) {
@@ -210,9 +212,9 @@ func TestPinger_PingConsumerPeer_Timeout(t *testing.T) {
 		select {}
 	}()
 
-	_, err = pinger.PingConsumerPeer("127.0.0.1", []int{consumerPort}, []int{providerPort}, 2, 2)
+	_, err = pinger.PingConsumerPeer(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, 2, 2)
 
-	assert.Error(t, errNATPunchAttemptTimedOut, err)
+	assert.EqualError(t, err, "ping failed: context deadline exceeded")
 }
 
 func newPinger(config *PingConfig) NATPinger {

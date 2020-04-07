@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -148,7 +149,7 @@ func (c *openvpnConnection) Statistics() (connection.Statistics, error) {
 	return c.stats, nil
 }
 
-func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
+func (c *openvpnConnection) Start(ctx context.Context, options connection.ConnectOptions) error {
 	sessionConfig := openvpn.VPNConfig{}
 	err := json.Unmarshal(options.SessionConfig, &sessionConfig)
 	if err != nil {
@@ -196,7 +197,7 @@ func (c *openvpnConnection) Start(options connection.ConnectOptions) error {
 		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
 
 		remoteIP := sessionConfig.RemoteIP
-		_, _, err = c.natPinger.PingProvider(remoteIP, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
+		_, _, err = c.natPinger.PingProvider(ctx, remoteIP, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
 		if err != nil {
 			return errors.Wrap(err, "could not ping provider")
 		}

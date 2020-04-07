@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -155,7 +156,7 @@ func (foc *connectionMock) GetConfig() (ConsumerConfig, error) {
 	return nil, nil
 }
 
-func (foc *connectionMock) Start(connectionParams ConnectOptions) error {
+func (foc *connectionMock) Start(ctx context.Context, connectionParams ConnectOptions) error {
 	foc.RLock()
 	defer foc.RUnlock()
 

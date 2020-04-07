@@ -109,7 +109,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, service
 		}
 	} else {
 		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
+		conns, err := m.consumerPinger.PingProviderPeer(ctx, config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}

@@ -18,6 +18,7 @@
 package openvpn
 
 import (
+	"context"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -34,7 +35,7 @@ func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
 	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	connectionOptions := connection.ConnectOptions{}
 	assert.Nil(t, err)
-	err = conn.Start(connectionOptions)
+	err = conn.Start(context.Background(), connectionOptions)
 	assert.EqualError(t, err, "failed to unmarshal session config: unexpected end of JSON input")
 }
 
@@ -48,6 +49,6 @@ func TestConnection_CreatesConnection(t *testing.T) {
 type MockNATPinger struct{}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ string, _, _ []int, _ int) (int, int, error) {
+func (mnp *MockNATPinger) PingProvider(_ context.Context, _ string, _, _ []int, _ int) (int, int, error) {
 	return 0, 0, nil
 }
