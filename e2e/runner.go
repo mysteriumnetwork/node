@@ -70,9 +70,6 @@ func (r *Runner) Test(providerHost, consumerHost string) error {
 
 	err := r.compose("run", "go-runner",
 		"go", "test", "-v", "./e2e/...", "-args",
-		"--deployer.keystore-directory=../e2e/blockchain/keystore",
-		"--deployer.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
-		"--deployer.passphrase", r.etherPassphrase,
 		"--provider.tequilapi-host", providerHost,
 		"--provider.tequilapi-port=4050",
 		"--consumer.tequilapi-host", consumerHost,
