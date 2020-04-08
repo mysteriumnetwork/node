@@ -341,11 +341,6 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
 	}
-	if di.Storage != nil {
-		if err := di.Storage.Close(); err != nil {
-			errs = append(errs, err)
-		}
-	}
 	if di.BrokerConnection != nil {
 		di.BrokerConnection.Close()
 	}
@@ -364,6 +359,12 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+	if di.Storage != nil {
+		if err := di.Storage.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	return nil
 }
 

@@ -37,16 +37,13 @@ var (
 	providerID  = identity.FromAddress("providerID")
 	serviceType = "serviceType"
 
-	mockPayload = connection.AppEventConnectionSession{
-		Status: connection.SessionCreatedStatus,
-		SessionInfo: connection.Status{
-			SessionID:  sessionID,
-			ConsumerID: consumerID,
-			Proposal: market.ServiceProposal{
-				ServiceDefinition: stubLocation,
-				ServiceType:       serviceType,
-				ProviderID:        providerID.Address,
-			},
+	mockSession = connection.Status{
+		SessionID:  sessionID,
+		ConsumerID: consumerID,
+		Proposal: market.ServiceProposal{
+			ServiceDefinition: stubLocation,
+			ServiceType:       serviceType,
+			ProviderID:        providerID.Address,
 		},
 	}
 )
@@ -76,21 +73,13 @@ func TestSessionStorageConsumeEventEndedOK(t *testing.T) {
 
 	storage := NewSessionStorage(storer)
 	storage.consumeSessionEvent(connection.AppEventConnectionSession{
-		Status: connection.SessionEndedStatus,
+		Status:      connection.SessionCreatedStatus,
+		SessionInfo: mockSession,
 	})
-	assert.True(t, storer.UpdateCalled)
-}
-
-func TestSessionStorageConsumeEventEndedErrors(t *testing.T) {
-	storer := &StubSessionStorer{
-		UpdateError: errMock,
-	}
-
-	storage := NewSessionStorage(storer)
-	assert.NotPanics(t, func() {
-		storage.consumeSessionEvent(connection.AppEventConnectionSession{Status: connection.SessionEndedStatus})
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionEndedStatus,
+		SessionInfo: mockSession,
 	})
-
 	assert.True(t, storer.UpdateCalled)
 }
 
@@ -98,17 +87,9 @@ func TestSessionStorageConsumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer)
-	storage.consumeSessionEvent(mockPayload)
-	assert.True(t, storer.SaveCalled)
-}
-
-func TestSessionStorageConsumeEventConnectedError(t *testing.T) {
-	storer := &StubSessionStorer{
-		SaveError: errMock,
-	}
-	storage := NewSessionStorage(storer)
-	assert.NotPanics(t, func() {
-		storage.consumeSessionEvent(mockPayload)
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionCreatedStatus,
+		SessionInfo: mockSession,
 	})
 	assert.True(t, storer.SaveCalled)
 }

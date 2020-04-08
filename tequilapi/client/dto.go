@@ -140,6 +140,7 @@ type ConnectionSessionDTO struct {
 	DateStarted     string `json:"date_started"`
 	BytesSent       uint64 `json:"bytes_sent"`
 	BytesReceived   uint64 `json:"bytes_received"`
+	TokensSpent     uint64 `json:"tokens_spent"`
 	Duration        uint64 `json:"duration"`
 	Status          string `json:"status"`
 }

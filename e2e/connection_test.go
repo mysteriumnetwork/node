@@ -232,9 +232,6 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se := sessionsDTO.Sessions[0]
-	assert.Zero(t, se.Duration)
-	assert.Zero(t, se.BytesSent)
-	assert.Zero(t, se.BytesReceived)
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
