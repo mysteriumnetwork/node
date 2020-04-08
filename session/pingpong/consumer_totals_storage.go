@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +53,7 @@ func (cts *ConsumerTotalsStorage) Store(consumerAddress, accountantAddress ident
 		return err
 	}
 
-	go cts.bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	go cts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		Current:      amount,
 		AccountantID: accountantAddress,
 		ConsumerID:   consumerAddress,

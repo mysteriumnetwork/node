@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/cmd"
@@ -359,7 +360,7 @@ type BalanceChangeCallback interface {
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.AppEventBalanceChanged) {
+	_ = mb.eventBus.SubscribeAsync(event.AppTopicBalanceChanged, func(e event.AppEventBalanceChanged) {
 		cb.OnChange(e.Identity.Address, int64(e.Current))
 	})
 }

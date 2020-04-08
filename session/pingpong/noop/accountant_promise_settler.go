@@ -19,9 +19,7 @@ package noop
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/payments/client"
-	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 )
 
 // NoopAccountantPromiseSettler doesn't do much.
@@ -33,12 +31,9 @@ func (n *NoopAccountantPromiseSettler) Subscribe() error {
 	return nil
 }
 
-// SettlementState returns an empty state.
-func (n *NoopAccountantPromiseSettler) SettlementState(id identity.Identity) pingpong.SettlementState {
-	return pingpong.SettlementState{
-		Channel:     client.ProviderChannel{},
-		LastPromise: crypto.Promise{},
-	}
+// GetEarnings returns an empty state.
+func (n *NoopAccountantPromiseSettler) GetEarnings(_ identity.Identity) event.Earnings {
+	return event.Earnings{}
 }
 
 // ForceSettle does nothing.

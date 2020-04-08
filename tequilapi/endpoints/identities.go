@@ -27,18 +27,18 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
 )
 
 type balanceProvider interface {
-	GetBalance(id identity.Identity) uint64
 	ForceBalanceUpdate(id identity.Identity) uint64
 }
 
 type earningsProvider interface {
-	SettlementState(id identity.Identity) pingpong.SettlementState
+	GetEarnings(id identity.Identity) pingpong_event.Earnings
 }
 
 type identitiesAPI struct {
@@ -275,14 +275,14 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 	}
 
 	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
-	settlement := endpoint.earningsProvider.SettlementState(id)
+	settlement := endpoint.earningsProvider.GetEarnings(id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
 		ChannelAddress:     channelAddress.Hex(),
 		Balance:            balance,
-		Earnings:           settlement.UnsettledBalance(),
-		EarningsTotal:      settlement.LifetimeBalance(),
+		Earnings:           settlement.UnsettledBalance,
+		EarningsTotal:      settlement.LifetimeBalance,
 	}
 	utils.WriteAsJSON(status, resp)
 }

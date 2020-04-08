@@ -19,7 +19,6 @@ package state
 
 import (
 	"errors"
-	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/payments/client"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -382,7 +381,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	assert.True(t, keeper.GetState().MainConnection.Statistics.At.IsZero())
 
 	// when
-	eventBus.Publish(pingpong.AppTopicInvoicePaid, pingpong.AppEventInvoicePaid{
+	eventBus.Publish(pingpongEvent.AppTopicInvoicePaid, pingpongEvent.AppEventInvoicePaid{
 		Invoice: expected,
 	})
 
@@ -416,7 +415,7 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	assert.Zero(t, keeper.GetState().Identities[0].Balance)
 
 	// when
-	eventBus.Publish(pingpong.AppTopicBalanceChanged, pingpong.AppEventBalanceChanged{
+	eventBus.Publish(pingpongEvent.AppTopicBalanceChanged, pingpongEvent.AppEventBalanceChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
 		Previous: 0,
 		Current:  999,
@@ -452,22 +451,16 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	assert.Zero(t, keeper.GetState().Identities[0].Balance)
 
 	// when
-	newSettlement := pingpong.SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(100)},
-		LastPromise: crypto.Promise{Amount: 30},
-	}
-	eventBus.Publish(pingpong.AppTopicEarningsChanged, pingpong.AppEventEarningsChanged{
+	eventBus.Publish(pingpongEvent.AppTopicEarningsChanged, pingpongEvent.AppEventEarningsChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Previous: pingpong.SettlementState{},
-		Current:  newSettlement,
+		Previous: pingpongEvent.Earnings{},
+		Current:  pingpongEvent.Earnings{LifetimeBalance: 100, UnsettledBalance: 10},
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].Earnings != 0 && keeper.GetState().Identities[0].EarningsTotal != 0
+		return keeper.GetState().Identities[0].Earnings == 10 && keeper.GetState().Identities[0].EarningsTotal == 100
 	}, 2*time.Second, 10*time.Millisecond)
-	assert.Equal(t, newSettlement.UnsettledBalance(), keeper.GetState().Identities[0].Earnings)
-	assert.Equal(t, newSettlement.LifetimeBalance(), keeper.GetState().Identities[0].EarningsTotal)
 }
 
 func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
@@ -639,10 +632,10 @@ func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) uint64 {
 }
 
 type mockEarningsProvider struct {
-	State pingpong.SettlementState
+	Earnings pingpongEvent.Earnings
 }
 
-// SettlementState returns a pre-defined settlement state.
-func (mep *mockEarningsProvider) SettlementState(_ identity.Identity) pingpong.SettlementState {
-	return mep.State
+// GetEarnings returns a pre-defined settlement state.
+func (mep *mockEarningsProvider) GetEarnings(_ identity.Identity) pingpongEvent.Earnings {
+	return mep.Earnings
 }

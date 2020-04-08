@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -565,8 +566,8 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	ev := <-mp.publicationChan
-	assert.Equal(t, AppTopicInvoicePaid, ev.name)
-	assert.EqualValues(t, AppEventInvoicePaid{
+	assert.Equal(t, event.AppTopicInvoicePaid, ev.name)
+	assert.EqualValues(t, event.AppEventInvoicePaid{
 		ConsumerID: emt.deps.Identity,
 		SessionID:  sessionID,
 		Invoice: crypto.Invoice{
@@ -576,8 +577,8 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	}, ev.value)
 
 	ev = <-mp.publicationChan
-	assert.Equal(t, AppTopicGrandTotalChanged, ev.name)
-	assert.EqualValues(t, AppEventGrandTotalChanged{
+	assert.Equal(t, event.AppTopicGrandTotalChanged, ev.name)
+	assert.EqualValues(t, event.AppEventGrandTotalChanged{
 		ConsumerID: emt.deps.Identity,
 		Current:    5,
 	}, ev.value)
@@ -709,7 +710,7 @@ type mockConsumerTotalsStorage struct {
 
 func (mcts *mockConsumerTotalsStorage) Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error {
 	mcts.calledWith = amount
-	go mcts.bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		Current:      amount,
 		AccountantID: accountantAddress,
 		ConsumerID:   consumerAddress,

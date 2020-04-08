@@ -35,7 +35,7 @@ import (
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
-	"github.com/mysteriumnetwork/node/session/pingpong"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/rs/zerolog/log"
 )
 
@@ -72,7 +72,7 @@ type balanceProvider interface {
 }
 
 type earningsProvider interface {
-	SettlementState(id identity.Identity) pingpong.SettlementState
+	GetEarnings(id identity.Identity) pingpongEvent.Earnings
 }
 
 // Keeper keeps track of state through eventual consistency.
@@ -155,14 +155,14 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
 		}
 
-		settlement := k.deps.EarningsProvider.SettlementState(id)
+		earnings := k.deps.EarningsProvider.GetEarnings(id)
 		stateIdentity := event.Identity{
 			Address:            id.Address,
 			RegistrationStatus: status,
 			ChannelAddress:     channelAddress,
 			Balance:            k.deps.BalanceProvider.GetBalance(id),
-			Earnings:           settlement.UnsettledBalance(),
-			EarningsTotal:      settlement.LifetimeBalance(),
+			Earnings:           earnings.UnsettledBalance,
+			EarningsTotal:      earnings.LifetimeBalance,
 		}
 		identities[idx] = stateIdentity
 	}
@@ -189,7 +189,7 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(bandwidth.AppTopicConnectionThroughput, k.consumeConnectionThroughputEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(pingpong.AppTopicInvoicePaid, k.consumeConnectionSpendingEvent); err != nil {
+	if err := bus.SubscribeAsync(pingpongEvent.AppTopicInvoicePaid, k.consumeConnectionSpendingEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(identity.AppTopicIdentityCreated, k.consumeIdentityCreatedEvent); err != nil {
@@ -198,10 +198,10 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, k.consumeIdentityRegistrationEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(pingpong.AppTopicBalanceChanged, k.consumeBalanceChangedEvent); err != nil {
+	if err := bus.SubscribeAsync(pingpongEvent.AppTopicBalanceChanged, k.consumeBalanceChangedEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(pingpong.AppTopicEarningsChanged, k.consumeEarningsChangedEvent); err != nil {
+	if err := bus.SubscribeAsync(pingpongEvent.AppTopicEarningsChanged, k.consumeEarningsChangedEvent); err != nil {
 		return err
 	}
 	return nil
@@ -392,7 +392,7 @@ func (k *Keeper) updateConnectionThroughput(e interface{}) {
 func (k *Keeper) updateConnectionSpending(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(pingpong.AppEventInvoicePaid)
+	evt, ok := e.(pingpongEvent.AppEventInvoicePaid)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return
@@ -407,7 +407,7 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(pingpong.AppEventBalanceChanged)
+	evt, ok := e.(pingpongEvent.AppEventBalanceChanged)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for balance change")
 		return
@@ -430,7 +430,7 @@ func (k *Keeper) consumeBalanceChangedEvent(e interface{}) {
 func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(pingpong.AppEventEarningsChanged)
+	evt, ok := e.(pingpongEvent.AppEventEarningsChanged)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for earnings change")
 		return
@@ -446,8 +446,8 @@ func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 		log.Warn().Msgf("Couldn't find a matching identity for earnings change: %s", evt.Identity.Address)
 		return
 	}
-	id.Earnings = evt.Current.UnsettledBalance()
-	id.EarningsTotal = evt.Current.LifetimeBalance()
+	id.Earnings = evt.Current.UnsettledBalance
+	id.EarningsTotal = evt.Current.LifetimeBalance
 	go k.announceStateChanges(nil)
 }
 

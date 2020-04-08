@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -247,7 +248,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	ip.deps.EventBus.Publish(AppTopicInvoicePaid, AppEventInvoicePaid{
+	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
 		ConsumerID: ip.deps.Identity,
 		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,
