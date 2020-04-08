@@ -109,13 +109,13 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SetProviderContact updates service proposal description with general data
-func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity, providerContact Contact) {
+// SetProviderContacts updates service proposal description with general data
+func (proposal *ServiceProposal) SetProviderContacts(providerID identity.Identity, contacts ContactList) {
 	proposal.Format = proposalFormat
 	// TODO This will be generated later
 	proposal.ID = 1
 	proposal.ProviderID = providerID.Address
-	proposal.ProviderContacts = ContactList{providerContact}
+	proposal.ProviderContacts = contacts
 }
 
 // SetAccessPolicies updates service proposal with the given AccessPolicy

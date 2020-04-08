@@ -88,7 +88,7 @@ func NewManager(
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
 		policyOracle:         policyOracle,
-		p2pManager:           p2pListener,
+		p2pListener:          p2pListener,
 		sessionManager:       sessionManager,
 		statusStorage:        statusStorage,
 	}
@@ -106,7 +106,7 @@ type Manager struct {
 	eventPublisher   Publisher
 	policyOracle     *policy.Oracle
 
-	p2pManager     p2p.Listener
+	p2pListener    p2p.Listener
 	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
 	statusStorage  connectivity.StatusStorage
 }
@@ -135,7 +135,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	if err != nil {
 		return id, err
 	}
-	proposal.SetProviderContact(providerID, dialogWaiter.GetContact())
+	proposal.SetProviderContacts(providerID, market.ContactList{dialogWaiter.GetContact(), manager.p2pListener.GetContact()})
 
 	id, err = generateID()
 	if err != nil {
@@ -157,7 +157,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		subscribeSessionDestroy(mng, ch)
 	}
 
-	err = manager.p2pManager.Listen(providerID, serviceType, channelHandlers)
+	err = manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
 
 	if err != nil {
 		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)

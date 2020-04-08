@@ -172,6 +172,7 @@ type Dependencies struct {
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Configure(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
+	p2p.RegisterContactUnserializer()
 	di.BrokerConnector = nats.NewBrokerConnector()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
@@ -223,8 +224,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapNATComponents(nodeOptions)
 
 	di.PortPool = port.NewPool()
-	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
