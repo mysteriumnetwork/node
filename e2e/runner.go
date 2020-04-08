@@ -126,11 +126,6 @@ func (r *Runner) Init() error {
 		return errors.New("starting DB timed out")
 	}
 
-	log.Info().Msg("Starting transactor")
-	if err := r.compose("up", "-d", "transactor"); err != nil {
-		return errors.Wrap(err, "starting transactor failed!")
-	}
-
 	log.Info().Msg("Migrating DB")
 	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "mysterium-api"); err != nil {
 		return errors.Wrap(err, "migrating DB failed!")
@@ -150,6 +145,11 @@ func (r *Runner) Init() error {
 		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
+	}
+
+	log.Info().Msg("Starting transactor")
+	if err := r.compose("up", "-d", "transactor"); err != nil {
+		return errors.Wrap(err, "starting transactor failed!")
 	}
 
 	log.Info().Msg("starting accountant")
