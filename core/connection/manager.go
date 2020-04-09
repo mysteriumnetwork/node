@@ -143,7 +143,7 @@ type connectionManager struct {
 
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
-	ctxLock                sync.Mutex
+	ctxLock                sync.RWMutex
 	status                 Status
 	statusLock             sync.RWMutex
 	sessionInfo            SessionInfo
@@ -212,7 +212,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 
 	var channel p2p.Channel
 	if contact, err := p2p.ParseContact(proposal.ProviderContacts); err == nil {
-		channel, err = m.createP2PChannel(m.ctx, consumerID, providerID, proposal.ServiceType, contact)
+		channel, err = m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal.ServiceType, contact)
 		if err != nil {
 			return fmt.Errorf("could not create p2p channel: %w", err)
 		}
@@ -241,7 +241,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 	var sessionDTO session.SessionDto
 
 	if channel != nil {
-		sessionDTO, paymentInfo, err = m.createP2PSession(m.ctx, connection, channel, consumerID, accountantID, proposal)
+		sessionDTO, paymentInfo, err = m.createP2PSession(m.currentCtx(), connection, channel, consumerID, accountantID, proposal)
 	} else {
 		sessionDTO, paymentInfo, err = m.createSession(connection, dialog, consumerID, accountantID, proposal)
 	}
@@ -258,7 +258,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
-	err = m.startConnection(m.ctx, connection, consumerID, proposal, params, sessionDTO, channel)
+	err = m.startConnection(m.currentCtx(), connection, consumerID, proposal, params, sessionDTO, channel)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -329,7 +329,7 @@ func (m *connectionManager) sendSessionStatus(dialog communication.Dialog, chann
 
 	log.Debug().Msgf("Sending session status P2P message to %q: %s", p2p.TopicSessionStatus, sessionStatus.String())
 
-	ctx, cancel := context.WithTimeout(m.ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(m.currentCtx(), 20*time.Second)
 	defer cancel()
 	_, err := channel.Send(ctx, p2p.TopicSessionStatus, p2p.ProtoMessage(sessionStatus))
 	if err != nil {
@@ -716,8 +716,8 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) err
 			default:
 				m.onStateChanged(state)
 			}
-		case <-m.ctx.Done():
-			return m.ctx.Err()
+		case <-m.currentCtx().Done():
+			return m.currentCtx().Err()
 		}
 	}
 }
@@ -809,8 +809,8 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 	var errCount int
 	for {
 		select {
-		case <-m.ctx.Done():
-			log.Debug().Msgf("Stopping p2p keepalive: %v", m.ctx.Err())
+		case <-m.currentCtx().Done():
+			log.Debug().Msgf("Stopping p2p keepalive: %v", m.currentCtx().Err())
 			return
 		case <-time.After(m.config.KeepAlive.SendInterval):
 			if err := m.sendKeepAlivePing(channel, sessionID); err != nil {
@@ -836,6 +836,13 @@ func (m *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID ses
 	}
 	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
 	return err
+}
+
+func (m *connectionManager) currentCtx() context.Context {
+	m.ctxLock.RLock()
+	defer m.ctxLock.RUnlock()
+
+	return m.ctx
 }
 
 func logDisconnectError(err error) {
