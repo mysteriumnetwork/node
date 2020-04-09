@@ -18,6 +18,7 @@
 package noop
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -51,7 +52,7 @@ func (c *Connection) Statistics() (connection.Statistics, error) {
 }
 
 // Start implements the connection.Connection interface
-func (c *Connection) Start(params connection.ConnectOptions) error {
+func (c *Connection) Start(ctx context.Context, params connection.ConnectOptions) error {
 	c.noopConnection.Add(1)
 	c.isRunning = true
 

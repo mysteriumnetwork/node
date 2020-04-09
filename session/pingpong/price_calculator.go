@@ -41,7 +41,8 @@ func isServiceFree(method market.PaymentMethod) bool {
 	return false
 }
 
-func calculatePaymentAmount(timePassed time.Duration, bytesTransferred dataTransferred, method market.PaymentMethod) uint64 {
+// CalculatePaymentAmount calculates the required payment amount.
+func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, method market.PaymentMethod) uint64 {
 	if isServiceFree(method) {
 		return 0
 	}

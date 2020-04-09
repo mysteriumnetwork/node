@@ -41,14 +41,13 @@ import (
 type Dialer interface {
 	// Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 	// and create p2p channel which is ready for communication.
-	Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error)
+	Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition) (Channel, error)
 }
 
 // NewDialer creates new p2p communication dialer which is used on consumer side.
-func NewDialer(broker brokerConnector, address string, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) Dialer {
+func NewDialer(broker brokerConnector, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) Dialer {
 	return &dialer{
 		broker:         broker,
-		brokerAddress:  address,
 		ipResolver:     ipResolver,
 		signer:         signer,
 		verifier:       verifier,
@@ -65,13 +64,12 @@ type dialer struct {
 	signer         identity.SignerFactory
 	verifier       identity.Verifier
 	ipResolver     ip.Resolver
-	brokerAddress  string
 }
 
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
-func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (Channel, error) {
-	brokerConn, err := m.broker.Connect(m.brokerAddress)
+func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition) (Channel, error) {
+	brokerConn, err := m.broker.Connect(contactDef.BrokerAddresses...)
 	if err != nil {
 		return nil, fmt.Errorf("could not open broker conn: %w", err)
 	}
@@ -99,17 +97,17 @@ func (m *dialer) Dial(ctx context.Context, consumerID identity.Identity, service
 	var conn1, conn2 *net.UDPConn
 	if len(config.peerPorts) == requiredConnCount {
 		log.Debug().Msg("Skipping provider ping")
-		conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[0]})
+		conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
 		if err != nil {
 			return nil, fmt.Errorf("could not create UDP conn for p2p channel: %w", err)
 		}
-		conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[1]})
+		conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
 		if err != nil {
 			return nil, fmt.Errorf("could not create UDP conn for service: %w", err)
 		}
 	} else {
-		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
+		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.peerIP(), config.localPorts, config.peerPorts)
+		conns, err := m.consumerPinger.PingProviderPeer(ctx, config.peerIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}

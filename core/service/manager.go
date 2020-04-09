@@ -19,6 +19,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
@@ -88,7 +89,7 @@ func NewManager(
 		discoveryFactory:     discoveryFactory,
 		eventPublisher:       eventPublisher,
 		policyOracle:         policyOracle,
-		p2pManager:           p2pListener,
+		p2pListener:          p2pListener,
 		sessionManager:       sessionManager,
 		statusStorage:        statusStorage,
 	}
@@ -106,7 +107,7 @@ type Manager struct {
 	eventPublisher   Publisher
 	policyOracle     *policy.Oracle
 
-	p2pManager     p2p.Listener
+	p2pListener    p2p.Listener
 	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
 	statusStorage  connectivity.StatusStorage
 }
@@ -135,7 +136,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	if err != nil {
 		return id, err
 	}
-	proposal.SetProviderContact(providerID, dialogWaiter.GetContact())
+	proposal.SetProviderContacts(providerID, market.ContactList{dialogWaiter.GetContact(), manager.p2pListener.GetContact()})
 
 	id, err = generateID()
 	if err != nil {
@@ -147,20 +148,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 	if err = dialogWaiter.Start(dialogHandler); err != nil {
 		return id, err
-	}
-
-	channelHandlers := func(ch p2p.Channel) {
-		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service)
-		subscribeSessionStatus(mng, ch, manager.statusStorage)
-		subscribeSessionAcknowledge(mng, ch)
-		subscribeSessionDestroy(mng, ch)
-	}
-
-	err = manager.p2pManager.Listen(providerID, serviceType, channelHandlers)
-
-	if err != nil {
-		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
 	}
 
 	discovery := manager.discoveryFactory()
@@ -176,6 +163,22 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		dialogWaiter:   dialogWaiter,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
+	}
+
+	channelHandlers := func(ch p2p.Channel) {
+		instance.addP2PChannel(ch)
+		mng := manager.sessionManager(proposal, string(id), ch)
+		subscribeSessionCreate(mng, ch, service)
+		subscribeSessionStatus(mng, ch, manager.statusStorage)
+		subscribeSessionAcknowledge(mng, ch)
+		subscribeSessionDestroy(mng, ch, func() {
+			// Give some time for channel to finish sending last message.
+			time.Sleep(10 * time.Second)
+			instance.closeP2PChannel(ch)
+		})
+	}
+	if err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers); err != nil {
+		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
 	}
 
 	manager.servicePool.Add(instance)

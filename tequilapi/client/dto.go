@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 // Fees represents the transactor fee
@@ -58,6 +59,19 @@ type ProposalDTO struct {
 	ServiceType       string               `json:"service_type"`
 	ServiceDefinition ServiceDefinitionDTO `json:"service_definition"`
 	AccessPolicies    []AccessPolicy       `json:"access_policies"`
+	PaymentMethodType string               `json:"payment_method_type"`
+	PaymentMethod     paymentMethodRes     `json:"payment_method"`
+}
+
+type paymentMethodRes struct {
+	Type  string         `json:"type"`
+	Price money.Money    `json:"price"`
+	Rate  paymentRateRes `json:"rate"`
+}
+
+type paymentRateRes struct {
+	PerSeconds uint64 `json:"per_seconds"`
+	PerBytes   uint64 `json:"per_bytes"`
 }
 
 // AccessPolicy represents the access controls for proposal

@@ -39,9 +39,6 @@ import (
 // PromiseWaitTimeout is the time that the provider waits for the promise to arrive
 const PromiseWaitTimeout = time.Second * 50
 
-// InvoiceSendPeriod is how often the provider will send invoice messages to the consumer
-const InvoiceSendPeriod = time.Second * 60
-
 // DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
 const DefaultAccountantFailureCount uint64 = 10
 

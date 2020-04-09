@@ -39,7 +39,7 @@ func Test() error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{"test", "-race", "-timeout", "5m"}, packages...)
+	args := append([]string{"test", "-race", "-count=1", "-timeout", "5m"}, packages...)
 	return sh.RunV("go", args...)
 }
 

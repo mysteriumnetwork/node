@@ -17,7 +17,10 @@
 
 package traversal
 
-import "net"
+import (
+	"context"
+	"net"
+)
 
 // NoopPinger does nothing
 type NoopPinger struct{}
@@ -28,12 +31,12 @@ func NewNoopPinger() NATPinger {
 }
 
 // PingProviderPeer does nothing.
-func (np *NoopPinger) PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (np *NoopPinger) PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return []*net.UDPConn{}, nil
 }
 
 // PingConsumerPeer does nothing.
-func (np *NoopPinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (np *NoopPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return []*net.UDPConn{}, nil
 }
 
@@ -52,12 +55,13 @@ func (np *NoopPinger) SetProtectSocketCallback(socketProtect func(socket int) bo
 func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(_ string, _, _ []int, _ int) (int, int, error) {
+func (np *NoopPinger) PingProvider(ctx context.Context, _ string, _, _ []int, _ int) (int, int, error) {
 	return 0, 0, nil
 }
 
 // PingConsumer does nothing
-func (np *NoopPinger) PingConsumer(ip string, localPorts, remotePorts []int, mappingKey string) {}
+func (np *NoopPinger) PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string) {
+}
 
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(key string, port int) {}

@@ -47,10 +47,11 @@ func TestDialer_Exchange_And_Communication_When_Provider_With_PublicIP(t *testin
 	portPool := port.NewPool()
 	providerPinger := &mockProviderNATPinger{}
 	consumerPinger := &mockConsumerNATPinger{}
+	mockPortMapper := &mockPortMapper{}
 	ipResolver := ip.NewResolverMock("127.0.0.1")
 
 	t.Run("Test provider listens to peer", func(t *testing.T) {
-		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, portPool)
+		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool, mockPortMapper)
 		err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
@@ -60,11 +61,11 @@ func TestDialer_Exchange_And_Communication_When_Provider_With_PublicIP(t *testin
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
-		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, portPool)
+		channelDialer := NewDialer(mockBroker, signerFactory, verifier, ipResolver, consumerPinger, portPool)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
 		require.NoError(t, err)
 
 		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
@@ -85,6 +86,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	defer brokerConn.Close()
 	mockBroker := &mockBroker{conn: brokerConn}
 	portPool := &mockPortPool{}
+	mockPortMapper := &mockPortMapper{}
 
 	// Create mock NAT pinger.
 	ports, err := acquirePorts(2)
@@ -101,7 +103,7 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	ipResolver := ip.NewResolverMock("127.0.0.1", "1.1.1.1")
 
 	t.Run("Test provider listens to peer", func(t *testing.T) {
-		channelListener := NewListener(mockBroker, "broker", signerFactory, verifier, ipResolver, providerPinger, portPool)
+		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool, mockPortMapper)
 		err = channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 			ch.Handle("test", func(c Context) error {
 				return c.OkWithReply(&Message{Data: []byte("pong")})
@@ -111,11 +113,53 @@ func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT(t *testing.T
 	})
 
 	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
-		channelDialer := NewDialer(mockBroker, "broker", signerFactory, verifier, ipResolver, consumerPinger, portPool)
+		channelDialer := NewDialer(mockBroker, signerFactory, verifier, ipResolver, consumerPinger, portPool)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		consumerChannel, err := channelDialer.Dial(ctx, consumerID, "wireguard", providerID)
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
+		require.NoError(t, err)
+
+		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
+		require.NoError(t, err)
+		assert.Equal(t, "pong", string(res.Data))
+	})
+}
+
+func TestDialer_Exchange_And_Communication_When_Provider_Behind_NAT_With_Upnp_Enabled(t *testing.T) {
+	consumerID, providerID, ks, cleanup := createTestIdentities(t)
+	defer cleanup()
+
+	signerFactory := func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(ks, identity.FromAddress(id.Address))
+	}
+	verifier := identity.NewVerifierSigned()
+	brokerConn := nats.StartConnectionMock()
+	defer brokerConn.Close()
+	mockBroker := &mockBroker{conn: brokerConn}
+	portPool := port.NewPool()
+	mockPortMapper := &mockPortMapper{enabled: true}
+	providerPinger := &mockProviderNATPinger{}
+	consumerPinger := &mockConsumerNATPinger{}
+	// Simulate behind NAT behaviour with different IP's.
+	ipResolver := ip.NewResolverMock("127.0.0.1", "0.0.0.0")
+
+	t.Run("Test provider listens to peer", func(t *testing.T) {
+		channelListener := NewListener(brokerConn, signerFactory, verifier, ipResolver, providerPinger, portPool, mockPortMapper)
+		err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
+			ch.Handle("test", func(c Context) error {
+				return c.OkWithReply(&Message{Data: []byte("pong")})
+			})
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("Test consumer dialer creates new ready to use channel", func(t *testing.T) {
+		channelDialer := NewDialer(mockBroker, signerFactory, verifier, ipResolver, consumerPinger, portPool)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		consumerChannel, err := channelDialer.Dial(ctx, consumerID, providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
 		require.NoError(t, err)
 
 		res, err := consumerChannel.Send(context.Background(), "test", &Message{Data: []byte("ping")})
@@ -145,7 +189,7 @@ type mockConsumerNATPinger struct {
 	conns []*net.UDPConn
 }
 
-func (m *mockConsumerNATPinger) PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (m *mockConsumerNATPinger) PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return m.conns, nil
 }
 
@@ -153,7 +197,7 @@ type mockProviderNATPinger struct {
 	conns []*net.UDPConn
 }
 
-func (m *mockProviderNATPinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (m *mockProviderNATPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return m.conns, nil
 }
 
@@ -177,4 +221,12 @@ func (m mockPortPool) AcquireMultiple(n int) (ports []port.Port, err error) {
 		ports = append(ports, port.Port(i))
 	}
 	return
+}
+
+type mockPortMapper struct {
+	enabled bool
+}
+
+func (m mockPortMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
+	return func() {}, m.enabled
 }

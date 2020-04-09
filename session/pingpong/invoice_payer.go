@@ -82,7 +82,7 @@ type InvoicePayer struct {
 	lastInvoice crypto.Invoice
 	deps        InvoicePayerDeps
 
-	dataTransferred     dataTransferred
+	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
 }
 
@@ -169,9 +169,9 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 	}
 
 	transferred := ip.getDataTransferred()
-	transferred.up += ip.deps.DataLeeway.Bytes()
+	transferred.Up += ip.deps.DataLeeway.Bytes()
 
-	shouldBe := calculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
+	shouldBe := CalculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
 	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transferred)
 
 	upperBound := uint64(math.Trunc(float64(shouldBe) * estimatedTolerance))
@@ -186,7 +186,7 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 	return nil
 }
 
-func estimateInvoiceTolerance(elapsed time.Duration, transferred dataTransferred) float64 {
+func estimateInvoiceTolerance(elapsed time.Duration, transferred DataTransferred) float64 {
 	if elapsed.Seconds() < 1 {
 		return 3
 	}
@@ -283,23 +283,23 @@ func (ip *InvoicePayer) updateDataTransfer(up, down uint64) {
 	ip.dataTransferredLock.Lock()
 	defer ip.dataTransferredLock.Unlock()
 
-	newUp := ip.dataTransferred.up
-	if up > ip.dataTransferred.up {
+	newUp := ip.dataTransferred.Up
+	if up > ip.dataTransferred.Up {
 		newUp = up
 	}
 
-	newDown := ip.dataTransferred.down
-	if down > ip.dataTransferred.down {
+	newDown := ip.dataTransferred.Down
+	if down > ip.dataTransferred.Down {
 		newDown = down
 	}
 
-	ip.dataTransferred = dataTransferred{
-		up:   newUp,
-		down: newDown,
+	ip.dataTransferred = DataTransferred{
+		Up:   newUp,
+		Down: newDown,
 	}
 }
 
-func (ip *InvoicePayer) getDataTransferred() dataTransferred {
+func (ip *InvoicePayer) getDataTransferred() DataTransferred {
 	ip.dataTransferredLock.Lock()
 	defer ip.dataTransferredLock.Unlock()
 

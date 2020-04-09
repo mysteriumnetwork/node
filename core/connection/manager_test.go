@@ -59,9 +59,12 @@ var (
 	consumerID            = identity.FromAddress("identity-1")
 	activeProviderID      = identity.FromAddress("fake-node-1")
 	accountantID          = identity.FromAddress("accountant")
-	activeProviderContact = market.Contact{}
-	activeServiceType     = "fake-service"
-	activeProposal        = market.ServiceProposal{
+	activeProviderContact = market.Contact{
+		Type:       p2p.ContactTypeV1,
+		Definition: p2p.ContactDefinition{},
+	}
+	activeServiceType = "fake-service"
+	activeProposal    = market.ServiceProposal{
 		ProviderID:        activeProviderID.Address,
 		ProviderContacts:  []market.Contact{activeProviderContact},
 		ServiceType:       activeServiceType,
@@ -564,7 +567,7 @@ type mockP2PDialer struct {
 	ch *mockP2PChannel
 }
 
-func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, serviceType string, providerID identity.Identity) (p2p.Channel, error) {
+func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
 	return m.ch, nil
 }
 

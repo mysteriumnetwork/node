@@ -36,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -88,6 +87,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			wgOptions := serviceOptions.(wireguard_service.Options)
 
+			// TODO: Use global port pool once migrated to p2p.
 			var portPool port.ServicePortSupplier
 			var natPinger traversal.NATPinger
 			if wgOptions.Ports.IsSpecified() {
@@ -99,14 +99,6 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				natPinger = di.NATPinger
 			}
 
-			var portMapper mapping.PortMapper
-			if config.GetBool(config.FlagPortMapping) {
-				portmapConfig := mapping.DefaultConfig()
-				portMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
-			} else {
-				portMapper = mapping.NewNoopPortMapper(di.EventBus)
-			}
-
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
@@ -116,7 +108,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				di.EventBus,
 				wgOptions,
 				portPool,
-				portMapper,
+				di.PortMapper,
 				di.ServiceFirewall,
 			)
 			return svc, wireguard_service.GetProposal(loc), nil
@@ -138,6 +130,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		transportOptions := serviceOptions.(openvpn_service.Options)
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(loc, transportOptions.Protocol)
 
+		// TODO: Use global port pool once migrated to p2p.
 		var portPool port.ServicePortSupplier
 		var natPinger traversal.NATPinger
 		if transportOptions.Port != 0 {
@@ -146,14 +139,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		} else {
 			portPool = port.NewPool()
 			natPinger = di.NATPinger
-		}
-
-		var portMapper mapping.PortMapper
-		if config.GetBool(config.FlagPortMapping) {
-			portmapConfig := mapping.DefaultConfig()
-			portMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
-		} else {
-			portMapper = mapping.NewNoopPortMapper(di.EventBus)
 		}
 
 		manager := openvpn_service.NewManager(
@@ -167,7 +152,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.NATTracker,
 			portPool,
 			di.EventBus,
-			portMapper,
+			di.PortMapper,
 			di.ServiceFirewall,
 		)
 		return manager, proposal, nil
@@ -254,7 +239,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	}
 	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(nil,
-			channel, pingpong.InvoiceSendPeriod,
+			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
 			pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			di.AccountantPromiseStorage,

@@ -141,6 +141,7 @@ type Dependencies struct {
 	NATTracker     *event.Tracker
 	NATEventSender *event.Sender
 	PortPool       *port.Pool
+	PortMapper     mapping.PortMapper
 
 	BandwidthTracker *bandwidth.Tracker
 
@@ -172,6 +173,7 @@ type Dependencies struct {
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Configure(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
+	p2p.RegisterContactUnserializer()
 	di.BrokerConnector = nats.NewBrokerConnector()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
@@ -222,9 +224,17 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 
+	// TODO: Add global services ports flag to support fixed range global ports pool.
 	di.PortPool = port.NewPool()
-	di.P2PListener = p2p.NewListener(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.NetworkDefinition.BrokerAddress, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	if config.GetBool(config.FlagPortMapping) {
+		portmapConfig := mapping.DefaultConfig()
+		di.PortMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
+	} else {
+		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
+	}
+
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
@@ -603,7 +613,7 @@ func newSessionManagerFactory(
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
-			dialog, nil, pingpong.InvoiceSendPeriod,
+			dialog, nil, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
 			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,

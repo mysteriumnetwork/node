@@ -70,9 +70,6 @@ func (r *Runner) Test(providerHost, consumerHost string) error {
 
 	err := r.compose("run", "go-runner",
 		"go", "test", "-v", "./e2e/...", "-args",
-		"--deployer.keystore-directory=../e2e/blockchain/keystore",
-		"--deployer.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
-		"--deployer.passphrase", r.etherPassphrase,
 		"--provider.tequilapi-host", providerHost,
 		"--provider.tequilapi-port=4050",
 		"--consumer.tequilapi-host", consumerHost,
@@ -126,11 +123,6 @@ func (r *Runner) Init() error {
 		return errors.New("starting DB timed out")
 	}
 
-	log.Info().Msg("Starting transactor")
-	if err := r.compose("up", "-d", "transactor"); err != nil {
-		return errors.Wrap(err, "starting transactor failed!")
-	}
-
 	log.Info().Msg("Migrating DB")
 	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "mysterium-api"); err != nil {
 		return errors.Wrap(err, "migrating DB failed!")
@@ -150,6 +142,11 @@ func (r *Runner) Init() error {
 		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
+	}
+
+	log.Info().Msg("Starting transactor")
+	if err := r.compose("up", "-d", "transactor"); err != nil {
+		return errors.Wrap(err, "starting transactor failed!")
 	}
 
 	log.Info().Msg("starting accountant")

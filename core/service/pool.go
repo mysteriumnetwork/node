@@ -24,8 +24,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // ID represent unique identifier of the running service.
@@ -90,23 +92,8 @@ func (p *Pool) stop(id ID) error {
 	if !ok {
 		return ErrNoSuchInstance
 	}
-
-	errStop := utils.ErrorCollection{}
-	if instance.discovery != nil {
-		instance.discovery.Stop()
-	}
-	if instance.dialogWaiter != nil {
-		errStop.Add(instance.dialogWaiter.Stop())
-	}
-	if instance.service != nil {
-		errStop.Add(instance.service.Stop())
-	}
-
 	p.del(id)
-
-	instance.setState(servicestate.NotRunning)
-
-	return errStop.Errorf("ErrorCollection(%s)", ", ")
+	return instance.stop()
 }
 
 // StopAll kills all running instances
@@ -158,17 +145,18 @@ func NewInstance(
 
 // Instance represents a run service
 type Instance struct {
-	id             ID
-	state          servicestate.State
-	options        Options
-	service        RunnableService
-	proposal       market.ServiceProposal
-	policies       *policy.Repository
-	dialogWaiter   communication.DialogWaiter
-	discovery      Discovery
-	eventPublisher Publisher
-
-	stateLock sync.RWMutex
+	id              ID
+	state           servicestate.State
+	stateLock       sync.RWMutex
+	options         Options
+	service         RunnableService
+	proposal        market.ServiceProposal
+	policies        *policy.Repository
+	dialogWaiter    communication.DialogWaiter
+	discovery       Discovery
+	eventPublisher  Publisher
+	p2pChannelsLock sync.Mutex
+	p2pChannels     []p2p.Channel
 }
 
 // Options returns options used to start service
@@ -199,6 +187,51 @@ func (i *Instance) setState(newState servicestate.State) {
 	i.state = newState
 
 	i.eventPublisher.Publish(servicestate.AppTopicServiceStatus, i.toEvent())
+}
+
+func (i *Instance) addP2PChannel(ch p2p.Channel) {
+	i.p2pChannelsLock.Lock()
+	defer i.p2pChannelsLock.Unlock()
+
+	i.p2pChannels = append(i.p2pChannels, ch)
+}
+
+func (i *Instance) closeP2PChannel(ch p2p.Channel) {
+	i.p2pChannelsLock.Lock()
+	defer i.p2pChannelsLock.Unlock()
+
+	for index, channel := range i.p2pChannels {
+		if channel == ch {
+			// Close and delete channel.
+			if err := channel.Close(); err != nil {
+				log.Err(err).Msg("Could not close p2p channel")
+			}
+			i.p2pChannels = append(i.p2pChannels[:index], i.p2pChannels[index+1:]...)
+			return
+		}
+	}
+}
+
+func (i *Instance) stop() error {
+	errStop := utils.ErrorCollection{}
+	if i.discovery != nil {
+		i.discovery.Stop()
+	}
+	if i.dialogWaiter != nil {
+		errStop.Add(i.dialogWaiter.Stop())
+	}
+	if i.service != nil {
+		errStop.Add(i.service.Stop())
+	}
+
+	i.p2pChannelsLock.Lock()
+	for _, channel := range i.p2pChannels {
+		errStop.Add(channel.Close())
+	}
+	i.p2pChannelsLock.Unlock()
+
+	i.setState(servicestate.NotRunning)
+	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
 // toEvent returns an event representation of the instance

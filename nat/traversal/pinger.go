@@ -18,16 +18,18 @@
 package traversal
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sort"
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/ipv4"
 )
@@ -36,29 +38,26 @@ import (
 const StageName = "hole_punching"
 
 const (
-	maxTTL              = 128
-	msgOK               = "OK"
-	msgOKACK            = "OK_ACK"
-	msgReceiveTimeout   = 2 * time.Second
-	sendConnACKInterval = 100 * time.Millisecond
+	maxTTL   = 128
+	msgOK    = "OK"
+	msgOKACK = "OK_ACK"
 )
 
 var (
-	errNATPunchAttemptStopped  = errors.New("NAT punch attempt stopped")
-	errNATPunchAttemptTimedOut = errors.New("NAT punch attempt timed out")
+	errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
 )
 
 // NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
 type NATProviderPinger interface {
-	PingProvider(ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 }
 
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	NATProviderPinger
-	PingConsumer(ip string, localPorts, remotePorts []int, mappingKey string)
-	PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
-	PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
+	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	BindServicePort(key string, port int)
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
@@ -67,15 +66,17 @@ type NATPinger interface {
 
 // PingConfig represents NAT pinger config.
 type PingConfig struct {
-	Interval time.Duration
-	Timeout  time.Duration
+	Interval            time.Duration
+	Timeout             time.Duration
+	SendConnACKInterval time.Duration
 }
 
 // DefaultPingConfig returns default NAT pinger config.
 func DefaultPingConfig() *PingConfig {
 	return &PingConfig{
-		Interval: 200 * time.Millisecond,
-		Timeout:  10 * time.Second,
+		Interval:            200 * time.Millisecond,
+		Timeout:             10 * time.Second,
+		SendConnACKInterval: 200 * time.Millisecond,
 	}
 }
 
@@ -122,10 +123,13 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error) {
-	conns, err := p.pingPeer(ip, localPorts, remotePorts, maxTTL, 1)
+func (p *Pinger) PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error) {
+	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
+	defer cancel()
+
+	conns, err := p.pingPeer(ctx, ip, localPorts, remotePorts, maxTTL, 1)
 	if err != nil {
-		return 0, 0, errors.Wrap(err, "failed to ping remote peer")
+		return 0, 0, fmt.Errorf("failed to ping remote peer: %w", err)
 	}
 
 	conn := conns[0]
@@ -150,8 +154,11 @@ func (p *Pinger) PingProvider(ip string, localPorts, remotePorts []int, proxyPor
 }
 
 // PingConsumer pings consumer with increasing TTL for every connection.
-func (p *Pinger) PingConsumer(ip string, localPorts, remotePorts []int, mappingKey string) {
-	conns, err := p.pingPeer(ip, localPorts, remotePorts, 2, 1)
+func (p *Pinger) PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string) {
+	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
+	defer cancel()
+
+	conns, err := p.pingPeer(ctx, ip, localPorts, remotePorts, 2, 1)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to ping remote peer")
 		return
@@ -167,88 +174,110 @@ func (p *Pinger) PingConsumer(ip string, localPorts, remotePorts []int, mappingK
 
 // pingPeer pings remote peer with a defined configuration.
 // It returns n connections if possible or all available with error.
-func (p *Pinger) pingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (p *Pinger) pingPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	log.Info().Msg("NAT pinging to remote peer")
 
-	stop := make(chan struct{})
-	defer close(stop)
-
-	ch, err := p.multiPing(ip, localPorts, remotePorts, initialTTL, stop)
+	ch, err := p.multiPing(ctx, ip, localPorts, remotePorts, initialTTL)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
 	}
 
-	for res := range ch {
-		if res.err != nil {
-			log.Warn().Err(res.err).Msg("One of the pings has error")
-		} else {
-			if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
-				log.Warn().Err(res.err).Msg("Failed to set connection TTL")
-				continue
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case res, more := <-ch:
+			if !more {
+				return nil, errors.New("not enough connections")
 			}
 
-			res.conn.Write([]byte("OK")) // notify peer that we are using this connection.
+			if res.err != nil {
+				log.Warn().Err(res.err).Msg("One of the pings has error")
+			} else {
+				if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
+					log.Warn().Err(res.err).Msg("Failed to set connection TTL")
+					continue
+				}
 
-			conns = append(conns, res.conn)
-			if len(conns) == n {
-				return conns, nil
+				res.conn.Write([]byte("OK")) // notify peer that we are using this connection.
+
+				conns = append(conns, res.conn)
+				if len(conns) == n {
+					return conns, nil
+				}
 			}
 		}
 	}
-
-	return conns, errors.New("not enough connections")
 }
 
 // PingConsumerPeer pings remote peer with a defined configuration
 // and notifies peer which connections will be used.
 // It returns n connections if possible or error.
-func (p *Pinger) PingConsumerPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+func (p *Pinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
+	defer cancel()
+
 	log.Info().Msg("NAT pinging to remote peer")
 
 	stop := make(chan struct{})
 	defer close(stop)
 
-	ch, err := p.multiPingN(ip, localPorts, remotePorts, initialTTL, n, stop)
+	ch, err := p.multiPingN(ctx, ip, localPorts, remotePorts, initialTTL, n)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
 	}
 
+	pingsCh := make(chan pingResponse, n)
+	go func() {
+		for res := range ch {
+			if res.err != nil {
+				log.Warn().Err(res.err).Msg("One of the pings has error")
+				continue
+			}
+
+			if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
+				log.Warn().Err(res.err).Msg("Failed to set connection TTL")
+				continue
+			}
+
+			sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
+
+			if err := p.sendConnACK(ctx, res.conn); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					log.Warn().Err(err).Msg("Failed to send conn ACK to consumer")
+				}
+			} else {
+				pingsCh <- res
+			}
+		}
+	}()
+
 	var pings []pingResponse
-	for res := range ch {
-		if res.err != nil {
-			log.Warn().Err(res.err).Msg("One of the pings has error")
-			continue
-		}
-
-		if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
-			log.Warn().Err(res.err).Msg("Failed to set connection TTL")
-			continue
-		}
-
-		sendMsg(res.conn, msgOK) // Notify peer that we are using this connection.
-
-		pings = append(pings, res)
-		if len(pings) == n {
-			waitAllConnACKSent(pings)
-			return sortedConns(pings), nil
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("ping failed: %w", ctx.Err())
+		case ping := <-pingsCh:
+			pings = append(pings, ping)
+			if len(pings) == n {
+				return sortedConns(pings), nil
+			}
 		}
 	}
-
-	return nil, errors.New("not enough connections")
 }
 
 // PingProviderPeer pings remote peer with a defined configuration
 // and waits for peer to send ack with connection selected ids.
 // It returns n connections if possible or error.
-func (p *Pinger) PingProviderPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+func (p *Pinger) PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
+	defer cancel()
+
 	log.Info().Msg("NAT pinging to remote peer")
 
-	stop := make(chan struct{})
-	defer close(stop)
-
-	ch, err := p.multiPingN(ip, localPorts, remotePorts, initialTTL, n, stop)
+	ch, err := p.multiPingN(ctx, ip, localPorts, remotePorts, initialTTL, n)
 	if err != nil {
 		log.Err(err).Msg("Failed to ping remote peer")
 		return nil, err
@@ -271,8 +300,10 @@ func (p *Pinger) PingProviderPeer(ip string, localPorts, remotePorts []int, init
 
 			// Wait for peer to notify that it uses this connection too.
 			go func(ping pingResponse) {
-				if err := waitMsg(ping.conn, msgOK); err != nil {
-					log.Err(err).Msg("Failed to wait for conn OK from provider")
+				if err := waitMsg(ctx, ping.conn, msgOK); err != nil {
+					if !errors.Is(err, context.Canceled) {
+						log.Err(err).Msg("Failed to wait for conn OK from provider")
+					}
 					return
 				}
 				sendMsg(ping.conn, msgOKACK)
@@ -281,48 +312,33 @@ func (p *Pinger) PingProviderPeer(ip string, localPorts, remotePorts []int, init
 		}
 	}()
 
-	timeout := time.After(p.pingConfig.Timeout)
 	var pings []pingResponse
 	for {
 		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("ping failed: %w", ctx.Err())
 		case ping := <-pingsCh:
 			pings = append(pings, ping)
 			if len(pings) == n {
 				return sortedConns(pings), nil
 			}
-		case <-timeout:
-			return nil, errNATPunchAttemptTimedOut
 		}
 	}
 }
 
-func waitAllConnACKSent(pings []pingResponse) {
-	var wg sync.WaitGroup
-	wg.Add(len(pings))
-	for _, ping := range pings {
-		go func(conn *net.UDPConn) {
-			defer wg.Done()
-			if err := sendConnACK(conn); err != nil {
-				log.Warn().Err(err).Msg("Failed to send conn ACK to consumer")
-			}
-		}(ping.conn)
-	}
-	wg.Wait()
-}
-
 // sendConnACK notifies peer that we are using this connection
 // and waits for ack or returns timeout err.
-func sendConnACK(conn *net.UDPConn) error {
+func (p *Pinger) sendConnACK(ctx context.Context, conn *net.UDPConn) error {
 	ackWaitErr := make(chan error)
 	go func() {
-		ackWaitErr <- waitMsg(conn, msgOKACK)
+		ackWaitErr <- waitMsg(ctx, conn, msgOKACK)
 	}()
 
 	for {
 		select {
 		case err := <-ackWaitErr:
 			return err
-		case <-time.After(sendConnACKInterval):
+		case <-time.After(p.pingConfig.SendConnACKInterval):
 			sendMsg(conn, msgOK)
 		}
 	}
@@ -340,7 +356,7 @@ func sortedConns(pings []pingResponse) []*net.UDPConn {
 }
 
 // waitMsg waits until conn receives given message or timeouts.
-func waitMsg(conn *net.UDPConn, msg string) error {
+func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
 	ok := make(chan struct{})
 	go func() {
 		buf := make([]byte, 1024)
@@ -360,8 +376,8 @@ func waitMsg(conn *net.UDPConn, msg string) error {
 	select {
 	case <-ok:
 		return nil
-	case <-time.After(msgReceiveTimeout):
-		return fmt.Errorf("timeout waiting for %q msg", msg)
+	case <-ctx.Done():
+		return fmt.Errorf("timeout waiting for %q msg: %w", msg, ctx.Err())
 	}
 }
 
@@ -369,15 +385,15 @@ func sendMsg(conn *net.UDPConn, msg string) {
 	conn.Write([]byte(msg))
 }
 
-func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop <-chan struct{}, pingReceived <-chan struct{}) error {
+func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, pingReceived <-chan struct{}) error {
 	err := ipv4.NewConn(conn).SetTTL(ttl)
 	if err != nil {
-		return errors.Wrap(err, "pinger setting ttl failed")
+		return fmt.Errorf("pinger setting ttl failed: %w", err)
 	}
 
-	for deadline := time.Now().Add(p.pingConfig.Timeout); time.Now().Before(deadline); {
+	for {
 		select {
-		case <-stop:
+		case <-ctx.Done():
 			return nil
 		case <-p.stop:
 			return nil
@@ -389,12 +405,10 @@ func (p *Pinger) ping(conn *net.UDPConn, remoteAddr *net.UDPAddr, ttl int, stop 
 
 			_, err := conn.WriteToUDP([]byte("continuously pinging to "+remoteAddr.String()), remoteAddr)
 			if err != nil {
-				return errors.Wrap(err, "pinging request failed")
+				return fmt.Errorf("pinging request failed: %w", err)
 			}
 		}
 	}
-
-	return errors.New("timeout while waiting for ping ack, trying to continue")
 }
 
 // BindServicePort register service port to forward connection to
@@ -402,21 +416,18 @@ func (p *Pinger) BindServicePort(key string, port int) {
 	p.natProxy.registerServicePort(key, port)
 }
 
-func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) (*net.UDPAddr, error) {
-	timeout := time.After(p.pingConfig.Timeout)
+func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPAddr, error) {
 	buf := make([]byte, bufferLen)
 
 	for {
 		select {
-		case <-timeout:
-			return nil, errNATPunchAttemptTimedOut
-		case <-stop:
+		case <-ctx.Done():
 			return nil, errNATPunchAttemptStopped
 		case <-p.stop:
 			return nil, errNATPunchAttemptStopped
 		default:
 			// Add read deadline to prevent possible conn.Read hang when remote peer doesn't send ping ack.
-			conn.SetReadDeadline(time.Now().Add(p.pingConfig.Timeout * 2))
+			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 			n, raddr, err := conn.ReadFromUDP(buf)
 			// Reset read deadline.
 			conn.SetReadDeadline(time.Time{})
@@ -448,7 +459,7 @@ type pingResponse struct {
 	id   int
 }
 
-func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL int, stop <-chan struct{}) (<-chan pingResponse, error) {
+func (p *Pinger) multiPing(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int) (<-chan pingResponse, error) {
 	if len(localPorts) != len(remotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
@@ -460,7 +471,7 @@ func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL 
 		wg.Add(1)
 
 		go func(i int) {
-			conn, err := p.singlePing(ip, localPorts[i], remotePorts[i], initialTTL+i, stop)
+			conn, err := p.singlePing(ctx, ip, localPorts[i], remotePorts[i], initialTTL+i)
 
 			ch <- pingResponse{id: i, conn: conn, err: err}
 
@@ -473,7 +484,7 @@ func (p *Pinger) multiPing(ip string, localPorts, remotePorts []int, initialTTL 
 	return ch, nil
 }
 
-func (p *Pinger) multiPingN(ip string, localPorts, remotePorts []int, initialTTL int, n int, stop <-chan struct{}) (<-chan pingResponse, error) {
+func (p *Pinger) multiPingN(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (<-chan pingResponse, error) {
 	if len(localPorts) != len(remotePorts) {
 		return nil, errors.New("number of local and remote ports does not match")
 	}
@@ -488,7 +499,7 @@ func (p *Pinger) multiPingN(ip string, localPorts, remotePorts []int, initialTTL
 
 		go func(i, ttl int) {
 			defer wg.Done()
-			conn, err := p.singlePing(ip, localPorts[i], remotePorts[i], ttl, stop)
+			conn, err := p.singlePing(ctx, ip, localPorts[i], remotePorts[i], ttl)
 			ch <- pingResponse{conn: conn, err: err, id: i}
 		}(i, ttl)
 
@@ -506,33 +517,33 @@ func (p *Pinger) multiPingN(ip string, localPorts, remotePorts []int, initialTTL
 	return ch, nil
 }
 
-func (p *Pinger) singlePing(remoteIP string, localPort, remotePort, ttl int, stop <-chan struct{}) (*net.UDPConn, error) {
+func (p *Pinger) singlePing(ctx context.Context, remoteIP string, localPort, remotePort, ttl int) (*net.UDPConn, error) {
 	conn, err := net.ListenUDP("udp4", &net.UDPAddr{Port: localPort})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get connection")
+		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
 
 	log.Info().Msgf("Local socket: %s", conn.LocalAddr())
 
 	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", remoteIP, remotePort))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve remote address")
+		return nil, fmt.Errorf("failed to resolve remote addres: %w", err)
 	}
 
 	pingReceived := make(chan struct{}, 1)
 	go func() {
-		err := p.ping(conn, remoteAddr, ttl, stop, pingReceived)
+		err := p.ping(ctx, conn, remoteAddr, ttl, pingReceived)
 		if err != nil {
 			log.Warn().Err(err).Msg("Error while pinging")
 		}
 	}()
 
 	laddr := conn.LocalAddr().(*net.UDPAddr)
-	raddr, err := p.pingReceiver(conn, stop)
+	raddr, err := p.pingReceiver(ctx, conn)
 	pingReceived <- struct{}{}
 	if err != nil {
 		conn.Close()
-		return nil, errors.Wrap(err, "ping receiver error")
+		return nil, fmt.Errorf("ping receiver error: %w", err)
 	}
 
 	conn.Close()
