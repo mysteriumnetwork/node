@@ -423,7 +423,7 @@ func (it *InvoiceTracker) Start() error {
 	defer it.revealPromise()
 
 	// give the consumer a second to start up his payments before sending the first request
-	firstSend := time.After(time.Second)
+	firstSend := time.After(3 * time.Second)
 	for {
 		select {
 		case <-firstSend:
