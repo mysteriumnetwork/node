@@ -145,18 +145,18 @@ func NewInstance(
 
 // Instance represents a run service
 type Instance struct {
-	id             ID
-	state          servicestate.State
-	stateMu        sync.RWMutex
-	options        Options
-	service        RunnableService
-	proposal       market.ServiceProposal
-	policies       *policy.Repository
-	dialogWaiter   communication.DialogWaiter
-	discovery      Discovery
-	eventPublisher Publisher
-	p2pChannelsMu  sync.Mutex
-	p2pChannels    []p2p.Channel
+	id              ID
+	state           servicestate.State
+	stateLock       sync.RWMutex
+	options         Options
+	service         RunnableService
+	proposal        market.ServiceProposal
+	policies        *policy.Repository
+	dialogWaiter    communication.DialogWaiter
+	discovery       Discovery
+	eventPublisher  Publisher
+	p2pChannelsLock sync.Mutex
+	p2pChannels     []p2p.Channel
 }
 
 // Options returns options used to start service
@@ -176,29 +176,29 @@ func (i *Instance) Policies() *policy.Repository {
 
 // State returns the service instance state.
 func (i *Instance) State() servicestate.State {
-	i.stateMu.RLock()
-	defer i.stateMu.RUnlock()
+	i.stateLock.RLock()
+	defer i.stateLock.RUnlock()
 	return i.state
 }
 
 func (i *Instance) setState(newState servicestate.State) {
-	i.stateMu.Lock()
-	defer i.stateMu.Unlock()
+	i.stateLock.Lock()
+	defer i.stateLock.Unlock()
 	i.state = newState
 
 	i.eventPublisher.Publish(servicestate.AppTopicServiceStatus, i.toEvent())
 }
 
 func (i *Instance) addP2PChannel(ch p2p.Channel) {
-	i.p2pChannelsMu.Lock()
-	defer i.p2pChannelsMu.Unlock()
+	i.p2pChannelsLock.Lock()
+	defer i.p2pChannelsLock.Unlock()
 
 	i.p2pChannels = append(i.p2pChannels, ch)
 }
 
 func (i *Instance) closeP2PChannel(ch p2p.Channel) {
-	i.p2pChannelsMu.Lock()
-	defer i.p2pChannelsMu.Unlock()
+	i.p2pChannelsLock.Lock()
+	defer i.p2pChannelsLock.Unlock()
 
 	for index, channel := range i.p2pChannels {
 		if channel == ch {
@@ -224,11 +224,11 @@ func (i *Instance) stop() error {
 		errStop.Add(i.service.Stop())
 	}
 
-	i.p2pChannelsMu.Lock()
+	i.p2pChannelsLock.Lock()
 	for _, channel := range i.p2pChannels {
 		errStop.Add(channel.Close())
 	}
-	i.p2pChannelsMu.Unlock()
+	i.p2pChannelsLock.Unlock()
 
 	i.setState(servicestate.NotRunning)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")

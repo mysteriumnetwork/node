@@ -42,5 +42,5 @@ func (p *noopPortMapper) Map(protocol string, port int, name string) (release fu
 
 	return func() {
 		log.Debug().Msgf("Noop port mapping released: %d", port)
-	}, true
+	}, false
 }

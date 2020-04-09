@@ -90,18 +90,19 @@ type channel struct {
 	mu   sync.RWMutex
 	once sync.Once
 
-	tr            *transport
-	serviceConn   *net.UDPConn
-	topicHandlers map[string]HandlerFunc
-	streams       map[uint64]*stream
-	nextStreamID  uint64
-	privateKey    PrivateKey
-	peerPubKey    PublicKey
-	peerAddr      *net.UDPAddr
-	localAddr     *net.UDPAddr
-	blockCrypt    kcp.BlockCrypt
-	stop          chan struct{}
-	sendQueue     chan *transportMsg
+	tr               *transport
+	serviceConn      *net.UDPConn
+	topicHandlers    map[string]HandlerFunc
+	streams          map[uint64]*stream
+	nextStreamID     uint64
+	privateKey       PrivateKey
+	peerPubKey       PublicKey
+	peerAddr         *net.UDPAddr
+	localAddr        *net.UDPAddr
+	blockCrypt       kcp.BlockCrypt
+	stop             chan struct{}
+	sendQueue        chan *transportMsg
+	upnpPortsRelease []func()
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
@@ -178,7 +179,7 @@ func (c *channel) readLoop() {
 			readErrCount = 0
 
 			if debugTransport {
-				log.Debug().Msgf("recv: %+v", msg)
+				log.Debug().Msgf("recv from %s: %+v", c.tr.session.RemoteAddr(), msg)
 			}
 
 			// If message contains topic it means that peer is making a request
@@ -205,7 +206,7 @@ func (c *channel) sendLoop() {
 			}
 
 			if debugTransport {
-				log.Debug().Msgf("send: %+v", msg)
+				log.Debug().Msgf("send to %s: %+v", c.tr.session.RemoteAddr(), msg)
 			}
 
 			if err := msg.writeTo(c.tr.Writer); err != nil {
@@ -269,9 +270,16 @@ func (c *channel) ServiceConn() *net.UDPConn {
 
 // Close closes channel.
 func (c *channel) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.once.Do(func() {
 		close(c.stop)
+		for _, release := range c.upnpPortsRelease {
+			release()
+		}
 	})
+
 	if err := c.tr.session.Close(); err != nil {
 		return fmt.Errorf("could not close p2p transport session: %w", err)
 	}
@@ -341,8 +349,18 @@ func (c *channel) deleteStream(id uint64) {
 }
 
 func (c *channel) setServiceConn(conn *net.UDPConn) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	log.Debug().Msgf("Will use service conn with local port: %d, remote port: %d", conn.LocalAddr().(*net.UDPAddr).Port, conn.RemoteAddr().(*net.UDPAddr).Port)
 	c.serviceConn = conn
+}
+
+func (c *channel) setUpnpPortsRelease(release []func()) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.upnpPortsRelease = release
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {

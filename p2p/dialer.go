@@ -97,17 +97,17 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 	var conn1, conn2 *net.UDPConn
 	if len(config.peerPorts) == requiredConnCount {
 		log.Debug().Msg("Skipping provider ping")
-		conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[0]})
+		conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
 		if err != nil {
 			return nil, fmt.Errorf("could not create UDP conn for p2p channel: %w", err)
 		}
-		conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[1]})
+		conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
 		if err != nil {
 			return nil, fmt.Errorf("could not create UDP conn for service: %w", err)
 		}
 	} else {
-		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.pingIP(), config.localPorts, config.peerPorts)
-		conns, err := m.consumerPinger.PingProviderPeer(ctx, config.pingIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
+		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.peerIP(), config.localPorts, config.peerPorts)
+		conns, err := m.consumerPinger.PingProviderPeer(ctx, config.peerIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 		if err != nil {
 			return nil, fmt.Errorf("could not ping peer: %w", err)
 		}
