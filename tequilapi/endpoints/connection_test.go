@@ -104,7 +104,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := &mockConnectionManager{}
 	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.MainConnection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.Connection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
 
 	mockedProposalProvider := mockRepositoryWithProposal("node1", "noop")
 	AddRoutesForConnection(router, fakeManager, fakeState, mockedProposalProvider, mockIdentityRegistryInstance)
@@ -414,9 +414,9 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.MainConnection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
-	fakeState.stateToReturn.MainConnection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
-	fakeState.stateToReturn.MainConnection.Invoice = crypto.Invoice{AgreementTotal: 10001}
+	fakeState.stateToReturn.Connection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
+	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: 10001}
 
 	manager := mockConnectionManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance)

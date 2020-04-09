@@ -115,7 +115,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 			NATStatus: stateEvent.NATStatus{
 				Status: "not_finished",
 			},
-			MainConnection: stateEvent.Connection{
+			Connection: stateEvent.Connection{
 				Session: connection.Status{
 					State: connection.NotConnected,
 				},
@@ -353,10 +353,10 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	}
 
 	if evt.State == connection.NotConnected {
-		k.state.MainConnection = stateEvent.Connection{}
+		k.state.Connection = stateEvent.Connection{}
 	}
-	k.state.MainConnection.Session = evt.SessionInfo
-	log.Info().Msgf("Session %s", k.state.MainConnection.String())
+	k.state.Connection.Session = evt.SessionInfo
+	log.Info().Msgf("Session %s", k.state.Connection.String())
 
 	go k.announceStateChanges(nil)
 }
@@ -370,7 +370,7 @@ func (k *Keeper) updateConnectionStats(e interface{}) {
 		return
 	}
 
-	k.state.MainConnection.Statistics = evt.Stats
+	k.state.Connection.Statistics = evt.Stats
 
 	go k.announceStateChanges(nil)
 }
@@ -384,7 +384,7 @@ func (k *Keeper) updateConnectionThroughput(e interface{}) {
 		return
 	}
 
-	k.state.MainConnection.Throughput = evt.Throughput
+	k.state.Connection.Throughput = evt.Throughput
 
 	go k.announceStateChanges(nil)
 }
@@ -398,8 +398,8 @@ func (k *Keeper) updateConnectionSpending(e interface{}) {
 		return
 	}
 
-	k.state.MainConnection.Invoice = evt.Invoice
-	log.Info().Msgf("Session %s", k.state.MainConnection.String())
+	k.state.Connection.Invoice = evt.Invoice
+	log.Info().Msgf("Session %s", k.state.Connection.String())
 
 	go k.announceStateChanges(nil)
 }

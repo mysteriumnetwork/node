@@ -293,7 +293,7 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	connection := ce.stateProvider.GetState().MainConnection
+	connection := ce.stateProvider.GetState().Connection
 	response := contract.NewConnectionStatisticsDTO(connection.Session, connection.Statistics, connection.Throughput, connection.Invoice)
 
 	utils.WriteAsJSON(response, writer)

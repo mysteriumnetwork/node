@@ -178,7 +178,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState = msp.GetState()
-	changedState.MainConnection.Session.State = connection.Connecting
+	changedState.Connection.Session.State = connection.Connecting
 	changedState.Identities = []stateEvent.Identity{
 		{
 			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",

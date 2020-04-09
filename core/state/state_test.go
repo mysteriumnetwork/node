@@ -314,7 +314,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connection.NotConnected, keeper.GetState().MainConnection.Session.State)
+	assert.Equal(t, connection.NotConnected, keeper.GetState().Connection.Session.State)
 
 	// when
 	eventBus.Publish(connection.AppTopicConnectionState, connection.AppEventConnectionState{
@@ -324,9 +324,9 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().MainConnection.Session.State == connection.Connected
+		return keeper.GetState().Connection.Session.State == connection.Connected
 	}, 2*time.Second, 10*time.Millisecond)
-	assert.Equal(t, expected, keeper.GetState().MainConnection.Session)
+	assert.Equal(t, expected, keeper.GetState().Connection.Session)
 }
 
 func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
@@ -347,7 +347,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.True(t, keeper.GetState().MainConnection.Statistics.At.IsZero())
+	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
 
 	// when
 	eventBus.Publish(connection.AppTopicConnectionStatistics, connection.AppEventConnectionStatistics{
@@ -356,7 +356,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return expected == keeper.GetState().MainConnection.Statistics
+		return expected == keeper.GetState().Connection.Statistics
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -378,7 +378,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.True(t, keeper.GetState().MainConnection.Statistics.At.IsZero())
+	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
 
 	// when
 	eventBus.Publish(pingpongEvent.AppTopicInvoicePaid, pingpongEvent.AppEventInvoicePaid{
@@ -387,7 +387,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return expected == keeper.GetState().MainConnection.Invoice
+		return expected == keeper.GetState().Connection.Invoice
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
