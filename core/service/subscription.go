@@ -66,7 +66,6 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 			go func() {
 				<-session.Done()
 				config.SessionDestroyCallback()
-				ch.Close()
 			}()
 		}
 
@@ -106,7 +105,7 @@ func subscribeSessionStatus(mng *session.Manager, ch p2p.ChannelHandler, statusS
 	})
 }
 
-func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler) {
+func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done func()) {
 	ch.Handle(p2p.TopicSessionDestroy, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
@@ -122,6 +121,7 @@ func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler) {
 			return fmt.Errorf("cannot destroy session %s: %w", sessionID, err)
 		}
 
+		done()
 		return c.OK()
 	})
 }
