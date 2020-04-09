@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -43,11 +44,11 @@ type mockConnectionManager struct {
 	disconnectCount       int
 	requestedConsumerID   identity.Identity
 	requestedProvider     identity.Identity
-	requestedAccountantID identity.Identity
+	requestedAccountantID common.Address
 	requestedServiceType  string
 }
 
-func (cm *mockConnectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
+func (cm *mockConnectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	cm.requestedConsumerID = consumerID
 	cm.requestedAccountantID = accountantID
 	cm.requestedProvider = identity.FromAddress(proposal.ProviderID)
@@ -308,7 +309,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumerID)
-	assert.Equal(t, identity.FromAddress("accountant"), fakeManager.requestedAccountantID)
+	assert.Equal(t, common.HexToAddress("accountant"), fakeManager.requestedAccountantID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "openvpn", fakeManager.requestedServiceType)
 }
@@ -393,7 +394,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
-	assert.Equal(t, identity.FromAddress("accountant"), fakeManager.requestedAccountantID)
+	assert.Equal(t, common.HexToAddress("accountant"), fakeManager.requestedAccountantID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "noop", fakeManager.requestedServiceType)
 }

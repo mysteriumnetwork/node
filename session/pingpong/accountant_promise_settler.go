@@ -43,10 +43,6 @@ type providerChannelStatusProvider interface {
 	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error)
 }
 
-type accountantPromiseGetter interface {
-	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
-}
-
 type ks interface {
 	Accounts() []accounts.Account
 }
@@ -61,7 +57,7 @@ type transactor interface {
 }
 
 type promiseStorage interface {
-	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
+	Get(id identity.Identity, accountantID common.Address) (AccountantPromise, error)
 }
 
 type receivedPromise struct {
@@ -72,7 +68,7 @@ type receivedPromise struct {
 // AccountantPromiseSettler is responsible for settling the accountant promises.
 type AccountantPromiseSettler interface {
 	GetEarnings(id identity.Identity) event.Earnings
-	ForceSettle(providerID, accountantID identity.Identity) error
+	ForceSettle(providerID identity.Identity, accountantID common.Address) error
 	Subscribe() error
 }
 
@@ -82,7 +78,6 @@ type accountantPromiseSettler struct {
 	bc                         providerChannelStatusProvider
 	config                     AccountantPromiseSettlerConfig
 	lock                       sync.RWMutex
-	accountantPromiseGetter    accountantPromiseGetter
 	registrationStatusProvider registrationStatusProvider
 	ks                         ks
 	transactor                 transactor
@@ -148,7 +143,7 @@ func (aps *accountantPromiseSettler) resyncState(id identity.Identity) error {
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", id))
 	}
 
-	accountantPromise, err := aps.promiseStorage.Get(id, identity.FromAddress(aps.config.AccountantAddress.Hex()))
+	accountantPromise, err := aps.promiseStorage.Get(id, aps.config.AccountantAddress)
 	if err != nil && err != ErrNotFound {
 		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", id))
 	}
@@ -304,7 +299,7 @@ func (aps *accountantPromiseSettler) GetEarnings(id identity.Identity) event.Ear
 var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
-func (aps *accountantPromiseSettler) ForceSettle(providerID, accountantID identity.Identity) error {
+func (aps *accountantPromiseSettler) ForceSettle(providerID identity.Identity, accountantID common.Address) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle

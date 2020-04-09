@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -61,7 +62,7 @@ type MobileNode struct {
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
 	proposalsManager             *proposalsManager
-	accountant                   identity.Identity
+	accountant                   common.Address
 	feedbackReporter             *feedback.Reporter
 	transactor                   *registry.Transactor
 	identityRegistry             registry.IdentityRegistry
@@ -216,7 +217,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
-		accountant:                   identity.FromAddress(nodeOptions.Accountant.AccountantID),
+		accountant:                   common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		feedbackReporter:             di.Reporter,
 		transactor:                   di.Transactor,
 		identityRegistry:             di.IdentityRegistry,

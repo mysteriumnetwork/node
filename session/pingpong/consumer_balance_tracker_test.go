@@ -42,7 +42,7 @@ var defaultWaitInterval = time.Millisecond
 func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	id2 := identity.FromAddress("0x000000002")
-	accountantID := identity.FromAddress("0x000000acc")
+	accountantID := common.HexToAddress("0x000000acc")
 	assert.NotEqual(t, id1.Address, id2.Address)
 
 	bus := eventbus.New()
@@ -98,7 +98,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 
 func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
-	accountantID := identity.FromAddress("0x000000acc")
+	accountantID := common.HexToAddress("0x000000acc")
 	var grandTotalPromised uint64 = 100
 	bus := eventbus.New()
 
@@ -145,7 +145,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
-	accountantID := identity.FromAddress("0x000000acc")
+	accountantID := common.HexToAddress("0x000000acc")
 	var grandTotalPromised uint64 = 100
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{

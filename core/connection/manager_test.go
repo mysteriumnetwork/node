@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -59,7 +60,7 @@ type testContext struct {
 var (
 	consumerID            = identity.FromAddress("identity-1")
 	activeProviderID      = identity.FromAddress("fake-node-1")
-	accountantID          = identity.FromAddress("accountant")
+	accountantID          = common.HexToAddress("accountant")
 	activeProviderContact = market.Contact{
 		Type:       p2p.ContactTypeV1,
 		Definition: p2p.ContactDefinition{},
@@ -138,7 +139,7 @@ func (tc *testContext) SetupTest() {
 		dialogCreator,
 		func(paymentInfo session.PaymentInfo,
 			dialog communication.Dialog, channel p2p.Channel,
-			consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error) {
+			consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
 				initialState:      paymentInfo,
 				paymentDefinition: market.PaymentRate{},
@@ -491,7 +492,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 		connectedState,
 	}
 
-	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 
 	waitABit()
@@ -525,7 +526,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	// Simulate IP change.
 	tc.connManager.ipResolver = ip.NewResolverMockMultiple("127.0.0.1", "10.0.0.4", "10.0.5")
 
-	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 
 	waitABit()

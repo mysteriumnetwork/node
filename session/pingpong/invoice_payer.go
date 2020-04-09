@@ -61,8 +61,8 @@ type consumerInvoiceStorage interface {
 }
 
 type consumerTotalsStorage interface {
-	Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error
-	Get(providerAddress, accountantAddress identity.Identity) (uint64, error)
+	Store(id identity.Identity, accountantID common.Address, amount uint64) error
+	Get(id identity.Identity, accountantID common.Address) (uint64, error)
 }
 
 type timeTracker interface {
@@ -99,7 +99,7 @@ type InvoicePayerDeps struct {
 	SessionID                 string
 	ChannelAddressCalculator  channelAddressCalculator
 	EventBus                  eventbus.EventBus
-	AccountantAddress         identity.Identity
+	AccountantAddress         common.Address
 	DataLeeway                datasize.BitSize
 }
 

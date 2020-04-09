@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -230,7 +231,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.AccountantID), *proposal, connectOptions)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), common.HexToAddress(cr.AccountantID), *proposal, connectOptions)
 
 	if err != nil {
 		switch err {
