@@ -19,6 +19,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
@@ -149,20 +150,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	channelHandlers := func(ch p2p.Channel) {
-		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service)
-		subscribeSessionStatus(mng, ch, manager.statusStorage)
-		subscribeSessionAcknowledge(mng, ch)
-		subscribeSessionDestroy(mng, ch)
-	}
-
-	err = manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
-
-	if err != nil {
-		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
-	}
-
 	discovery := manager.discoveryFactory()
 	discovery.Start(providerID, proposal)
 
@@ -176,6 +163,22 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		dialogWaiter:   dialogWaiter,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
+	}
+
+	channelHandlers := func(ch p2p.Channel) {
+		instance.addP2PChannel(ch)
+		mng := manager.sessionManager(proposal, string(id), ch)
+		subscribeSessionCreate(mng, ch, service)
+		subscribeSessionStatus(mng, ch, manager.statusStorage)
+		subscribeSessionAcknowledge(mng, ch)
+		subscribeSessionDestroy(mng, ch, func() {
+			// Give some time for channel to finish sending last message.
+			time.Sleep(10 * time.Second)
+			instance.closeP2PChannel(ch)
+		})
+	}
+	if err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers); err != nil {
+		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
 	}
 
 	manager.servicePool.Add(instance)

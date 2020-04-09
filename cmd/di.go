@@ -141,6 +141,7 @@ type Dependencies struct {
 	NATTracker     *event.Tracker
 	NATEventSender *event.Sender
 	PortPool       *port.Pool
+	PortMapper     mapping.PortMapper
 
 	BandwidthTracker *bandwidth.Tracker
 
@@ -223,8 +224,16 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 
+	// TODO: Add global services ports flag to support fixed range global ports pool.
 	di.PortPool = port.NewPool()
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	if config.GetBool(config.FlagPortMapping) {
+		portmapConfig := mapping.DefaultConfig()
+		di.PortMapper = mapping.NewPortMapper(portmapConfig, di.EventBus)
+	} else {
+		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
+	}
+
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper)
 	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 

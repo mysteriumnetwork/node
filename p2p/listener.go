@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/pb"
 
 	nats_lib "github.com/nats-io/go-nats"
@@ -48,15 +49,16 @@ type Listener interface {
 }
 
 // NewListener creates new p2p communication listener which is used on provider side.
-func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier) Listener {
+func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper) Listener {
 	return &listener{
 		brokerConn:     brokerConn,
-		pendingConfigs: map[PublicKey]*p2pConnectConfig{},
+		pendingConfigs: map[PublicKey]p2pConnectConfig{},
 		ipResolver:     ipResolver,
 		signer:         signer,
 		verifier:       verifier,
 		portPool:       portPool,
 		providerPinger: providerPinger,
+		portMapper:     portMapper,
 	}
 }
 
@@ -68,23 +70,25 @@ type listener struct {
 	signer         identity.SignerFactory
 	verifier       identity.Verifier
 	ipResolver     ip.Resolver
+	portMapper     mapping.PortMapper
 
 	// Keys holds pendingConfigs temporary configs for provider side since it
 	// need to handle key exchange in two steps.
-	pendingConfigs   map[PublicKey]*p2pConnectConfig
+	pendingConfigs   map[PublicKey]p2pConnectConfig
 	pendingConfigsMu sync.Mutex
 }
 
 type p2pConnectConfig struct {
-	publicIP     string
-	peerPublicIP string
-	peerPorts    []int
-	localPorts   []int
-	privateKey   PrivateKey
-	peerPubKey   PublicKey
+	publicIP         string
+	peerPublicIP     string
+	peerPorts        []int
+	localPorts       []int
+	privateKey       PrivateKey
+	peerPubKey       PublicKey
+	upnpPortsRelease []func()
 }
 
-func (c *p2pConnectConfig) pingIP() string {
+func (c *p2pConnectConfig) peerIP() string {
 	if c.publicIP == c.peerPublicIP {
 		// Assume that both peers are on the same network.
 		return "127.0.0.1"
@@ -132,19 +136,19 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		var conn1, conn2 *net.UDPConn
 		if len(config.peerPorts) == requiredConnCount {
 			log.Debug().Msg("Skipping consumer ping")
-			conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[0]})
+			conn1, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[0]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[0]})
 			if err != nil {
 				log.Err(err).Msg("Could not create UDP conn for p2p channel")
 				return
 			}
-			conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerPublicIP), Port: config.peerPorts[1]})
+			conn2, err = net.DialUDP("udp4", &net.UDPAddr{Port: config.localPorts[1]}, &net.UDPAddr{IP: net.ParseIP(config.peerIP()), Port: config.peerPorts[1]})
 			if err != nil {
 				log.Err(err).Msg("Could not create UDP conn for service")
 				return
 			}
 		} else {
-			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v", config.pingIP(), config.localPorts, config.peerPorts)
-			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), config.pingIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
+			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v", config.peerIP(), config.localPorts, config.peerPorts)
+			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
@@ -158,12 +162,14 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			return
 		}
 		channel.setServiceConn(conn2)
+		channel.setUpnpPortsRelease(config.upnpPortsRelease)
 
 		channelHandlers(channel)
 
-		// Send handlers ready to consumer
+		// Send handlers ready to consumer.
 		if err := m.providerChannelHandlersReady(providerID, serviceType); err != nil {
 			log.Err(err).Msg("Could not handle channel handlers ready")
+			channel.Close()
 			return
 		}
 	})
@@ -197,14 +203,22 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	if err != nil {
 		return fmt.Errorf("could not get public IP: %v", err)
 	}
-	portsCount := pingMaxPorts
-	if outboundIP == publicIP {
-		portsCount = requiredConnCount
-	}
-	localPorts, err := acquireLocalPorts(m.portPool, portsCount)
+
+	localPorts, portsRelease, err := m.prepareLocalPorts(publicIP, outboundIP)
 	if err != nil {
-		return fmt.Errorf("could not acquire local ports: %v", err)
+		return fmt.Errorf("could not prepare ports: %w", err)
 	}
+
+	m.setPendingConfig(p2pConnectConfig{
+		publicIP:         publicIP,
+		localPorts:       localPorts,
+		privateKey:       privateKey,
+		peerPubKey:       peerPubKey,
+		upnpPortsRelease: portsRelease,
+		peerPublicIP:     "",
+		peerPorts:        nil,
+	})
+
 	config := pb.P2PConnectConfig{
 		PublicIP: publicIP,
 		Ports:    intToInt32Slice(localPorts),
@@ -226,9 +240,44 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	if err != nil {
 		return fmt.Errorf("could not publish message via broker: %v", err)
 	}
-
-	m.setPendingConfig(publicIP, peerPubKey, privateKey, localPorts)
 	return nil
+}
+
+func (m *listener) prepareLocalPorts(publicIP, outboundIP string) ([]int, []func(), error) {
+	// First acquire required only ports for needed n connections.
+	localPorts, err := acquireLocalPorts(m.portPool, requiredConnCount)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not acquire initial local ports: %v", err)
+	}
+	// Return these ports if provider is not behind NAT.
+	if outboundIP == publicIP {
+		return localPorts, nil, nil
+	}
+
+	// Try to add upnp ports mapping.
+	var portsRelease []func()
+	var portMappingOk bool
+	var portRelease func()
+	for _, p := range localPorts {
+		portRelease, portMappingOk = m.portMapper.Map("UDP", p, "Myst node port mapping")
+		if !portMappingOk {
+			break
+		}
+		portsRelease = append(portsRelease, portRelease)
+	}
+	if portMappingOk {
+		return localPorts, portsRelease, nil
+	}
+
+	// Since port mapping failed acquire more ports which will be used for NAT pinger.
+	morePorts, err := acquireLocalPorts(m.portPool, pingMaxPorts-requiredConnCount)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not acquire more local ports: %v", err)
+	}
+	for _, p := range morePorts {
+		localPorts = append(localPorts, p)
+	}
+	return localPorts, nil, nil
 }
 
 func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConfig, error) {
@@ -259,11 +308,13 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	log.Debug().Msgf("Decrypted consumer config: %v", peerConfig)
 
 	return &p2pConnectConfig{
-		privateKey:   config.privateKey,
-		localPorts:   config.localPorts,
-		peerPubKey:   config.peerPubKey,
-		peerPublicIP: peerConfig.PublicIP,
-		peerPorts:    int32ToIntSlice(peerConfig.Ports),
+		peerPublicIP:     peerConfig.PublicIP,
+		peerPorts:        int32ToIntSlice(peerConfig.Ports),
+		localPorts:       config.localPorts,
+		privateKey:       config.privateKey,
+		peerPubKey:       config.peerPubKey,
+		publicIP:         config.publicIP,
+		upnpPortsRelease: config.upnpPortsRelease,
 	}, nil
 }
 
@@ -279,22 +330,17 @@ func (m *listener) providerChannelHandlersReady(providerID identity.Identity, se
 	return m.brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
 }
 
-func (m *listener) pendingConfig(peerPubKey PublicKey) (*p2pConnectConfig, bool) {
+func (m *listener) pendingConfig(peerPubKey PublicKey) (p2pConnectConfig, bool) {
 	m.pendingConfigsMu.Lock()
 	defer m.pendingConfigsMu.Unlock()
 	config, ok := m.pendingConfigs[peerPubKey]
 	return config, ok
 }
 
-func (m *listener) setPendingConfig(publicIP string, peerPubKey PublicKey, privateKey PrivateKey, localPorts []int) {
+func (m *listener) setPendingConfig(config p2pConnectConfig) {
 	m.pendingConfigsMu.Lock()
 	defer m.pendingConfigsMu.Unlock()
-	m.pendingConfigs[peerPubKey] = &p2pConnectConfig{
-		publicIP:   publicIP,
-		localPorts: localPorts,
-		privateKey: privateKey,
-		peerPubKey: peerPubKey,
-	}
+	m.pendingConfigs[config.peerPubKey] = config
 }
 
 func (m *listener) deletePendingConfig(peerPubKey PublicKey) {
