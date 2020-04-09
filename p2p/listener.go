@@ -209,6 +209,16 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 		return fmt.Errorf("could not prepare ports: %w", err)
 	}
 
+	m.setPendingConfig(p2pConnectConfig{
+		publicIP:         publicIP,
+		localPorts:       localPorts,
+		privateKey:       privateKey,
+		peerPubKey:       peerPubKey,
+		upnpPortsRelease: portsRelease,
+		peerPublicIP:     "",
+		peerPorts:        nil,
+	})
+
 	config := pb.P2PConnectConfig{
 		PublicIP: publicIP,
 		Ports:    intToInt32Slice(localPorts),
@@ -230,16 +240,6 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	if err != nil {
 		return fmt.Errorf("could not publish message via broker: %v", err)
 	}
-
-	m.setPendingConfig(p2pConnectConfig{
-		publicIP:         publicIP,
-		localPorts:       localPorts,
-		privateKey:       privateKey,
-		peerPubKey:       peerPubKey,
-		upnpPortsRelease: portsRelease,
-		peerPublicIP:     "",
-		peerPorts:        nil,
-	})
 	return nil
 }
 
