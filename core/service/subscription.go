@@ -113,15 +113,18 @@ func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done f
 		}
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionDestroy, si.String())
 
-		consumerID := identity.FromAddress(si.GetConsumerID())
-		sessionID := si.GetSessionID()
+		go func() {
+			consumerID := identity.FromAddress(si.GetConsumerID())
+			sessionID := si.GetSessionID()
 
-		err := mng.Destroy(consumerID, sessionID)
-		if err != nil {
-			return fmt.Errorf("cannot destroy session %s: %w", sessionID, err)
-		}
+			err := mng.Destroy(consumerID, sessionID)
+			if err != nil {
+				log.Err(err).Msgf("Could not destroy session %s: %w", sessionID, err)
+			}
 
-		done()
+			done()
+		}()
+
 		return c.OK()
 	})
 }
