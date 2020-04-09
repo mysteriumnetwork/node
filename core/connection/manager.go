@@ -196,7 +196,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 	}
 
 	m.ctxLock.Lock()
-	m.ctx, m.cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
 	m.publishStateEvent(Connecting)
@@ -810,6 +810,7 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 	for {
 		select {
 		case <-m.ctx.Done():
+			log.Debug().Msgf("Stopping p2p keepalive: %v", m.ctx.Err())
 			return
 		case <-time.After(m.config.KeepAlive.SendInterval):
 			if err := m.sendKeepAlivePing(channel, sessionID); err != nil {
