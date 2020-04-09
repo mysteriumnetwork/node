@@ -19,6 +19,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
@@ -171,6 +172,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		subscribeSessionStatus(mng, ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch, func() {
+			// Give some time for channel to finish sending last message.
+			time.Sleep(10 * time.Second)
 			instance.closeP2PChannel(ch)
 		})
 	}
