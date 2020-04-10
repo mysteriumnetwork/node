@@ -113,6 +113,8 @@ func InvoiceFactoryCreator(
 			ChargePeriodLeeway:         15 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
+			FirstInvoiceSendTimeout:    10 * time.Second,
+			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
 			AccountantCaller:           accountantCaller,
 			AccountantPromiseStorage:   accountantPromiseStorage,
