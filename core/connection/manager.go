@@ -757,7 +757,6 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
 
 func (m *connectionManager) onStateChanged(state State) {
 	log.Debug().Msgf("Connection state received: %s", state)
-	m.publishStateEvent(state)
 
 	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
 	switch state {
