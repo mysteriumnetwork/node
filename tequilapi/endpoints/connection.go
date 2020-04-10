@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -29,9 +28,9 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
-	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -104,29 +103,6 @@ type ipResponse struct {
 	IP string `json:"ip"`
 }
 
-// swagger:model ConnectionStatisticsDTO
-type statisticsResponse struct {
-	// example: 1024
-	BytesSent uint64 `json:"bytes_sent"`
-
-	// example: 1024
-	BytesReceived uint64 `json:"bytes_received"`
-
-	// connection duration in seconds
-	// example: 60
-	Duration int `json:"duration"`
-
-	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
-}
-
-// SessionStatisticsTracker represents the session stat keeper
-type SessionStatisticsTracker interface {
-	GetDataStats() connection.Statistics
-	GetDuration() time.Duration
-	GetInvoice() crypto.Invoice
-}
-
 // ProposalGetter defines interface to fetch currently active service proposal by id
 type ProposalGetter interface {
 	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
@@ -138,18 +114,18 @@ type identityRegistry interface {
 
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
-	manager           connection.Manager
-	statisticsTracker SessionStatisticsTracker
+	manager       connection.Manager
+	stateProvider stateProvider
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
 	proposalRepository proposal.Repository
 	identityRegistry   identityRegistry
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, statsKeeper SessionStatisticsTracker, proposalRepository proposal.Repository, identityRegistry identityRegistry) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:            manager,
-		statisticsTracker:  statsKeeper,
+		stateProvider:      stateProvider,
 		proposalRepository: proposalRepository,
 		identityRegistry:   identityRegistry,
 	}
@@ -317,21 +293,16 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	dataStats := ce.statisticsTracker.GetDataStats()
-	response := statisticsResponse{
-		BytesSent:     dataStats.BytesSent,
-		BytesReceived: dataStats.BytesReceived,
-		Duration:      int(ce.statisticsTracker.GetDuration().Seconds()),
-		TokensSpent:   ce.statisticsTracker.GetInvoice().AgreementTotal,
-	}
+	connection := ce.stateProvider.GetState().Connection
+	response := contract.NewConnectionStatisticsDTO(connection.Session, connection.Statistics, connection.Throughput, connection.Invoice)
 
 	utils.WriteAsJSON(response, writer)
 }
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	statsKeeper SessionStatisticsTracker, proposalRepository proposal.Repository, identityRegistry identityRegistry) {
-	connectionEndpoint := NewConnectionEndpoint(manager, statsKeeper, proposalRepository, identityRegistry)
+	stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry) {
+	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)

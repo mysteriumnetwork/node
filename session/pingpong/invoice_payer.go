@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -125,7 +126,7 @@ func (ip *InvoicePayer) Start() error {
 
 	ip.deps.TimeTracker.StartTracking()
 
-	err = ip.deps.EventBus.Subscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
+	err = ip.deps.EventBus.Subscribe(connection.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to data transfer events")
 	}
@@ -247,7 +248,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	ip.deps.EventBus.Publish(AppTopicInvoicePaid, AppEventInvoicePaid{
+	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
 		ConsumerID: ip.deps.Identity,
 		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,
@@ -262,12 +263,12 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 func (ip *InvoicePayer) Stop() {
 	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConsumerStatistics, ip.consumeDataTransferredEvent)
+		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 		close(ip.stop)
 	})
 }
 
-func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.SessionStatsEvent) {
+func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.AppEventConnectionStatistics) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(string(e.SessionInfo.SessionID), ip.deps.SessionID) {
 		return

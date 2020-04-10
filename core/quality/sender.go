@@ -22,8 +22,11 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node/event"
+	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/rs/zerolog/log"
 )
@@ -101,8 +104,25 @@ type sessionContext struct {
 	ConsumerCountry string
 }
 
-// SendSessionData sends transferred information about session.
-func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
+// Subscribe subscribes to relevant events of event bus.
+func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.SubscribeAsync(connection.AppTopicConnectionState, sender.sendConnStateEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
+		return err
+	}
+	return bus.SubscribeAsync(nodevent.AppTopicNode, sender.sendStartupEvent)
+}
+
+// sendSessionData sends transferred information about session.
+func (sender *Sender) sendSessionData(e connection.AppEventConnectionStatistics) {
 	if !e.SessionInfo.IsActive() {
 		return
 	}
@@ -121,8 +141,8 @@ func (sender *Sender) SendSessionData(e connection.SessionStatsEvent) {
 	})
 }
 
-// SendConnStateEvent sends session update events.
-func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
+// sendConnStateEvent sends session update events.
+func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
 	if !e.SessionInfo.IsActive() {
 		return
 	}
@@ -139,8 +159,8 @@ func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
 	})
 }
 
-// SendSessionEvent sends session update events.
-func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
+// sendSessionEvent sends session update events.
+func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
 	if !e.SessionInfo.IsActive() {
 		return
 	}
@@ -157,13 +177,13 @@ func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
 	})
 }
 
-// SendStartupEvent sends startup event
-func (sender *Sender) SendStartupEvent(e event.Payload) {
+// sendStartupEvent sends startup event
+func (sender *Sender) sendStartupEvent(e event.Payload) {
 	sender.sendEvent(startupEventName, e.Status)
 }
 
-// SendProposalEvent sends provider proposal event.
-func (sender *Sender) SendProposalEvent(p market.ServiceProposal) {
+// sendProposalEvent sends provider proposal event.
+func (sender *Sender) sendProposalEvent(p market.ServiceProposal) {
 	sender.sendEvent(proposalEventName, p)
 }
 

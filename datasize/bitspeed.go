@@ -15,28 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package noop
+package datasize
 
-import (
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
-)
+// BitSpeed represents the data speed in bits per second.
+type BitSpeed BitSize
 
-// NoopAccountantPromiseSettler doesn't do much.
-type NoopAccountantPromiseSettler struct {
-}
-
-// Subscribe does nothing.
-func (n *NoopAccountantPromiseSettler) Subscribe() error {
-	return nil
-}
-
-// GetEarnings returns an empty state.
-func (n *NoopAccountantPromiseSettler) GetEarnings(_ identity.Identity) event.Earnings {
-	return event.Earnings{}
-}
-
-// ForceSettle does nothing.
-func (n *NoopAccountantPromiseSettler) ForceSettle(_, _ identity.Identity) error {
-	return nil
+// String returns human readable form of the throughput
+func (t BitSpeed) String() string {
+	return BitSize(t).String() + "s"
 }

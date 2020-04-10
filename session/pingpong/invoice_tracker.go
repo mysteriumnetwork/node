@@ -36,7 +36,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
-	"github.com/mysteriumnetwork/node/session/event"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -334,12 +335,12 @@ func (it *InvoiceTracker) requestPromise(r []byte, em crypto.ExchangeMessage) er
 	}
 
 	promise.R = r
-	it.deps.EventBus.Publish(AppTopicAccountantPromise, AppEventAccountantPromise{
+	it.deps.EventBus.Publish(event.AppTopicAccountantPromise, event.AppEventAccountantPromise{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
 	})
-	it.deps.EventBus.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
+	it.deps.EventBus.Publish(sessionEvent.AppTopicSessionTokensEarned, sessionEvent.AppEventSessionTokensEarned{
 		ProviderID: it.deps.ProviderID,
 		SessionID:  it.deps.SessionID,
 		Total:      em.AgreementTotal,
@@ -383,7 +384,7 @@ func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
 	it.deps.TimeTracker.StartTracking()
 
-	if err := it.deps.EventBus.SubscribeAsync(event.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
+	if err := it.deps.EventBus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
 		return err
 	}
 
@@ -690,12 +691,12 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = it.deps.EventBus.Unsubscribe(event.AppTopicDataTransferred, it.consumeDataTransferredEvent)
+		_ = it.deps.EventBus.Unsubscribe(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent)
 		close(it.stop)
 	})
 }
 
-func (it *InvoiceTracker) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
+func (it *InvoiceTracker) consumeDataTransferredEvent(e sessionEvent.AppEventDataTransferred) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(e.ID, it.deps.SessionID) {
 		return

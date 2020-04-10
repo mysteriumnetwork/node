@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -70,7 +71,7 @@ type receivedPromise struct {
 
 // AccountantPromiseSettler is responsible for settling the accountant promises.
 type AccountantPromiseSettler interface {
-	SettlementState(id identity.Identity) SettlementState
+	GetEarnings(id identity.Identity) event.Earnings
 	ForceSettle(providerID, accountantID identity.Identity) error
 	Subscribe() error
 }
@@ -87,7 +88,7 @@ type accountantPromiseSettler struct {
 	transactor                 transactor
 	promiseStorage             promiseStorage
 
-	currentState map[identity.Identity]SettlementState
+	currentState map[identity.Identity]settlementState
 	settleQueue  chan receivedPromise
 	stop         chan struct{}
 	once         sync.Once
@@ -108,7 +109,7 @@ func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transact
 		ks:                         ks,
 		registrationStatusProvider: registrationStatusProvider,
 		config:                     config,
-		currentState:               make(map[identity.Identity]SettlementState),
+		currentState:               make(map[identity.Identity]settlementState),
 		promiseStorage:             promiseStorage,
 
 		// defaulting to a queue of 5, in case we have a few active identities.
@@ -152,23 +153,23 @@ func (aps *accountantPromiseSettler) resyncState(id identity.Identity) error {
 		return errors.Wrap(err, fmt.Sprintf("could not get accountant promise for %v", id))
 	}
 
-	s := SettlementState{
-		Channel:     channel,
-		LastPromise: accountantPromise.Promise,
+	s := settlementState{
+		channel:     channel,
+		lastPromise: accountantPromise.Promise,
 		registered:  true,
 	}
 
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[id] = s
-	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", id, s.balance(), s.availableBalance(), s.UnsettledBalance())
+	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", id, s.balance(), s.availableBalance(), s.unsettledBalance())
 	return nil
 }
 
-func (aps *accountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after SettlementState) {
-	aps.eventBus.Publish(AppTopicEarningsChanged, AppEventEarningsChanged{
+func (aps *accountantPromiseSettler) publishChangeEvent(id identity.Identity, before, after settlementState) {
+	aps.eventBus.Publish(event.AppTopicEarningsChanged, event.AppEventEarningsChanged{
 		Identity: id,
-		Previous: before,
-		Current:  after,
+		Previous: before.Earnings(),
+		Current:  after.Earnings(),
 	})
 }
 
@@ -189,7 +190,7 @@ func (aps *accountantPromiseSettler) Subscribe() error {
 		return errors.Wrap(err, "could not subscribe to service status event")
 	}
 
-	err = aps.eventBus.SubscribeAsync(AppTopicAccountantPromise, aps.handleAccountantPromiseReceived)
+	err = aps.eventBus.SubscribeAsync(event.AppTopicAccountantPromise, aps.handleAccountantPromiseReceived)
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
 }
 
@@ -246,7 +247,7 @@ func (aps *accountantPromiseSettler) handleRegistrationEvent(payload registry.Ap
 	log.Info().Msgf("Identity registration event handled for provider %q", payload.ID)
 }
 
-func (aps *accountantPromiseSettler) handleAccountantPromiseReceived(apep AppEventAccountantPromise) {
+func (aps *accountantPromiseSettler) handleAccountantPromiseReceived(apep event.AppEventAccountantPromise) {
 	id := apep.ProviderID
 	log.Info().Msgf("Received accountant promise for %q", id)
 	aps.lock.Lock()
@@ -261,7 +262,7 @@ func (aps *accountantPromiseSettler) handleAccountantPromiseReceived(apep AppEve
 		log.Error().Msgf("provider %q not registered, skipping", id)
 		return
 	}
-	s.LastPromise = apep.Promise
+	s.lastPromise = apep.Promise
 
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[apep.ProviderID] = s
@@ -291,12 +292,12 @@ func (aps *accountantPromiseSettler) listenForSettlementRequests() {
 	}
 }
 
-// SettlementState returns current settlement status for given identity
-func (aps *accountantPromiseSettler) SettlementState(id identity.Identity) SettlementState {
+// GetEarnings returns current settlement status for given identity
+func (aps *accountantPromiseSettler) GetEarnings(id identity.Identity) event.Earnings {
 	aps.lock.RLock()
 	defer aps.lock.RUnlock()
 
-	return aps.currentState[id]
+	return aps.currentState[id].Earnings()
 }
 
 // ErrNothingToSettle indicates that there is nothing to settle.
@@ -426,4 +427,73 @@ func (aps *accountantPromiseSettler) handleNodeStop() {
 	aps.once.Do(func() {
 		close(aps.stop)
 	})
+}
+
+// settlementState earning calculations model
+type settlementState struct {
+	channel     client.ProviderChannel
+	lastPromise crypto.Promise
+
+	settleInProgress bool
+	registered       bool
+}
+
+// lifetimeBalance returns earnings of all history.
+func (ss settlementState) lifetimeBalance() uint64 {
+	return ss.lastPromise.Amount
+}
+
+// unsettledBalance returns current unsettled earnings.
+func (ss settlementState) unsettledBalance() uint64 {
+	settled := uint64(0)
+	if ss.channel.Settled != nil {
+		settled = ss.channel.Settled.Uint64()
+	}
+
+	return safeSub(ss.lastPromise.Amount, settled)
+}
+
+func (ss settlementState) availableBalance() uint64 {
+	balance := uint64(0)
+	if ss.channel.Balance != nil {
+		balance = ss.channel.Balance.Uint64()
+	}
+
+	settled := uint64(0)
+	if ss.channel.Settled != nil {
+		settled = ss.channel.Settled.Uint64()
+	}
+
+	return balance + settled
+}
+
+func (ss settlementState) balance() uint64 {
+	return safeSub(ss.availableBalance(), ss.lastPromise.Amount)
+}
+
+func (ss settlementState) needsSettling(threshold float64) bool {
+	if !ss.registered {
+		return false
+	}
+
+	if ss.settleInProgress {
+		return false
+	}
+
+	if float64(ss.balance()) <= 0 {
+		return true
+	}
+
+	if float64(ss.balance()) <= threshold*float64(ss.availableBalance()) {
+		return true
+	}
+
+	return false
+}
+
+func (ss settlementState) Earnings() event.Earnings {
+	return event.Earnings{
+		LifetimeBalance:  ss.lifetimeBalance(),
+		UnsettledBalance: ss.unsettledBalance(),
+	}
 }

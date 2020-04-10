@@ -39,14 +39,6 @@ type StatusDTO struct {
 	Proposal   ProposalDTO `json:"proposal"`
 }
 
-// StatisticsDTO holds statistics about connection
-type StatisticsDTO struct {
-	BytesSent     uint64 `json:"bytes_sent"`
-	BytesReceived uint64 `json:"bytes_received"`
-	Duration      int    `json:"duration"`
-	TokensSpent   uint64 `json:"tokens_spent"`
-}
-
 // ProposalList describes list of proposals
 type ProposalList struct {
 	Proposals []ProposalDTO `json:"proposals"`
@@ -148,6 +140,7 @@ type ConnectionSessionDTO struct {
 	DateStarted     string `json:"date_started"`
 	BytesSent       uint64 `json:"bytes_sent"`
 	BytesReceived   uint64 `json:"bytes_received"`
+	TokensSpent     uint64 `json:"tokens_spent"`
 	Duration        uint64 `json:"duration"`
 	Status          string `json:"status"`
 }

@@ -25,10 +25,10 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -60,7 +60,6 @@ type MobileNode struct {
 	ipResolver                   ip.Resolver
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
-	statisticsTracker            *statistics.SessionStatisticsTracker
 	proposalsManager             *proposalsManager
 	accountant                   identity.Identity
 	feedbackReporter             *feedback.Reporter
@@ -217,7 +216,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
-		statisticsTracker:            di.StatisticsTracker,
 		accountant:                   identity.FromAddress(nodeOptions.Accountant.AccountantID),
 		feedbackReporter:             di.Reporter,
 		transactor:                   di.Transactor,
@@ -337,9 +335,8 @@ type StatisticsChangeCallback interface {
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, func(e connection.SessionStatsEvent) {
-		duration := mb.statisticsTracker.GetDuration()
-		cb.OnChange(int64(duration.Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
+		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
 	})
 }
 
@@ -351,7 +348,7 @@ type ConnectionStatusChangeCallback interface {
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, func(e connection.StateEvent) {
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
 		cb.OnChange(string(e.State))
 	})
 }
@@ -363,7 +360,7 @@ type BalanceChangeCallback interface {
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(pingpong.AppTopicBalanceChanged, func(e pingpong.AppEventBalanceChanged) {
+	_ = mb.eventBus.SubscribeAsync(event.AppTopicBalanceChanged, func(e event.AppEventBalanceChanged) {
 		cb.OnChange(e.Identity.Address, int64(e.Current))
 	})
 }
@@ -579,7 +576,7 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 			mb.ipResolver,
 		)
 	}
-	_ = mb.eventBus.Subscribe(connection.AppTopicConsumerConnectionState, st.handleState)
+	_ = mb.eventBus.Subscribe(connection.AppTopicConnectionState, st.handleState)
 	mb.connectionRegistry.Register("openvpn", factory)
 	return st
 }

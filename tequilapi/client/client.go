@@ -204,14 +204,14 @@ func (client *Client) ConnectionDestroy() (err error) {
 }
 
 // ConnectionStatistics returns statistics about current connection
-func (client *Client) ConnectionStatistics() (StatisticsDTO, error) {
+func (client *Client) ConnectionStatistics() (contract.ConnectionStatisticsDTO, error) {
 	response, err := client.http.Get("connection/statistics", url.Values{})
 	if err != nil {
-		return StatisticsDTO{}, err
+		return contract.ConnectionStatisticsDTO{}, err
 	}
 	defer response.Body.Close()
 
-	var statistics StatisticsDTO
+	var statistics contract.ConnectionStatisticsDTO
 	err = parseResponseJSON(response, &statistics)
 	return statistics, err
 }

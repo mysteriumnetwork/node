@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/stretchr/testify/assert"
@@ -85,7 +86,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var promised uint64 = 100
-	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		ConsumerID: id1,
 		Current:    promised,
 	})
@@ -122,7 +123,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var diff uint64 = 10
-	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		ConsumerID: id1,
 		Current:    grandTotalPromised + diff,
 	})
@@ -132,7 +133,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var diff2 uint64 = 20
-	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		ConsumerID: id1,
 		Current:    grandTotalPromised + diff2,
 	})

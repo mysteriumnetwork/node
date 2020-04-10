@@ -15,28 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package noop
+package bandwidth
 
 import (
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/datasize"
 )
 
-// NoopAccountantPromiseSettler doesn't do much.
-type NoopAccountantPromiseSettler struct {
+// AppTopicConnectionThroughput represents the session throughput topic.
+const AppTopicConnectionThroughput = "Throughput"
+
+// AppEventConnectionThroughput represents a session throughput event.
+type AppEventConnectionThroughput struct {
+	Throughput  Throughput
+	SessionInfo connection.Status
 }
 
-// Subscribe does nothing.
-func (n *NoopAccountantPromiseSettler) Subscribe() error {
-	return nil
-}
-
-// GetEarnings returns an empty state.
-func (n *NoopAccountantPromiseSettler) GetEarnings(_ identity.Identity) event.Earnings {
-	return event.Earnings{}
-}
-
-// ForceSettle does nothing.
-func (n *NoopAccountantPromiseSettler) ForceSettle(_, _ identity.Identity) error {
-	return nil
+// Throughput represents the current(moment) download and upload speeds.
+type Throughput struct {
+	Up, Down datasize.BitSpeed
 }

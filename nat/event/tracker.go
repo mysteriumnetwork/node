@@ -20,6 +20,7 @@ package event
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,8 +48,8 @@ func NewTracker() *Tracker {
 	return &Tracker{eventChan: make(chan Event, 1)}
 }
 
-// ConsumeNATEvent consumes a NAT event
-func (et *Tracker) ConsumeNATEvent(event Event) {
+// consumeNATEvent consumes a NAT event
+func (et *Tracker) consumeNATEvent(event Event) {
 	log.Info().Interface("event", event).Msg("Got NAT event")
 
 	et.lastEvent = &event
@@ -56,6 +57,11 @@ func (et *Tracker) ConsumeNATEvent(event Event) {
 	case et.eventChan <- event:
 	case <-time.After(300 * time.Millisecond):
 	}
+}
+
+// Subscribe subscribes to relevant events of event bus.
+func (et *Tracker) Subscribe(bus eventbus.Subscriber) error {
+	return bus.Subscribe(AppTopicTraversal, et.consumeNATEvent)
 }
 
 // LastEvent returns the last known event and boolean flag, indicating if such event exists

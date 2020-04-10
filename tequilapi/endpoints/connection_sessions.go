@@ -60,6 +60,9 @@ type connectionSession struct {
 	// example: 120
 	Duration uint64 `json:"duration"`
 
+	// example: 500000
+	TokensSpent uint64 `json:"tokens_spent"`
+
 	// example: Completed
 	Status string `json:"status"`
 }
@@ -118,7 +121,8 @@ func connectionSessionToDto(se session.History) connectionSession {
 		DateStarted:     se.Started.Format(time.RFC3339),
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
-		Duration:        se.GetDuration(),
+		Duration:        uint64(se.GetDuration().Seconds()),
+		TokensSpent:     se.Invoice.AgreementTotal,
 		Status:          se.Status,
 	}
 }

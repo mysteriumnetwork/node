@@ -32,11 +32,16 @@ var (
 
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
-	sessionData, paymentInfo, err := RequestSessionCreate(sender, 123, []byte{}, ConsumerInfo{})
+	response, err := RequestSessionCreate(sender, CreateRequest{})
 	assert.NoError(t, err)
-	assert.Exactly(t, successfullSessionID, sessionData.ID)
-	assert.Exactly(t, successfullSessionConfig, sessionData.Config)
-	assert.Exactly(t, PaymentInfo{}, paymentInfo)
+	assert.Exactly(
+		t, CreateResponse{
+			Success: true,
+			Message: "Everything is great!",
+			Session: SessionDto{ID: successfullSessionID, Config: successfullSessionConfig},
+		},
+		response,
+	)
 }
 
 func TestProducer_SessionAcknowledge(t *testing.T) {

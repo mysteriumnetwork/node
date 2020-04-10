@@ -18,16 +18,13 @@
 package session
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/communication"
 )
 
 type createProducer struct {
-	ProposalID   int
-	Config       json.RawMessage
-	ConsumerInfo *ConsumerInfo
+	Request CreateRequest
 }
 
 func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
@@ -39,41 +36,22 @@ func (producer *createProducer) NewResponse() (responsePtr interface{}) {
 }
 
 func (producer *createProducer) Produce() (requestPtr interface{}) {
-	return &CreateRequest{
-		ProposalID:   producer.ProposalID,
-		Config:       producer.Config,
-		ConsumerInfo: producer.ConsumerInfo,
-	}
+	return &producer.Request
 }
 
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int, config interface{}, ci ConsumerInfo) (session SessionDto, pi PaymentInfo, err error) {
-	sessionCreateConfigJSON, err := json.Marshal(config)
+func RequestSessionCreate(sender communication.Sender, request CreateRequest) (CreateResponse, error) {
+	responsePtr, err := sender.Request(&createProducer{Request: request})
 	if err != nil {
-		return
-	}
-
-	responsePtr, err := sender.Request(&createProducer{
-		ProposalID:   proposalID,
-		Config:       sessionCreateConfigJSON,
-		ConsumerInfo: &ci,
-	})
-	if err != nil {
-		return
+		return CreateResponse{}, err
 	}
 
 	response := responsePtr.(*CreateResponse)
 	if !response.Success {
-		err = fmt.Errorf("session create failed: %s", response.Message)
-		return
+		return CreateResponse{}, fmt.Errorf("session create failed: %s", response.Message)
 	}
 
-	session = SessionDto{
-		ID:     response.Session.ID,
-		Config: response.Session.Config,
-	}
-	pi = response.PaymentInfo
-	return
+	return *response, nil
 }
 
 // AcknowledgeSession lets the provider know we've successfully established a connection

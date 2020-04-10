@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/pkg/errors"
 )
 
@@ -105,9 +106,9 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 	}
 	info("Registration status:", identityStatus.RegistrationStatus)
 	info("Channel address:", identityStatus.ChannelAddress)
-	info("Balance:", identityStatus.Balance)
-	info("Earnings:", identityStatus.Earnings)
-	info("Earnings total:", identityStatus.EarningsTotal)
+	info(fmt.Sprintf("Balance: %s", money.NewMoney(identityStatus.Balance, money.CurrencyMyst)))
+	info(fmt.Sprintf("Earnings: %s", money.NewMoney(identityStatus.Earnings, money.CurrencyMyst)))
+	info(fmt.Sprintf("Earnings total: %s", money.NewMoney(identityStatus.EarningsTotal, money.CurrencyMyst)))
 }
 
 const usageNewIdentity = "new [passphrase]"

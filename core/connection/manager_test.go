@@ -52,6 +52,7 @@ type testContext struct {
 	statusSender          *mockStatusSender
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
+	mockTime              time.Time
 	sync.RWMutex
 }
 
@@ -131,6 +132,7 @@ func (tc *testContext) SetupTest() {
 	brokerConn.MockResponse("fake-node-1.p2p-config-exchange", []byte("123"))
 
 	tc.mockP2P = &mockP2PDialer{&mockP2PChannel{}}
+	tc.mockTime = time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC)
 
 	tc.connManager = NewManager(
 		dialogCreator,
@@ -153,23 +155,45 @@ func (tc *testContext) SetupTest() {
 		&mockValidator{},
 		tc.mockP2P,
 	)
+	tc.connManager.timeGetter = func() time.Time {
+		return tc.mockTime
+	}
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
-	assert.Exactly(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Exactly(tc.T(), Status{State: NotConnected}, tc.connManager.Status())
 }
 
 func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 	tc.fakeConnectionFactory.mockError = errors.New("fatal connection error")
 
 	assert.Error(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      NotConnected,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      Connected,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -181,7 +205,17 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 
 	waitABit()
 
-	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      Connecting,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 	tc.connManager.Disconnect()
 }
 
@@ -194,14 +228,24 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
+	assert.Equal(tc.T(), Connected, tc.connManager.Status().State)
 
 	go func() {
 		assert.NoError(tc.T(), tc.connManager.Disconnect())
 	}()
 
 	waitABit()
-	assert.Equal(tc.T(), statusDisconnecting(), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      Disconnecting,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 
 	tc.fakeConnectionFactory.mockConnection.stopBlock <- struct{}{}
 
@@ -209,7 +253,17 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
 
 	waitABit()
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      NotConnected,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
@@ -225,30 +279,40 @@ func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconn
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
 	tc.fakeConnectionFactory.mockConnection.reportState(reconnectingState)
 	waitABit()
-	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      Reconnecting,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 }
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
+	assert.Equal(tc.T(), Connected, tc.connManager.Status().State)
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Equal(tc.T(), NotConnected, tc.connManager.Status().State)
 	assert.Equal(tc.T(), ErrNoConnection, tc.connManager.Disconnect())
 }
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
+	assert.Equal(tc.T(), Connected, tc.connManager.Status().State)
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Equal(tc.T(), NotConnected, tc.connManager.Status().State)
 
 	assert.NoError(tc.T(), tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
+	assert.Equal(tc.T(), Connected, tc.connManager.Status().State)
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Equal(tc.T(), NotConnected, tc.connManager.Status().State)
 }
 
 func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
@@ -258,7 +322,17 @@ func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
 
 func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutError() {
 	tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
-	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal, consumerID), tc.connManager.Status())
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			State:      Connected,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
 }
 
 func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
@@ -274,7 +348,7 @@ func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	}()
 
 	waitABit()
-	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
+	assert.Equal(tc.T(), Connecting, tc.connManager.Status().State)
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 
 	connectWaiter.Wait()
@@ -325,8 +399,8 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	found := false
 
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerSession {
-			event := v.calledWithData.(SessionEvent)
+		if v.calledWithTopic == AppTopicConnectionSession {
+			event := v.calledWithData.(AppEventConnectionSession)
 			if event.Status == SessionEndedStatus {
 				found = true
 
@@ -365,7 +439,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.True(tc.T(), len(history) >= 4)
 
 	// Check if published to all expected topics.
-	expectedTopics := [...]string{AppTopicConsumerStatistics, AppTopicConsumerConnectionState, AppTopicConsumerSession}
+	expectedTopics := [...]string{AppTopicConnectionStatistics, AppTopicConnectionState, AppTopicConnectionSession}
 	for _, v := range expectedTopics {
 		var published bool
 		for _, h := range history {
@@ -378,29 +452,29 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	// Check received events data.
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerStatistics {
-			event := v.calledWithData.(SessionStatsEvent)
+		if v.calledWithTopic == AppTopicConnectionStatistics {
+			event := v.calledWithData.(AppEventConnectionStatistics)
 			assert.True(tc.T(), event.Stats.BytesReceived == tc.mockStatistics.BytesReceived)
 			assert.True(tc.T(), event.Stats.BytesSent == tc.mockStatistics.BytesSent)
 		}
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == Connected {
-			event := v.calledWithData.(StateEvent)
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == Connected {
+			event := v.calledWithData.(AppEventConnectionState)
 			assert.Equal(tc.T(), Connected, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == StateIPNotChanged {
-			event := v.calledWithData.(StateEvent)
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
+			event := v.calledWithData.(AppEventConnectionState)
 			assert.Equal(tc.T(), StateIPNotChanged, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == AppTopicConsumerSession {
-			event := v.calledWithData.(SessionEvent)
+		if v.calledWithTopic == AppTopicConnectionSession {
+			event := v.calledWithData.(AppEventConnectionSession)
 			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
@@ -426,7 +500,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 	history := tc.stubPublisher.GetEventHistory()
 	var ipNotChangedEvent *StubPublisherEvent
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
 			ipNotChangedEvent = &v
 		}
 	}
@@ -449,7 +523,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	}
 
 	// Simulate IP change.
-	tc.connManager.ipResolver = ip.NewResolverMock("10.0.0.4", "10.0.5")
+	tc.connManager.ipResolver = ip.NewResolverMockMultiple("127.0.0.1", "10.0.0.4", "10.0.5")
 
 	err := tc.connManager.Connect(consumerID, consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
@@ -460,7 +534,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	history := tc.stubPublisher.GetEventHistory()
 	var ipNotChangedEvent *StubPublisherEvent
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConsumerConnectionState && v.calledWithData.(StateEvent).State == StateIPNotChanged {
+		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
 			ipNotChangedEvent = &v
 		}
 	}

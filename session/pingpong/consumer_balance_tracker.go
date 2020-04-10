@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/rs/zerolog/log"
@@ -98,7 +99,7 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(AppTopicGrandTotalChanged, cbt.handleGrandTotalChanged)
+	err = bus.SubscribeAsync(event.AppTopicGrandTotalChanged, cbt.handleGrandTotalChanged)
 	if err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 		return
 	}
 
-	cbt.publisher.Publish(AppTopicBalanceChanged, AppEventBalanceChanged{
+	cbt.publisher.Publish(event.AppTopicBalanceChanged, event.AppEventBalanceChanged{
 		Identity: id,
 		Previous: before,
 		Current:  after,
@@ -136,7 +137,7 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 	cbt.ForceBalanceUpdate(identity)
 }
 
-func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev AppEventGrandTotalChanged) {
+func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
 	cbt.balancesLock.Lock()
 	_, ok := cbt.balances[ev.ConsumerID]
 	cbt.balancesLock.Unlock()

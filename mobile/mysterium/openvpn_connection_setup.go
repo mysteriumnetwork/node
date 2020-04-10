@@ -295,7 +295,7 @@ func (st *sessionTracker) Reconnect(afterSeconds int) error {
 	return st.session.Reconnect(afterSeconds)
 }
 
-func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
+func (st *sessionTracker) handleState(stateEvent connection.AppEventConnectionState) {
 	// On disconnected - remove session
 	if stateEvent.State == connection.Disconnecting {
 		st.mux.Lock()

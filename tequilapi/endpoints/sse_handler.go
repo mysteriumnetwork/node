@@ -218,9 +218,9 @@ type consumerStateRes struct {
 }
 
 type consumerConnectionRes struct {
-	State      connection.State                         `json:"state"`
-	Statistics *stateEvent.ConsumerConnectionStatistics `json:"statistics,omitempty"`
-	Proposal   *proposalDTO                             `json:"proposal,omitempty"`
+	State      connection.State                  `json:"state"`
+	Statistics *contract.ConnectionStatisticsDTO `json:"statistics,omitempty"`
+	Proposal   *proposalDTO                      `json:"proposal,omitempty"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -235,20 +235,27 @@ func mapState(event stateEvent.State) stateRes {
 			EarningsTotal:      identity.EarningsTotal,
 		}
 	}
+
+	connectionRes := consumerConnectionRes{
+		State: event.Connection.Session.State,
+	}
+	if !event.Connection.Statistics.At.IsZero() {
+		statsRes := contract.NewConnectionStatisticsDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice)
+		connectionRes.Statistics = &statsRes
+	}
+	// If none exists, conn manager still has empty proposal
+	if event.Connection.Session.Proposal.ProviderID != "" {
+		connectionRes.Proposal = proposalToRes(event.Connection.Session.Proposal)
+	}
+
 	res := stateRes{
 		NATStatus: event.NATStatus,
 		Services:  event.Services,
 		Sessions:  event.Sessions,
 		Consumer: consumerStateRes{
-			Connection: consumerConnectionRes{
-				State:      event.Consumer.Connection.State,
-				Statistics: event.Consumer.Connection.Statistics,
-			},
+			Connection: connectionRes,
 		},
 		Identities: identitiesRes,
-	}
-	if event.Consumer.Connection.Proposal != nil && event.Consumer.Connection.Proposal.IsSupported() { // If none exists, conn manager still has empty proposal
-		res.Consumer.Connection.Proposal = proposalToRes(*event.Consumer.Connection.Proposal)
 	}
 	return res
 }

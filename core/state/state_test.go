@@ -19,7 +19,6 @@ package state
 
 import (
 	"errors"
-	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/payments/client"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,29 +49,6 @@ type debounceTester struct {
 
 type interactionCounter interface {
 	interactions() int
-}
-
-type zeroDurationProvider struct {
-}
-
-func (f zeroDurationProvider) GetDataStats() connection.Statistics {
-	return connection.Statistics{
-		At:            time.Now(),
-		BytesReceived: 10 * datasize.MiB.Bytes(),
-		BytesSent:     500 * datasize.KiB.Bytes(),
-	}
-}
-
-func (f zeroDurationProvider) GetDuration() time.Duration {
-	return time.Duration(0)
-}
-
-func (f *zeroDurationProvider) GetInvoice() crypto.Invoice {
-	return crypto.Invoice{
-		AgreementID:    1,
-		AgreementTotal: 1001,
-		TransactorFee:  10,
-	}
 }
 
 func (dt *debounceTester) do(interface{}) {
@@ -184,12 +160,11 @@ func Test_ConsumesNATEvents(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -224,12 +199,11 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -263,12 +237,11 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	keeper.state.Services = []event.ServiceInfo{
@@ -303,12 +276,11 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -330,87 +302,92 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	// given
+	expected := connection.Status{State: connection.Connected, SessionID: "1"}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:                 eventBus,
-		ServiceLister:             &serviceListerMock{},
-		ServiceSessionStorage:     &serviceSessionStorageMock{},
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:             eventBus,
+		ServiceLister:         &serviceListerMock{},
+		ServiceSessionStorage: &serviceSessionStorageMock{},
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connection.NotConnected, keeper.GetState().Consumer.Connection.State)
+	assert.Equal(t, connection.NotConnected, keeper.GetState().Connection.Session.State)
 
 	// when
-	eventBus.Publish(connection.AppTopicConsumerConnectionState, connection.StateEvent{
-		State: connection.Connected,
+	eventBus.Publish(connection.AppTopicConnectionState, connection.AppEventConnectionState{
+		State:       expected.State,
+		SessionInfo: expected,
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Consumer.Connection.State == connection.Connected
+		return keeper.GetState().Connection.Session.State == connection.Connected
 	}, 2*time.Second, 10*time.Millisecond)
+	assert.Equal(t, expected, keeper.GetState().Connection.Session)
 }
 
 func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	// given
+	expected := connection.Statistics{
+		At:            time.Now(),
+		BytesReceived: 10 * datasize.MiB.Bytes(),
+		BytesSent:     500 * datasize.KiB.Bytes(),
+	}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:                 eventBus,
-		ServiceLister:             &serviceListerMock{},
-		ServiceSessionStorage:     &serviceSessionStorageMock{},
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:             eventBus,
+		ServiceLister:         &serviceListerMock{},
+		ServiceSessionStorage: &serviceSessionStorageMock{},
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Nil(t, keeper.GetState().Consumer.Connection.Statistics)
+	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
 
 	// when
-	eventBus.Publish(connection.AppTopicConsumerStatistics, connection.SessionStatsEvent{})
+	eventBus.Publish(connection.AppTopicConnectionStatistics, connection.AppEventConnectionStatistics{
+		Stats: expected,
+	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		stats := keeper.GetState().Consumer.Connection.Statistics
-		if stats == nil {
-			return false
-		}
-		return stats.BytesReceived == 10*datasize.MiB.Bytes() &&
-			stats.BytesSent == 500*datasize.KiB.Bytes()
+		return expected == keeper.GetState().Connection.Statistics
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	// given
+	expected := crypto.Invoice{
+		AgreementID:    1,
+		AgreementTotal: 1001,
+		TransactorFee:  10,
+	}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:                 eventBus,
-		ServiceLister:             &serviceListerMock{},
-		ServiceSessionStorage:     &serviceSessionStorageMock{},
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:             eventBus,
+		ServiceLister:         &serviceListerMock{},
+		ServiceSessionStorage: &serviceSessionStorageMock{},
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Nil(t, keeper.GetState().Consumer.Connection.Statistics)
+	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
 
 	// when
-	eventBus.Publish(pingpong.AppTopicInvoicePaid, pingpong.AppEventInvoicePaid{})
+	eventBus.Publish(pingpongEvent.AppTopicInvoicePaid, pingpongEvent.AppEventInvoicePaid{
+		Invoice: expected,
+	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		stats := keeper.GetState().Consumer.Connection.Statistics
-		if stats == nil {
-			return false
-		}
-		return stats.TokensSpent == 1001
+		return expected == keeper.GetState().Connection.Invoice
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -418,11 +395,10 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:                 eventBus,
-		ServiceLister:             &serviceListerMock{},
-		ServiceSessionStorage:     &serviceSessionStorageMock{},
-		ConnectionSessionProvider: &zeroDurationProvider{},
+		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:             eventBus,
+		ServiceLister:         &serviceListerMock{},
+		ServiceSessionStorage: &serviceSessionStorageMock{},
 		IdentityProvider: &mocks.IdentityProvider{
 			Identities: []identity.Identity{
 				{Address: "0x000000000000000000000000000000000000000a"},
@@ -439,7 +415,7 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	assert.Zero(t, keeper.GetState().Identities[0].Balance)
 
 	// when
-	eventBus.Publish(pingpong.AppTopicBalanceChanged, pingpong.AppEventBalanceChanged{
+	eventBus.Publish(pingpongEvent.AppTopicBalanceChanged, pingpongEvent.AppEventBalanceChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
 		Previous: 0,
 		Current:  999,
@@ -455,11 +431,10 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:                 eventBus,
-		ServiceLister:             &serviceListerMock{},
-		ServiceSessionStorage:     &serviceSessionStorageMock{},
-		ConnectionSessionProvider: &zeroDurationProvider{},
+		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:             eventBus,
+		ServiceLister:         &serviceListerMock{},
+		ServiceSessionStorage: &serviceSessionStorageMock{},
 		IdentityProvider: &mocks.IdentityProvider{
 			Identities: []identity.Identity{
 				{Address: "0x000000000000000000000000000000000000000a"},
@@ -476,33 +451,26 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	assert.Zero(t, keeper.GetState().Identities[0].Balance)
 
 	// when
-	newSettlement := pingpong.SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(100)},
-		LastPromise: crypto.Promise{Amount: 30},
-	}
-	eventBus.Publish(pingpong.AppTopicEarningsChanged, pingpong.AppEventEarningsChanged{
+	eventBus.Publish(pingpongEvent.AppTopicEarningsChanged, pingpongEvent.AppEventEarningsChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Previous: pingpong.SettlementState{},
-		Current:  newSettlement,
+		Previous: pingpongEvent.Earnings{},
+		Current:  pingpongEvent.Earnings{LifetimeBalance: 100, UnsettledBalance: 10},
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].Earnings != 0 && keeper.GetState().Identities[0].EarningsTotal != 0
+		return keeper.GetState().Identities[0].Earnings == 10 && keeper.GetState().Identities[0].EarningsTotal == 100
 	}, 2*time.Second, 10*time.Millisecond)
-	assert.Equal(t, newSettlement.UnsettledBalance(), keeper.GetState().Identities[0].Earnings)
-	assert.Equal(t, newSettlement.LifetimeBalance(), keeper.GetState().Identities[0].EarningsTotal)
 }
 
 func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:         &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:                 eventBus,
-		ServiceLister:             &serviceListerMock{},
-		ServiceSessionStorage:     &serviceSessionStorageMock{},
-		ConnectionSessionProvider: &zeroDurationProvider{},
+		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:             eventBus,
+		ServiceLister:         &serviceListerMock{},
+		ServiceSessionStorage: &serviceSessionStorageMock{},
 		IdentityProvider: &mocks.IdentityProvider{
 			Identities: []identity.Identity{
 				{Address: "0x000000000000000000000000000000000000000a"},
@@ -544,12 +512,11 @@ func Test_getServiceByID(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -581,12 +548,11 @@ func Test_getSessionByID(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -622,12 +588,11 @@ func Test_incrementConnectionCount(t *testing.T) {
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:         natProvider,
-		Publisher:                 publisher,
-		ServiceLister:             sl,
-		ServiceSessionStorage:     sessionStorage,
-		ConnectionSessionProvider: &zeroDurationProvider{},
-		IdentityProvider:          &mocks.IdentityProvider{},
+		NATStatusProvider:     natProvider,
+		Publisher:             publisher,
+		ServiceLister:         sl,
+		ServiceSessionStorage: sessionStorage,
+		IdentityProvider:      &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -667,10 +632,10 @@ func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) uint64 {
 }
 
 type mockEarningsProvider struct {
-	State pingpong.SettlementState
+	Earnings pingpongEvent.Earnings
 }
 
-// SettlementState returns a pre-defined settlement state.
-func (mep *mockEarningsProvider) SettlementState(_ identity.Identity) pingpong.SettlementState {
-	return mep.State
+// GetEarnings returns a pre-defined settlement state.
+func (mep *mockEarningsProvider) GetEarnings(_ identity.Identity) pingpongEvent.Earnings {
+	return mep.Earnings
 }

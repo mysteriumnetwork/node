@@ -18,6 +18,7 @@
 package event
 
 import (
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,8 +48,13 @@ func NewSender(metricsSender metricsSender, ipResolver ipResolver, gatewayLoader
 	}
 }
 
-// ConsumeNATEvent sends received event to server
-func (es *Sender) ConsumeNATEvent(event Event) {
+// Subscribe subscribes to relevant events of event bus.
+func (es *Sender) Subscribe(bus eventbus.Subscriber) error {
+	return bus.Subscribe(AppTopicTraversal, es.consumeNATEvent)
+}
+
+// consumeNATEvent sends received event to server
+func (es *Sender) consumeNATEvent(event Event) {
 	publicIP, err := es.ipResolver()
 	if err != nil {
 		log.Warn().Err(err).Msg("Resolving public IP failed")

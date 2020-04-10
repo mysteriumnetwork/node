@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
@@ -231,9 +232,6 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se := sessionsDTO.Sessions[0]
-	assert.Zero(t, se.Duration)
-	assert.Zero(t, se.BytesSent)
-	assert.Zero(t, se.BytesReceived)
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
@@ -284,13 +282,13 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 }
 
 func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string) func() bool {
-	var delegate func(stats client.StatisticsDTO) bool
+	var delegate func(stats contract.ConnectionStatisticsDTO) bool
 	if serviceType != "noop" {
-		delegate = func(stats client.StatisticsDTO) bool {
+		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
 			return stats.BytesReceived > 0 && stats.BytesSent > 0 && stats.Duration > 30
 		}
 	} else {
-		delegate = func(stats client.StatisticsDTO) bool {
+		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
 			return stats.Duration > 30
 		}
 	}
