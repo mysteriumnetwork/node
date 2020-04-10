@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// NewConnectionStatisticsDTO maps consumer connection details.
+// NewConnectionStatisticsDTO maps to API connection stats.
 func NewConnectionStatisticsDTO(connection connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
 	return ConnectionStatisticsDTO{
 		Duration:           int(connection.Duration().Seconds()),
@@ -36,7 +36,7 @@ func NewConnectionStatisticsDTO(connection connection.Status, statistics connect
 	}
 }
 
-// ConnectionStatisticsDTO represents consumer connection details.
+// ConnectionStatisticsDTO holds consumer connection details.
 // swagger:model ConnectionStatisticsDTO
 type ConnectionStatisticsDTO struct {
 	// example: 1024

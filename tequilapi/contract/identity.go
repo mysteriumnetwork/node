@@ -90,3 +90,9 @@ type IdentityRegistrationResponse struct {
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
 }
+
+// ListProposalsResponse holds list of proposals.
+// swagger:model ListProposalsResponse
+type ListProposalsResponse struct {
+	Proposals []*ProposalDTO `json:"proposals"`
+}

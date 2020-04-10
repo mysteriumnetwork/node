@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/rs/zerolog/log"
@@ -55,7 +56,7 @@ type serviceRequest struct {
 	AccessPolicies accessPoliciesRequest `json:"access_policies"`
 
 	// PaymentMethod describes payment options that should be used for service creation.
-	PaymentMethod paymentMethodRes `json:"payment_method"`
+	PaymentMethod contract.PaymentMethodDTO `json:"payment_method"`
 }
 
 // accessPolicy represents the access controls
@@ -87,7 +88,7 @@ type serviceInfo struct {
 	// example: Running
 	Status string `json:"status"`
 
-	Proposal proposalDTO `json:"proposal"`
+	Proposal contract.ProposalDTO `json:"proposal"`
 
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
 }
@@ -289,11 +290,11 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	jsonData := struct {
-		ProviderID     string                `json:"provider_id"`
-		Type           string                `json:"type"`
-		Options        *json.RawMessage      `json:"options"`
-		AccessPolicies accessPoliciesRequest `json:"access_policies"`
-		PaymentMethod  paymentMethodRes      `json:"payment_method"`
+		ProviderID     string                    `json:"provider_id"`
+		Type           string                    `json:"type"`
+		Options        *json.RawMessage          `json:"options"`
+		AccessPolicies accessPoliciesRequest     `json:"access_policies"`
+		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
 			Ids: services.SharedConfiguredOptions().AccessPolicyList,
@@ -350,7 +351,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 		Type:       proposal.ServiceType,
 		Options:    instance.Options(),
 		Status:     string(instance.State()),
-		Proposal:   *proposalToRes(instance.Proposal()),
+		Proposal:   *contract.NewProposalDTO(instance.Proposal()),
 	}
 }
 

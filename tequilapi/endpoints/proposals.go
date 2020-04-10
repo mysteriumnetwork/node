@@ -24,108 +24,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
-	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
-
-// swagger:model ProposalsList
-type proposalsRes struct {
-	Proposals []*proposalDTO `json:"proposals"`
-}
-
-// swagger:model ServiceLocationDTO
-type locationRes struct {
-	// example: EU
-	Continent string `json:"continent,omitempty"`
-	// example: NL
-	Country string `json:"country,omitempty"`
-	// example: Amsterdam
-	City string `json:"city,omitempty"`
-
-	// Autonomous System Number
-	// example: 00001
-	ASN int `json:"asn"`
-	// example: Telia Lietuva, AB
-	ISP string `json:"isp,omitempty"`
-	// example: residential
-	NodeType string `json:"node_type,omitempty"`
-}
-
-// swagger:model ServiceDefinitionDTO
-type serviceDefinitionRes struct {
-	LocationOriginate locationRes `json:"location_originate"`
-}
-
-type metricsRes struct {
-	ConnectCount quality.ConnectCount `json:"connect_count"`
-}
-
-type paymentRateRes struct {
-	PerSeconds uint64 `json:"per_seconds"`
-	PerBytes   uint64 `json:"per_bytes"`
-}
-
-type paymentMethodRes struct {
-	Type  string         `json:"type"`
-	Price money.Money    `json:"price"`
-	Rate  paymentRateRes `json:"rate"`
-}
-
-// swagger:model ProposalDTO
-type proposalDTO struct {
-	// per provider unique serial number of service description provided
-	// example: 5
-	ID int `json:"id"`
-
-	// provider who offers service
-	// example: 0x0000000000000000000000000000000000000001
-	ProviderID string `json:"provider_id"`
-
-	// type of service provider offers
-	// example: openvpn
-	ServiceType string `json:"service_type"`
-
-	// qualitative service definition
-	ServiceDefinition serviceDefinitionRes `json:"service_definition"`
-
-	// Metrics of the service
-	Metrics *metricsRes `json:"metrics,omitempty"`
-
-	// AccessPolicies
-	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
-
-	// PaymentMethod
-	PaymentMethod paymentMethodRes `json:"payment_method"`
-}
-
-func proposalToRes(p market.ServiceProposal) *proposalDTO {
-	return &proposalDTO{
-		ID:          p.ID,
-		ProviderID:  p.ProviderID,
-		ServiceType: p.ServiceType,
-		ServiceDefinition: serviceDefinitionRes{
-			LocationOriginate: locationRes{
-				Continent: p.ServiceDefinition.GetLocation().Continent,
-				Country:   p.ServiceDefinition.GetLocation().Country,
-				City:      p.ServiceDefinition.GetLocation().City,
-
-				ASN:      p.ServiceDefinition.GetLocation().ASN,
-				ISP:      p.ServiceDefinition.GetLocation().ISP,
-				NodeType: p.ServiceDefinition.GetLocation().NodeType,
-			},
-		},
-		AccessPolicies: p.AccessPolicies,
-		PaymentMethod: paymentMethodRes{
-			Type:  p.PaymentMethod.GetType(),
-			Price: p.PaymentMethod.GetPrice(),
-			Rate: paymentRateRes{
-				PerSeconds: uint64(p.PaymentMethod.GetRate().PerTime.Seconds()),
-				PerBytes:   p.PaymentMethod.GetRate().PerByte,
-			},
-		},
-	}
-}
 
 // QualityFinder allows to fetch proposal quality data
 type QualityFinder interface {
@@ -174,7 +75,7 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //   200:
 //     description: List of proposals
 //     schema:
-//       "$ref": "#/definitions/ProposalsList"
+//       "$ref": "#/definitions/ListProposalsResponse"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -221,9 +122,9 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		return
 	}
 
-	proposalsRes := proposalsRes{Proposals: []*proposalDTO{}}
+	proposalsRes := contract.ListProposalsResponse{Proposals: []*contract.ProposalDTO{}}
 	for _, p := range proposals {
-		proposalsRes.Proposals = append(proposalsRes.Proposals, proposalToRes(p))
+		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
 
 	if fetchConnectCounts == "true" {
@@ -250,7 +151,7 @@ func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposa
 }
 
 // addProposalMetrics adds quality metrics to proposals.
-func addProposalMetrics(proposals []*proposalDTO, metrics []quality.ConnectMetric) {
+func addProposalMetrics(proposals []*contract.ProposalDTO, metrics []quality.ConnectMetric) {
 	// Convert metrics slice to map for fast lookup.
 	metricsMap := map[string]quality.ConnectMetric{}
 	for _, m := range metrics {
@@ -259,7 +160,7 @@ func addProposalMetrics(proposals []*proposalDTO, metrics []quality.ConnectMetri
 
 	for _, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			p.Metrics = &metricsRes{ConnectCount: mc.ConnectCount}
+			p.Metrics = &contract.ProposalMetricsDTO{ConnectCount: mc.ConnectCount}
 		}
 	}
 }

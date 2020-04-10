@@ -220,7 +220,7 @@ type consumerStateRes struct {
 type consumerConnectionRes struct {
 	State      connection.State                  `json:"state"`
 	Statistics *contract.ConnectionStatisticsDTO `json:"statistics,omitempty"`
-	Proposal   *proposalDTO                      `json:"proposal,omitempty"`
+	Proposal   *contract.ProposalDTO             `json:"proposal,omitempty"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -245,7 +245,7 @@ func mapState(event stateEvent.State) stateRes {
 	}
 	// If none exists, conn manager still has empty proposal
 	if event.Connection.Session.Proposal.ProviderID != "" {
-		connectionRes.Proposal = proposalToRes(event.Connection.Session.Proposal)
+		connectionRes.Proposal = contract.NewProposalDTO(event.Connection.Session.Proposal)
 	}
 
 	res := stateRes{
