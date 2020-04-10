@@ -37,9 +37,10 @@ var (
 	// If this env variable is set channel will log raw messages from send and receive loops.
 	debugTransport = os.Getenv("P2P_DEBUG_TRANSPORT") == "1"
 
-	// ErrSendTimeout represent send timeout error.
+	// ErrSendTimeout indicates send timeout error.
 	ErrSendTimeout = errors.New("p2p send timeout")
 
+	// ErrHandlerNotFound indicates that peer is not registered handler yet.
 	ErrHandlerNotFound = errors.New("p2p peer handler not found")
 )
 

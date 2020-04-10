@@ -105,6 +105,8 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               identity.FromAddress(acc.Address.Hex()),
@@ -385,6 +387,8 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Millisecond,
 		ChargePeriodLeeway:         15 * time.Minute,
+		FirstInvoiceSendDuration:   time.Millisecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -448,6 +452,8 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -474,7 +480,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.NoError(t, <-errChan)
 }
 
-func Test_InvoiceTracker_SendsInvoice_Return_Max_Send_Error(t *testing.T) {
+func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -526,8 +532,8 @@ func Test_InvoiceTracker_SendsInvoice_Return_Max_Send_Error(t *testing.T) {
 
 	err = <-errChan
 
-	if !stdErrors.Is(err, ErrInvoiceSendMaxFailCountReached) {
-		t.Fatalf("expected err %v, got: %v", ErrInvoiceSendMaxFailCountReached, err)
+	if !stdErrors.Is(err, ErrFirstInvoiceSendTimeout) {
+		t.Fatalf("expected err %v, got: %v", ErrFirstInvoiceSendTimeout, err)
 	}
 }
 
@@ -558,6 +564,8 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Second,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),

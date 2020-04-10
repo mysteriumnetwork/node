@@ -58,6 +58,9 @@ var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 // ErrInvoiceSendMaxFailCountReached indicates that we did not sent an exchange message in time.
 var ErrInvoiceSendMaxFailCountReached = errors.New("did not sent a new exchange message")
 
+// ErrFirstInvoiceSendTimeout indicates that first invoice was not sent.
+var ErrFirstInvoiceSendTimeout = errors.New("did not sent first invoice")
+
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
@@ -154,6 +157,8 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
+	FirstInvoiceSendDuration   time.Duration
+	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
 	AccountantID               identity.Identity
 	AccountantCaller           accountantCaller
@@ -423,15 +428,13 @@ func (it *InvoiceTracker) Start() error {
 	// on session close, try and reveal the promise before exiting
 	defer it.revealPromise()
 
-	// give the consumer a second to start up his payments before sending the first request
-	firstSend := time.After(3 * time.Second)
+	err = it.sendFirstInvoice()
+	if err != nil {
+		return fmt.Errorf("could not send first invoice: %w", err)
+	}
+
 	for {
 		select {
-		case <-firstSend:
-			err := it.sendInvoice()
-			if err != nil {
-				return errors.Wrap(err, "sending first invoice failed")
-			}
 		case <-it.stop:
 			return nil
 		case <-time.After(it.deps.ChargePeriod):
@@ -536,6 +539,24 @@ func (it *InvoiceTracker) sendInvoice() error {
 
 	err = it.deps.InvoiceStorage.Store(it.deps.ProviderID, it.deps.Peer, invoice)
 	return errors.Wrap(err, "could not store invoice")
+}
+
+func (it *InvoiceTracker) sendFirstInvoice() error {
+	timeout := time.After(it.deps.FirstInvoiceSendTimeout)
+	for {
+		select {
+		case <-it.stop:
+			return nil
+		case <-timeout:
+			return ErrFirstInvoiceSendTimeout
+		case <-time.After(it.deps.FirstInvoiceSendDuration):
+			err := it.sendInvoice()
+			if stdErr.Is(err, p2p.ErrHandlerNotFound) {
+				continue
+			}
+			return err
+		}
+	}
 }
 
 func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
