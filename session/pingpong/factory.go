@@ -36,23 +36,35 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// PromiseWaitTimeout is the time that the provider waits for the promise to arrive
-const PromiseWaitTimeout = time.Second * 50
+const (
+	// PromiseWaitTimeout is the time that the provider waits for the promise to arrive
+	PromiseWaitTimeout = time.Second * 50
 
-// DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
-const DefaultAccountantFailureCount uint64 = 10
+	// InvoiceSendPeriod is how often the provider will send invoice messages to the consumer
+	InvoiceSendPeriod = time.Second * 60
 
-// DefaultPaymentMethod represents the the default payment method of time + bytes.
-// The rate is frozen at 0.07MYSTT per GiB of data transferred and 0.0005MYSTT/minute.
-// Since the price is calculated based on the rate and price, for 1 GiB we need:
-// 0.07 * 100 000 000 / 50 000 = 140 chunks.
-// 1024 * 1024 * 1024(or 1 GiB)  / 140 ~= 7669584.
-// Therefore, for reach 7669584 bytes transferred, we'll pay 0.0005 MYSTT.
-var DefaultPaymentMethod = PaymentMethod{
-	Price:    money.NewMoney(50000, money.CurrencyMyst),
-	Duration: time.Minute,
-	Type:     "BYTES_TRANSFERRED_WITH_TIME",
-	Bytes:    7669584,
+	// DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
+	DefaultAccountantFailureCount uint64 = 10
+
+	gb       = 1024 * 1024 * 1024
+	accuracy = 50000
+)
+
+// NewPaymentMethod returns the the default payment method of time + bytes.
+func NewPaymentMethod(pricePerGB, pricePerMinute uint64) PaymentMethod {
+	if pricePerGB > 0 {
+		pricePerGB = gb * accuracy / pricePerGB
+	}
+	if pricePerMinute > 0 {
+		pricePerMinute = uint64(time.Minute) * accuracy / pricePerMinute
+	}
+
+	return PaymentMethod{
+		Price:    money.NewMoney(accuracy, money.CurrencyMyst),
+		Duration: time.Duration(pricePerMinute),
+		Type:     "BYTES_TRANSFERRED_WITH_TIME",
+		Bytes:    pricePerGB,
+	}
 }
 
 // PaymentMethod represents a payment method
