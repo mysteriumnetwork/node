@@ -80,9 +80,10 @@ const (
 	headerFieldTopic     = "Topic"
 	headerStatusCode     = "Status-Code"
 
-	statusCodeOK          = 1
-	statusCodePublicErr   = 2
-	statusCodeInternalErr = 3
+	statusCodeOK                 = 1
+	statusCodePublicErr          = 2
+	statusCodeInternalErr        = 3
+	statusCodeHandlerNotFoundErr = 4
 )
 
 // transportMsg is internal structure for sending and receiving messages.

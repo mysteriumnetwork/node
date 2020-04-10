@@ -39,6 +39,8 @@ var (
 
 	// ErrSendTimeout represent send timeout error.
 	ErrSendTimeout = errors.New("p2p send timeout")
+
+	ErrHandlerNotFound = errors.New("p2p peer handler not found")
 )
 
 // ChannelSender is used to send messages.
@@ -237,8 +239,8 @@ func (c *channel) handleRequest(msg *transportMsg) {
 	resMsg.id = msg.id
 
 	if !ok {
-		resMsg.statusCode = statusCodePublicErr
-		errMsg := fmt.Sprintf("handler %q is not registered", msg.topic)
+		resMsg.statusCode = statusCodeHandlerNotFoundErr
+		errMsg := fmt.Sprintf("handler %q not found", msg.topic)
 		log.Err(errors.New(errMsg))
 		resMsg.data = []byte(errMsg)
 		c.sendQueue <- &resMsg
@@ -324,6 +326,9 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 		if res.statusCode != statusCodeOK {
 			if res.statusCode == statusCodePublicErr {
 				return nil, fmt.Errorf("public peer error: %s", string(res.data))
+			}
+			if res.statusCode == statusCodeHandlerNotFoundErr {
+				return nil, fmt.Errorf("%s: %w", string(res.data), ErrHandlerNotFound)
 			}
 			return nil, errors.New("internal peer error")
 		}

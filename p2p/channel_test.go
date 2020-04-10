@@ -171,7 +171,9 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 
 	t.Run("Test peer returns handler not found error", func(t *testing.T) {
 		_, err := consumer.Send(context.Background(), "ping", &Message{Data: []byte("hello")})
-		assert.EqualError(t, err, "public peer error: handler \"ping\" is not registered")
+		if !errors.Is(err, ErrHandlerNotFound) {
+			t.Fatalf("expect handler not found err, got %v", err)
+		}
 	})
 }
 
