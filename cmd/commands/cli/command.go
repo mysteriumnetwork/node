@@ -23,6 +23,7 @@ import (
 	"io"
 	stdlog "log"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -235,6 +236,8 @@ func (c *cliApp) service(argsString string) {
 		c.serviceList()
 	case "sessions":
 		c.serviceSessions()
+	case "price":
+		c.servicePrice(argsString)
 	default:
 		info(fmt.Sprintf("Unknown action provided: %s", action))
 		fmt.Println(serviceHelp)
@@ -640,6 +643,10 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItem("list"),
 			readline.PcItem("status"),
 			readline.PcItem("sessions"),
+			readline.PcItem("price",
+				readline.PcItem("openvpn", readline.PcItem("gb"), readline.PcItem("minute")),
+				readline.PcItem("wireguard", readline.PcItem("gb"), readline.PcItem("minute")),
+			),
 		),
 		readline.PcItem(
 			"identities",
@@ -701,4 +708,55 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	}
 
 	return nil, config.ServicesOptions{}, errors.New("service type not found")
+}
+
+func (c *cliApp) servicePrice(argsString string) {
+	const paymentsHelp = "Usage: service price <openvpn|wireguard> [gb|minute] [value]"
+
+	args := strings.Fields(argsString)
+	if len(args) == 1 {
+		info(paymentsHelp)
+		return
+	}
+
+	serviceType := args[1]
+	flagGB := cli.Uint64Flag{Name: serviceType + ".price-gb"}
+	flagMinute := cli.Uint64Flag{Name: serviceType + ".price-minute"}
+	priceGB := config.GetUInt64(flagGB)
+	priceMinute := config.GetUInt64(flagMinute)
+
+	infof("Current price per GiB: %d\n", priceGB)
+	infof("Current price per minute: %d\n", priceMinute)
+
+	if len(args) < 4 {
+		return
+	}
+
+	value, err := strconv.ParseUint(args[3], 10, 64)
+	if err != nil {
+		warnf("Failed to parse value %v: %v\n", args[3], err)
+		return
+	}
+
+	switch strings.ToLower(args[2]) {
+	case "gb":
+		config.Current.SetUser(flagGB.Name, value)
+	case "minute":
+		config.Current.SetUser(flagMinute.Name, value)
+	default:
+		info(fmt.Sprintf("Unknown price type provided: %s", serviceType))
+		info(paymentsHelp)
+		return
+	}
+
+	if err := config.Current.SaveUserConfig(); err != nil {
+		warnf("Failed to save user config %v\n", err)
+		return
+	}
+
+	priceGB = config.GetUInt64(flagGB)
+	priceMinute = config.GetUInt64(flagMinute)
+
+	infof("New price per GiB: %d\n", priceGB)
+	infof("New price per minute: %d\n", priceMinute)
 }
