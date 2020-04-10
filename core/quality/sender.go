@@ -18,7 +18,9 @@
 package quality
 
 import (
+	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -28,12 +30,14 @@ import (
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
+	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/rs/zerolog/log"
 )
 
 const (
 	appName             = "myst"
 	sessionDataName     = "session_data"
+	sessionTokensName   = "session_tokens"
 	sessionEventName    = "session_event"
 	startupEventName    = "startup"
 	proposalEventName   = "proposal_event"
@@ -52,6 +56,8 @@ func NewSender(transport Transport, appVersion string, manager connection.Manage
 		AppVersion: appVersion,
 		connection: manager,
 		location:   locationResolver,
+
+		sessionsActive: make(map[string]sessionContext),
 	}
 }
 
@@ -61,6 +67,9 @@ type Sender struct {
 	AppVersion string
 	connection connection.Manager
 	location   location.OriginResolver
+
+	sessionsMu     sync.RWMutex
+	sessionsActive map[string]sessionContext
 }
 
 // Event contains data about event, which is sent using transport
@@ -95,6 +104,11 @@ type sessionDataContext struct {
 	sessionContext
 }
 
+type sessionTokensContext struct {
+	Tokens uint64
+	sessionContext
+}
+
 type sessionContext struct {
 	ID              string
 	Consumer        string
@@ -115,6 +129,9 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
 		return err
 	}
+	if err := bus.SubscribeAsync(pingpongEvent.AppTopicInvoicePaid, sender.sendSessionEarning); err != nil {
+		return err
+	}
 	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
 		return err
 	}
@@ -123,58 +140,63 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 
 // sendSessionData sends transferred information about session.
 func (sender *Sender) sendSessionData(e connection.AppEventConnectionStatistics) {
-	if !e.SessionInfo.IsActive() {
+	if e.SessionInfo.SessionID == "" {
 		return
 	}
-	currentSession := e.SessionInfo
+
 	sender.sendEvent(sessionDataName, sessionDataContext{
-		Rx: e.Stats.BytesReceived,
-		Tx: e.Stats.BytesSent,
-		sessionContext: sessionContext{
-			ID:              string(currentSession.SessionID),
-			Consumer:        currentSession.ConsumerID.Address,
-			Provider:        currentSession.Proposal.ProviderID,
-			ServiceType:     currentSession.Proposal.ServiceType,
-			ProviderCountry: currentSession.Proposal.ServiceDefinition.GetLocation().Country,
-			ConsumerCountry: sender.originCountry(),
-		},
+		Rx:             e.Stats.BytesReceived,
+		Tx:             e.Stats.BytesSent,
+		sessionContext: sender.toSessionContext(e.SessionInfo),
+	})
+}
+
+func (sender *Sender) sendSessionEarning(e pingpongEvent.AppEventInvoicePaid) {
+	session, err := sender.recoverSessionContext(e.SessionID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Can't recover session context")
+		return
+	}
+
+	sender.sendEvent(sessionTokensName, sessionTokensContext{
+		Tokens:         e.Invoice.AgreementTotal,
+		sessionContext: session,
 	})
 }
 
 // sendConnStateEvent sends session update events.
 func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
-	if !e.SessionInfo.IsActive() {
+	if e.SessionInfo.SessionID == "" {
 		return
 	}
+
 	sender.sendEvent(sessionEventName, sessionEventContext{
-		Event: string(e.State),
-		sessionContext: sessionContext{
-			ID:              string(e.SessionInfo.SessionID),
-			Consumer:        e.SessionInfo.ConsumerID.Address,
-			Provider:        e.SessionInfo.Proposal.ProviderID,
-			ServiceType:     e.SessionInfo.Proposal.ServiceType,
-			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
-			ConsumerCountry: sender.originCountry(),
-		},
+		Event:          string(e.State),
+		sessionContext: sender.toSessionContext(e.SessionInfo),
 	})
 }
 
 // sendSessionEvent sends session update events.
 func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
-	if !e.SessionInfo.IsActive() {
+	if e.SessionInfo.SessionID == "" {
 		return
 	}
-	sender.sendEvent(sessionEventName, sessionEventContext{
-		Event: e.Status,
-		sessionContext: sessionContext{
-			ID:              string(e.SessionInfo.SessionID),
-			Consumer:        e.SessionInfo.ConsumerID.Address,
-			Provider:        e.SessionInfo.Proposal.ProviderID,
-			ServiceType:     e.SessionInfo.Proposal.ServiceType,
-			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
-			ConsumerCountry: sender.originCountry(),
-		},
-	})
+	sessionContext := sender.toSessionContext(e.SessionInfo)
+
+	switch e.Status {
+	case connection.SessionCreatedStatus:
+		sender.rememberSessionContext(sessionContext)
+		sender.sendEvent(sessionEventName, sessionEventContext{
+			Event:          e.Status,
+			sessionContext: sessionContext,
+		})
+	case connection.SessionEndedStatus:
+		sender.sendEvent(sessionEventName, sessionEventContext{
+			Event:          e.Status,
+			sessionContext: sessionContext,
+		})
+		sender.forgetSessionContext(sessionContext)
+	}
 }
 
 // sendStartupEvent sends startup event
@@ -221,6 +243,42 @@ func (sender *Sender) sendEvent(eventName string, context interface{}) {
 	})
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send metric: " + eventName)
+	}
+}
+
+func (sender *Sender) rememberSessionContext(context sessionContext) {
+	sender.sessionsMu.Lock()
+	defer sender.sessionsMu.Unlock()
+
+	sender.sessionsActive[context.ID] = context
+}
+
+func (sender *Sender) forgetSessionContext(context sessionContext) {
+	sender.sessionsMu.Lock()
+	defer sender.sessionsMu.Unlock()
+
+	delete(sender.sessionsActive, context.ID)
+}
+
+func (sender *Sender) recoverSessionContext(sessionID string) (sessionContext, error) {
+	sender.sessionsMu.Lock()
+	defer sender.sessionsMu.Unlock()
+
+	context, found := sender.sessionsActive[sessionID]
+	if !found {
+		return sessionContext{}, fmt.Errorf("unknown session: %v", sessionID)
+	}
+	return context, nil
+}
+
+func (sender *Sender) toSessionContext(session connection.Status) sessionContext {
+	return sessionContext{
+		ID:              string(session.SessionID),
+		Consumer:        session.ConsumerID.Address,
+		Provider:        session.Proposal.ProviderID,
+		ServiceType:     session.Proposal.ServiceType,
+		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
+		ConsumerCountry: sender.originCountry(),
 	}
 }
 

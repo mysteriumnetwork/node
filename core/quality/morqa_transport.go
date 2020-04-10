@@ -51,6 +51,8 @@ func mapEventToMetric(event Event) *metrics.Event {
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
 		return sessionDataToMetricsEvent(event.Context.(sessionDataContext))
+	case sessionTokensName:
+		return sessionTokensToMetricsEvent(event.Context.(sessionTokensContext))
 	case proposalEventName:
 		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
 	}
@@ -97,6 +99,25 @@ func sessionDataToMetricsEvent(context sessionDataContext) *metrics.Event {
 			SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
 				BytesSent:     context.Tx,
 				BytesReceived: context.Rx,
+				Session: &metrics.SessionPayload{
+					Id:             context.ID,
+					ServiceType:    context.ServiceType,
+					ProviderContry: context.ProviderCountry,
+					ConsumerContry: context.ConsumerCountry,
+				},
+			},
+		},
+	}
+}
+
+func sessionTokensToMetricsEvent(context sessionTokensContext) *metrics.Event {
+	return &metrics.Event{
+		Signature:  context.Consumer,
+		TargetId:   context.Provider,
+		IsProvider: false,
+		Metric: &metrics.Event_SessionTokensPayload{
+			SessionTokensPayload: &metrics.SessionTokensPayload{
+				Tokens: context.Tokens,
 				Session: &metrics.SessionPayload{
 					Id:             context.ID,
 					ServiceType:    context.ServiceType,

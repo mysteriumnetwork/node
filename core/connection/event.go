@@ -76,11 +76,6 @@ type Status struct {
 	Proposal     market.ServiceProposal
 }
 
-// IsActive checks if session is active
-func (s *Status) IsActive() bool {
-	return s.SessionID != ""
-}
-
 // Duration returns elapsed time from marked session start
 func (s *Status) Duration() time.Duration {
 	if s.StartedAt.IsZero() {
