@@ -39,6 +39,12 @@ type connectionSession struct {
 	SessionID string `json:"session_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
+	ConsumerID string `json:"consumer_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
+	AccountantID string `json:"accountant_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"provider_id"`
 
 	// example: openvpn
@@ -115,6 +121,8 @@ func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage co
 func connectionSessionToDto(se session.History) connectionSession {
 	return connectionSession{
 		SessionID:       string(se.SessionID),
+		ConsumerID:      se.ConsumerID.Address,
+		AccountantID:    se.AccountantID,
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,

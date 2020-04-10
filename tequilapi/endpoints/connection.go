@@ -87,6 +87,9 @@ type connectionResponse struct {
 	// example: 0x00
 	ConsumerID string `json:"consumer_id,omitempty"`
 
+	// example: 0x00
+	AccountantID string `json:"accountant_id,omitempty"`
+
 	// example: Connected
 	Status string `json:"status"`
 
@@ -348,11 +351,16 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 	return errs
 }
 
+var emptyAddress = common.Address{}
+
 func toConnectionResponse(status connection.Status) connectionResponse {
 	response := connectionResponse{
 		Status:     string(status.State),
 		SessionID:  string(status.SessionID),
 		ConsumerID: status.ConsumerID.Address,
+	}
+	if status.AccountantID != emptyAddress {
+		response.AccountantID = status.AccountantID.Hex()
 	}
 
 	if status.Proposal.ProviderID != "" {

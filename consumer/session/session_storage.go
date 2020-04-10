@@ -43,9 +43,12 @@ type Storer interface {
 	GetAllFrom(bucket string, array interface{}) error
 }
 
+type timeGetter func() time.Time
+
 // Storage contains functions for storing, getting session objects
 type Storage struct {
-	storage Storer
+	storage    Storer
+	timeGetter timeGetter
 
 	mu             sync.RWMutex
 	sessionsActive map[session.ID]History
@@ -54,7 +57,9 @@ type Storage struct {
 // NewSessionStorage creates session repository with given dependencies
 func NewSessionStorage(storage Storer) *Storage {
 	return &Storage{
-		storage:        storage,
+		storage:    storage,
+		timeGetter: time.Now,
+
 		sessionsActive: make(map[session.ID]History),
 	}
 }
@@ -114,7 +119,7 @@ func (repo *Storage) consumeSessionSpendingEvent(e pingpongEvent.AppEventInvoice
 		log.Warn().Msg("Received a unknown session update")
 		return
 	}
-	row.Updated = time.Now().UTC()
+	row.Updated = repo.timeGetter()
 	row.Invoice = e.Invoice
 
 	err := repo.storage.Update(sessionStorageBucketName, &row)
@@ -136,7 +141,7 @@ func (repo *Storage) handleEndedEvent(sessionID session.ID) {
 		log.Warn().Msgf("Can't find session %v to update", sessionID)
 		return
 	}
-	row.Updated = time.Now().UTC()
+	row.Updated = repo.timeGetter()
 	row.Status = SessionStatusCompleted
 
 	err := repo.storage.Update(sessionStorageBucketName, &row)
@@ -155,10 +160,12 @@ func (repo *Storage) handleCreatedEvent(session connection.Status) {
 
 	row := History{
 		SessionID:       session.SessionID,
+		ConsumerID:      session.ConsumerID,
+		AccountantID:    session.AccountantID.Hex(),
 		ProviderID:      identity.FromAddress(session.Proposal.ProviderID),
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
-		Started:         time.Now().UTC(),
+		Started:         session.StartedAt,
 		Status:          SessionStatusNew,
 	}
 	err := repo.storage.Store(sessionStorageBucketName, &row)

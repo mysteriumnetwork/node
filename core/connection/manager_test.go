@@ -172,10 +172,11 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      NotConnected,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        NotConnected,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -187,11 +188,12 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      Connected,
-			SessionID:  establishedSessionID,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        Connected,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -209,11 +211,12 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      Connecting,
-			SessionID:  establishedSessionID,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        Connecting,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -239,11 +242,12 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      Disconnecting,
-			SessionID:  establishedSessionID,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        Disconnecting,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -257,11 +261,12 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      NotConnected,
-			SessionID:  establishedSessionID,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        NotConnected,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -283,11 +288,12 @@ func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconn
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      Reconnecting,
-			SessionID:  establishedSessionID,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        Reconnecting,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -326,11 +332,12 @@ func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutErro
 	assert.Equal(
 		tc.T(),
 		Status{
-			StartedAt:  tc.mockTime,
-			ConsumerID: consumerID,
-			State:      Connected,
-			SessionID:  establishedSessionID,
-			Proposal:   activeProposal,
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        Connected,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
 		},
 		tc.connManager.Status(),
 	)

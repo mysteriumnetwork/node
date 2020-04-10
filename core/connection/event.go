@@ -20,6 +20,7 @@ package connection
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
@@ -67,11 +68,12 @@ const (
 
 // Status holds connection state, session id and proposal of the connection
 type Status struct {
-	StartedAt  time.Time
-	ConsumerID identity.Identity
-	State      State
-	SessionID  session.ID
-	Proposal   market.ServiceProposal
+	StartedAt    time.Time
+	ConsumerID   identity.Identity
+	AccountantID common.Address
+	State        State
+	SessionID    session.ID
+	Proposal     market.ServiceProposal
 }
 
 // IsActive checks if session is active

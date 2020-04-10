@@ -185,7 +185,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
-	m.statusConnecting(consumerID, proposal)
+	m.statusConnecting(consumerID, accountantID, proposal)
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -626,13 +626,14 @@ func (m *connectionManager) setStatus(delta func(status *Status)) {
 	}
 }
 
-func (m *connectionManager) statusConnecting(consumerID identity.Identity, proposal market.ServiceProposal) {
+func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
 	m.setStatus(func(status *Status) {
 		*status = Status{
-			StartedAt:  m.timeGetter(),
-			ConsumerID: consumerID,
-			Proposal:   proposal,
-			State:      Connecting,
+			StartedAt:    m.timeGetter(),
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			Proposal:     proposal,
+			State:        Connecting,
 		}
 	})
 }
