@@ -116,6 +116,7 @@ type sessionContext struct {
 	ServiceType     string
 	ProviderCountry string
 	ConsumerCountry string
+	AccountantID    string
 }
 
 // Subscribe subscribes to relevant events of event bus.
@@ -279,6 +280,7 @@ func (sender *Sender) toSessionContext(session connection.Status) sessionContext
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
 		ConsumerCountry: sender.originCountry(),
+		AccountantID:    session.AccountantID.Hex(),
 	}
 }
 
