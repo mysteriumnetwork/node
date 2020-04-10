@@ -237,6 +237,26 @@ func TestChannel_Send_To_When_Peer_Starts_Later(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestChannel_Detect_And_Update_Peer_Addr(t *testing.T) {
+	provider, consumer, err := createTestChannels()
+	require.NoError(t, err)
+	defer consumer.Close()
+	defer provider.Close()
+
+	provider.Handle("ping", func(c Context) error {
+		return c.OK()
+	})
+
+	// Close consumer peer and reopen channel with new local addr.
+	consumer.Close()
+	consumer, err = reopenChannelWithNewLocalAddr(consumer.(*channel))
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err = consumer.Send(ctx, "ping", &Message{Data: []byte("pingasssas")})
+}
+
 func BenchmarkChannel_Send(b *testing.B) {
 	provider, consumer, err := createTestChannels()
 	require.NoError(b, err)
@@ -257,11 +277,19 @@ func BenchmarkChannel_Send(b *testing.B) {
 }
 
 func reopenChannel(c *channel) (*channel, error) {
-	punchedConn, err := net.DialUDP("udp", c.localAddr, c.peerAddr)
+	punchedConn, err := net.DialUDP("udp4", c.tr.remoteConn.LocalAddr().(*net.UDPAddr), c.peer.addr())
 	if err != nil {
 		return nil, err
 	}
-	return newChannel(punchedConn, c.privateKey, c.peerPubKey)
+	return newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+}
+
+func reopenChannelWithNewLocalAddr(c *channel) (*channel, error) {
+	punchedConn, err := net.DialUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1")}, c.peer.addr())
+	if err != nil {
+		return nil, err
+	}
+	return newChannel(punchedConn, c.privateKey, c.peer.publicKey)
 }
 
 func createTestChannels() (Channel, Channel, error) {
@@ -272,12 +300,12 @@ func createTestChannels() (Channel, Channel, error) {
 	providerPort := ports[0]
 	consumerPort := ports[1]
 
-	providerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: providerPort}, &net.UDPAddr{Port: consumerPort})
+	providerConn, err := net.DialUDP("udp4", &net.UDPAddr{Port: providerPort}, &net.UDPAddr{Port: consumerPort})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	consumerConn, err := net.DialUDP("udp", &net.UDPAddr{Port: consumerPort}, &net.UDPAddr{Port: providerPort})
+	consumerConn, err := net.DialUDP("udp4", &net.UDPAddr{Port: consumerPort}, &net.UDPAddr{Port: providerPort})
 	if err != nil {
 		return nil, nil, err
 	}

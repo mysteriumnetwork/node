@@ -101,7 +101,7 @@ func (m *transportMsg) readFrom(conn *textproto.Reader) error {
 	// Read header.
 	header, err := conn.ReadMIMEHeader()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read mime header: %w", err)
 	}
 	id, err := strconv.ParseUint(header.Get(headerFieldRequestID), 10, 64)
 	if err != nil {
@@ -118,7 +118,7 @@ func (m *transportMsg) readFrom(conn *textproto.Reader) error {
 	// Read data.
 	data, err := conn.ReadDotBytes()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read dot bytes: %w", err)
 	}
 	if len(data) > 0 {
 		m.data = data[:len(data)-1]
