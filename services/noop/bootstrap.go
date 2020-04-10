@@ -37,7 +37,7 @@ func Bootstrap() {
 	)
 
 	market.RegisterPaymentMethodUnserializer(
-		pingpong.DefaultPaymentMethod.Type,
+		pingpong.NewPaymentMethod(0, 0).Type,
 		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method pingpong.PaymentMethod
 			err := json.Unmarshal(*rawDefinition, &method)

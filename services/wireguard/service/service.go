@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/market"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -36,13 +37,17 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		NodeType: location.NodeType,
 	}
 
+	pricePerByte := config.GetUInt64(config.FlagWireguardPriceGB)
+	pricePerMinute := config.GetUInt64(config.FlagWireguardPriceMinute)
+	paymentMethod := pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
+
 	return market.ServiceProposal{
 		ServiceType: wg.ServiceType,
 		ServiceDefinition: wg.ServiceDefinition{
 			Location:          marketLocation,
 			LocationOriginate: marketLocation,
 		},
-		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-		PaymentMethod:     pingpong.DefaultPaymentMethod,
+		PaymentMethodType: paymentMethod.GetType(),
+		PaymentMethod:     paymentMethod,
 	}
 }

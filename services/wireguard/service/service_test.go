@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -45,6 +46,8 @@ var (
 var connectionEndpointStub = &mockConnectionEndpoint{}
 
 func Test_GetProposal(t *testing.T) {
+	paymentMethod := pingpong.NewPaymentMethod(config.GetUInt64(config.FlagWireguardPriceGB), config.GetUInt64(config.FlagWireguardPriceMinute))
+
 	assert.Exactly(
 		t,
 		market.ServiceProposal{
@@ -53,8 +56,8 @@ func Test_GetProposal(t *testing.T) {
 				Location:          market.Location{Country: country},
 				LocationOriginate: market.Location{Country: country},
 			},
-			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-			PaymentMethod:     pingpong.DefaultPaymentMethod,
+			PaymentMethodType: paymentMethod.GetType(),
+			PaymentMethod:     paymentMethod,
 		},
 		GetProposal(location.Location{Country: country}),
 	)

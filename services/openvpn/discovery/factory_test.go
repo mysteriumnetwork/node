@@ -42,6 +42,7 @@ var (
 func Test_NewServiceProposalWithLocation(t *testing.T) {
 	proposal := NewServiceProposalWithLocation(locationLTTelia, protocol)
 
+	paymentMethod := pingpong.NewPaymentMethod(0, 0)
 	assert.Exactly(
 		t,
 		market.ServiceProposal{
@@ -53,8 +54,8 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 				Protocol:          "tcp",
 			},
 
-			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-			PaymentMethod:     pingpong.DefaultPaymentMethod,
+			PaymentMethodType: paymentMethod.GetType(),
+			PaymentMethod:     paymentMethod,
 		},
 		proposal,
 	)

@@ -18,6 +18,7 @@
 package discovery
 
 import (
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
@@ -40,6 +41,10 @@ func NewServiceProposalWithLocation(
 		NodeType:  loc.NodeType,
 	}
 
+	pricePerByte := config.GetUInt64(config.FlagOpenVPNPriceGB)
+	pricePerMinute := config.GetUInt64(config.FlagOpenVPNPriceMinute)
+	paymentMethod := pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
+
 	return market.ServiceProposal{
 		ServiceType: openvpn.ServiceType,
 		ServiceDefinition: dto.ServiceDefinition{
@@ -48,7 +53,7 @@ func NewServiceProposalWithLocation(
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MiB),
 			Protocol:          protocol,
 		},
-		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-		PaymentMethod:     pingpong.DefaultPaymentMethod,
+		PaymentMethodType: paymentMethod.GetType(),
+		PaymentMethod:     paymentMethod,
 	}
 }
