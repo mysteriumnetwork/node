@@ -37,6 +37,9 @@ import (
 )
 
 const (
+	// PaymentForDataWithTime is a payment method type that is used for both data transfer and time.
+	PaymentForDataWithTime = "BYTES_TRANSFERRED_WITH_TIME"
+
 	// PromiseWaitTimeout is the time that the provider waits for the promise to arrive
 	PromiseWaitTimeout = time.Second * 50
 
@@ -62,7 +65,7 @@ func NewPaymentMethod(pricePerGB, pricePerMinute uint64) PaymentMethod {
 	return PaymentMethod{
 		Price:    money.NewMoney(accuracy, money.CurrencyMyst),
 		Duration: time.Duration(pricePerMinute),
-		Type:     "BYTES_TRANSFERRED_WITH_TIME",
+		Type:     PaymentForDataWithTime,
 		Bytes:    pricePerGB,
 	}
 }
