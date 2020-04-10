@@ -22,6 +22,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
@@ -67,7 +68,8 @@ func (manager *Manager) Stop() error {
 
 // GetProposal returns the proposal for NOOP service for given country
 func GetProposal(location location.Location) market.ServiceProposal {
-	paymentMethod := pingpong.NewPaymentMethod(0, 10000)
+	pricePerMinute := config.GetUInt64(config.FlagNoopPriceMinute)
+	paymentMethod := pingpong.NewPaymentMethod(0, pricePerMinute)
 	return market.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
