@@ -365,7 +365,7 @@ func toConnectionResponse(status connection.Status) connectionResponse {
 
 	if status.Proposal.ProviderID != "" {
 		proposalRes := contract.NewProposalDTO(status.Proposal)
-		response.Proposal = proposalRes
+		response.Proposal = &proposalRes
 	}
 	return response
 }

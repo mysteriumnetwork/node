@@ -245,7 +245,8 @@ func mapState(event stateEvent.State) stateRes {
 	}
 	// If none exists, conn manager still has empty proposal
 	if event.Connection.Session.Proposal.ProviderID != "" {
-		connectionRes.Proposal = contract.NewProposalDTO(event.Connection.Session.Proposal)
+		proposalRes := contract.NewProposalDTO(event.Connection.Session.Proposal)
+		connectionRes.Proposal = &proposalRes
 	}
 
 	res := stateRes{

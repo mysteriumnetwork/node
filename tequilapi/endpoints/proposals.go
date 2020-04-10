@@ -122,7 +122,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		return
 	}
 
-	proposalsRes := contract.ListProposalsResponse{Proposals: []*contract.ProposalDTO{}}
+	proposalsRes := contract.ListProposalsResponse{Proposals: []contract.ProposalDTO{}}
 	for _, p := range proposals {
 		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
@@ -151,16 +151,16 @@ func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposa
 }
 
 // addProposalMetrics adds quality metrics to proposals.
-func addProposalMetrics(proposals []*contract.ProposalDTO, metrics []quality.ConnectMetric) {
+func addProposalMetrics(proposals []contract.ProposalDTO, metrics []quality.ConnectMetric) {
 	// Convert metrics slice to map for fast lookup.
 	metricsMap := map[string]quality.ConnectMetric{}
 	for _, m := range metrics {
 		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
 	}
 
-	for _, p := range proposals {
+	for i, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			p.Metrics = &contract.ProposalMetricsDTO{ConnectCount: mc.ConnectCount}
+			proposals[i].Metrics = &contract.ProposalMetricsDTO{ConnectCount: mc.ConnectCount}
 		}
 	}
 }

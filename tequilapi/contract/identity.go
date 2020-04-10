@@ -94,5 +94,5 @@ type IdentityRegistrationResponse struct {
 // ListProposalsResponse holds list of proposals.
 // swagger:model ListProposalsResponse
 type ListProposalsResponse struct {
-	Proposals []*ProposalDTO `json:"proposals"`
+	Proposals []ProposalDTO `json:"proposals"`
 }

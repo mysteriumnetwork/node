@@ -24,8 +24,8 @@ import (
 )
 
 // NewProposalDTO maps to API service proposal.
-func NewProposalDTO(p market.ServiceProposal) *ProposalDTO {
-	return &ProposalDTO{
+func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
+	return ProposalDTO{
 		ID:          p.ID,
 		ProviderID:  p.ProviderID,
 		ServiceType: p.ServiceType,

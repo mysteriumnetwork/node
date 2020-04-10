@@ -351,7 +351,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 		Type:       proposal.ServiceType,
 		Options:    instance.Options(),
 		Status:     string(instance.State()),
-		Proposal:   *contract.NewProposalDTO(instance.Proposal()),
+		Proposal:   contract.NewProposalDTO(instance.Proposal()),
 	}
 }
 
