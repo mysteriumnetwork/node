@@ -82,24 +82,6 @@ type connectionRequest struct {
 	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
 }
 
-// swagger:model ConnectionStatusDTO
-type connectionResponse struct {
-	// example: 0x00
-	ConsumerID string `json:"consumer_id,omitempty"`
-
-	// example: 0x00
-	AccountantID string `json:"accountant_id,omitempty"`
-
-	// example: Connected
-	Status string `json:"status"`
-
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	SessionID string `json:"session_id,omitempty"`
-
-	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
-	Proposal *contract.ProposalDTO `json:"proposal,omitempty"`
-}
-
 // swagger:model IPDTO
 type ipResponse struct {
 	// public IP address
@@ -150,7 +132,9 @@ func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvid
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	statusResponse := toConnectionResponse(ce.manager.Status())
+	connection := ce.stateProvider.GetState().Connection
+	statusResponse := contract.NewConnectionStatusDTO(connection.Session)
+
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -197,27 +181,27 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	status, err := ce.identityRegistry.GetRegistrationStatus(identity.FromAddress(cr.ConsumerID))
+	errorMap := validateConnectionRequest(cr)
+	if errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
+	// TODO Validate for account existence
+	consumerID := identity.FromAddress(cr.ConsumerID)
+	status, err := ce.identityRegistry.GetRegistrationStatus(consumerID)
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("could not check registration status")
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-
 	switch status {
 	case registry.Unregistered, registry.InProgress, registry.RegistrationError:
 		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
 	}
-
 	log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
-
-	errorMap := validateConnectionRequest(cr)
-	if errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
-		return
-	}
 
 	// TODO Pass proposal ID directly in request
 	proposal, err := ce.proposalRepository.Proposal(market.ProposalID{
@@ -234,7 +218,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), common.HexToAddress(cr.AccountantID), *proposal, connectOptions)
+	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.AccountantID), *proposal, connectOptions)
 
 	if err != nil {
 		switch err {
@@ -349,23 +333,4 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 		errs.ForField("accountant_id").AddError("required", "Field is required")
 	}
 	return errs
-}
-
-var emptyAddress = common.Address{}
-
-func toConnectionResponse(status connection.Status) connectionResponse {
-	response := connectionResponse{
-		Status:     string(status.State),
-		SessionID:  string(status.SessionID),
-		ConsumerID: status.ConsumerID.Address,
-	}
-	if status.AccountantID != emptyAddress {
-		response.AccountantID = status.AccountantID.Hex()
-	}
-
-	if status.Proposal.ProviderID != "" {
-		proposalRes := contract.NewProposalDTO(status.Proposal)
-		response.Proposal = &proposalRes
-	}
-	return response
 }

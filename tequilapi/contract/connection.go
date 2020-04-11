@@ -18,11 +18,70 @@
 package contract
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
+
+var emptyAddress = common.Address{}
+
+// NewConnectionStatusDTO maps to API connection status.
+func NewConnectionStatusDTO(connection connection.Status) ConnectionStatusDTO {
+	response := ConnectionStatusDTO{
+		Status:     string(connection.State),
+		ConsumerID: connection.ConsumerID.Address,
+		SessionID:  string(connection.SessionID),
+	}
+	if connection.AccountantID != emptyAddress {
+		response.AccountantAddress = connection.AccountantID.Hex()
+	}
+	// nNne exists, for not started connection
+	if connection.Proposal.ProviderID != "" {
+		proposalRes := NewProposalDTO(connection.Proposal)
+		response.Proposal = &proposalRes
+	}
+	return response
+}
+
+// ConnectionStatusDTO holds partial consumer connection details.
+// swagger:model ConnectionStatusDTO
+type ConnectionStatusDTO struct {
+	// example: Connected
+	Status string `json:"status"`
+
+	// example: 0x00
+	ConsumerID string `json:"consumer_id,omitempty"`
+
+	// example: 0x00
+	AccountantAddress string `json:"accountant_address,omitempty"`
+
+	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
+	Proposal *ProposalDTO `json:"proposal,omitempty"`
+
+	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
+	SessionID string `json:"session_id,omitempty"`
+}
+
+// NewConnectionDTO maps to API connection.
+func NewConnectionDTO(connection connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
+	dto := ConnectionDTO{
+		ConnectionStatusDTO: NewConnectionStatusDTO(connection),
+	}
+	if !statistics.At.IsZero() {
+		statsDto := NewConnectionStatisticsDTO(connection, statistics, throughput, invoice)
+		dto.Statistics = &statsDto
+	}
+	return dto
+}
+
+// ConnectionDTO holds full consumer connection details.
+// swagger:model ConnectionDTO
+type ConnectionDTO struct {
+	ConnectionStatusDTO
+	Statistics *ConnectionStatisticsDTO `json:"statistics,omitempty"`
+}
 
 // NewConnectionStatisticsDTO maps to API connection stats.
 func NewConnectionStatisticsDTO(connection connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
@@ -36,7 +95,7 @@ func NewConnectionStatisticsDTO(connection connection.Status, statistics connect
 	}
 }
 
-// ConnectionStatisticsDTO holds consumer connection details.
+// ConnectionStatisticsDTO holds consumer connection statistics.
 // swagger:model ConnectionStatisticsDTO
 type ConnectionStatisticsDTO struct {
 	// example: 1024

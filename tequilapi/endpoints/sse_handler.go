@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -214,13 +213,7 @@ type stateRes struct {
 }
 
 type consumerStateRes struct {
-	Connection consumerConnectionRes `json:"connection"`
-}
-
-type consumerConnectionRes struct {
-	State      connection.State                  `json:"state"`
-	Statistics *contract.ConnectionStatisticsDTO `json:"statistics,omitempty"`
-	Proposal   *contract.ProposalDTO             `json:"proposal,omitempty"`
+	Connection contract.ConnectionDTO `json:"connection"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -236,25 +229,12 @@ func mapState(event stateEvent.State) stateRes {
 		}
 	}
 
-	connectionRes := consumerConnectionRes{
-		State: event.Connection.Session.State,
-	}
-	if !event.Connection.Statistics.At.IsZero() {
-		statsRes := contract.NewConnectionStatisticsDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice)
-		connectionRes.Statistics = &statsRes
-	}
-	// If none exists, conn manager still has empty proposal
-	if event.Connection.Session.Proposal.ProviderID != "" {
-		proposalRes := contract.NewProposalDTO(event.Connection.Session.Proposal)
-		connectionRes.Proposal = &proposalRes
-	}
-
 	res := stateRes{
 		NATStatus: event.NATStatus,
 		Services:  event.Services,
 		Sessions:  event.Sessions,
 		Consumer: consumerStateRes{
-			Connection: connectionRes,
+			Connection: contract.NewConnectionDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice),
 		},
 		Identities: identitiesRes,
 	}
