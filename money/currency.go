@@ -23,4 +23,7 @@ type Currency string
 const (
 	// CurrencyMyst is the myst token currency representation
 	CurrencyMyst = Currency("MYST")
+
+	// MystSize represents a size of the Myst token.
+	MystSize = 100_000_000
 )

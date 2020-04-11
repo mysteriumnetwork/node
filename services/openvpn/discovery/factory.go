@@ -41,8 +41,8 @@ func NewServiceProposalWithLocation(
 		NodeType:  loc.NodeType,
 	}
 
-	pricePerByte := config.GetUInt64(config.FlagOpenVPNPriceGB)
-	pricePerMinute := config.GetUInt64(config.FlagOpenVPNPriceMinute)
+	pricePerByte := config.GetFloat64(config.FlagOpenVPNPriceGB)
+	pricePerMinute := config.GetFloat64(config.FlagOpenVPNPriceMinute)
 	paymentMethod := pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
 
 	return market.ServiceProposal{

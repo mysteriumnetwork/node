@@ -68,7 +68,7 @@ func (manager *Manager) Stop() error {
 
 // GetProposal returns the proposal for NOOP service for given country
 func GetProposal(location location.Location) market.ServiceProposal {
-	pricePerMinute := config.GetUInt64(config.FlagNoopPriceMinute)
+	pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
 	paymentMethod := pingpong.NewPaymentMethod(0, pricePerMinute)
 	return market.ServiceProposal{
 		ServiceType: ServiceType,

@@ -38,7 +38,7 @@ var _ service.Service = NewManager()
 
 func Test_GetProposal(t *testing.T) {
 	country := "LT"
-	pricePerMinute := config.GetUInt64(config.FlagNoopPriceMinute)
+	pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
 	paymentMethod := pingpong.NewPaymentMethod(0, pricePerMinute)
 	assert.Exactly(
 		t,

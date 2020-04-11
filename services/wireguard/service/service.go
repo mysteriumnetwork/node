@@ -37,8 +37,8 @@ func GetProposal(location location.Location) market.ServiceProposal {
 		NodeType: location.NodeType,
 	}
 
-	pricePerByte := config.GetUInt64(config.FlagWireguardPriceGB)
-	pricePerMinute := config.GetUInt64(config.FlagWireguardPriceMinute)
+	pricePerByte := config.GetFloat64(config.FlagWireguardPriceGB)
+	pricePerMinute := config.GetFloat64(config.FlagWireguardPriceMinute)
 	paymentMethod := pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
 
 	return market.ServiceProposal{

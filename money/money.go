@@ -38,7 +38,7 @@ func NewMoney(amount uint64, currency Currency) Money {
 func (value Money) String() string {
 	return fmt.Sprintf(
 		"%.6f%s",
-		float64(value.Amount)/100000000,
+		float64(value.Amount)/MystSize,
 		value.Currency,
 	)
 }

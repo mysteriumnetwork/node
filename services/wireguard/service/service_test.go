@@ -46,7 +46,7 @@ var (
 var connectionEndpointStub = &mockConnectionEndpoint{}
 
 func Test_GetProposal(t *testing.T) {
-	paymentMethod := pingpong.NewPaymentMethod(config.GetUInt64(config.FlagWireguardPriceGB), config.GetUInt64(config.FlagWireguardPriceMinute))
+	paymentMethod := pingpong.NewPaymentMethod(config.GetFloat64(config.FlagWireguardPriceGB), config.GetFloat64(config.FlagWireguardPriceMinute))
 
 	assert.Exactly(
 		t,

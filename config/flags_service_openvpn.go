@@ -47,16 +47,16 @@ var (
 		Value: "255.255.255.0",
 	}
 	// FlagOpenVPNPriceMinute sets the price per minute for provided OpenVPN service.
-	FlagOpenVPNPriceMinute = cli.Uint64Flag{
+	FlagOpenVPNPriceMinute = cli.Float64Flag{
 		Name:  "openvpn.price-minute",
 		Usage: "Sets the price of the OpenVPN service per minute.",
-		Value: 50000,
+		Value: 0.0005,
 	}
 	// FlagOpenVPNPriceGB sets the price per GiB for provided OpenVPN service.
-	FlagOpenVPNPriceGB = cli.Uint64Flag{
+	FlagOpenVPNPriceGB = cli.Float64Flag{
 		Name:  "openvpn.price-gb",
 		Usage: "Sets the price of the OpenVPN service per minute.",
-		Value: 7000000,
+		Value: 0.07,
 	}
 )
 
@@ -78,6 +78,6 @@ func ParseFlagsServiceOpenvpn(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagOpenvpnPort)
 	Current.ParseStringFlag(ctx, FlagOpenvpnSubnet)
 	Current.ParseStringFlag(ctx, FlagOpenvpnNetmask)
-	Current.ParseUInt64Flag(ctx, FlagOpenVPNPriceMinute)
-	Current.ParseUInt64Flag(ctx, FlagOpenVPNPriceGB)
+	Current.ParseFloat64Flag(ctx, FlagOpenVPNPriceMinute)
+	Current.ParseFloat64Flag(ctx, FlagOpenVPNPriceGB)
 }
