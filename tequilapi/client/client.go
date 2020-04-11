@@ -60,7 +60,7 @@ func (client *Client) GetIdentities() (ids []contract.IdentityRefDTO, err error)
 
 // NewIdentity creates a new client identity
 func (client *Client) NewIdentity(passphrase string) (id contract.IdentityRefDTO, err error) {
-	response, err := client.http.Post("identities", contract.IdentityRequest{Passphrase: &passphrase})
+	response, err := client.http.Post("identities", contract.IdentityCreateRequest{Passphrase: &passphrase})
 	if err != nil {
 		return
 	}
@@ -72,7 +72,7 @@ func (client *Client) NewIdentity(passphrase string) (id contract.IdentityRefDTO
 
 // CurrentIdentity unlocks and returns the last used, new or first identity
 func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityRefDTO, err error) {
-	response, err := client.http.Put("identities/current", contract.IdentityRequest{
+	response, err := client.http.Put("identities/current", contract.IdentityCurrentRequest{
 		Address:    &identity,
 		Passphrase: &passphrase,
 	})
@@ -311,7 +311,7 @@ func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB ui
 func (client *Client) Unlock(identity, passphrase string) error {
 	path := fmt.Sprintf("identities/%s/unlock", identity)
 
-	response, err := client.http.Put(path, contract.IdentityRequest{Passphrase: &passphrase})
+	response, err := client.http.Put(path, contract.IdentityUnlockRequest{Passphrase: &passphrase})
 	if err != nil {
 		return err
 	}

@@ -67,20 +67,50 @@ func NewIdentityListResponse(ids []identity.Identity) ListIdentitiesResponse {
 	return result
 }
 
-// IdentityRequest request used for identity actions.
-// swagger:model IdentityRequestDTO
-type IdentityRequest struct {
+// IdentityCreateRequest request used for new identity creation.
+// swagger:model IdentityCreateRequestDTO
+type IdentityCreateRequest struct {
+	Passphrase *string `json:"passphrase"`
+}
+
+// Validate validates fields in request
+func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+	if r.Passphrase == nil {
+		errors.ForField("passphrase").AddError("required", "Field is required")
+	}
+	return errors
+}
+
+// IdentityUnlockRequest request used for identity unlocking.
+// swagger:model IdentityUnlockRequestDTO
+type IdentityUnlockRequest struct {
+	Passphrase *string `json:"passphrase"`
+}
+
+// Validate validates fields in request
+func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+	if r.Passphrase == nil {
+		errors.ForField("passphrase").AddError("required", "Field is required")
+	}
+	return errors
+}
+
+// IdentityCurrentRequest request used for current identity remembering.
+// swagger:model IdentityCurrentRequestDTO
+type IdentityCurrentRequest struct {
 	Address    *string `json:"id"`
 	Passphrase *string `json:"passphrase"`
 }
 
-// ValidateIdentityRequest validates request.
-func ValidateIdentityRequest(req IdentityRequest) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
-	if req.Passphrase == nil {
+// Validate validates fields in request
+func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+	if r.Passphrase == nil {
 		errors.ForField("passphrase").AddError("required", "Field is required")
 	}
-	return
+	return errors
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity
