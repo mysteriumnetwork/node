@@ -119,7 +119,7 @@ func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done f
 
 			err := mng.Destroy(consumerID, sessionID)
 			if err != nil {
-				log.Err(err).Msgf("Could not destroy session %s: %w", sessionID, err)
+				log.Err(err).Msgf("Could not destroy session %s: %v", sessionID, err)
 			}
 
 			done()

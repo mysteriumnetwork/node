@@ -20,26 +20,35 @@ package service
 import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/urfave/cli/v2"
 )
 
 var (
 	serviceTypes = []string{"openvpn", "wireguard", "noop"}
 
-	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		noop.ServiceType: noop.ParseFlags,
-		openvpn.ServiceType: func(ctx *cli.Context) service.Options {
-			config.ParseFlagsServiceOpenvpn(ctx)
-			return openvpn_service.GetOptions()
+	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) (service.Options, market.PaymentMethod){
+		noop.ServiceType: func(ctx *cli.Context) (service.Options, market.PaymentMethod) {
+			pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
+			return noop.ParseFlags(ctx), pingpong.NewPaymentMethod(0, pricePerMinute)
 		},
-		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
+		openvpn.ServiceType: func(ctx *cli.Context) (service.Options, market.PaymentMethod) {
+			config.ParseFlagsServiceOpenvpn(ctx)
+			pricePerByte := config.GetFloat64(config.FlagOpenVPNPriceGB)
+			pricePerMinute := config.GetFloat64(config.FlagOpenVPNPriceMinute)
+			return openvpn_service.GetOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
+		},
+		wireguard.ServiceType: func(ctx *cli.Context) (service.Options, market.PaymentMethod) {
 			config.ParseFlagsServiceWireguard(ctx)
-			return wireguard_service.GetOptions()
+			pricePerByte := config.GetFloat64(config.FlagWireguardPriceGB)
+			pricePerMinute := config.GetFloat64(config.FlagWireguardPriceMinute)
+			return wireguard_service.GetOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
 		},
 	}
 )

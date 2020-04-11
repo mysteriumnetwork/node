@@ -21,12 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,8 +36,6 @@ var _ service.Service = NewManager()
 
 func Test_GetProposal(t *testing.T) {
 	country := "LT"
-	pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
-	paymentMethod := pingpong.NewPaymentMethod(0, pricePerMinute)
 	assert.Exactly(
 		t,
 		market.ServiceProposal{
@@ -47,8 +43,6 @@ func Test_GetProposal(t *testing.T) {
 			ServiceDefinition: ServiceDefinition{
 				Location: market.Location{Country: country},
 			},
-			PaymentMethodType: paymentMethod.GetType(),
-			PaymentMethod:     paymentMethod,
 		},
 		GetProposal(location.Location{Country: country}),
 	)

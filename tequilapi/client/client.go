@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 )
@@ -409,7 +410,7 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPoliciesRequest) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPoliciesRequest, pm market.PaymentMethod) (service ServiceInfoDTO, err error) {
 	opts, err := json.Marshal(options)
 	if err != nil {
 		return service, err
@@ -420,11 +421,20 @@ func (client *Client) ServiceStart(providerID, serviceType string, options inter
 		Type           string                `json:"type"`
 		Options        json.RawMessage       `json:"options"`
 		AccessPolicies AccessPoliciesRequest `json:"access_policies"`
+		PaymentMethod  paymentMethodRes      `json:"payment_method"`
 	}{
 		providerID,
 		serviceType,
 		opts,
 		ap,
+		paymentMethodRes{
+			Type:  pm.GetType(),
+			Price: pm.GetPrice(),
+			Rate: paymentRateRes{
+				PerSeconds: uint64(pm.GetRate().PerTime.Seconds()),
+				PerBytes:   pm.GetRate().PerByte,
+			},
+		},
 	}
 
 	response, err := client.http.Post("services", payload)

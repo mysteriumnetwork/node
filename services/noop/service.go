@@ -22,13 +22,11 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -68,8 +66,6 @@ func (manager *Manager) Stop() error {
 
 // GetProposal returns the proposal for NOOP service for given country
 func GetProposal(location location.Location) market.ServiceProposal {
-	pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
-	paymentMethod := pingpong.NewPaymentMethod(0, pricePerMinute)
 	return market.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
@@ -83,7 +79,5 @@ func GetProposal(location location.Location) market.ServiceProposal {
 				NodeType: location.NodeType,
 			},
 		},
-		PaymentMethodType: paymentMethod.GetType(),
-		PaymentMethod:     paymentMethod,
 	}
 }
