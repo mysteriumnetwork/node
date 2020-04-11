@@ -29,9 +29,9 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -39,48 +39,6 @@ import (
 // statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
 // operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 const statusConnectCancelled = 499
-
-// ConnectOptions holds tequilapi connect options
-// swagger:model ConnectOptionsDTO
-type ConnectOptions struct {
-	// kill switch option restricting communication only through VPN
-	// required: false
-	// example: true
-	DisableKillSwitch bool `json:"kill_switch"`
-	// DNS to use
-	// required: false
-	// default: auto
-	// example: auto, provider, system, "1.1.1.1,8.8.8.8"
-	DNS connection.DNSOption `json:"dns"`
-}
-
-// swagger:model ConnectionRequestDTO
-type connectionRequest struct {
-	// consumer identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumer_id"`
-
-	// provider identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
-
-	// accountant identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000003
-	AccountantID string `json:"accountant_id"`
-
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// required: false
-	// default: openvpn
-	// example: openvpn
-	ServiceType string `json:"service_type"`
-
-	// connect options
-	// required: false
-	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
-}
 
 // swagger:model IPDTO
 type ipResponse struct {
@@ -148,7 +106,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     name: body
 //     description: Parameters in body (consumer_id, provider_id, service_type) required for creating new connection
 //     schema:
-//       $ref: "#/definitions/ConnectionRequestDTO"
+//       $ref: "#/definitions/ConnectionCreateRequestDTO"
 // responses:
 //   201:
 //     description: Connection started
@@ -181,8 +139,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	errorMap := validateConnectionRequest(cr)
-	if errorMap.HasErrors() {
+	if errorMap := cr.Validate(); errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
@@ -217,8 +174,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.AccountantID), *proposal, connectOptions)
+	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.AccountantID), *proposal, getConnectOptions(cr))
 
 	if err != nil {
 		switch err {
@@ -297,11 +253,15 @@ func AddRoutesForConnection(router *httprouter.Router, manager connection.Manage
 	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 }
 
-func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
-	var connectionRequest = connectionRequest{
+func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, error) {
+	var connectionRequest = contract.ConnectionCreateRequest{
 		// This defaults the service type to openvpn, for backward compatibility
 		// If specified in the request, the value will get overridden
-		ServiceType: "openvpn",
+		ServiceType: openvpn.ServiceType,
+		ConnectOptions: contract.ConnectOptions{
+			DisableKillSwitch: false,
+			DNS:               connection.DNSOptionAuto,
+		},
 	}
 	err := json.NewDecoder(req.Body).Decode(&connectionRequest)
 	if err != nil {
@@ -310,27 +270,14 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 	return &connectionRequest, nil
 }
 
-func getConnectOptions(cr *connectionRequest) connection.ConnectParams {
+func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectParams {
 	dns := connection.DNSOptionAuto
 	if cr.ConnectOptions.DNS != "" {
 		dns = cr.ConnectOptions.DNS
 	}
+
 	return connection.ConnectParams{
 		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
 		DNS:               dns,
 	}
-}
-
-func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
-	if len(cr.ConsumerID) == 0 {
-		errs.ForField("consumer_id").AddError("required", "Field is required")
-	}
-	if len(cr.ProviderID) == 0 {
-		errs.ForField("provider_id").AddError("required", "Field is required")
-	}
-	if len(cr.AccountantID) == 0 {
-		errs.ForField("accountant_id").AddError("required", "Field is required")
-	}
-	return errs
 }

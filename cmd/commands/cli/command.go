@@ -34,7 +34,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
@@ -45,6 +44,7 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -95,7 +95,7 @@ func describeQuit(err error) error {
 type cliApp struct {
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
-	fetchedProposals []tequilapi_client.ProposalDTO
+	fetchedProposals []contract.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
 
@@ -351,7 +351,7 @@ func (c *cliApp) connect(argsString string) {
 		}
 	}
 
-	connectOptions := tequilapi_client.ConnectOptions{
+	connectOptions := contract.ConnectOptions{
 		DNS:               dns,
 		DisableKillSwitch: disableKillSwitch,
 	}
@@ -513,8 +513,10 @@ func (c *cliApp) proposals(filter string) {
 		}
 
 		var policies []string
-		for _, policy := range proposal.AccessPolicies {
-			policies = append(policies, policy.ID)
+		if proposal.AccessPolicies != nil {
+			for _, policy := range *proposal.AccessPolicies {
+				policies = append(policies, policy.ID)
+			}
 		}
 
 		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","))
@@ -528,7 +530,7 @@ func (c *cliApp) proposals(filter string) {
 	}
 }
 
-func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
+func (c *cliApp) fetchProposals() []contract.ProposalDTO {
 	upperTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
 	lowerTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
 	upperGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound)
@@ -536,7 +538,7 @@ func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		warn(err)
-		return []tequilapi_client.ProposalDTO{}
+		return []contract.ProposalDTO{}
 	}
 	return proposals
 }
@@ -600,7 +602,7 @@ func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []st
 	}
 }
 
-func getProposalOptionList(proposals []tequilapi_client.ProposalDTO) func(string) []string {
+func getProposalOptionList(proposals []contract.ProposalDTO) func(string) []string {
 	return func(line string) []string {
 		var providerIDS []string
 		for _, proposal := range proposals {
@@ -610,7 +612,7 @@ func getProposalOptionList(proposals []tequilapi_client.ProposalDTO) func(string
 	}
 }
 
-func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_client.ProposalDTO) *readline.PrefixCompleter {
+func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.ProposalDTO) *readline.PrefixCompleter {
 	connectOpts := []readline.PrefixCompleterInterface{
 		readline.PcItem("dns=auto"),
 		readline.PcItem("dns=provider"),
@@ -673,7 +675,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, market.PaymentMethod, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, contract.PaymentMethodDTO, error) {
 	var flags []cli.Flag
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
@@ -685,7 +687,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, config.ServicesOptions{}, nil, err
+		return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
@@ -693,19 +695,26 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	config.ParseFlagsServiceShared(ctx)
 	switch serviceType {
 	case noop.ServiceType:
-		pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
-		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), pingpong.NewPaymentMethod(0, pricePerMinute), nil
+		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+			0,
+			config.GetFloat64(config.FlagNoopPriceMinute),
+		))
+		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), payment, nil
 	case wireguard.ServiceType:
 		config.ParseFlagsServiceWireguard(ctx)
-		pricePerByte := config.GetFloat64(config.FlagWireguardPriceGB)
-		pricePerMinute := config.GetFloat64(config.FlagWireguardPriceMinute)
-		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute), nil
+		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+			config.GetFloat64(config.FlagWireguardPriceGB),
+			config.GetFloat64(config.FlagWireguardPriceMinute),
+		))
+		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
 	case openvpn.ServiceType:
 		config.ParseFlagsServiceOpenvpn(ctx)
-		pricePerByte := config.GetFloat64(config.FlagOpenVPNPriceGB)
-		pricePerMinute := config.GetFloat64(config.FlagOpenVPNPriceMinute)
-		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute), nil
+		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+			config.GetFloat64(config.FlagOpenVPNPriceGB),
+			config.GetFloat64(config.FlagOpenVPNPriceMinute),
+		))
+		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
 	}
 
-	return nil, config.ServicesOptions{}, nil, errors.New("service type not found")
+	return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, errors.New("service type not found")
 }

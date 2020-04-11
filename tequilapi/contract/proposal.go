@@ -18,6 +18,8 @@
 package contract
 
 import (
+	"fmt"
+
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -41,13 +43,18 @@ func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
 			},
 		},
 		AccessPolicies: p.AccessPolicies,
-		PaymentMethod: PaymentMethodDTO{
-			Type:  p.PaymentMethod.GetType(),
-			Price: p.PaymentMethod.GetPrice(),
-			Rate: PaymentRateDTO{
-				PerSeconds: uint64(p.PaymentMethod.GetRate().PerTime.Seconds()),
-				PerBytes:   p.PaymentMethod.GetRate().PerByte,
-			},
+		PaymentMethod:  NewPaymentMethodDTO(p.PaymentMethod),
+	}
+}
+
+// NewPaymentMethodDTO maps to API payment method.
+func NewPaymentMethodDTO(m market.PaymentMethod) PaymentMethodDTO {
+	return PaymentMethodDTO{
+		Type:  m.GetType(),
+		Price: m.GetPrice(),
+		Rate: PaymentRateDTO{
+			PerSeconds: uint64(m.GetRate().PerTime.Seconds()),
+			PerBytes:   m.GetRate().PerByte,
 		},
 	}
 }
@@ -78,6 +85,10 @@ type ProposalDTO struct {
 
 	// PaymentMethod
 	PaymentMethod PaymentMethodDTO `json:"payment_method"`
+}
+
+func (p ProposalDTO) String() string {
+	return fmt.Sprintf("Id: %d , Provider: %s, Country: %s", p.ID, p.ProviderID, p.ServiceDefinition.LocationOriginate.Country)
 }
 
 // ServiceDefinitionDTO holds specific service details.

@@ -22,6 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -118,4 +119,62 @@ type ConnectionStatisticsDTO struct {
 
 	// example: 500000
 	TokensSpent uint64 `json:"tokens_spent"`
+}
+
+// ConnectionCreateRequest request used to start a connection.
+// swagger:model ConnectionCreateRequestDTO
+type ConnectionCreateRequest struct {
+	// consumer identity
+	// required: true
+	// example: 0x0000000000000000000000000000000000000001
+	ConsumerID string `json:"consumer_id"`
+
+	// provider identity
+	// required: true
+	// example: 0x0000000000000000000000000000000000000002
+	ProviderID string `json:"provider_id"`
+
+	// accountant identity
+	// required: true
+	// example: 0x0000000000000000000000000000000000000003
+	AccountantID string `json:"accountant_id"`
+
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// required: false
+	// default: openvpn
+	// example: openvpn
+	ServiceType string `json:"service_type"`
+
+	// connect options
+	// required: false
+	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
+}
+
+// Validate validates fields in request
+func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
+	errs := validation.NewErrorMap()
+	if len(cr.ConsumerID) == 0 {
+		errs.ForField("consumer_id").AddError("required", "Field is required")
+	}
+	if len(cr.ProviderID) == 0 {
+		errs.ForField("provider_id").AddError("required", "Field is required")
+	}
+	if len(cr.AccountantID) == 0 {
+		errs.ForField("accountant_id").AddError("required", "Field is required")
+	}
+	return errs
+}
+
+// ConnectOptions holds tequilapi connect options
+// swagger:model ConnectOptionsDTO
+type ConnectOptions struct {
+	// kill switch option restricting communication only through VPN
+	// required: false
+	// example: true
+	DisableKillSwitch bool `json:"kill_switch"`
+	// DNS to use
+	// required: false
+	// default: auto
+	// example: auto, provider, system, "1.1.1.1,8.8.8.8"
+	DNS connection.DNSOption `json:"dns"`
 }

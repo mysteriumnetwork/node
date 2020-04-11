@@ -112,7 +112,7 @@ func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpen
 	assert.Equal(t, promised, providerEarnings, fmt.Sprintf("Provider reported earning %v  accountant says %v", providerEarnings, promised))
 }
 
-func validateProviderEarnings(t *testing.T, proposal client.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
+func validateProviderEarnings(t *testing.T, proposal contract.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
 	sessions, err := consumerTequila.ConnectionSessions()
 	assert.NoError(t, err)
 
@@ -132,7 +132,7 @@ func validateProviderEarnings(t *testing.T, proposal client.ProposalDTO, provide
 		Duration: time.Duration(proposal.PaymentMethod.Rate.PerSeconds) * time.Second,
 		Price:    money.NewMoney(proposal.PaymentMethod.Price.Amount, money.CurrencyMyst),
 		Bytes:    proposal.PaymentMethod.Rate.PerBytes,
-		Type:     proposal.PaymentMethodType,
+		Type:     proposal.PaymentMethod.Type,
 	}
 
 	// we're running the tests for 30 secs, but due to the initial handshakes this could take longer.
@@ -190,8 +190,8 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 }
 
 // expect exactly one proposal
-func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) tequilapi_client.ProposalDTO {
-	var proposals []tequilapi_client.ProposalDTO
+func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) contract.ProposalDTO {
+	var proposals []contract.ProposalDTO
 	err := waitForConditionFor(
 		30*time.Second,
 		func() (state bool, stateErr error) {
@@ -207,7 +207,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal tequilapi_client.ProposalDTO) uint64 {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) uint64 {
 	connectionStatus, err := tequilapi.ConnectionStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
@@ -222,7 +222,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, tequilapi_client.ConnectOptions{
+	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, contract.ConnectOptions{
 		DisableKillSwitch: false,
 	})
 

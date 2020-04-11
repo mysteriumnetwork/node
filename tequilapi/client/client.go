@@ -25,7 +25,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 )
@@ -169,23 +168,16 @@ func (client *Client) TopUp(identity string) error {
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
-	payload := struct {
-		Identity     string         `json:"consumer_id"`
-		ProviderID   string         `json:"provider_id"`
-		AccountantID string         `json:"accountant_id"`
-		ServiceType  string         `json:"service_type"`
-		Options      ConnectOptions `json:"connect_options"`
-	}{
-		Identity:     consumerID,
-		ProviderID:   providerID,
-		AccountantID: accountantID,
-		ServiceType:  serviceType,
-		Options:      options,
-	}
-	response, err := client.http.Put("connection", payload)
+func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
+	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
+		ConsumerID:     consumerID,
+		ProviderID:     providerID,
+		AccountantID:   accountantID,
+		ServiceType:    serviceType,
+		ConnectOptions: options,
+	})
 	if err != nil {
-		return StatusDTO{}, err
+		return contract.ConnectionStatusDTO{}, err
 	}
 	defer response.Body.Close()
 
@@ -218,14 +210,14 @@ func (client *Client) ConnectionStatistics() (contract.ConnectionStatisticsDTO, 
 }
 
 // ConnectionStatus returns connection status
-func (client *Client) ConnectionStatus() (StatusDTO, error) {
+func (client *Client) ConnectionStatus() (contract.ConnectionStatusDTO, error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
-		return StatusDTO{}, err
+		return contract.ConnectionStatusDTO{}, err
 	}
 	defer response.Body.Close()
 
-	var status StatusDTO
+	var status contract.ConnectionStatusDTO
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
@@ -282,31 +274,31 @@ func (client *Client) OriginLocation() (location LocationDTO, err error) {
 }
 
 // ProposalsByType fetches proposals by given type
-func (client *Client) ProposalsByType(serviceType string) ([]ProposalDTO, error) {
+func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
 	queryParams.Add("service_type", serviceType)
 	return client.proposals(queryParams)
 }
 
 // Proposals returns all available proposals for services
-func (client *Client) Proposals() ([]ProposalDTO, error) {
+func (client *Client) Proposals() ([]contract.ProposalDTO, error) {
 	return client.proposals(url.Values{})
 }
 
-func (client *Client) proposals(query url.Values) ([]ProposalDTO, error) {
+func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error) {
 	response, err := client.http.Get("proposals", query)
 	if err != nil {
-		return []ProposalDTO{}, err
+		return []contract.ProposalDTO{}, err
 	}
 	defer response.Body.Close()
 
-	var proposals ProposalList
+	var proposals contract.ListProposalsResponse
 	err = parseResponseJSON(response, &proposals)
 	return proposals.Proposals, err
 }
 
 // ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]ProposalDTO, error) {
+func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]contract.ProposalDTO, error) {
 	values := url.Values{}
 	values.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTime))
 	values.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTime))
@@ -410,31 +402,24 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPoliciesRequest, pm market.PaymentMethod) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPoliciesRequest, pm contract.PaymentMethodDTO) (service ServiceInfoDTO, err error) {
 	opts, err := json.Marshal(options)
 	if err != nil {
 		return service, err
 	}
 
 	payload := struct {
-		ProviderID     string                `json:"provider_id"`
-		Type           string                `json:"type"`
-		Options        json.RawMessage       `json:"options"`
-		AccessPolicies AccessPoliciesRequest `json:"access_policies"`
-		PaymentMethod  paymentMethodRes      `json:"payment_method"`
+		ProviderID     string                    `json:"provider_id"`
+		Type           string                    `json:"type"`
+		Options        json.RawMessage           `json:"options"`
+		AccessPolicies AccessPoliciesRequest     `json:"access_policies"`
+		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
 	}{
 		providerID,
 		serviceType,
 		opts,
 		ap,
-		paymentMethodRes{
-			Type:  pm.GetType(),
-			Price: pm.GetPrice(),
-			Rate: paymentRateRes{
-				PerSeconds: uint64(pm.GetRate().PerTime.Seconds()),
-				PerBytes:   pm.GetRate().PerByte,
-			},
-		},
+		pm,
 	}
 
 	response, err := client.http.Post("services", payload)
