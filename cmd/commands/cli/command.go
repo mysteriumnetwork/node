@@ -458,7 +458,7 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
-			info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)))
+			info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)*time.Second))
 			info(fmt.Sprintf("Data: %s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
 			info(fmt.Sprintf("Throughput: %s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
 			info(fmt.Sprintf("Spent: %s", money.NewMoney(statistics.TokensSpent, money.CurrencyMyst)))
