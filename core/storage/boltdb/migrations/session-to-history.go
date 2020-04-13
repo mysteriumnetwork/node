@@ -20,7 +20,7 @@ package migrations
 import (
 	"time"
 
-	"github.com/asdine/storm"
+	"github.com/asdine/storm/v3"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"

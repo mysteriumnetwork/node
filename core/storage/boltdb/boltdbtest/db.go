@@ -23,7 +23,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/asdine/storm"
+	"github.com/asdine/storm/v3"
 	"github.com/stretchr/testify/assert"
 )
 

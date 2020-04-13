@@ -20,7 +20,7 @@ package boltdb
 import (
 	"path/filepath"
 
-	"github.com/asdine/storm"
+	"github.com/asdine/storm/v3"
 	"github.com/pkg/errors"
 )
 

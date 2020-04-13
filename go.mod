@@ -4,12 +4,10 @@ go 1.13
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/DataDog/zstd v1.4.1 // indirect
-	github.com/Sereal/Sereal v0.0.0-20190618215532-0b8ac451a863 // indirect
 	github.com/andybalholm/brotli v1.0.0 // indirect
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
-	github.com/asdine/storm v2.1.2+incompatible
+	github.com/asdine/storm/v3 v3.1.1
 	github.com/awnumar/memguard v0.21.0
 	github.com/aws/aws-sdk-go-v2 v0.15.0
 	github.com/cenkalti/backoff/v4 v4.0.0
@@ -65,14 +63,12 @@ require (
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.4.1-0.20200130210847-518a1491c713
 	github.com/urfave/cli/v2 v2.1.1
-	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xtaci/kcp-go/v5 v5.5.8
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
-	golang.zx2c4.com/wireguard v0.0.20200121
+	golang.org/x/sys v0.0.0-20200408040146-ea54a3c99b9b
+	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/protobuf v1.20.1
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect

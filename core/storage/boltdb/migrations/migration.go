@@ -20,7 +20,7 @@ package migrations
 import (
 	"time"
 
-	"github.com/asdine/storm"
+	"github.com/asdine/storm/v3"
 )
 
 // Migration represents a migration we want to run on bolt db
