@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
@@ -42,6 +43,7 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
@@ -242,7 +244,7 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, sharedOpts, err := parseStartFlags(serviceType, args...)
+	opts, sharedOpts, pm, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
@@ -252,7 +254,7 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		IDs: sharedOpts.AccessPolicyList,
 	}
 
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap)
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap, pm)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -671,7 +673,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, market.PaymentMethod, error) {
 	var flags []cli.Flag
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
@@ -683,7 +685,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, config.ServicesOptions{}, err
+		return nil, config.ServicesOptions{}, nil, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
@@ -691,14 +693,19 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	config.ParseFlagsServiceShared(ctx)
 	switch serviceType {
 	case noop.ServiceType:
-		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), nil
+		pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
+		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), pingpong.NewPaymentMethod(0, pricePerMinute), nil
 	case wireguard.ServiceType:
 		config.ParseFlagsServiceWireguard(ctx)
-		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), nil
+		pricePerByte := config.GetFloat64(config.FlagWireguardPriceGB)
+		pricePerMinute := config.GetFloat64(config.FlagWireguardPriceMinute)
+		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute), nil
 	case openvpn.ServiceType:
 		config.ParseFlagsServiceOpenvpn(ctx)
-		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
+		pricePerByte := config.GetFloat64(config.FlagOpenVPNPriceGB)
+		pricePerMinute := config.GetFloat64(config.FlagOpenVPNPriceMinute)
+		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute), nil
 	}
 
-	return nil, config.ServicesOptions{}, errors.New("service type not found")
+	return nil, config.ServicesOptions{}, nil, errors.New("service type not found")
 }

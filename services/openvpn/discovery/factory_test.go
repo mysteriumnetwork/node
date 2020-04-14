@@ -23,7 +23,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,9 +51,6 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 				SessionBandwidth:  83886080,
 				Protocol:          "tcp",
 			},
-
-			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-			PaymentMethod:     pingpong.DefaultPaymentMethod,
 		},
 		proposal,
 	)

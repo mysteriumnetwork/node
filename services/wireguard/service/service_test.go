@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,6 +44,7 @@ var (
 var connectionEndpointStub = &mockConnectionEndpoint{}
 
 func Test_GetProposal(t *testing.T) {
+
 	assert.Exactly(
 		t,
 		market.ServiceProposal{
@@ -53,8 +53,6 @@ func Test_GetProposal(t *testing.T) {
 				Location:          market.Location{Country: country},
 				LocationOriginate: market.Location{Country: country},
 			},
-			PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-			PaymentMethod:     pingpong.DefaultPaymentMethod,
 		},
 		GetProposal(location.Location{Country: country}),
 	)

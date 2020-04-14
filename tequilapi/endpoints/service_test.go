@@ -89,7 +89,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options service.Options) (service.ID, error) {
+func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, policyIDs []string, options service.Options, _ market.PaymentMethod) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}
