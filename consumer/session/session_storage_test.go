@@ -104,7 +104,7 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 			DataStats:       mockStats,
 			Invoice:         crypto.Invoice{},
 		},
-		storer.UpdateCalled,
+		storer.UpdatedObject,
 	)
 }
 
@@ -131,7 +131,7 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 			DataStats:       connection.Statistics{},
 			Invoice:         crypto.Invoice{},
 		},
-		storer.SaveCalled,
+		storer.SavedObject,
 	)
 }
 
@@ -152,7 +152,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		SessionID:  "unknown",
 		Invoice:    mockInvoice,
 	})
-	assert.Nil(t, storer.UpdateCalled)
+	assert.Nil(t, storer.UpdatedObject)
 
 	storage.consumeSessionSpendingEvent(event.AppEventInvoicePaid{
 		ConsumerID: identity.FromAddress("me"),
@@ -174,27 +174,27 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 			DataStats:       connection.Statistics{},
 			Invoice:         mockInvoice,
 		},
-		storer.UpdateCalled,
+		storer.UpdatedObject,
 	)
 }
 
 // StubSessionStorer allows us to get all sessions, save and update them
 type StubSessionStorer struct {
-	SaveError    error
-	SaveCalled   interface{}
-	UpdateError  error
-	UpdateCalled interface{}
-	GetAllCalled bool
-	GetAllError  error
+	SaveError     error
+	SavedObject   interface{}
+	UpdateError   error
+	UpdatedObject interface{}
+	GetAllCalled  bool
+	GetAllError   error
 }
 
 func (sss *StubSessionStorer) Store(from string, object interface{}) error {
-	sss.SaveCalled = object
+	sss.SavedObject = object
 	return sss.SaveError
 }
 
 func (sss *StubSessionStorer) Update(from string, object interface{}) error {
-	sss.UpdateCalled = object
+	sss.UpdatedObject = object
 	return sss.UpdateError
 }
 

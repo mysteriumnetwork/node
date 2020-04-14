@@ -262,12 +262,12 @@ func (sender *Sender) forgetSessionContext(context sessionContext) {
 }
 
 func (sender *Sender) recoverSessionContext(sessionID string) (sessionContext, error) {
-	sender.sessionsMu.Lock()
-	defer sender.sessionsMu.Unlock()
+	sender.sessionsMu.RLock()
+	defer sender.sessionsMu.RUnlock()
 
 	context, found := sender.sessionsActive[sessionID]
 	if !found {
-		return sessionContext{}, fmt.Errorf("unknown session: %v", sessionID)
+		return sessionContext{}, fmt.Errorf("unknown session: %w", sessionID)
 	}
 	return context, nil
 }

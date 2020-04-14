@@ -119,7 +119,7 @@ func (repo *Storage) consumeSessionSpendingEvent(e pingpongEvent.AppEventInvoice
 		log.Warn().Msg("Received a unknown session update")
 		return
 	}
-	row.Updated = repo.timeGetter()
+	row.Updated = repo.timeGetter().UTC()
 	row.Invoice = e.Invoice
 
 	err := repo.storage.Update(sessionStorageBucketName, &row)
@@ -141,7 +141,7 @@ func (repo *Storage) handleEndedEvent(sessionID session.ID) {
 		log.Warn().Msgf("Can't find session %v to update", sessionID)
 		return
 	}
-	row.Updated = repo.timeGetter()
+	row.Updated = repo.timeGetter().UTC()
 	row.Status = SessionStatusCompleted
 
 	err := repo.storage.Update(sessionStorageBucketName, &row)
@@ -165,7 +165,7 @@ func (repo *Storage) handleCreatedEvent(session connection.Status) {
 		ProviderID:      identity.FromAddress(session.Proposal.ProviderID),
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
-		Started:         session.StartedAt,
+		Started:         session.StartedAt.UTC(),
 		Status:          SessionStatusNew,
 	}
 	err := repo.storage.Store(sessionStorageBucketName, &row)
