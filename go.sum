@@ -478,8 +478,8 @@ github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2 h1:+MzoNo
 github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2/go.mod h1:QI+154TA1KKdrSYAWpr50FP6AzHsbT3wJvFD5kSEQVE=
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed h1:x9CzKvMnu+8VH9z8lvB/6ZldbpwlLkFuraU0ycH4j5U=
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed/go.mod h1:Mj4ZoTFxQltcDoC/Mn8EgO7SkK1dUJQixLgX04p0cN0=
-github.com/mysteriumnetwork/payments v0.0.11-0.20200325083835-89ffae399efa h1:hm8jJXx8cQL/MEt6QlUV3RNA0FlumyShTlkuJ+WwM8c=
-github.com/mysteriumnetwork/payments v0.0.11-0.20200325083835-89ffae399efa/go.mod h1:8voxT4oTTZaXyg/v+MJ/eT6A1KVkaha461irBEIJ4i0=
+github.com/mysteriumnetwork/payments v0.0.11 h1:tfGL8Q20rZCeuSF0nELCyho3qHfpbYiqN6vMQnFGF/8=
+github.com/mysteriumnetwork/payments v0.0.11/go.mod h1:yzYaUbvzPFxi3Gj0WwhOiE/2lohZVTDQ55tpIAPk3JA=
 github.com/nats-io/gnatsd v1.4.1 h1:RconcfDeWpKCD6QIIwiVFcvForlXpWeJP7i5/lDLy44=
 github.com/nats-io/gnatsd v1.4.1/go.mod h1:nqco77VO78hLCJpIcVfygDP2rPGfsEHkGTUk94uh5DQ=
 github.com/nats-io/nats-server v1.4.1 h1:Ul1oSOGNV/L8kjr4v6l2f9Yet6WY+LevH1/7cRZ/qyA=

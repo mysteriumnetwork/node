@@ -25,7 +25,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -96,7 +95,7 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
-	EtherClient       *ethclient.Client
+	EtherClient       *paymentClient.ReconnectableEthClient
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -242,7 +241,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.registerConnections(nodeOptions)
-	if err = di.handleHTTPClientConnections(); err != nil {
+	if err = di.handleConnStateChange(); err != nil {
 		return err
 	}
 	if err := di.Node.Start(); err != nil {
@@ -637,7 +636,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
-	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
+	di.EtherClient, err = paymentClient.NewReconnectableEthClient(network.EtherClientRPC)
+	if err != nil {
 		return err
 	}
 
@@ -823,7 +823,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	return nil
 }
 
-func (di *Dependencies) handleHTTPClientConnections() error {
+func (di *Dependencies) handleConnStateChange() error {
 	if di.HTTPClient == nil {
 		return errors.New("HTTPClient is not initialized")
 	}
@@ -842,6 +842,9 @@ func (di *Dependencies) handleHTTPClientConnections() error {
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()
 			di.BrokerConnector.ReconnectAll()
+			if err := di.EtherClient.Reconnect(); err != nil {
+				log.Error().Msgf("Ethereum client failed to reconnect")
+			}
 		}
 		latestState = e.State
 	})
