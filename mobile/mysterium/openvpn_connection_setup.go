@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
+	"github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"

@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -62,6 +63,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	t.Run("ConsumerConnectFlow", func(t *testing.T) {
 		var providerEarnedForService uint64
+		p2p.ProviderInitialTTL = 1
 		servicesInFlag := strings.Split(*consumerServices, ",")
 		for _, serviceType := range servicesInFlag {
 			if _, ok := serviceTypeAssertionMap[serviceType]; ok {

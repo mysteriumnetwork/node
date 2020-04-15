@@ -35,8 +35,10 @@ const (
 	pingMaxPorts       = 20
 	requiredConnCount  = 2
 	consumerInitialTTL = 128
-	providerInitialTTL = 2
 )
+
+//ProviderInitialTTL minimal value us 2 is needed to make windows network stack happy
+var ProviderInitialTTL = 2
 
 type brokerConnector interface {
 	Connect(serverURIs ...string) (nats.Connection, error)
