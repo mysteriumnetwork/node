@@ -40,7 +40,7 @@ func (f fakeSupplier) PeerStats() (*wireguard.Stats, error) {
 
 func Test_statsPublisher_start(t *testing.T) {
 	bus := mocks.NewEventBus()
-	publisher := newStatsPublisher(bus, 5*time.Millisecond)
+	publisher := newStatsPublisher(bus, time.Microsecond)
 
 	go publisher.start("kappa", &fakeSupplier{})
 
@@ -52,11 +52,16 @@ func Test_statsPublisher_start(t *testing.T) {
 		evt, ok := lastEvt.(event.AppEventDataTransferred)
 		assert.True(t, ok)
 		return evt.ID == "kappa" && evt.Down == 52 && evt.Up == 25
-	}, 1*time.Second, 5*time.Millisecond)
+	}, time.Second, time.Microsecond)
 
 	publisher.stop()
 
+	// After stop publisher may still publish one last event if it was started before stop
+	// so we need to wait and drain last event from bus before checking if publisher
+	// actually stopped publishing events.
+	time.Sleep(time.Millisecond)
+	bus.Pop()
 	assert.Never(t, func() bool {
 		return bus.Pop() != nil
-	}, 1*time.Second, 5*time.Millisecond)
+	}, time.Millisecond, time.Microsecond)
 }
