@@ -23,9 +23,12 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
+
+	nats_lib "github.com/nats-io/go-nats"
 
 	"github.com/mysteriumnetwork/node/firewall"
-	nats_lib "github.com/nats-io/go-nats"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -106,6 +109,13 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 			return nil, fmt.Errorf("could not create UDP conn for service: %w", err)
 		}
 	} else {
+		// race condition still happens when consumer starts to ping until provider did not manage to complete required number of pings
+		// this might be provider / consumer performance dependent
+		// make sleep time dependent on pinger interval and wait for 2 ping iterations
+		// TODO: either reintroduce eventual increase of TTL on consumer or maintain some sane delay
+		dur := traversal.DefaultPingConfig().Interval.Milliseconds() * 2
+		log.Debug().Msgf("Sleeping for %v ms - waiting for provider to launch pings", dur)
+		time.Sleep(time.Duration(dur) * time.Millisecond)
 		log.Debug().Msgf("Pinging provider %s with IP %s using ports %v:%v", providerID.Address, config.peerIP(), config.localPorts, config.peerPorts)
 		conns, err := m.consumerPinger.PingProviderPeer(ctx, config.peerIP(), config.localPorts, config.peerPorts, consumerInitialTTL, requiredConnCount)
 		if err != nil {

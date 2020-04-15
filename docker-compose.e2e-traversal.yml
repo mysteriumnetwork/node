@@ -257,6 +257,7 @@ services:
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
+      --payments.bc.timeout=1s
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual \
