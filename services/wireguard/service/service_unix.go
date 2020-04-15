@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -64,7 +65,7 @@ func NewManager(
 	natService nat.NATService,
 	natPinger NATPinger,
 	natEventGetter NATEventGetter,
-	eventPublisher eventbus.Publisher,
+	eventBus eventbus.EventBus,
 	options Options,
 	portSupplier port.ServicePortSupplier,
 	portMapper mapping.PortMapper,
@@ -80,7 +81,7 @@ func NewManager(
 		natPinger:          natPinger,
 		natEventGetter:     natEventGetter,
 		natPingerPorts:     port.NewPool(),
-		publisher:          eventPublisher,
+		eventBus:           eventBus,
 		portMapper:         portMapper,
 		trafficFirewall:    trafficFirewall,
 
@@ -104,7 +105,7 @@ type Manager struct {
 	natPinger       NATPinger
 	natPingerPorts  port.ServicePortSupplier
 	natEventGetter  NATEventGetter
-	publisher       eventbus.Publisher
+	eventBus        eventbus.EventBus
 	portMapper      mapping.PortMapper
 	trafficFirewall firewall.IncomingTrafficFirewall
 
@@ -218,8 +219,15 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		return nil, errors.Wrap(err, "failed to setup NAT/firewall rules")
 	}
 
-	statsPublisher := newStatsPublisher(m.publisher, time.Second)
+	statsPublisher := newStatsPublisher(m.eventBus, time.Second)
 	go statsPublisher.start(sessionID, conn)
+
+	ifaceName := conn.InterfaceName()
+	s := shaper.New(m.eventBus)
+	err = s.Start(ifaceName)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not start traffic shaper")
+	}
 
 	destroy := func() {
 		log.Info().Msgf("Cleaning up session %s", sessionID)
@@ -228,6 +236,8 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		m.sessionCleanupMu.Unlock()
 
 		statsPublisher.stop()
+
+		s.Clear(ifaceName)
 
 		if releasePortMapping != nil {
 			log.Trace().Msg("Deleting port mapping")
