@@ -513,7 +513,7 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         5 * time.Nanosecond,
-		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendDuration:   time.Millisecond,
 		FirstInvoiceSendTimeout:    time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
