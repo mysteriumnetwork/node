@@ -191,8 +191,8 @@ install_debian() {
     apt install -y ipset resolvconf openvpn
 
     # Wireguard
-    echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
-    printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
+    prepare_sources_list
+
     apt update
     if [[ "$container" != "docker" ]]; then
         apt install -y "linux-headers-$(uname -r)"
@@ -207,6 +207,15 @@ install_debian() {
     apt-get --only-upgrade install -y myst
     apt install -y myst
     service mysterium-node restart
+}
+
+prepare_sources_list() {
+    if [[ "$VERSION_CODENAME" == "buster" ]]; then
+      echo "deb http://deb.debian.org/debian ${VERSION_CODENAME}-backports main" > /etc/apt/sources.list.d/backports.list
+    else
+      echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
+      printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
+    fi
 }
 
 install() {
