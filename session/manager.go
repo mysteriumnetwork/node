@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -105,7 +106,7 @@ type Storage interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID, accountantID identity.Identity, sessionID string) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -170,7 +171,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, consumerInfo.AccountantID, string(session.ID))
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, common.HexToAddress(consumerInfo.AccountantID.Address), string(session.ID))
 	if err != nil {
 		return err
 	}

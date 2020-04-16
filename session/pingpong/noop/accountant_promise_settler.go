@@ -18,6 +18,7 @@
 package noop
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 )
@@ -37,6 +38,6 @@ func (n *NoopAccountantPromiseSettler) GetEarnings(_ identity.Identity) event.Ea
 }
 
 // ForceSettle does nothing.
-func (n *NoopAccountantPromiseSettler) ForceSettle(_, _ identity.Identity) error {
+func (n *NoopAccountantPromiseSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
 	return nil
 }

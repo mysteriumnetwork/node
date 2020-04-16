@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
@@ -85,6 +86,9 @@ type connectionRequest struct {
 type connectionResponse struct {
 	// example: 0x00
 	ConsumerID string `json:"consumer_id,omitempty"`
+
+	// example: 0x00
+	AccountantID string `json:"accountant_id,omitempty"`
 
 	// example: Connected
 	Status string `json:"status"`
@@ -230,7 +234,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.AccountantID), *proposal, connectOptions)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), common.HexToAddress(cr.AccountantID), *proposal, connectOptions)
 
 	if err != nil {
 		switch err {
@@ -347,11 +351,16 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 	return errs
 }
 
+var emptyAddress = common.Address{}
+
 func toConnectionResponse(status connection.Status) connectionResponse {
 	response := connectionResponse{
 		Status:     string(status.State),
 		SessionID:  string(status.SessionID),
 		ConsumerID: status.ConsumerID.Address,
+	}
+	if status.AccountantID != emptyAddress {
+		response.AccountantID = status.AccountantID.Hex()
 	}
 
 	if status.Proposal.ProviderID != "" {

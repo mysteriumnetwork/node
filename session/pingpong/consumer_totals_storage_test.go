@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -40,7 +41,7 @@ func TestConsumerTotalStorage(t *testing.T) {
 	consumerTotalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 
 	channelAddress := identity.FromAddress("someAddress")
-	accountantAddress := identity.FromAddress("someOtherAddress")
+	accountantAddress := common.HexToAddress("someOtherAddress")
 	var amount uint64 = 12
 
 	// check if errors are wrapped correctly

@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -110,7 +111,7 @@ type TimeGetter func() time.Time
 // PaymentEngineFactory creates a new payment issuer from the given params
 type PaymentEngineFactory func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog, channel p2p.Channel,
-	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
+	consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -170,7 +171,7 @@ func NewManager(
 	}
 }
 
-func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (m *connectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if m.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -184,7 +185,7 @@ func (m *connectionManager) Connect(consumerID, accountantID identity.Identity, 
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
-	m.statusConnecting(consumerID, proposal)
+	m.statusConnecting(consumerID, accountantID, proposal)
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -343,7 +344,7 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel p2p.Channel, consumerID, providerID, accountantID identity.Identity, proposal market.ServiceProposal, sessionID session.ID) error {
+func (m *connectionManager) launchPayments(paymentInfo session.PaymentInfo, dialog communication.Dialog, channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, sessionID session.ID) error {
 	payments, err := m.paymentEngineFactory(paymentInfo, dialog, channel, consumerID, providerID, accountantID, proposal, string(sessionID))
 	if err != nil {
 		return err
@@ -427,7 +428,7 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.CreateResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (session.CreateResponse, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.CreateResponse{}, fmt.Errorf("could not get session config: %w", err)
@@ -441,7 +442,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	sessionRequest := &pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:             consumerID.Address,
-			AccountantID:   accountantID.Address,
+			AccountantID:   accountantID.Hex(),
 			PaymentVersion: string(session.PaymentVersionV3),
 		},
 		ProposalID: int64(proposal.ID),
@@ -506,7 +507,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	}, nil
 }
 
-func (m *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID, accountantID identity.Identity, proposal market.ServiceProposal) (session.CreateResponse, error) {
+func (m *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (session.CreateResponse, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.CreateResponse{}, fmt.Errorf("could not get session config: %w", err)
@@ -522,7 +523,7 @@ func (m *connectionManager) createSession(c Connection, dialog communication.Dia
 		Config:     config,
 		ConsumerInfo: &session.ConsumerInfo{
 			IssuerID:       consumerID,
-			AccountantID:   accountantID,
+			AccountantID:   identity.FromAddress(accountantID.Hex()),
 			PaymentVersion: session.PaymentVersionV3,
 		},
 	})
@@ -625,13 +626,14 @@ func (m *connectionManager) setStatus(delta func(status *Status)) {
 	}
 }
 
-func (m *connectionManager) statusConnecting(consumerID identity.Identity, proposal market.ServiceProposal) {
+func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
 	m.setStatus(func(status *Status) {
 		*status = Status{
-			StartedAt:  m.timeGetter(),
-			ConsumerID: consumerID,
-			Proposal:   proposal,
-			State:      Connecting,
+			StartedAt:    m.timeGetter(),
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			Proposal:     proposal,
+			State:        Connecting,
 		}
 	})
 }
@@ -755,7 +757,6 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
 
 func (m *connectionManager) onStateChanged(state State) {
 	log.Debug().Msgf("Connection state received: %s", state)
-	m.publishStateEvent(state)
 
 	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
 	switch state {

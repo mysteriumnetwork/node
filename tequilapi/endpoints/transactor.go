@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -40,7 +41,7 @@ type Transactor interface {
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
-	ForceSettle(providerID, accountantID identity.Identity) error
+	ForceSettle(providerID identity.Identity, accountantID common.Address) error
 }
 
 type transactorEndpoint struct {
@@ -148,7 +149,7 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, func(provider, accountant identity.Identity) error {
+	err := te.settle(request, func(provider identity.Identity, accountant common.Address) error {
 		go func() {
 			err := te.promiseSettler.ForceSettle(provider, accountant)
 			if err != nil {
@@ -165,7 +166,7 @@ func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *htt
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (te *transactorEndpoint) settle(request *http.Request, settler func(identity.Identity, identity.Identity) error) error {
+func (te *transactorEndpoint) settle(request *http.Request, settler func(identity.Identity, common.Address) error) error {
 	req := SettleRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
@@ -173,7 +174,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 		return errors.Wrap(err, "failed to unmarshal settle request")
 	}
 
-	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), identity.FromAddress(req.AccountantID)), "settling failed")
+	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), common.HexToAddress(req.AccountantID)), "settling failed")
 }
 
 // swagger:operation POST /transactor/topup

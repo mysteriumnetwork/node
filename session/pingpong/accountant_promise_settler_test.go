@@ -288,7 +288,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	// no receive on unknown provider
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 	})
 	assertNoReceive(t, settler.settleQueue)
@@ -298,7 +298,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		registered: false,
 	}
 	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 	})
 	assertNoReceive(t, settler.settleQueue)
@@ -310,7 +310,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		registered:  true,
 	}
 	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 		Promise:      crypto.Promise{Amount: 9000},
 	})
@@ -328,7 +328,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		registered:  true,
 	}
 	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 		Promise: crypto.Promise{
 			Amount: 8999,
@@ -475,7 +475,7 @@ type mockAccountantPromiseGetter struct {
 	err     error
 }
 
-func (mapg *mockAccountantPromiseGetter) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
+func (mapg *mockAccountantPromiseGetter) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
 	return mapg.promise, mapg.err
 }
 

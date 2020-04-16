@@ -20,6 +20,7 @@ package pingpong
 import (
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
@@ -49,11 +50,11 @@ type AccountantPromise struct {
 }
 
 // Store stores the given promise for the given accountant.
-func (aps *AccountantPromiseStorage) Store(providerID, accountantID identity.Identity, promise AccountantPromise) error {
+func (aps *AccountantPromiseStorage) Store(id identity.Identity, accountantID common.Address, promise AccountantPromise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	channel, err := crypto.GenerateProviderChannelID(providerID.Address, accountantID.Address)
+	channel, err := crypto.GenerateProviderChannelID(id.Address, accountantID.Hex())
 	if err != nil {
 		return errors.Wrap(err, "could not generate provider channel address")
 	}
@@ -62,11 +63,11 @@ func (aps *AccountantPromiseStorage) Store(providerID, accountantID identity.Ide
 }
 
 // Get fetches the promise for the given accountant.
-func (aps *AccountantPromiseStorage) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
+func (aps *AccountantPromiseStorage) Get(id identity.Identity, accountantID common.Address) (AccountantPromise, error) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	channel, err := crypto.GenerateProviderChannelID(providerID.Address, accountantID.Address)
+	channel, err := crypto.GenerateProviderChannelID(id.Address, accountantID.Hex())
 	if err != nil {
 		return AccountantPromise{}, errors.Wrap(err, "could not generate provider channel address")
 	}

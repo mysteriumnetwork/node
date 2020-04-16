@@ -40,7 +40,7 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[identity.Identity]ConsumerBalance
 
-	accountantAddress          identity.Identity
+	accountantAddress          common.Address
 	mystSCAddress              common.Address
 	consumerBalanceChecker     consumerBalanceChecker
 	channelAddressCalculator   channelAddressCalculator
@@ -56,7 +56,7 @@ type ConsumerBalanceTracker struct {
 func NewConsumerBalanceTracker(
 	publisher eventbus.Publisher,
 	mystSCAddress common.Address,
-	accountantAddress identity.Identity,
+	accountantAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
 	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,

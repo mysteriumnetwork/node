@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -121,7 +122,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), identity.Identity{}, 10)
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, 10)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -194,7 +195,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), identity.Identity{}, 0)
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, 0)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -708,17 +709,17 @@ type mockConsumerTotalsStorage struct {
 	calledWith uint64
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error {
+func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
 	mcts.calledWith = amount
 	go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		Current:      amount,
-		AccountantID: accountantAddress,
-		ConsumerID:   consumerAddress,
+		AccountantID: accountantID,
+		ConsumerID:   id,
 	})
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(providerAddress, accountantAddress identity.Identity) (uint64, error) {
+func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, accountantID common.Address) (uint64, error) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err

@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/requests"
@@ -268,6 +269,6 @@ type mockSettler struct {
 	errToReturn error
 }
 
-func (ms *mockSettler) ForceSettle(providerID, accountantID identity.Identity) error {
+func (ms *mockSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
 	return ms.errToReturn
 }

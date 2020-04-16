@@ -36,6 +36,8 @@ const (
 // History holds structure for saving session history
 type History struct {
 	SessionID       node_session.ID `storm:"id"`
+	ConsumerID      identity.Identity
+	AccountantID    string
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string

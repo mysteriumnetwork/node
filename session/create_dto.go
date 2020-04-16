@@ -41,6 +41,7 @@ type CreateRequest struct {
 
 // ConsumerInfo represents the consumer related information
 type ConsumerInfo struct {
+	// TODO Should not use internal structures for transport
 	IssuerID       identity.Identity `json:"issuerID"`
 	AccountantID   identity.Identity `json:"accountantID"`
 	PaymentVersion PaymentVersion    `json:"paymentVersion"`

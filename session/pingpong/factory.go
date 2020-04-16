@@ -20,6 +20,7 @@ package pingpong
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
@@ -114,8 +115,8 @@ func InvoiceFactoryCreator(
 	proposal market.ServiceProposal,
 	settler settler,
 	encryptor encryption,
-) func(identity.Identity, identity.Identity, identity.Identity, string) (session.PaymentEngine, error) {
-	return func(providerID, consumerID, accountantID identity.Identity, sessionID string) (session.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(dialog, channel)
 		if err != nil {
 			return nil, err
@@ -146,7 +147,7 @@ func InvoiceFactoryCreator(
 			Settler:                    settler,
 			SessionID:                  sessionID,
 			Encryption:                 encryptor,
-			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Address, channelImplementationAddress, registryAddress),
+			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Hex(), channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -203,10 +204,10 @@ func ExchangeFactoryFunc(
 	eventBus eventbus.EventBus,
 	dataLeewayMegabytes uint64) func(paymentInfo session.PaymentInfo,
 	dialog communication.Dialog, channel p2p.Channel,
-	consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
+	consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 	return func(paymentInfo session.PaymentInfo,
 		dialog communication.Dialog, channel p2p.Channel,
-		consumer, provider, accountant identity.Identity, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
+		consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
 
 		if paymentInfo.Supports != string(session.PaymentVersionV3) {
 			log.Info().Msg("provider requested old payments")
@@ -228,7 +229,7 @@ func ExchangeFactoryFunc(
 			Identity:                  consumer,
 			Peer:                      provider,
 			Proposal:                  proposal,
-			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Address, channelImplementation, registryAddress),
+			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Hex(), channelImplementation, registryAddress),
 			EventBus:                  eventBus,
 			AccountantAddress:         accountant,
 			SessionID:                 sessionID,

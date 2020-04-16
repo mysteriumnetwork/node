@@ -440,7 +440,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		identity.FromAddress(nodeOptions.Accountant.AccountantID),
+		common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
