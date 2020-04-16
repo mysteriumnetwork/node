@@ -113,6 +113,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		LowerTimePriceBound: lowerTimePriceBound,
 		UpperTimePriceBound: upperTimePriceBound,
 		ExcludeUnsupported:  true,
+		IncludeFailed:       req.URL.Query().Get("include_failed") == "true",
 	})
 
 	if err != nil {

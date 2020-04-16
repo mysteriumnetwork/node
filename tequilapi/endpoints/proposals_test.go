@@ -311,7 +311,8 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"success": 5,
 							"fail": 3,
 							"timeout": 2
-						}
+						},
+						"monitoring_failed": false
 					}
 				},
 				{
