@@ -622,7 +622,7 @@ func (m *connectionManager) setStatus(delta func(status *Status)) {
 
 	if state != stateWas {
 		log.Info().Msgf("Connection state: %v -> %v", stateWas, state)
-		m.publishStateEvent(m.status.State)
+		m.publishStateEvent(state)
 	}
 }
 
