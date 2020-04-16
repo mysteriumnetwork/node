@@ -29,18 +29,18 @@ import (
 var emptyAddress = common.Address{}
 
 // NewConnectionStatusDTO maps to API connection status.
-func NewConnectionStatusDTO(connection connection.Status) ConnectionStatusDTO {
+func NewConnectionStatusDTO(session connection.Status) ConnectionStatusDTO {
 	response := ConnectionStatusDTO{
-		Status:     string(connection.State),
-		ConsumerID: connection.ConsumerID.Address,
-		SessionID:  string(connection.SessionID),
+		Status:     string(session.State),
+		ConsumerID: session.ConsumerID.Address,
+		SessionID:  string(session.SessionID),
 	}
-	if connection.AccountantID != emptyAddress {
-		response.AccountantAddress = connection.AccountantID.Hex()
+	if session.AccountantID != emptyAddress {
+		response.AccountantAddress = session.AccountantID.Hex()
 	}
-	// nNne exists, for not started connection
-	if connection.Proposal.ProviderID != "" {
-		proposalRes := NewProposalDTO(connection.Proposal)
+	// None exists, for not started connection
+	if session.Proposal.ProviderID != "" {
+		proposalRes := NewProposalDTO(session.Proposal)
 		response.Proposal = &proposalRes
 	}
 	return response
@@ -66,12 +66,12 @@ type ConnectionStatusDTO struct {
 }
 
 // NewConnectionDTO maps to API connection.
-func NewConnectionDTO(connection connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
+func NewConnectionDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
 	dto := ConnectionDTO{
-		ConnectionStatusDTO: NewConnectionStatusDTO(connection),
+		ConnectionStatusDTO: NewConnectionStatusDTO(session),
 	}
 	if !statistics.At.IsZero() {
-		statsDto := NewConnectionStatisticsDTO(connection, statistics, throughput, invoice)
+		statsDto := NewConnectionStatisticsDTO(session, statistics, throughput, invoice)
 		dto.Statistics = &statsDto
 	}
 	return dto
@@ -85,9 +85,9 @@ type ConnectionDTO struct {
 }
 
 // NewConnectionStatisticsDTO maps to API connection stats.
-func NewConnectionStatisticsDTO(connection connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+func NewConnectionStatisticsDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
 	return ConnectionStatisticsDTO{
-		Duration:           int(connection.Duration().Seconds()),
+		Duration:           int(session.Duration().Seconds()),
 		BytesSent:          statistics.BytesSent,
 		BytesReceived:      statistics.BytesReceived,
 		ThroughputSent:     datasize.BitSize(throughput.Up).Bits(),
