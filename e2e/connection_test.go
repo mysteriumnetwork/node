@@ -27,6 +27,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -73,6 +74,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 					forThisService := providerEarnings - providerEarnedForService
 					providerEarnedForService += forThisService
 					validateProviderEarnings(t, proposal, forThisService, tequilapiConsumer)
+					recheckBalancesWithAccountant(t, consumerID, balanceSpent, providerEarnings)
 				})
 			}
 		}
@@ -99,6 +101,15 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
 		assert.InDelta(t, expected, providerStatus.Balance, 2)
 	})
+}
+
+func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending, providerEarnings uint64) {
+	accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
+	accountantData, err := accountantCaller.GetConsumerData(consumerID)
+	assert.NoError(t, err)
+	promised := accountantData.LatestPromise.Amount
+	assert.Equal(t, promised, consumerSpending, fmt.Sprintf("Consumer reported spending %v  accountant says %v", consumerSpending, promised))
+	assert.Equal(t, promised, providerEarnings, fmt.Sprintf("Provider reported earning %v  accountant says %v", providerEarnings, promised))
 }
 
 func validateProviderEarnings(t *testing.T, proposal client.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
@@ -277,8 +288,8 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(690000000), providerStatus.Balance)
-	assert.Equal(t, earningsExpected, providerStatus.Earnings)
-	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal)
+	assert.Equal(t, earningsExpected, providerStatus.Earnings, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
+	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
 	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
 	return providerStatus.Earnings
 }
