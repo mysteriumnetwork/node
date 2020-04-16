@@ -18,6 +18,11 @@
 package location
 
 import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/cenkalti/backoff/v4"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -37,14 +42,32 @@ func NewOracleResolver(httpClient *requests.HTTPClient, address string) *oracleR
 }
 
 // DetectLocation detects current IP-address provides location information for the IP.
-func (o *oracleResolver) DetectLocation() (location Location, err error) {
+func (o *oracleResolver) DetectLocation() (Location, error) {
 	log.Debug().Msg("Detecting with oracle resolver")
-	request, err := requests.NewGetRequest(o.address, "", nil)
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return Location{}, errors.Wrap(err, "failed to create request")
+
+	var boff backoff.BackOff
+	eback := backoff.NewExponentialBackOff()
+	eback.MaxElapsedTime = time.Second * 20
+	eback.InitialInterval = time.Second * 2
+	boff = backoff.WithMaxRetries(eback, 10)
+
+	var loc Location
+	retry := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		request, err := requests.NewGetRequestWithContext(ctx, o.address, "", nil)
+		if err != nil {
+			return errors.Wrap(err, "failed to create request")
+		}
+		if err := o.httpClient.DoRequestAndParseResponse(request, &loc); err != nil {
+			log.Err(err).Msg("Location detection failed, will try again")
+			return err
+		}
+		return nil
 	}
 
-	err = o.httpClient.DoRequestAndParseResponse(request, &location)
-	return location, errors.Wrap(err, "failed to execute request")
+	if err := backoff.Retry(retry, boff); err != nil {
+		return Location{}, fmt.Errorf("could not detect location: %w", err)
+	}
+	return loc, nil
 }

@@ -18,8 +18,11 @@
 package ip
 
 import (
+	"context"
 	"net"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -85,18 +88,31 @@ func (r *ResolverImpl) GetOutboundIP() (net.IP, error) {
 
 // GetPublicIP returns current public IP
 func (r *ResolverImpl) GetPublicIP() (string, error) {
-	var ipResponse ipResponse
+	var boff backoff.BackOff
+	eback := backoff.NewExponentialBackOff()
+	eback.MaxElapsedTime = time.Second * 20
+	eback.InitialInterval = time.Second * 2
+	boff = backoff.WithMaxRetries(eback, 10)
 
-	request, err := requests.NewGetRequest(r.url, "", nil)
-	request.Header.Set("User-Agent", apiClient)
-	request.Header.Set("Accept", "application/json")
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return "", err
+	var ipResponse ipResponse
+	retry := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		req, err := requests.NewGetRequestWithContext(ctx, r.url, "", nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("User-Agent", apiClient)
+		req.Header.Set("Accept", "application/json")
+
+		if err := r.httpClient.DoRequestAndParseResponse(req, &ipResponse); err != nil {
+			log.Err(err).Msg("IP detection failed, will try again")
+			return err
+		}
+		return err
 	}
 
-	err = r.httpClient.DoRequestAndParseResponse(request, &ipResponse)
-	if err != nil {
+	if err := backoff.Retry(retry, boff); err != nil {
 		return "", err
 	}
 
