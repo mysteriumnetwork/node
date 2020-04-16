@@ -71,74 +71,74 @@ func nodeVersionToMetricsEvent(info appInfo) *metrics.Event {
 	}
 }
 
-func sessionEventToMetricsEvent(context sessionEventContext) *metrics.Event {
+func sessionEventToMetricsEvent(ctx sessionEventContext) *metrics.Event {
 	return &metrics.Event{
-		Signature:  context.Consumer,
-		TargetId:   context.Provider,
+		Signature:  ctx.Consumer,
+		TargetId:   ctx.Provider,
 		IsProvider: false,
 		Metric: &metrics.Event_SessionEventPayload{
 			SessionEventPayload: &metrics.SessionEventPayload{
-				Event: context.Event,
+				Event: ctx.Event,
 				Session: &metrics.SessionPayload{
-					Id:             context.ID,
-					ServiceType:    context.ServiceType,
-					ProviderContry: context.ProviderCountry,
-					ConsumerContry: context.ConsumerCountry,
-					AccountantId:   context.AccountantID,
+					Id:             ctx.ID,
+					ServiceType:    ctx.ServiceType,
+					ProviderContry: ctx.ProviderCountry,
+					ConsumerContry: ctx.ConsumerCountry,
+					AccountantId:   ctx.AccountantID,
 				},
 			},
 		},
 	}
 }
 
-func sessionDataToMetricsEvent(context sessionDataContext) *metrics.Event {
+func sessionDataToMetricsEvent(ctx sessionDataContext) *metrics.Event {
 	return &metrics.Event{
-		Signature:  context.Consumer,
-		TargetId:   context.Provider,
+		Signature:  ctx.Consumer,
+		TargetId:   ctx.Provider,
 		IsProvider: false,
 		Metric: &metrics.Event_SessionStatisticsPayload{
 			SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
-				BytesSent:     context.Tx,
-				BytesReceived: context.Rx,
+				BytesSent:     ctx.Tx,
+				BytesReceived: ctx.Rx,
 				Session: &metrics.SessionPayload{
-					Id:             context.ID,
-					ServiceType:    context.ServiceType,
-					ProviderContry: context.ProviderCountry,
-					ConsumerContry: context.ConsumerCountry,
-					AccountantId:   context.AccountantID,
+					Id:             ctx.ID,
+					ServiceType:    ctx.ServiceType,
+					ProviderContry: ctx.ProviderCountry,
+					ConsumerContry: ctx.ConsumerCountry,
+					AccountantId:   ctx.AccountantID,
 				},
 			},
 		},
 	}
 }
 
-func sessionTokensToMetricsEvent(context sessionTokensContext) *metrics.Event {
+func sessionTokensToMetricsEvent(ctx sessionTokensContext) *metrics.Event {
 	return &metrics.Event{
-		Signature:  context.Consumer,
-		TargetId:   context.Provider,
+		Signature:  ctx.Consumer,
+		TargetId:   ctx.Provider,
 		IsProvider: false,
 		Metric: &metrics.Event_SessionTokensPayload{
 			SessionTokensPayload: &metrics.SessionTokensPayload{
-				Tokens: context.Tokens,
+				Tokens: ctx.Tokens,
 				Session: &metrics.SessionPayload{
-					Id:             context.ID,
-					ServiceType:    context.ServiceType,
-					ProviderContry: context.ProviderCountry,
-					ConsumerContry: context.ConsumerCountry,
-					AccountantId:   context.AccountantID,
+					Id:             ctx.ID,
+					ServiceType:    ctx.ServiceType,
+					ProviderContry: ctx.ProviderCountry,
+					ConsumerContry: ctx.ConsumerCountry,
+					AccountantId:   ctx.AccountantID,
 				},
 			},
 		},
 	}
 }
 
-func proposalEventToMetricsEvent(context market.ServiceProposal, info appInfo) *metrics.Event {
-	location := context.ServiceDefinition.GetLocation()
+func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) *metrics.Event {
+	location := ctx.ServiceDefinition.GetLocation()
 	return &metrics.Event{
 		Metric: &metrics.Event_ProposalPayload{
 			ProposalPayload: &metrics.ProposalPayload{
-				ProviderId:  context.ProviderID,
-				ServiceType: context.ServiceType,
+				ProviderId:  ctx.ProviderID,
+				ServiceType: ctx.ServiceType,
 				NodeType:    location.NodeType,
 				Country:     location.Country,
 				Version: &metrics.VersionPayload{

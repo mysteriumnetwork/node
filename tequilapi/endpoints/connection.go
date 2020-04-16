@@ -29,9 +29,9 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -39,66 +39,6 @@ import (
 // statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
 // operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 const statusConnectCancelled = 499
-
-// ConnectOptions holds tequilapi connect options
-// swagger:model ConnectOptionsDTO
-type ConnectOptions struct {
-	// kill switch option restricting communication only through VPN
-	// required: false
-	// example: true
-	DisableKillSwitch bool `json:"kill_switch"`
-	// DNS to use
-	// required: false
-	// default: auto
-	// example: auto, provider, system, "1.1.1.1,8.8.8.8"
-	DNS connection.DNSOption `json:"dns"`
-}
-
-// swagger:model ConnectionRequestDTO
-type connectionRequest struct {
-	// consumer identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumer_id"`
-
-	// provider identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
-
-	// accountant identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000003
-	AccountantID string `json:"accountant_id"`
-
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// required: false
-	// default: openvpn
-	// example: openvpn
-	ServiceType string `json:"service_type"`
-
-	// connect options
-	// required: false
-	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
-}
-
-// swagger:model ConnectionStatusDTO
-type connectionResponse struct {
-	// example: 0x00
-	ConsumerID string `json:"consumer_id,omitempty"`
-
-	// example: 0x00
-	AccountantID string `json:"accountant_id,omitempty"`
-
-	// example: Connected
-	Status string `json:"status"`
-
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	SessionID string `json:"session_id,omitempty"`
-
-	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
-	Proposal *proposalDTO `json:"proposal,omitempty"`
-}
 
 // swagger:model IPDTO
 type ipResponse struct {
@@ -150,7 +90,9 @@ func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvid
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	statusResponse := toConnectionResponse(ce.manager.Status())
+	connection := ce.stateProvider.GetState().Connection
+	statusResponse := contract.NewConnectionStatusDTO(connection.Session)
+
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -164,7 +106,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     name: body
 //     description: Parameters in body (consumer_id, provider_id, service_type) required for creating new connection
 //     schema:
-//       $ref: "#/definitions/ConnectionRequestDTO"
+//       $ref: "#/definitions/ConnectionCreateRequestDTO"
 // responses:
 //   201:
 //     description: Connection started
@@ -197,27 +139,26 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	status, err := ce.identityRegistry.GetRegistrationStatus(identity.FromAddress(cr.ConsumerID))
+	if errorMap := cr.Validate(); errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
+	// TODO Validate for account existence
+	consumerID := identity.FromAddress(cr.ConsumerID)
+	status, err := ce.identityRegistry.GetRegistrationStatus(consumerID)
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("could not check registration status")
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-
 	switch status {
 	case registry.Unregistered, registry.InProgress, registry.RegistrationError:
 		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
 	}
-
 	log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
-
-	errorMap := validateConnectionRequest(cr)
-	if errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(resp, errorMap)
-		return
-	}
 
 	// TODO Pass proposal ID directly in request
 	proposal, err := ce.proposalRepository.Proposal(market.ProposalID{
@@ -233,8 +174,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), common.HexToAddress(cr.AccountantID), *proposal, connectOptions)
+	err = ce.manager.Connect(consumerID, common.HexToAddress(cr.AccountantID), *proposal, getConnectOptions(cr))
 
 	if err != nil {
 		switch err {
@@ -313,11 +253,15 @@ func AddRoutesForConnection(router *httprouter.Router, manager connection.Manage
 	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 }
 
-func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
-	var connectionRequest = connectionRequest{
+func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, error) {
+	var connectionRequest = contract.ConnectionCreateRequest{
 		// This defaults the service type to openvpn, for backward compatibility
 		// If specified in the request, the value will get overridden
-		ServiceType: "openvpn",
+		ServiceType: openvpn.ServiceType,
+		ConnectOptions: contract.ConnectOptions{
+			DisableKillSwitch: false,
+			DNS:               connection.DNSOptionAuto,
+		},
 	}
 	err := json.NewDecoder(req.Body).Decode(&connectionRequest)
 	if err != nil {
@@ -326,46 +270,14 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 	return &connectionRequest, nil
 }
 
-func getConnectOptions(cr *connectionRequest) connection.ConnectParams {
+func getConnectOptions(cr *contract.ConnectionCreateRequest) connection.ConnectParams {
 	dns := connection.DNSOptionAuto
 	if cr.ConnectOptions.DNS != "" {
 		dns = cr.ConnectOptions.DNS
 	}
+
 	return connection.ConnectParams{
 		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
 		DNS:               dns,
 	}
-}
-
-func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {
-	errs := validation.NewErrorMap()
-	if len(cr.ConsumerID) == 0 {
-		errs.ForField("consumer_id").AddError("required", "Field is required")
-	}
-	if len(cr.ProviderID) == 0 {
-		errs.ForField("provider_id").AddError("required", "Field is required")
-	}
-	if len(cr.AccountantID) == 0 {
-		errs.ForField("accountant_id").AddError("required", "Field is required")
-	}
-	return errs
-}
-
-var emptyAddress = common.Address{}
-
-func toConnectionResponse(status connection.Status) connectionResponse {
-	response := connectionResponse{
-		Status:     string(status.State),
-		SessionID:  string(status.SessionID),
-		ConsumerID: status.ConsumerID.Address,
-	}
-	if status.AccountantID != emptyAddress {
-		response.AccountantID = status.AccountantID.Hex()
-	}
-
-	if status.Proposal.ProviderID != "" {
-		proposalRes := proposalToRes(status.Proposal)
-		response.Proposal = proposalRes
-	}
-	return response
 }

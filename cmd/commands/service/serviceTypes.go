@@ -20,35 +20,42 @@ package service
 import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/urfave/cli/v2"
 )
 
 var (
 	serviceTypes = []string{"openvpn", "wireguard", "noop"}
 
-	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) (service.Options, market.PaymentMethod){
-		noop.ServiceType: func(ctx *cli.Context) (service.Options, market.PaymentMethod) {
-			pricePerMinute := config.GetFloat64(config.FlagNoopPriceMinute)
-			return noop.ParseFlags(ctx), pingpong.NewPaymentMethod(0, pricePerMinute)
+	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO){
+		noop.ServiceType: func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO) {
+			payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+				0,
+				config.GetFloat64(config.FlagNoopPriceMinute),
+			))
+			return noop.ParseFlags(ctx), payment
 		},
-		openvpn.ServiceType: func(ctx *cli.Context) (service.Options, market.PaymentMethod) {
+		openvpn.ServiceType: func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO) {
 			config.ParseFlagsServiceOpenvpn(ctx)
-			pricePerByte := config.GetFloat64(config.FlagOpenVPNPriceGB)
-			pricePerMinute := config.GetFloat64(config.FlagOpenVPNPriceMinute)
-			return openvpn_service.GetOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
+			payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+				config.GetFloat64(config.FlagOpenVPNPriceGB),
+				config.GetFloat64(config.FlagOpenVPNPriceMinute),
+			))
+			return openvpn_service.GetOptions(), payment
 		},
-		wireguard.ServiceType: func(ctx *cli.Context) (service.Options, market.PaymentMethod) {
+		wireguard.ServiceType: func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO) {
 			config.ParseFlagsServiceWireguard(ctx)
-			pricePerByte := config.GetFloat64(config.FlagWireguardPriceGB)
-			pricePerMinute := config.GetFloat64(config.FlagWireguardPriceMinute)
-			return wireguard_service.GetOptions(), pingpong.NewPaymentMethod(pricePerByte, pricePerMinute)
+			payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+				config.GetFloat64(config.FlagWireguardPriceGB),
+				config.GetFloat64(config.FlagWireguardPriceMinute),
+			))
+			return wireguard_service.GetOptions(), payment
 		},
 	}
 )

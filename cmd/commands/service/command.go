@@ -29,10 +29,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -146,7 +146,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 	return nil
 }
 
-func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm market.PaymentMethod) {
+func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO) {
 	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap, pm)
 	if err != nil {
 		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
@@ -168,12 +168,12 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	}
 }
 
-func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, market.PaymentMethod, error) {
+func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, contract.PaymentMethodDTO, error) {
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
 		opt, pm := f(ctx)
 		return opt, pm, nil
 	}
-	return service.OptionsIdentity{}, nil, errors.Errorf("unknown service type: %q", serviceType)
+	return service.OptionsIdentity{}, contract.PaymentMethodDTO{}, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

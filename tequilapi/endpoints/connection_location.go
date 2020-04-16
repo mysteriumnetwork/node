@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -72,7 +71,6 @@ func locationToRes(l location.Location) locationResponse {
 
 // ConnectionLocationEndpoint struct represents /connection/location resource and it's subresources.
 type ConnectionLocationEndpoint struct {
-	manager                connection.Manager
 	ipResolver             ip.Resolver
 	locationResolver       location.Resolver
 	locationOriginResolver location.OriginResolver
@@ -80,13 +78,11 @@ type ConnectionLocationEndpoint struct {
 
 // NewConnectionLocationEndpoint creates and returns connection location endpoint.
 func NewConnectionLocationEndpoint(
-	manager connection.Manager,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 	locationOriginResolver location.OriginResolver,
 ) *ConnectionLocationEndpoint {
 	return &ConnectionLocationEndpoint{
-		manager:                manager,
 		ipResolver:             ipResolver,
 		locationResolver:       locationResolver,
 		locationOriginResolver: locationOriginResolver,
@@ -175,13 +171,12 @@ func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWrit
 // AddRoutesForConnectionLocation adds connection location routes to given router
 func AddRoutesForConnectionLocation(
 	router *httprouter.Router,
-	manager connection.Manager,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 	locationOriginResolver location.OriginResolver,
 ) {
 
-	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, ipResolver, locationResolver, locationOriginResolver)
+	connectionLocationEndpoint := NewConnectionLocationEndpoint(ipResolver, locationResolver, locationOriginResolver)
 	router.GET("/connection/ip", connectionLocationEndpoint.GetConnectionIP)
 	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
 	router.GET("/location", connectionLocationEndpoint.GetOriginLocation)

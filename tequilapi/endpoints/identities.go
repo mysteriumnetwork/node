@@ -78,7 +78,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/IdentityRequestDTO"
+//       $ref: "#/definitions/IdentityCurrentRequestDTO"
 // responses:
 //   200:
 //     description: Unlocked identity returned
@@ -97,15 +97,14 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, _ *http.Request, _
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	var req contract.IdentityRequest
+	var req contract.IdentityCurrentRequest
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityRequest(req)
-	if errorMap.HasErrors() {
+	if errorMap := req.Validate(); errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
@@ -134,7 +133,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/IdentityRequestDTO"
+//       $ref: "#/definitions/IdentityCreateRequestDTO"
 // responses:
 //   200:
 //     description: Identity created
@@ -153,15 +152,14 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
-	var req contract.IdentityRequest
+	var req contract.IdentityCreateRequest
 	err := json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityRequest(req)
-	if errorMap.HasErrors() {
+	if errorMap := req.Validate(); errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
@@ -190,7 +188,7 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, httpReq *http.Re
 //   name: body
 //   description: Parameter in body (passphrase) required for unlocking identity
 //   schema:
-//     $ref: "#/definitions/IdentityRequestDTO"
+//     $ref: "#/definitions/IdentityUnlockRequestDTO"
 // responses:
 //   202:
 //     description: Identity unlocked
@@ -214,15 +212,14 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 		return
 	}
 
-	var req contract.IdentityRequest
+	var req contract.IdentityUnlockRequest
 	err = json.NewDecoder(httpReq.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := contract.ValidateIdentityRequest(req)
-	if errorMap.HasErrors() {
+	if errorMap := req.Validate(); errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}

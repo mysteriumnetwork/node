@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/pkg/errors"
@@ -70,11 +69,6 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	locationResolver := &locationResolverMock{ip: "1.2.3.4", ipOrigin: "1.2.3.1"}
 	AddRoutesForConnectionLocation(
 		router,
-		&mockConnectionManager{
-			onStatusReturn: connection.Status{
-				State: connection.Connected,
-			},
-		},
 		ip.NewResolverMock("123.123.123.123"),
 		locationResolver,
 		locationResolver,
@@ -135,9 +129,8 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 }
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
-	manager := mockConnectionManager{}
 	ipResolver := ip.NewResolverMock("123.123.123.123")
-	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil, nil)
+	endpoint := NewConnectionLocationEndpoint(ipResolver, nil, nil)
 	resp := httptest.NewRecorder()
 
 	endpoint.GetConnectionIP(resp, nil, nil)
@@ -153,9 +146,8 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 }
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
-	manager := mockConnectionManager{}
 	ipResolver := ip.NewResolverMockFailing(errors.New("fake error"))
-	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil, nil)
+	endpoint := NewConnectionLocationEndpoint(ipResolver, nil, nil)
 	resp := httptest.NewRecorder()
 
 	endpoint.GetConnectionIP(resp, nil, nil)

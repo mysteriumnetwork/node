@@ -138,7 +138,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     "sessions": null,
     "consumer": {
       "connection": {
-        "state": ""
+        "status": ""
       }
     },
     "identities": []
@@ -168,7 +168,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     "sessions": null,
     "consumer": {
       "connection": {
-        "state": ""
+        "status": ""
       }
     },
     "identities": []
@@ -205,7 +205,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     "sessions": null,
     "consumer": {
       "connection": {
-        "state": "Connecting"
+        "status": "Connecting"
       }
     },
     "identities": [

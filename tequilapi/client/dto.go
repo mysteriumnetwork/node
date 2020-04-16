@@ -19,71 +19,14 @@ package client
 
 import (
 	"encoding/json"
-	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
 
 // Fees represents the transactor fee
 type Fees struct {
 	Registration uint64 `json:"registration"`
 	Settlement   uint64 `json:"settlement"`
-}
-
-// StatusDTO holds connection status and session id
-type StatusDTO struct {
-	ConsumerID string      `json:"consumer_id"`
-	Status     string      `json:"status"`
-	SessionID  string      `json:"session_id"`
-	Proposal   ProposalDTO `json:"proposal"`
-}
-
-// ProposalList describes list of proposals
-type ProposalList struct {
-	Proposals []ProposalDTO `json:"proposals"`
-}
-
-// ProposalDTO describes service proposal
-type ProposalDTO struct {
-	ID                int                  `json:"id"`
-	ProviderID        string               `json:"provider_id"`
-	ServiceType       string               `json:"service_type"`
-	ServiceDefinition ServiceDefinitionDTO `json:"service_definition"`
-	AccessPolicies    []AccessPolicy       `json:"access_policies"`
-	PaymentMethodType string               `json:"payment_method_type"`
-	PaymentMethod     paymentMethodRes     `json:"payment_method"`
-}
-
-type paymentMethodRes struct {
-	Type  string         `json:"type"`
-	Price money.Money    `json:"price"`
-	Rate  paymentRateRes `json:"rate"`
-}
-
-type paymentRateRes struct {
-	PerSeconds uint64 `json:"per_seconds"`
-	PerBytes   uint64 `json:"per_bytes"`
-}
-
-// AccessPolicy represents the access controls for proposal
-type AccessPolicy struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-}
-
-func (p ProposalDTO) String() string {
-	return fmt.Sprintf("Id: %d , Provider: %s, Country: %s", p.ID, p.ProviderID, p.ServiceDefinition.LocationOriginate.Country)
-}
-
-// ServiceDefinitionDTO describes service of proposal
-type ServiceDefinitionDTO struct {
-	LocationOriginate ServiceLocationDTO `json:"location_originate"`
-}
-
-// ServiceLocationDTO describes location of proposal
-type ServiceLocationDTO struct {
-	Country string `json:"country"`
 }
 
 // HealthcheckDTO holds returned healthcheck response
@@ -120,12 +63,6 @@ type RegistrationDataDTO struct {
 	Registered bool   `json:"registered"`
 }
 
-// ConnectOptions copied from tequilapi endpoint
-type ConnectOptions struct {
-	DisableKillSwitch bool                 `json:"kill_switch"`
-	DNS               connection.DNSOption `json:"dns"`
-}
-
 // ConnectionSessionListDTO copied from tequilapi endpoint
 type ConnectionSessionListDTO struct {
 	Sessions []ConnectionSessionDTO `json:"sessions"`
@@ -150,12 +87,12 @@ type ServiceListDTO []ServiceInfoDTO
 
 // ServiceInfoDTO represents running service information
 type ServiceInfoDTO struct {
-	ID          string          `json:"id"`
-	ProviderID  string          `json:"provider_id"`
-	ServiceType string          `json:"type"`
-	Options     json.RawMessage `json:"options"`
-	Status      string          `json:"status"`
-	Proposal    ProposalDTO     `json:"proposal"`
+	ID          string               `json:"id"`
+	ProviderID  string               `json:"provider_id"`
+	ServiceType string               `json:"type"`
+	Options     json.RawMessage      `json:"options"`
+	Status      string               `json:"status"`
+	Proposal    contract.ProposalDTO `json:"proposal"`
 }
 
 // ServiceSessionListDTO copied from tequilapi endpoint
