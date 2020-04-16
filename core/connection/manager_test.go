@@ -117,8 +117,8 @@ func (tc *testContext) SetupTest() {
 
 	tc.config = Config{
 		IPCheck: IPCheckConfig{
-			MaxAttempts:             3,
-			SleepDurationAfterCheck: 1 * time.Millisecond,
+			MaxAttempts:             2,
+			SleepDurationAfterCheck: time.Nanosecond,
 		},
 		KeepAlive: KeepAliveConfig{
 			SendInterval:    100 * time.Millisecond,
