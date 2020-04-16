@@ -182,22 +182,24 @@ func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance
 func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint64 {
+	fallback := cbt.GetBalance(id)
+
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not calculate channel address")
-		return 0
+		return fallback
 	}
 
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(addr, cbt.mystSCAddress)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get consumer channel")
-		return 0
+		return fallback
 	}
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
-		return 0
+		return fallback
 	}
 
 	cbt.balancesLock.Lock()

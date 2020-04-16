@@ -843,7 +843,7 @@ func (di *Dependencies) handleConnStateChange() error {
 			di.QualityClient.Reconnect()
 			di.BrokerConnector.ReconnectAll()
 			if err := di.EtherClient.Reconnect(); err != nil {
-				log.Error().Msgf("Ethereum client failed to reconnect")
+				log.Error().Err(err).Msg("Ethereum client failed to reconnect")
 			}
 		}
 		latestState = e.State
