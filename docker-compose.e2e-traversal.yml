@@ -239,7 +239,7 @@ services:
   myst-consumer:
     build:
       context: .
-      dockerfile: ./bin/docker/alpine/Dockerfile
+      dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     environment:
       - DEFAULT_ROUTE=10.100.1.2
     depends_on:
@@ -283,7 +283,7 @@ services:
   myst-provider:
     build:
       context: .
-      dockerfile: ./bin/docker/alpine/Dockerfile
+      dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     environment:
       - DEFAULT_ROUTE=10.100.0.2
     depends_on:
@@ -335,10 +335,9 @@ services:
   go-runner:
     build:
       context: .
-      dockerfile: ./e2e/gorunner/Dockerfile
+      dockerfile: ./e2e/gorunner/Dockerfile.precompiled
     volumes:
-      - ./:/node
-      - $GOPATH/pkg/mod:/go/pkg/mod
+      - ./e2e/blockchain/keystore:/node/keystore
     working_dir: /node
     dns: 172.30.0.254
     cap_add:

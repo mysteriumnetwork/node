@@ -1,0 +1,6 @@
+FROM alpine:3.6
+
+RUN apk add --update --no-cache bash gcc musl-dev make linux-headers iptables ipset ca-certificates openvpn bash sudo openresolv
+
+COPY ./build/e2e/test /usr/bin/test
+COPY ./build/e2e/deployer /usr/bin/deployer
