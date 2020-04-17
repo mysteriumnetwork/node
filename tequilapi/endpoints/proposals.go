@@ -68,7 +68,7 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     description: the access policy source to filter the proposals by
 //     type: string
 //   - in: query
-//     name: fetch_connect_counts
+//     name: fetch_metrics
 //     description: if set to true, fetches the connection success metrics for nodes. False by default.
 //     type: boolean
 // responses:
@@ -113,7 +113,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		LowerTimePriceBound: lowerTimePriceBound,
 		UpperTimePriceBound: upperTimePriceBound,
 		ExcludeUnsupported:  true,
-		IncludeFailed:       req.URL.Query().Get("include_failed") == "true",
+		IncludeFailed:       req.URL.Query().Get("monitoring_failed") == "true",
 	})
 
 	if err != nil {
@@ -126,7 +126,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
 
-	fetchConnectCounts := req.URL.Query().Get("fetch_connect_counts")
+	fetchConnectCounts := req.URL.Query().Get("fetch_metrics")
 	if fetchConnectCounts == "true" {
 		metrics := pe.qualityProvider.ProposalsMetrics()
 		addProposalMetrics(proposalsRes.Proposals, metrics)
@@ -141,9 +141,9 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 // description: Returns list of proposals  quality metrics
 // responses:
 //   200:
-//     description: List of proposals
+//     description: List of quality metrics
 //     schema:
-//       "$ref": "#/definitions/ProposalsList"
+//       "$ref": "#/definitions/QualityMetricsDTO"
 func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	metrics := pe.qualityProvider.ProposalsMetrics()
 	utils.WriteAsJSON(mapQualityMetrics(metrics), resp)

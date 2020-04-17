@@ -270,7 +270,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	}
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant?fetch_connect_counts=true",
+		"/irrelevant?fetch_metrics=true",
 		nil,
 	)
 	assert.Nil(t, err)
