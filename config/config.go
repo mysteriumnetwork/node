@@ -47,11 +47,7 @@ type Config struct {
 }
 
 // Current global configuration instance.
-var Current *Config
-
-func init() {
-	Current = NewConfig()
-}
+var Current = NewConfig()
 
 // NewConfig creates a new configuration instance.
 func NewConfig() *Config {

@@ -37,11 +37,13 @@ import (
 var (
 	connectionSessionMock = session.History{
 		SessionID:       node_session.ID("SessionID"),
+		ConsumerID:      identity.FromAddress("consumerID"),
+		AccountantID:    "0x000000000000000000000000000000000000000C",
 		ProviderID:      identity.FromAddress("providerID"),
 		ServiceType:     "serviceType",
 		ProviderCountry: "ProviderCountry",
-		Started:         time.Now(),
-		Updated:         time.Now(),
+		Started:         time.Date(2010, time.January, 1, 12, 00, 0, 700000000, time.UTC),
+		Updated:         time.Date(2010, time.January, 1, 12, 00, 55, 800000000, time.UTC),
 		DataStats: connection.Statistics{
 			BytesReceived: 10,
 			BytesSent:     10,
@@ -50,21 +52,17 @@ var (
 )
 
 func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
-	value := "2010-01-01T12:00:00Z"
-	startedAt, _ := time.Parse(time.RFC3339, value)
-
-	se := connectionSessionMock
-	se.Started = startedAt
-	sessionDTO := connectionSessionToDto(se)
-
-	assert.Equal(t, value, sessionDTO.DateStarted)
+	sessionDTO := connectionSessionToDto(connectionSessionMock)
+	assert.Equal(t, "2010-01-01T12:00:00Z", sessionDTO.DateStarted)
 	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.SessionID)
+	assert.Equal(t, connectionSessionMock.ConsumerID.Address, sessionDTO.ConsumerID)
+	assert.Equal(t, connectionSessionMock.AccountantID, sessionDTO.AccountantID)
 	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
 	assert.Equal(t, connectionSessionMock.ServiceType, sessionDTO.ServiceType)
 	assert.Equal(t, connectionSessionMock.ProviderCountry, sessionDTO.ProviderCountry)
 	assert.Equal(t, connectionSessionMock.DataStats.BytesReceived, sessionDTO.BytesReceived)
 	assert.Equal(t, connectionSessionMock.DataStats.BytesSent, sessionDTO.BytesSent)
-	assert.Equal(t, connectionSessionMock.GetDuration(), sessionDTO.Duration)
+	assert.Equal(t, 55, int(sessionDTO.Duration))
 	assert.Equal(t, connectionSessionMock.Status, sessionDTO.Status)
 }
 

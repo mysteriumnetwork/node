@@ -24,12 +24,12 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/firewall"
 	nats_lib "github.com/nats-io/go-nats"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
 

@@ -270,7 +270,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	}
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant?fetch_connect_counts=true",
+		"/irrelevant?fetch_metrics=true",
 		nil,
 	)
 	assert.Nil(t, err)
@@ -311,7 +311,8 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"success": 5,
 							"fail": 3,
 							"timeout": 2
-						}
+						},
+						"monitoring_failed": false
 					}
 				},
 				{

@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/session"
@@ -49,9 +50,10 @@ type Reporter interface {
 type SessionStatisticsReporter struct {
 	locationDetector location.OriginResolver
 
-	signerFactory     identity.SignerFactory
-	statisticsTracker StatsTracker
-	remoteReporter    Reporter
+	signerFactory  identity.SignerFactory
+	statistics     connection.Statistics
+	statisticsMu   sync.RWMutex
+	remoteReporter Reporter
 
 	sendInterval time.Duration
 	done         chan struct{}
@@ -61,16 +63,23 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(statisticsTracker StatsTracker, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector location.OriginResolver, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector location.OriginResolver, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
-		locationDetector:  locationDetector,
-		signerFactory:     signerFactory,
-		statisticsTracker: statisticsTracker,
-		remoteReporter:    remoteReporter,
+		locationDetector: locationDetector,
+		signerFactory:    signerFactory,
+		remoteReporter:   remoteReporter,
 
 		sendInterval: interval,
 		done:         make(chan struct{}),
 	}
+}
+
+// Subscribe subscribes to relevant events of event bus.
+func (sr *SessionStatisticsReporter) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.Subscribe(connection.AppTopicConnectionSession, sr.consumeSessionEvent); err != nil {
+		return err
+	}
+	return bus.Subscribe(connection.AppTopicConnectionStatistics, sr.consumeSessionStatisticsEvent)
 }
 
 // start starts sending of stats
@@ -129,7 +138,10 @@ func (sr *SessionStatisticsReporter) stop() {
 }
 
 func (sr *SessionStatisticsReporter) send(serviceType, providerID, country string, sessionID session.ID, signer identity.Signer) error {
-	dataStats := sr.statisticsTracker.GetDataStats()
+	sr.statisticsMu.RLock()
+	dataStats := sr.statistics
+	sr.statisticsMu.RUnlock()
+
 	return sr.remoteReporter.SendSessionStats(
 		sessionID,
 		mysterium.SessionStats{
@@ -143,12 +155,13 @@ func (sr *SessionStatisticsReporter) send(serviceType, providerID, country strin
 	)
 }
 
-// ConsumeSessionEvent handles the session state changes
-func (sr *SessionStatisticsReporter) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
+// consumeSessionEvent handles the session state changes
+func (sr *SessionStatisticsReporter) consumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
 	switch sessionEvent.Status {
 	case connection.SessionEndedStatus:
 		sr.stop()
 	case connection.SessionCreatedStatus:
+		sr.statistics = connection.Statistics{}
 		sr.start(
 			sessionEvent.SessionInfo.ConsumerID,
 			sessionEvent.SessionInfo.Proposal.ServiceType,
@@ -156,4 +169,10 @@ func (sr *SessionStatisticsReporter) ConsumeSessionEvent(sessionEvent connection
 			sessionEvent.SessionInfo.SessionID,
 		)
 	}
+}
+
+func (sr *SessionStatisticsReporter) consumeSessionStatisticsEvent(e connection.AppEventConnectionStatistics) {
+	sr.statisticsMu.Lock()
+	sr.statistics = e.Stats
+	sr.statisticsMu.Unlock()
 }

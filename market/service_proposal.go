@@ -123,6 +123,14 @@ func (proposal *ServiceProposal) SetAccessPolicies(ap *[]AccessPolicy) {
 	proposal.AccessPolicies = ap
 }
 
+// SetPaymentMethod updates payment method in the proposal.
+func (proposal *ServiceProposal) SetPaymentMethod(pm PaymentMethod) {
+	if pm != nil {
+		proposal.PaymentMethodType = pm.GetType()
+	}
+	proposal.PaymentMethod = pm
+}
+
 // IsSupported returns true if this service proposal can be used for connections by service consumer
 // can be used as a filter to filter out all proposals which are unsupported for any reason
 func (proposal *ServiceProposal) IsSupported() bool {

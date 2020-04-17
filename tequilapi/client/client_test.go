@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,7 +82,7 @@ func TestConnectionErrorIsReturnedByClientInsteadOfDoubleParsing(t *testing.T) {
 		},
 	}
 
-	_, err := client.ConnectionCreate("consumer", "provider", "accountant", "service", ConnectOptions{})
+	_, err := client.ConnectionCreate("consumer", "provider", "accountant", "service", contract.ConnectOptions{})
 	assert.Error(t, err)
 	assert.EqualError(t, err, "server response invalid: Internal server error (http://test-api-whatever/connection). Possible error: me haz faild")
 	//when doing http request, response body should always be closed by client - otherwise persistent connections are leaking

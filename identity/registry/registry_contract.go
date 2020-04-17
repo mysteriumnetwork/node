@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/bindings"
+	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -55,9 +56,9 @@ type contractRegistry struct {
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress, accountantAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
+func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, accountantAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
 	log.Info().Msgf("Using registryAddress %v accountantAddress %v", registryAddress.Hex(), accountantAddress.Hex())
-	contract, err := bindings.NewRegistryCaller(registryAddress, contractBackend)
+	contract, err := bindings.NewRegistryCaller(registryAddress, ethClient.Client())
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,7 @@ func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryA
 		},
 	}
 
-	accountantContract, err := bindings.NewAccountantImplementationCaller(accountantAddress, contractBackend)
+	accountantContract, err := bindings.NewAccountantImplementationCaller(accountantAddress, ethClient.Client())
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryA
 		},
 	}
 
-	filterer, err := bindings.NewRegistryFilterer(registryAddress, contractBackend)
+	filterer, err := bindings.NewRegistryFilterer(registryAddress, ethClient.Client())
 	if err != nil {
 		return nil, err
 	}

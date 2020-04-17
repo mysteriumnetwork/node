@@ -4,12 +4,10 @@ go 1.13
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/DataDog/zstd v1.4.1 // indirect
-	github.com/Sereal/Sereal v0.0.0-20190618215532-0b8ac451a863 // indirect
 	github.com/andybalholm/brotli v1.0.0 // indirect
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
-	github.com/asdine/storm v2.1.2+incompatible
+	github.com/asdine/storm/v3 v3.1.1
 	github.com/awnumar/memguard v0.21.0
 	github.com/aws/aws-sdk-go-v2 v0.15.0
 	github.com/cenkalti/backoff/v4 v4.0.0
@@ -24,36 +22,38 @@ require (
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/protobuf v1.4.0-rc.4
+	github.com/golang/protobuf v1.4.0
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/gateway v1.0.5
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
-	github.com/klauspost/compress v1.10.0 // indirect
+	github.com/klauspost/compress v1.10.4 // indirect
+	github.com/klauspost/pgzip v1.2.3 // indirect
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magefile/mage v1.9.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
-	github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c
+	github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.36
 	github.com/mysteriumnetwork/go-openvpn v0.0.22
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
-	github.com/mysteriumnetwork/metrics v0.0.0-20191002053948-084a00d6c6b2
-	github.com/mysteriumnetwork/payments v0.0.11-0.20200325083835-89ffae399efa
+	github.com/mysteriumnetwork/metrics v0.0.3
+	github.com/mysteriumnetwork/payments v0.0.11
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/nats-server v1.4.1
 	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect
+	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
 	github.com/onsi/ginkgo v1.11.0 // indirect
 	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
-	github.com/pierrec/lz4 v2.4.1+incompatible // indirect
+	github.com/pierrec/lz4 v2.5.1+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/zerolog v1.17.2
@@ -64,16 +64,15 @@ require (
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570 // indirect
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.4.1-0.20200130210847-518a1491c713
+	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/urfave/cli/v2 v2.1.1
-	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/xtaci/kcp-go/v5 v5.5.8
-	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae
-	golang.zx2c4.com/wireguard v0.0.20200121
+	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
+	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4
+	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	google.golang.org/appengine v1.6.5 // indirect
-	google.golang.org/protobuf v1.20.1
+	google.golang.org/protobuf v1.21.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )

@@ -80,9 +80,10 @@ const (
 	headerFieldTopic     = "Topic"
 	headerStatusCode     = "Status-Code"
 
-	statusCodeOK          = 1
-	statusCodePublicErr   = 2
-	statusCodeInternalErr = 3
+	statusCodeOK                 = 1
+	statusCodePublicErr          = 2
+	statusCodeInternalErr        = 3
+	statusCodeHandlerNotFoundErr = 4
 )
 
 // transportMsg is internal structure for sending and receiving messages.
@@ -100,7 +101,7 @@ func (m *transportMsg) readFrom(conn *textproto.Reader) error {
 	// Read header.
 	header, err := conn.ReadMIMEHeader()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read mime header: %w", err)
 	}
 	id, err := strconv.ParseUint(header.Get(headerFieldRequestID), 10, 64)
 	if err != nil {
@@ -117,7 +118,7 @@ func (m *transportMsg) readFrom(conn *textproto.Reader) error {
 	// Read data.
 	data, err := conn.ReadDotBytes()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read dot bytes: %w", err)
 	}
 	if len(data) > 0 {
 		m.data = data[:len(data)-1]

@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -32,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -120,7 +122,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), identity.Identity{}, 10)
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, 10)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -193,7 +195,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), identity.Identity{}, 0)
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, 0)
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -565,8 +567,8 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	ev := <-mp.publicationChan
-	assert.Equal(t, AppTopicInvoicePaid, ev.name)
-	assert.EqualValues(t, AppEventInvoicePaid{
+	assert.Equal(t, event.AppTopicInvoicePaid, ev.name)
+	assert.EqualValues(t, event.AppEventInvoicePaid{
 		ConsumerID: emt.deps.Identity,
 		SessionID:  sessionID,
 		Invoice: crypto.Invoice{
@@ -576,8 +578,8 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	}, ev.value)
 
 	ev = <-mp.publicationChan
-	assert.Equal(t, AppTopicGrandTotalChanged, ev.name)
-	assert.EqualValues(t, AppEventGrandTotalChanged{
+	assert.Equal(t, event.AppTopicGrandTotalChanged, ev.name)
+	assert.EqualValues(t, event.AppEventGrandTotalChanged{
 		ConsumerID: emt.deps.Identity,
 		Current:    5,
 	}, ev.value)
@@ -707,17 +709,17 @@ type mockConsumerTotalsStorage struct {
 	calledWith uint64
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(consumerAddress, accountantAddress identity.Identity, amount uint64) error {
+func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
 	mcts.calledWith = amount
-	go mcts.bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		Current:      amount,
-		AccountantID: accountantAddress,
-		ConsumerID:   consumerAddress,
+		AccountantID: accountantID,
+		ConsumerID:   id,
 	})
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(providerAddress, accountantAddress identity.Identity) (uint64, error) {
+func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, accountantID common.Address) (uint64, error) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err

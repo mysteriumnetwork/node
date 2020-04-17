@@ -20,41 +20,39 @@ package session
 import (
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	node_session "github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	stubRetriever = &StubRetriever{}
-	stubLocation  = &StubServiceDefinition{}
-
-	errMock     = errors.New("error")
-	sessionID   = node_session.ID("sessionID")
-	consumerID  = identity.FromAddress("consumerID")
-	providerID  = identity.FromAddress("providerID")
-	serviceType = "serviceType"
-
-	mockPayload = connection.SessionEvent{
-		Status: connection.SessionCreatedStatus,
-		SessionInfo: connection.SessionInfo{
-			SessionID:  sessionID,
-			ConsumerID: consumerID,
-			Proposal: market.ServiceProposal{
-				ServiceDefinition: stubLocation,
-				ServiceType:       serviceType,
-				ProviderID:        providerID.Address,
-			},
+	errMock       = errors.New("error")
+	mockSessionID = "sessionID"
+	mockSession   = connection.Status{
+		StartedAt:    time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+		SessionID:    node_session.ID(mockSessionID),
+		ConsumerID:   identity.FromAddress("consumerID"),
+		AccountantID: common.HexToAddress("0x00000000000000000000000000000000000000AC"),
+		Proposal: market.ServiceProposal{
+			ServiceDefinition: &StubServiceDefinition{},
+			ServiceType:       "serviceType",
+			ProviderID:        "providerID",
 		},
 	}
+	mockStats   = connection.Statistics{BytesReceived: 100000, BytesSent: 50000}
+	mockInvoice = crypto.Invoice{AgreementID: 10, AgreementTotal: 1000, TransactorFee: 10}
 )
 
 func TestSessionStorageGetAll(t *testing.T) {
 	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer, stubRetriever)
+	storage := NewSessionStorage(storer)
 	sessions, err := storage.GetAll()
 	assert.Nil(t, err)
 	assert.True(t, storer.GetAllCalled)
@@ -65,72 +63,138 @@ func TestSessionStorageGetAllReturnsError(t *testing.T) {
 	storer := &StubSessionStorer{
 		GetAllError: errMock,
 	}
-	storage := NewSessionStorage(storer, stubRetriever)
+	storage := NewSessionStorage(storer)
 	sessions, err := storage.GetAll()
 	assert.NotNil(t, err)
 	assert.True(t, storer.GetAllCalled)
 	assert.Nil(t, sessions)
 }
 
-func TestSessionStorageConsumeEventEndedOK(t *testing.T) {
+func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionEndedStatus,
-	})
-	assert.True(t, storer.UpdateCalled)
-}
-
-func TestSessionStorageConsumeEventEndedErrors(t *testing.T) {
-	storer := &StubSessionStorer{
-		UpdateError: errMock,
+	storage := NewSessionStorage(storer)
+	storage.timeGetter = func() time.Time {
+		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
-
-	storage := NewSessionStorage(storer, stubRetriever)
-	assert.NotPanics(t, func() {
-		storage.ConsumeSessionEvent(connection.SessionEvent{Status: connection.SessionEndedStatus})
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionCreatedStatus,
+		SessionInfo: mockSession,
 	})
-
-	assert.True(t, storer.UpdateCalled)
+	storage.consumeSessionStatisticsEvent(connection.AppEventConnectionStatistics{
+		Stats:       mockStats,
+		SessionInfo: mockSession,
+	})
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionEndedStatus,
+		SessionInfo: mockSession,
+	})
+	assert.Equal(
+		t,
+		&History{
+			SessionID:       node_session.ID("sessionID"),
+			ConsumerID:      identity.FromAddress("consumerID"),
+			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			ProviderID:      identity.FromAddress("providerID"),
+			ServiceType:     "serviceType",
+			ProviderCountry: "MU",
+			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+			Status:          "Completed",
+			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
+			DataStats:       mockStats,
+			Invoice:         crypto.Invoice{},
+		},
+		storer.UpdatedObject,
+	)
 }
 
-func TestSessionStorageConsumeEventConnectedOK(t *testing.T) {
+func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeSessionEvent(mockPayload)
-	assert.True(t, storer.SaveCalled)
+	storage := NewSessionStorage(storer)
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionCreatedStatus,
+		SessionInfo: mockSession,
+	})
+	assert.Equal(
+		t,
+		&History{
+			SessionID:       node_session.ID("sessionID"),
+			ConsumerID:      identity.FromAddress("consumerID"),
+			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			ProviderID:      identity.FromAddress("providerID"),
+			ServiceType:     "serviceType",
+			ProviderCountry: "MU",
+			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+			Status:          "New",
+			Updated:         time.Time{},
+			DataStats:       connection.Statistics{},
+			Invoice:         crypto.Invoice{},
+		},
+		storer.SavedObject,
+	)
 }
 
-func TestSessionStorageConsumeEventConnectedError(t *testing.T) {
-	storer := &StubSessionStorer{
-		SaveError: errMock,
+func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
+	storer := &StubSessionStorer{}
+
+	storage := NewSessionStorage(storer)
+	storage.timeGetter = func() time.Time {
+		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
-	storage := NewSessionStorage(storer, stubRetriever)
-	assert.NotPanics(t, func() {
-		storage.ConsumeSessionEvent(mockPayload)
+	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionCreatedStatus,
+		SessionInfo: mockSession,
 	})
-	assert.True(t, storer.SaveCalled)
+
+	storage.consumeSessionSpendingEvent(event.AppEventInvoicePaid{
+		ConsumerID: identity.FromAddress("me"),
+		SessionID:  "unknown",
+		Invoice:    mockInvoice,
+	})
+	assert.Nil(t, storer.UpdatedObject)
+
+	storage.consumeSessionSpendingEvent(event.AppEventInvoicePaid{
+		ConsumerID: identity.FromAddress("me"),
+		SessionID:  mockSessionID,
+		Invoice:    mockInvoice,
+	})
+	assert.Equal(
+		t,
+		&History{
+			SessionID:       node_session.ID("sessionID"),
+			ConsumerID:      identity.FromAddress("consumerID"),
+			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			ProviderID:      identity.FromAddress("providerID"),
+			ServiceType:     "serviceType",
+			ProviderCountry: "MU",
+			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+			Status:          "New",
+			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
+			DataStats:       connection.Statistics{},
+			Invoice:         mockInvoice,
+		},
+		storer.UpdatedObject,
+	)
 }
 
 // StubSessionStorer allows us to get all sessions, save and update them
 type StubSessionStorer struct {
-	SaveError    error
-	SaveCalled   bool
-	UpdateError  error
-	UpdateCalled bool
-	GetAllCalled bool
-	GetAllError  error
+	SaveError     error
+	SavedObject   interface{}
+	UpdateError   error
+	UpdatedObject interface{}
+	GetAllCalled  bool
+	GetAllError   error
 }
 
 func (sss *StubSessionStorer) Store(from string, object interface{}) error {
-	sss.SaveCalled = true
+	sss.SavedObject = object
 	return sss.SaveError
 }
 
 func (sss *StubSessionStorer) Update(from string, object interface{}) error {
-	sss.UpdateCalled = true
+	sss.UpdatedObject = object
 	return sss.UpdateError
 }
 
@@ -139,14 +203,8 @@ func (sss *StubSessionStorer) GetAllFrom(from string, array interface{}) error {
 	return sss.GetAllError
 }
 
-type StubRetriever struct {
-	Value connection.Statistics
-}
-
-func (sr *StubRetriever) GetDataStats() connection.Statistics {
-	return sr.Value
-}
-
 type StubServiceDefinition struct{}
 
-func (fs *StubServiceDefinition) GetLocation() market.Location { return market.Location{} }
+func (fs *StubServiceDefinition) GetLocation() market.Location {
+	return market.Location{Country: "MU"}
+}

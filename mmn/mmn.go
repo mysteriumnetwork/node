@@ -59,7 +59,7 @@ func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	}
 
 	err = eventBus.SubscribeAsync(
-		connection.AppTopicConsumerSession,
+		connection.AppTopicConnectionSession,
 		m.handleClient,
 	)
 	if err != nil {

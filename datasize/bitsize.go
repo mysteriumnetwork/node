@@ -64,11 +64,11 @@ func (size BitSize) Bytes() uint64 {
 func (size BitSize) String() string {
 	if size < B {
 		// No fraction on bits
-		return fmt.Sprintf("%d %v", uint64(size), "b")
+		return fmt.Sprintf("%d%s", uint64(size), "b")
 	}
 	if size < KiB {
 		// No fraction on bytes
-		return fmt.Sprintf("%d %v", size.Bytes(), "B")
+		return fmt.Sprintf("%d%s", size.Bytes(), "B")
 	}
 	val := float64(size.Bytes())
 	i := 0
@@ -77,5 +77,5 @@ func (size BitSize) String() string {
 		val = val / 1024
 		i++
 	}
-	return fmt.Sprintf("%.1f %s", val, units[i])
+	return fmt.Sprintf("%.1f%s", val, units[i])
 }

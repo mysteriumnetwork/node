@@ -27,6 +27,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -71,6 +74,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 					forThisService := providerEarnings - providerEarnedForService
 					providerEarnedForService += forThisService
 					validateProviderEarnings(t, proposal, forThisService, tequilapiConsumer)
+					recheckBalancesWithAccountant(t, consumerID, balanceSpent, providerEarnings)
 				})
 			}
 		}
@@ -99,7 +103,16 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 }
 
-func validateProviderEarnings(t *testing.T, proposal client.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
+func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending, providerEarnings uint64) {
+	accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
+	accountantData, err := accountantCaller.GetConsumerData(consumerID)
+	assert.NoError(t, err)
+	promised := accountantData.LatestPromise.Amount
+	assert.Equal(t, promised, consumerSpending, fmt.Sprintf("Consumer reported spending %v  accountant says %v", consumerSpending, promised))
+	assert.Equal(t, promised, providerEarnings, fmt.Sprintf("Provider reported earning %v  accountant says %v", providerEarnings, promised))
+}
+
+func validateProviderEarnings(t *testing.T, proposal contract.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
 	sessions, err := consumerTequila.ConnectionSessions()
 	assert.NoError(t, err)
 
@@ -119,7 +132,7 @@ func validateProviderEarnings(t *testing.T, proposal client.ProposalDTO, provide
 		Duration: time.Duration(proposal.PaymentMethod.Rate.PerSeconds) * time.Second,
 		Price:    money.NewMoney(proposal.PaymentMethod.Price.Amount, money.CurrencyMyst),
 		Bytes:    proposal.PaymentMethod.Rate.PerBytes,
-		Type:     proposal.PaymentMethodType,
+		Type:     proposal.PaymentMethod.Type,
 	}
 
 	// we're running the tests for 30 secs, but due to the initial handshakes this could take longer.
@@ -177,8 +190,8 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 }
 
 // expect exactly one proposal
-func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) tequilapi_client.ProposalDTO {
-	var proposals []tequilapi_client.ProposalDTO
+func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) contract.ProposalDTO {
+	var proposals []contract.ProposalDTO
 	err := waitForConditionFor(
 		30*time.Second,
 		func() (state bool, stateErr error) {
@@ -194,7 +207,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal tequilapi_client.ProposalDTO) uint64 {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) uint64 {
 	connectionStatus, err := tequilapi.ConnectionStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
@@ -209,7 +222,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, tequilapi_client.ConnectOptions{
+	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, contract.ConnectOptions{
 		DisableKillSwitch: false,
 	})
 
@@ -231,9 +244,6 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se := sessionsDTO.Sessions[0]
-	assert.Zero(t, se.Duration)
-	assert.Zero(t, se.BytesSent)
-	assert.Zero(t, se.BytesReceived)
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
@@ -265,6 +275,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	consumerStatus, err := tequilapi.Identity(consumerID)
 	assert.NoError(t, err)
+	assert.True(t, consumerStatus.Balance > uint64(0), "consumer balance should not be empty")
 	assert.True(t, consumerStatus.Balance < uint64(690000000), "balance should decrease but is %sd", consumerStatus.Balance)
 	assert.Zero(t, consumerStatus.Earnings)
 	assert.Zero(t, consumerStatus.EarningsTotal)
@@ -277,20 +288,20 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(690000000), providerStatus.Balance)
-	assert.Equal(t, earningsExpected, providerStatus.Earnings)
-	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal)
+	assert.Equal(t, earningsExpected, providerStatus.Earnings, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
+	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
 	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
 	return providerStatus.Earnings
 }
 
 func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string) func() bool {
-	var delegate func(stats client.StatisticsDTO) bool
+	var delegate func(stats contract.ConnectionStatisticsDTO) bool
 	if serviceType != "noop" {
-		delegate = func(stats client.StatisticsDTO) bool {
+		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
 			return stats.BytesReceived > 0 && stats.BytesSent > 0 && stats.Duration > 30
 		}
 	} else {
-		delegate = func(stats client.StatisticsDTO) bool {
+		delegate = func(stats contract.ConnectionStatisticsDTO) bool {
 			return stats.Duration > 30
 		}
 	}

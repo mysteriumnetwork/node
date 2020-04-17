@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -135,18 +136,18 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
 	for _, serviceType := range serviceTypes {
-		options, err := parseFlagsByServiceType(ctx, serviceType)
+		options, pm, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go sc.runService(providerID, serviceType, options)
+		go sc.runService(providerID, serviceType, options, pm)
 	}
 
 	return nil
 }
 
-func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap)
+func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO) {
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap, pm)
 	if err != nil {
 		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
 	}
@@ -167,11 +168,12 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	}
 }
 
-func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, error) {
+func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, contract.PaymentMethodDTO, error) {
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
-		return f(ctx), nil
+		opt, pm := f(ctx)
+		return opt, pm, nil
 	}
-	return service.OptionsIdentity{}, errors.Errorf("unknown service type: %q", serviceType)
+	return service.OptionsIdentity{}, contract.PaymentMethodDTO{}, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

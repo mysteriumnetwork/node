@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -57,7 +58,7 @@ func (m mockBalanceTracker) Stop() {
 
 }
 
-func mockPaymentEngineFactory(providerID, consumerID, accountant identity.Identity, sessionID string) (PaymentEngine, error) {
+func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accountant common.Address, sessionID string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
 

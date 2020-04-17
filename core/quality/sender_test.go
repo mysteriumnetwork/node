@@ -44,7 +44,7 @@ func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	sender.SendStartupEvent(event.Payload{Status: event.StatusStarted})
+	sender.sendStartupEvent(event.Payload{Status: event.StatusStarted})
 
 	sentEvent := mockTransport.sentEvent
 	assert.Equal(t, "startup", sentEvent.EventName)

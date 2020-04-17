@@ -20,6 +20,7 @@ package connection
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -57,7 +58,7 @@ type PromiseIssuerCreator func(issuerID identity.Identity, dialog communication.
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, params ConnectParams) error
+	Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) error
 	// Status queries current status of connection
 	Status() Status
 	// Disconnect closes established connection, reports error if no connection

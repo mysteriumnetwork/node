@@ -24,6 +24,7 @@ import (
 	stdlog "log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
@@ -32,14 +33,18 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -90,7 +95,7 @@ func describeQuit(err error) error {
 type cliApp struct {
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
-	fetchedProposals []tequilapi_client.ProposalDTO
+	fetchedProposals []contract.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
 
@@ -239,7 +244,7 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, sharedOpts, err := parseStartFlags(serviceType, args...)
+	opts, sharedOpts, pm, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
@@ -249,7 +254,7 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		IDs: sharedOpts.AccessPolicyList,
 	}
 
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap)
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap, pm)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -346,7 +351,7 @@ func (c *cliApp) connect(argsString string) {
 		}
 	}
 
-	connectOptions := tequilapi_client.ConnectOptions{
+	connectOptions := contract.ConnectOptions{
 		DNS:               dns,
 		DisableKillSwitch: disableKillSwitch,
 	}
@@ -455,10 +460,10 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
-			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
-			info("Bytes sent:", statistics.BytesSent)
-			info("Bytes received:", statistics.BytesReceived)
-			info("Spent:", statistics.TokensSpent)
+			info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)*time.Second))
+			info(fmt.Sprintf("Data: %s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
+			info(fmt.Sprintf("Throughput: %s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
+			info(fmt.Sprintf("Spent: %s", money.NewMoney(statistics.TokensSpent, money.CurrencyMyst)))
 		}
 	}
 }
@@ -508,8 +513,10 @@ func (c *cliApp) proposals(filter string) {
 		}
 
 		var policies []string
-		for _, policy := range proposal.AccessPolicies {
-			policies = append(policies, policy.ID)
+		if proposal.AccessPolicies != nil {
+			for _, policy := range *proposal.AccessPolicies {
+				policies = append(policies, policy.ID)
+			}
 		}
 
 		msg := fmt.Sprintf("- provider id: %v\ttype: %v\tcountry: %v\taccess policies: %v", proposal.ProviderID, proposal.ServiceType, country, strings.Join(policies, ","))
@@ -523,7 +530,7 @@ func (c *cliApp) proposals(filter string) {
 	}
 }
 
-func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
+func (c *cliApp) fetchProposals() []contract.ProposalDTO {
 	upperTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
 	lowerTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
 	upperGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound)
@@ -531,7 +538,7 @@ func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		warn(err)
-		return []tequilapi_client.ProposalDTO{}
+		return []contract.ProposalDTO{}
 	}
 	return proposals
 }
@@ -595,7 +602,7 @@ func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []st
 	}
 }
 
-func getProposalOptionList(proposals []tequilapi_client.ProposalDTO) func(string) []string {
+func getProposalOptionList(proposals []contract.ProposalDTO) func(string) []string {
 	return func(line string) []string {
 		var providerIDS []string
 		for _, proposal := range proposals {
@@ -605,7 +612,7 @@ func getProposalOptionList(proposals []tequilapi_client.ProposalDTO) func(string
 	}
 }
 
-func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_client.ProposalDTO) *readline.PrefixCompleter {
+func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.ProposalDTO) *readline.PrefixCompleter {
 	connectOpts := []readline.PrefixCompleterInterface{
 		readline.PcItem("dns=auto"),
 		readline.PcItem("dns=provider"),
@@ -668,7 +675,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, contract.PaymentMethodDTO, error) {
 	var flags []cli.Flag
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
@@ -680,7 +687,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, config.ServicesOptions{}, err
+		return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
@@ -688,14 +695,26 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	config.ParseFlagsServiceShared(ctx)
 	switch serviceType {
 	case noop.ServiceType:
-		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), nil
+		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+			0,
+			config.GetFloat64(config.FlagNoopPriceMinute),
+		))
+		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), payment, nil
 	case wireguard.ServiceType:
 		config.ParseFlagsServiceWireguard(ctx)
-		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), nil
+		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+			config.GetFloat64(config.FlagWireguardPriceGB),
+			config.GetFloat64(config.FlagWireguardPriceMinute),
+		))
+		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
 	case openvpn.ServiceType:
 		config.ParseFlagsServiceOpenvpn(ctx)
-		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
+		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
+			config.GetFloat64(config.FlagOpenVPNPriceGB),
+			config.GetFloat64(config.FlagOpenVPNPriceMinute),
+		))
+		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
 	}
 
-	return nil, config.ServicesOptions{}, errors.New("service type not found")
+	return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, errors.New("service type not found")
 }

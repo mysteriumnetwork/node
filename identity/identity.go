@@ -25,6 +25,7 @@ import (
 
 // Identity represents unique user network identity
 type Identity struct {
+	// TODO Encoding should be in transport layer
 	Address string `json:"address"`
 }
 

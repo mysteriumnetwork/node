@@ -35,10 +35,10 @@ func NewMoney(amount uint64, currency Currency) Money {
 }
 
 // String converts struct to string
-func (value *Money) String() string {
+func (value Money) String() string {
 	return fmt.Sprintf(
-		"%d%s",
-		value.Amount,
+		"%.6f%s",
+		float64(value.Amount)/MystSize,
 		value.Currency,
 	)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,7 @@ var defaultWaitInterval = time.Millisecond
 func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	id2 := identity.FromAddress("0x000000002")
-	accountantID := identity.FromAddress("0x000000acc")
+	accountantID := common.HexToAddress("0x000000acc")
 	assert.NotEqual(t, id1.Address, id2.Address)
 
 	bus := eventbus.New()
@@ -85,7 +86,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var promised uint64 = 100
-	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		ConsumerID: id1,
 		Current:    promised,
 	})
@@ -97,7 +98,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 
 func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
-	accountantID := identity.FromAddress("0x000000acc")
+	accountantID := common.HexToAddress("0x000000acc")
 	var grandTotalPromised uint64 = 100
 	bus := eventbus.New()
 
@@ -122,7 +123,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var diff uint64 = 10
-	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		ConsumerID: id1,
 		Current:    grandTotalPromised + diff,
 	})
@@ -132,7 +133,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 
 	var diff2 uint64 = 20
-	bus.Publish(AppTopicGrandTotalChanged, AppEventGrandTotalChanged{
+	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
 		ConsumerID: id1,
 		Current:    grandTotalPromised + diff2,
 	})
@@ -144,7 +145,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
-	accountantID := identity.FromAddress("0x000000acc")
+	accountantID := common.HexToAddress("0x000000acc")
 	var grandTotalPromised uint64 = 100
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{

@@ -45,21 +45,21 @@ func newStatsPublisher(bus eventbus.Publisher, interval time.Duration) statsPubl
 	}
 }
 
-func (s statsPublisher) start(sessionInfo SessionInfo, supplier statsSupplier) {
+func (s statsPublisher) start(sessionSupplier *connectionManager, statsSupplier statsSupplier) {
 	for {
 		select {
 		case <-time.After(s.interval):
-			stats, err := supplier.Statistics()
+			stats, err := statsSupplier.Statistics()
 			if err != nil {
-				log.Warn().Err(err).Msg("Could not get peer statistics")
+				log.Warn().Err(err).Msg("Could not get connection statistics")
 				continue
 			}
-			s.bus.Publish(AppTopicConsumerStatistics, SessionStatsEvent{
+			s.bus.Publish(AppTopicConnectionStatistics, AppEventConnectionStatistics{
 				Stats:       stats,
-				SessionInfo: sessionInfo,
+				SessionInfo: sessionSupplier.Status(),
 			})
 		case <-s.done:
-			log.Info().Msgf("Stopped publishing statistics for session %s", sessionInfo.SessionID)
+			log.Info().Msg("Stopped publishing connection statistics")
 			return
 		}
 	}

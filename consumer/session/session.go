@@ -22,8 +22,8 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	node_session "github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 const (
@@ -33,21 +33,11 @@ const (
 	SessionStatusCompleted = "Completed"
 )
 
-// NewHistory creates a new session history datapoint
-func NewHistory(sessionID node_session.ID, proposal market.ServiceProposal) *History {
-	return &History{
-		SessionID:       sessionID,
-		ProviderID:      identity.FromAddress(proposal.ProviderID),
-		ServiceType:     proposal.ServiceType,
-		ProviderCountry: proposal.ServiceDefinition.GetLocation().Country,
-		Started:         time.Now().UTC(),
-		Status:          SessionStatusNew,
-	}
-}
-
 // History holds structure for saving session history
 type History struct {
 	SessionID       node_session.ID `storm:"id"`
+	ConsumerID      identity.Identity
+	AccountantID    string
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string
@@ -55,12 +45,14 @@ type History struct {
 	Status          string
 	Updated         time.Time
 	DataStats       connection.Statistics // is updated on disconnect event
+	Invoice         crypto.Invoice        // is updated on disconnect event
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
-func (se *History) GetDuration() uint64 {
-	if se.Status == SessionStatusCompleted {
-		return uint64(se.Updated.Sub(se.Started).Seconds())
+func (se *History) GetDuration() time.Duration {
+	ended := se.Updated
+	if ended.IsZero() {
+		ended = time.Now()
 	}
-	return 0
+	return ended.Sub(se.Started)
 }

@@ -39,6 +39,14 @@ type CreateRequest struct {
 	ConsumerInfo *ConsumerInfo   `json:"consumer_info,omitempty"`
 }
 
+// ConsumerInfo represents the consumer related information
+type ConsumerInfo struct {
+	// TODO Should not use internal structures for transport
+	IssuerID       identity.Identity `json:"issuerID"`
+	AccountantID   identity.Identity `json:"accountantID"`
+	PaymentVersion PaymentVersion    `json:"paymentVersion"`
+}
+
 // CreateResponse structure represents service provider response to given session request from consumer
 type CreateResponse struct {
 	Success     bool        `json:"success"`
@@ -53,15 +61,13 @@ type SessionDto struct {
 	Config json.RawMessage `json:"config"`
 }
 
+// PaymentInfo represents the payment version information
+type PaymentInfo struct {
+	Supports string `json:"supported"`
+}
+
 // PaymentVersion represents the different payment versions we have
 type PaymentVersion string
 
 // PaymentVersionV3 represents the new pingpong version
 const PaymentVersionV3 PaymentVersion = "v3"
-
-// ConsumerInfo represents the consumer related information
-type ConsumerInfo struct {
-	IssuerID       identity.Identity `json:"issuerID"`
-	AccountantID   identity.Identity `json:"accountantID"`
-	PaymentVersion PaymentVersion    `json:"paymentVersion"`
-}

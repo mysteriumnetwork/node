@@ -23,50 +23,67 @@ import (
 
 // NewResolverMock returns mockResolver which resolves statically entered IP.
 // If multiple addresses are provided then return will depend on call order.
-func NewResolverMock(ipAddresses ...string) Resolver {
+func NewResolverMock(ip string) Resolver {
 	return &mockResolver{
-		ipAddresses: ipAddresses,
-		error:       nil,
+		publicIP:   ip,
+		outboundIP: net.ParseIP(ip),
+		error:      nil,
+	}
+}
+
+// NewResolverMockMultiple returns mockResolver which resolves statically entered IP.
+// If multiple addresses are provided then return will depend on call order.
+func NewResolverMockMultiple(outboundIP string, publicIPs ...string) Resolver {
+	return &mockResolver{
+		publicIPs:  publicIPs,
+		outboundIP: net.ParseIP(outboundIP),
+		error:      nil,
 	}
 }
 
 // NewResolverMockFailing returns mockResolver with entered error
 func NewResolverMockFailing(err error) Resolver {
 	return &mockResolver{
-		ipAddresses: []string{""},
-		error:       err,
+		error: err,
 	}
 }
 
 type mockResolver struct {
-	ipAddresses []string
-	error       error
+	publicIP   string
+	publicIPs  []string
+	outboundIP net.IP
+	error      error
+}
+
+func (client *mockResolver) MockPublicIPs(ips ...string) {
+	client.publicIPs = ips
 }
 
 func (client *mockResolver) GetPublicIP() (string, error) {
-	return client.getNextIP(), client.error
+	if client.publicIPs != nil {
+		return client.getNextIP(), client.error
+	}
+	return client.publicIP, client.error
 }
 
 func (client *mockResolver) GetOutboundIP() (net.IP, error) {
-	ipAddress := net.ParseIP(client.getNextIP())
-	localIPAddress := net.UDPAddr{IP: ipAddress}
-	return localIPAddress.IP, client.error
+	return client.outboundIP, client.error
 }
 
 func (client *mockResolver) GetOutboundIPAsString() (string, error) {
-	return client.getNextIP(), client.error
+	return client.outboundIP.String(), client.error
 }
 
 func (client *mockResolver) getNextIP() string {
 	// Return first address if only one provided.
-	if len(client.ipAddresses) == 1 {
-		return client.ipAddresses[0]
+	if len(client.publicIPs) == 1 {
+		return client.publicIPs[0]
 	}
 	// Return first address and dequeue from address list. This allows to
 	// mock to return different value for each call.
-	if len(client.ipAddresses) > 0 {
-		ip := client.ipAddresses[0]
-		client.ipAddresses = client.ipAddresses[1:]
+	if len(client.publicIPs) > 0 {
+		ip := client.publicIPs[0]
+		client.publicIPs = client.publicIPs[1:]
 		return ip
 	}
 	return ""

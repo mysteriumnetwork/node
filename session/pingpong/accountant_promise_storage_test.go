@@ -47,7 +47,7 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	accountantStorage := NewAccountantPromiseStorage(bolt)
 
 	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
-	firstAccountant := identity.FromAddress(acc.Address.Hex())
+	firstAccountant := acc.Address
 	fp, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
 	assert.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	err = ks.Unlock(account2, "")
 	assert.Nil(t, err)
 
-	secondAccountant := identity.FromAddress(account2.Address.Hex())
+	secondAccountant := account2.Address
 
 	err = accountantStorage.Store(id, secondAccountant, firstPromise)
 	assert.NoError(t, err)

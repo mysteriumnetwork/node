@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -32,8 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const natPunchingMaxTTL = 10
@@ -295,7 +296,7 @@ func (st *sessionTracker) Reconnect(afterSeconds int) error {
 	return st.session.Reconnect(afterSeconds)
 }
 
-func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
+func (st *sessionTracker) handleState(stateEvent connection.AppEventConnectionState) {
 	// On disconnected - remove session
 	if stateEvent.State == connection.Disconnecting {
 		st.mux.Lock()

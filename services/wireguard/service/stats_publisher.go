@@ -66,5 +66,5 @@ func (s statsPublisher) start(sessionID string, supplier statsSupplier) {
 }
 
 func (s statsPublisher) stop() {
-	s.done <- struct{}{}
+	close(s.done)
 }

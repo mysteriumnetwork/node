@@ -56,7 +56,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		mockPolicyOracle,
 		&mockP2PListener{}, nil, nil,
 	)
-	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
+	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, nil)
 	assert.Nil(t, err)
 
 	discovery.Wait()
@@ -82,7 +82,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		mockPolicyOracle,
 		&mockP2PListener{}, nil, nil,
 	)
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, nil)
 	assert.Nil(t, err)
 	err = manager.Stop(id)
 	assert.Nil(t, err)
@@ -111,7 +111,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		&mockP2PListener{}, nil, nil,
 	)
 
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{}, nil)
 	assert.NoError(t, err)
 
 	services := manager.servicePool.List()

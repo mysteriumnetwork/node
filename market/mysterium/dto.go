@@ -75,6 +75,7 @@ type ProposalsQuery struct {
 	AccessPolicyID     string
 	AccessPolicySource string
 	NodeType           string
+	IncludeFailed      bool
 }
 
 // ProposalsResponse represents JSON response for the list of proposals

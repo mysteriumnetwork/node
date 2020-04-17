@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -214,13 +213,7 @@ type stateRes struct {
 }
 
 type consumerStateRes struct {
-	Connection consumerConnectionRes `json:"connection"`
-}
-
-type consumerConnectionRes struct {
-	State      connection.State                         `json:"state"`
-	Statistics *stateEvent.ConsumerConnectionStatistics `json:"statistics,omitempty"`
-	Proposal   *proposalDTO                             `json:"proposal,omitempty"`
+	Connection contract.ConnectionDTO `json:"connection"`
 }
 
 func mapState(event stateEvent.State) stateRes {
@@ -235,20 +228,15 @@ func mapState(event stateEvent.State) stateRes {
 			EarningsTotal:      identity.EarningsTotal,
 		}
 	}
+
 	res := stateRes{
 		NATStatus: event.NATStatus,
 		Services:  event.Services,
 		Sessions:  event.Sessions,
 		Consumer: consumerStateRes{
-			Connection: consumerConnectionRes{
-				State:      event.Consumer.Connection.State,
-				Statistics: event.Consumer.Connection.Statistics,
-			},
+			Connection: contract.NewConnectionDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice),
 		},
 		Identities: identitiesRes,
-	}
-	if event.Consumer.Connection.Proposal != nil && event.Consumer.Connection.Proposal.IsSupported() { // If none exists, conn manager still has empty proposal
-		res.Consumer.Connection.Proposal = proposalToRes(*event.Consumer.Connection.Proposal)
 	}
 	return res
 }

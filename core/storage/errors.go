@@ -17,7 +17,7 @@
 
 package storage
 
-import "github.com/asdine/storm"
+import "github.com/asdine/storm/v3"
 
 var (
 	// ErrNotFound not found

@@ -31,12 +31,8 @@ var (
 )
 
 func TestProducer_RequestSessionDestroy(t *testing.T) {
-	sender := &fakeSender{}
-	sessionData, _, err := RequestSessionCreate(sender, 123, []byte{}, ConsumerInfo{})
-	assert.NoError(t, err)
-
 	destroySender := &fakeDestroySender{}
-	err = RequestSessionDestroy(destroySender, sessionData.ID)
+	err := RequestSessionDestroy(destroySender, "1")
 	assert.NoError(t, err)
 }
 

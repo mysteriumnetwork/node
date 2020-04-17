@@ -105,9 +105,11 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		AccountantCaller:           &mockAccountantCaller{},
 		FeeProvider:                &mockTransactor{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
@@ -163,7 +165,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		EventBus:                   mocks.NewEventBus(),
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: false},
@@ -220,7 +222,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		AccountantCaller:           &mockAccountantCaller{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		AccountantPromiseStorage:   accountantPromiseStorage,
@@ -274,7 +276,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		AccountantCaller:           &mockAccountantCaller{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
@@ -332,7 +334,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		FeeProvider:                &mockTransactor{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
@@ -385,10 +387,12 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Millisecond,
 		ChargePeriodLeeway:         15 * time.Minute,
+		FirstInvoiceSendDuration:   time.Millisecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		AccountantCaller:           &mockAccountantCaller{},
 		AccountantPromiseStorage:   accountantPromiseStorage,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
@@ -448,10 +452,12 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		FeeProvider:                &mockTransactor{},
@@ -474,7 +480,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.NoError(t, <-errChan)
 }
 
-func Test_InvoiceTracker_SendsInvoice_Return_Max_Send_Error(t *testing.T) {
+func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -507,10 +513,12 @@ func Test_InvoiceTracker_SendsInvoice_Return_Max_Send_Error(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         5 * time.Nanosecond,
+		FirstInvoiceSendDuration:   time.Millisecond,
+		FirstInvoiceSendTimeout:    time.Nanosecond,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		FeeProvider:                &mockTransactor{},
@@ -526,8 +534,8 @@ func Test_InvoiceTracker_SendsInvoice_Return_Max_Send_Error(t *testing.T) {
 
 	err = <-errChan
 
-	if !stdErrors.Is(err, ErrInvoiceSendMaxFailCountReached) {
-		t.Fatalf("expected err %v, got: %v", ErrInvoiceSendMaxFailCountReached, err)
+	if !stdErrors.Is(err, ErrFirstInvoiceSendTimeout) {
+		t.Fatalf("expected err %v, got: %v", ErrFirstInvoiceSendTimeout, err)
 	}
 }
 
@@ -558,10 +566,12 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Second,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		AccountantCaller:           &mockAccountantCaller{},
 		FeeProvider:                &mockTransactor{},
@@ -637,7 +647,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		exchangeMessageWaitTimeout time.Duration
 		accountantFailureCount     uint64
 		accountantPromiseStorage   accountantPromiseStorage
-		accountantID               identity.Identity
+		accountantID               common.Address
 		AgreementID                uint64
 		lastExchangeMessage        crypto.ExchangeMessage
 		accountantCaller           accountantCaller
@@ -692,7 +702,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				peer:                       identity.FromAddress(addr3),
 				registryAddress:            mockRegistryAddress,
 				channelImplementation:      mockChannelImplementation,
-				accountantID:               identity.FromAddress(mockAccountantAddress),
+				accountantID:               common.HexToAddress(mockAccountantAddress),
 				invoicesSent: map[string]sentInvoice{
 					hex.EncodeToString(msg3.Promise.Hashlock): sentInvoice{
 						invoice: crypto.Invoice{
@@ -716,7 +726,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				Registry:                   tt.fields.registryAddress,
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
-				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Address, tt.fields.channelImplementation, tt.fields.registryAddress),
+				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Hex(), tt.fields.channelImplementation, tt.fields.registryAddress),
 			}
 			it := &InvoiceTracker{
 				accountantFailureCount: tt.fields.accountantFailureCount,
@@ -735,11 +745,11 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 type mockAccountantPromiseStorage struct {
 }
 
-func (maps *mockAccountantPromiseStorage) Store(providerID, accountantID identity.Identity, promise AccountantPromise) error {
+func (maps *mockAccountantPromiseStorage) Store(_ identity.Identity, _ common.Address, _ AccountantPromise) error {
 	return nil
 }
 
-func (maps *mockAccountantPromiseStorage) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
+func (maps *mockAccountantPromiseStorage) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
 	return AccountantPromise{}, nil
 }
 
@@ -790,7 +800,7 @@ func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
 
 func TestInvoiceTracker_TestInvoiceTracker_handleAccountantError_settles(t *testing.T) {
 	ms := &mockSettler{}
-	accountant := identity.FromAddress("0x1")
+	accountant := common.HexToAddress("0x1")
 	provider := identity.FromAddress("0x2")
 	it := &InvoiceTracker{
 		deps: InvoiceTrackerDeps{
@@ -804,7 +814,7 @@ func TestInvoiceTracker_TestInvoiceTracker_handleAccountantError_settles(t *test
 
 	assert.Eventually(t, func() bool {
 		p, a := ms.getCalledWith()
-		return provider.Address == p.Address && accountant.Address == a.Address
+		return provider == p && accountant == a
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -878,17 +888,18 @@ func TestInvoiceTracker_handleAccountantError(t *testing.T) {
 }
 
 type mockSettler struct {
-	lock                                     sync.Mutex
-	calledWithAccountant, calledWithProvider identity.Identity
+	lock                 sync.Mutex
+	calledWithProvider   identity.Identity
+	calledWithAccountant common.Address
 }
 
-func (ms *mockSettler) getCalledWith() (identity.Identity, identity.Identity) {
+func (ms *mockSettler) getCalledWith() (identity.Identity, common.Address) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 	return ms.calledWithProvider, ms.calledWithAccountant
 }
 
-func (ms *mockSettler) settle(providerID, accountantID identity.Identity) error {
+func (ms *mockSettler) settle(providerID identity.Identity, accountantID common.Address) error {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 	ms.calledWithAccountant = accountantID

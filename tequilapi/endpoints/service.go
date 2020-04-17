@@ -20,12 +20,15 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/rs/zerolog/log"
@@ -51,6 +54,9 @@ type serviceRequest struct {
 	// access list which determines which identities will be able to receive the service
 	// required: false
 	AccessPolicies accessPoliciesRequest `json:"access_policies"`
+
+	// PaymentMethod describes payment options that should be used for service creation.
+	PaymentMethod contract.PaymentMethodDTO `json:"payment_method"`
 }
 
 // accessPolicy represents the access controls
@@ -82,7 +88,7 @@ type serviceInfo struct {
 	// example: Running
 	Status string `json:"status"`
 
-	Proposal proposalDTO `json:"proposal"`
+	Proposal contract.ProposalDTO `json:"proposal"`
 
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
 }
@@ -205,8 +211,15 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
+	pm := pingpong.PaymentMethod{
+		Type:     sr.PaymentMethod.Type,
+		Price:    sr.PaymentMethod.Price,
+		Duration: time.Duration(sr.PaymentMethod.Rate.PerSeconds) * time.Second,
+		Bytes:    sr.PaymentMethod.Rate.PerBytes,
+	}
+
 	log.Info().Msgf("Service start options: %+v", sr)
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.AccessPolicies.Ids, sr.Options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.AccessPolicies.Ids, sr.Options, pm)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -277,10 +290,11 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	jsonData := struct {
-		ProviderID     string                `json:"provider_id"`
-		Type           string                `json:"type"`
-		Options        *json.RawMessage      `json:"options"`
-		AccessPolicies accessPoliciesRequest `json:"access_policies"`
+		ProviderID     string                    `json:"provider_id"`
+		Type           string                    `json:"type"`
+		Options        *json.RawMessage          `json:"options"`
+		AccessPolicies accessPoliciesRequest     `json:"access_policies"`
+		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
 			Ids: services.SharedConfiguredOptions().AccessPolicyList,
@@ -297,6 +311,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		Type:           se.toServiceType(jsonData.Type),
 		Options:        se.toServiceOptions(jsonData.Type, jsonData.Options),
 		AccessPolicies: jsonData.AccessPolicies,
+		PaymentMethod:  jsonData.PaymentMethod,
 	}
 	return sr, nil
 }
@@ -336,7 +351,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 		Type:       proposal.ServiceType,
 		Options:    instance.Options(),
 		Status:     string(instance.State()),
-		Proposal:   *proposalToRes(instance.Proposal()),
+		Proposal:   contract.NewProposalDTO(instance.Proposal()),
 	}
 }
 
@@ -367,7 +382,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that is used for services management.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, policies []string, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, policies []string, options service.Options, pm market.PaymentMethod) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

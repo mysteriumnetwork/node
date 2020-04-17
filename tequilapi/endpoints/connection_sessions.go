@@ -39,6 +39,12 @@ type connectionSession struct {
 	SessionID string `json:"session_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
+	ConsumerID string `json:"consumer_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
+	AccountantID string `json:"accountant_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"provider_id"`
 
 	// example: openvpn
@@ -59,6 +65,9 @@ type connectionSession struct {
 	// duration in seconds
 	// example: 120
 	Duration uint64 `json:"duration"`
+
+	// example: 500000
+	TokensSpent uint64 `json:"tokens_spent"`
 
 	// example: Completed
 	Status string `json:"status"`
@@ -112,13 +121,16 @@ func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage co
 func connectionSessionToDto(se session.History) connectionSession {
 	return connectionSession{
 		SessionID:       string(se.SessionID),
+		ConsumerID:      se.ConsumerID.Address,
+		AccountantID:    se.AccountantID,
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
 		DateStarted:     se.Started.Format(time.RFC3339),
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
-		Duration:        se.GetDuration(),
+		Duration:        uint64(se.GetDuration().Seconds()),
+		TokensSpent:     se.Invoice.AgreementTotal,
 		Status:          se.Status,
 	}
 }

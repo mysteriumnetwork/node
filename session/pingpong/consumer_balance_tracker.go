@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/rs/zerolog/log"
@@ -39,7 +40,7 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[identity.Identity]ConsumerBalance
 
-	accountantAddress          identity.Identity
+	accountantAddress          common.Address
 	mystSCAddress              common.Address
 	consumerBalanceChecker     consumerBalanceChecker
 	channelAddressCalculator   channelAddressCalculator
@@ -55,7 +56,7 @@ type ConsumerBalanceTracker struct {
 func NewConsumerBalanceTracker(
 	publisher eventbus.Publisher,
 	mystSCAddress common.Address,
-	accountantAddress identity.Identity,
+	accountantAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
 	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,
@@ -98,7 +99,7 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(AppTopicGrandTotalChanged, cbt.handleGrandTotalChanged)
+	err = bus.SubscribeAsync(event.AppTopicGrandTotalChanged, cbt.handleGrandTotalChanged)
 	if err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 		return
 	}
 
-	cbt.publisher.Publish(AppTopicBalanceChanged, AppEventBalanceChanged{
+	cbt.publisher.Publish(event.AppTopicBalanceChanged, event.AppEventBalanceChanged{
 		Identity: id,
 		Previous: before,
 		Current:  after,
@@ -136,7 +137,7 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 	cbt.ForceBalanceUpdate(identity)
 }
 
-func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev AppEventGrandTotalChanged) {
+func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
 	cbt.balancesLock.Lock()
 	_, ok := cbt.balances[ev.ConsumerID]
 	cbt.balancesLock.Unlock()
@@ -181,22 +182,24 @@ func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance
 func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint64 {
+	fallback := cbt.GetBalance(id)
+
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not calculate channel address")
-		return 0
+		return fallback
 	}
 
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(addr, cbt.mystSCAddress)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get consumer channel")
-		return 0
+		return fallback
 	}
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
-		return 0
+		return fallback
 	}
 
 	cbt.balancesLock.Lock()

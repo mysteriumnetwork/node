@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/asdine/storm"
+	"github.com/asdine/storm/v3"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/boltdbtest"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
 	"github.com/stretchr/testify/assert"

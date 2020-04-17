@@ -17,8 +17,8 @@ services:
     volumes:
       - ./e2e/prometheus:/prometheus
     command:
-      - '--config.file=/prometheus/prometheus-local.yml'
-      - '--storage.tsdb.path=/data'
+      - '--config.file=/prometheus/config.yml'
+      - '--storage.tsdb.path=data/'
     expose:
       - 9090
 

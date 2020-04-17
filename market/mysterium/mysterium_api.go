@@ -234,6 +234,9 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	if query.NodeType != "" {
 		values.Set("node_type", query.NodeType)
 	}
+	if query.IncludeFailed {
+		values.Set("include_failed", "true")
+	}
 
 	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {

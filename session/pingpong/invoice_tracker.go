@@ -36,7 +36,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
-	"github.com/mysteriumnetwork/node/session/event"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -56,6 +57,9 @@ var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 
 // ErrInvoiceSendMaxFailCountReached indicates that we did not sent an exchange message in time.
 var ErrInvoiceSendMaxFailCountReached = errors.New("did not sent a new exchange message")
+
+// ErrFirstInvoiceSendTimeout indicates that first invoice was not sent.
+var ErrFirstInvoiceSendTimeout = errors.New("did not sent first invoice")
 
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
@@ -87,8 +91,8 @@ type providerInvoiceStorage interface {
 }
 
 type accountantPromiseStorage interface {
-	Store(providerID, accountantID identity.Identity, promise AccountantPromise) error
-	Get(providerID, accountantID identity.Identity) (AccountantPromise, error)
+	Store(providerID identity.Identity, accountantID common.Address, promise AccountantPromise) error
+	Get(providerID identity.Identity, accountantID common.Address) (AccountantPromise, error)
 }
 
 type accountantCaller interface {
@@ -96,7 +100,7 @@ type accountantCaller interface {
 	RevealR(r string, provider string, agreementID uint64) error
 }
 
-type settler func(providerID, accountantID identity.Identity) error
+type settler func(providerID identity.Identity, accountantID common.Address) error
 
 type sentInvoice struct {
 	invoice crypto.Invoice
@@ -153,8 +157,10 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
+	FirstInvoiceSendDuration   time.Duration
+	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
-	AccountantID               identity.Identity
+	AccountantID               common.Address
 	AccountantCaller           accountantCaller
 	AccountantPromiseStorage   accountantPromiseStorage
 	Registry                   string
@@ -334,12 +340,12 @@ func (it *InvoiceTracker) requestPromise(r []byte, em crypto.ExchangeMessage) er
 	}
 
 	promise.R = r
-	it.deps.EventBus.Publish(AppTopicAccountantPromise, AppEventAccountantPromise{
+	it.deps.EventBus.Publish(event.AppTopicAccountantPromise, event.AppEventAccountantPromise{
 		Promise:      promise,
 		AccountantID: it.deps.AccountantID,
 		ProviderID:   it.deps.ProviderID,
 	})
-	it.deps.EventBus.Publish(event.AppTopicSessionTokensEarned, event.AppEventSessionTokensEarned{
+	it.deps.EventBus.Publish(sessionEvent.AppTopicSessionTokensEarned, sessionEvent.AppEventSessionTokensEarned{
 		ProviderID: it.deps.ProviderID,
 		SessionID:  it.deps.SessionID,
 		Total:      em.AgreementTotal,
@@ -383,7 +389,7 @@ func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
 	it.deps.TimeTracker.StartTracking()
 
-	if err := it.deps.EventBus.SubscribeAsync(event.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
+	if err := it.deps.EventBus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
 		return err
 	}
 
@@ -402,7 +408,7 @@ func (it *InvoiceTracker) Start() error {
 	}
 	it.transactorFee = fees
 
-	fee, err := it.deps.BlockchainHelper.GetAccountantFee(common.HexToAddress(it.deps.AccountantID.Address))
+	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.AccountantID)
 	if err != nil {
 		return errors.Wrap(err, "could not get accountants fee")
 	}
@@ -422,15 +428,13 @@ func (it *InvoiceTracker) Start() error {
 	// on session close, try and reveal the promise before exiting
 	defer it.revealPromise()
 
-	// give the consumer a second to start up his payments before sending the first request
-	firstSend := time.After(3 * time.Second)
+	err = it.sendFirstInvoice()
+	if err != nil {
+		return fmt.Errorf("could not send first invoice: %w", err)
+	}
+
 	for {
 		select {
-		case <-firstSend:
-			err := it.sendInvoice()
-			if err != nil {
-				return errors.Wrap(err, "sending first invoice failed")
-			}
 		case <-it.stop:
 			return nil
 		case <-time.After(it.deps.ChargePeriod):
@@ -535,6 +539,24 @@ func (it *InvoiceTracker) sendInvoice() error {
 
 	err = it.deps.InvoiceStorage.Store(it.deps.ProviderID, it.deps.Peer, invoice)
 	return errors.Wrap(err, "could not store invoice")
+}
+
+func (it *InvoiceTracker) sendFirstInvoice() error {
+	timeout := time.After(it.deps.FirstInvoiceSendTimeout)
+	for {
+		select {
+		case <-it.stop:
+			return nil
+		case <-timeout:
+			return ErrFirstInvoiceSendTimeout
+		case <-time.After(it.deps.FirstInvoiceSendDuration):
+			err := it.sendInvoice()
+			if stdErr.Is(err, p2p.ErrHandlerNotFound) {
+				continue
+			}
+			return err
+		}
+	}
 }
 
 func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
@@ -690,12 +712,12 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 func (it *InvoiceTracker) Stop() {
 	it.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = it.deps.EventBus.Unsubscribe(event.AppTopicDataTransferred, it.consumeDataTransferredEvent)
+		_ = it.deps.EventBus.Unsubscribe(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent)
 		close(it.stop)
 	})
 }
 
-func (it *InvoiceTracker) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
+func (it *InvoiceTracker) consumeDataTransferredEvent(e sessionEvent.AppEventDataTransferred) {
 	// skip irrelevant sessions
 	if !strings.EqualFold(e.ID, it.deps.SessionID) {
 		return

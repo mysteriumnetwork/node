@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/mapping"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/pb"
 
 	nats_lib "github.com/nats-io/go-nats"
@@ -128,6 +129,14 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		// It is important that provider starts sending pings first otherwise
 		// providers router can think that consumer is sending DDoS packets.
 		go func(reply string) {
+			// race condition still happens when consumer starts to ping until provider did not manage to complete required number of pings
+			// this might be provider / consumer performance dependent
+			// make sleep time dependent on pinger interval and wait for 2 ping iterations
+			// TODO: either reintroduce eventual increase of TTL on consumer or maintain some sane delay
+			dur := traversal.DefaultPingConfig().Interval.Milliseconds() * 2
+			log.Debug().Msgf("Delaying pings from consumer for %v ms", dur)
+			time.Sleep(time.Duration(dur) * time.Millisecond)
+
 			if err := m.brokerConn.Publish(reply, []byte("OK")); err != nil {
 				log.Err(err).Msg("Could not publish exchange ack")
 			}
@@ -147,7 +156,8 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 				return
 			}
 		} else {
-			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v", config.peerIP(), config.localPorts, config.peerPorts)
+			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v initial ttl: %v",
+				config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL)
 			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")

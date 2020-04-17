@@ -35,6 +35,7 @@ type Filter struct {
 	UpperGBPriceBound   *uint64
 	LowerGBPriceBound   *uint64
 	ExcludeUnsupported  bool
+	IncludeFailed       bool
 }
 
 // Matches return flag if filter matches given proposal
@@ -79,6 +80,7 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 		ServiceType:        filter.ServiceType,
 		AccessPolicyID:     filter.AccessPolicyID,
 		AccessPolicySource: filter.AccessPolicySource,
+		IncludeFailed:      filter.IncludeFailed,
 	}
 	if filter.ServiceType == "" {
 		query.ServiceType = "all"

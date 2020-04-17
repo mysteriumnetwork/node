@@ -25,7 +25,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -37,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -97,7 +95,7 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
-	EtherClient       *ethclient.Client
+	EtherClient       *paymentClient.ReconnectableEthClient
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -114,15 +112,13 @@ type Dependencies struct {
 	ProposalRepository proposal.Repository
 	DiscoveryWorker    brokerdiscovery.Worker
 
-	QualityMetricsSender *quality.Sender
-	QualityClient        *quality.MysteriumMORQA
+	QualityClient *quality.MysteriumMORQA
 
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
 
 	PolicyOracle *policy.Oracle
 
-	StatisticsTracker                *statistics.SessionStatisticsTracker
 	StatisticsReporter               *statistics.SessionStatisticsReporter
 	SessionStorage                   *consumer_session.Storage
 	SessionConnectivityStatusStorage connectivity.StatusStorage
@@ -137,13 +133,10 @@ type Dependencies struct {
 	ServiceSessionStorage *session.EventBasedStorage
 	ServiceFirewall       firewall.IncomingTrafficFirewall
 
-	NATPinger      traversal.NATPinger
-	NATTracker     *event.Tracker
-	NATEventSender *event.Sender
-	PortPool       *port.Pool
-	PortMapper     mapping.PortMapper
-
-	BandwidthTracker *bandwidth.Tracker
+	NATPinger  traversal.NATPinger
+	NATTracker *event.Tracker
+	PortPool   *port.Pool
+	PortMapper mapping.PortMapper
 
 	StateKeeper *state.Keeper
 
@@ -218,11 +211,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapUIServer(nodeOptions)
 	di.bootstrapMMN(nodeOptions)
-	if err := di.bootstrapBandwidthTracker(); err != nil {
+	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
 		return err
 	}
-
-	di.bootstrapNATComponents(nodeOptions)
 
 	// TODO: Add global services ports flag to support fixed range global ports pool.
 	di.PortPool = port.NewPool()
@@ -250,8 +241,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.registerConnections(nodeOptions)
-
-	if err = di.subscribeEventConsumers(); err != nil {
+	if err = di.handleConnStateChange(); err != nil {
 		return err
 	}
 	if err := di.Node.Start(); err != nil {
@@ -289,7 +279,6 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
 		ServiceSessionStorage:     di.ServiceSessionStorage,
-		ConnectionSessionProvider: di.StatisticsTracker,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
@@ -351,11 +340,6 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
 	}
-	if di.Storage != nil {
-		if err := di.Storage.Close(); err != nil {
-			errs = append(errs, err)
-		}
-	}
 	if di.BrokerConnection != nil {
 		di.BrokerConnection.Close()
 	}
@@ -374,6 +358,12 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+	if di.Storage != nil {
+		if err := di.Storage.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	return nil
 }
 
@@ -395,69 +385,8 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
-	return nil
-}
-
-func (di *Dependencies) subscribeEventConsumers() error {
-	// Consumer current session store
-	err := di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsTracker.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerStatistics, di.StatisticsTracker.ConsumeStatisticsEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(pingpong.AppTopicInvoicePaid, di.StatisticsTracker.ConsumeInvoiceEvent)
-	if err != nil {
-		return err
-	}
-
-	// Consumer session history (API storage)
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.StatisticsReporter.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-
-	// Consumer session history (local storage)
-	err = di.EventBus.Subscribe(connection.AppTopicConsumerSession, di.SessionStorage.ConsumeSessionEvent)
-	if err != nil {
-		return err
-	}
-
-	// NAT events
-	err = di.EventBus.Subscribe(event.AppTopicTraversal, di.NATEventSender.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.Subscribe(event.AppTopicTraversal, di.NATTracker.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-
-	// Quality metrics
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, di.QualityMetricsSender.SendConnStateEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerSession, di.QualityMetricsSender.SendSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, di.QualityMetricsSender.SendSessionData)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(discovery.AppTopicProposalAnnounce, di.QualityMetricsSender.SendProposalEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(nodevent.AppTopicNode, di.QualityMetricsSender.SendStartupEvent)
-	if err != nil {
-		return err
-	}
-
-	return di.handleHTTPClientConnections()
+	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
+	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
@@ -466,15 +395,22 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
+	// Consumer current session bandwidth
+	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
+	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
+	// Consumer session history (API storage)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
-		di.StatisticsTracker,
 		di.MysteriumAPI,
 		di.SignerFactory,
 		di.LocationResolver,
 		time.Minute,
 	)
-	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
+	if err := di.StatisticsReporter.Subscribe(di.EventBus); err != nil {
+		return err
+	}
 
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
@@ -504,7 +440,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		identity.FromAddress(nodeOptions.Accountant.AccountantID),
+		common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		di.BCHelper,
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
@@ -570,9 +506,9 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.AccountantPromiseSettler)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.ProposalRepository, di.IdentityRegistry)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
-	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
+	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository, di.QualityClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
@@ -700,7 +636,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
-	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
+	di.EtherClient, err = paymentClient.NewReconnectableEthClient(network.EtherClientRPC)
+	if err != nil {
 		return err
 	}
 
@@ -767,12 +704,21 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if err != nil {
 		return err
 	}
-	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+
+	// Quality metrics
+	qualitySender := quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+	if err := qualitySender.Subscribe(di.EventBus); err != nil {
+		return err
+	}
 
 	// warm up the loader as the load takes up to a couple of secs
 	loader := &upnp.GatewayLoader{}
 	go loader.Get()
-	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+	natSender := event.NewSender(qualitySender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+	if err := natSender.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -810,7 +756,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConsumerConnectionState, di.LocationResolver.HandleConnectionEvent)
+	err = di.EventBus.SubscribeAsync(connection.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
 	if err != nil {
 		return err
 	}
@@ -834,18 +780,12 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 	return nil
 }
 
-func (di *Dependencies) bootstrapBandwidthTracker() error {
-	di.BandwidthTracker = &bandwidth.Tracker{}
-	err := di.EventBus.SubscribeAsync(connection.AppTopicConsumerSession, di.BandwidthTracker.ConsumeSessionEvent)
-	if err != nil {
+func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
+	di.NATTracker = event.NewTracker()
+	if err := di.NATTracker.Subscribe(di.EventBus); err != nil {
 		return err
 	}
 
-	return di.EventBus.SubscribeAsync(connection.AppTopicConsumerStatistics, di.BandwidthTracker.ConsumeStatisticsEvent)
-}
-
-func (di *Dependencies) bootstrapNATComponents(options node.Options) {
-	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
 		log.Debug().Msg("Experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
@@ -855,6 +795,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
+	return nil
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
@@ -882,13 +823,13 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	return nil
 }
 
-func (di *Dependencies) handleHTTPClientConnections() error {
+func (di *Dependencies) handleConnStateChange() error {
 	if di.HTTPClient == nil {
 		return errors.New("HTTPClient is not initialized")
 	}
 
 	latestState := connection.NotConnected
-	return di.EventBus.Subscribe(connection.AppTopicConsumerConnectionState, func(e connection.StateEvent) {
+	return di.EventBus.Subscribe(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
 		// Here we care only about connected and disconnected events.
 		if e.State != connection.Connected && e.State != connection.NotConnected {
 			return
@@ -901,6 +842,9 @@ func (di *Dependencies) handleHTTPClientConnections() error {
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()
 			di.BrokerConnector.ReconnectAll()
+			if err := di.EtherClient.Reconnect(); err != nil {
+				log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+			}
 		}
 		latestState = e.State
 	})

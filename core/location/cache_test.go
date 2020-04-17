@@ -87,7 +87,7 @@ func TestCacheHandlesConnection_Connected(t *testing.T) {
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
-	c.HandleConnectionEvent(connection.StateEvent{State: connection.Connected})
+	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.Connected})
 	assert.True(t, r.called)
 }
 
@@ -97,7 +97,7 @@ func TestCacheHandlesConnection_NotConnected(t *testing.T) {
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
-	c.HandleConnectionEvent(connection.StateEvent{State: connection.NotConnected})
+	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.NotConnected})
 	assert.True(t, r.called)
 }
 
@@ -107,6 +107,6 @@ func TestCacheIgnoresOther(t *testing.T) {
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
-	c.HandleConnectionEvent(connection.StateEvent{State: connection.Reconnecting})
+	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.Reconnecting})
 	assert.False(t, r.called)
 }

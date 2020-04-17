@@ -74,7 +74,7 @@ type PingConfig struct {
 // DefaultPingConfig returns default NAT pinger config.
 func DefaultPingConfig() *PingConfig {
 	return &PingConfig{
-		Interval:            200 * time.Millisecond,
+		Interval:            50 * time.Millisecond,
 		Timeout:             10 * time.Second,
 		SendConnACKInterval: 200 * time.Millisecond,
 	}

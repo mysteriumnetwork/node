@@ -21,15 +21,12 @@ import (
 	"encoding/json"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -81,13 +78,6 @@ func GetProposal(location location.Location) market.ServiceProposal {
 				ISP:      location.ISP,
 				NodeType: location.NodeType,
 			},
-		},
-		PaymentMethodType: pingpong.DefaultPaymentMethod.GetType(),
-		PaymentMethod: pingpong.PaymentMethod{
-			Type:     pingpong.DefaultPaymentMethod.GetType(),
-			Price:    money.NewMoney(10000, money.CurrencyMyst),
-			Bytes:    0,
-			Duration: time.Minute,
 		},
 	}
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -133,14 +134,14 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
-	settler.currentState[mockID] = SettlementState{}
+	settler.currentState[mockID] = settlementState{}
 
 	// check if existing gets skipped
 	err = settler.loadInitialState(mockID)
 	assert.NoError(t, err)
 
 	v := settler.currentState[mockID]
-	assert.EqualValues(t, SettlementState{}, v)
+	assert.EqualValues(t, settlementState{}, v)
 
 	// check if unregistered gets skipped
 	delete(settler.currentState, mockID)
@@ -153,7 +154,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	assert.NoError(t, err)
 
 	v = settler.currentState[mockID]
-	assert.EqualValues(t, SettlementState{}, v)
+	assert.EqualValues(t, settlementState{}, v)
 
 	// check if will resync
 	delete(settler.currentState, mockID)
@@ -286,30 +287,30 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 
 	// no receive on unknown provider
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
-	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 	})
 	assertNoReceive(t, settler.settleQueue)
 
 	// no receive should be gotten on a non registered provider
-	settler.currentState[mockID] = SettlementState{
+	settler.currentState[mockID] = settlementState{
 		registered: false,
 	}
-	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 	})
 	assertNoReceive(t, settler.settleQueue)
 
-	// should receive on registered provider. Should also expect a recalculated balance to be added to the SettlementState
-	settler.currentState[mockID] = SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
-		LastPromise: crypto.Promise{Amount: 8900},
+	// should receive on registered provider. Should also expect a recalculated balance to be added to the settlementState
+	settler.currentState[mockID] = settlementState{
+		channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+		lastPromise: crypto.Promise{Amount: 8900},
 		registered:  true,
 	}
-	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 		Promise:      crypto.Promise{Amount: 9000},
 	})
@@ -321,13 +322,13 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	assert.Equal(t, uint64(10000-9000), v.balance())
 
 	// should not receive here due to balance being large and stake being small
-	settler.currentState[mockID] = SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
-		LastPromise: crypto.Promise{Amount: 8900},
+	settler.currentState[mockID] = settlementState{
+		channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+		lastPromise: crypto.Promise{Amount: 8900},
 		registered:  true,
 	}
-	settler.handleAccountantPromiseReceived(AppEventAccountantPromise{
-		AccountantID: identity.FromAddress(cfg.AccountantAddress.Hex()),
+	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
+		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
 		Promise: crypto.Promise{
 			Amount: 8999,
@@ -390,16 +391,16 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 }
 
 func TestPromiseSettlerState_needsSettling(t *testing.T) {
-	s := SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(100)},
-		LastPromise: crypto.Promise{Amount: 100},
+	s := settlementState{
+		channel:     client.ProviderChannel{Balance: big.NewInt(100)},
+		lastPromise: crypto.Promise{Amount: 100},
 		registered:  true,
 	}
 	assert.True(t, s.needsSettling(0.1), "should be true with zero balance left")
 
-	s = SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
-		LastPromise: crypto.Promise{Amount: 9000},
+	s = settlementState{
+		channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+		lastPromise: crypto.Promise{Amount: 9000},
 		registered:  true,
 	}
 	assert.True(t, s.needsSettling(0.1), "should be true with 10% missing")
@@ -410,40 +411,40 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s.settleInProgress = true
 	assert.False(t, s.needsSettling(0.1), "should be false with settle in progress")
 
-	s = SettlementState{
-		Channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
-		LastPromise: crypto.Promise{Amount: 8999},
+	s = settlementState{
+		channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+		lastPromise: crypto.Promise{Amount: 8999},
 		registered:  true,
 	}
 	assert.False(t, s.needsSettling(0.1), "should be false with 10.01% missing")
 }
 
 func TestPromiseSettlerState_balance(t *testing.T) {
-	s := SettlementState{
-		Channel: client.ProviderChannel{
+	s := settlementState{
+		channel: client.ProviderChannel{
 			Balance: big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
-		LastPromise: crypto.Promise{
+		lastPromise: crypto.Promise{
 			Amount: 15,
 		},
 	}
 	assert.Equal(t, uint64(110), s.availableBalance())
 	assert.Equal(t, uint64(95), s.balance())
-	assert.Equal(t, uint64(5), s.UnsettledBalance())
+	assert.Equal(t, uint64(5), s.unsettledBalance())
 
-	s = SettlementState{
-		Channel: client.ProviderChannel{
+	s = settlementState{
+		channel: client.ProviderChannel{
 			Balance: big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
-		LastPromise: crypto.Promise{
+		lastPromise: crypto.Promise{
 			Amount: 16,
 		},
 	}
 	assert.Equal(t, uint64(110), s.availableBalance())
 	assert.Equal(t, uint64(94), s.balance())
-	assert.Equal(t, uint64(6), s.UnsettledBalance())
+	assert.Equal(t, uint64(6), s.unsettledBalance())
 }
 
 // mocks start here
@@ -474,7 +475,7 @@ type mockAccountantPromiseGetter struct {
 	err     error
 }
 
-func (mapg *mockAccountantPromiseGetter) Get(providerID, accountantID identity.Identity) (AccountantPromise, error) {
+func (mapg *mockAccountantPromiseGetter) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
 	return mapg.promise, mapg.err
 }
 
