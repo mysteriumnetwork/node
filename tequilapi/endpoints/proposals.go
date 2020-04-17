@@ -68,7 +68,7 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     description: the access policy source to filter the proposals by
 //     type: string
 //   - in: query
-//     name: fetch_connect_counts
+//     name: fetch_metrics
 //     description: if set to true, fetches the connection success metrics for nodes. False by default.
 //     type: boolean
 // responses:
@@ -81,8 +81,6 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	fetchConnectCounts := req.URL.Query().Get("fetch_connect_counts")
-
 	upperTimePriceBound, err := parsePriceBound(req, "upper_time_price_bound")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -115,6 +113,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		LowerTimePriceBound: lowerTimePriceBound,
 		UpperTimePriceBound: upperTimePriceBound,
 		ExcludeUnsupported:  true,
+		IncludeFailed:       req.URL.Query().Get("monitoring_failed") == "true",
 	})
 
 	if err != nil {
@@ -127,12 +126,27 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
 
+	fetchConnectCounts := req.URL.Query().Get("fetch_metrics")
 	if fetchConnectCounts == "true" {
 		metrics := pe.qualityProvider.ProposalsMetrics()
 		addProposalMetrics(proposalsRes.Proposals, metrics)
 	}
 
 	utils.WriteAsJSON(proposalsRes, resp)
+}
+
+// swagger:operation GET /proposals/quality Proposal quality metrics
+// ---
+// summary: Returns proposals quality metrics
+// description: Returns list of proposals  quality metrics
+// responses:
+//   200:
+//     description: List of quality metrics
+//     schema:
+//       "$ref": "#/definitions/QualityMetricsDTO"
+func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	metrics := pe.qualityProvider.ProposalsMetrics()
+	utils.WriteAsJSON(mapQualityMetrics(metrics), resp)
 }
 
 func parsePriceBound(req *http.Request, key string) (*uint64, error) {
@@ -148,6 +162,7 @@ func parsePriceBound(req *http.Request, key string) (*uint64, error) {
 func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository, qualityProvider QualityFinder) {
 	pe := NewProposalsEndpoint(proposalRepository, qualityProvider)
 	router.GET("/proposals", pe.List)
+	router.GET("/proposals/quality", pe.Quality)
 }
 
 // addProposalMetrics adds quality metrics to proposals.
@@ -160,7 +175,32 @@ func addProposalMetrics(proposals []contract.ProposalDTO, metrics []quality.Conn
 
 	for i, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			proposals[i].Metrics = &contract.ProposalMetricsDTO{ConnectCount: mc.ConnectCount}
+			proposals[i].Metrics = &contract.ProposalMetricsDTO{
+				ConnectCount:     mc.ConnectCount,
+				MonitoringFailed: mc.MonitoringFailed,
+			}
 		}
+	}
+}
+
+func mapQualityMetrics(metrics []quality.ConnectMetric) contract.ProposalsQualityMetricsResponse {
+	var res []contract.QualityMetricsResponse
+	for _, m := range metrics {
+		res = append(res, contract.QualityMetricsResponse{
+			ProviderID:  m.ProposalID.ProviderID,
+			ServiceType: m.ProposalID.ServiceType,
+			ProposalMetricsDTO: contract.ProposalMetricsDTO{
+				MonitoringFailed: m.MonitoringFailed,
+				ConnectCount: quality.ConnectCount{
+					Success: m.ConnectCount.Success,
+					Timeout: m.ConnectCount.Timeout,
+					Fail:    m.ConnectCount.Fail,
+				},
+			},
+		})
+	}
+
+	return contract.ProposalsQualityMetricsResponse{
+		Metrics: res,
 	}
 }

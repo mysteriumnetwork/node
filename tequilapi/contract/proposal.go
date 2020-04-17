@@ -119,7 +119,8 @@ type ServiceLocationDTO struct {
 // ProposalMetricsDTO holds proposal quality metrics from Quality Oracle.
 // swagger:model ProposalMetricsDTO
 type ProposalMetricsDTO struct {
-	ConnectCount quality.ConnectCount `json:"connect_count"`
+	ConnectCount     quality.ConnectCount `json:"connect_count"`
+	MonitoringFailed bool                 `json:"monitoring_failed"`
 }
 
 // PaymentMethodDTO holds payment method details.
@@ -135,4 +136,18 @@ type PaymentMethodDTO struct {
 type PaymentRateDTO struct {
 	PerSeconds uint64 `json:"per_seconds"`
 	PerBytes   uint64 `json:"per_bytes"`
+}
+
+// ProposalsQualityMetricsResponse holds all quality metrics.
+// swagger:model QualityMetricsDTO
+type ProposalsQualityMetricsResponse struct {
+	Metrics []QualityMetricsResponse `json:"metrics"`
+}
+
+// QualityMetricsResponse holds quality metrics per service.
+// swagger:model QualityMetricsResponse
+type QualityMetricsResponse struct {
+	ProviderID  string `json:"provider_id"`
+	ServiceType string `json:"service_type"`
+	ProposalMetricsDTO
 }

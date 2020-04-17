@@ -41,6 +41,7 @@ func (a *apiRepository) Proposal(id market.ProposalID) (*market.ServiceProposal,
 		NodeKey:         id.ProviderID,
 		ServiceType:     id.ServiceType,
 		AccessPolicyAll: true,
+		IncludeFailed:   true,
 	})
 	if err != nil {
 		return nil, err

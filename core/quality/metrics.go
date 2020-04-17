@@ -24,8 +24,9 @@ type ServiceMetricsResponse struct {
 
 // ConnectMetric represents a proposal with quality info
 type ConnectMetric struct {
-	ProposalID   ProposalID   `json:"proposalId"`
-	ConnectCount ConnectCount `json:"connectCount"`
+	ProposalID       ProposalID   `json:"proposalId"`
+	ConnectCount     ConnectCount `json:"connectCount"`
+	MonitoringFailed bool         `json:"monitoringFailed"`
 }
 
 // ProposalID represents the struct used to uniquely identify proposals
