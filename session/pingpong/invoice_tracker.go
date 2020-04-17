@@ -67,8 +67,6 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
-const providerFirstInvoiceTolerance = 0.8
-
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
@@ -508,7 +506,7 @@ func (it *InvoiceTracker) sendInvoice() error {
 	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
 	// Over the long run, this becomes redundant as the difference should become miniscule.
 	if it.lastExchangeMessage.AgreementTotal == 0 {
-		shouldBe = uint64(math.Trunc(float64(shouldBe) * providerFirstInvoiceTolerance))
+		shouldBe = uint64(math.Min(float64(1), float64(shouldBe)))
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
