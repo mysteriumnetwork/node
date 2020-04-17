@@ -28,7 +28,7 @@ var (
 	FlagIPDetectorURL = cli.StringFlag{
 		Name:  "ip-detector",
 		Usage: "Address (URL form) of IP detection service",
-		Value: "https://testnet-location.mysterium.network/api/v1/location",
+		Value: "https://testnet-location.mysterium.network/api/v1/ip",
 	}
 	// FlagLocationType location detector type.
 	FlagLocationType = cli.StringFlag{
