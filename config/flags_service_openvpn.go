@@ -55,7 +55,7 @@ var (
 	// FlagOpenVPNPriceGB sets the price per GiB for provided OpenVPN service.
 	FlagOpenVPNPriceGB = cli.Float64Flag{
 		Name:  "openvpn.price-gb",
-		Usage: "Sets the price of the OpenVPN service per minute.",
+		Usage: "Sets the price of the OpenVPN service per GiB.",
 		Value: 0.07,
 	}
 )
