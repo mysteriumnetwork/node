@@ -27,11 +27,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	openvpn3 "github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
-	openvpn3 "github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"

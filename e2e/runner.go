@@ -137,7 +137,7 @@ func (r *Runner) Init() error {
 
 	log.Info().Msg("Force rebuilding go runner")
 	if err := r.compose("build", "go-runner"); err != nil {
-		return errors.Wrap(err, "building go-runner!")
+		return fmt.Errorf("could not build go runner %w", err)
 	}
 
 	log.Info().Msg("Deploying contracts")
