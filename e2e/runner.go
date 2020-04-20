@@ -69,13 +69,13 @@ func (r *Runner) Test(providerHost, consumerHost string) error {
 	log.Info().Msg("Running tests for env: " + r.testEnv)
 
 	err := r.compose("run", "go-runner",
-		"go", "test", "-v", "./e2e/...", "-args",
-		"--provider.tequilapi-host", providerHost,
-		"--provider.tequilapi-port=4050",
-		"--consumer.tequilapi-host", consumerHost,
-		"--consumer.tequilapi-port=4050",
-		"--geth.url=ws://ganache:8545",
-		"--consumer.services", r.services,
+		"/usr/bin/test", "-test.v",
+		"-provider.tequilapi-host", providerHost,
+		"-provider.tequilapi-port=4050",
+		"-consumer.tequilapi-host", consumerHost,
+		"-consumer.tequilapi-port=4050",
+		"-geth.url=ws://ganache:8545",
+		"-consumer.services", r.services,
 	)
 	return errors.Wrap(err, "tests failed!")
 }
@@ -100,9 +100,11 @@ func (r *Runner) Init() error {
 	if err := r.compose("pull"); err != nil {
 		return errors.Wrap(err, "could not pull images")
 	}
-	if err := r.compose("up", "-d", "broker", "ganache", "ipify", "morqa"); err != nil {
+
+	if err := r.compose("up", "-d", "broker", "ganache", "ipify", "morqa", "mongodb"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
+
 	log.Info().Msg("Starting DB")
 	if err := r.compose("up", "-d", "db"); err != nil {
 		return errors.Wrap(err, "starting DB failed!")
@@ -133,10 +135,15 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "starting mysterium-api failed!")
 	}
 
+	log.Info().Msg("Force rebuilding go runner")
+	if err := r.compose("build", "go-runner"); err != nil {
+		return fmt.Errorf("could not build go runner %w", err)
+	}
+
 	log.Info().Msg("Deploying contracts")
 	err := r.compose("run", "go-runner",
-		"go", "run", "./e2e/blockchain/deployer.go",
-		"--keystore.directory=./e2e/blockchain/keystore",
+		"/usr/bin/deployer",
+		"--keystore.directory=./keystore",
 		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
 		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
 		"--geth.url=ws://ganache:8545")
