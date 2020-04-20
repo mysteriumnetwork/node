@@ -21,19 +21,18 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
@@ -48,35 +47,67 @@ const (
 	initialBalance uint64 = 690000000
 )
 
+type consumer struct {
+	consumerID   string
+	serviceType  string
+	tequila      *tequilapi_client.Client
+	balanceSpent uint64
+	proposal     contract.ProposalDTO
+}
+
 func TestConsumerConnectsToProvider(t *testing.T) {
 	tequilapiProvider := newTequilapiProvider()
-	tequilapiConsumer := newTequilapiConsumer()
-	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
+	t.Run("Provider has a registered identity", func(t *testing.T) {
 		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
 	})
 
-	var consumerID string
-	t.Run("ConsumerCreatesAndRegistersIdentityFlow", func(t *testing.T) {
-		consumerID = identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
-		consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
+	servicesInFlag := strings.Split(*consumerServices, ",")
+	consumers := make(map[string]consumer)
+	t.Run("Consumer Creates And Registers Identity", func(t *testing.T) {
+		wg := sync.WaitGroup{}
+		wg.Add(len(servicesInFlag))
+
+		for _, serviceType := range servicesInFlag {
+			go func(serviceType string) {
+				defer wg.Done()
+				tequilapiConsumer := newTequilapiConsumer(serviceType)
+				consumerID := identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
+				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
+				consumers[serviceType] = consumer{
+					consumerID:  consumerID,
+					serviceType: serviceType,
+					tequila:     tequilapiConsumer,
+				}
+			}(serviceType)
+		}
+
+		wg.Wait()
 	})
 
-	t.Run("ConsumerConnectFlow", func(t *testing.T) {
-		var providerEarnedForService uint64
-		servicesInFlag := strings.Split(*consumerServices, ",")
-		for _, serviceType := range servicesInFlag {
-			if _, ok := serviceTypeAssertionMap[serviceType]; ok {
-				t.Run(serviceType, func(t *testing.T) {
-					proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
-					balanceSpent := consumerConnectFlow(t, tequilapiConsumer, consumerID, accountantID, serviceType, proposal)
-					providerEarnings := providerEarnedTokens(t, tequilapiProvider, providerID, balanceSpent)
-					forThisService := providerEarnings - providerEarnedForService
-					providerEarnedForService += forThisService
-					validateProviderEarnings(t, proposal, forThisService, tequilapiConsumer)
-					recheckBalancesWithAccountant(t, consumerID, balanceSpent, providerEarnings)
-				})
-			}
+	t.Run("Consumers Connect to provider", func(t *testing.T) {
+		wg := sync.WaitGroup{}
+		for _, v := range consumers {
+			wg.Add(1)
+			go func(c consumer) {
+				defer wg.Done()
+				proposal := consumerPicksProposal(t, c.tequila, c.serviceType)
+				balanceSpent := consumerConnectFlow(t, c.tequila, c.consumerID, accountantID, c.serviceType, proposal)
+				copied := consumers[c.consumerID]
+				copied.balanceSpent = balanceSpent
+				copied.proposal = proposal
+				consumers[c.consumerID] = copied
+				recheckBalancesWithAccountant(t, c.consumerID, balanceSpent, proposal.ServiceType)
+			}(v)
 		}
+		wg.Wait()
+	})
+
+	t.Run("Validate provider earnings", func(t *testing.T) {
+		var sum uint64
+		for _, v := range consumers {
+			sum += v.balanceSpent
+		}
+		providerEarnedTokens(t, tequilapiProvider, providerID, sum)
 	})
 
 	t.Run("Provider settlement flow", func(t *testing.T) {
@@ -102,44 +133,12 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 }
 
-func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending, providerEarnings uint64) {
+func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
 	accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
 	accountantData, err := accountantCaller.GetConsumerData(consumerID)
 	assert.NoError(t, err)
 	promised := accountantData.LatestPromise.Amount
-	assert.Equal(t, promised, consumerSpending, fmt.Sprintf("Consumer reported spending %v  accountant says %v", consumerSpending, promised))
-	assert.Equal(t, promised, providerEarnings, fmt.Sprintf("Provider reported earning %v  accountant says %v", providerEarnings, promised))
-}
-
-func validateProviderEarnings(t *testing.T, proposal contract.ProposalDTO, providerEarnings uint64, consumerTequila *tequilapi_client.Client) {
-	sessions, err := consumerTequila.ConnectionSessions()
-	assert.NoError(t, err)
-
-	var session *client.ConnectionSessionDTO
-	for _, s := range sessions.Sessions {
-		if s.ServiceType == proposal.ServiceType && s.ProviderID == proposal.ProviderID {
-			session = &s
-		}
-	}
-	assert.NotNil(t, session)
-
-	total := pingpong.DataTransferred{
-		Up:   session.BytesReceived,
-		Down: session.BytesSent,
-	}
-	method := pingpong.PaymentMethod{
-		Duration: time.Duration(proposal.PaymentMethod.Rate.PerSeconds) * time.Second,
-		Price:    money.NewMoney(proposal.PaymentMethod.Price.Amount, money.CurrencyMyst),
-		Bytes:    proposal.PaymentMethod.Rate.PerBytes,
-		Type:     proposal.PaymentMethod.Type,
-	}
-
-	// we're running the tests for 30 secs, but due to the initial handshakes this could take longer.
-	lowerEstimate := pingpong.CalculatePaymentAmount(time.Second*30, total, method)
-	upperEstimate := pingpong.CalculatePaymentAmount(time.Second*45, total, method)
-	delta := upperEstimate - lowerEstimate
-	msg := fmt.Sprintf("expected providerEarnings to be within [%d:%d], is %d", lowerEstimate, upperEstimate, providerEarnings)
-	assert.InDelta(t, float64(upperEstimate), float64(providerEarnings), float64(delta), msg)
+	assert.Equal(t, promised, consumerSpending, fmt.Sprintf("Consumer reported spending %v  accountant says %v. Service type %v", consumerSpending, promised, serviceType))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {

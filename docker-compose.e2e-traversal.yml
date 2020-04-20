@@ -179,7 +179,7 @@ services:
         ipv4_address: 172.31.0.203
 
   accountant:
-    image: mysteriumnetwork/accountant:0.2
+    image: localhost:5000/accountant
     environment:
       PORT: 8889
     expose:
@@ -192,6 +192,7 @@ services:
     depends_on:
       - ganache
       - mongodb
+      - redis
     command: >
       -identityPassphrase ""
       -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -206,6 +207,7 @@ services:
       -MongoPass accountant
       -MongoHost "mongodb:27017"
       -MongoReplSet ""
+      -redisAddress "redis:6379"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254
@@ -214,6 +216,20 @@ services:
         ipv4_address: 172.30.0.204
       public1:
         ipv4_address: 172.31.0.204
+
+  redis:
+    image: bitnami/redis:5.0.8
+    container_name: 'accountant_redis'
+    ports: 
+      - '6379:6379'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.206
+      public1:
+        ipv4_address: 172.31.0.206
 
   mongodb:
     image: 'mongo:4.2.3'
@@ -236,7 +252,7 @@ services:
       public1:
         ipv4_address: 172.31.0.205
 
-  myst-consumer:
+  myst-consumer-wireguard:
     build:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
@@ -250,6 +266,7 @@ services:
       - transactor
       - accountant
       - morqa
+      - ganache
     cap_add:
       - NET_ADMIN
     expose:
@@ -279,6 +296,95 @@ services:
     networks:
       priv1:
         ipv4_address: 10.100.1.101
+
+
+  myst-consumer-openvpn:
+    environment:
+      - DEFAULT_ROUTE=10.100.1.2
+    build:
+      context: .
+      dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - myst-provider
+      - morqa
+      - ganache
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --ip-detector=http://ipify:3000/?format=json
+      --location.type=manual
+      --log-level=debug
+      --broker-address=broker
+      --tequilapi.address=0.0.0.0
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --keystore.lightweight
+      --firewall.killSwitch.always
+      --quality.address=http://morqa:8085/api/v1
+      daemon
+    dns: 172.30.0.254
+    networks:
+      priv1:
+        ipv4_address: 10.100.1.103
+
+  myst-consumer-noop:
+    environment:
+      - DEFAULT_ROUTE=10.100.1.2
+    build:
+      context: .
+      dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
+    depends_on:
+      - broker
+      - mysterium-api
+      - ipify
+      - transactor
+      - accountant
+      - myst-provider
+      - morqa
+      - ganache
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --discovery.ping=1s
+      --discovery.fetch=1s
+      --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
+      --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
+      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.address=http://accountant:8889/api/v1
+      --transactor.address=http://transactor:8888/api/v1
+      --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
+      --ip-detector=http://ipify:3000/?format=json
+      --location.type=manual
+      --log-level=debug
+      --broker-address=broker
+      --tequilapi.address=0.0.0.0
+      --api.address=http://mysterium-api:8001/v1
+      --ether.client.rpc=ws://ganache:8545
+      --keystore.lightweight
+      --firewall.killSwitch.always
+      --quality.address=http://morqa:8085/api/v1
+      daemon
+    dns: 172.30.0.254
+    networks:
+      priv1:
+        ipv4_address: 10.100.1.104
 
   myst-provider:
     build:
