@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -107,10 +108,10 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // GetBalance gets the current balance for given identity
-func (cbt *ConsumerBalanceTracker) GetBalance(ID identity.Identity) uint64 {
+func (cbt *ConsumerBalanceTracker) GetBalance(id identity.Identity) uint64 {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
-	if v, ok := cbt.balances[ID]; ok {
+	if v, ok := cbt.balances[id]; ok {
 		return v.GetBalance()
 	}
 	return 0
@@ -197,7 +198,13 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 	}
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
-	if err != nil && err != ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
+		if err := cbt.recoverGrandTotalPromised(id); err != nil {
+			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
+		}
+		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
+	}
+	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
 		return fallback
 	}

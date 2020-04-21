@@ -267,7 +267,7 @@ func (sender *Sender) recoverSessionContext(sessionID string) (sessionContext, e
 
 	context, found := sender.sessionsActive[sessionID]
 	if !found {
-		return sessionContext{}, fmt.Errorf("unknown session: %w", sessionID)
+		return sessionContext{}, fmt.Errorf("unknown session: %s", sessionID)
 	}
 	return context, nil
 }
