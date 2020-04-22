@@ -29,7 +29,7 @@ import (
 const accountantPromiseBucketName = "accountant_promises"
 
 // ErrAttemptToOverwrite occurs when a promise with lower value is attempted to be overwritten on top of an existing promise.
-var ErrAttemptToOverwrite = errors.New("attempted to overwrite a promise with lower value")
+var ErrAttemptToOverwrite = errors.New("attempted to overwrite a promise with and equal or lower value")
 
 // AccountantPromiseStorage allows for storing of accountant promises.
 type AccountantPromiseStorage struct {
