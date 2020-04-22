@@ -335,7 +335,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, em crypto.ExchangeMessage) er
 		AgreementID: it.agreementID,
 	}
 	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, ap)
-	if err != nil {
+	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		return errors.Wrap(err, "could not store accountant promise")
 	}
 
@@ -377,7 +377,7 @@ func (it *InvoiceTracker) revealPromise() error {
 
 	accountantPromise.Revealed = true
 	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, accountantPromise)
-	if err != nil {
+	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		return errors.Wrap(err, "could not store accountant promise")
 	}
 
