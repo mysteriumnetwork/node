@@ -614,7 +614,11 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		if !ok {
 			return errors.New("could not cast errNeedsRecovery to accountantError")
 		}
-		return it.recoverR(aer)
+		recoveryErr := it.recoverR(aer)
+		if recoveryErr != nil {
+			return recoveryErr
+		}
+		return errHandled
 	case stdErr.Is(err, ErrAccountantNoPreviousPromise):
 		log.Info().Msg("no previous promise on accountant, will mark R as revealed")
 		return nil
