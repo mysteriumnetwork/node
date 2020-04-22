@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -119,13 +121,27 @@ func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, e
 		return crypto.Promise{}, fmt.Errorf("could not form request_promise request: %w", err)
 	}
 
-	res := crypto.Promise{}
-	err = ac.doRequest(req, &res)
-	if err != nil {
-		return res, fmt.Errorf("could not request promise: %w", err)
+	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
+	boff := backoff.WithMaxRetries(eback, 3)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	boff = backoff.WithContext(boff, ctx)
 
-	}
-	return res, nil
+	res := crypto.Promise{}
+
+	return res, backoff.Retry(func() error {
+		err = ac.doRequest(req, &res)
+		if err != nil {
+			// if too many requests, retry
+			if errors.Is(err, ErrTooManyRequests) {
+				return err
+			}
+			// otherwise, do not retry anymore and return the error
+			cancel()
+			return fmt.Errorf("could not request promise: %w", err)
+		}
+		return nil
+	}, boff)
 }
 
 // RevealObject represents the reveal request object.
@@ -145,12 +161,25 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 	if err != nil {
 		return fmt.Errorf("could not form reveal_r request: %w", err)
 	}
-	err = ac.doRequest(req, &RevealSuccess{})
-	if err != nil {
-		return fmt.Errorf("could not reveal R for accountant: %w", err)
-	}
 
-	return nil
+	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
+	boff := backoff.WithMaxRetries(eback, 3)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	boff = backoff.WithContext(boff, ctx)
+	return backoff.Retry(func() error {
+		err = ac.doRequest(req, &RevealSuccess{})
+		if err != nil {
+			// if too many requests, retry
+			if errors.Is(err, ErrTooManyRequests) {
+				return err
+			}
+			// otherwise, do not retry anymore and return the error
+			cancel()
+			return fmt.Errorf("could not reveal R for accountant: %w", err)
+		}
+		return nil
+	}, boff)
 }
 
 // GetConsumerData gets consumer data from accountant
@@ -303,6 +332,9 @@ var ErrAccountantHashlockMissmatch = errors.New("hashlock missmatch")
 // ErrAccountantNotFound occurs when a requested resource is not found
 var ErrAccountantNotFound = errors.New("resource not found")
 
+// ErrTooManyRequests occurs when we call the reveal R or request promise errors asynchronously at the same time.
+var ErrTooManyRequests = errors.New("too many simultaneous requests")
+
 var accountantCauseToError = map[string]error{
 	ErrAccountantInvalidSignature.Error():         ErrAccountantInvalidSignature,
 	ErrAccountantInternal.Error():                 ErrAccountantInternal,
@@ -316,6 +348,7 @@ var accountantCauseToError = map[string]error{
 	ErrAccountantHashlockMissmatch.Error():        ErrAccountantHashlockMissmatch,
 	ErrAccountantNotFound.Error():                 ErrAccountantNotFound,
 	ErrNeedsRRecovery.Error():                     ErrNeedsRRecovery,
+	ErrTooManyRequests.Error():                    ErrTooManyRequests,
 }
 
 type rRecoveryDetails struct {

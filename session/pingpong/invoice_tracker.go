@@ -629,7 +629,8 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 	case
 		stdErr.Is(err, ErrAccountantInternal),
 		stdErr.Is(err, ErrAccountantNotFound),
-		stdErr.Is(err, ErrAccountantMalformedJSON):
+		stdErr.Is(err, ErrAccountantMalformedJSON),
+		stdErr.Is(err, ErrTooManyRequests):
 		// these are ignorable, we'll eventually fail
 		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
 			return err
