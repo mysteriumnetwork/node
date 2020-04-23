@@ -335,7 +335,7 @@ func (it *InvoiceTracker) requestPromise(r []byte, em crypto.ExchangeMessage) er
 		AgreementID: it.agreementID,
 	}
 	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, ap)
-	if err != nil {
+	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		return errors.Wrap(err, "could not store accountant promise")
 	}
 
@@ -377,7 +377,7 @@ func (it *InvoiceTracker) revealPromise() error {
 
 	accountantPromise.Revealed = true
 	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, accountantPromise)
-	if err != nil {
+	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		return errors.Wrap(err, "could not store accountant promise")
 	}
 
@@ -614,7 +614,11 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		if !ok {
 			return errors.New("could not cast errNeedsRecovery to accountantError")
 		}
-		return it.recoverR(aer)
+		recoveryErr := it.recoverR(aer)
+		if recoveryErr != nil {
+			return recoveryErr
+		}
+		return errHandled
 	case stdErr.Is(err, ErrAccountantNoPreviousPromise):
 		log.Info().Msg("no previous promise on accountant, will mark R as revealed")
 		return nil
@@ -625,7 +629,8 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 	case
 		stdErr.Is(err, ErrAccountantInternal),
 		stdErr.Is(err, ErrAccountantNotFound),
-		stdErr.Is(err, ErrAccountantMalformedJSON):
+		stdErr.Is(err, ErrAccountantMalformedJSON),
+		stdErr.Is(err, ErrTooManyRequests):
 		// these are ignorable, we'll eventually fail
 		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
 			return err

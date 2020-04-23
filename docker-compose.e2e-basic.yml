@@ -71,7 +71,7 @@ services:
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   transactor:
-    image: mysteriumnetwork/transactor:latest
+    image: mysteriumnetwork/transactor:0.1.4
     environment:
       PORT: 8888
     expose:
@@ -133,7 +133,7 @@ services:
   myst-provider:
     build:
       context: .
-      dockerfile: ./bin/docker/alpine/Dockerfile
+      dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     depends_on:
       - broker
       - mysterium-api
@@ -179,7 +179,7 @@ services:
   myst-consumer:
     build:
       context: .
-      dockerfile: ./bin/docker/alpine/Dockerfile
+      dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     depends_on:
       - broker
       - mysterium-api
@@ -217,10 +217,9 @@ services:
   go-runner:
     build:
       context: .
-      dockerfile: ./e2e/gorunner/Dockerfile
+      dockerfile: ./e2e/gorunner/Dockerfile.precompiled
     cap_add:
       - NET_ADMIN
     volumes:
-      - ./:/node
-      - $GOPATH/pkg/mod:/go/pkg/mod
+      - ./e2e/blockchain/keystore:/node/keystore
     working_dir: /node

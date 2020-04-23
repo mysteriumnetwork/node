@@ -18,6 +18,8 @@
 package selector
 
 import (
+	"sync"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -30,6 +32,7 @@ type IdentityRegistry interface {
 }
 
 type handler struct {
+	mu            sync.Mutex
 	manager       identity.Manager
 	registry      IdentityRegistry
 	cache         identity.IdentityCacheInterface
@@ -52,6 +55,9 @@ func NewHandler(
 }
 
 func (h *handler) UseOrCreate(address, passphrase string) (id identity.Identity, err error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if len(address) > 0 {
 		log.Debug().Msg("Using existing identity")
 		return h.useExisting(address, passphrase)

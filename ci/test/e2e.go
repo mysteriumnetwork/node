@@ -18,16 +18,59 @@
 package test
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 
+	"github.com/magefile/mage/mg"
+	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/node/e2e"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/rs/zerolog/log"
 )
 
+var crossCompileFlags = map[string]string{
+	"GOARCH":      "amd64",
+	"GOOS":        "linux",
+	"CGO_ENABLED": "0",
+}
+
+// BuildMystBinaryForE2eDocker builds myst binary for e2e tests.
+func BuildMystBinaryForE2eDocker() error {
+	return sh.RunWith(crossCompileFlags, "go", "build", "-o", "./build/e2e/myst", "./cmd/mysterium_node/mysterium_node.go")
+}
+
+// BuildE2eTestBinary builds the e2e test binary.
+func BuildE2eTestBinary() error {
+	if err := replaceOpenvpnConnectionSetupPkg("github.com/mysteriumnetwork/go-openvpn/openvpn3", "github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3"); err != nil {
+		return err
+	}
+	defer replaceOpenvpnConnectionSetupPkg("github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3", "github.com/mysteriumnetwork/go-openvpn/openvpn3")
+
+	err := sh.RunWith(crossCompileFlags, "go", "test", "-c", "./e2e/")
+	if err != nil {
+		return err
+	}
+
+	_ = os.Mkdir("./build/e2e/", os.ModeDir)
+	return os.Rename("./e2e.test", "./build/e2e/test")
+}
+
+// BuildE2eDeployerBinary builds the deployer binary for e2e tests.
+func BuildE2eDeployerBinary() error {
+	return sh.RunWith(crossCompileFlags, "go", "build", "-o", "./build/e2e/deployer", "./e2e/blockchain/deployer.go")
+}
+
 // TestE2EBasic runs end-to-end tests
 func TestE2EBasic() error {
 	logconfig.Bootstrap()
+
+	mg.Deps(BuildMystBinaryForE2eDocker, BuildE2eDeployerBinary)
+
+	// not running this in parallel as it does some package switching magic
+	mg.Deps(BuildE2eTestBinary)
+
 	composeFiles := []string{
 		"./docker-compose.e2e-basic.yml",
 	}
@@ -42,6 +85,9 @@ func TestE2EBasic() error {
 // TestE2ENAT runs end-to-end tests in NAT environment
 func TestE2ENAT() error {
 	logconfig.Bootstrap()
+
+	mg.Deps(BuildMystBinaryForE2eDocker, BuildE2eTestBinary, BuildE2eDeployerBinary)
+
 	composeFiles := []string{
 		"./docker-compose.e2e-traversal.yml",
 	}
@@ -56,6 +102,9 @@ func TestE2ENAT() error {
 // TestE2ECompatibility runs end-to-end tests with older node version to make check compatibility
 func TestE2ECompatibility() error {
 	logconfig.Bootstrap()
+
+	mg.Deps(BuildMystBinaryForE2eDocker, BuildE2eTestBinary, BuildE2eDeployerBinary)
+
 	composeFiles := []string{
 		"./docker-compose.e2e-compatibility.yml",
 	}
@@ -80,4 +129,16 @@ func TestE2ECompatibility() error {
 		}
 	}
 	return nil
+}
+
+// replaceOpenvpnConnectionSetupPkg replaces openvpn_connection_setup.go go-openvpn pacakges
+// for mobile entry e2e tests so we don't need to include any C++ dependencies.
+func replaceOpenvpnConnectionSetupPkg(from, to string) error {
+	path := "./mobile/mysterium/openvpn_connection_setup.go"
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	content = bytes.Replace(content, []byte(from), []byte(to), 1)
+	return ioutil.WriteFile(path, content, 0600)
 }

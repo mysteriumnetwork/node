@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -104,4 +105,13 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	promise, err = accountantStorage.Get(id, secondAccountant)
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
+
+	overwritingPromise := AccountantPromise{
+		Promise:     *fp,
+		R:           "some r",
+		AgreementID: 123,
+	}
+	overwritingPromise.Promise.Amount = 0
+	err = accountantStorage.Store(id, secondAccountant, overwritingPromise)
+	assert.True(t, errors.Is(err, ErrAttemptToOverwrite))
 }
