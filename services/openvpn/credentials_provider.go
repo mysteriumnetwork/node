@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package openvpn
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
@@ -25,7 +25,7 @@ import (
 // SignatureCredentialsProvider returns session id as username and id signed with given signer as password
 func SignatureCredentialsProvider(sessionID session.ID, signer identity.Signer) func() (username string, password string, err error) {
 	return func() (username string, password string, err error) {
-		signature, err := signer.Sign([]byte(SignaturePrefix + sessionID))
+		signature, err := signer.Sign([]byte(AuthSignaturePrefix + sessionID))
 		if err != nil {
 			return
 		}

@@ -157,7 +157,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		openvpnFilterAllow = []string{m.dnsIP.String()}
 	}
 
-	vpnServerConfig := openvpn_service.NewServerConfig(
+	vpnServerConfig := NewServerConfig(
 		m.nodeOptions.Directories.Runtime,
 		m.nodeOptions.Directories.Config,
 		m.serviceOptions.Subnet,

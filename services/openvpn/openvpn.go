@@ -17,6 +17,9 @@
 
 package openvpn
 
+// AuthSignaturePrefix is used to prefix with each session string before calculating signature or extracting identity
+const AuthSignaturePrefix = "MystVpnSessionId:"
+
 // ConsumerConfig is used for sending some configuration from consumer to provider
 type ConsumerConfig struct {
 	IP    string `json:"Ip,omitempty"`

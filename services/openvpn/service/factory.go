@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/rs/zerolog/log"
 )
@@ -46,7 +45,7 @@ func NewManager(nodeOptions node.Options,
 	serviceOptions Options,
 	country string,
 	ipResolver ip.Resolver,
-	sessionMap openvpn_session.SessionMap,
+	sessionMap SessionMap,
 	natService nat.NATService,
 	natPinger natPinger,
 	natEventGetter NATEventGetter,
@@ -55,9 +54,9 @@ func NewManager(nodeOptions node.Options,
 	portMapper mapping.PortMapper,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
-	clientMap := openvpn_session.NewClientMap(sessionMap)
+	clientMap := NewClientMap(sessionMap)
 
-	sessionValidator := openvpn_session.NewValidator(clientMap, identity.NewExtractor())
+	sessionValidator := NewValidator(clientMap, identity.NewExtractor())
 
 	callback := func(sbc bytecount.SessionByteCount) {
 		sessions := clientMap.GetClientSessions(sbc.ClientID)

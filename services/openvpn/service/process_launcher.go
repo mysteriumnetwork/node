@@ -25,16 +25,15 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/core/node"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
-	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 )
 
 type processLauncher struct {
 	opts             node.Options
-	sessionValidator *openvpn_session.Validator
+	sessionValidator *Validator
 	statsCallback    func(count bytecount.SessionByteCount)
 }
 
-func newProcessLauncher(opts node.Options, sessionValidator *openvpn_session.Validator, statsCallback func(bytecount.SessionByteCount)) *processLauncher {
+func newProcessLauncher(opts node.Options, sessionValidator *Validator, statsCallback func(bytecount.SessionByteCount)) *processLauncher {
 	return &processLauncher{
 		opts:             opts,
 		sessionValidator: sessionValidator,
