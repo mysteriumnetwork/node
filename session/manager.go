@@ -113,12 +113,16 @@ type NATEventGetter interface {
 	LastEvent() *event.Event
 }
 
+type natPinger interface {
+	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
+}
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
-	natPinger traversal.NATPinger,
+	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
@@ -143,7 +147,7 @@ type Manager struct {
 	currentProposal      market.ServiceProposal
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
-	natPinger            traversal.NATPinger
+	natPinger            natPinger
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher

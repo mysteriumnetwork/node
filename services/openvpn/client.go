@@ -47,11 +47,15 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
+type natPinger interface {
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
+}
+
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
-	natPinger traversal.NATProviderPinger,
+	natPinger natPinger,
 ) (connection.Connection, error) {
 
 	stateCh := make(chan connection.State, 100)
@@ -96,7 +100,7 @@ type Client struct {
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
-	natPinger           traversal.NATProviderPinger
+	natPinger           natPinger
 	ports               []int
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
