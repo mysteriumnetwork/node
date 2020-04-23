@@ -32,6 +32,7 @@ func SharedConfiguredOptions() config.ServicesOptions {
 	} else {
 		policies = []string{}
 	}
+
 	return config.ServicesOptions{
 		AccessPolicyAddress:       config.GetString(config.FlagAccessPolicyAddress),
 		AccessPolicyList:          policies,

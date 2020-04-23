@@ -215,7 +215,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	// TODO: Add global services ports flag to support fixed range global ports pool.
 	di.PortPool = port.NewPool()
 	if config.GetBool(config.FlagPortMapping) {
 		portmapConfig := mapping.DefaultConfig()
@@ -223,9 +222,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	} else {
 		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
 	}
-
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.bootstrapP2P(nodeOptions.P2PPorts)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
@@ -252,6 +249,20 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	log.Info().Msg("Mysterium node started!")
 	return nil
+}
+
+func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
+	portPool := di.PortPool
+	natPinger := di.NATPinger
+	identityVerifier := identity.NewVerifierSigned()
+	if p2pPorts.IsSpecified() {
+		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
+		portPool = port.NewFixedRangePool(*p2pPorts)
+		natPinger = traversal.NewNoopPinger()
+	}
+
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
