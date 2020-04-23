@@ -18,50 +18,48 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// Validator structure that keeps attributes needed Validator operations
-type Validator struct {
+// authHandler authorises incoming Openvpn clients
+type authHandler struct {
+	management.Middleware
+
 	clientMap         *clientMap
 	identityExtractor identity.Extractor
 }
 
-// NewValidator return Validator instance
-func NewValidator(clientMap *clientMap, extractor identity.Extractor) *Validator {
-	return &Validator{
+// newAuthHandler return authHandler instance
+func newAuthHandler(clientMap *clientMap, extractor identity.Extractor) *authHandler {
+	ah := &authHandler{
 		clientMap:         clientMap,
 		identityExtractor: extractor,
 	}
+	ah.Middleware = auth.NewMiddleware(ah.validate)
+	return ah
 }
 
-// Validate provides glue code for openvpn management interface to validate incoming client login request,
+// handleAuthorisation provides glue code for openvpn management interface to validate incoming client login request,
 // it expects session id as username, and session signature signed by client as password
-func (v *Validator) Validate(clientID int, sessionString, signatureString string) (bool, error) {
-	sessionID := session.ID(sessionString)
-	currentSession, found, err := v.clientMap.FindClientSession(clientID, sessionID)
-
+func (ah *authHandler) validate(clientID int, username, password string) (bool, error) {
+	sessionID := session.ID(username)
+	currentSession, found, err := ah.clientMap.FindClientSession(clientID, sessionID)
 	if err != nil {
 		return false, err
 	}
 
 	if !found {
-		v.clientMap.UpdateClientSession(clientID, sessionID)
+		ah.clientMap.UpdateClientSession(clientID, sessionID)
 	}
 
-	signature := identity.SignatureBase64(signatureString)
-	extractedIdentity, err := v.identityExtractor.Extract([]byte(openvpn.AuthSignaturePrefix+sessionString), signature)
+	signature := identity.SignatureBase64(password)
+	extractedIdentity, err := ah.identityExtractor.Extract([]byte(openvpn.AuthSignaturePrefix+username), signature)
 	if err != nil {
 		return false, err
 	}
 	return currentSession.ConsumerID == extractedIdentity, nil
-}
-
-// Cleanup removes session from underlying session managers
-func (v *Validator) Cleanup(sessionString string) error {
-	sessionID := session.ID(sessionString)
-
-	return v.clientMap.RemoveSession(sessionID)
 }
