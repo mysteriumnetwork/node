@@ -40,7 +40,7 @@ import (
 const natPunchingMaxTTL = 10
 
 type natPinger interface {
-	traversal.NATProviderPinger
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 

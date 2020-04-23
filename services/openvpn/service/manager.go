@@ -48,11 +48,9 @@ import (
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
-// NATPinger defined Pinger interface for Provider
-type NATPinger interface {
+type natPinger interface {
 	BindServicePort(key string, port int)
 	Stop()
-	Valid() bool
 }
 
 // NATEventGetter allows us to fetch the last known NAT event
@@ -69,7 +67,7 @@ type Manager struct {
 	natService      nat.NATService
 	ports           port.ServicePortSupplier
 	natPingerPorts  port.ServicePortSupplier
-	natPinger       NATPinger
+	natPinger       natPinger
 	natEventGetter  NATEventGetter
 	dnsProxy        *dns.Proxy
 	eventListener   eventListener
@@ -265,7 +263,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *n
 	}
 
 	if conn == nil { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-		if !m.natPinger.Valid() {
+		if _, noop := m.natPinger.(*traversal.NoopPinger); noop {
 			return &session.ConfigParams{SessionServiceConfig: vpnConfig}, nil
 		}
 

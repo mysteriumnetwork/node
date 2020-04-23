@@ -46,11 +46,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// NATPinger defined Pinger interface for Provider
-type NATPinger interface {
+type natPinger interface {
 	BindServicePort(key string, port int)
 	Stop()
-	Valid() bool
 }
 
 // NATEventGetter allows us to fetch the last known NAT event
@@ -63,7 +61,7 @@ func NewManager(
 	ipResolver ip.Resolver,
 	country string,
 	natService nat.NATService,
-	natPinger NATPinger,
+	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	eventBus eventbus.EventBus,
 	options Options,
@@ -102,7 +100,7 @@ type Manager struct {
 	resourcesAllocator *resources.Allocator
 
 	natService      nat.NATService
-	natPinger       NATPinger
+	natPinger       natPinger
 	natPingerPorts  port.ServicePortSupplier
 	natEventGetter  NATEventGetter
 	eventBus        eventbus.EventBus
@@ -152,7 +150,8 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 
 		var portMappingOK bool
 		releasePortMapping, portMappingOK = m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
-		natPingerEnabled = !portMappingOK && m.natPinger.Valid() && m.behindNAT(providerConfig.PublicIP)
+		_, noopPinger := m.natPinger.(*traversal.NoopPinger)
+		natPingerEnabled = !portMappingOK && !noopPinger && m.behindNAT(providerConfig.PublicIP)
 
 		traversalParams, err = m.newTraversalParams(natPingerEnabled, consumerConfig)
 		if err != nil {
