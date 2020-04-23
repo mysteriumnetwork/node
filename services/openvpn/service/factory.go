@@ -20,25 +20,16 @@ package service
 import (
 	"crypto/x509/pkix"
 
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/rs/zerolog/log"
 )
-
-const statisticsReportingIntervalInSeconds = 1
-
-type eventBus interface {
-	Publish(topic string, data interface{})
-	SubscribeAsync(topic string, fn interface{}) error
-}
 
 // NewManager creates new instance of Openvpn service
 func NewManager(nodeOptions node.Options,
@@ -50,41 +41,25 @@ func NewManager(nodeOptions node.Options,
 	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
-	bus eventBus,
+	bus eventbus.EventBus,
 	portMapper mapping.PortMapper,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
-	clientMap := NewClientMap(sessionMap)
-
-	sessionValidator := NewValidator(clientMap, identity.NewExtractor())
-
-	callback := func(sbc bytecount.SessionByteCount) {
-		sessions := clientMap.GetClientSessions(sbc.ClientID)
-		if len(sessions) == 1 {
-			bus.Publish(event.AppTopicDataTransferred, event.AppEventDataTransferred{
-				ID:   string(sessions[0]),
-				Up:   sbc.BytesOut,
-				Down: sbc.BytesIn,
-			})
-		} else {
-			log.Warn().Msgf("Could not map sessions - expected a single session to exist for a user, got %v sessions instead", len(sessions))
-		}
-	}
-
 	return &Manager{
 		nodeOptions:     nodeOptions,
 		serviceOptions:  serviceOptions,
 		natService:      natService,
-		processLauncher: newProcessLauncher(nodeOptions, sessionValidator, callback),
 		natPingerPorts:  port.NewPool(),
 		natPinger:       natPinger,
 		natEventGetter:  natEventGetter,
 		ports:           portPool,
-		eventListener:   bus,
+		bus:             bus,
 		portMapper:      portMapper,
 		trafficFirewall: trafficFirewall,
 		country:         country,
 		ipResolver:      ipResolver,
+
+		openvpnClients: NewClientMap(sessionMap),
 	}
 }
 
