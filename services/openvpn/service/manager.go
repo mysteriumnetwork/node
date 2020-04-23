@@ -24,7 +24,6 @@ import (
 	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/filter"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
@@ -296,14 +295,12 @@ func (m *Manager) startServer() error {
 		openvpnFilterAllow = []string{m.dnsIP.String()}
 	}
 
-	sessionValidator := NewValidator(m.openvpnClients, identity.NewExtractor())
-
 	stateChannel := make(chan openvpn.State, 10)
 	m.openvpnProcess = openvpn.CreateNewProcess(
 		m.nodeOptions.Openvpn.BinaryPath(),
 		vpnServerConfig.GenericConfig,
 		filter.NewMiddleware(openvpnFilterAllow, openvpnFilterDeny),
-		auth.NewMiddleware(sessionValidator.Validate),
+		newAuthHandler(m.openvpnClients, identity.NewExtractor()),
 		state.NewMiddleware(func(state openvpn.State) {
 			stateChannel <- state
 			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
