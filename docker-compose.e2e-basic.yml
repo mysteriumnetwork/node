@@ -98,7 +98,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   accountant:
-    image: localhost:5000/accountant
+    image: mysteriumnetwork/hermes:0.4.0
     environment:
       PORT: 8889
     expose:

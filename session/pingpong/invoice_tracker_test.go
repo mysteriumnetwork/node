@@ -89,7 +89,6 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -110,9 +109,6 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
-		AccountantCaller:           &mockAccountantCaller{},
-		FeeProvider:                &mockTransactor{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -147,7 +143,6 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -166,11 +161,8 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
-		AccountantCaller:           &mockAccountantCaller{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: false},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		FeeProvider:                &mockTransactor{},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -204,7 +196,6 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 	mockError := errors.New("explosions everywhere")
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -223,11 +214,8 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
-		AccountantCaller:           &mockAccountantCaller{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegisteredError: mockError},
-		FeeProvider:                &mockTransactor{},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -260,7 +248,6 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -277,11 +264,8 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
-		AccountantCaller:           &mockAccountantCaller{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
-		AccountantPromiseStorage:   accountantPromiseStorage,
-		FeeProvider:                &mockTransactor{},
 		MaxAllowedAccountantFee:    1500,
 		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
 	}
@@ -317,7 +301,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	mockErr := errors.New("explosions everywhere")
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -335,11 +319,8 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
-		FeeProvider:                &mockTransactor{},
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
-		AccountantCaller:           &mockAccountantCaller{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -373,7 +354,6 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -393,10 +373,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
-		AccountantCaller:           &mockAccountantCaller{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		FeeProvider:                &mockTransactor{},
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -438,7 +415,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -459,9 +435,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		AccountantCaller:           &mockAccountantCaller{},
-		FeeProvider:                &mockTransactor{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
 	}
@@ -499,7 +472,6 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
@@ -520,9 +492,6 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		AccountantCaller:           &mockAccountantCaller{},
-		FeeProvider:                &mockTransactor{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
 	}
@@ -558,7 +527,6 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Peer:                       identity.FromAddress("some peer"),
 		PeerInvoiceSender:          mockSender,
@@ -573,9 +541,6 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		AccountantID:               acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		AccountantCaller:           &mockAccountantCaller{},
-		FeeProvider:                &mockTransactor{},
-		AccountantPromiseStorage:   accountantPromiseStorage,
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
 	}
@@ -720,9 +685,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				Peer:                       tt.fields.peer,
 				ExchangeMessageChan:        tt.fields.exchangeMessageChan,
 				ExchangeMessageWaitTimeout: tt.fields.exchangeMessageWaitTimeout,
-				AccountantPromiseStorage:   tt.fields.accountantPromiseStorage,
 				AccountantID:               tt.fields.accountantID,
-				AccountantCaller:           tt.fields.accountantCaller,
 				Registry:                   tt.fields.registryAddress,
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
@@ -743,14 +706,16 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 }
 
 type mockAccountantPromiseStorage struct {
+	toReturn    AccountantPromise
+	errToReturn error
 }
 
 func (maps *mockAccountantPromiseStorage) Store(_ identity.Identity, _ common.Address, _ AccountantPromise) error {
-	return nil
+	return maps.errToReturn
 }
 
 func (maps *mockAccountantPromiseStorage) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
-	return AccountantPromise{}, nil
+	return maps.toReturn, maps.errToReturn
 }
 
 type mockBlockchainHelper struct {
@@ -798,26 +763,6 @@ func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
 	return nil
 }
 
-func TestInvoiceTracker_TestInvoiceTracker_handleAccountantError_settles(t *testing.T) {
-	ms := &mockSettler{}
-	accountant := common.HexToAddress("0x1")
-	provider := identity.FromAddress("0x2")
-	it := &InvoiceTracker{
-		deps: InvoiceTrackerDeps{
-			Settler:      ms.settle,
-			AccountantID: accountant,
-			ProviderID:   provider,
-		},
-	}
-	err := it.handleAccountantError(ErrAccountantProviderBalanceExhausted)
-	assert.Equal(t, errors.Cause(err), ErrAccountantProviderBalanceExhausted)
-
-	assert.Eventually(t, func() bool {
-		p, a := ms.getCalledWith()
-		return provider == p && accountant == a
-	}, 2*time.Second, 10*time.Millisecond)
-}
-
 func TestInvoiceTracker_handleAccountantError(t *testing.T) {
 	tests := []struct {
 		name                      string
@@ -841,8 +786,8 @@ func TestInvoiceTracker_handleAccountantError(t *testing.T) {
 			err:     ErrAccountantInternal,
 		},
 		{
-			name:                      "returns handled on internal not exceeding limit",
-			wantErr:                   errHandled,
+			name:                      "returns nil on internal not exceeding limit",
+			wantErr:                   nil,
 			maxAccountantFailureCount: 1,
 			err:                       ErrAccountantInternal,
 		},
@@ -852,8 +797,8 @@ func TestInvoiceTracker_handleAccountantError(t *testing.T) {
 			err:     ErrAccountantHashlockMissmatch,
 		},
 		{
-			name:                      "returns handled on hashlock missmatch not exceeding limit",
-			wantErr:                   errHandled,
+			name:                      "returns nil on hashlock missmatch not exceeding limit",
+			wantErr:                   nil,
 			maxAccountantFailureCount: 1,
 			err:                       ErrAccountantHashlockMissmatch,
 		},
@@ -924,84 +869,6 @@ func (mpm *mockPaymentMethod) GetType() string {
 
 func (mpm *mockPaymentMethod) GetRate() market.PaymentRate {
 	return mpm.rate
-}
-
-func TestInvoiceTracker_recoverR(t *testing.T) {
-	type fields struct {
-		deps InvoiceTrackerDeps
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		err     accountantError
-		wantErr bool
-	}{
-		{
-			name: "green path",
-			fields: fields{
-				deps: InvoiceTrackerDeps{
-					ProviderID:       identity.FromAddress("0x0"),
-					AccountantCaller: &mockAccountantCaller{},
-					Encryption:       &mockEncryptor{},
-				},
-			},
-			err: AccountantErrorResponse{
-				ErrorMessage: `Secret R for previous promise exchange (Encrypted recovery data: "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d"`,
-				CausedBy:     ErrNeedsRRecovery.Error(),
-				c:            ErrNeedsRRecovery,
-				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
-			},
-			wantErr: false,
-		},
-		{
-			name: "bubbles accountant errors",
-			fields: fields{
-				deps: InvoiceTrackerDeps{
-					ProviderID: identity.FromAddress("0x0"),
-					AccountantCaller: &mockAccountantCaller{
-						errToReturn: errors.New("explosions"),
-					},
-					Encryption: &mockEncryptor{},
-				},
-			},
-			err: AccountantErrorResponse{
-				ErrorMessage: `Secret R for previous promise exchange (Encrypted recovery data: "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d"`,
-				CausedBy:     ErrNeedsRRecovery.Error(),
-				c:            ErrNeedsRRecovery,
-				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
-			},
-			wantErr: true,
-		},
-		{
-			name: "bubbles decryptor errors",
-			fields: fields{
-				deps: InvoiceTrackerDeps{
-					ProviderID:       identity.FromAddress("0x0"),
-					AccountantCaller: &mockAccountantCaller{},
-					Encryption: &mockEncryptor{
-						errToReturn: errors.New("explosions"),
-					},
-				},
-			},
-			err: AccountantErrorResponse{
-				ErrorMessage: `Secret R for previous promise exchange (Encrypted recovery data: "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d"`,
-				CausedBy:     ErrNeedsRRecovery.Error(),
-				c:            ErrNeedsRRecovery,
-				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			it := &InvoiceTracker{
-				deps: tt.fields.deps,
-			}
-			if err := it.recoverR(tt.err); (err != nil) != tt.wantErr {
-				t.Errorf("InvoiceTracker.recoverR() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
 }
 
 type mockEncryptor struct {

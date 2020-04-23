@@ -37,6 +37,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type accountantPromiseStorage interface {
+	Store(providerID identity.Identity, accountantID common.Address, promise AccountantPromise) error
+	Get(providerID identity.Identity, accountantID common.Address) (AccountantPromise, error)
+}
+
+type feeProvider interface {
+	FetchSettleFees() (registry.FeesResponse, error)
+}
+
+type accountantCaller interface {
+	RequestPromise(rp RequestPromise) (crypto.Promise, error)
+	RevealR(r string, provider string, agreementID uint64) error
+}
+
+type encryption interface {
+	Decrypt(addr common.Address, encrypted []byte) ([]byte, error)
+	Encrypt(addr common.Address, plaintext []byte) ([]byte, error)
+}
+
 // AccountantPromiseHandlerDeps represents the AccountantPromiseHandler dependencies.
 type AccountantPromiseHandlerDeps struct {
 	AccountantPromiseStorage accountantPromiseStorage
@@ -44,7 +63,6 @@ type AccountantPromiseHandlerDeps struct {
 	AccountantID             common.Address
 	FeeProvider              feeProvider
 	Encryption               encryption
-	Settler                  settler
 	EventBus                 eventbus.Publisher
 }
 
@@ -115,19 +133,23 @@ func (aph *AccountantPromiseHandler) handleRequests() {
 func (aph *AccountantPromiseHandler) Subscribe(bus eventbus.Subscriber) error {
 	err := bus.SubscribeAsync(event.AppTopicNode, aph.handleNodeStopEvents)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to node events")
+		return fmt.Errorf("could not subscribe to node events: %w", err)
 	}
 
 	err = bus.SubscribeAsync(servicestate.AppTopicServiceStatus, aph.handleServiceEvent)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to service events")
+		return fmt.Errorf("could not subscribe to service events: %w", err)
 	}
 	return nil
 }
 
 func (aph *AccountantPromiseHandler) handleServiceEvent(ev servicestate.AppEventServiceStatus) {
 	if ev.Status == string(servicestate.Running) {
-		aph.startOnce.Do(aph.handleRequests)
+		aph.startOnce.Do(
+			func() {
+				aph.updateFee()
+				aph.handleRequests()
+			})
 	}
 }
 
@@ -158,13 +180,13 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	bytes, err := json.Marshal(details)
 	if err != nil {
-		er.errChan <- fmt.Errorf("could not marshal R recovery details %w", err)
+		er.errChan <- fmt.Errorf("could not marshal R recovery details: %w", err)
 		return
 	}
 
 	encrypted, err := aph.deps.Encryption.Encrypt(er.providerID.ToCommonAddress(), bytes)
 	if err != nil {
-		er.errChan <- fmt.Errorf("could not encrypt R %w", err)
+		er.errChan <- fmt.Errorf("could not encrypt R: %w", err)
 		return
 	}
 
@@ -177,10 +199,7 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 	promise, err := aph.deps.AccountantCaller.RequestPromise(request)
 	err = aph.handleAccountantError(err, er.providerID)
 	if err != nil {
-		if err == errHandled {
-			return
-		}
-		er.errChan <- fmt.Errorf("accountant request promise error %w", err)
+		er.errChan <- fmt.Errorf("accountant request promise error: %w", err)
 		return
 	}
 
@@ -193,7 +212,7 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	err = aph.deps.AccountantPromiseStorage.Store(er.providerID, aph.deps.AccountantID, ap)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
-		er.errChan <- fmt.Errorf("could not store accountant promise %w", err)
+		er.errChan <- fmt.Errorf("could not store accountant promise: %w", err)
 		return
 	}
 
@@ -211,10 +230,7 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 	err = aph.revealR(er.providerID)
 	err = aph.handleAccountantError(err, er.providerID)
 	if err != nil {
-		if err == errHandled {
-			return
-		}
-		er.errChan <- fmt.Errorf("accountant reveal r error %w", err)
+		er.errChan <- fmt.Errorf("accountant reveal r error: %w", err)
 		return
 	}
 }
@@ -228,7 +244,7 @@ func (aph *AccountantPromiseHandler) revealR(providerID identity.Identity) error
 	case ErrNotFound:
 		needsRevealing = false
 	default:
-		return fmt.Errorf("could not get accountant promise %w", err)
+		return fmt.Errorf("could not get accountant promise: %w", err)
 	}
 
 	if !needsRevealing {
@@ -238,13 +254,13 @@ func (aph *AccountantPromiseHandler) revealR(providerID identity.Identity) error
 	err = aph.deps.AccountantCaller.RevealR(accountantPromise.R, providerID.Address, accountantPromise.AgreementID)
 	handledErr := aph.handleAccountantError(err, providerID)
 	if handledErr != nil {
-		return errors.Wrap(handledErr, "could not reveal R")
+		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
 	accountantPromise.Revealed = true
 	err = aph.deps.AccountantPromiseStorage.Store(providerID, aph.deps.AccountantID, accountantPromise)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
-		return errors.Wrap(err, "could not store accountant promise")
+		return fmt.Errorf("could not store accountant promise: %w", err)
 	}
 
 	return nil
@@ -266,37 +282,11 @@ func (aph *AccountantPromiseHandler) handleAccountantError(err error, providerID
 		if recoveryErr != nil {
 			return recoveryErr
 		}
-		return errHandled
+		return nil
 	case stdErr.Is(err, ErrAccountantNoPreviousPromise):
 		log.Info().Msg("no previous promise on accountant, will mark R as revealed")
 		return nil
-	case stdErr.Is(err, ErrAccountantHashlockMissmatch), stdErr.Is(err, ErrAccountantPreviousRNotRevealed):
-		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
-		// For now though, handle as ignorable.
-		fallthrough
-	case
-		stdErr.Is(err, ErrAccountantInternal),
-		stdErr.Is(err, ErrAccountantNotFound),
-		stdErr.Is(err, ErrAccountantMalformedJSON),
-		stdErr.Is(err, ErrTooManyRequests):
-		return err
-	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
-		go func() {
-			settleErr := aph.deps.Settler(providerID, aph.deps.AccountantID)
-			if settleErr != nil {
-				log.Err(settleErr).Msgf("settling failed")
-			}
-		}()
-		log.Warn().Err(err).Msg("out of balance, will try settling")
-		return errHandled
-	case
-		stdErr.Is(err, ErrAccountantInvalidSignature),
-		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
-		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
-		stdErr.Is(err, ErrAccountantOverspend):
-		return err
 	default:
-		log.Err(err).Msgf("unknown accountant error encountered")
 		return err
 	}
 }
@@ -305,24 +295,24 @@ func (aph *AccountantPromiseHandler) recoverR(aerr accountantError, providerID i
 	log.Info().Msg("Recovering R...")
 	decoded, err := hex.DecodeString(aerr.Data())
 	if err != nil {
-		return errors.Wrap(err, "could not decode R recovery details")
+		return fmt.Errorf("could not decode R recovery details: %w", err)
 	}
 
 	decrypted, err := aph.deps.Encryption.Decrypt(providerID.ToCommonAddress(), decoded)
 	if err != nil {
-		return errors.Wrap(err, "could not decrypt R details")
+		return fmt.Errorf("could not decrypt R details: %w", err)
 	}
 
 	res := rRecoveryDetails{}
 	err = json.Unmarshal(decrypted, &res)
 	if err != nil {
-		return errors.Wrap(err, "could not unmarshal R details")
+		return fmt.Errorf("could not unmarshal R details: %w", err)
 	}
 
 	log.Info().Msg("R recovered, will reveal...")
 	err = aph.deps.AccountantCaller.RevealR(res.R, providerID.Address, res.AgreementID)
 	if err != nil {
-		return errors.Wrap(err, "could not reveal R")
+		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
 	log.Info().Msg("R recovered successfully")
