@@ -33,11 +33,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NATPinger defined Pinger interface for Provider
-type NATPinger interface {
+type natPinger interface {
 	BindServicePort(key string, port int)
 	Stop()
-	Valid() bool
 }
 
 // NATEventGetter allows us to fetch the last known NAT event
@@ -50,7 +48,7 @@ func NewManager(
 	ipResolver ip.Resolver,
 	country string,
 	natService nat.NATService,
-	natPinger NATPinger,
+	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	eventPublisher eventbus.Publisher,
 	options Options,
