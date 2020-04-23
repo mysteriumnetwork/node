@@ -15,15 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
-
-// SignaturePrefix is used to prefix with each session string before calculating signature or extracting identity
-const SignaturePrefix = "MystVpnSessionId:"
 
 // Validator structure that keeps attributes needed Validator operations
 type Validator struct {
@@ -54,7 +52,7 @@ func (v *Validator) Validate(clientID int, sessionString, signatureString string
 	}
 
 	signature := identity.SignatureBase64(signatureString)
-	extractedIdentity, err := v.identityExtractor.Extract([]byte(SignaturePrefix+sessionString), signature)
+	extractedIdentity, err := v.identityExtractor.Extract([]byte(openvpn.AuthSignaturePrefix+sessionString), signature)
 	if err != nil {
 		return false, err
 	}

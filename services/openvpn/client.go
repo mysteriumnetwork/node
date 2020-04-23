@@ -35,7 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -233,7 +232,7 @@ type VPNConfig struct {
 }
 
 func newAuthMiddleware(sessionID session.ID, signer identity.Signer) management.Middleware {
-	credentialsProvider := openvpn_session.SignatureCredentialsProvider(sessionID, signer)
+	credentialsProvider := SignatureCredentialsProvider(sessionID, signer)
 	return auth.NewMiddleware(credentialsProvider)
 }
 
