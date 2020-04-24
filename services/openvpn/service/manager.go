@@ -77,6 +77,7 @@ type Manager struct {
 	vpnServerPort   int
 	openvpnProcess  openvpn.Process
 	openvpnClients  *clientMap
+	openvpnAuth     *authHandler
 	ipResolver      ip.Resolver
 	serviceOptions  Options
 	nodeOptions     node.Options
@@ -296,11 +297,12 @@ func (m *Manager) startServer() error {
 	}
 
 	stateChannel := make(chan openvpn.State, 10)
+	m.openvpnAuth = newAuthHandler(m.openvpnClients, identity.NewExtractor())
 	m.openvpnProcess = openvpn.CreateNewProcess(
 		m.nodeOptions.Openvpn.BinaryPath(),
 		vpnServerConfig.GenericConfig,
 		filter.NewMiddleware(openvpnFilterAllow, openvpnFilterDeny),
-		newAuthHandler(m.openvpnClients, identity.NewExtractor()),
+		m.openvpnAuth,
 		state.NewMiddleware(func(state openvpn.State) {
 			stateChannel <- state
 			//this is the last state - close channel (according to best practices of go - channel writer controls channel)

@@ -18,16 +18,18 @@
 package service
 
 import (
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/credentials"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/rs/zerolog/log"
 )
 
-// authHandler authorises incoming Openvpn clients
+// authHandler authorizes incoming clients by registering a callback to check auth primitives.
+// username - provider's sessionId
+// password - consumer's identity signature
 type authHandler struct {
-	management.Middleware
+	*credentials.Middleware
 
 	clientMap         *clientMap
 	identityExtractor identity.Extractor
@@ -39,7 +41,7 @@ func newAuthHandler(clientMap *clientMap, extractor identity.Extractor) *authHan
 		clientMap:         clientMap,
 		identityExtractor: extractor,
 	}
-	ah.Middleware = auth.NewMiddleware(ah.validate)
+	ah.Middleware = credentials.NewMiddleware(ah.validate)
 	return ah
 }
 
@@ -47,19 +49,28 @@ func newAuthHandler(clientMap *clientMap, extractor identity.Extractor) *authHan
 // it expects session id as username, and session signature signed by client as password
 func (ah *authHandler) validate(clientID int, username, password string) (bool, error) {
 	sessionID := session.ID(username)
-	currentSession, found, err := ah.clientMap.FindClientSession(clientID, sessionID)
-	if err != nil {
-		return false, err
+	currentSession, currestSessionFound := ah.clientMap.GetSession(sessionID)
+	if !currestSessionFound {
+		log.Warn().Msgf("Possible break-in attempt. No established session exists: %s", sessionID)
+		return false, nil
 	}
 
-	if !found {
-		ah.clientMap.UpdateClientSession(clientID, sessionID)
+	if currentClientID, exist := ah.clientMap.GetSessionClient(sessionID); exist && clientID != currentClientID {
+		log.Warn().Msgf("Possible break-in attempt. Session %s already used by another client %d", sessionID, currentClientID)
+		return false, nil
 	}
 
 	signature := identity.SignatureBase64(password)
-	extractedIdentity, err := ah.identityExtractor.Extract([]byte(openvpn.AuthSignaturePrefix+username), signature)
+	signerID, err := ah.identityExtractor.Extract([]byte(openvpn.AuthSignaturePrefix+username), signature)
 	if err != nil {
-		return false, err
+		log.Warn().Err(err).Msgf("Possible break-in attempt. Invalid session %s signature", sessionID)
+		return false, nil
 	}
-	return currentSession.ConsumerID == extractedIdentity, nil
+	if signerID != currentSession.ConsumerID {
+		log.Warn().Msgf("Possible break-in attempt. Invalid session %s consumer %s", sessionID, signerID)
+		return false, nil
+	}
+
+	ah.clientMap.AssignSessionClient(sessionID, clientID)
+	return true, nil
 }
