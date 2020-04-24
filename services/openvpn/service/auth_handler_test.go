@@ -43,7 +43,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 
 	authenticated, err := validator(1, "not important", "not important")
 
-	assert.Errorf(t, err, "no underlying session exists, possible break-in attempt")
+	assert.NoError(t, err)
 	assert.False(t, authenticated)
 }
 
@@ -72,7 +72,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDDiffe
 	authenticated, err := validator(2, sessionExistingString, "not important")
 
 	assert.NoError(t, err)
-	assert.True(t, authenticated)
+	assert.False(t, authenticated)
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatches(t *testing.T) {

@@ -38,7 +38,7 @@ require (
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.38
-	github.com/mysteriumnetwork/go-openvpn v0.0.22
+	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.3
 	github.com/mysteriumnetwork/payments v0.0.11
