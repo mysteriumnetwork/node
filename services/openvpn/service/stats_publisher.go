@@ -41,18 +41,14 @@ type statsPublisher struct {
 }
 
 func (sb *statsPublisher) handleStatsEvent(clientStats bytecount.SessionByteCount) {
-	sessions := sb.clientMap.GetClientSessions(clientStats.ClientID)
-	if len(sessions) != 1 {
-		log.Warn().Msgf(
-			"Stats for unknown session. Expected a single session to exist for client %d, got %v sessions instead",
-			clientStats.ClientID,
-			len(sessions),
-		)
+	session, exist := sb.clientMap.GetClientSession(clientStats.ClientID)
+	if !exist {
+		log.Warn().Msgf("Stats for unknown session of client %d", clientStats.ClientID)
 		return
 	}
 
 	sb.bus.Publish(event.AppTopicDataTransferred, event.AppEventDataTransferred{
-		ID:   string(sessions[0]),
+		ID:   string(session),
 		Up:   clientStats.BytesOut,
 		Down: clientStats.BytesIn,
 	})

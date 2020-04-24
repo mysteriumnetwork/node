@@ -72,7 +72,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDDiffe
 	authenticated, err := validator(2, sessionExistingString, "not important")
 
 	assert.NoError(t, err)
-	assert.False(t, authenticated)
+	assert.True(t, authenticated)
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatches(t *testing.T) {

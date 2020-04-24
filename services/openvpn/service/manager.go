@@ -213,7 +213,7 @@ func (m *Manager) Stop() error {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
 	if m.vpnServerPort == 0 {
 		return nil, errors.New("service port not initialized")
 	}
@@ -275,7 +275,18 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *n
 		}
 	}
 
-	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
+	destroy := func() {
+		log.Info().Msgf("Cleaning up session %s", sessionID)
+
+		sessionClients := m.openvpnClients.GetSessionClients(session.ID(sessionID))
+		for clientID := range sessionClients {
+			if err := m.openvpnAuth.ClientKill(clientID); err != nil {
+				log.Error().Err(err).Msgf("Cleaning up session %s failed. Error disconnecting Openvpn client %d", sessionID, clientID)
+			}
+		}
+	}
+
+	return &session.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
 func (m *Manager) startServer() error {
