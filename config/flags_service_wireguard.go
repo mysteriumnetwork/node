@@ -31,7 +31,7 @@ var (
 	// FlagWireguardListenPorts range of listen ports.
 	FlagWireguardListenPorts = cli.StringFlag{
 		Name:  "wireguard.listen.ports",
-		Usage: "Range of listen ports (e.g. 52820:53075)",
+		Usage: "Range of listen ports (e.g. 52820:53075), value of 0:0 means disabled",
 		Value: "0:0",
 	}
 	// FlagWireguardListenSubnet subnet to be used by the wireguard service.

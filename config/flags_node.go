@@ -170,6 +170,12 @@ var (
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
 	}
+	//FlagP2PListenPorts sets manual ports for p2p connections.
+	FlagP2PListenPorts = cli.StringFlag{
+		Name:  "p2p.listen.ports",
+		Usage: "Range of P2P listen ports (e.g. 51820:52075), value of 0:0 means disabled",
+		Value: "0:0",
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -206,6 +212,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagPProfEnable,
 		&FlagUIPort,
 		&FlagVendorID,
+		&FlagP2PListenPorts,
 	)
 
 	return nil
@@ -242,6 +249,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseStringFlag(ctx, FlagVendorID)
+	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

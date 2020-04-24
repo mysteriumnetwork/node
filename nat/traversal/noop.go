@@ -26,7 +26,7 @@ import (
 type NoopPinger struct{}
 
 // NewNoopPinger returns noop nat pinger
-func NewNoopPinger() NATPinger {
+func NewNoopPinger() *NoopPinger {
 	return &NoopPinger{}
 }
 
@@ -38,11 +38,6 @@ func (np *NoopPinger) PingProviderPeer(ctx context.Context, ip string, localPort
 // PingConsumerPeer does nothing.
 func (np *NoopPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return []*net.UDPConn{}, nil
-}
-
-// Valid returns that noop pinger is not a valid pinger
-func (np *NoopPinger) Valid() bool {
-	return false
 }
 
 // StopNATProxy does nothing

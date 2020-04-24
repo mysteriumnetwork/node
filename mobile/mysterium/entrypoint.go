@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -199,6 +200,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ConsumerUpperGBPriceBound:          7000000,
 		},
 		MobileConsumer: true,
+		P2PPorts:       port.UnspecifiedRange(),
 	}
 
 	err := di.Bootstrap(nodeOptions)

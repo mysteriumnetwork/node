@@ -253,6 +253,10 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	return nil
 }
 
+// prepareLocalPorts acquires ports for p2p connections. It tries to acquire only
+// required ports count for actual p2p and service connections and fallback to
+// acquiring extra ports for nat pinger if provider is behind nat, port mapping failed
+// and no manual port forwarding is enabled.
 func (m *listener) prepareLocalPorts(publicIP, outboundIP string) ([]int, []func(), error) {
 	// First acquire required only ports for needed n connections.
 	localPorts, err := acquireLocalPorts(m.portPool, requiredConnCount)
@@ -279,7 +283,13 @@ func (m *listener) prepareLocalPorts(publicIP, outboundIP string) ([]int, []func
 		return localPorts, portsRelease, nil
 	}
 
-	// Since port mapping failed acquire more ports which will be used for NAT pinger.
+	// Check if nat pinger is valid. It's considered as not valid when noop pinger is used in case
+	// manual port forwarding is specified.
+	if _, noop := m.providerPinger.(*traversal.NoopPinger); noop {
+		return localPorts, nil, nil
+	}
+
+	// Acquire more ports for nat pinger.
 	morePorts, err := acquireLocalPorts(m.portPool, pingMaxPorts-requiredConnCount)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not acquire more local ports: %v", err)

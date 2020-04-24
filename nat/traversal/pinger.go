@@ -47,21 +47,15 @@ var (
 	errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
 )
 
-// NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
-type NATProviderPinger interface {
-	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
-}
-
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
-	NATProviderPinger
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
 	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	BindServicePort(key string, port int)
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
-	Valid() bool
 }
 
 // PingConfig represents NAT pinger config.
