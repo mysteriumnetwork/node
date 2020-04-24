@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/pkg/errors"
 )
 
 // SessionMap defines map of current sessions
@@ -31,69 +30,62 @@ type SessionMap interface {
 	Remove(session.ID)
 }
 
-// clientMap extends current sessions with client id metadata from Openvpn
+// clientMap extends current sessions with client id metadata from Openvpn.
 type clientMap struct {
 	sessions SessionMap
 	// TODO: use clientID to kill OpenVPN session (client-kill {clientID}) when promise processor instructs so
-	sessionClientIDs map[session.ID]int
+	sessionClientIDs map[int]session.ID
 	sessionMapLock   sync.Mutex
 }
 
-// NewClientMap creates a new instance of client map
+// NewClientMap creates a new instance of client map.
 func NewClientMap(sessionMap SessionMap) *clientMap {
 	return &clientMap{
 		sessions:         sessionMap,
-		sessionClientIDs: make(map[session.ID]int),
+		sessionClientIDs: make(map[int]session.ID),
 	}
 }
 
-// GetSession returns ongoing session instance by given session id
+// Add adds OpenVPN client with used session ID.
+func (cm *clientMap) Add(clientID int, sessionID session.ID) {
+	cm.sessionMapLock.Lock()
+	defer cm.sessionMapLock.Unlock()
+
+	cm.sessionClientIDs[clientID] = sessionID
+}
+
+// Remove removes given OpenVPN client.
+func (cm *clientMap) Remove(clientID int) {
+	cm.sessionMapLock.Lock()
+	defer cm.sessionMapLock.Unlock()
+
+	delete(cm.sessionClientIDs, clientID)
+}
+
+// GetSession returns ongoing session instance by given session id.
 func (cm *clientMap) GetSession(id session.ID) (session.Session, bool) {
 	return cm.sessions.Find(id)
 }
 
-// GetSessionClient returns client to which session belongs
-func (cm *clientMap) GetSessionClient(id session.ID) (int, bool) {
+// GetSessionClients returns Openvpn clients which are using given session.
+func (cm *clientMap) GetSessionClients(id session.ID) []int {
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 
-	clientID, exist := cm.sessionClientIDs[id]
-	return clientID, exist
-}
-
-// AssignSessionClient updates OpenVPN session with clientID
-func (cm *clientMap) AssignSessionClient(id session.ID, clientID int) {
-	cm.sessionMapLock.Lock()
-	defer cm.sessionMapLock.Unlock()
-
-	cm.sessionClientIDs[id] = clientID
-}
-
-// GetClientSessions returns the list of sessions for client found in the client map
-func (cm *clientMap) GetClientSessions(clientID int) []session.ID {
-	cm.sessionMapLock.Lock()
-	defer cm.sessionMapLock.Unlock()
-	res := make([]session.ID, 0)
-
-	for k, v := range cm.sessionClientIDs {
-		if v == clientID {
-			res = append(res, k)
+	res := make([]int, 0)
+	for clientID, sessionID := range cm.sessionClientIDs {
+		if id == sessionID {
+			res = append(res, clientID)
 		}
 	}
 	return res
 }
 
-// RemoveSession removes given session from underlying session managers
-func (cm *clientMap) RemoveSession(id session.ID) error {
+// GetClientSession returns session for given Openvpn client.
+func (cm *clientMap) GetClientSession(clientID int) (session.ID, bool) {
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 
-	_, clientIDExist := cm.sessions.Find(id)
-	if !clientIDExist {
-		return errors.New("no underlying session exists: " + string(id))
-	}
-
-	cm.sessions.Remove(id)
-	delete(cm.sessionClientIDs, id)
-	return nil
+	sessionID, exist := cm.sessionClientIDs[clientID]
+	return sessionID, exist
 }

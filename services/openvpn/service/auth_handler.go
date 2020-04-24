@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/credentials"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -42,21 +43,26 @@ func newAuthHandler(clientMap *clientMap, extractor identity.Extractor) *authHan
 		identityExtractor: extractor,
 	}
 	ah.Middleware = credentials.NewMiddleware(ah.validate)
+	ah.Middleware.ClientsSubscribe(ah.handleClientEvent)
 	return ah
+}
+
+func (ah *authHandler) handleClientEvent(event server.ClientEvent) {
+	switch event.EventType {
+	case server.Connect:
+		ah.clientMap.Add(event.ClientID, session.ID(event.Env["username"]))
+	case server.Disconnect:
+		ah.clientMap.Remove(event.ClientID)
+	}
 }
 
 // handleAuthorisation provides glue code for openvpn management interface to validate incoming client login request,
 // it expects session id as username, and session signature signed by client as password
-func (ah *authHandler) validate(clientID int, username, password string) (bool, error) {
+func (ah *authHandler) validate(_ int, username, password string) (bool, error) {
 	sessionID := session.ID(username)
-	currentSession, currestSessionFound := ah.clientMap.GetSession(sessionID)
-	if !currestSessionFound {
+	currentSession, currentSessionFound := ah.clientMap.GetSession(sessionID)
+	if !currentSessionFound {
 		log.Warn().Msgf("Possible break-in attempt. No established session exists: %s", sessionID)
-		return false, nil
-	}
-
-	if currentClientID, exist := ah.clientMap.GetSessionClient(sessionID); exist && clientID != currentClientID {
-		log.Warn().Msgf("Possible break-in attempt. Session %s already used by another client %d", sessionID, currentClientID)
 		return false, nil
 	}
 
@@ -71,6 +77,5 @@ func (ah *authHandler) validate(clientID int, username, password string) (bool, 
 		return false, nil
 	}
 
-	ah.clientMap.AssignSessionClient(sessionID, clientID)
 	return true, nil
 }
