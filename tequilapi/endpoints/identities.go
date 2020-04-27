@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -30,6 +32,7 @@ import (
 	pingpong_event "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 )
 
@@ -41,8 +44,8 @@ type earningsProvider interface {
 	GetEarnings(id identity.Identity) pingpong_event.Earnings
 }
 
-type accountantCaller interface {
-	GetProviderBeneficiary(id string) (string, error)
+type providerChannel interface {
+	GetProviderChannel(accountantAddress common.Address, provider common.Address) (client.ProviderChannel, error)
 }
 
 type identitiesAPI struct {
@@ -52,7 +55,7 @@ type identitiesAPI struct {
 	channelCalculator *pingpong.ChannelAddressCalculator
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
-	accountantCaller  accountantCaller
+	bc                providerChannel
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -350,14 +353,14 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	beneficiary, err := endpoint.accountantCaller.GetProviderBeneficiary(address)
+	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
 	}
 
 	registrationDataDTO := &contract.IdentityBeneficiaryResponce{
-		Beneficiary: beneficiary,
+		Beneficiary: data.Beneficiary.String(),
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
@@ -371,7 +374,7 @@ func AddRoutesForIdentities(
 	balanceProvider balanceProvider,
 	channelAddressCalculator *pingpong.ChannelAddressCalculator,
 	earningsProvider earningsProvider,
-	accountantCaller accountantCaller,
+	bc providerChannel,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:               idm,
@@ -380,7 +383,7 @@ func AddRoutesForIdentities(
 		balanceProvider:   balanceProvider,
 		channelCalculator: channelAddressCalculator,
 		earningsProvider:  earningsProvider,
-		accountantCaller:  accountantCaller,
+		bc:                bc,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
