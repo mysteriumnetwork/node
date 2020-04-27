@@ -41,6 +41,10 @@ type earningsProvider interface {
 	GetEarnings(id identity.Identity) pingpong_event.Earnings
 }
 
+type accountantCaller interface {
+	GetProviderBeneficiary(id string) (string, error)
+}
+
 type identitiesAPI struct {
 	idm               identity.Manager
 	selector          identity_selector.Handler
@@ -48,6 +52,7 @@ type identitiesAPI struct {
 	channelCalculator *pingpong.ChannelAddressCalculator
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
+	accountantCaller  accountantCaller
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -324,6 +329,39 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
+// swagger:operation GET /identities/{id}/beneficiary Identity beneficiary address
+// ---
+// summary: Provide identity beneficiary address
+// description: Provides beneficiary address for given identity
+// parameters:
+//   - in: path
+//     name: id
+//     description: hex address of identity
+//     type: string
+//     required: true
+// responses:
+//   200:
+//     description: Beneficiary retrieved
+//     schema:
+//       "$ref": "#/definitions/IdentityBeneficiaryDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	address := params.ByName("id")
+	beneficiary, err := endpoint.accountantCaller.GetProviderBeneficiary(address)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	registrationDataDTO := &contract.IdentityBeneficiaryResponce{
+		Beneficiary: beneficiary,
+	}
+	utils.WriteAsJSON(registrationDataDTO, resp)
+}
+
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
@@ -333,6 +371,7 @@ func AddRoutesForIdentities(
 	balanceProvider balanceProvider,
 	channelAddressCalculator *pingpong.ChannelAddressCalculator,
 	earningsProvider earningsProvider,
+	accountantCaller accountantCaller,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:               idm,
@@ -341,6 +380,7 @@ func AddRoutesForIdentities(
 		balanceProvider:   balanceProvider,
 		channelCalculator: channelAddressCalculator,
 		earningsProvider:  earningsProvider,
+		accountantCaller:  accountantCaller,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
@@ -357,4 +397,5 @@ func AddRoutesForIdentities(
 	router.GET("/identities/:id/status", idmEnd.Get)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
+	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
 }

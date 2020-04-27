@@ -202,6 +202,21 @@ func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 	return resp, nil
 }
 
+// GetProviderBeneficiary gets provider beneficiary address.
+func (ac *AccountantCaller) GetProviderBeneficiary(id string) (string, error) {
+	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/provider/%v", id), nil)
+	if err != nil {
+		return "", fmt.Errorf("could not form consumer data request: %w", err)
+	}
+
+	var resp ConsumerData
+	if err = ac.doRequest(req, &resp); err != nil {
+		return "", fmt.Errorf("could not request consumer data from accountant: %w", err)
+	}
+
+	return resp.Beneficiary, nil
+}
+
 func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 	resp, err := ac.transport.Do(req)
 	if err != nil {

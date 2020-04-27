@@ -126,3 +126,9 @@ type IdentityRegistrationResponse struct {
 type ListProposalsResponse struct {
 	Proposals []ProposalDTO `json:"proposals"`
 }
+
+// IdentityBeneficiaryResponce represents the provider beneficiary address.
+// swagger:model IdentityBeneficiaryDTO
+type IdentityBeneficiaryResponce struct {
+	Beneficiary string `json:"Beneficiary"`
+}

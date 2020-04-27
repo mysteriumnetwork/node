@@ -502,6 +502,7 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	return nil
 }
 
+// SetBeneficiary set new beneficiary address for the provided identity.
 func (client *Client) SetBeneficiary(address, beneficiary string) error {
 	payload := SetBeneficiaryRequest{Beneficiary: beneficiary}
 	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
@@ -515,4 +516,16 @@ func (client *Client) SetBeneficiary(address, beneficiary string) error {
 	}
 
 	return nil
+}
+
+// Beneficiary gets beneficiary address for the provided identity.
+func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponce, err error) {
+	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
+	if err != nil {
+		return contract.IdentityBeneficiaryResponce{}, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	return res, err
 }
