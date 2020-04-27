@@ -77,3 +77,5 @@ require (
 )
 
 replace github.com/nats-io/go-nats v1.4.0 => github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed
+
+replace github.com/mysteriumnetwork/payments => ../payments

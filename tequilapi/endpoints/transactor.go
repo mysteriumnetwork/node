@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -37,6 +39,7 @@ type Transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 	TopUp(identity string) error
 	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
+	SetBeneficiary(identity, beneficiary string) error
 }
 
 // promiseSettler settles the given promises
@@ -263,10 +266,31 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	identity := params.ByName("id")
+
+	req := &client.SetBeneficiaryRequest{}
+	err := json.NewDecoder(request.Body).Decode(&req)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	err = te.transactor.SetBeneficiary(identity, req.Beneficiary)
+	if err != nil {
+		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", identity, req)
+		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler) {
 	te := NewTransactorEndpoint(transactor, promiseSettler)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
+	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/topup", te.TopUp)
 	router.POST("/transactor/settle/sync", te.SettleSync)

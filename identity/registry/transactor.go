@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/payments/client"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
@@ -38,6 +39,10 @@ const AppTopicTransactorRegistration = "transactor_identity_registration"
 // AppTopicTransactorTopUp represents the top up topic to which events regarding top up attempts are sent.
 const AppTopicTransactorTopUp = "transactor_top_up"
 
+type channelProvider interface {
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error)
+}
+
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
 	httpClient            *requests.HTTPClient
@@ -47,10 +52,11 @@ type Transactor struct {
 	accountantID          string
 	channelImplementation string
 	publisher             eventbus.Publisher
+	bc                    channelProvider
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
 	return &Transactor{
 		httpClient:            httpClient,
 		endpointAddress:       endpointAddress,
@@ -59,6 +65,7 @@ func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAdd
 		accountantID:          accountantID,
 		channelImplementation: channelImplementation,
 		publisher:             publisher,
+		bc:                    bc,
 	}
 }
 
@@ -209,20 +216,21 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
-	regReq := IdentityRegistrationRequest{RegistryAddress: t.registryAddress, AccountantID: t.accountantID}
+	regReq := IdentityRegistrationRequest{
+		RegistryAddress: t.registryAddress,
+		AccountantID:    t.accountantID,
+		Stake:           regReqDTO.Stake,
+		Fee:             regReqDTO.Fee,
+		Beneficiary:     regReqDTO.Beneficiary,
+	}
 
-	regReq.Stake = regReqDTO.Stake
-	regReq.Fee = regReqDTO.Fee
-
-	if regReqDTO.Beneficiary == "" {
+	if regReq.Beneficiary == "" {
 		channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
 
 		regReq.Beneficiary = channelAddress
-	} else {
-		regReq.Beneficiary = regReqDTO.Beneficiary
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
@@ -269,5 +277,68 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	if err != nil {
 		return nil, errors.Wrap(err, "signature reformat failed")
 	}
-	return signature.Bytes(), err
+
+	return signature.Bytes(), nil
+}
+
+// SetBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
+func (t *Transactor) SetBeneficiary(id, beneficiary string) error {
+	signedReq, err := t.fillSetBeneficiaryRequest(id, beneficiary)
+	if err != nil {
+		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/beneficiary", signedReq)
+	if err != nil {
+		return fmt.Errorf("failed to create RegisterIdentity request %w", err)
+	}
+
+	return t.httpClient.DoRequest(req)
+}
+
+func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (registration.SetBeneficiaryRequest, error) {
+	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.accountantID), common.HexToAddress(id))
+	if err != nil {
+		return registration.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
+	}
+
+	addr, err := pc.GenerateProviderChannelID(id, t.accountantID)
+	if err != nil {
+		return registration.SetBeneficiaryRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
+	}
+
+	regReq := registration.SetBeneficiaryRequest{
+		AccountantID: strings.ToLower(t.accountantID),
+		Beneficiary:  strings.ToLower(beneficiary),
+		ChannelID:    strings.ToLower(addr),
+		Nonce:        ch.LastUsedNonce.Uint64() + 1,
+	}
+
+	signer := t.signerFactory(identity.FromAddress(id))
+
+	sig, err := t.signSetBeneficiaryRequest(signer, regReq)
+	if err != nil {
+		return registration.SetBeneficiaryRequest{}, fmt.Errorf("failed to sign set beneficiary request: %w", err)
+	}
+
+	signatureHex := common.Bytes2Hex(sig)
+	regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
+
+	return regReq, nil
+}
+
+func (t *Transactor) signSetBeneficiaryRequest(signer identity.Signer, req registration.SetBeneficiaryRequest) ([]byte, error) {
+	message := req.GetMessage()
+
+	signature, err := signer.Sign(message)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign set beneficiary request: %w", err)
+	}
+
+	err = pc.ReformatSignatureVForBC(signature.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("signature reformat failed: %w", err)
+	}
+
+	return signature.Bytes(), nil
 }

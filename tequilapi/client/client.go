@@ -501,3 +501,18 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	}
 	return nil
 }
+
+func (client *Client) SetBeneficiary(address, beneficiary string) error {
+	payload := SetBeneficiaryRequest{Beneficiary: beneficiary}
+	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("expected 202 got %v", response.StatusCode)
+	}
+
+	return nil
+}

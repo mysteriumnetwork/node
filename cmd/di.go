@@ -432,6 +432,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		nodeOptions.Transactor.ChannelImplementation,
 		di.SignerFactory,
 		di.EventBus,
+		di.BCHelper,
 	)
 
 	if err := di.bootstrapAccountantPromiseSettler(nodeOptions); err != nil {
