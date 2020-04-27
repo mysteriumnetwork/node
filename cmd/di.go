@@ -160,6 +160,7 @@ type Dependencies struct {
 	AccountantPromiseSettler pingpong.AccountantPromiseSettler
 	AccountantCaller         *pingpong.AccountantCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
+	AccountantPromiseHandler *pingpong.AccountantPromiseHandler
 }
 
 // Bootstrap initiates all container dependencies
@@ -463,6 +464,19 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
+	di.AccountantPromiseHandler = pingpong.NewAccountantPromiseHandler(pingpong.AccountantPromiseHandlerDeps{
+		AccountantPromiseStorage: di.AccountantPromiseStorage,
+		AccountantCaller:         di.AccountantCaller,
+		AccountantID:             common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		FeeProvider:              di.Transactor,
+		Encryption:               di.Keystore,
+		EventBus:                 di.EventBus,
+	})
+
+	if err := di.AccountantPromiseHandler.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
@@ -547,14 +561,12 @@ func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
-	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
 	natPingerChan traversal.NATPinger,
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
 	bcHelper *paymentClient.BlockchainWithRetries,
-	transactor *registry.Transactor,
-	settler pingpong.AccountantPromiseSettler,
+	promiseHandler *pingpong.AccountantPromiseHandler,
 	httpClient *requests.HTTPClient,
 	keystore *identity.Keystore,
 ) session.ManagerFactory {
@@ -562,18 +574,14 @@ func newSessionManagerFactory(
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			dialog, nil, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
-			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
-			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			bcHelper,
 			eventbus,
-			transactor,
 			proposal,
-			settler.ForceSettle,
-			keystore,
+			promiseHandler,
 		)
 		return session.NewManager(
 			proposal,
