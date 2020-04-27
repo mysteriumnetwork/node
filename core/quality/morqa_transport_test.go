@@ -45,7 +45,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 		response.WriteHeader(http.StatusAccepted)
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
 	go morqa.Start()
 	defer morqa.Stop()
 
@@ -82,7 +82,7 @@ func TestMORQAT_sendMetrics_HandlesErrorsWithMessages(t *testing.T) {
 		}`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
 	morqa.addMetric(&metrics.Event{})
 	err := morqa.sendMetrics()
 
@@ -103,7 +103,7 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 		}`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
 	morqa.addMetric(&metrics.Event{})
 	err := morqa.sendMetrics()
 
@@ -127,7 +127,7 @@ func TestMORQA_ProposalsMetrics(t *testing.T) {
 		}] }`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 10*time.Millisecond)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
 	metrics := morqa.ProposalsMetrics()
 
 	assert.Equal(t,

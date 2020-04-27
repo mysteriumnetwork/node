@@ -679,10 +679,10 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	var ks *keystore.KeyStore
 	if options.Keystore.UseLightweight {
 		log.Debug().Msg("Using lightweight keystore")
-		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.LightScryptN, keystore.LightScryptP)
 	} else {
 		log.Debug().Msg("Using heavyweight keystore")
-		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.LightScryptN, keystore.LightScryptP)
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	}
 
 	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks, keystore.DecryptKey)
