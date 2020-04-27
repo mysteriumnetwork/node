@@ -2,4 +2,5 @@
 CONF_DIR="--config-dir=/etc/mysterium-node"
 RUN_DIR="--runtime-dir=/var/run/mysterium-node"
 DATA_DIR="--data-dir=/var/lib/mysterium-node"
+DAEMON_OPTS="--keystore.lightweight"
 SERVICE_OPTS="openvpn,wireguard"
