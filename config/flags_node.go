@@ -78,6 +78,7 @@ var (
 	FlagKeystoreLightweight = cli.BoolFlag{
 		Name:  "keystore.lightweight",
 		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
+		Value: true,
 	}
 	// FlagLogHTTP enables HTTP payload logging.
 	FlagLogHTTP = cli.BoolFlag{
