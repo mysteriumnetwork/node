@@ -250,11 +250,7 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		return
 	}
 
-	ap := tequilapi_client.AccessPoliciesRequest{
-		IDs: sharedOpts.AccessPolicyList,
-	}
-
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap, pm)
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, sharedOpts.AccessPolicyList, pm)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return

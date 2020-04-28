@@ -402,7 +402,7 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPoliciesRequest, pm contract.PaymentMethodDTO) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, policies []string, pm contract.PaymentMethodDTO) (service ServiceInfoDTO, err error) {
 	opts, err := json.Marshal(options)
 	if err != nil {
 		return service, err
@@ -418,7 +418,7 @@ func (client *Client) ServiceStart(providerID, serviceType string, options inter
 		providerID,
 		serviceType,
 		opts,
-		ap,
+		AccessPoliciesRequest{IDs: policies},
 		pm,
 	}
 

@@ -67,11 +67,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: quit,
-				ap: client.AccessPoliciesRequest{
-					IDs: services.SharedConfiguredOptions().AccessPolicyList,
-				},
 			}
-
 			go func() {
 				quit <- cmdService.Run(ctx)
 			}()
@@ -101,7 +97,6 @@ func describeQuit(err error) error {
 type serviceCommand struct {
 	tequilapi    *client.Client
 	errorChannel chan error
-	ap           client.AccessPoliciesRequest
 }
 
 // Run runs a command
@@ -114,12 +109,14 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	providerID := sc.unlockIdentity(parseIdentityFlags(ctx))
 	log.Info().Msgf("Unlocked identity: %v", providerID.Address)
 
+	sharedOpts := services.SharedConfiguredOptions()
 	for _, serviceType := range serviceTypes {
 		options, pm, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go sc.runService(providerID.Address, serviceType, options, pm)
+
+		go sc.runService(providerID.Address, serviceType, options, pm, sharedOpts.AccessPolicyList)
 	}
 
 	return <-sc.errorChannel
@@ -138,8 +135,8 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 	}
 }
 
-func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap, pm)
+func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO, ap []string) {
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, ap, pm)
 	if err != nil {
 		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
 	}
