@@ -22,6 +22,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
@@ -84,9 +85,12 @@ func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRep
 
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	fakeManager := &mockConnectionManager{}
+	state := connection.Status{State: connection.NotConnected}
+	fakeManager := &mockConnectionManager{
+		onStatusReturn: state,
+	}
 	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Session = connection.Status{State: connection.NotConnected}
+	fakeState.stateToReturn.Connection.Session = state
 	fakeState.stateToReturn.Connection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
 
 	mockedProposalProvider := mockRepositoryWithProposal("node1", "noop")
@@ -138,13 +142,18 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 }
 
 func TestStateIsReturnedFromStore(t *testing.T) {
-	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Session = connection.Status{
-		State:     connection.Disconnecting,
-		SessionID: "1",
+	manager := &mockConnectionManager{
+		onStatusReturn: connection.Status{
+			StartedAt:    time.Time{},
+			ConsumerID:   identity.Identity{},
+			AccountantID: common.Address{},
+			State:        connection.Disconnecting,
+			SessionID:    "1",
+			Proposal:     market.ServiceProposal{},
+		},
 	}
 
-	connEndpoint := NewConnectionEndpoint(nil, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance)
+	connEndpoint := NewConnectionEndpoint(manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance)
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -204,12 +213,13 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 }
 
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
-	fakeManager := mockConnectionManager{}
-	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Session = connection.Status{
+	state := connection.Status{
 		State:     connection.Connected,
 		SessionID: "1",
 	}
+	fakeManager := mockConnectionManager{onStatusReturn: state}
+	fakeState := &mockStateProvider{}
+	fakeState.stateToReturn.Connection.Session = state
 
 	proposalProvider := mockRepositoryWithProposal("required-node", "openvpn")
 	connEndpoint := NewConnectionEndpoint(&fakeManager, fakeState, proposalProvider, mockIdentityRegistryInstance)
