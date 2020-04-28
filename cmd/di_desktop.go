@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -38,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -59,7 +59,7 @@ import (
 )
 
 // bootstrapServices loads all the components required for running services
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options, servicesOptions services.SharedOptions) error {
 	if nodeOptions.MobileConsumer {
 		return nil
 	}
@@ -213,7 +213,7 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
-func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
+func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, servicesOptions services.SharedOptions) error {
 	di.NATService = nat.NewService()
 	if err := di.NATService.Enable(); err != nil {
 		log.Warn().Err(err).Msg("Failed to enable NAT forwarding")

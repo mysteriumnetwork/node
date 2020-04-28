@@ -15,34 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package services
 
 import (
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
-	"github.com/urfave/cli/v2"
+	"github.com/pkg/errors"
 )
 
-var (
-	serviceTypes = []string{"openvpn", "wireguard", "noop"}
+// Types returns all possible service types
+func Types() []string {
+	return []string{openvpn.ServiceType, wireguard.ServiceType, noop.ServiceType}
+}
 
-	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		noop.ServiceType: func(ctx *cli.Context) service.Options {
-			config.ParseFlagsServiceNoop(ctx)
-			return noop.GetOptions()
-		},
-		openvpn.ServiceType: func(ctx *cli.Context) service.Options {
-			config.ParseFlagsServiceOpenvpn(ctx)
-			return openvpn_service.GetOptions()
-		},
-		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
-			config.ParseFlagsServiceWireguard(ctx)
-			return wireguard_service.GetOptions()
-		},
+// TypeConfiguredOptions returns specific service options
+func TypeConfiguredOptions(serviceType string) (service.Options, error) {
+	switch serviceType {
+	case openvpn.ServiceType:
+		return openvpn_service.GetOptions(), nil
+	case wireguard.ServiceType:
+		return wireguard_service.GetOptions(), nil
+	case noop.ServiceType:
+		return noop.GetOptions(), nil
+	default:
+		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}
-)
+}

@@ -19,12 +19,13 @@ package services
 
 import (
 	"strings"
+	"time"
 
 	"github.com/mysteriumnetwork/node/config"
 )
 
 // SharedConfiguredOptions returns effective shared service options
-func SharedConfiguredOptions() config.ServicesOptions {
+func SharedConfiguredOptions() SharedOptions {
 	policiesStr := config.GetString(config.FlagAccessPolicyList)
 	var policies []string
 	if len(policiesStr) > 0 {
@@ -33,7 +34,7 @@ func SharedConfiguredOptions() config.ServicesOptions {
 		policies = []string{}
 	}
 
-	return config.ServicesOptions{
+	return SharedOptions{
 		PaymentPricePerGB:         config.GetFloat64(config.FlagPaymentPricePerGB),
 		PaymentPricePerMinute:     config.GetFloat64(config.FlagPaymentPricePerMinute),
 		AccessPolicyAddress:       config.GetString(config.FlagAccessPolicyAddress),
@@ -41,4 +42,14 @@ func SharedConfiguredOptions() config.ServicesOptions {
 		AccessPolicyFetchInterval: config.GetDuration(config.FlagAccessPolicyFetchInterval),
 		ShaperEnabled:             config.GetBool(config.FlagShaperEnabled),
 	}
+}
+
+// SharedOptions describes options shared among multiple services
+type SharedOptions struct {
+	PaymentPricePerGB         float64
+	PaymentPricePerMinute     float64
+	AccessPolicyAddress       string
+	AccessPolicyList          []string
+	AccessPolicyFetchInterval time.Duration
+	ShaperEnabled             bool
 }

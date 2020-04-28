@@ -24,16 +24,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// ServicesOptions describes options shared among multiple services
-type ServicesOptions struct {
-	PaymentPricePerGB         float64
-	PaymentPricePerMinute     float64
-	AccessPolicyAddress       string
-	AccessPolicyList          []string
-	AccessPolicyFetchInterval time.Duration
-	ShaperEnabled             bool
-}
-
 var (
 	// FlagIdentity keystore's identity.
 	FlagIdentity = cli.StringFlag{
