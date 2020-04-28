@@ -579,7 +579,7 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 			mb.ipResolver,
 		)
 	}
-	_ = mb.eventBus.Subscribe(connection.AppTopicConnectionState, st.handleState)
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionState, st.handleState)
 	mb.connectionRegistry.Register("openvpn", factory)
 	return st
 }

@@ -840,7 +840,7 @@ func (di *Dependencies) handleConnStateChange() error {
 	}
 
 	latestState := connection.NotConnected
-	return di.EventBus.Subscribe(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
+	return di.EventBus.SubscribeAsync(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
 		// Here we care only about connected and disconnected events.
 		if e.State != connection.Connected && e.State != connection.NotConnected {
 			return
