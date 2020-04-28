@@ -89,7 +89,7 @@ type UIServer interface {
 
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
-	Node *node.Node
+	Node *Node
 
 	HTTPClient *requests.HTTPClient
 
@@ -518,7 +518,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	di.Node = node.NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
 	return nil
 }
 
