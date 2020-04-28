@@ -90,9 +90,8 @@ func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvid
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	connection := ce.stateProvider.GetState().Connection
-	statusResponse := contract.NewConnectionStatusDTO(connection.Session)
-
+	status := ce.manager.Status()
+	statusResponse := contract.NewConnectionStatusDTO(status)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
