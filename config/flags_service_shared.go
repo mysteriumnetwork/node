@@ -26,6 +26,8 @@ import (
 
 // ServicesOptions describes options shared among multiple services
 type ServicesOptions struct {
+	PaymentPricePerGB         float64
+	PaymentPricePerMinute     float64
 	AccessPolicyAddress       string
 	AccessPolicyList          []string
 	AccessPolicyFetchInterval time.Duration
@@ -50,6 +52,7 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
+
 	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
 	FlagAccessPolicyAddress = cli.StringFlag{
 		Name:  "access-policy.address",
@@ -68,6 +71,20 @@ var (
 		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
 		Value: 10 * time.Minute,
 	}
+
+	// FlagPaymentPricePerGB sets the price per GiB to provided service.
+	FlagPaymentPricePerGB = cli.Float64Flag{
+		Name:  "payment.price-gb",
+		Usage: "Sets the price per GiB applied to provider service.",
+		Value: 0.1,
+	}
+	// FlagPaymentPricePerMinute sets the price per minute to provided service.
+	FlagPaymentPricePerMinute = cli.Float64Flag{
+		Name:  "payment.price-minute",
+		Usage: "Sets the price per minute applied to provider service.",
+		Value: 0.0001,
+	}
+
 	// FlagShaperEnabled enables bandwidth limitation.
 	FlagShaperEnabled = cli.BoolFlag{
 		Name:  "shaper.enabled",
@@ -81,6 +98,8 @@ func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 		&FlagIdentity,
 		&FlagIdentityPassphrase,
 		&FlagAgreedTermsConditions,
+		&FlagPaymentPricePerGB,
+		&FlagPaymentPricePerMinute,
 		&FlagAccessPolicyAddress,
 		&FlagAccessPolicyList,
 		&FlagAccessPolicyFetchInterval,
@@ -93,6 +112,8 @@ func ParseFlagsServiceShared(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIdentity)
 	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
+	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerGB)
+	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerMinute)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
 	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)

@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
@@ -111,12 +112,11 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 
 	sharedOpts := services.SharedConfiguredOptions()
 	for _, serviceType := range serviceTypes {
-		options, pm, err := parseFlagsByServiceType(ctx, serviceType)
+		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-
-		go sc.runService(providerID.Address, serviceType, options, pm, sharedOpts.AccessPolicyList)
+		go sc.runService(providerID.Address, serviceType, options, sharedOpts)
 	}
 
 	return <-sc.errorChannel
@@ -135,8 +135,9 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 	}
 }
 
-func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO, ap []string) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, ap, pm)
+func (sc *serviceCommand) runService(providerID, serviceType string, serviceOptions service.Options, sharedOpts config.ServicesOptions) {
+	pm := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(sharedOpts.PaymentPricePerGB, sharedOpts.PaymentPricePerMinute))
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, serviceOptions, sharedOpts.AccessPolicyList, pm)
 	if err != nil {
 		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
 	}
@@ -158,12 +159,11 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	}
 }
 
-func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, contract.PaymentMethodDTO, error) {
+func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, error) {
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
-		opt, pm := f(ctx)
-		return opt, pm, nil
+		return f(ctx), nil
 	}
-	return nil, contract.PaymentMethodDTO{}, errors.Errorf("unknown service type: %q", serviceType)
+	return nil, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

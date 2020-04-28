@@ -244,12 +244,13 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, sharedOpts, pm, err := parseStartFlags(serviceType, args...)
+	opts, sharedOpts, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
 	}
 
+	pm := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(sharedOpts.PaymentPricePerGB, sharedOpts.PaymentPricePerMinute))
 	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, sharedOpts.AccessPolicyList, pm)
 	if err != nil {
 		info("Failed to start service: ", err)
@@ -671,7 +672,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, contract.PaymentMethodDTO, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, error) {
 	var flags []cli.Flag
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
@@ -684,7 +685,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, err
+		return nil, config.ServicesOptions{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
@@ -693,26 +694,14 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	switch serviceType {
 	case noop.ServiceType:
 		config.ParseFlagsServiceNoop(ctx)
-		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
-			0,
-			config.GetFloat64(config.FlagNoopPriceMinute),
-		))
-		return noop.GetOptions(), services.SharedConfiguredOptions(), payment, nil
+		return noop.GetOptions(), services.SharedConfiguredOptions(), nil
 	case wireguard.ServiceType:
 		config.ParseFlagsServiceWireguard(ctx)
-		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
-			config.GetFloat64(config.FlagWireguardPriceGB),
-			config.GetFloat64(config.FlagWireguardPriceMinute),
-		))
-		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
+		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	case openvpn.ServiceType:
 		config.ParseFlagsServiceOpenvpn(ctx)
-		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
-			config.GetFloat64(config.FlagOpenVPNPriceGB),
-			config.GetFloat64(config.FlagOpenVPNPriceMinute),
-		))
-		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
+		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), nil
 	}
 
-	return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, errors.New("service type not found")
+	return nil, config.ServicesOptions{}, errors.New("service type not found")
 }

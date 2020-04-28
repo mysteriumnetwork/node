@@ -34,6 +34,8 @@ func SharedConfiguredOptions() config.ServicesOptions {
 	}
 
 	return config.ServicesOptions{
+		PaymentPricePerGB:         config.GetFloat64(config.FlagPaymentPricePerGB),
+		PaymentPricePerMinute:     config.GetFloat64(config.FlagPaymentPricePerMinute),
 		AccessPolicyAddress:       config.GetString(config.FlagAccessPolicyAddress),
 		AccessPolicyList:          policies,
 		AccessPolicyFetchInterval: config.GetDuration(config.FlagAccessPolicyFetchInterval),

@@ -21,24 +21,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var (
-	// FlagNoopPriceMinute sets the price per minute for provided noop service.
-	FlagNoopPriceMinute = cli.Float64Flag{
-		Name:   "noop.price-minute",
-		Usage:  "Sets the price of the noop service per minute.",
-		Value:  0.0001,
-		Hidden: true,
-	}
-)
-
 // RegisterFlagsServiceNoop function register Wireguard flags to flag list
-func RegisterFlagsServiceNoop(flags *[]cli.Flag) {
-	*flags = append(*flags,
-		&FlagNoopPriceMinute,
-	)
+func RegisterFlagsServiceNoop(_ *[]cli.Flag) {
+	// no flags currently
 }
 
 // ParseFlagsServiceNoop parses CLI flags and registers value to configuration
-func ParseFlagsServiceNoop(ctx *cli.Context) {
-	Current.ParseFloat64Flag(ctx, FlagNoopPriceMinute)
+func ParseFlagsServiceNoop(_ *cli.Context) {
+	// no flags currently
 }
