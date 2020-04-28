@@ -256,6 +256,7 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, re
 		case ping := <-pingsCh:
 			pings = append(pings, ping)
 			if len(pings) == n {
+				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
 				return sortedConns(pings), nil
 			}
 		}
