@@ -40,6 +40,7 @@ func NewCommand() *cli.Command {
 			config.ParseFlagsServiceShared(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
+			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
 
 			nodeOptions := node.GetOptions()

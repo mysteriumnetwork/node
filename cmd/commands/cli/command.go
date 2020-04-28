@@ -680,6 +680,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	config.RegisterFlagsServiceShared(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
 	config.RegisterFlagsServiceWireguard(&flags)
+	config.RegisterFlagsServiceNoop(&flags)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
@@ -695,11 +696,12 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, confi
 	config.ParseFlagsServiceShared(ctx)
 	switch serviceType {
 	case noop.ServiceType:
+		config.ParseFlagsServiceNoop(ctx)
 		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
 			0,
 			config.GetFloat64(config.FlagNoopPriceMinute),
 		))
-		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), payment, nil
+		return noop.GetOptions(), services.SharedConfiguredOptions(), payment, nil
 	case wireguard.ServiceType:
 		config.ParseFlagsServiceWireguard(ctx)
 		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(

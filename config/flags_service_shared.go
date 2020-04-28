@@ -73,13 +73,6 @@ var (
 		Name:  "shaper.enabled",
 		Usage: "Limit service bandwidth",
 	}
-	// FlagNoopPriceMinute sets the price per minute for provided noop service.
-	FlagNoopPriceMinute = cli.Float64Flag{
-		Name:   "noop.price-minute",
-		Usage:  "Sets the price of the noop service per minute.",
-		Value:  0.0001,
-		Hidden: true,
-	}
 )
 
 // RegisterFlagsServiceShared registers shared service CLI flags
@@ -92,7 +85,6 @@ func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 		&FlagAccessPolicyList,
 		&FlagAccessPolicyFetchInterval,
 		&FlagShaperEnabled,
-		&FlagNoopPriceMinute,
 	)
 }
 
@@ -105,5 +97,4 @@ func ParseFlagsServiceShared(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
 	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
-	Current.ParseFloat64Flag(ctx, FlagNoopPriceMinute)
 }

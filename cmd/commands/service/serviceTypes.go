@@ -35,11 +35,12 @@ var (
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO){
 		noop.ServiceType: func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO) {
+			config.ParseFlagsServiceNoop(ctx)
 			payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
 				0,
 				config.GetFloat64(config.FlagNoopPriceMinute),
 			))
-			return noop.ParseFlags(ctx), payment
+			return noop.GetOptions(), payment
 		},
 		openvpn.ServiceType: func(ctx *cli.Context) (service.Options, contract.PaymentMethodDTO) {
 			config.ParseFlagsServiceOpenvpn(ctx)

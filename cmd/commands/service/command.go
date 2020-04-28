@@ -114,8 +114,12 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	providerID := sc.unlockIdentity(parseIdentityFlags(ctx))
 	log.Info().Msgf("Unlocked identity: %v", providerID.Address)
 
-	if err := sc.runServices(ctx, providerID.Address, serviceTypes); err != nil {
-		return err
+	for _, serviceType := range serviceTypes {
+		options, pm, err := parseFlagsByServiceType(ctx, serviceType)
+		if err != nil {
+			return err
+		}
+		go sc.runService(providerID.Address, serviceType, options, pm)
 	}
 
 	return <-sc.errorChannel
@@ -134,18 +138,6 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 	}
 }
 
-func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
-	for _, serviceType := range serviceTypes {
-		options, pm, err := parseFlagsByServiceType(ctx, serviceType)
-		if err != nil {
-			return err
-		}
-		go sc.runService(providerID, serviceType, options, pm)
-	}
-
-	return nil
-}
-
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO) {
 	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap, pm)
 	if err != nil {
@@ -158,6 +150,7 @@ func registerFlags(flags *[]cli.Flag) {
 	config.RegisterFlagsServiceShared(flags)
 	config.RegisterFlagsServiceOpenvpn(flags)
 	config.RegisterFlagsServiceWireguard(flags)
+	config.RegisterFlagsServiceNoop(flags)
 }
 
 // parseIdentityFlags function fills in service command options from CLI context
@@ -173,7 +166,7 @@ func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Opti
 		opt, pm := f(ctx)
 		return opt, pm, nil
 	}
-	return service.OptionsIdentity{}, contract.PaymentMethodDTO{}, errors.Errorf("unknown service type: %q", serviceType)
+	return nil, contract.PaymentMethodDTO{}, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {
