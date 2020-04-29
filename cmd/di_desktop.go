@@ -260,6 +260,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			di.EventBus,
 			channel,
 			session.DefaultConfig(),
+			nodeOptions.Accountant.AccountantEndpointAddress,
 		)
 	}
 

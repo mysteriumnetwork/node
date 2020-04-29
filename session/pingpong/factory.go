@@ -111,8 +111,8 @@ func InvoiceFactoryCreator(
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
-) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, common.Address, string, string) (session.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID, accountantURI string) (session.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(dialog, channel)
 		if err != nil {
 			return nil, err
@@ -132,6 +132,7 @@ func InvoiceFactoryCreator(
 			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
 			AccountantID:               accountantID,
+			AccountantURI:              accountantURI,
 			Registry:                   registryAddress,
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,

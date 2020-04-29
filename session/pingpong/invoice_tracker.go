@@ -84,7 +84,7 @@ type providerInvoiceStorage interface {
 }
 
 type promiseHandler interface {
-	RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error
+	RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID, accountantURI string) <-chan error
 }
 
 type sentInvoice struct {
@@ -141,6 +141,7 @@ type InvoiceTrackerDeps struct {
 	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
 	AccountantID               common.Address
+	AccountantURI              string
 	Registry                   string
 	MaxAccountantFailureCount  uint64
 	MaxAllowedAccountantFee    uint16
@@ -240,7 +241,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 		return errors.Wrap(err, fmt.Sprintf("could not store r: %s", hex.EncodeToString(invoice.r)))
 	}
 
-	errChan := it.deps.PromiseHandler.RequestPromise(invoice.r, em, it.deps.ProviderID, it.deps.SessionID)
+	errChan := it.deps.PromiseHandler.RequestPromise(invoice.r, em, it.deps.ProviderID, it.deps.SessionID, it.deps.AccountantURI)
 	go it.handlePromiseErrors(errChan)
 	return nil
 }

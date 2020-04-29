@@ -35,7 +35,7 @@ func TestAccountantPromiseHandler_RequestPromise(t *testing.T) {
 	bus := eventbus.New()
 	aph := &AccountantPromiseHandler{
 		deps: AccountantPromiseHandlerDeps{
-			AccountantCaller:         &mockAccountantCaller{},
+			AccountantCallerFactory:  func(string) AccCaller { return &mockAccountantCaller{} },
 			Encryption:               &mockEncryptor{},
 			EventBus:                 eventbus.New(),
 			AccountantPromiseStorage: &mockAccountantPromiseStorage{},
@@ -58,7 +58,7 @@ func TestAccountantPromiseHandler_RequestPromise(t *testing.T) {
 		Promise: crypto.Promise{},
 	}
 
-	ch := aph.RequestPromise(r, em, identity.FromAddress("asddadadqweqwe"), "session")
+	ch := aph.RequestPromise(r, em, identity.FromAddress("asddadadqweqwe"), "session", "")
 
 	err, more := <-ch
 	assert.False(t, more)
@@ -69,8 +69,10 @@ func TestAccountantPromiseHandler_RequestPromise_BubblesErrors(t *testing.T) {
 	bus := eventbus.New()
 	aph := &AccountantPromiseHandler{
 		deps: AccountantPromiseHandlerDeps{
-			AccountantCaller: &mockAccountantCaller{
-				errToReturn: ErrNeedsRRecovery,
+			AccountantCallerFactory: func(string) AccCaller {
+				return &mockAccountantCaller{
+					errToReturn: ErrNeedsRRecovery,
+				}
 			},
 			Encryption: &mockEncryptor{
 				errToReturn: errors.New("beep beep boop boop"),
@@ -96,7 +98,7 @@ func TestAccountantPromiseHandler_RequestPromise_BubblesErrors(t *testing.T) {
 		Promise: crypto.Promise{},
 	}
 
-	ch := aph.RequestPromise(r, em, identity.FromAddress("asddadadqweqwe"), "session")
+	ch := aph.RequestPromise(r, em, identity.FromAddress("asddadadqweqwe"), "session", "")
 
 	err, more := <-ch
 	assert.True(t, more)
@@ -122,8 +124,10 @@ func TestAccountantPromiseHandler_recoverR(t *testing.T) {
 			name: "green path",
 			fields: fields{
 				deps: AccountantPromiseHandlerDeps{
-					AccountantCaller: &mockAccountantCaller{},
-					Encryption:       &mockEncryptor{},
+					AccountantCallerFactory: func(string) AccCaller {
+						return &mockAccountantCaller{}
+					},
+					Encryption: &mockEncryptor{},
 				},
 				providerID: identity.FromAddress("0x0"),
 			},
@@ -140,8 +144,10 @@ func TestAccountantPromiseHandler_recoverR(t *testing.T) {
 			fields: fields{
 				providerID: identity.FromAddress("0x0"),
 				deps: AccountantPromiseHandlerDeps{
-					AccountantCaller: &mockAccountantCaller{
-						errToReturn: errors.New("explosions"),
+					AccountantCallerFactory: func(string) AccCaller {
+						return &mockAccountantCaller{
+							errToReturn: errors.New("explosions"),
+						}
 					},
 					Encryption: &mockEncryptor{},
 				},
@@ -159,7 +165,9 @@ func TestAccountantPromiseHandler_recoverR(t *testing.T) {
 			fields: fields{
 				providerID: identity.FromAddress("0x0"),
 				deps: AccountantPromiseHandlerDeps{
-					AccountantCaller: &mockAccountantCaller{},
+					AccountantCallerFactory: func(string) AccCaller {
+						return &mockAccountantCaller{}
+					},
 					Encryption: &mockEncryptor{
 						errToReturn: errors.New("explosions"),
 					},
@@ -179,7 +187,9 @@ func TestAccountantPromiseHandler_recoverR(t *testing.T) {
 			it := &AccountantPromiseHandler{
 				deps: tt.fields.deps,
 			}
-			if err := it.recoverR(tt.err, tt.fields.providerID); (err != nil) != tt.wantErr {
+			if err := it.recoverR(tt.err, enqueuedRequest{
+				providerID: tt.fields.providerID,
+			}); (err != nil) != tt.wantErr {
 				t.Errorf("AccountantPromiseHandler.recoverR() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -213,7 +223,9 @@ func TestAccountantPromiseHandler_handleAccountantError(t *testing.T) {
 		{
 			name: "bubbles R recovery errors",
 			deps: AccountantPromiseHandlerDeps{
-				AccountantCaller: &mockAccountantCaller{},
+				AccountantCallerFactory: func(string) AccCaller {
+					return &mockAccountantCaller{}
+				},
 				Encryption: &mockEncryptor{
 					errToReturn: merr,
 				},
@@ -230,7 +242,9 @@ func TestAccountantPromiseHandler_handleAccountantError(t *testing.T) {
 			aph := &AccountantPromiseHandler{
 				deps: tt.deps,
 			}
-			err := aph.handleAccountantError(tt.err, tt.providerID)
+			err := aph.handleAccountantError(tt.err, enqueuedRequest{
+				providerID: tt.providerID,
+			})
 			if tt.wantErr == nil {
 				assert.NoError(t, err, tt.name)
 			} else {

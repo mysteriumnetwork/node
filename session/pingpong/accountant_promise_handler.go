@@ -46,7 +46,7 @@ type feeProvider interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 }
 
-type accountantCaller interface {
+type AccCaller interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID uint64) error
 }
@@ -59,7 +59,7 @@ type encryption interface {
 // AccountantPromiseHandlerDeps represents the AccountantPromiseHandler dependencies.
 type AccountantPromiseHandlerDeps struct {
 	AccountantPromiseStorage accountantPromiseStorage
-	AccountantCaller         accountantCaller
+	AccountantCallerFactory  func(accountantBaseURI string) AccCaller
 	AccountantID             common.Address
 	FeeProvider              feeProvider
 	Encryption               encryption
@@ -86,21 +86,23 @@ func NewAccountantPromiseHandler(deps AccountantPromiseHandlerDeps) *AccountantP
 }
 
 type enqueuedRequest struct {
-	errChan    chan error
-	r          []byte
-	em         crypto.ExchangeMessage
-	providerID identity.Identity
-	sessionID  string
+	errChan       chan error
+	r             []byte
+	em            crypto.ExchangeMessage
+	providerID    identity.Identity
+	sessionID     string
+	accountantURI string
 }
 
 // RequestPromise adds the request to the queue.
-func (aph *AccountantPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
+func (aph *AccountantPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID, accountantURI string) <-chan error {
 	er := enqueuedRequest{
-		r:          r,
-		em:         em,
-		providerID: providerID,
-		errChan:    make(chan error),
-		sessionID:  sessionID,
+		r:             r,
+		em:            em,
+		providerID:    providerID,
+		errChan:       make(chan error),
+		sessionID:     sessionID,
+		accountantURI: accountantURI,
 	}
 	aph.queue <- er
 	return er.errChan
@@ -166,13 +168,7 @@ func (aph *AccountantPromiseHandler) handleNodeStopEvents(e event.Payload) {
 	}
 }
 
-func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
-	defer func() { close(er.errChan) }()
-
-	if !aph.transactorFee.IsValid() {
-		aph.updateFee()
-	}
-
+func (aph *AccountantPromiseHandler) callRequestPromise(er enqueuedRequest) (crypto.Promise, error) {
 	details := rRecoveryDetails{
 		R:           hex.EncodeToString(er.r),
 		AgreementID: er.em.AgreementID,
@@ -180,14 +176,12 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	bytes, err := json.Marshal(details)
 	if err != nil {
-		er.errChan <- fmt.Errorf("could not marshal R recovery details: %w", err)
-		return
+		return crypto.Promise{}, fmt.Errorf("could not marshal R recovery details: %w", err)
 	}
 
 	encrypted, err := aph.deps.Encryption.Encrypt(er.providerID.ToCommonAddress(), bytes)
 	if err != nil {
-		er.errChan <- fmt.Errorf("could not encrypt R: %w", err)
-		return
+		return crypto.Promise{}, fmt.Errorf("could not encrypt R: %w", err)
 	}
 
 	request := RequestPromise{
@@ -196,10 +190,26 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
-	promise, err := aph.deps.AccountantCaller.RequestPromise(request)
-	err = aph.handleAccountantError(err, er.providerID)
+	accountantCaller := aph.deps.AccountantCallerFactory(er.accountantURI)
+	promise, err := accountantCaller.RequestPromise(request)
+	err = aph.handleAccountantError(err, er)
 	if err != nil {
-		er.errChan <- fmt.Errorf("accountant request promise error: %w", err)
+		return crypto.Promise{}, fmt.Errorf("accountant request promise error: %w", err)
+	}
+
+	return promise, nil
+}
+
+func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
+	defer func() { close(er.errChan) }()
+
+	if !aph.transactorFee.IsValid() {
+		aph.updateFee()
+	}
+
+	promise, err := aph.callRequestPromise(er)
+	if err != nil {
+		er.errChan <- err
 		return
 	}
 
@@ -227,17 +237,17 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 		Total:      er.em.AgreementTotal,
 	})
 
-	err = aph.revealR(er.providerID)
-	err = aph.handleAccountantError(err, er.providerID)
+	err = aph.revealR(er)
+	err = aph.handleAccountantError(err, er)
 	if err != nil {
 		er.errChan <- fmt.Errorf("accountant reveal r error: %w", err)
 		return
 	}
 }
 
-func (aph *AccountantPromiseHandler) revealR(providerID identity.Identity) error {
+func (aph *AccountantPromiseHandler) revealR(er enqueuedRequest) error {
 	needsRevealing := false
-	accountantPromise, err := aph.deps.AccountantPromiseStorage.Get(providerID, aph.deps.AccountantID)
+	accountantPromise, err := aph.deps.AccountantPromiseStorage.Get(er.providerID, aph.deps.AccountantID)
 	switch err {
 	case nil:
 		needsRevealing = !accountantPromise.Revealed
@@ -251,14 +261,15 @@ func (aph *AccountantPromiseHandler) revealR(providerID identity.Identity) error
 		return nil
 	}
 
-	err = aph.deps.AccountantCaller.RevealR(accountantPromise.R, providerID.Address, accountantPromise.AgreementID)
-	handledErr := aph.handleAccountantError(err, providerID)
+	caller := aph.deps.AccountantCallerFactory(er.accountantURI)
+	err = caller.RevealR(accountantPromise.R, er.providerID.Address, accountantPromise.AgreementID)
+	handledErr := aph.handleAccountantError(err, er)
 	if handledErr != nil {
 		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
 	accountantPromise.Revealed = true
-	err = aph.deps.AccountantPromiseStorage.Store(providerID, aph.deps.AccountantID, accountantPromise)
+	err = aph.deps.AccountantPromiseStorage.Store(er.providerID, aph.deps.AccountantID, accountantPromise)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		return fmt.Errorf("could not store accountant promise: %w", err)
 	}
@@ -266,7 +277,7 @@ func (aph *AccountantPromiseHandler) revealR(providerID identity.Identity) error
 	return nil
 }
 
-func (aph *AccountantPromiseHandler) handleAccountantError(err error, providerID identity.Identity) error {
+func (aph *AccountantPromiseHandler) handleAccountantError(err error, er enqueuedRequest) error {
 	if err == nil {
 		return nil
 	}
@@ -278,7 +289,7 @@ func (aph *AccountantPromiseHandler) handleAccountantError(err error, providerID
 		if !ok {
 			return errors.New("could not cast errNeedsRecovery to accountantError")
 		}
-		recoveryErr := aph.recoverR(aer, providerID)
+		recoveryErr := aph.recoverR(aer, er)
 		if recoveryErr != nil {
 			return recoveryErr
 		}
@@ -291,14 +302,14 @@ func (aph *AccountantPromiseHandler) handleAccountantError(err error, providerID
 	}
 }
 
-func (aph *AccountantPromiseHandler) recoverR(aerr accountantError, providerID identity.Identity) error {
+func (aph *AccountantPromiseHandler) recoverR(aerr accountantError, er enqueuedRequest) error {
 	log.Info().Msg("Recovering R...")
 	decoded, err := hex.DecodeString(aerr.Data())
 	if err != nil {
 		return fmt.Errorf("could not decode R recovery details: %w", err)
 	}
 
-	decrypted, err := aph.deps.Encryption.Decrypt(providerID.ToCommonAddress(), decoded)
+	decrypted, err := aph.deps.Encryption.Decrypt(er.providerID.ToCommonAddress(), decoded)
 	if err != nil {
 		return fmt.Errorf("could not decrypt R details: %w", err)
 	}
@@ -310,7 +321,8 @@ func (aph *AccountantPromiseHandler) recoverR(aerr accountantError, providerID i
 	}
 
 	log.Info().Msg("R recovered, will reveal...")
-	err = aph.deps.AccountantCaller.RevealR(res.R, providerID.Address, res.AgreementID)
+	caller := aph.deps.AccountantCallerFactory(er.accountantURI)
+	err = caller.RevealR(res.R, er.providerID.Address, res.AgreementID)
 	if err != nil {
 		return fmt.Errorf("could not reveal R: %w", err)
 	}

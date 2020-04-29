@@ -615,7 +615,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		accountantID               common.Address
 		AgreementID                uint64
 		lastExchangeMessage        crypto.ExchangeMessage
-		accountantCaller           accountantCaller
+		accountantCaller           AccCaller
 		invoicesSent               map[string]sentInvoice
 		channelImplementation      string
 		registryAddress            string

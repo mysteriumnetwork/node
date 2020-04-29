@@ -106,7 +106,7 @@ type Storage interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID, accountantURI string) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -128,6 +128,7 @@ func NewManager(
 	publisher publisher,
 	channel p2p.Channel,
 	config Config,
+	defaultAccountantURI string,
 ) *Manager {
 	return &Manager{
 		currentProposal:      currentProposal,
@@ -139,6 +140,7 @@ func NewManager(
 		paymentEngineFactory: paymentEngineFactory,
 		channel:              channel,
 		config:               config,
+		defaultAccountantURI: defaultAccountantURI,
 	}
 }
 
@@ -154,6 +156,7 @@ type Manager struct {
 	creationLock         sync.Mutex
 	channel              p2p.Channel
 	config               Config
+	defaultAccountantURI string
 }
 
 // Start starts a session on the provider side for the given consumer.
@@ -175,7 +178,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, common.HexToAddress(consumerInfo.AccountantID.Address), string(session.ID))
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, common.HexToAddress(consumerInfo.AccountantID.Address), string(session.ID), manager.defaultAccountantURI)
 	if err != nil {
 		return err
 	}

@@ -58,7 +58,7 @@ func (m mockBalanceTracker) Stop() {
 
 }
 
-func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accountant common.Address, sessionID string) (PaymentEngine, error) {
+func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accountant common.Address, sessionID, accountantURI string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
 
@@ -146,5 +146,5 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 
 func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *Manager {
 	return NewManager(proposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
-		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
+		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig(), "")
 }

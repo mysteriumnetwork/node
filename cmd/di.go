@@ -466,11 +466,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.AccountantPromiseHandler = pingpong.NewAccountantPromiseHandler(pingpong.AccountantPromiseHandlerDeps{
 		AccountantPromiseStorage: di.AccountantPromiseStorage,
-		AccountantCaller:         di.AccountantCaller,
-		AccountantID:             common.HexToAddress(nodeOptions.Accountant.AccountantID),
-		FeeProvider:              di.Transactor,
-		Encryption:               di.Keystore,
-		EventBus:                 di.EventBus,
+		AccountantCallerFactory: func(accountantUri string) pingpong.AccCaller {
+			return pingpong.NewAccountantCaller(di.HTTPClient, accountantUri)
+		},
+		AccountantID: common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		FeeProvider:  di.Transactor,
+		Encryption:   di.Keystore,
+		EventBus:     di.EventBus,
 	})
 
 	if err := di.AccountantPromiseHandler.Subscribe(di.EventBus); err != nil {
@@ -593,6 +595,7 @@ func newSessionManagerFactory(
 			eventbus,
 			nil,
 			session.DefaultConfig(),
+			nodeOptions.Accountant.AccountantEndpointAddress,
 		)
 	}
 }

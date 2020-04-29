@@ -99,6 +99,7 @@ type AccountantCaller struct {
 	accountantBaseURI string
 }
 
+
 // NewAccountantCaller returns a new instance of accountant caller.
 func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI string) *AccountantCaller {
 	return &AccountantCaller{
