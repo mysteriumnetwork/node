@@ -25,11 +25,10 @@ import (
 )
 
 func newStatsPublisher(clientMap *clientMap, bus eventbus.Publisher, frequencySeconds int) *statsPublisher {
-	sb := &statsPublisher{
-		clientMap: clientMap,
-		bus:       bus,
-	}
+	sb := new(statsPublisher)
 	sb.Middleware = bytecount.NewMiddleware(sb.handleStatsEvent, frequencySeconds)
+	sb.clientMap = clientMap
+	sb.bus = bus
 	return sb
 }
 

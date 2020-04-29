@@ -22,7 +22,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-func mockAuthHandler(identityToExtract identity.Identity) *authHandler {
+func createAuthHandler(identityToExtract identity.Identity) *authHandler {
 	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,
@@ -34,7 +34,7 @@ func mockAuthHandler(identityToExtract identity.Identity) *authHandler {
 	return newAuthHandler(NewClientMap(mockSessions), mockExtractor)
 }
 
-func mockAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *authHandler {
+func createAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *authHandler {
 	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,

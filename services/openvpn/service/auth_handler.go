@@ -38,12 +38,11 @@ type authHandler struct {
 
 // newAuthHandler return authHandler instance
 func newAuthHandler(clientMap *clientMap, extractor identity.Extractor) *authHandler {
-	ah := &authHandler{
-		clientMap:         clientMap,
-		identityExtractor: extractor,
-	}
+	ah := new(authHandler)
 	ah.Middleware = credentials.NewMiddleware(ah.validate)
 	ah.Middleware.ClientsSubscribe(ah.handleClientEvent)
+	ah.clientMap = clientMap
+	ah.identityExtractor = extractor
 	return ah
 }
 
