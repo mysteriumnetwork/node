@@ -148,7 +148,7 @@ func (d *Discovery) mainDiscoveryLoop() {
 }
 
 func (d *Discovery) stopLoop() {
-	log.Info().Msg("Stopping discovery loop..")
+	log.Info().Msg("Stopping discovery loop...")
 	d.mu.RLock()
 	if d.status == WaitingForRegistration {
 		d.mu.RUnlock()
@@ -201,13 +201,18 @@ func (d *Discovery) registerProposal() {
 }
 
 func (d *Discovery) pingProposal() {
-	time.Sleep(d.proposalPingTTL)
-	err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to ping proposal")
+	select {
+	case <-d.stop:
+		return
+	case <-time.After(d.proposalPingTTL):
+		err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to ping proposal")
+		}
+
+		d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
+		d.changeStatus(PingProposal)
 	}
-	d.eventBus.Publish(AppTopicProposalAnnounce, d.proposal)
-	d.changeStatus(PingProposal)
 }
 
 func (d *Discovery) unregisterProposal() {
