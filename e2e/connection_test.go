@@ -134,11 +134,15 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 }
 
 func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
-	accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
-	accountantData, err := accountantCaller.GetConsumerData(consumerID)
-	assert.NoError(t, err)
-	promised := accountantData.LatestPromise.Amount
-	assert.Equal(t, promised, consumerSpending, fmt.Sprintf("Consumer reported spending %v  accountant says %v. Service type %v", consumerSpending, promised, serviceType))
+	var lastAccountant uint64
+	assert.Eventually(t, func() bool {
+		accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
+		accountantData, err := accountantCaller.GetConsumerData(consumerID)
+		assert.NoError(t, err)
+		promised := accountantData.LatestPromise.Amount
+		lastAccountant = promised
+		return promised == consumerSpending
+	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v  accountant says %v. Service type %v", consumerSpending, lastAccountant, serviceType))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
