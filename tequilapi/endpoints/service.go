@@ -291,6 +291,8 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 }
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
+	sharedOpts := services.SharedConfiguredOptions()
+
 	jsonData := struct {
 		ProviderID     string                `json:"provider_id"`
 		Type           string                `json:"type"`
@@ -298,8 +300,12 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		AccessPolicies accessPoliciesRequest `json:"access_policies"`
 		PaymentMethod  paymentMethodRequest  `json:"payment_method"`
 	}{
+		PaymentMethod: paymentMethodRequest{
+			PriceGB:     sharedOpts.PaymentPricePerGB,
+			PriceMinute: sharedOpts.PaymentPricePerMinute,
+		},
 		AccessPolicies: accessPoliciesRequest{
-			Ids: services.SharedConfiguredOptions().AccessPolicyList,
+			Ids: sharedOpts.AccessPolicyList,
 		},
 	}
 	decoder := json.NewDecoder(req.Body)
