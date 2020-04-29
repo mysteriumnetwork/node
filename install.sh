@@ -147,7 +147,7 @@ install_ubuntu() {
     fi
     add-apt-repository -y ppa:wireguard/wireguard
     apt update
-    apt install -y wireguard
+    apt install -y wireguard wireguard-dkms
     dpkg-reconfigure wireguard-dkms
 
     # myst
@@ -173,7 +173,7 @@ install_raspbian() {
     echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu $UBUNTU_VERSION_CODENAME main" > /etc/apt/sources.list.d/wireguard.list
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
     apt update
-    apt install -y wireguard
+    apt install -y wireguard wireguard-dkms
     dpkg-reconfigure wireguard-dkms
 
     # myst
@@ -197,7 +197,7 @@ install_debian() {
     if [[ "$container" != "docker" ]]; then
         apt install -y "linux-headers-$(uname -r)"
     fi
-    apt install -y wireguard
+    apt install -y wireguard wireguard-dkms
     dpkg-reconfigure wireguard-dkms
 
     # myst
