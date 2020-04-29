@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@ var (
 )
 
 func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
-	validator := mockAuthHandler(identity.Identity{}).validate
+	validator := createAuthHandler(identity.Identity{}).validate
 
 	authenticated, err := validator(1, "not important", "not important")
 
@@ -48,7 +48,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 }
 
 func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	validator := mockAuthHandlerWithSession(identity.FromAddress("wrongsignature"), sessionExisting).validate
+	validator := createAuthHandlerWithSession(identity.FromAddress("wrongsignature"), sessionExisting).validate
 
 	authenticated, err := validator(1, sessionExistingString, "not important")
 
@@ -57,7 +57,7 @@ func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
-	validator := mockAuthHandlerWithSession(identityExisting, sessionExisting).validate
+	validator := createAuthHandlerWithSession(identityExisting, sessionExisting).validate
 
 	authenticated, err := validator(1, sessionExistingString, "not important")
 
@@ -66,7 +66,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDDiffers(t *testing.T) {
-	validator := mockAuthHandlerWithSession(identityExisting, sessionExisting).validate
+	validator := createAuthHandlerWithSession(identityExisting, sessionExisting).validate
 
 	validator(1, sessionExistingString, "not important")
 	authenticated, err := validator(2, sessionExistingString, "not important")
@@ -76,7 +76,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDDiffe
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatches(t *testing.T) {
-	validator := mockAuthHandlerWithSession(identityExisting, sessionExisting).validate
+	validator := createAuthHandlerWithSession(identityExisting, sessionExisting).validate
 
 	validator(1, sessionExistingString, "not important")
 	authenticated, err := validator(1, sessionExistingString, "not important")
@@ -108,7 +108,7 @@ func TestSecondClientIsNotDisconnectedWhenFirstClientDisconnects(t *testing.T) {
 	}
 
 	mockMangement := &management.MockConnection{CommandResult: "SUCCESS"}
-	middleware := mockAuthHandlerWithSession(identityExisting, sessionExisting)
+	middleware := createAuthHandlerWithSession(identityExisting, sessionExisting)
 	middleware.Start(mockMangement)
 
 	feedLinesToMiddleware(middleware, firstClientConnected)
@@ -139,7 +139,7 @@ func TestSecondClientWithTheSameCredentialsIsConnected(t *testing.T) {
 	}
 
 	mockMangement := &management.MockConnection{CommandResult: "SUCCESS"}
-	middleware := mockAuthHandlerWithSession(identityExisting, sessionExisting)
+	middleware := createAuthHandlerWithSession(identityExisting, sessionExisting)
 	middleware.Start(mockMangement)
 
 	feedLinesToMiddleware(middleware, firstClientConnected)
