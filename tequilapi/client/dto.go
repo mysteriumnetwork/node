@@ -106,6 +106,12 @@ type ServiceSessionDTO struct {
 	ConsumerID string `json:"consumer_id"`
 }
 
+// PaymentPriceRequest payment parameters for service start.
+type PaymentPriceRequest struct {
+	PriceGB     uint64 `json:"price_gb"`
+	PriceMinute uint64 `json:"price_minute"`
+}
+
 // AccessPoliciesRequest represents the access controls for service start
 type AccessPoliciesRequest struct {
 	IDs []string `json:"ids"`

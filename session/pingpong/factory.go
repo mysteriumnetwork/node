@@ -55,10 +55,7 @@ const (
 )
 
 // NewPaymentMethod returns the the default payment method of time + bytes.
-func NewPaymentMethod(tokensPerGB, tokensPerMinute float64) PaymentMethod {
-	pricePerGB := uint64(tokensPerGB * money.MystSize)
-	pricePerMinute := uint64(tokensPerMinute * money.MystSize)
-
+func NewPaymentMethod(pricePerGB, pricePerMinute uint64) PaymentMethod {
 	if pricePerGB > 0 {
 		pricePerGB = gb * accuracy / pricePerGB
 	}

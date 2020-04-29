@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 // SharedConfiguredOptions returns effective shared service options
@@ -35,8 +36,8 @@ func SharedConfiguredOptions() SharedOptions {
 	}
 
 	return SharedOptions{
-		PaymentPricePerGB:         config.GetFloat64(config.FlagPaymentPricePerGB),
-		PaymentPricePerMinute:     config.GetFloat64(config.FlagPaymentPricePerMinute),
+		PaymentPricePerGB:         uint64(config.GetFloat64(config.FlagPaymentPricePerGB) * money.MystSize),
+		PaymentPricePerMinute:     uint64(config.GetFloat64(config.FlagPaymentPricePerMinute) * money.MystSize),
 		AccessPolicyAddress:       config.GetString(config.FlagAccessPolicyAddress),
 		AccessPolicyList:          policies,
 		AccessPolicyFetchInterval: config.GetDuration(config.FlagAccessPolicyFetchInterval),
@@ -46,8 +47,8 @@ func SharedConfiguredOptions() SharedOptions {
 
 // SharedOptions describes options shared among multiple services
 type SharedOptions struct {
-	PaymentPricePerGB         float64
-	PaymentPricePerMinute     float64
+	PaymentPricePerGB         uint64
+	PaymentPricePerMinute     uint64
 	AccessPolicyAddress       string
 	AccessPolicyList          []string
 	AccessPolicyFetchInterval time.Duration

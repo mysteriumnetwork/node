@@ -20,7 +20,6 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -56,7 +55,14 @@ type serviceRequest struct {
 	AccessPolicies accessPoliciesRequest `json:"access_policies"`
 
 	// PaymentMethod describes payment options that should be used for service creation.
-	PaymentMethod contract.PaymentMethodDTO `json:"payment_method"`
+	PaymentMethod paymentMethodRequest `json:"payment_method"`
+}
+
+// paymentMethodRequest payment parameters for service start.
+// swagger:model PaymentPriceRequest
+type paymentMethodRequest struct {
+	PriceGB     uint64 `json:"price_gb"`
+	PriceMinute uint64 `json:"price_minute"`
 }
 
 // accessPolicy represents the access controls
@@ -208,15 +214,14 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	pm := pingpong.PaymentMethod{
-		Type:     sr.PaymentMethod.Type,
-		Price:    sr.PaymentMethod.Price,
-		Duration: time.Duration(sr.PaymentMethod.Rate.PerSeconds) * time.Second,
-		Bytes:    sr.PaymentMethod.Rate.PerBytes,
-	}
-
 	log.Info().Msgf("Service start options: %+v", sr)
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.AccessPolicies.Ids, sr.Options, pm)
+	id, err := se.serviceManager.Start(
+		identity.FromAddress(sr.ProviderID),
+		sr.Type,
+		sr.AccessPolicies.Ids,
+		sr.Options,
+		pingpong.NewPaymentMethod(sr.PaymentMethod.PriceGB, sr.PaymentMethod.PriceMinute),
+	)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -287,11 +292,11 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	jsonData := struct {
-		ProviderID     string                    `json:"provider_id"`
-		Type           string                    `json:"type"`
-		Options        *json.RawMessage          `json:"options"`
-		AccessPolicies accessPoliciesRequest     `json:"access_policies"`
-		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
+		ProviderID     string                `json:"provider_id"`
+		Type           string                `json:"type"`
+		Options        *json.RawMessage      `json:"options"`
+		AccessPolicies accessPoliciesRequest `json:"access_policies"`
+		PaymentMethod  paymentMethodRequest  `json:"payment_method"`
 	}{
 		AccessPolicies: accessPoliciesRequest{
 			Ids: services.SharedConfiguredOptions().AccessPolicyList,

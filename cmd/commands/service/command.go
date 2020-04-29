@@ -30,9 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -146,8 +144,14 @@ func (sc *serviceCommand) unlockIdentity(id, passphrase string) string {
 }
 
 func (sc *serviceCommand) runService(providerID, serviceType string, serviceOptions service.Options, sharedOpts services.SharedOptions) {
-	pm := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(sharedOpts.PaymentPricePerGB, sharedOpts.PaymentPricePerMinute))
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, serviceOptions, sharedOpts.AccessPolicyList, pm)
+	_, err := sc.tequilapi.ServiceStart(
+		providerID,
+		serviceType,
+		serviceOptions,
+		sharedOpts.PaymentPricePerGB,
+		sharedOpts.PaymentPricePerMinute,
+		sharedOpts.AccessPolicyList,
+	)
 	if err != nil {
 		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
 	}

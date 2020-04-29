@@ -402,24 +402,27 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, policies []string, pm contract.PaymentMethodDTO) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, priceGB, priceMinute uint64, policies []string) (service ServiceInfoDTO, err error) {
 	opts, err := json.Marshal(options)
 	if err != nil {
 		return service, err
 	}
 
 	payload := struct {
-		ProviderID     string                    `json:"provider_id"`
-		Type           string                    `json:"type"`
-		Options        json.RawMessage           `json:"options"`
-		AccessPolicies AccessPoliciesRequest     `json:"access_policies"`
-		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
+		ProviderID     string                `json:"provider_id"`
+		Type           string                `json:"type"`
+		Options        json.RawMessage       `json:"options"`
+		AccessPolicies AccessPoliciesRequest `json:"access_policies"`
+		PaymentMethod  PaymentPriceRequest   `json:"payment_method"`
 	}{
 		providerID,
 		serviceType,
 		opts,
 		AccessPoliciesRequest{IDs: policies},
-		pm,
+		PaymentPriceRequest{
+			PriceGB:     priceGB,
+			PriceMinute: priceMinute,
+		},
 	}
 
 	response, err := client.http.Post("services", payload)

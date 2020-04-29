@@ -37,7 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
@@ -244,8 +243,14 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		return
 	}
 
-	pm := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(sharedOpts.PaymentPricePerGB, sharedOpts.PaymentPricePerMinute))
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, serviceOpts, sharedOpts.AccessPolicyList, pm)
+	service, err := c.tequilapi.ServiceStart(
+		providerID,
+		serviceType,
+		serviceOpts,
+		sharedOpts.PaymentPricePerGB,
+		sharedOpts.PaymentPricePerMinute,
+		sharedOpts.AccessPolicyList,
+	)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
