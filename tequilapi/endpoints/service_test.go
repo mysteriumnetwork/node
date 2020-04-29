@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -112,7 +113,7 @@ func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
 }
 func (sm *mockServiceManager) Kill() error { return nil }
 
-var fakeOptionsParser = map[string]ServiceOptionsParser{
+var fakeOptionsParser = map[string]services.ServiceOptionsParser{
 	"testprotocol": func(opts *json.RawMessage) (service.Options, error) {
 		return nil, nil
 	},

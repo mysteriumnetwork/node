@@ -96,11 +96,8 @@ type serviceInfo struct {
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
-	optionsParser  map[string]ServiceOptionsParser
+	optionsParser  map[string]services.ServiceOptionsParser
 }
-
-// ServiceOptionsParser parses request to service specific options
-type ServiceOptionsParser func(*json.RawMessage) (service.Options, error)
 
 var (
 	// serviceTypeInvalid represents service type which is unknown to node
@@ -110,7 +107,7 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
 		optionsParser:  optionsParser,
@@ -279,7 +276,7 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
 
 	router.GET("/services", serviceEndpoint.ServiceList)

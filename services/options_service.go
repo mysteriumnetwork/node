@@ -18,6 +18,8 @@
 package services
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -27,12 +29,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Types returns all possible service types
+var (
+	// JSONParsersByType parsers of service specific options from JSON request.
+	JSONParsersByType = map[string]ServiceOptionsParser{
+		noop.ServiceType:      noop.ParseJSONOptions,
+		openvpn.ServiceType:   openvpn_service.ParseJSONOptions,
+		wireguard.ServiceType: wireguard_service.ParseJSONOptions,
+	}
+)
+
+// ServiceOptionsParser parses request to service specific options
+type ServiceOptionsParser func(*json.RawMessage) (service.Options, error)
+
+// Types returns all possible service types.
 func Types() []string {
 	return []string{openvpn.ServiceType, wireguard.ServiceType, noop.ServiceType}
 }
 
-// TypeConfiguredOptions returns specific service options
+// TypeConfiguredOptions returns specific service options.
 func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 	switch serviceType {
 	case openvpn.ServiceType:
@@ -44,4 +58,13 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 	default:
 		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}
+}
+
+// TypeJSONParser get parser to parse service specific options from JSON request.
+func TypeJSONParser(serviceType string) (ServiceOptionsParser, error) {
+	parser, exist := JSONParsersByType[serviceType]
+	if !exist {
+		return nil, errors.Errorf("unknown service type: %q", serviceType)
+	}
+	return parser, nil
 }

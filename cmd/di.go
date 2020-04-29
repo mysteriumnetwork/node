@@ -535,7 +535,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository, di.QualityClient)
-	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
+	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, services.JSONParsersByType)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, services.SharedConfiguredOptions().AccessPolicyAddress)
