@@ -38,12 +38,12 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
-	github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269
+	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.38
 	github.com/mysteriumnetwork/go-openvpn v0.0.22
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.3
-	github.com/mysteriumnetwork/payments v0.0.11
+	github.com/mysteriumnetwork/payments v0.0.13-0.20200430114543-8b00d4439302
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/nats-server v1.4.1

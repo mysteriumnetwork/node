@@ -477,6 +477,8 @@ github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c h1:8LI4spVF
 github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269 h1:CQrEJButil3tqscYLd9mOr7X0M6r5epK2en5nyRBnKQ=
 github.com/mysteriumnetwork/go-ci v0.0.0-20200316165146-af25c6390269/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
+github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4 h1:t18FszkN3GHd3lE95/5I6YlrvhiQCdWP58JOeVfhi1E=
+github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-dvpn-web v0.0.38 h1:XeiEuki+OCaOjVHhbQtpSQwxZAJI2DN2C/Pwh8enIEs=
 github.com/mysteriumnetwork/go-dvpn-web v0.0.38/go.mod h1:2wlR34GPZfnJxSc+0KZMoRCEDW0RVPVFv7bRC1QOZnU=
 github.com/mysteriumnetwork/go-openvpn v0.0.22 h1:r7nbXrDLy4NDDvhfvSlgF5gmJ3ffMTfcTLhcQFZkJ7M=
@@ -489,6 +491,8 @@ github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed h1:x9Cz
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed/go.mod h1:Mj4ZoTFxQltcDoC/Mn8EgO7SkK1dUJQixLgX04p0cN0=
 github.com/mysteriumnetwork/payments v0.0.11 h1:tfGL8Q20rZCeuSF0nELCyho3qHfpbYiqN6vMQnFGF/8=
 github.com/mysteriumnetwork/payments v0.0.11/go.mod h1:yzYaUbvzPFxi3Gj0WwhOiE/2lohZVTDQ55tpIAPk3JA=
+github.com/mysteriumnetwork/payments v0.0.13-0.20200430114543-8b00d4439302 h1:Lg5Z8Gx9iaWR02kM5It70nFRo+2yGLhqgutH+34APrE=
+github.com/mysteriumnetwork/payments v0.0.13-0.20200430114543-8b00d4439302/go.mod h1:e7j40M4OJQOekLcBsHvvBQfuRglmUx/uYR/msogDhlU=
 github.com/nats-io/gnatsd v1.4.1 h1:RconcfDeWpKCD6QIIwiVFcvForlXpWeJP7i5/lDLy44=
 github.com/nats-io/gnatsd v1.4.1/go.mod h1:nqco77VO78hLCJpIcVfygDP2rPGfsEHkGTUk94uh5DQ=
 github.com/nats-io/nats-server v1.4.1 h1:Ul1oSOGNV/L8kjr4v6l2f9Yet6WY+LevH1/7cRZ/qyA=
