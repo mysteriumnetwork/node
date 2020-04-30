@@ -19,9 +19,7 @@ package p2p
 
 import (
 	"context"
-	"io/ioutil"
 	"net"
-	"os"
 	"testing"
 	"time"
 
@@ -75,13 +73,11 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			consumerID, providerID, ks, cleanup := createTestIdentities(t)
-			defer cleanup()
-
+			providerID := identity.FromAddress("0x1")
 			signerFactory := func(id identity.Identity) identity.Signer {
-				return identity.NewSigner(ks, identity.FromAddress(id.Address))
+				return &identity.SignerFake{}
 			}
-			verifier := identity.NewVerifierSigned()
+			verifier := &identity.VerifierFake{}
 			brokerConn := nats.StartConnectionMock()
 			defer brokerConn.Close()
 			mockBroker := &mockBroker{conn: brokerConn}
@@ -100,7 +96,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			channelDialer := NewDialer(mockBroker, signerFactory, verifier, test.ipResolver, test.natConsumerPinger, portPool)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			consumerChannel, err := channelDialer.Dial(ctx, consumerID, providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
+			consumerChannel, err := channelDialer.Dial(ctx, identity.FromAddress("0x2"), providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}})
 			assert.NoError(t, err)
 			defer consumerChannel.Close()
 
@@ -122,23 +118,6 @@ func natTestPingers(t *testing.T) (providerPinger natProviderPinger, consumerPin
 	assert.NoError(t, err)
 	providerPinger = &mockProviderNATPinger{conns: []*net.UDPConn{consumerConn, consumerConn}}
 	consumerPinger = &mockConsumerNATPinger{conns: []*net.UDPConn{providerConn, providerConn}}
-	return
-}
-
-func createTestIdentities(t *testing.T) (consumerID identity.Identity, providerID identity.Identity, ks *identity.Keystore, cleanup func()) {
-	dir, err := ioutil.TempDir("", "p2pDialerTest")
-	assert.NoError(t, err)
-	cleanup = func() { os.RemoveAll(dir) }
-
-	ks = identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
-	consumerAcc, err := ks.NewAccount("")
-	assert.NoError(t, err)
-	ks.Unlock(consumerAcc, "")
-	consumerID = identity.FromAddress(consumerAcc.Address.Hex())
-	providerAcc, err := ks.NewAccount("")
-	assert.NoError(t, err)
-	ks.Unlock(providerAcc, "")
-	providerID = identity.FromAddress(providerAcc.Address.Hex())
 	return
 }
 

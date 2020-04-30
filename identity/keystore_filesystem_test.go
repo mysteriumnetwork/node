@@ -32,7 +32,7 @@ func Test_DerivedEncryption(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := NewKeystoreFilesystem(dir, NewMockKeystore(MockKeys), MockDecryptFunc)
+	ks := NewKeystoreFilesystem(dir, NewMockKeystoreWith(MockKeys), MockDecryptFunc)
 
 	acc, err := ks.NewAccount("")
 	assert.NoError(t, err)
@@ -90,7 +90,7 @@ var result []byte
 func Benchmark_DerivedEncryption(b *testing.B) {
 	dir, _ := ioutil.TempDir(os.TempDir(), "derived_encryption_bench")
 	defer os.RemoveAll(dir)
-	ks := NewKeystoreFilesystem(dir, NewMockKeystore(MockKeys), MockDecryptFunc)
+	ks := NewKeystoreFilesystem(dir, NewMockKeystoreWith(MockKeys), MockDecryptFunc)
 	acc, _ := ks.NewAccount("")
 	_ = ks.Unlock(acc, "")
 
@@ -106,7 +106,7 @@ func Benchmark_DerivedEncryption(b *testing.B) {
 func Benchmark_DerivedDecryption(b *testing.B) {
 	dir, _ := ioutil.TempDir(os.TempDir(), "derived_encryption_bench")
 	defer os.RemoveAll(dir)
-	ks := NewKeystoreFilesystem(dir, NewMockKeystore(MockKeys), MockDecryptFunc)
+	ks := NewKeystoreFilesystem(dir, NewMockKeystoreWith(MockKeys), MockDecryptFunc)
 	acc, _ := ks.NewAccount("")
 	_ = ks.Unlock(acc, "")
 	encrypted, _ := ks.Encrypt(acc.Address, []byte(secretMessage))
