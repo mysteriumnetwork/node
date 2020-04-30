@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -87,13 +88,17 @@ type InvoicePayer struct {
 	dataTransferredLock sync.Mutex
 }
 
+type hashSigner interface {
+	SignHash(a accounts.Account, hash []byte) ([]byte, error)
+}
+
 // InvoicePayerDeps contains all the dependencies for the exchange message tracker.
 type InvoicePayerDeps struct {
 	InvoiceChan               chan crypto.Invoice
 	PeerExchangeMessageSender PeerExchangeMessageSender
 	ConsumerTotalsStorage     consumerTotalsStorage
 	TimeTracker               timeTracker
-	Ks                        *identity.Keystore
+	Ks                        hashSigner
 	Identity, Peer            identity.Identity
 	Proposal                  market.ServiceProposal
 	SessionID                 string

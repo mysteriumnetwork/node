@@ -36,14 +36,19 @@ type mockKeystore struct {
 
 // MockKeys represents the mocked keys
 var MockKeys = map[common.Address]MockKey{
-	common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"): MockKey{
+	common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"): {
 		PkHex: "6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657",
 		Pass:  "",
 	},
 }
 
-// NewMockKeystore returns a new mock keystore
-func NewMockKeystore(keys map[common.Address]MockKey) *mockKeystore {
+// NewMockKeystore returns empty mock keystore
+func NewMockKeystore() *mockKeystore {
+	return NewMockKeystoreWith(map[common.Address]MockKey{})
+}
+
+// NewMockKeystoreWith returns a new mock keystore with specified keys
+func NewMockKeystoreWith(keys map[common.Address]MockKey) *mockKeystore {
 	copied := make(map[common.Address]MockKey)
 	for key, value := range keys {
 		copied[key] = value

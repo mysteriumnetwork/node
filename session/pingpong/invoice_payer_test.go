@@ -56,7 +56,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -104,7 +104,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -177,7 +177,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -243,7 +243,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -525,11 +525,7 @@ func TestInvoicePayer_calculateAmountToPromise(t *testing.T) {
 }
 
 func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
-	dir, err := ioutil.TempDir("", "TestInvoicePayer_issueExchangeMessage_test")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -586,11 +582,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 }
 
 func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "TestInvoicePayer_issueExchangeMessage_test")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -601,7 +593,7 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 
 	type fields struct {
 		peerExchangeMessageSender *MockPeerExchangeMessageSender
-		keystore                  *identity.Keystore
+		keystore                  hashSigner
 		identity                  identity.Identity
 		peer                      identity.Identity
 		lastInvoice               crypto.Invoice

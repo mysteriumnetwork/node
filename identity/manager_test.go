@@ -27,7 +27,7 @@ import (
 )
 
 func Test_IdentityManager(t *testing.T) {
-	ks := NewKeystoreFilesystem("dir", NewMockKeystore(MockKeys), MockDecryptFunc)
+	ks := NewKeystoreFilesystem("dir", NewMockKeystoreWith(MockKeys), MockDecryptFunc)
 	idm := &identityManager{
 		keystoreManager: ks,
 		eventBus:        eventbus.New(),

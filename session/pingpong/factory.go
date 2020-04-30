@@ -188,7 +188,7 @@ func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.ChannelHan
 
 // ExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
 func ExchangeFactoryFunc(
-	keystore *identity.Keystore,
+	keystore hashSigner,
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,

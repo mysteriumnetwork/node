@@ -74,7 +74,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -128,7 +128,7 @@ func Test_InvoiceTracker_Start_RefusesUnregisteredUser(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -180,7 +180,7 @@ func Test_InvoiceTracker_Start_BubblesRegistrationCheckErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -233,7 +233,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -285,7 +285,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -339,7 +339,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
@@ -401,7 +401,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 	mockSender := &MockPeerInvoiceSender{
@@ -458,7 +458,7 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 	mockSender := &MockPeerInvoiceSender{
@@ -513,7 +513,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 	mockSender := &MockPeerInvoiceSender{
@@ -573,7 +573,7 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 	acc, err := ks.NewAccount("")
 	assert.Nil(t, err)
 
