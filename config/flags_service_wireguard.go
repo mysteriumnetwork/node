@@ -44,13 +44,13 @@ var (
 	FlagWireguardPriceMinute = cli.Float64Flag{
 		Name:  "wireguard.price-minute",
 		Usage: "Sets the price of the wireguard service per minute.",
-		Value: 0.0005,
+		Value: 0.0001,
 	}
 	// FlagWireguardPriceGB sets the price per GiB for provided wireguard service.
 	FlagWireguardPriceGB = cli.Float64Flag{
 		Name:  "wireguard.price-gb",
 		Usage: "Sets the price of the wireguard service per minute.",
-		Value: 0.07,
+		Value: 0.1,
 	}
 )
 
