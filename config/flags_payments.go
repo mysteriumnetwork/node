@@ -76,7 +76,7 @@ var (
 	FlagPaymentsConsumerPricePerGBUpperBound = cli.Uint64Flag{
 		Name:  "payments.consumer.price-pergib-max",
 		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: 7000000,
+		Value: 11000000,
 	}
 	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBLowerBound = cli.Uint64Flag{
