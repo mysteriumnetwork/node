@@ -460,7 +460,7 @@ func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(p
 	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
 }
 
