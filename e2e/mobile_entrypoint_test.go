@@ -62,7 +62,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 	})
 
 	t.Run("Test identity registration", func(t *testing.T) {
-		identity, err := node.GetIdentity()
+		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 		require.NoError(t, err)
 		require.NotNil(t, identity)
 		require.Equal(t, "Unregistered", identity.RegistrationStatus)
@@ -74,14 +74,14 @@ func TestMobileNodeConsumer(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool {
-			identity, err := node.GetIdentity()
+			identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 			require.NoError(t, err)
 			return identity.RegistrationStatus == "RegisteredConsumer"
 		}, 15*time.Second, 1*time.Second)
 	})
 
 	t.Run("Test balance", func(t *testing.T) {
-		identity, err := node.GetIdentity()
+		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 		require.NoError(t, err)
 
 		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
