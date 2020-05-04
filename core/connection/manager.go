@@ -580,15 +580,6 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return nil
 	})
 
-	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
-	go statsPublisher.start(m, conn)
-	m.addCleanup(func() error {
-		log.Trace().Msg("Cleaning: stopping statistics publisher")
-		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
-		statsPublisher.stop()
-		return nil
-	})
-
 	err = m.setupTrafficBlock(disableKillSwitch)
 	if err != nil {
 		return err
@@ -598,6 +589,15 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	if err != nil {
 		return err
 	}
+
+	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
+	go statsPublisher.start(m, conn)
+	m.addCleanup(func() error {
+		log.Trace().Msg("Cleaning: stopping statistics publisher")
+		defer log.Trace().Msg("Cleaning: stopping statistics publisher DONE")
+		statsPublisher.stop()
+		return nil
+	})
 
 	go m.consumeConnectionStates(conn.State())
 	go m.connectionWaiter(conn)
