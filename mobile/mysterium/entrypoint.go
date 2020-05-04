@@ -439,6 +439,12 @@ func (mb *MobileNode) Disconnect() error {
 	return nil
 }
 
+// GetIdentityRequest represents identity request.
+type GetIdentityRequest struct {
+	Address    string
+	Passphrase string
+}
+
 // GetIdentityResponse represents identity response.
 type GetIdentityResponse struct {
 	IdentityAddress    string
@@ -448,8 +454,11 @@ type GetIdentityResponse struct {
 
 // GetIdentity finds first identity and unlocks it.
 // If there is no identity default one will be created.
-func (mb *MobileNode) GetIdentity() (*GetIdentityResponse, error) {
-	id, err := mb.identitySelector.UseOrCreate("", "")
+func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse, error) {
+	if req == nil {
+		req = &GetIdentityRequest{}
+	}
+	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}
