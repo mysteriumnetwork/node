@@ -352,7 +352,7 @@ func sortedConns(pings []pingResponse) []*net.UDPConn {
 
 // waitMsg waits until conn receives given message or timeouts.
 func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
-	ok := make(chan struct{})
+	ok := make(chan struct{}, 1)
 	go func() {
 		buf := make([]byte, 1024)
 		for {
