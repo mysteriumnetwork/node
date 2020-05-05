@@ -27,10 +27,10 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -124,7 +124,18 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		if err != nil {
 			return err
 		}
-		go sc.runService(providerID, serviceType, serviceOpts, sharedOpts)
+		startRequest := contract.ServiceStartRequest{
+			ProviderID: providerID,
+			Type:       serviceType,
+			PaymentMethod: contract.ServicePaymentMethod{
+				PriceGB:     sharedOpts.PaymentPricePerGB,
+				PriceMinute: sharedOpts.PaymentPricePerMinute,
+			},
+			AccessPolicies: contract.ServiceAccessPolicies{IDs: sharedOpts.AccessPolicyList},
+			Options:        serviceOpts,
+		}
+
+		go sc.runService(startRequest)
 	}
 
 	return <-sc.errorChannel
@@ -143,17 +154,10 @@ func (sc *serviceCommand) unlockIdentity(id, passphrase string) string {
 	}
 }
 
-func (sc *serviceCommand) runService(providerID, serviceType string, serviceOptions service.Options, sharedOpts services.SharedOptions) {
-	_, err := sc.tequilapi.ServiceStart(
-		providerID,
-		serviceType,
-		serviceOptions,
-		sharedOpts.PaymentPricePerGB,
-		sharedOpts.PaymentPricePerMinute,
-		sharedOpts.AccessPolicyList,
-	)
+func (sc *serviceCommand) runService(request contract.ServiceStartRequest) {
+	_, err := sc.tequilapi.ServiceStart(request)
 	if err != nil {
-		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
+		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", request.Type)
 	}
 }
 

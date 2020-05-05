@@ -243,14 +243,16 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		return
 	}
 
-	service, err := c.tequilapi.ServiceStart(
-		providerID,
-		serviceType,
-		serviceOpts,
-		sharedOpts.PaymentPricePerGB,
-		sharedOpts.PaymentPricePerMinute,
-		sharedOpts.AccessPolicyList,
-	)
+	service, err := c.tequilapi.ServiceStart(contract.ServiceStartRequest{
+		ProviderID: providerID,
+		Type:       serviceType,
+		PaymentMethod: contract.ServicePaymentMethod{
+			PriceGB:     sharedOpts.PaymentPricePerGB,
+			PriceMinute: sharedOpts.PaymentPricePerMinute,
+		},
+		AccessPolicies: contract.ServiceAccessPolicies{IDs: sharedOpts.AccessPolicyList},
+		Options:        serviceOpts,
+	})
 	if err != nil {
 		info("Failed to start service: ", err)
 		return

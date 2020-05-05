@@ -33,44 +33,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// swagger:model ServiceRequestDTO
-type serviceRequest struct {
-	// provider identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
-
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// required: true
-	// example: openvpn
-	Type string `json:"type"`
-
-	// service options. Every service has a unique list of allowed options.
-	// required: false
-	// example: {"port": 1123, "protocol": "udp"}
-	Options interface{} `json:"options"`
-
-	// access list which determines which identities will be able to receive the service
-	// required: false
-	AccessPolicies accessPoliciesRequest `json:"access_policies"`
-
-	// PaymentMethod describes payment options that should be used for service creation.
-	PaymentMethod paymentMethodRequest `json:"payment_method"`
-}
-
-// paymentMethodRequest payment parameters for service start.
-// swagger:model PaymentPriceRequest
-type paymentMethodRequest struct {
-	PriceGB     uint64 `json:"price_gb"`
-	PriceMinute uint64 `json:"price_minute"`
-}
-
-// accessPolicy represents the access controls
-// swagger:model AccessPolicyRequest
-type accessPoliciesRequest struct {
-	Ids []string `json:"ids"`
-}
-
 // swagger:model ServiceListDTO
 type serviceList []serviceInfo
 
@@ -174,7 +136,7 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //     name: body
 //     description: Parameters in body (providerID) required for starting new service
 //     schema:
-//       $ref: "#/definitions/ServiceRequestDTO"
+//       $ref: "#/definitions/ServiceStartRequestDTO"
 // responses:
 //   201:
 //     description: Initiates service start
@@ -218,7 +180,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	id, err := se.serviceManager.Start(
 		identity.FromAddress(sr.ProviderID),
 		sr.Type,
-		sr.AccessPolicies.Ids,
+		sr.AccessPolicies.IDs,
 		sr.Options,
 		pingpong.NewPaymentMethod(sr.PaymentMethod.PriceGB, sr.PaymentMethod.PriceMinute),
 	)
@@ -270,7 +232,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
+func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
 	for _, instance := range se.serviceManager.List() {
 		proposal := instance.Proposal()
 		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.Type {
@@ -290,31 +252,31 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
 }
 
-func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
+func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.ServiceStartRequest, error) {
 	sharedOpts := services.SharedConfiguredOptions()
 
 	jsonData := struct {
-		ProviderID     string                `json:"provider_id"`
-		Type           string                `json:"type"`
-		Options        *json.RawMessage      `json:"options"`
-		AccessPolicies accessPoliciesRequest `json:"access_policies"`
-		PaymentMethod  paymentMethodRequest  `json:"payment_method"`
+		ProviderID     string                         `json:"provider_id"`
+		Type           string                         `json:"type"`
+		Options        *json.RawMessage               `json:"options"`
+		PaymentMethod  contract.ServicePaymentMethod  `json:"payment_method"`
+		AccessPolicies contract.ServiceAccessPolicies `json:"access_policies"`
 	}{
-		PaymentMethod: paymentMethodRequest{
+		PaymentMethod: contract.ServicePaymentMethod{
 			PriceGB:     sharedOpts.PaymentPricePerGB,
 			PriceMinute: sharedOpts.PaymentPricePerMinute,
 		},
-		AccessPolicies: accessPoliciesRequest{
-			Ids: sharedOpts.AccessPolicyList,
+		AccessPolicies: contract.ServiceAccessPolicies{
+			IDs: sharedOpts.AccessPolicyList,
 		},
 	}
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&jsonData); err != nil {
-		return serviceRequest{}, err
+		return contract.ServiceStartRequest{}, err
 	}
 
-	sr := serviceRequest{
+	sr := contract.ServiceStartRequest{
 		ProviderID:     jsonData.ProviderID,
 		Type:           se.toServiceType(jsonData.Type),
 		Options:        se.toServiceOptions(jsonData.Type, jsonData.Options),
@@ -371,7 +333,7 @@ func toServiceListResponse(instances map[service.ID]*service.Instance) serviceLi
 	return res
 }
 
-func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
+func validateServiceRequest(sr contract.ServiceStartRequest) *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if len(sr.ProviderID) == 0 {
 		errors.ForField("provider_id").AddError("required", "Field is required")
