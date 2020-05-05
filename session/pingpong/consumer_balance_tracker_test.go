@@ -104,7 +104,6 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 	mcts := mockConsumerTotalsStorage{
 		res: grandTotalPromised,
-		bus: bus,
 	}
 	bc := mockConsumerBalanceChecker{
 		channelToReturn: client.ConsumerChannel{
