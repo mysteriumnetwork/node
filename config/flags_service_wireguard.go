@@ -40,6 +40,18 @@ var (
 		Usage: "Subnet to be used by the wireguard service",
 		Value: "10.182.0.0/16",
 	}
+	// FlagWireguardPriceMinute sets the price per minute for provided wireguard service.
+	FlagWireguardPriceMinute = cli.Float64Flag{
+		Name:  "wireguard.price-minute",
+		Usage: "Sets the price of the wireguard service per minute.",
+		Value: 0.0001,
+	}
+	// FlagWireguardPriceGB sets the price per GiB for provided wireguard service.
+	FlagWireguardPriceGB = cli.Float64Flag{
+		Name:  "wireguard.price-gb",
+		Usage: "Sets the price of the wireguard service per minute.",
+		Value: 0.1,
+	}
 )
 
 // RegisterFlagsServiceWireguard function register Wireguard flags to flag list
@@ -48,6 +60,8 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 		&FlagWireguardConnectDelay,
 		&FlagWireguardListenPorts,
 		&FlagWireguardListenSubnet,
+		&FlagWireguardPriceMinute,
+		&FlagWireguardPriceGB,
 	)
 }
 
@@ -56,4 +70,6 @@ func ParseFlagsServiceWireguard(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagWireguardConnectDelay)
 	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
 	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
+	Current.ParseFloat64Flag(ctx, FlagWireguardPriceMinute)
+	Current.ParseFloat64Flag(ctx, FlagWireguardPriceGB)
 }
