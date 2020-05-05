@@ -18,69 +18,59 @@
 package identity
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts"
+	ethKs "github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 const secretMessage = "I like trains. A LOT. Choo CHOO"
 
+var (
+	encryptionAddress = common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68")
+	encryptionAccount = accounts.Account{Address: encryptionAddress}
+	encryptionKey, _  = crypto.HexToECDSA("6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657")
+)
+
 func Test_DerivedEncryption(t *testing.T) {
-	dir, err := ioutil.TempDir(os.TempDir(), "derived_encryption")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	ks := NewKeystoreFilesystem("", &ethKeystoreMock{account: encryptionAccount})
+	ks.loadKey = func(addr common.Address, filename, auth string) (*ethKs.Key, error) {
+		return &ethKs.Key{Address: addr, PrivateKey: encryptionKey}, nil
+	}
 
-	ks := NewKeystoreFilesystem(dir, NewMockKeystoreWith(MockKeys), MockDecryptFunc)
+	t.Run("Fails to decrypt or encrypt if account is locked", func(t *testing.T) {
+		encrypted, err := ks.Encrypt(encryptionAddress, []byte(secretMessage))
+		assert.Error(t, err)
 
-	acc, err := ks.NewAccount("")
-	assert.NoError(t, err)
-
-	err = ks.Unlock(acc, "")
-	assert.NoError(t, err)
-
-	t.Run("Has a derived key for unlocked account", func(t *testing.T) {
-		key, err := ks.getDerivedKey(acc.Address)
-		assert.NoError(t, err)
-
-		assert.Len(t, key, 32)
+		_, err = ks.Decrypt(encryptionAddress, encrypted)
+		assert.Error(t, err)
 	})
 
+	err := ks.Unlock(encryptionAccount, "")
+	assert.NoError(t, err)
+
 	t.Run("Encrypts and decrypts messages with the derived key", func(t *testing.T) {
-		encrypted, err := ks.Encrypt(acc.Address, []byte(secretMessage))
+		encrypted, err := ks.Encrypt(encryptionAddress, []byte(secretMessage))
 		assert.NoError(t, err)
 		assert.NotEqual(t, []byte(secretMessage), encrypted)
 
-		decrypted, err := ks.Decrypt(acc.Address, encrypted)
+		decrypted, err := ks.Decrypt(encryptionAddress, encrypted)
 		assert.NoError(t, err)
 
 		assert.Equal(t, secretMessage, string(decrypted))
 	})
 
 	t.Run("Errors if message is tampered with", func(t *testing.T) {
-		encrypted, err := ks.Encrypt(acc.Address, []byte(secretMessage))
+		encrypted, err := ks.Encrypt(encryptionAddress, []byte(secretMessage))
 		assert.NoError(t, err)
 		assert.NotEqual(t, []byte(secretMessage), encrypted)
 
 		encrypted[1] = 0x1
-		_, err = ks.Decrypt(acc.Address, encrypted)
-		assert.Error(t, err)
-	})
-
-	t.Run("Removes key if account is locked", func(t *testing.T) {
-		err := ks.Lock(acc.Address)
-		assert.NoError(t, err)
-
-		_, err = ks.getDerivedKey(acc.Address)
-		assert.Error(t, err)
-	})
-
-	t.Run("Fails to decrypt or encrypt if account is locked", func(t *testing.T) {
-		encrypted, err := ks.Encrypt(acc.Address, []byte(secretMessage))
-		assert.Error(t, err)
-
-		_, err = ks.Decrypt(acc.Address, encrypted)
+		_, err = ks.Decrypt(encryptionAddress, encrypted)
 		assert.Error(t, err)
 	})
 }
@@ -88,15 +78,15 @@ func Test_DerivedEncryption(t *testing.T) {
 var result []byte
 
 func Benchmark_DerivedEncryption(b *testing.B) {
-	dir, _ := ioutil.TempDir(os.TempDir(), "derived_encryption_bench")
-	defer os.RemoveAll(dir)
-	ks := NewKeystoreFilesystem(dir, NewMockKeystoreWith(MockKeys), MockDecryptFunc)
-	acc, _ := ks.NewAccount("")
-	_ = ks.Unlock(acc, "")
+	ks := NewKeystoreFilesystem("", &ethKeystoreMock{account: encryptionAccount})
+	ks.loadKey = func(addr common.Address, filename, auth string) (*ethKs.Key, error) {
+		return &ethKs.Key{}, nil
+	}
+	_ = ks.Unlock(encryptionAccount, "")
 
 	var r []byte
 	for n := 0; n < b.N; n++ {
-		encrypted, _ := ks.Encrypt(acc.Address, []byte(secretMessage))
+		encrypted, _ := ks.Encrypt(encryptionAddress, []byte(secretMessage))
 		r = encrypted
 	}
 
@@ -104,18 +94,34 @@ func Benchmark_DerivedEncryption(b *testing.B) {
 }
 
 func Benchmark_DerivedDecryption(b *testing.B) {
-	dir, _ := ioutil.TempDir(os.TempDir(), "derived_encryption_bench")
-	defer os.RemoveAll(dir)
-	ks := NewKeystoreFilesystem(dir, NewMockKeystoreWith(MockKeys), MockDecryptFunc)
-	acc, _ := ks.NewAccount("")
-	_ = ks.Unlock(acc, "")
-	encrypted, _ := ks.Encrypt(acc.Address, []byte(secretMessage))
+	ks := NewKeystoreFilesystem("", &ethKeystoreMock{account: encryptionAccount})
+	ks.loadKey = func(addr common.Address, filename, auth string) (*ethKs.Key, error) {
+		return &ethKs.Key{}, nil
+	}
+	_ = ks.Unlock(encryptionAccount, "")
+	encrypted, _ := ks.Encrypt(encryptionAddress, []byte(secretMessage))
 
 	var r []byte
 	for n := 0; n < b.N; n++ {
-		decrypted, _ := ks.Decrypt(acc.Address, encrypted)
+		decrypted, _ := ks.Decrypt(encryptionAddress, encrypted)
 		r = decrypted
 	}
 
 	result = r
+}
+
+type ethKeystoreMock struct {
+	account accounts.Account
+}
+
+func (ekm *ethKeystoreMock) Accounts() []accounts.Account {
+	return []accounts.Account{ekm.account}
+}
+
+func (ekm *ethKeystoreMock) Find(a accounts.Account) (accounts.Account, error) {
+	return ekm.account, nil
+}
+
+func (ekm *ethKeystoreMock) NewAccount(passphrase string) (accounts.Account, error) {
+	return accounts.Account{}, errors.New("not implemented yet")
 }

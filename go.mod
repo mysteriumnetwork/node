@@ -8,7 +8,6 @@ require (
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/asdine/storm/v3 v3.1.1
-	github.com/awnumar/memguard v0.21.0
 	github.com/aws/aws-sdk-go-v2 v0.15.0
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/cheggaaa/pb/v3 v3.0.1

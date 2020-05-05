@@ -677,7 +677,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	}
 
-	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks, keystore.DecryptKey)
+	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
