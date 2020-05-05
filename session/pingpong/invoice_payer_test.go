@@ -703,11 +703,13 @@ type mockConsumerTotalsStorage struct {
 
 func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
 	mcts.calledWith = amount
-	go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
-		Current:      amount,
-		AccountantID: accountantID,
-		ConsumerID:   id,
-	})
+	if mcts.bus != nil {
+		go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+			Current:      amount,
+			AccountantID: accountantID,
+			ConsumerID:   id,
+		})
+	}
 	return nil
 }
 
