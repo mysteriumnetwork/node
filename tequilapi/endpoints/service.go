@@ -253,22 +253,12 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 }
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.ServiceStartRequest, error) {
-	sharedOpts := services.SharedConfiguredOptions()
-
-	jsonData := struct {
-		ProviderID     string                         `json:"provider_id"`
-		Type           string                         `json:"type"`
-		Options        *json.RawMessage               `json:"options"`
-		PaymentMethod  contract.ServicePaymentMethod  `json:"payment_method"`
-		AccessPolicies contract.ServiceAccessPolicies `json:"access_policies"`
-	}{
-		PaymentMethod: contract.ServicePaymentMethod{
-			PriceGB:     sharedOpts.PaymentPricePerGB,
-			PriceMinute: sharedOpts.PaymentPricePerMinute,
-		},
-		AccessPolicies: contract.ServiceAccessPolicies{
-			IDs: sharedOpts.AccessPolicyList,
-		},
+	var jsonData struct {
+		ProviderID     string                          `json:"provider_id"`
+		Type           string                          `json:"type"`
+		Options        *json.RawMessage                `json:"options"`
+		PaymentMethod  *contract.ServicePaymentMethod  `json:"payment_method"`
+		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
 	}
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
@@ -276,12 +266,24 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.Service
 		return contract.ServiceStartRequest{}, err
 	}
 
+	serviceOpts, _ := services.GetStartOptions(jsonData.Type)
 	sr := contract.ServiceStartRequest{
-		ProviderID:     jsonData.ProviderID,
-		Type:           se.toServiceType(jsonData.Type),
-		Options:        se.toServiceOptions(jsonData.Type, jsonData.Options),
-		AccessPolicies: jsonData.AccessPolicies,
-		PaymentMethod:  jsonData.PaymentMethod,
+		ProviderID: jsonData.ProviderID,
+		Type:       se.toServiceType(jsonData.Type),
+		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
+		PaymentMethod: contract.ServicePaymentMethod{
+			PriceGB:     serviceOpts.PaymentPricePerGB,
+			PriceMinute: serviceOpts.PaymentPricePerMinute,
+		},
+		AccessPolicies: contract.ServiceAccessPolicies{
+			IDs: serviceOpts.AccessPolicyList,
+		},
+	}
+	if jsonData.PaymentMethod != nil {
+		sr.PaymentMethod = *jsonData.PaymentMethod
+	}
+	if jsonData.AccessPolicies != nil {
+		sr.AccessPolicies = *jsonData.AccessPolicies
 	}
 	return sr, nil
 }

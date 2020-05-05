@@ -21,11 +21,17 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/money"
 )
 
-// SharedConfiguredOptions returns effective shared service options
-func SharedConfiguredOptions() SharedOptions {
+// GetStartOptions returns options to use for starting a service.
+func GetStartOptions(serviceType string) (StartOptions, error) {
+	typeOptions, err := TypeConfiguredOptions(serviceType)
+	if err != nil {
+		return StartOptions{}, err
+	}
+
 	policiesStr := config.GetString(config.FlagAccessPolicyList)
 	var policies []string
 	if len(policiesStr) > 0 {
@@ -34,16 +40,18 @@ func SharedConfiguredOptions() SharedOptions {
 		policies = []string{}
 	}
 
-	return SharedOptions{
+	return StartOptions{
 		PaymentPricePerGB:     uint64(config.GetFloat64(config.FlagPaymentPricePerGB) * money.MystSize),
 		PaymentPricePerMinute: uint64(config.GetFloat64(config.FlagPaymentPricePerMinute) * money.MystSize),
 		AccessPolicyList:      policies,
-	}
+		TypeOptions:           typeOptions,
+	}, nil
 }
 
-// SharedOptions describes options shared among multiple services
-type SharedOptions struct {
+// StartOptions describes options shared among multiple services
+type StartOptions struct {
 	PaymentPricePerGB     uint64
 	PaymentPricePerMinute uint64
 	AccessPolicyList      []string
+	TypeOptions           service.Options
 }

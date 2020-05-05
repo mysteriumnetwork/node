@@ -51,7 +51,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			}
 
 			quit := make(chan error)
-			config.ParseFlagsServiceShared(ctx)
+			config.ParseFlagsServiceStart(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
 			config.ParseFlagsServiceNoop(ctx)
@@ -81,7 +81,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		},
 	}
 
-	config.RegisterFlagsServiceShared(&command.Flags)
+	config.RegisterFlagsServiceStart(&command.Flags)
 	config.RegisterFlagsServiceOpenvpn(&command.Flags)
 	config.RegisterFlagsServiceWireguard(&command.Flags)
 	config.RegisterFlagsServiceNoop(&command.Flags)
@@ -118,9 +118,8 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	sharedOpts := services.SharedConfiguredOptions()
 	for _, serviceType := range serviceTypes {
-		serviceOpts, err := services.TypeConfiguredOptions(serviceType)
+		serviceOpts, err := services.GetStartOptions(serviceType)
 		if err != nil {
 			return err
 		}
@@ -128,10 +127,10 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 			ProviderID: providerID,
 			Type:       serviceType,
 			PaymentMethod: contract.ServicePaymentMethod{
-				PriceGB:     sharedOpts.PaymentPricePerGB,
-				PriceMinute: sharedOpts.PaymentPricePerMinute,
+				PriceGB:     serviceOpts.PaymentPricePerGB,
+				PriceMinute: serviceOpts.PaymentPricePerMinute,
 			},
-			AccessPolicies: contract.ServiceAccessPolicies{IDs: sharedOpts.AccessPolicyList},
+			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
 			Options:        serviceOpts,
 		}
 

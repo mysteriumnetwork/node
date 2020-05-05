@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
@@ -237,7 +236,7 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	serviceOpts, sharedOpts, err := parseStartFlags(serviceType, args...)
+	serviceOpts, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
@@ -247,11 +246,11 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		ProviderID: providerID,
 		Type:       serviceType,
 		PaymentMethod: contract.ServicePaymentMethod{
-			PriceGB:     sharedOpts.PaymentPricePerGB,
-			PriceMinute: sharedOpts.PaymentPricePerMinute,
+			PriceGB:     serviceOpts.PaymentPricePerGB,
+			PriceMinute: serviceOpts.PaymentPricePerMinute,
 		},
-		AccessPolicies: contract.ServiceAccessPolicies{IDs: sharedOpts.AccessPolicyList},
-		Options:        serviceOpts,
+		AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+		Options:        serviceOpts.TypeOptions,
 	})
 	if err != nil {
 		info("Failed to start service: ", err)
@@ -673,9 +672,9 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, services.SharedOptions, error) {
+func parseStartFlags(serviceType string, args ...string) (services.StartOptions, error) {
 	var flags []cli.Flag
-	config.RegisterFlagsServiceShared(&flags)
+	config.RegisterFlagsServiceStart(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
 	config.RegisterFlagsServiceWireguard(&flags)
 	config.RegisterFlagsServiceNoop(&flags)
@@ -685,19 +684,14 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, servi
 		f.Apply(set)
 	}
 	if err := set.Parse(args); err != nil {
-		return nil, services.SharedOptions{}, err
+		return services.StartOptions{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
-	config.ParseFlagsServiceShared(ctx)
+	config.ParseFlagsServiceStart(ctx)
 	config.ParseFlagsServiceOpenvpn(ctx)
 	config.ParseFlagsServiceWireguard(ctx)
 	config.ParseFlagsServiceNoop(ctx)
 
-	serviceOptions, err := services.TypeConfiguredOptions(serviceType)
-	if err != nil {
-		return nil, services.SharedOptions{}, err
-	}
-
-	return serviceOptions, services.SharedConfiguredOptions(), nil
+	return services.GetStartOptions(serviceType)
 }

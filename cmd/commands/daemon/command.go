@@ -37,7 +37,7 @@ func NewCommand() *cli.Command {
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
 			quit := make(chan error, 2)
-			config.ParseFlagsServiceShared(ctx)
+			config.ParseFlagsServiceStart(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
 			config.ParseFlagsServiceNoop(ctx)

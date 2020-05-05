@@ -61,8 +61,8 @@ var (
 	}
 )
 
-// RegisterFlagsServiceShared registers shared service CLI flags
-func RegisterFlagsServiceShared(flags *[]cli.Flag) {
+// RegisterFlagsServiceStart registers CLI flags used to start a service.
+func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		&FlagIdentity,
 		&FlagIdentityPassphrase,
@@ -73,8 +73,8 @@ func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 	)
 }
 
-// ParseFlagsServiceShared parses shared service CLI flags and registers values to the configuration
-func ParseFlagsServiceShared(ctx *cli.Context) {
+// ParseFlagsServiceStart parses service start CLI flags and registers values to the configuration
+func ParseFlagsServiceStart(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIdentity)
 	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
