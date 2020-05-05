@@ -51,7 +51,7 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 
 	totalBytes, err := io.CopyBuffer(dstConn, srcConn, buf)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to write/read a stream to/from natProxy")
+		log.Error().Err(err).Msg("Failed to write/read a stream to/from service natProxy")
 	}
 
 	log.Debug().Msgf("Total bytes transferred from %s to %s: %d",
