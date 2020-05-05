@@ -74,6 +74,11 @@ var (
 		Usage: "List of comma separated (no spaces) subnets to be protected from access via VPN",
 		Value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8",
 	}
+	// FlagShaperEnabled enables bandwidth limitation.
+	FlagShaperEnabled = cli.BoolFlag{
+		Name:  "shaper.enabled",
+		Usage: "Limit service bandwidth",
+	}
 	// FlagKeystoreLightweight determines the scrypt memory complexity.
 	FlagKeystoreLightweight = cli.BoolFlag{
 		Name:  "keystore.lightweight",
@@ -190,6 +195,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsTransactor(flags)
 	RegisterFlagsAccountant(flags)
 	RegisterFlagsPayments(flags)
+	RegisterFlagsPolicy(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -199,6 +205,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagFeedbackURL,
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
+		&FlagShaperEnabled,
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
@@ -228,6 +235,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsTransactor(ctx)
 	ParseFlagsAccountant(ctx)
 	ParseFlagsPayments(ctx)
+	ParseFlagsPolicy(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
@@ -236,6 +244,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
+	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseStringFlag(ctx, FlagLogLevel)

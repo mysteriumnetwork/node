@@ -18,9 +18,6 @@
 package config
 
 import (
-	"time"
-
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
 
@@ -43,23 +40,11 @@ var (
 		Usage: "Agree with terms & conditions",
 	}
 
-	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
-	FlagAccessPolicyAddress = cli.StringFlag{
-		Name:  "access-policy.address",
-		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
-		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
-	}
 	// FlagAccessPolicyList a comma-separated list of access policies that determines allowed identities to use the service.
 	FlagAccessPolicyList = cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the access policies applied to provide service.",
 		Value: "",
-	}
-	// FlagAccessPolicyFetchInterval policy list fetch interval.
-	FlagAccessPolicyFetchInterval = cli.DurationFlag{
-		Name:  "access-policy.fetch",
-		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
-		Value: 10 * time.Minute,
 	}
 
 	// FlagPaymentPricePerGB sets the price per GiB to provided service.
@@ -74,12 +59,6 @@ var (
 		Usage: "Sets the price per minute applied to provider service.",
 		Value: 0.0001,
 	}
-
-	// FlagShaperEnabled enables bandwidth limitation.
-	FlagShaperEnabled = cli.BoolFlag{
-		Name:  "shaper.enabled",
-		Usage: "Limit service bandwidth",
-	}
 )
 
 // RegisterFlagsServiceShared registers shared service CLI flags
@@ -90,10 +69,7 @@ func RegisterFlagsServiceShared(flags *[]cli.Flag) {
 		&FlagAgreedTermsConditions,
 		&FlagPaymentPricePerGB,
 		&FlagPaymentPricePerMinute,
-		&FlagAccessPolicyAddress,
 		&FlagAccessPolicyList,
-		&FlagAccessPolicyFetchInterval,
-		&FlagShaperEnabled,
 	)
 }
 
@@ -104,8 +80,5 @@ func ParseFlagsServiceShared(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
 	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerGB)
 	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerMinute)
-	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
-	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)
-	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 }
