@@ -20,18 +20,33 @@ package identity
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts"
+	ethKs "github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	idAddress = "0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"
+	idAccount = accounts.Account{
+		Address: common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"),
+	}
+	idKey, _ = crypto.HexToECDSA("6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657")
+)
+
 func Test_UnlockAndSignAndVerify(t *testing.T) {
-	ks := NewKeystoreFilesystem("dir", NewMockKeystore(MockKeys), MockDecryptFunc)
+	ks := NewKeystoreFilesystem("dir", &ethKeystoreMock{account: idAccount})
+	ks.loadKey = func(addr common.Address, filename, auth string) (*ethKs.Key, error) {
+		return &ethKs.Key{Address: addr, PrivateKey: idKey}, nil
+	}
 
 	manager := NewIdentityManager(ks, eventbus.New())
-	err := manager.Unlock("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68", "")
+	err := manager.Unlock(idAddress, "")
 	assert.NoError(t, err)
 
-	signer := NewSigner(ks, FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
+	signer := NewSigner(ks, FromAddress(idAddress))
 	signature, err := signer.Sign([]byte("Boop!"))
 	assert.NoError(t, err)
 	assert.Exactly(
@@ -40,6 +55,6 @@ func Test_UnlockAndSignAndVerify(t *testing.T) {
 		signature,
 	)
 
-	verifier := NewVerifierIdentity(FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
+	verifier := NewVerifierIdentity(FromAddress(idAddress))
 	assert.True(t, verifier.Verify([]byte("Boop!"), signature))
 }
