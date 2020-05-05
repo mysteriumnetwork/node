@@ -23,29 +23,57 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/noop"
+	"github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/urfave/cli/v2"
 )
 
 // GetStartOptions returns options to use for starting a service.
-func GetStartOptions(serviceType string) (StartOptions, error) {
-	typeOptions, err := TypeConfiguredOptions(serviceType)
+func GetStartOptions(serviceType string) (opts StartOptions, err error) {
+	opts.TypeOptions, err = TypeConfiguredOptions(serviceType)
 	if err != nil {
-		return StartOptions{}, err
+		return
 	}
 
-	policiesStr := config.GetString(config.FlagAccessPolicyList)
+	switch serviceType {
+	case openvpn.ServiceType:
+		opts.PaymentPricePerGB = getPrice(config.FlagOpenVPNPriceGB, config.FlagPaymentPricePerGB)
+		opts.PaymentPricePerMinute = getPrice(config.FlagOpenVPNPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.AccessPolicyList = getPolicies(config.FlagOpenVPNAccessPolicies, config.FlagAccessPolicyList)
+	case wireguard.ServiceType:
+		opts.PaymentPricePerGB = getPrice(config.FlagWireguardPriceGB, config.FlagPaymentPricePerGB)
+		opts.PaymentPricePerMinute = getPrice(config.FlagWireguardPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.AccessPolicyList = getPolicies(config.FlagWireguardAccessPolicies, config.FlagAccessPolicyList)
+	case noop.ServiceType:
+		opts.PaymentPricePerGB = getPrice(config.FlagNoopPriceGB, config.FlagPaymentPricePerGB)
+		opts.PaymentPricePerMinute = getPrice(config.FlagNoopPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.AccessPolicyList = getPolicies(config.FlagNoopAccessPolicies, config.FlagAccessPolicyList)
+	}
+	return opts, nil
+}
+
+func getPrice(flag cli.Float64Flag, fallback cli.Float64Flag) uint64 {
+	value := config.GetFloat64(flag)
+	if value == 0 {
+		value = config.GetFloat64(fallback)
+	}
+	return uint64(value * money.MystSize)
+}
+
+func getPolicies(flag cli.StringFlag, fallback cli.StringFlag) []string {
+	policiesStr := config.GetString(flag)
+	if policiesStr == "" {
+		policiesStr = config.GetString(fallback)
+	}
+
 	var policies []string
 	if len(policiesStr) > 0 {
 		policies = strings.Split(policiesStr, ",")
 	} else {
 		policies = []string{}
 	}
-
-	return StartOptions{
-		PaymentPricePerGB:     uint64(config.GetFloat64(config.FlagPaymentPricePerGB) * money.MystSize),
-		PaymentPricePerMinute: uint64(config.GetFloat64(config.FlagPaymentPricePerMinute) * money.MystSize),
-		AccessPolicyList:      policies,
-		TypeOptions:           typeOptions,
-	}, nil
+	return policies
 }
 
 // StartOptions describes options shared among multiple services
