@@ -73,7 +73,6 @@ type PeerInvoiceSender interface {
 
 type bcHelper interface {
 	GetAccountantFee(accountantAddress common.Address) (uint16, error)
-	IsRegistered(registryAddress, addressToCheck common.Address) (bool, error)
 }
 
 type providerInvoiceStorage interface {
@@ -252,15 +251,6 @@ func (it *InvoiceTracker) Start() error {
 
 	if err := it.deps.EventBus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
 		return err
-	}
-
-	isConsumerRegistered, err := it.deps.BlockchainHelper.IsRegistered(common.HexToAddress(it.deps.Registry), it.deps.Peer.ToCommonAddress())
-	if err != nil {
-		return errors.Wrap(err, "could not check customer identity registration status")
-	}
-
-	if !isConsumerRegistered {
-		return ErrConsumerNotRegistered
 	}
 
 	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.AccountantID)
