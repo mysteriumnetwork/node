@@ -27,8 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
@@ -53,8 +51,12 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			}
 
 			quit := make(chan error)
+			config.ParseFlagsServiceStart(ctx)
+			config.ParseFlagsServiceOpenvpn(ctx)
+			config.ParseFlagsServiceWireguard(ctx)
+			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
-			config.ParseFlagsServiceShared(ctx)
+
 			nodeOptions := node.GetOptions()
 			nodeOptions.Discovery.FetchEnabled = false
 			if err := di.Bootstrap(*nodeOptions); err != nil {
@@ -67,11 +69,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: quit,
-				ap: client.AccessPoliciesRequest{
-					IDs: services.SharedConfiguredOptions().AccessPolicyList,
-				},
 			}
-
 			go func() {
 				quit <- cmdService.Run(ctx)
 			}()
@@ -83,7 +81,10 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		},
 	}
 
-	registerFlags(&command.Flags)
+	config.RegisterFlagsServiceStart(&command.Flags)
+	config.RegisterFlagsServiceOpenvpn(&command.Flags)
+	config.RegisterFlagsServiceWireguard(&command.Flags)
+	config.RegisterFlagsServiceNoop(&command.Flags)
 
 	return command
 }
@@ -101,32 +102,50 @@ func describeQuit(err error) error {
 type serviceCommand struct {
 	tequilapi    *client.Client
 	errorChannel chan error
-	ap           client.AccessPoliciesRequest
 }
 
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	arg := ctx.Args().Get(0)
+	serviceTypes := services.Types()
 	if arg != "" {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	providerID := sc.unlockIdentity(parseIdentityFlags(ctx))
-	log.Info().Msgf("Unlocked identity: %v", providerID.Address)
+	providerID := sc.unlockIdentity(
+		ctx.String(config.FlagIdentity.Name),
+		ctx.String(config.FlagIdentityPassphrase.Name),
+	)
+	log.Info().Msgf("Unlocked identity: %v", providerID)
 
-	if err := sc.runServices(ctx, providerID.Address, serviceTypes); err != nil {
-		return err
+	for _, serviceType := range serviceTypes {
+		serviceOpts, err := services.GetStartOptions(serviceType)
+		if err != nil {
+			return err
+		}
+		startRequest := contract.ServiceStartRequest{
+			ProviderID: providerID,
+			Type:       serviceType,
+			PaymentMethod: contract.ServicePaymentMethod{
+				PriceGB:     serviceOpts.PaymentPricePerGB,
+				PriceMinute: serviceOpts.PaymentPricePerMinute,
+			},
+			AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+			Options:        serviceOpts,
+		}
+
+		go sc.runService(startRequest)
 	}
 
 	return <-sc.errorChannel
 }
 
-func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) *identity.Identity {
+func (sc *serviceCommand) unlockIdentity(id, passphrase string) string {
 	const retryRate = 10 * time.Second
 	for {
-		id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
+		id, err := sc.tequilapi.CurrentIdentity(id, passphrase)
 		if err == nil {
-			return &identity.Identity{Address: id.Address}
+			return id.Address
 		}
 		log.Warn().Err(err).Msg("Failed to get current identity")
 		log.Warn().Msgf("retrying in %vs...", retryRate.Seconds())
@@ -134,46 +153,11 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 	}
 }
 
-func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
-	for _, serviceType := range serviceTypes {
-		options, pm, err := parseFlagsByServiceType(ctx, serviceType)
-		if err != nil {
-			return err
-		}
-		go sc.runService(providerID, serviceType, options, pm)
-	}
-
-	return nil
-}
-
-func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options, pm contract.PaymentMethodDTO) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap, pm)
+func (sc *serviceCommand) runService(request contract.ServiceStartRequest) {
+	_, err := sc.tequilapi.ServiceStart(request)
 	if err != nil {
-		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
+		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", request.Type)
 	}
-}
-
-// registerFlags function register service flags to flag list
-func registerFlags(flags *[]cli.Flag) {
-	config.RegisterFlagsServiceShared(flags)
-	config.RegisterFlagsServiceOpenvpn(flags)
-	config.RegisterFlagsServiceWireguard(flags)
-}
-
-// parseIdentityFlags function fills in service command options from CLI context
-func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
-	return service.OptionsIdentity{
-		Identity:   ctx.String(config.FlagIdentity.Name),
-		Passphrase: ctx.String(config.FlagIdentityPassphrase.Name),
-	}
-}
-
-func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, contract.PaymentMethodDTO, error) {
-	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
-		opt, pm := f(ctx)
-		return opt, pm, nil
-	}
-	return service.OptionsIdentity{}, contract.PaymentMethodDTO{}, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

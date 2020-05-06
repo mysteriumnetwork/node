@@ -89,7 +89,7 @@ type UIServer interface {
 
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
-	Node *node.Node
+	Node *Node
 
 	HTTPClient *requests.HTTPClient
 
@@ -226,7 +226,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapP2P(nodeOptions.P2PPorts)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
-	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
+	if err := di.bootstrapServices(nodeOptions); err != nil {
 		return err
 	}
 
@@ -518,7 +518,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	di.Node = node.NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
 	return nil
 }
 
@@ -535,10 +535,10 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository, di.QualityClient)
-	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
+	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, services.JSONParsersByType)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
-	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, services.SharedConfiguredOptions().AccessPolicyAddress)
+	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConfig(router)

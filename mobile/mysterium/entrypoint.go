@@ -53,7 +53,7 @@ import (
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
 	shutdown                     func() error
-	node                         *node.Node
+	node                         *cmd.Node
 	connectionManager            connection.Manager
 	locationResolver             *location.Cache
 	identitySelector             selector.Handler

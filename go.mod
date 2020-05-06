@@ -27,7 +27,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
-	github.com/klauspost/compress v1.10.4 // indirect
+	github.com/klauspost/compress v1.10.5 // indirect
 	github.com/klauspost/pgzip v1.2.3 // indirect
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/kr/pretty v0.2.0 // indirect
@@ -36,7 +36,7 @@ require (
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.38
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.39
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.3
@@ -52,7 +52,7 @@ require (
 	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
-	github.com/pierrec/lz4 v2.5.1+incompatible // indirect
+	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/zerolog v1.17.2
@@ -66,9 +66,9 @@ require (
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/xtaci/kcp-go/v5 v5.5.8
-	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71
-	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
-	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4
+	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
+	golang.org/x/net v0.0.0-20200505041828-1ed23360d12c
+	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/protobuf v1.21.0

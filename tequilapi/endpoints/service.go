@@ -20,7 +20,6 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -33,37 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/rs/zerolog/log"
 )
-
-// swagger:model ServiceRequestDTO
-type serviceRequest struct {
-	// provider identity
-	// required: true
-	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
-
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// required: true
-	// example: openvpn
-	Type string `json:"type"`
-
-	// service options. Every service has a unique list of allowed options.
-	// required: false
-	// example: {"port": 1123, "protocol": "udp"}
-	Options interface{} `json:"options"`
-
-	// access list which determines which identities will be able to receive the service
-	// required: false
-	AccessPolicies accessPoliciesRequest `json:"access_policies"`
-
-	// PaymentMethod describes payment options that should be used for service creation.
-	PaymentMethod contract.PaymentMethodDTO `json:"payment_method"`
-}
-
-// accessPolicy represents the access controls
-// swagger:model AccessPolicyRequest
-type accessPoliciesRequest struct {
-	Ids []string `json:"ids"`
-}
 
 // swagger:model ServiceListDTO
 type serviceList []serviceInfo
@@ -96,11 +64,8 @@ type serviceInfo struct {
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
-	optionsParser  map[string]ServiceOptionsParser
+	optionsParser  map[string]services.ServiceOptionsParser
 }
-
-// ServiceOptionsParser parses request to service specific options
-type ServiceOptionsParser func(*json.RawMessage) (service.Options, error)
 
 var (
 	// serviceTypeInvalid represents service type which is unknown to node
@@ -110,7 +75,7 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
 		optionsParser:  optionsParser,
@@ -171,7 +136,7 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //     name: body
 //     description: Parameters in body (providerID) required for starting new service
 //     schema:
-//       $ref: "#/definitions/ServiceRequestDTO"
+//       $ref: "#/definitions/ServiceStartRequestDTO"
 // responses:
 //   201:
 //     description: Initiates service start
@@ -211,15 +176,14 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	pm := pingpong.PaymentMethod{
-		Type:     sr.PaymentMethod.Type,
-		Price:    sr.PaymentMethod.Price,
-		Duration: time.Duration(sr.PaymentMethod.Rate.PerSeconds) * time.Second,
-		Bytes:    sr.PaymentMethod.Rate.PerBytes,
-	}
-
 	log.Info().Msgf("Service start options: %+v", sr)
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.AccessPolicies.Ids, sr.Options, pm)
+	id, err := se.serviceManager.Start(
+		identity.FromAddress(sr.ProviderID),
+		sr.Type,
+		sr.AccessPolicies.IDs,
+		sr.Options,
+		pingpong.NewPaymentMethod(sr.PaymentMethod.PriceGB, sr.PaymentMethod.PriceMinute),
+	)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -268,7 +232,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
+func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
 	for _, instance := range se.serviceManager.List() {
 		proposal := instance.Proposal()
 		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.Type {
@@ -279,7 +243,7 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]services.ServiceOptionsParser) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
@@ -288,30 +252,38 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
 }
 
-func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
-	jsonData := struct {
-		ProviderID     string                    `json:"provider_id"`
-		Type           string                    `json:"type"`
-		Options        *json.RawMessage          `json:"options"`
-		AccessPolicies accessPoliciesRequest     `json:"access_policies"`
-		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
-	}{
-		AccessPolicies: accessPoliciesRequest{
-			Ids: services.SharedConfiguredOptions().AccessPolicyList,
-		},
+func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (contract.ServiceStartRequest, error) {
+	var jsonData struct {
+		ProviderID     string                          `json:"provider_id"`
+		Type           string                          `json:"type"`
+		Options        *json.RawMessage                `json:"options"`
+		PaymentMethod  *contract.ServicePaymentMethod  `json:"payment_method"`
+		AccessPolicies *contract.ServiceAccessPolicies `json:"access_policies"`
 	}
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&jsonData); err != nil {
-		return serviceRequest{}, err
+		return contract.ServiceStartRequest{}, err
 	}
 
-	sr := serviceRequest{
-		ProviderID:     jsonData.ProviderID,
-		Type:           se.toServiceType(jsonData.Type),
-		Options:        se.toServiceOptions(jsonData.Type, jsonData.Options),
-		AccessPolicies: jsonData.AccessPolicies,
-		PaymentMethod:  jsonData.PaymentMethod,
+	serviceOpts, _ := services.GetStartOptions(jsonData.Type)
+	sr := contract.ServiceStartRequest{
+		ProviderID: jsonData.ProviderID,
+		Type:       se.toServiceType(jsonData.Type),
+		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
+		PaymentMethod: contract.ServicePaymentMethod{
+			PriceGB:     serviceOpts.PaymentPricePerGB,
+			PriceMinute: serviceOpts.PaymentPricePerMinute,
+		},
+		AccessPolicies: contract.ServiceAccessPolicies{
+			IDs: serviceOpts.AccessPolicyList,
+		},
+	}
+	if jsonData.PaymentMethod != nil {
+		sr.PaymentMethod = *jsonData.PaymentMethod
+	}
+	if jsonData.AccessPolicies != nil {
+		sr.AccessPolicies = *jsonData.AccessPolicies
 	}
 	return sr, nil
 }
@@ -363,7 +335,7 @@ func toServiceListResponse(instances map[service.ID]*service.Instance) serviceLi
 	return res
 }
 
-func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
+func validateServiceRequest(sr contract.ServiceStartRequest) *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if len(sr.ProviderID) == 0 {
 		errors.ForField("provider_id").AddError("required", "Field is required")

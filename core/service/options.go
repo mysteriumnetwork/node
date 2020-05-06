@@ -17,11 +17,5 @@
 
 package service
 
-// OptionsIdentity describes identity which is required to start a service
-type OptionsIdentity struct {
-	Identity   string
-	Passphrase string
-}
-
 // Options represents any type of options for pluggable service
 type Options interface{}

@@ -18,7 +18,6 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -402,27 +401,8 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPoliciesRequest, pm contract.PaymentMethodDTO) (service ServiceInfoDTO, err error) {
-	opts, err := json.Marshal(options)
-	if err != nil {
-		return service, err
-	}
-
-	payload := struct {
-		ProviderID     string                    `json:"provider_id"`
-		Type           string                    `json:"type"`
-		Options        json.RawMessage           `json:"options"`
-		AccessPolicies AccessPoliciesRequest     `json:"access_policies"`
-		PaymentMethod  contract.PaymentMethodDTO `json:"payment_method"`
-	}{
-		providerID,
-		serviceType,
-		opts,
-		ap,
-		pm,
-	}
-
-	response, err := client.http.Post("services", payload)
+func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service ServiceInfoDTO, err error) {
+	response, err := client.http.Post("services", request)
 	if err != nil {
 		return service, err
 	}

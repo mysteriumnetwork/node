@@ -21,11 +21,10 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/urfave/cli/v2"
 )
 
-// ParseFlags function fills in Noop options from CLI context
-func ParseFlags(_ *cli.Context) service.Options {
+// GetOptions returns effective Noop service options from application configuration.
+func GetOptions() service.Options {
 	return nil
 }
 
