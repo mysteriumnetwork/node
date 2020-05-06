@@ -545,12 +545,14 @@ func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, e
 
 // SendFeedbackRequest represents user feedback request.
 type SendFeedbackRequest struct {
+	Email       string
 	Description string
 }
 
 // SendFeedback sends user feedback via feedback reported.
 func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
 	report := feedback.UserReport{
+		Email:       req.Email,
 		Description: req.Description,
 	}
 	result, err := mb.feedbackReporter.NewIssue(report)
