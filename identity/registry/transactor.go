@@ -40,7 +40,7 @@ const AppTopicTransactorRegistration = "transactor_identity_registration"
 const AppTopicTransactorTopUp = "transactor_top_up"
 
 type channelProvider interface {
-	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error)
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 // Transactor allows for convenient calls to the transactor service
@@ -281,14 +281,35 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	return signature.Bytes(), nil
 }
 
+type SettleWithBeneficiaryRequest struct {
+	Promise     PromiseSettlementRequest
+	Beneficiary string `json:"beneficiary"`
+	Nonce       uint64 `json:"nonce"`
+	Signature   string `json:"signature"`
+}
+
 // SetBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
-func (t *Transactor) SetBeneficiary(id, beneficiary string) error {
+func (t *Transactor) SettleWithBeneficiary(id, beneficiary, accountantID string, promise pc.Promise) error {
 	signedReq, err := t.fillSetBeneficiaryRequest(id, beneficiary)
 	if err != nil {
 		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
 	}
 
-	req, err := requests.NewPostRequest(t.endpointAddress, "identity/beneficiary", signedReq)
+	payload := SettleWithBeneficiaryRequest{
+		Promise: PromiseSettlementRequest{
+			AccountantID:  accountantID,
+			ChannelID:     hex.EncodeToString(promise.ChannelID),
+			Amount:        promise.Amount,
+			TransactorFee: promise.Fee,
+			Preimage:      hex.EncodeToString(promise.R),
+			Signature:     hex.EncodeToString(promise.Signature),
+		},
+		Beneficiary: signedReq.Beneficiary,
+		Nonce:       signedReq.Nonce,
+		Signature:   signedReq.Signature,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
 	if err != nil {
 		return fmt.Errorf("failed to create RegisterIdentity request %w", err)
 	}
@@ -296,29 +317,28 @@ func (t *Transactor) SetBeneficiary(id, beneficiary string) error {
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (registration.SetBeneficiaryRequest, error) {
-	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.accountantID), common.HexToAddress(id))
+func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
+	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.accountantID), common.HexToAddress(id), false)
 	if err != nil {
-		return registration.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
 	}
 
 	addr, err := pc.GenerateProviderChannelID(id, t.accountantID)
 	if err != nil {
-		return registration.SetBeneficiaryRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
 	}
 
-	regReq := registration.SetBeneficiaryRequest{
-		AccountantID: strings.ToLower(t.accountantID),
-		Beneficiary:  strings.ToLower(beneficiary),
-		ChannelID:    strings.ToLower(addr),
-		Nonce:        ch.LastUsedNonce.Uint64() + 1,
+	regReq := pc.SetBeneficiaryRequest{
+		Beneficiary: strings.ToLower(beneficiary),
+		ChannelID:   strings.ToLower(addr),
+		Nonce:       ch.LastUsedNonce.Uint64() + 1,
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
 
 	sig, err := t.signSetBeneficiaryRequest(signer, regReq)
 	if err != nil {
-		return registration.SetBeneficiaryRequest{}, fmt.Errorf("failed to sign set beneficiary request: %w", err)
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to sign set beneficiary request: %w", err)
 	}
 
 	signatureHex := common.Bytes2Hex(sig)
@@ -327,7 +347,7 @@ func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (registra
 	return regReq, nil
 }
 
-func (t *Transactor) signSetBeneficiaryRequest(signer identity.Signer, req registration.SetBeneficiaryRequest) ([]byte, error) {
+func (t *Transactor) signSetBeneficiaryRequest(signer identity.Signer, req pc.SetBeneficiaryRequest) ([]byte, error) {
 	message := req.GetMessage()
 
 	signature, err := signer.Sign(message)

@@ -39,12 +39,12 @@ type Transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 	TopUp(identity string) error
 	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
-	SetBeneficiary(identity, beneficiary string) error
 }
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
 	ForceSettle(providerID identity.Identity, accountantID common.Address) error
+	SettleWithBeneficiary(id identity.Identity, beneficiary, accountantID common.Address) error
 }
 
 type transactorEndpoint struct {
@@ -267,18 +267,18 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 }
 
 func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	identity := params.ByName("id")
+	id := params.ByName("id")
 
-	req := &client.SetBeneficiaryRequest{}
+	req := &client.SettleWithBeneficiaryRequest{}
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
 		return
 	}
 
-	err = te.transactor.SetBeneficiary(identity, req.Beneficiary)
+	err = te.promiseSettler.SettleWithBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.AccountantID))
 	if err != nil {
-		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", identity, req)
+		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
 		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
 		return
 	}

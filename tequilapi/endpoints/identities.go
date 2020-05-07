@@ -45,7 +45,7 @@ type earningsProvider interface {
 }
 
 type providerChannel interface {
-	GetProviderChannel(accountantAddress common.Address, provider common.Address) (client.ProviderChannel, error)
+	GetProviderChannel(accountantAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 type identitiesAPI struct {
@@ -353,7 +353,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address))
+	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address), false)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return

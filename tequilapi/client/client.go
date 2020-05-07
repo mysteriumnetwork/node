@@ -495,6 +495,7 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	if err != nil {
 		return err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
 		return errors.Wrap(err, "could not settle promise")
@@ -503,8 +504,14 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 }
 
 // SetBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SetBeneficiary(address, beneficiary string) error {
-	payload := SetBeneficiaryRequest{Beneficiary: beneficiary}
+func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID string) error {
+	payload := SettleWithBeneficiaryRequest{
+		SettleRequest: SettleRequest{
+			ProviderID:   address,
+			AccountantID: accountantID,
+		},
+		Beneficiary: beneficiary,
+	}
 	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
 	if err != nil {
 		return err

@@ -485,8 +485,8 @@ github.com/mysteriumnetwork/metrics v0.0.3 h1:I4Dv99MTmKPh37xJkNbjr6/YqAkK0nihIK
 github.com/mysteriumnetwork/metrics v0.0.3/go.mod h1:LE6fOzc0hlThLPYbrtyr8oLiaW3KFuGSKKNb4bOILYU=
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed h1:x9CzKvMnu+8VH9z8lvB/6ZldbpwlLkFuraU0ycH4j5U=
 github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed/go.mod h1:Mj4ZoTFxQltcDoC/Mn8EgO7SkK1dUJQixLgX04p0cN0=
-github.com/mysteriumnetwork/payments v0.0.13-0.20200430114543-8b00d4439302 h1:Lg5Z8Gx9iaWR02kM5It70nFRo+2yGLhqgutH+34APrE=
-github.com/mysteriumnetwork/payments v0.0.13-0.20200430114543-8b00d4439302/go.mod h1:e7j40M4OJQOekLcBsHvvBQfuRglmUx/uYR/msogDhlU=
+github.com/mysteriumnetwork/payments v0.0.13-0.20200506030439-fe21695a9127 h1:H5AGMb7lwhHmV20vl5nkOC9L0RrFBNQmgwqq5lGQGps=
+github.com/mysteriumnetwork/payments v0.0.13-0.20200506030439-fe21695a9127/go.mod h1:e7j40M4OJQOekLcBsHvvBQfuRglmUx/uYR/msogDhlU=
 github.com/nats-io/gnatsd v1.4.1 h1:RconcfDeWpKCD6QIIwiVFcvForlXpWeJP7i5/lDLy44=
 github.com/nats-io/gnatsd v1.4.1/go.mod h1:nqco77VO78hLCJpIcVfygDP2rPGfsEHkGTUk94uh5DQ=
 github.com/nats-io/nats-server v1.4.1 h1:Ul1oSOGNV/L8kjr4v6l2f9Yet6WY+LevH1/7cRZ/qyA=

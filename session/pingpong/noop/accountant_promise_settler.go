@@ -41,3 +41,8 @@ func (n *NoopAccountantPromiseSettler) GetEarnings(_ identity.Identity) event.Ea
 func (n *NoopAccountantPromiseSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
 	return nil
 }
+
+// SettleWithBeneficiary does nothing.
+func (n *NoopAccountantPromiseSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
+	return nil
+}

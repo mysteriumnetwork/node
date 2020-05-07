@@ -281,7 +281,8 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 		beneficiary = actionArgs[1]
 	}
 
-	err := c.tequilapi.SetBeneficiary(address, beneficiary)
+	accountantID := config.GetString(config.FlagAccountantID)
+	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, accountantID)
 	if err != nil {
 		warn(errors.Wrap(err, "could not set beneficiary"))
 		return

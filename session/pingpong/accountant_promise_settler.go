@@ -54,6 +54,7 @@ type registrationStatusProvider interface {
 type transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 	SettleAndRebalance(id string, promise crypto.Promise) error
+	SettleWithBeneficiary(id, beneficiary, accountantID string, promise crypto.Promise) error
 }
 
 type promiseStorage interface {
@@ -69,6 +70,7 @@ type receivedPromise struct {
 type AccountantPromiseSettler interface {
 	GetEarnings(id identity.Identity) event.Earnings
 	ForceSettle(providerID identity.Identity, accountantID common.Address) error
+	SettleWithBeneficiary(providerID identity.Identity, beneficiary, accountantID common.Address) error
 	Subscribe() error
 }
 
@@ -310,6 +312,86 @@ func (aps *accountantPromiseSettler) ForceSettle(providerID identity.Identity, a
 	})
 }
 
+// ForceSettle forces the settlement for a provider
+func (aps *accountantPromiseSettler) SettleWithBeneficiary(providerID identity.Identity, beneficiary, accountantID common.Address) error {
+	promise, err := aps.promiseStorage.Get(providerID, accountantID)
+	fmt.Println(promise, err)
+	if err == ErrNotFound {
+		return ErrNothingToSettle
+	}
+	if err != nil {
+		return errors.Wrap(err, "could not get promise from storage")
+	}
+
+	hexR, err := hex.DecodeString(promise.R)
+	if err != nil {
+		return errors.Wrap(err, "could not decode R")
+	}
+
+	promise.Promise.R = hexR
+	return aps.settleWithBeneficiary(receivedPromise{
+		promise:  promise.Promise,
+		provider: providerID,
+	}, beneficiary)
+}
+
+func (aps *accountantPromiseSettler) settleWithBeneficiary(p receivedPromise, beneficiary common.Address) error {
+	if aps.isSettling(p.provider) {
+		return errors.New("provider already has settlement in progress")
+	}
+
+	aps.setSettling(p.provider, true)
+	log.Info().Msgf("Marked provider %v as requesting settlement", p.provider)
+	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
+	if err != nil {
+		aps.setSettling(p.provider, false)
+		log.Error().Err(err).Msg("Could not subscribe to promise settlement")
+		return err
+	}
+
+	errCh := make(chan error)
+	go func() {
+		defer cancel()
+		defer aps.setSettling(p.provider, false)
+		defer close(errCh)
+		select {
+		case <-aps.stop:
+			return
+		case _, more := <-sink:
+			if !more {
+				break
+			}
+
+			log.Info().Msgf("Settling complete for provider %v", p.provider)
+
+			err := aps.resyncState(p.provider)
+			if err != nil {
+				// This will get retried so we do not need to explicitly retry
+				// TODO: maybe add a sane limit of retries
+				log.Error().Err(err).Msgf("Resync failed for provider %v", p.provider)
+			} else {
+				log.Info().Msgf("Resync success for provider %v", p.provider)
+			}
+			return
+		case <-time.After(aps.config.MaxWaitForSettlement):
+			log.Info().Msgf("Settle timeout for %v", p.provider)
+
+			// send a signal to waiter that the settlement has timed out
+			errCh <- ErrSettleTimeout
+			return
+		}
+	}()
+
+	err = aps.transactor.SettleWithBeneficiary(p.provider.Address, beneficiary.Hex(), aps.config.AccountantAddress.Hex(), p.promise)
+	if err != nil {
+		cancel()
+		log.Error().Err(err).Msgf("Could not settle promise for %v", p.provider.Address)
+		return err
+	}
+
+	return <-errCh
+}
+
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
@@ -319,7 +401,7 @@ func (aps *accountantPromiseSettler) settle(p receivedPromise) error {
 	}
 
 	aps.setSettling(p.provider, true)
-	log.Info().Msgf("Marked provider %v as requesting setlement", p.provider)
+	log.Info().Msgf("Marked provider %v as requesting settlement", p.provider)
 	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
 	if err != nil {
 		aps.setSettling(p.provider, false)
