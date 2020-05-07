@@ -503,7 +503,7 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	return nil
 }
 
-// SetBeneficiary set new beneficiary address for the provided identity.
+// SettleWithBeneficiary set new beneficiary address for the provided identity.
 func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID string) error {
 	payload := SettleWithBeneficiaryRequest{
 		SettleRequest: SettleRequest{

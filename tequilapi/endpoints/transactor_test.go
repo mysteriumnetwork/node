@@ -272,3 +272,7 @@ type mockSettler struct {
 func (ms *mockSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
 	return ms.errToReturn
 }
+
+func (ms *mockSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
+	return ms.errToReturn
+}

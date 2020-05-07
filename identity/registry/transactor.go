@@ -281,6 +281,7 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	return signature.Bytes(), nil
 }
 
+// SettleWithBeneficiaryRequest represent the request for setting new beneficiary address.
 type SettleWithBeneficiaryRequest struct {
 	Promise     PromiseSettlementRequest
 	Beneficiary string `json:"beneficiary"`
@@ -288,7 +289,7 @@ type SettleWithBeneficiaryRequest struct {
 	Signature   string `json:"signature"`
 }
 
-// SetBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
+// SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
 func (t *Transactor) SettleWithBeneficiary(id, beneficiary, accountantID string, promise pc.Promise) error {
 	signedReq, err := t.fillSetBeneficiaryRequest(id, beneficiary)
 	if err != nil {

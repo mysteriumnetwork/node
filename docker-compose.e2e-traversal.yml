@@ -201,7 +201,7 @@ services:
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -keystoreDir /keystore
-      -accountantAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -accountantAddress 0x5AF60161f779DaeFFC5b14A6464d9820D206A04a
       -bcDataRefreshInterval 1ns
       -MongoUser accountant
       -MongoPass accountant
@@ -220,7 +220,7 @@ services:
   redis:
     image: bitnami/redis:5.0.8
     container_name: 'accountant_redis'
-    ports: 
+    ports:
       - '6379:6379'
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
@@ -239,7 +239,7 @@ services:
       - MONGO_INITDB_DATABASE=accountant
       - MONGO_NON_ROOT_USERNAME=accountant
       - MONGO_NON_ROOT_PASSWORD=accountant
-    expose: 
+    expose:
       - 27017
       - 27018
       - 27019
@@ -286,7 +286,7 @@ services:
       --keystore.lightweight
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.accountant-id=0x7621a5E6EC206309f8E703A653f03F7C8a3097a8
       --accountant.address=http://accountant:8889/api/v2
       --transactor.address=http://transactor:8888/api/v1
       --quality.address=http://morqa:8085/api/v1
@@ -322,7 +322,7 @@ services:
       --discovery.fetch=1s
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.accountant-id=0x7621a5E6EC206309f8E703A653f03F7C8a3097a8
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -366,7 +366,7 @@ services:
       --discovery.fetch=1s
       --payments.mystscaddress=0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
-      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.accountant-id=0x7621a5E6EC206309f8E703A653f03F7C8a3097a8
       --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -421,7 +421,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75
-      --accountant.accountant-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
+      --accountant.accountant-id=0x7621a5E6EC206309f8E703A653f03F7C8a3097a8
       --accountant.address=http://accountant:8889/api/v2
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
