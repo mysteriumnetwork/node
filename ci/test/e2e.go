@@ -79,7 +79,7 @@ func TestE2EBasic() error {
 	if err := runner.Init(); err != nil {
 		return err
 	}
-	return runner.Test("myst-provider", "myst-consumer")
+	return runner.Test("myst-provider")
 }
 
 // TestE2ENAT runs end-to-end tests in NAT environment
@@ -96,7 +96,7 @@ func TestE2ENAT() error {
 	if err := runner.Init(); err != nil {
 		return err
 	}
-	return runner.Test("myst-provider", "myst-consumer")
+	return runner.Test("myst-provider")
 }
 
 // TestE2ECompatibility runs end-to-end tests with older node version to make check compatibility
@@ -124,7 +124,7 @@ func TestE2ECompatibility() error {
 	for _, test := range tests {
 		log.Info().Msgf("Testing compatibility for %s and %s", test.provider, test.consumer)
 
-		if err := runner.Test(test.provider, test.consumer); err != nil {
+		if err := runner.Test(test.provider); err != nil {
 			return fmt.Errorf("compatibility test failed for %s and %s", test.provider, test.consumer)
 		}
 	}

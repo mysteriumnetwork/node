@@ -47,21 +47,15 @@ var (
 	errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
 )
 
-// NATProviderPinger pings provider and optionally hands off connection to consumer proxy.
-type NATProviderPinger interface {
-	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
-}
-
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
-	NATProviderPinger
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
 	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	BindServicePort(key string, port int)
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
-	Valid() bool
 }
 
 // PingConfig represents NAT pinger config.
@@ -262,6 +256,7 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, re
 		case ping := <-pingsCh:
 			pings = append(pings, ping)
 			if len(pings) == n {
+				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
 				return sortedConns(pings), nil
 			}
 		}
@@ -357,7 +352,7 @@ func sortedConns(pings []pingResponse) []*net.UDPConn {
 
 // waitMsg waits until conn receives given message or timeouts.
 func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
-	ok := make(chan struct{})
+	ok := make(chan struct{}, 1)
 	go func() {
 		buf := make([]byte, 1024)
 		for {

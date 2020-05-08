@@ -15,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
 
-func mockValidator(identityToExtract identity.Identity) *Validator {
+func createAuthHandler(identityToExtract identity.Identity) *authHandler {
 	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,
@@ -31,10 +31,10 @@ func mockValidator(identityToExtract identity.Identity) *Validator {
 		session.Session{},
 		false,
 	}
-	return NewValidator(NewClientMap(mockSessions), mockExtractor)
+	return newAuthHandler(NewClientMap(mockSessions), mockExtractor)
 }
 
-func mockValidatorWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *Validator {
+func createAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *authHandler {
 	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,
@@ -43,7 +43,7 @@ func mockValidatorWithSession(identityToExtract identity.Identity, sessionInstan
 		sessionInstance,
 		true,
 	}
-	return NewValidator(NewClientMap(mockSessions), mockExtractor)
+	return newAuthHandler(NewClientMap(mockSessions), mockExtractor)
 }
 
 // mockIdentityExtractor mocked identity extractor

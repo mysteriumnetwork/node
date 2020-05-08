@@ -18,19 +18,8 @@
 package config
 
 import (
-	"time"
-
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
-
-// ServicesOptions describes options shared among multiple services
-type ServicesOptions struct {
-	AccessPolicyAddress       string
-	AccessPolicyList          []string
-	AccessPolicyFetchInterval time.Duration
-	ShaperEnabled             bool
-}
 
 var (
 	// FlagIdentity keystore's identity.
@@ -50,60 +39,46 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
-	// FlagAccessPolicyAddress Trust oracle URL for retrieving access policies.
-	FlagAccessPolicyAddress = cli.StringFlag{
-		Name:  "access-policy.address",
-		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
-		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
-	}
+
 	// FlagAccessPolicyList a comma-separated list of access policies that determines allowed identities to use the service.
 	FlagAccessPolicyList = cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the access policies applied to provide service.",
 		Value: "",
 	}
-	// FlagAccessPolicyFetchInterval policy list fetch interval.
-	FlagAccessPolicyFetchInterval = cli.DurationFlag{
-		Name:  "access-policy.fetch",
-		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
-		Value: 10 * time.Minute,
+
+	// FlagPaymentPricePerGB sets the price per GiB to provided service.
+	FlagPaymentPricePerGB = cli.Float64Flag{
+		Name:  "payment.price-gb",
+		Usage: "Sets the price per GiB applied to provider service.",
+		Value: 0.1,
 	}
-	// FlagShaperEnabled enables bandwidth limitation.
-	FlagShaperEnabled = cli.BoolFlag{
-		Name:  "shaper.enabled",
-		Usage: "Limit service bandwidth",
-	}
-	// FlagNoopPriceMinute sets the price per minute for provided noop service.
-	FlagNoopPriceMinute = cli.Float64Flag{
-		Name:   "noop.price-minute",
-		Usage:  "Sets the price of the noop service per minute.",
-		Value:  0.0001,
-		Hidden: true,
+	// FlagPaymentPricePerMinute sets the price per minute to provided service.
+	FlagPaymentPricePerMinute = cli.Float64Flag{
+		Name:  "payment.price-minute",
+		Usage: "Sets the price per minute applied to provider service.",
+		Value: 0.0001,
 	}
 )
 
-// RegisterFlagsServiceShared registers shared service CLI flags
-func RegisterFlagsServiceShared(flags *[]cli.Flag) {
+// RegisterFlagsServiceStart registers CLI flags used to start a service.
+func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		&FlagIdentity,
 		&FlagIdentityPassphrase,
 		&FlagAgreedTermsConditions,
-		&FlagAccessPolicyAddress,
+		&FlagPaymentPricePerGB,
+		&FlagPaymentPricePerMinute,
 		&FlagAccessPolicyList,
-		&FlagAccessPolicyFetchInterval,
-		&FlagShaperEnabled,
-		&FlagNoopPriceMinute,
 	)
 }
 
-// ParseFlagsServiceShared parses shared service CLI flags and registers values to the configuration
-func ParseFlagsServiceShared(ctx *cli.Context) {
+// ParseFlagsServiceStart parses service start CLI flags and registers values to the configuration
+func ParseFlagsServiceStart(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIdentity)
 	Current.ParseStringFlag(ctx, FlagIdentityPassphrase)
 	Current.ParseBoolFlag(ctx, FlagAgreedTermsConditions)
-	Current.ParseStringFlag(ctx, FlagAccessPolicyAddress)
+	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerGB)
+	Current.ParseFloat64Flag(ctx, FlagPaymentPricePerMinute)
 	Current.ParseStringFlag(ctx, FlagAccessPolicyList)
-	Current.ParseDurationFlag(ctx, FlagAccessPolicyFetchInterval)
-	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
-	Current.ParseFloat64Flag(ctx, FlagNoopPriceMinute)
 }

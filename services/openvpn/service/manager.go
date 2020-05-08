@@ -24,6 +24,8 @@ import (
 	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/filter"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -32,10 +34,12 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/dns"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/event"
+	nat_event "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
@@ -48,20 +52,14 @@ import (
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
-// NATPinger defined Pinger interface for Provider
-type NATPinger interface {
+type natPinger interface {
 	BindServicePort(key string, port int)
 	Stop()
-	Valid() bool
 }
 
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
-	LastEvent() *event.Event
-}
-
-type eventListener interface {
-	SubscribeAsync(topic string, fn interface{}) error
+	LastEvent() *nat_event.Event
 }
 
 // Manager represents entrypoint for Openvpn service with top level components
@@ -69,16 +67,17 @@ type Manager struct {
 	natService      nat.NATService
 	ports           port.ServicePortSupplier
 	natPingerPorts  port.ServicePortSupplier
-	natPinger       NATPinger
+	natPinger       natPinger
 	natEventGetter  NATEventGetter
 	dnsProxy        *dns.Proxy
-	eventListener   eventListener
+	bus             eventbus.EventBus
 	portMapper      mapping.PortMapper
 	trafficFirewall firewall.IncomingTrafficFirewall
 	vpnNetwork      net.IPNet
 	vpnServerPort   int
-	processLauncher *processLauncher
 	openvpnProcess  openvpn.Process
+	openvpnClients  *clientMap
+	openvpnAuth     *authHandler
 	ipResolver      ip.Resolver
 	serviceOptions  Options
 	nodeOptions     node.Options
@@ -151,36 +150,9 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		return
 	}
 
-	stateChannel := make(chan openvpn.State, 10)
-
-	protectedNetworks := stringutil.Split(config.GetString(config.FlagFirewallProtectedNetworks), ',')
-	var openvpnFilterAllow []string
-	if m.dnsOK {
-		openvpnFilterAllow = []string{m.dnsIP.String()}
-	}
-
-	vpnServerConfig := openvpn_service.NewServerConfig(
-		m.nodeOptions.Directories.Runtime,
-		m.nodeOptions.Directories.Config,
-		m.serviceOptions.Subnet,
-		m.serviceOptions.Netmask,
-		m.tlsPrimitives,
-		m.nodeOptions.BindAddress,
-		m.vpnServerPort,
-		m.serviceOptions.Protocol,
-	)
-
-	m.openvpnProcess = m.processLauncher.launch(launchOpts{
-		config:       vpnServerConfig,
-		filterAllow:  openvpnFilterAllow,
-		filterBlock:  protectedNetworks,
-		stateChannel: stateChannel,
-	})
-
 	// register service port to which NATProxy will forward connects attempts to
 	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
-	log.Info().Msgf("Starting OpenVPN server on port: %d", m.vpnServerPort)
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return fmt.Errorf("failed to add firewall rule: %w", err)
 	}
@@ -190,7 +162,8 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		}
 	}()
 
-	if err := m.startServer(stateChannel); err != nil {
+	log.Info().Msgf("Starting OpenVPN server on port: %d", m.vpnServerPort)
+	if err := m.startServer(); err != nil {
 		return fmt.Errorf("failed to start Openvpn server: %w", err)
 	}
 
@@ -204,7 +177,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		return fmt.Errorf("failed to setup NAT/firewall rules: %w", err)
 	}
 
-	s := shaper.New(m.eventListener)
+	s := shaper.New(m.bus)
 	err = s.Start(m.openvpnProcess.DeviceName())
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start traffic shaper")
@@ -240,7 +213,7 @@ func (m *Manager) Stop() error {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
 	if m.vpnServerPort == 0 {
 		return nil, errors.New("service port not initialized")
 	}
@@ -265,7 +238,7 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *n
 	}
 
 	if conn == nil { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-		if !m.natPinger.Valid() {
+		if _, noop := m.natPinger.(*traversal.NoopPinger); noop {
 			return &session.ConfigParams{SessionServiceConfig: vpnConfig}, nil
 		}
 
@@ -301,10 +274,55 @@ func (m *Manager) ProvideConfig(_ string, sessionConfig json.RawMessage, conn *n
 			return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
 		}
 	}
-	return &session.ConfigParams{SessionServiceConfig: vpnConfig, TraversalParams: traversalParams}, nil
+
+	destroy := func() {
+		log.Info().Msgf("Cleaning up session %s", sessionID)
+
+		sessionClients := m.openvpnClients.GetSessionClients(session.ID(sessionID))
+		for clientID := range sessionClients {
+			if err := m.openvpnAuth.ClientKill(clientID); err != nil {
+				log.Error().Err(err).Msgf("Cleaning up session %s failed. Error disconnecting Openvpn client %d", sessionID, clientID)
+			}
+		}
+	}
+
+	return &session.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
-func (m *Manager) startServer(stateChannel chan openvpn.State) error {
+func (m *Manager) startServer() error {
+	vpnServerConfig := NewServerConfig(
+		m.nodeOptions.Directories.Runtime,
+		m.nodeOptions.Directories.Config,
+		m.serviceOptions.Subnet,
+		m.serviceOptions.Netmask,
+		m.tlsPrimitives,
+		m.nodeOptions.BindAddress,
+		m.vpnServerPort,
+		m.serviceOptions.Protocol,
+	)
+
+	openvpnFilterDeny := stringutil.Split(config.GetString(config.FlagFirewallProtectedNetworks), ',')
+	var openvpnFilterAllow []string
+	if m.dnsOK {
+		openvpnFilterAllow = []string{m.dnsIP.String()}
+	}
+
+	stateChannel := make(chan openvpn.State, 10)
+	m.openvpnAuth = newAuthHandler(m.openvpnClients, identity.NewExtractor())
+	m.openvpnProcess = openvpn.CreateNewProcess(
+		m.nodeOptions.Openvpn.BinaryPath(),
+		vpnServerConfig.GenericConfig,
+		filter.NewMiddleware(openvpnFilterAllow, openvpnFilterDeny),
+		m.openvpnAuth,
+		state.NewMiddleware(func(state openvpn.State) {
+			stateChannel <- state
+			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+			if state == openvpn.ProcessExited {
+				close(stateChannel)
+			}
+		}),
+		newStatsPublisher(m.openvpnClients, m.bus, 1),
+	)
 	if err := m.openvpnProcess.Start(); err != nil {
 		return err
 	}

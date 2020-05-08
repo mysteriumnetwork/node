@@ -42,8 +42,12 @@ type Options struct {
 	HandshakeTimeout time.Duration
 }
 
+type natPinger interface {
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
+}
+
 // NewConnection returns new WireGuard connection.
-func NewConnection(opts Options, ipResolver ip.Resolver, natPinger traversal.NATProviderPinger, endpointFactory wg.EndpointFactory, dnsManager DNSManager, handshakeWaiter HandshakeWaiter) (connection.Connection, error) {
+func NewConnection(opts Options, ipResolver ip.Resolver, natPinger natPinger, endpointFactory wg.EndpointFactory, dnsManager DNSManager, handshakeWaiter HandshakeWaiter) (connection.Connection, error) {
 	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate private key")
@@ -74,7 +78,7 @@ type Connection struct {
 	connectionEndpoint  wg.ConnectionEndpoint
 	removeAllowedIPRule func()
 	opts                Options
-	natPinger           traversal.NATProviderPinger
+	natPinger           natPinger
 	connEndpointFactory wg.EndpointFactory
 	dnsManager          DNSManager
 	handshakeWaiter     HandshakeWaiter

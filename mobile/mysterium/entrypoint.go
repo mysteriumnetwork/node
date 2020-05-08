@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -52,7 +53,7 @@ import (
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
 	shutdown                     func() error
-	node                         *node.Node
+	node                         *cmd.Node
 	connectionManager            connection.Manager
 	locationResolver             *location.Cache
 	identitySelector             selector.Handler
@@ -199,6 +200,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ConsumerUpperGBPriceBound:          7000000,
 		},
 		MobileConsumer: true,
+		P2PPorts:       port.UnspecifiedRange(),
 	}
 
 	err := di.Bootstrap(nodeOptions)
@@ -437,6 +439,12 @@ func (mb *MobileNode) Disconnect() error {
 	return nil
 }
 
+// GetIdentityRequest represents identity request.
+type GetIdentityRequest struct {
+	Address    string
+	Passphrase string
+}
+
 // GetIdentityResponse represents identity response.
 type GetIdentityResponse struct {
 	IdentityAddress    string
@@ -446,8 +454,11 @@ type GetIdentityResponse struct {
 
 // GetIdentity finds first identity and unlocks it.
 // If there is no identity default one will be created.
-func (mb *MobileNode) GetIdentity() (*GetIdentityResponse, error) {
-	id, err := mb.identitySelector.UseOrCreate("", "")
+func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse, error) {
+	if req == nil {
+		req = &GetIdentityRequest{}
+	}
+	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}
@@ -534,12 +545,14 @@ func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, e
 
 // SendFeedbackRequest represents user feedback request.
 type SendFeedbackRequest struct {
+	Email       string
 	Description string
 }
 
 // SendFeedback sends user feedback via feedback reported.
 func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
 	report := feedback.UserReport{
+		Email:       req.Email,
 		Description: req.Description,
 	}
 	result, err := mb.feedbackReporter.NewIssue(report)
@@ -577,7 +590,7 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 			mb.ipResolver,
 		)
 	}
-	_ = mb.eventBus.Subscribe(connection.AppTopicConnectionState, st.handleState)
+	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionState, st.handleState)
 	mb.connectionRegistry.Register("openvpn", factory)
 	return st
 }

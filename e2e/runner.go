@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/magefile/mage/sh"
@@ -53,13 +54,14 @@ type Runner struct {
 }
 
 // Test starts given provider and consumer nodes and runs e2e tests.
-func (r *Runner) Test(providerHost, consumerHost string) error {
-	if err := r.startProviderConsumerNodes(providerHost, consumerHost); err != nil {
+func (r *Runner) Test(providerHost string) error {
+	services := strings.Split(r.services, ",")
+	if err := r.startProviderConsumerNodes(providerHost, services); err != nil {
 		return err
 	}
 
 	defer func() {
-		if err := r.stopProviderConsumerNodes(providerHost, consumerHost); err != nil {
+		if err := r.stopProviderConsumerNodes(providerHost, services); err != nil {
 			log.Err(err).Msg("Could not stop provider consumer nodes")
 		}
 	}()
@@ -70,7 +72,6 @@ func (r *Runner) Test(providerHost, consumerHost string) error {
 		"/usr/bin/test", "-test.v",
 		"-provider.tequilapi-host", providerHost,
 		"-provider.tequilapi-port=4050",
-		"-consumer.tequilapi-host", consumerHost,
 		"-consumer.tequilapi-port=4050",
 		"-geth.url=ws://ganache:8545",
 		"-consumer.services", r.services,
@@ -91,6 +92,11 @@ func (r *Runner) cleanup() {
 func (r *Runner) Init() error {
 	log.Info().Msg("Starting other services")
 	if err := r.compose("pull"); err != nil {
+		return errors.Wrap(err, "could not pull images")
+	}
+
+	log.Info().Msg("building runner")
+	if err := r.compose("build", "go-runner"); err != nil {
 		return errors.Wrap(err, "could not pull images")
 	}
 
@@ -149,11 +155,6 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "starting transactor failed!")
 	}
 
-	log.Info().Msg("starting accountant")
-	if err := r.compose("up", "-d", "accountant"); err != nil {
-		return errors.Wrap(err, "starting accountant failed!")
-	}
-
 	log.Info().Msg("Building app images")
 	if err := r.compose("build"); err != nil {
 		return errors.Wrap(err, "building app images failed!")
@@ -162,17 +163,38 @@ func (r *Runner) Init() error {
 	return nil
 }
 
-func (r *Runner) startProviderConsumerNodes(providerHost, consumerHost string) error {
+func (r *Runner) startProviderConsumerNodes(providerHost string, services []string) error {
 	log.Info().Msg("Starting provider consumer containers")
-	if err := r.compose("up", "-d", providerHost, consumerHost); err != nil {
+
+	args := []string{
+		"up",
+		"-d",
+		providerHost,
+	}
+
+	for i := range services {
+		args = append(args, fmt.Sprintf("myst-consumer-%v", services[i]))
+	}
+
+	if err := r.compose(args...); err != nil {
 		return errors.Wrap(err, "starting app containers failed!")
 	}
 	return nil
 }
 
-func (r *Runner) stopProviderConsumerNodes(providerHost, consumerHost string) error {
+func (r *Runner) stopProviderConsumerNodes(providerHost string, services []string) error {
 	log.Info().Msg("Stopping provider consumer containers")
-	if err := r.compose("stop", providerHost, consumerHost); err != nil {
+
+	args := []string{
+		"stop",
+		providerHost,
+	}
+
+	for i := range services {
+		args = append(args, fmt.Sprintf("myst-consumer-%v", services[i]))
+	}
+
+	if err := r.compose(args...); err != nil {
 		return errors.Wrap(err, "stopping containers failed!")
 	}
 	return nil

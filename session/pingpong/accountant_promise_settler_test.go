@@ -19,9 +19,7 @@ package pingpong
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -43,14 +41,11 @@ func TestPromiseSettler_resyncState_returns_errors(t *testing.T) {
 	}
 	mrsp := &mockRegistrationStatusProvider{}
 	mapg := &mockAccountantPromiseGetter{}
-	dir, err := ioutil.TempDir("", "testPromiseSettler_resyncState_returns_errors")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
-	err = settler.resyncState(mockID)
+	err := settler.resyncState(mockID)
 	assert.Equal(t, fmt.Sprintf("could not get provider channel for %v: %v", mockID, errMock.Error()), err.Error())
 
 	channelStatusProvider.channelReturnError = nil
@@ -67,15 +62,12 @@ func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
 	mapg := &mockAccountantPromiseGetter{
 		err: ErrNotFound,
 	}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_resyncState_handles_no_promise")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 
 	id := identity.FromAddress("test")
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
-	err = settler.resyncState(id)
+	err := settler.resyncState(id)
 	assert.NoError(t, err)
 
 	v := settler.currentState[id]
@@ -97,14 +89,11 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 			},
 		},
 	}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_resyncState_takes_promise_into_account")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
 
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
-	err = settler.resyncState(mockID)
+	err := settler.resyncState(mockID)
 	assert.NoError(t, err)
 
 	v := settler.currentState[mockID]
@@ -126,18 +115,13 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		},
 	}
 	mapg := &mockAccountantPromiseGetter{}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_loadInitialState")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
-
 	settler.currentState[mockID] = settlementState{}
 
 	// check if existing gets skipped
-	err = settler.loadInitialState(mockID)
+	err := settler.loadInitialState(mockID)
 	assert.NoError(t, err)
 
 	v := settler.currentState[mockID]
@@ -196,12 +180,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 		},
 	}
 	mapg := &mockAccountantPromiseGetter{}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_handleServiceEvent")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
-
+	ks := identity.NewMockKeystore()
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
 	statusesWithNoChangeExpected := []string{string(servicestate.Starting), string(servicestate.NotRunning)}
@@ -238,12 +217,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		},
 	}
 	mapg := &mockAccountantPromiseGetter{}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_handleRegistrationEvent")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
-
+	ks := identity.NewMockKeystore()
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
@@ -279,11 +253,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 		},
 	}
 	mapg := &mockAccountantPromiseGetter{}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_handleAccountantPromiseReceived")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 
 	// no receive on unknown provider
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
@@ -353,11 +323,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	}
 
 	mapg := &mockAccountantPromiseGetter{}
-	dir, err := ioutil.TempDir("", "TestPromiseSettler_handleAccountantPromiseReceived")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewKeystoreFilesystem(dir, identity.NewMockKeystore(identity.MockKeys), identity.MockDecryptFunc)
+	ks := identity.NewMockKeystore()
 
 	acc1, err := ks.NewAccount("")
 	assert.NoError(t, err)
@@ -460,7 +426,7 @@ func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(p
 	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
 }
 

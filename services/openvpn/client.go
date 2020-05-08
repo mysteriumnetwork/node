@@ -35,7 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
-	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -47,11 +46,15 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
+type natPinger interface {
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
+}
+
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
-	natPinger traversal.NATProviderPinger,
+	natPinger natPinger,
 ) (connection.Connection, error) {
 
 	stateCh := make(chan connection.State, 100)
@@ -96,7 +99,7 @@ type Client struct {
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
-	natPinger           traversal.NATProviderPinger
+	natPinger           natPinger
 	ports               []int
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
@@ -229,7 +232,7 @@ type VPNConfig struct {
 }
 
 func newAuthMiddleware(sessionID session.ID, signer identity.Signer) management.Middleware {
-	credentialsProvider := openvpn_session.SignatureCredentialsProvider(sessionID, signer)
+	credentialsProvider := SignatureCredentialsProvider(sessionID, signer)
 	return auth.NewMiddleware(credentialsProvider)
 }
 

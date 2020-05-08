@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -32,12 +32,6 @@ type NATPinger interface {
 // Publisher is responsible for publishing given events
 type Publisher interface {
 	Publish(topic string, data interface{})
-}
-
-// UIServer represents the web server for our web
-type UIServer interface {
-	Serve() error
-	Stop()
 }
 
 // NewNode function creates new Mysterium node by given options

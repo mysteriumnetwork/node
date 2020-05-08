@@ -32,21 +32,13 @@ import (
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/services"
-	"github.com/mysteriumnetwork/node/services/noop"
-	"github.com/mysteriumnetwork/node/services/openvpn"
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	"github.com/mysteriumnetwork/node/services/wireguard"
-	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
-	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
@@ -244,17 +236,22 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, sharedOpts, pm, err := parseStartFlags(serviceType, args...)
+	serviceOpts, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
 	}
 
-	ap := tequilapi_client.AccessPoliciesRequest{
-		IDs: sharedOpts.AccessPolicyList,
-	}
-
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap, pm)
+	service, err := c.tequilapi.ServiceStart(contract.ServiceStartRequest{
+		ProviderID: providerID,
+		Type:       serviceType,
+		PaymentMethod: contract.ServicePaymentMethod{
+			PriceGB:     serviceOpts.PaymentPricePerGB,
+			PriceMinute: serviceOpts.PaymentPricePerMinute,
+		},
+		AccessPolicies: contract.ServiceAccessPolicies{IDs: serviceOpts.AccessPolicyList},
+		Options:        serviceOpts.TypeOptions,
+	})
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -675,46 +672,26 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, config.ServicesOptions, contract.PaymentMethodDTO, error) {
+func parseStartFlags(serviceType string, args ...string) (services.StartOptions, error) {
 	var flags []cli.Flag
-	config.RegisterFlagsServiceShared(&flags)
+	config.RegisterFlagsServiceStart(&flags)
 	config.RegisterFlagsServiceOpenvpn(&flags)
 	config.RegisterFlagsServiceWireguard(&flags)
+	config.RegisterFlagsServiceNoop(&flags)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
 		f.Apply(set)
 	}
-
 	if err := set.Parse(args); err != nil {
-		return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, err
+		return services.StartOptions{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
+	config.ParseFlagsServiceStart(ctx)
+	config.ParseFlagsServiceOpenvpn(ctx)
+	config.ParseFlagsServiceWireguard(ctx)
+	config.ParseFlagsServiceNoop(ctx)
 
-	config.ParseFlagsServiceShared(ctx)
-	switch serviceType {
-	case noop.ServiceType:
-		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
-			0,
-			config.GetFloat64(config.FlagNoopPriceMinute),
-		))
-		return noop.ParseFlags(ctx), services.SharedConfiguredOptions(), payment, nil
-	case wireguard.ServiceType:
-		config.ParseFlagsServiceWireguard(ctx)
-		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
-			config.GetFloat64(config.FlagWireguardPriceGB),
-			config.GetFloat64(config.FlagWireguardPriceMinute),
-		))
-		return wireguard_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
-	case openvpn.ServiceType:
-		config.ParseFlagsServiceOpenvpn(ctx)
-		payment := contract.NewPaymentMethodDTO(pingpong.NewPaymentMethod(
-			config.GetFloat64(config.FlagOpenVPNPriceGB),
-			config.GetFloat64(config.FlagOpenVPNPriceMinute),
-		))
-		return openvpn_service.GetOptions(), services.SharedConfiguredOptions(), payment, nil
-	}
-
-	return nil, config.ServicesOptions{}, contract.PaymentMethodDTO{}, errors.New("service type not found")
+	return services.GetStartOptions(serviceType)
 }

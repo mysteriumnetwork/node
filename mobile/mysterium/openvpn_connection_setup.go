@@ -34,13 +34,12 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn"
-	"github.com/mysteriumnetwork/node/services/openvpn/session"
 )
 
 const natPunchingMaxTTL = 10
 
 type natPinger interface {
-	traversal.NATProviderPinger
+	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
@@ -76,7 +75,7 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 
 		signer := signerFactory(options.ConsumerID)
 
-		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
+		username, password, err := openvpn.SignatureCredentialsProvider(options.SessionID, signer)()
 		if err != nil {
 			return nil, nil, err
 		}

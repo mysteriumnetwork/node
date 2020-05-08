@@ -74,10 +74,16 @@ var (
 		Usage: "List of comma separated (no spaces) subnets to be protected from access via VPN",
 		Value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8",
 	}
+	// FlagShaperEnabled enables bandwidth limitation.
+	FlagShaperEnabled = cli.BoolFlag{
+		Name:  "shaper.enabled",
+		Usage: "Limit service bandwidth",
+	}
 	// FlagKeystoreLightweight determines the scrypt memory complexity.
 	FlagKeystoreLightweight = cli.BoolFlag{
 		Name:  "keystore.lightweight",
 		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
+		Value: true,
 	}
 	// FlagLogHTTP enables HTTP payload logging.
 	FlagLogHTTP = cli.BoolFlag{
@@ -170,6 +176,12 @@ var (
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
 	}
+	//FlagP2PListenPorts sets manual ports for p2p connections.
+	FlagP2PListenPorts = cli.StringFlag{
+		Name:  "p2p.listen.ports",
+		Usage: "Range of P2P listen ports (e.g. 51820:52075), value of 0:0 means disabled",
+		Value: "0:0",
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -183,6 +195,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsTransactor(flags)
 	RegisterFlagsAccountant(flags)
 	RegisterFlagsPayments(flags)
+	RegisterFlagsPolicy(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -192,6 +205,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagFeedbackURL,
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
+		&FlagShaperEnabled,
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
@@ -206,6 +220,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagPProfEnable,
 		&FlagUIPort,
 		&FlagVendorID,
+		&FlagP2PListenPorts,
 	)
 
 	return nil
@@ -220,6 +235,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsTransactor(ctx)
 	ParseFlagsAccountant(ctx)
 	ParseFlagsPayments(ctx)
+	ParseFlagsPolicy(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
@@ -228,6 +244,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
+	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
@@ -242,6 +259,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseStringFlag(ctx, FlagVendorID)
+	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

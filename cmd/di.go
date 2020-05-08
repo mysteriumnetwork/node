@@ -89,7 +89,7 @@ type UIServer interface {
 
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
-	Node *node.Node
+	Node *Node
 
 	HTTPClient *requests.HTTPClient
 
@@ -160,6 +160,7 @@ type Dependencies struct {
 	AccountantPromiseSettler pingpong.AccountantPromiseSettler
 	AccountantCaller         *pingpong.AccountantCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
+	AccountantPromiseHandler *pingpong.AccountantPromiseHandler
 }
 
 // Bootstrap initiates all container dependencies
@@ -215,7 +216,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	// TODO: Add global services ports flag to support fixed range global ports pool.
 	di.PortPool = port.NewPool()
 	if config.GetBool(config.FlagPortMapping) {
 		portmapConfig := mapping.DefaultConfig()
@@ -223,12 +223,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	} else {
 		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
 	}
-
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool, di.PortMapper)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identity.NewVerifierSigned(), di.IPResolver, di.NATPinger, di.PortPool)
+	di.bootstrapP2P(nodeOptions.P2PPorts)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
-	if err := di.bootstrapServices(nodeOptions, services.SharedConfiguredOptions()); err != nil {
+	if err := di.bootstrapServices(nodeOptions); err != nil {
 		return err
 	}
 
@@ -252,6 +250,20 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	log.Info().Msg("Mysterium node started!")
 	return nil
+}
+
+func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
+	portPool := di.PortPool
+	natPinger := di.NATPinger
+	identityVerifier := identity.NewVerifierSigned()
+	if p2pPorts.IsSpecified() {
+		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
+		portPool = port.NewFixedRangePool(*p2pPorts)
+		natPinger = traversal.NewNoopPinger()
+	}
+
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -452,6 +464,19 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
+	di.AccountantPromiseHandler = pingpong.NewAccountantPromiseHandler(pingpong.AccountantPromiseHandlerDeps{
+		AccountantPromiseStorage: di.AccountantPromiseStorage,
+		AccountantCaller:         di.AccountantCaller,
+		AccountantID:             common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		FeeProvider:              di.Transactor,
+		Encryption:               di.Keystore,
+		EventBus:                 di.EventBus,
+	})
+
+	if err := di.AccountantPromiseHandler.Subscribe(di.EventBus); err != nil {
+		return err
+	}
+
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
@@ -493,7 +518,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	di.Node = node.NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
 	return nil
 }
 
@@ -510,10 +535,10 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository, di.QualityClient)
-	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
+	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, services.JSONParsersByType)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
-	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, services.SharedConfiguredOptions().AccessPolicyAddress)
+	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
 	tequilapi_endpoints.AddRoutesForConfig(router)
@@ -536,14 +561,12 @@ func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.EventBasedStorage,
 	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
-	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
 	natPingerChan traversal.NATPinger,
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
 	bcHelper *paymentClient.BlockchainWithRetries,
-	transactor *registry.Transactor,
-	settler pingpong.AccountantPromiseSettler,
+	promiseHandler *pingpong.AccountantPromiseHandler,
 	httpClient *requests.HTTPClient,
 	keystore *identity.Keystore,
 ) session.ManagerFactory {
@@ -551,18 +574,14 @@ func newSessionManagerFactory(
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			dialog, nil, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
-			pingpong.NewAccountantCaller(httpClient, nodeOptions.Accountant.AccountantEndpointAddress),
-			accountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			bcHelper,
 			eventbus,
-			transactor,
 			proposal,
-			settler.ForceSettle,
-			keystore,
+			promiseHandler,
 		)
 		return session.NewManager(
 			proposal,
@@ -660,13 +679,13 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	var ks *keystore.KeyStore
 	if options.Keystore.UseLightweight {
 		log.Debug().Msg("Using lightweight keystore")
-		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.LightScryptN, keystore.LightScryptP)
 	} else {
 		log.Debug().Msg("Using heavyweight keystore")
-		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.LightScryptN, keystore.LightScryptP)
+		ks = keystore.NewKeyStore(options.Directories.Keystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	}
 
-	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks, keystore.DecryptKey)
+	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
@@ -829,7 +848,7 @@ func (di *Dependencies) handleConnStateChange() error {
 	}
 
 	latestState := connection.NotConnected
-	return di.EventBus.Subscribe(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
+	return di.EventBus.SubscribeAsync(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
 		// Here we care only about connected and disconnected events.
 		if e.State != connection.Connected && e.State != connection.NotConnected {
 			return

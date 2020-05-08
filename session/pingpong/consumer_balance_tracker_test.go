@@ -36,7 +36,7 @@ var mockMystSCaddress = common.HexToAddress("0x0")
 
 const initialBalance = 100000000
 
-var defaultWaitTime = time.Millisecond * 50
+var defaultWaitTime = time.Millisecond * 1000
 var defaultWaitInterval = time.Millisecond
 
 func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
@@ -104,7 +104,6 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 	mcts := mockConsumerTotalsStorage{
 		res: grandTotalPromised,
-		bus: bus,
 	}
 	bc := mockConsumerBalanceChecker{
 		channelToReturn: client.ConsumerChannel{

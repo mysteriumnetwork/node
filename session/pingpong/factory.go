@@ -55,10 +55,7 @@ const (
 )
 
 // NewPaymentMethod returns the the default payment method of time + bytes.
-func NewPaymentMethod(tokensPerGB, tokensPerMinute float64) PaymentMethod {
-	pricePerGB := uint64(tokensPerGB * money.MystSize)
-	pricePerMinute := uint64(tokensPerMinute * money.MystSize)
-
+func NewPaymentMethod(pricePerGB, pricePerMinute uint64) PaymentMethod {
 	if pricePerGB > 0 {
 		pricePerGB = gb * accuracy / pricePerGB
 	}
@@ -103,18 +100,14 @@ func InvoiceFactoryCreator(
 	channel p2p.Channel,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
-	accountantCaller accountantCaller,
-	accountantPromiseStorage accountantPromiseStorage,
 	registryAddress string,
 	channelImplementationAddress string,
 	maxAccountantFailureCount uint64,
 	maxAllowedAccountantFee uint16,
 	blockchainHelper bcHelper,
 	eventBus eventbus.EventBus,
-	feeProvider feeProvider,
 	proposal market.ServiceProposal,
-	settler settler,
-	encryptor encryption,
+	promiseHandler promiseHandler,
 ) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(dialog, channel)
@@ -135,18 +128,14 @@ func InvoiceFactoryCreator(
 			FirstInvoiceSendTimeout:    10 * time.Second,
 			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
-			AccountantCaller:           accountantCaller,
-			AccountantPromiseStorage:   accountantPromiseStorage,
 			AccountantID:               accountantID,
 			Registry:                   registryAddress,
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
 			BlockchainHelper:           blockchainHelper,
 			EventBus:                   eventBus,
-			FeeProvider:                feeProvider,
-			Settler:                    settler,
 			SessionID:                  sessionID,
-			Encryption:                 encryptor,
+			PromiseHandler:             promiseHandler,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Hex(), channelImplementationAddress, registryAddress),
 		}
 		paymentEngine := NewInvoiceTracker(deps)
@@ -196,7 +185,7 @@ func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.ChannelHan
 
 // ExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
 func ExchangeFactoryFunc(
-	keystore *identity.Keystore,
+	keystore hashSigner,
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
 	channelImplementation string,

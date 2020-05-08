@@ -45,7 +45,7 @@ Service status:
 sudo systemctl status mysterium-node.service
 ```
 
-Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Debian 10_, _Ubuntu 18.04_ and _Ubuntu 16.04_ .
+Installation script tested on these OSes so far: _Raspbian 10_, _Debian 9_, _Debian 10_, _Ubuntu 18.04_ and _Ubuntu 20.04_ .
 
 ### Docker
 
@@ -55,9 +55,8 @@ To run a node in a docker container you will need [docker](https://www.docker.co
 You should be able to run a node on any OS that supports docker. We have tested it on these OSes so far:
 - Debian 9
 - Debian 10
-- Ubuntu 16.04
 - Ubuntu 18.04
-- Centos 7
+- Ubuntu 20.04
 
 Run node:
 ```bash

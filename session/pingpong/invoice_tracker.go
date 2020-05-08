@@ -21,7 +21,6 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	stdErr "errors"
 	"fmt"
 	"math"
@@ -33,11 +32,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -74,13 +71,8 @@ type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
 }
 
-type feeProvider interface {
-	FetchSettleFees() (registry.FeesResponse, error)
-}
-
 type bcHelper interface {
 	GetAccountantFee(accountantAddress common.Address) (uint16, error)
-	IsRegistered(registryAddress, addressToCheck common.Address) (bool, error)
 }
 
 type providerInvoiceStorage interface {
@@ -90,17 +82,9 @@ type providerInvoiceStorage interface {
 	GetR(providerID identity.Identity, agreementID uint64) (string, error)
 }
 
-type accountantPromiseStorage interface {
-	Store(providerID identity.Identity, accountantID common.Address, promise AccountantPromise) error
-	Get(providerID identity.Identity, accountantID common.Address) (AccountantPromise, error)
+type promiseHandler interface {
+	RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error
 }
-
-type accountantCaller interface {
-	RequestPromise(rp RequestPromise) (crypto.Promise, error)
-	RevealR(r string, provider string, agreementID uint64) error
-}
-
-type settler func(providerID identity.Identity, accountantID common.Address) error
 
 type sentInvoice struct {
 	invoice crypto.Invoice
@@ -119,6 +103,7 @@ func (dt DataTransferred) sum() uint64 {
 // InvoiceTracker keeps tab of invoices and sends them to the consumer.
 type InvoiceTracker struct {
 	stop                       chan struct{}
+	promiseErrors              chan error
 	accountantFailureCount     uint64
 	accountantFailureCountLock sync.Mutex
 
@@ -132,18 +117,12 @@ type InvoiceTracker struct {
 	rnd                            *rand.Rand
 	agreementID                    uint64
 	lastExchangeMessage            crypto.ExchangeMessage
-	transactorFee                  registry.FeesResponse
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
 
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
-}
-
-type encryption interface {
-	Decrypt(addr common.Address, encrypted []byte) ([]byte, error)
-	Encrypt(addr common.Address, plaintext []byte) ([]byte, error)
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -161,18 +140,14 @@ type InvoiceTrackerDeps struct {
 	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
 	AccountantID               common.Address
-	AccountantCaller           accountantCaller
-	AccountantPromiseStorage   accountantPromiseStorage
 	Registry                   string
 	MaxAccountantFailureCount  uint64
 	MaxAllowedAccountantFee    uint16
 	BlockchainHelper           bcHelper
 	EventBus                   eventbus.EventBus
-	FeeProvider                feeProvider
 	ChannelAddressCalculator   channelAddressCalculator
-	Settler                    settler
 	SessionID                  string
-	Encryption                 encryption
+	PromiseHandler             promiseHandler
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -185,6 +160,7 @@ func NewInvoiceTracker(
 		maxNotSentExchangeMessages:     calculateMaxNotSentExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		invoicesSent:                   make(map[string]sentInvoice),
 		rnd:                            rand.New(rand.NewSource(1)),
+		promiseErrors:                  make(chan error),
 	}
 }
 
@@ -258,129 +234,13 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 		return nil
 	}
 
-	err = it.revealPromise()
-	switch errors.Cause(err) {
-	case errHandled:
-		return nil
-	case nil:
-		break
-	default:
-		return err
-	}
-
 	err = it.deps.InvoiceStorage.StoreR(it.deps.ProviderID, it.agreementID, hex.EncodeToString(invoice.r))
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not store r: %s", hex.EncodeToString(invoice.r)))
 	}
 
-	err = it.requestPromise(invoice.r, em)
-	switch errors.Cause(err) {
-	case errHandled:
-		return nil
-	default:
-		return err
-	}
-}
-
-var errHandled = errors.New("error handled, please skip")
-
-func (it *InvoiceTracker) updateFee() {
-	fees, err := it.deps.FeeProvider.FetchSettleFees()
-	if err != nil {
-		log.Warn().Err(err).Msg("could not fetch fees, ignoring")
-		return
-	}
-
-	it.transactorFee = fees
-}
-
-func (it *InvoiceTracker) requestPromise(r []byte, em crypto.ExchangeMessage) error {
-	if !it.transactorFee.IsValid() {
-		it.updateFee()
-	}
-
-	details := rRecoveryDetails{
-		R:           hex.EncodeToString(r),
-		AgreementID: em.AgreementID,
-	}
-
-	bytes, err := json.Marshal(details)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal R recovery details")
-	}
-
-	encrypted, err := it.deps.Encryption.Encrypt(it.deps.ProviderID.ToCommonAddress(), bytes)
-	if err != nil {
-		return errors.Wrap(err, "could not encrypt R")
-	}
-
-	request := RequestPromise{
-		ExchangeMessage: em,
-		TransactorFee:   it.transactorFee.Fee,
-		RRecoveryData:   hex.EncodeToString(encrypted),
-	}
-
-	promise, err := it.deps.AccountantCaller.RequestPromise(request)
-	handledErr := it.handleAccountantError(err)
-	if handledErr != nil {
-		return errors.Wrap(handledErr, "could not request promise")
-	}
-
-	it.resetAccountantFailureCount()
-
-	ap := AccountantPromise{
-		Promise:     promise,
-		R:           hex.EncodeToString(r),
-		Revealed:    false,
-		AgreementID: it.agreementID,
-	}
-	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, ap)
-	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
-		return errors.Wrap(err, "could not store accountant promise")
-	}
-
-	promise.R = r
-	it.deps.EventBus.Publish(event.AppTopicAccountantPromise, event.AppEventAccountantPromise{
-		Promise:      promise,
-		AccountantID: it.deps.AccountantID,
-		ProviderID:   it.deps.ProviderID,
-	})
-	it.deps.EventBus.Publish(sessionEvent.AppTopicSessionTokensEarned, sessionEvent.AppEventSessionTokensEarned{
-		ProviderID: it.deps.ProviderID,
-		SessionID:  it.deps.SessionID,
-		Total:      em.AgreementTotal,
-	})
-	return nil
-}
-
-func (it *InvoiceTracker) revealPromise() error {
-	needsRevealing := false
-	accountantPromise, err := it.deps.AccountantPromiseStorage.Get(it.deps.ProviderID, it.deps.AccountantID)
-	switch err {
-	case nil:
-		needsRevealing = !accountantPromise.Revealed
-	case ErrNotFound:
-		needsRevealing = false
-	default:
-		return errors.Wrap(err, "could not get accountant promise")
-	}
-
-	if !needsRevealing {
-		return nil
-	}
-
-	err = it.deps.AccountantCaller.RevealR(accountantPromise.R, it.deps.ProviderID.Address, accountantPromise.AgreementID)
-	handledErr := it.handleAccountantError(err)
-	if handledErr != nil {
-		return errors.Wrap(handledErr, "could not reveal R")
-	}
-
-	accountantPromise.Revealed = true
-	err = it.deps.AccountantPromiseStorage.Store(it.deps.ProviderID, it.deps.AccountantID, accountantPromise)
-	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
-		return errors.Wrap(err, "could not store accountant promise")
-	}
-
+	errChan := it.deps.PromiseHandler.RequestPromise(invoice.r, em, it.deps.ProviderID, it.deps.SessionID)
+	go it.handlePromiseErrors(errChan)
 	return nil
 }
 
@@ -392,21 +252,6 @@ func (it *InvoiceTracker) Start() error {
 	if err := it.deps.EventBus.SubscribeAsync(sessionEvent.AppTopicDataTransferred, it.consumeDataTransferredEvent); err != nil {
 		return err
 	}
-
-	isConsumerRegistered, err := it.deps.BlockchainHelper.IsRegistered(common.HexToAddress(it.deps.Registry), it.deps.Peer.ToCommonAddress())
-	if err != nil {
-		return errors.Wrap(err, "could not check customer identity registration status")
-	}
-
-	if !isConsumerRegistered {
-		return ErrConsumerNotRegistered
-	}
-
-	fees, err := it.deps.FeeProvider.FetchSettleFees()
-	if err != nil {
-		return errors.Wrap(err, "could not fetch settlement fees")
-	}
-	it.transactorFee = fees
 
 	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.AccountantID)
 	if err != nil {
@@ -424,9 +269,6 @@ func (it *InvoiceTracker) Start() error {
 	go func() {
 		emErrors <- it.listenForExchangeMessages()
 	}()
-
-	// on session close, try and reveal the promise before exiting
-	defer it.revealPromise()
 
 	err = it.sendFirstInvoice()
 	if err != nil {
@@ -446,7 +288,18 @@ func (it *InvoiceTracker) Start() error {
 			if emErr != nil {
 				return errors.Wrap(emErr, "failed to get exchange message")
 			}
+		case pErr := <-it.promiseErrors:
+			err := it.handleAccountantError(pErr)
+			if err != nil {
+				return fmt.Errorf("could not request promise %w", err)
+			}
 		}
+	}
+}
+
+func (it *InvoiceTracker) handlePromiseErrors(ch <-chan error) {
+	for err := range ch {
+		it.promiseErrors <- err
 	}
 }
 
@@ -573,34 +426,6 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
-func (it *InvoiceTracker) recoverR(aerr accountantError) error {
-	log.Info().Msg("Recovering R...")
-	decoded, err := hex.DecodeString(aerr.Data())
-	if err != nil {
-		return errors.Wrap(err, "could not decode R recovery details")
-	}
-
-	decrypted, err := it.deps.Encryption.Decrypt(it.deps.ProviderID.ToCommonAddress(), decoded)
-	if err != nil {
-		return errors.Wrap(err, "could not decrypt R details")
-	}
-
-	res := rRecoveryDetails{}
-	err = json.Unmarshal(decrypted, &res)
-	if err != nil {
-		return errors.Wrap(err, "could not unmarshal R details")
-	}
-
-	log.Info().Msg("R recovered, will reveal...")
-	err = it.deps.AccountantCaller.RevealR(res.R, it.deps.ProviderID.Address, res.AgreementID)
-	if err != nil {
-		return errors.Wrap(err, "could not reveal R")
-	}
-
-	log.Info().Msg("R recovered successfully")
-	return nil
-}
-
 func (it *InvoiceTracker) handleAccountantError(err error) error {
 	if err == nil {
 		it.resetAccountantFailureCount()
@@ -608,25 +433,9 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 	}
 
 	switch {
-	case stdErr.Is(err, ErrNeedsRRecovery):
-		var aer AccountantErrorResponse
-		ok := stdErr.As(err, &aer)
-		if !ok {
-			return errors.New("could not cast errNeedsRecovery to accountantError")
-		}
-		recoveryErr := it.recoverR(aer)
-		if recoveryErr != nil {
-			return recoveryErr
-		}
-		return errHandled
-	case stdErr.Is(err, ErrAccountantNoPreviousPromise):
-		log.Info().Msg("no previous promise on accountant, will mark R as revealed")
-		return nil
-	case stdErr.Is(err, ErrAccountantHashlockMissmatch), stdErr.Is(err, ErrAccountantPreviousRNotRevealed):
-		// These should basicly be obsolete with the introduction of R recovery. Will remove in the future.
-		// For now though, handle as ignorable.
-		fallthrough
 	case
+		stdErr.Is(err, ErrAccountantHashlockMissmatch),
+		stdErr.Is(err, ErrAccountantPreviousRNotRevealed),
 		stdErr.Is(err, ErrAccountantInternal),
 		stdErr.Is(err, ErrAccountantNotFound),
 		stdErr.Is(err, ErrAccountantMalformedJSON),
@@ -636,19 +445,7 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 			return err
 		}
 		log.Warn().Err(err).Msg("accountant error, will retry")
-		return errHandled
-	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
-		go func() {
-			settleErr := it.deps.Settler(it.deps.ProviderID, it.deps.AccountantID)
-			if settleErr != nil {
-				log.Err(settleErr).Msgf("settling failed")
-			}
-		}()
-		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
-			return err
-		}
-		log.Warn().Err(err).Msg("out of balance, will try settling")
-		return errHandled
+		return nil
 	case
 		stdErr.Is(err, ErrAccountantInvalidSignature),
 		stdErr.Is(err, ErrAccountantPaymentValueTooLow),

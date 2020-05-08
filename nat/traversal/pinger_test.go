@@ -29,6 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	localhostIP = net.ParseIP("127.0.0.1")
+)
+
 func TestPinger_Multiple_Stop(t *testing.T) {
 	pinger := newPinger(&PingConfig{
 		Interval: 1 * time.Millisecond,
@@ -42,58 +46,64 @@ func TestPinger_Multiple_Stop(t *testing.T) {
 }
 
 func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
-	ports, err := port.NewPool().AcquireMultiple(3)
+	ports, err := port.NewPool().AcquireMultiple(4)
 	assert.NoError(t, err)
 	providerProxyPort := ports[0].Num()
 	providerPort := ports[1].Num()
 	consumerPort := ports[2].Num()
+	consumerProxyPort := ports[3].Num()
 
 	pingConfig := &PingConfig{
 		Interval: 10 * time.Millisecond,
-		Timeout:  1 * time.Second,
+		Timeout:  2 * time.Second,
 	}
-
-	pinger := newPinger(pingConfig)
-	defer pinger.Stop()
+	providerProxyCh := make(chan string)
+	waitProxyCh := make(chan struct{})
 
 	// Create provider's UDP proxy listener to which pinger should hand off connection.
 	// In real world this proxy represents started VPN service (WireGuard or OpenVPN).
-	ch := make(chan string)
 	go func() {
-		addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", providerProxyPort))
-		conn, err := net.ListenUDP("udp4", addr)
-		assert.NoError(t, err)
+		conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: localhostIP, Port: providerProxyPort})
+		require.NoError(t, err)
+		waitProxyCh <- struct{}{}
 		proxyBuf := make([]byte, 1024)
 		for {
 			n, err := conn.Read(proxyBuf)
-			assert.NoError(t, err)
-			ch <- string(proxyBuf[:n])
+			require.NoError(t, err)
+			providerProxyCh <- string(proxyBuf[:n])
 		}
 	}()
 
-	// Start pinging consumer.
+	<-waitProxyCh
+
+	// Start pinging consumer
+	providerPinger := newPinger(pingConfig)
+	defer providerPinger.Stop()
 	go func() {
-		pinger.BindServicePort("wg1", providerProxyPort)
-		pinger.PingConsumer(context.Background(), "127.0.0.1", []int{providerPort}, []int{consumerPort}, "wg1")
+		providerPinger.BindServicePort("wg1", providerProxyPort)
+		providerPinger.PingConsumer(context.Background(), "127.0.0.1", []int{providerPort}, []int{consumerPort}, "wg1")
 	}()
 
+	// Start pinging provider
+	consumerPinger := newPinger(pingConfig)
+	defer consumerPinger.Stop()
+	consumerPinger.SetProtectSocketCallback(func(socket int) bool {
+		return true
+	})
 	// Wait some time to simulate real network delay conditions.
-	time.Sleep(5 * pingConfig.Interval)
-
-	_, _, err = pinger.PingProvider(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerPort+1)
+	time.Sleep(3 * pingConfig.Interval)
+	_, _, err = consumerPinger.PingProvider(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerProxyPort)
 	assert.NoError(t, err)
 
-	laddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", consumerPort))
-	raddr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", providerPort))
-
-	conn, err := net.DialUDP("udp4", laddr, raddr)
+	// Create consumer conn which is used to write to consumer proxy. In real case this conn represents OpenVPN conn.
+	consumerConn, err := net.DialUDP("udp4", nil, &net.UDPAddr{IP: localhostIP, Port: consumerProxyPort})
 	assert.NoError(t, err)
-	defer conn.Close()
+	defer consumerConn.Close()
 
 	assert.Eventually(t, func() bool {
-		conn.Write([]byte("Test message"))
+		consumerConn.Write([]byte("Test message"))
 		select {
-		case msg := <-ch:
+		case msg := <-providerProxyCh:
 			if msg == "Test message" {
 				return true
 			}

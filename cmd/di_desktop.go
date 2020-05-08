@@ -59,12 +59,12 @@ import (
 )
 
 // bootstrapServices loads all the components required for running services
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	if nodeOptions.MobileConsumer {
 		return nil
 	}
 
-	err := di.bootstrapServiceComponents(nodeOptions, servicesOptions)
+	err := di.bootstrapServiceComponents(nodeOptions)
 	if err != nil {
 		return errors.Wrap(err, "service bootstrap failed")
 	}
@@ -213,7 +213,7 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
-func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, servicesOptions config.ServicesOptions) error {
+func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) error {
 	di.NATService = nat.NewService()
 	if err := di.NATService.Enable(); err != nil {
 		log.Warn().Err(err).Msg("Failed to enable NAT forwarding")
@@ -226,7 +226,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 	}
 	di.ServiceSessionStorage = storage
 
-	di.PolicyOracle = policy.NewOracle(di.HTTPClient, servicesOptions.AccessPolicyAddress, servicesOptions.AccessPolicyFetchInterval)
+	di.PolicyOracle = policy.NewOracle(
+		di.HTTPClient,
+		config.GetString(config.FlagAccessPolicyAddress),
+		config.GetDuration(config.FlagAccessPolicyFetchInterval),
+	)
 	go di.PolicyOracle.Start()
 
 	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
@@ -241,18 +245,14 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(nil,
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
-			pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress),
-			di.AccountantPromiseStorage,
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			di.BCHelper,
 			di.EventBus,
-			di.Transactor,
 			proposal,
-			di.AccountantPromiseSettler.ForceSettle,
-			di.Keystore,
+			di.AccountantPromiseHandler,
 		)
 		return session.NewManager(
 			proposal,
@@ -273,14 +273,12 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options, ser
 			proposal,
 			di.ServiceSessionStorage,
 			di.ProviderInvoiceStorage,
-			di.AccountantPromiseStorage,
 			di.NATPinger,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
 			di.BCHelper,
-			di.Transactor,
-			di.AccountantPromiseSettler,
+			di.AccountantPromiseHandler,
 			di.HTTPClient,
 			di.Keystore,
 		)

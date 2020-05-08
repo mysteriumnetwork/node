@@ -40,7 +40,7 @@ import (
 
 type providerChannelStatusProvider interface {
 	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
-	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address) (client.ProviderChannel, error)
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 type ks interface {
@@ -138,7 +138,7 @@ func (aps *accountantPromiseSettler) loadInitialState(addr identity.Identity) er
 }
 
 func (aps *accountantPromiseSettler) resyncState(id identity.Identity) error {
-	channel, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, id.ToCommonAddress())
+	channel, err := aps.bc.GetProviderChannel(aps.config.AccountantAddress, id.ToCommonAddress(), true)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", id))
 	}
@@ -193,11 +193,6 @@ func (aps *accountantPromiseSettler) handleServiceEvent(event servicestate.AppEv
 	switch event.Status {
 	case string(servicestate.Running):
 		err := aps.loadInitialState(identity.FromAddress(event.ProviderID))
-		// TODO: should we retry? should we signal that we need to cancel and abort?
-		// In any case, if we start exceeding our balances, the accountant will let us know.
-		// Sessions will be aborted, node *should* stop, indicating something went wrong.
-		// On restart, a rebalance then should follow almost immediately.
-		// But we'll get punished for that, won't we?
 		if err != nil {
 			log.Error().Err(err).Msgf("could not load initial state for provider %v", event.ProviderID)
 		}
@@ -230,11 +225,6 @@ func (aps *accountantPromiseSettler) handleRegistrationEvent(payload registry.Ap
 
 	err := aps.resyncState(payload.ID)
 	if err != nil {
-		// TODO: should we retry? should we signal that we need to cancel and abort?
-		// In any case, if we start exceeding our balances, the accountant will let us know.
-		// Sessions will be aborted, node *should* stop, indicating something went wrong.
-		// On restart, a rebalance then should follow almost immediately.
-		// But we'll get punished for that, won't we?
 		log.Error().Err(err).Msgf("Could not resync state for provider %v", payload.ID)
 		return
 	}
@@ -407,11 +397,6 @@ func (aps *accountantPromiseSettler) handleNodeStart() {
 		go func(address identity.Identity) {
 			err := aps.loadInitialState(address)
 			if err != nil {
-				// TODO: should we retry? should we signal that we need to cancel and abort?
-				// In any case, if we start exceeding our balances, the accountant will let us know.
-				// Sessions will be aborted, node *should* stop, indicating something went wrong.
-				// On restart, a rebalance then should follow almost immediately.
-				// But we'll get punished for that, won't we?
 				log.Error().Err(err).Msgf("could not load initial state for %v", addr)
 			}
 		}(addr)
@@ -475,11 +460,17 @@ func (ss settlementState) needsSettling(threshold float64) bool {
 		return false
 	}
 
+	calculatedThreshold := threshold * float64(ss.availableBalance())
+	possibleEarnings := float64(ss.unsettledBalance())
+	if possibleEarnings < calculatedThreshold {
+		return false
+	}
+
 	if float64(ss.balance()) <= 0 {
 		return true
 	}
 
-	if float64(ss.balance()) <= threshold*float64(ss.availableBalance()) {
+	if float64(ss.balance()) <= calculatedThreshold {
 		return true
 	}
 
