@@ -223,6 +223,26 @@ func (mcig *mockconsumerInfoGetter) GetConsumerData(_ string) (ConsumerData, err
 	}, nil
 }
 
+func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) {
+	accountantID := common.HexToAddress("0x000000acc")
+
+	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{bus: bus}
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
+		},
+	}
+	calc := mockChannelAddressCalculator{}
+
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{})
+
+	// Make sure we are not dead locked here. https://github.com/mysteriumnetwork/node/issues/2181
+	cbt.increaseBCBalance(identity.FromAddress("0x0000"), 1)
+	cbt.updateGrandTotal(identity.FromAddress("0x0000"), 1)
+}
+
 func TestConsumerBalance_GetBalance(t *testing.T) {
 	type fields struct {
 		BCBalance          uint64

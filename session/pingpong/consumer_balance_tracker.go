@@ -109,9 +109,7 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 
 // GetBalance gets the current balance for given identity
 func (cbt *ConsumerBalanceTracker) GetBalance(id identity.Identity) uint64 {
-	cbt.balancesLock.Lock()
-	defer cbt.balancesLock.Unlock()
-	if v, ok := cbt.balances[id]; ok {
+	if v, ok := cbt.getBalance(id); ok {
 		return v.GetBalance()
 	}
 	return 0
@@ -139,11 +137,7 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
-	cbt.balancesLock.Lock()
-	_, ok := cbt.balances[ev.ConsumerID]
-	cbt.balancesLock.Unlock()
-
-	if !ok {
+	if _, ok := cbt.getBalance(ev.ConsumerID); !ok {
 		cbt.ForceBalanceUpdate(ev.ConsumerID)
 		return
 	}
@@ -209,23 +203,20 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 		return fallback
 	}
 
-	cbt.balancesLock.Lock()
-	defer cbt.balancesLock.Unlock()
-
 	var before uint64
-	if v, ok := cbt.balances[id]; ok {
+	if v, ok := cbt.getBalance(id); ok {
 		before = v.GetBalance()
 	}
 
-	cbt.balances[id] = ConsumerBalance{
+	cbt.setBalance(id, ConsumerBalance{
 		BCBalance:          cc.Balance.Uint64(),
 		BCSettled:          cc.Settled.Uint64(),
 		GrandTotalPromised: grandTotal,
-	}
+	})
 
-	currentBalance := cbt.balances[id].GetBalance()
-	go cbt.publishChangeEvent(id, before, currentBalance)
-	return currentBalance
+	currentBalance, _ := cbt.getBalance(id)
+	go cbt.publishChangeEvent(id, before, currentBalance.GetBalance())
+	return currentBalance.GetBalance()
 }
 
 func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEventIdentityRegistration) {
@@ -283,35 +274,49 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 }
 
 func (cbt *ConsumerBalanceTracker) increaseBCBalance(id identity.Identity, diff uint64) {
-	cbt.balancesLock.Lock()
-	defer cbt.balancesLock.Unlock()
-
-	var before uint64
-	if v, ok := cbt.balances[id]; ok {
-		before = v.GetBalance()
-		v.BCBalance = safeAdd(v.BCBalance, diff)
-		cbt.balances[id] = v
+	b, ok := cbt.getBalance(id)
+	before := b.BCBalance
+	if ok {
+		b.BCBalance = safeAdd(b.BCBalance, diff)
+		cbt.setBalance(id, b)
 	} else {
 		cbt.ForceBalanceUpdate(id)
 	}
+	after, _ := cbt.getBalance(id)
 
-	go cbt.publishChangeEvent(id, before, cbt.balances[id].GetBalance())
+	go cbt.publishChangeEvent(id, before, after.GetBalance())
+}
+
+func (cbt *ConsumerBalanceTracker) getBalance(id identity.Identity) (ConsumerBalance, bool) {
+	cbt.balancesLock.Lock()
+	defer cbt.balancesLock.Unlock()
+
+	if v, ok := cbt.balances[id]; ok {
+		return v, true
+	}
+
+	return ConsumerBalance{}, false
+}
+
+func (cbt *ConsumerBalanceTracker) setBalance(id identity.Identity, balance ConsumerBalance) {
+	cbt.balancesLock.Lock()
+	defer cbt.balancesLock.Unlock()
+
+	cbt.balances[id] = balance
 }
 
 func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, current uint64) {
-	cbt.balancesLock.Lock()
-	defer cbt.balancesLock.Unlock()
-
-	var before uint64
-	if v, ok := cbt.balances[id]; ok {
-		before = v.GetBalance()
-		v.GrandTotalPromised = current
-		cbt.balances[id] = v
+	b, ok := cbt.getBalance(id)
+	before := b.BCBalance
+	if ok {
+		b.GrandTotalPromised = current
+		cbt.setBalance(id, b)
 	} else {
 		cbt.ForceBalanceUpdate(id)
 	}
+	after, _ := cbt.getBalance(id)
 
-	go cbt.publishChangeEvent(id, before, cbt.balances[id].GetBalance())
+	go cbt.publishChangeEvent(id, before, after.GetBalance())
 }
 
 func safeSub(a, b uint64) uint64 {
