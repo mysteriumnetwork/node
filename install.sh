@@ -188,7 +188,7 @@ install_raspbian() {
 install_debian() {
     # openvpn, etc.
     apt update
-    apt install -y ipset resolvconf openvpn
+    apt install -y ipset resolvconf openvpn bc
 
     # Wireguard
     prepare_sources_list
