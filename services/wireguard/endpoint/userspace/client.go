@@ -80,7 +80,7 @@ func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
 	return addDefaultRoute(iface)
 }
 
-func (c *client) PeerStats() (*wg.Stats, error) {
+func (c *client) PeerStats(string) (*wg.Stats, error) {
 	deviceState, err := wg.ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
 		return nil, err

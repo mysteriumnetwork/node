@@ -21,24 +21,30 @@ import (
 	"net"
 	"runtime"
 
+	"github.com/mysteriumnetwork/node/config"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/rs/zerolog/log"
 )
 
-type wgClient interface {
+// WgClient represents WireGuard client.
+type WgClient interface {
 	ConfigureDevice(config wg.DeviceConfig) error
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
 	AddPeer(iface string, peer wg.Peer) error
 	RemovePeer(name string, publicKey string) error
-	PeerStats() (*wg.Stats, error)
+	PeerStats(iface string) (*wg.Stats, error)
 	Close() error
 }
 
-func newWGClient() (wgClient, error) {
+func newWGClient() (WgClient, error) {
+	if config.GetBool(config.FlagUserMode) {
+		return remoteclient.New()
+	}
 	if isKernelSpaceSupported() {
 		return kernelspace.NewWireguardClient()
 	}

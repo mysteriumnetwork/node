@@ -19,6 +19,7 @@ package connection
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -51,7 +52,7 @@ func (h *handshakeWaiter) Wait(statsFetch func() (*wireguard.Stats, error), time
 		case <-time.After(100 * time.Millisecond):
 			stats, err := statsFetch()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to fetch stats: %w", err)
 			}
 			if !stats.LastHandshake.IsZero() {
 				return nil
