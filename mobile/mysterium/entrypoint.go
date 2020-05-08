@@ -197,7 +197,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ConsumerLowerMinutePriceBound:      0,
 			ConsumerUpperMinutePriceBound:      50000,
 			ConsumerLowerGBPriceBound:          0,
-			ConsumerUpperGBPriceBound:          7000000,
+			ConsumerUpperGBPriceBound:          11000000,
 		},
 		MobileConsumer: true,
 		P2PPorts:       port.UnspecifiedRange(),
