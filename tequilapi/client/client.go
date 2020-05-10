@@ -495,9 +495,44 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	if err != nil {
 		return err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
 		return errors.Wrap(err, "could not settle promise")
 	}
 	return nil
+}
+
+// SettleWithBeneficiary set new beneficiary address for the provided identity.
+func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID string) error {
+	payload := SettleWithBeneficiaryRequest{
+		SettleRequest: SettleRequest{
+			ProviderID:   address,
+			AccountantID: accountantID,
+		},
+		Beneficiary: beneficiary,
+	}
+	response, err := client.http.Post("identities/"+address+"/beneficiary", payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("expected 202 got %v", response.StatusCode)
+	}
+
+	return nil
+}
+
+// Beneficiary gets beneficiary address for the provided identity.
+func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponce, err error) {
+	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
+	if err != nil {
+		return contract.IdentityBeneficiaryResponce{}, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	return res, err
 }

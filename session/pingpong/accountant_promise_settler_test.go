@@ -484,3 +484,7 @@ func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
 func (mt *mockTransactor) SettleAndRebalance(id string, promise crypto.Promise) error {
 	return nil
 }
+
+func (mt *mockTransactor) SettleWithBeneficiary(_, _, _ string, _ crypto.Promise) error {
+	return nil
+}

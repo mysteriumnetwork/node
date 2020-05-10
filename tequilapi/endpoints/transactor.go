@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -42,6 +44,7 @@ type Transactor interface {
 // promiseSettler settles the given promises
 type promiseSettler interface {
 	ForceSettle(providerID identity.Identity, accountantID common.Address) error
+	SettleWithBeneficiary(id identity.Identity, beneficiary, accountantID common.Address) error
 }
 
 type transactorEndpoint struct {
@@ -263,10 +266,31 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+
+	req := &client.SettleWithBeneficiaryRequest{}
+	err := json.NewDecoder(request.Body).Decode(&req)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	err = te.promiseSettler.SettleWithBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.AccountantID))
+	if err != nil {
+		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
+		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler) {
 	te := NewTransactorEndpoint(transactor, promiseSettler)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
+	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/topup", te.TopUp)
 	router.POST("/transactor/settle/sync", te.SettleSync)

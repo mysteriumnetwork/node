@@ -117,3 +117,9 @@ type SettleRequest struct {
 	AccountantID string `json:"accountant_id"`
 	ProviderID   string `json:"provider_id"`
 }
+
+// SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
+type SettleWithBeneficiaryRequest struct {
+	SettleRequest
+	Beneficiary string `json:"beneficiary"`
+}
