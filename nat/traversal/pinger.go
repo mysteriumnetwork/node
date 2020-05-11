@@ -372,6 +372,7 @@ func waitMsg(ctx context.Context, conn *net.UDPConn, msg string) error {
 	case <-ok:
 		return nil
 	case <-ctx.Done():
+		conn.Close()
 		return fmt.Errorf("timeout waiting for %q msg: %w", msg, ctx.Err())
 	}
 }
