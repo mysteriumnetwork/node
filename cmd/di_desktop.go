@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -84,21 +83,17 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			// TODO: Use global port pool once migrated to p2p.
 			var portPool port.ServicePortSupplier
-			var natPinger traversal.NATPinger
 			if wgOptions.Ports.IsSpecified() {
 				log.Info().Msgf("Fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
-				natPinger = traversal.NewNoopPinger()
 			} else {
 				portPool = port.NewPool()
-				natPinger = di.NATPinger
 			}
 
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
-				natPinger,
 				di.NATTracker,
 				di.EventBus,
 				wgOptions,
@@ -127,13 +122,10 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		// TODO: Use global port pool once migrated to p2p.
 		var portPool port.ServicePortSupplier
-		var natPinger traversal.NATPinger
 		if transportOptions.Port != 0 {
 			portPool = port.NewPoolFixed(port.Port(transportOptions.Port))
-			natPinger = traversal.NewNoopPinger()
 		} else {
 			portPool = port.NewPool()
-			natPinger = di.NATPinger
 		}
 
 		manager := openvpn_service.NewManager(
@@ -143,7 +135,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.IPResolver,
 			di.ServiceSessionStorage,
 			di.NATService,
-			natPinger,
 			di.NATTracker,
 			portPool,
 			di.EventBus,
@@ -245,7 +236,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			proposal,
 			di.ServiceSessionStorage,
 			paymentEngineFactory,
-			di.NATPinger,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
@@ -296,7 +286,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 			DNSConfigDir:     nodeOptions.Directories.Config,
 			HandshakeTimeout: 1 * time.Minute,
 		}
-		return wireguard_connection.NewConnection(opts, di.IPResolver, di.NATPinger, endpointFactory, dnsManager, handshakeWaiter)
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, dnsManager, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }

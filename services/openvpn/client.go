@@ -28,13 +28,10 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -46,15 +43,10 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
-type natPinger interface {
-	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
-}
-
 // NewClient creates a new openvpn connection
 func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
-	natPinger natPinger,
 ) (connection.Connection, error) {
 
 	stateCh := make(chan connection.State, 100)
@@ -64,7 +56,6 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 		signerFactory:       signerFactory,
 		stateCh:             stateCh,
 		ipResolver:          ipResolver,
-		natPinger:           natPinger,
 		removeAllowedIPRule: func() {},
 	}
 
@@ -99,7 +90,6 @@ type Client struct {
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
-	natPinger           natPinger
 	ports               []int
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
@@ -179,31 +169,7 @@ func (c *Client) OnStats(cnt openvpn_bytescount.Bytecount) error {
 
 // GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
-	// TODO the whole content of this function needs to be removed once we will migrate to the p2p communication.
-	switch c.natPinger.(type) {
-	case *traversal.NoopPinger:
-		log.Info().Msg("Noop pinger detected, returning nil client config.")
-		return nil, nil
-	}
-
-	publicIP, err := c.ipResolver.GetPublicIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get consumer public IP")
-	}
-
-	ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range ports {
-		c.ports = append(c.ports, p.Num())
-	}
-
-	return &ConsumerConfig{
-		IP:    publicIP,
-		Ports: c.ports,
-	}, nil
+	return &ConsumerConfig{}, nil
 }
 
 //VPNConfig structure represents VPN configuration options for given session

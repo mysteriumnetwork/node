@@ -29,7 +29,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
@@ -63,7 +62,7 @@ type wireGuardOptions struct {
 }
 
 // NewWireGuardConnection creates a new wireguard connection
-func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipResolver ip.Resolver, natPinger natPinger, handshakeWaiter wireguard_connection.HandshakeWaiter) (connection.Connection, error) {
+func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipResolver ip.Resolver, handshakeWaiter wireguard_connection.HandshakeWaiter) (connection.Connection, error) {
 	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
 		return nil, err
@@ -76,7 +75,6 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 		device:          device,
 		privateKey:      privateKey,
 		ipResolver:      ipResolver,
-		natPinger:       natPinger,
 		handshakeWaiter: handshakeWaiter,
 	}, nil
 }
@@ -90,7 +88,6 @@ type wireguardConnection struct {
 	privateKey      string
 	device          wireguardDevice
 	ipResolver      ip.Resolver
-	natPinger       natPinger
 	handshakeWaiter wireguard_connection.HandshakeWaiter
 }
 
@@ -175,11 +172,6 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 		PublicKey: publicKey,
 		Ports:     c.ports,
 	}, nil
-}
-
-func (c *wireguardConnection) isNoopPinger() bool {
-	_, ok := c.natPinger.(*traversal.NoopPinger)
-	return ok
 }
 
 type wireguardDevice interface {

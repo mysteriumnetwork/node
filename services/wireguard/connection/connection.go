@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
@@ -40,12 +39,8 @@ type Options struct {
 	HandshakeTimeout time.Duration
 }
 
-type natPinger interface {
-	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
-}
-
 // NewConnection returns new WireGuard connection.
-func NewConnection(opts Options, ipResolver ip.Resolver, natPinger natPinger, endpointFactory wg.EndpointFactory, dnsManager DNSManager, handshakeWaiter HandshakeWaiter) (connection.Connection, error) {
+func NewConnection(opts Options, ipResolver ip.Resolver, endpointFactory wg.EndpointFactory, dnsManager DNSManager, handshakeWaiter HandshakeWaiter) (connection.Connection, error) {
 	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate private key")
@@ -57,7 +52,6 @@ func NewConnection(opts Options, ipResolver ip.Resolver, natPinger natPinger, en
 		privateKey:          privateKey,
 		opts:                opts,
 		ipResolver:          ipResolver,
-		natPinger:           natPinger,
 		connEndpointFactory: endpointFactory,
 		dnsManager:          dnsManager,
 		handshakeWaiter:     handshakeWaiter,
@@ -76,7 +70,6 @@ type Connection struct {
 	connectionEndpoint  wg.ConnectionEndpoint
 	removeAllowedIPRule func()
 	opts                Options
-	natPinger           natPinger
 	connEndpointFactory wg.EndpointFactory
 	dnsManager          DNSManager
 	handshakeWaiter     HandshakeWaiter
@@ -210,11 +203,6 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 		PublicKey: publicKey,
 		Ports:     c.ports,
 	}, nil
-}
-
-func (c *Connection) isNoopPinger() bool {
-	_, ok := c.natPinger.(*traversal.NoopPinger)
-	return ok
 }
 
 // Stop stops wireguard connection and closes connection endpoint.

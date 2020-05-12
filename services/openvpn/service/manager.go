@@ -52,11 +52,6 @@ import (
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
-type natPinger interface {
-	BindServicePort(key string, port int)
-	Stop()
-}
-
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
 	LastEvent() *nat_event.Event
@@ -66,8 +61,6 @@ type NATEventGetter interface {
 type Manager struct {
 	natService      nat.NATService
 	ports           port.ServicePortSupplier
-	natPingerPorts  port.ServicePortSupplier
-	natPinger       natPinger
 	natEventGetter  NATEventGetter
 	dnsProxy        *dns.Proxy
 	bus             eventbus.EventBus
@@ -149,9 +142,6 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	if err != nil {
 		return
 	}
-
-	// register service port to which NATProxy will forward connects attempts to
-	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return fmt.Errorf("failed to add firewall rule: %w", err)

@@ -79,9 +79,3 @@ func MockDiscoveryFactoryFunc(ds Discovery) DiscoveryFactory {
 		return ds
 	}
 }
-
-// MockNATPinger returns a mock nat pinger, that really doesn't do much
-type MockNATPinger struct{}
-
-// Stop does nothing
-func (mnp *MockNATPinger) Stop() {}

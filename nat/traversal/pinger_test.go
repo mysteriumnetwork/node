@@ -45,74 +45,6 @@ func TestPinger_Multiple_Stop(t *testing.T) {
 	pinger.Stop()
 }
 
-func TestPinger_Provider_Consumer_Ping_Flow(t *testing.T) {
-	ports, err := port.NewPool().AcquireMultiple(4)
-	assert.NoError(t, err)
-	providerProxyPort := ports[0].Num()
-	providerPort := ports[1].Num()
-	consumerPort := ports[2].Num()
-	consumerProxyPort := ports[3].Num()
-
-	pingConfig := &PingConfig{
-		Interval: 10 * time.Millisecond,
-		Timeout:  2 * time.Second,
-	}
-	providerProxyCh := make(chan string)
-	waitProxyCh := make(chan struct{})
-
-	// Create provider's UDP proxy listener to which pinger should hand off connection.
-	// In real world this proxy represents started VPN service (WireGuard or OpenVPN).
-	go func() {
-		conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: localhostIP, Port: providerProxyPort})
-		require.NoError(t, err)
-		waitProxyCh <- struct{}{}
-		proxyBuf := make([]byte, 1024)
-		for {
-			n, err := conn.Read(proxyBuf)
-			require.NoError(t, err)
-			providerProxyCh <- string(proxyBuf[:n])
-		}
-	}()
-
-	<-waitProxyCh
-
-	// Start pinging consumer
-	providerPinger := newPinger(pingConfig)
-	defer providerPinger.Stop()
-	go func() {
-		providerPinger.BindServicePort("wg1", providerProxyPort)
-		providerPinger.PingConsumer(context.Background(), "127.0.0.1", []int{providerPort}, []int{consumerPort}, "wg1")
-	}()
-
-	// Start pinging provider
-	consumerPinger := newPinger(pingConfig)
-	defer consumerPinger.Stop()
-	consumerPinger.SetProtectSocketCallback(func(socket int) bool {
-		return true
-	})
-	// Wait some time to simulate real network delay conditions.
-	time.Sleep(3 * pingConfig.Interval)
-	_, _, err = consumerPinger.PingProvider(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, consumerProxyPort)
-	assert.NoError(t, err)
-
-	// Create consumer conn which is used to write to consumer proxy. In real case this conn represents OpenVPN conn.
-	consumerConn, err := net.DialUDP("udp4", nil, &net.UDPAddr{IP: localhostIP, Port: consumerProxyPort})
-	assert.NoError(t, err)
-	defer consumerConn.Close()
-
-	assert.Eventually(t, func() bool {
-		consumerConn.Write([]byte("Test message"))
-		select {
-		case msg := <-providerProxyCh:
-			if msg == "Test message" {
-				return true
-			}
-		default:
-		}
-		return false
-	}, 2*time.Second, 50*time.Millisecond)
-}
-
 func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	pingConfig := &PingConfig{
 		Interval:            50 * time.Millisecond,
@@ -177,29 +109,6 @@ func TestPinger_PingPeer_Not_Enough_Connections_Timeout(t *testing.T) {
 
 	consumerErr := <-consumerPingErr
 	assert.EqualError(t, consumerErr, "ping failed: context deadline exceeded")
-}
-
-func TestPinger_PingProvider_Timeout(t *testing.T) {
-	pinger := newPinger(&PingConfig{
-		Interval: 1 * time.Millisecond,
-		Timeout:  5 * time.Millisecond,
-	})
-
-	providerPort := 51205
-	consumerPort := 51206
-
-	go func() {
-		addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", providerPort))
-		conn, err := net.ListenUDP("udp4", addr)
-		assert.NoError(t, err)
-		defer conn.Close()
-
-		select {}
-	}()
-
-	_, _, err := pinger.PingProvider(context.Background(), "127.0.0.1", []int{consumerPort}, []int{providerPort}, 0)
-
-	assert.EqualError(t, err, "failed to ping remote peer: context deadline exceeded")
 }
 
 func TestPinger_PingConsumerPeer_Timeout(t *testing.T) {

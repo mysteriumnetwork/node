@@ -49,8 +49,6 @@ var (
 
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
-	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
-	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
 	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	BindServicePort(key string, port int)
@@ -114,56 +112,6 @@ func (p *Pinger) Stop() {
 		close(p.stopNATProxy)
 		close(p.stop)
 	})
-}
-
-// PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error) {
-	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
-	defer cancel()
-
-	conns, err := p.pingPeer(ctx, ip, localPorts, remotePorts, maxTTL, 1)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to ping remote peer: %w", err)
-	}
-
-	conn := conns[0]
-	if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
-		localPort = addr.Port
-	}
-
-	if addr, ok := conn.RemoteAddr().(*net.UDPAddr); ok {
-		remotePort = addr.Port
-	}
-
-	if proxyPort > 0 {
-		consumerAddr := fmt.Sprintf("127.0.0.1:%d", proxyPort)
-		log.Info().Msg("Handing connection to consumer NATProxy: " + consumerAddr)
-
-		p.stopNATProxy = p.natProxy.ConsumerHandOff(consumerAddr, conn)
-	} else {
-		conn.Close()
-	}
-
-	return localPort, remotePort, nil
-}
-
-// PingConsumer pings consumer with increasing TTL for every connection.
-func (p *Pinger) PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string) {
-	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
-	defer cancel()
-
-	conns, err := p.pingPeer(ctx, ip, localPorts, remotePorts, 2, 1)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to ping remote peer")
-		return
-	}
-
-	conn := conns[0]
-
-	p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
-	log.Info().Msgf("Ping received from: %s, sending OK from: %s", conn.RemoteAddr(), conn.LocalAddr())
-
-	go p.natProxy.handOff(mappingKey, conn)
 }
 
 // pingPeer pings remote peer with a defined configuration.

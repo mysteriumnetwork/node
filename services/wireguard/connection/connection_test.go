@@ -27,7 +27,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/stretchr/testify/assert"
 )
@@ -99,7 +98,7 @@ func newConn(t *testing.T) *Connection {
 	opts := Options{
 		DNSConfigDir: "/dns/dir",
 	}
-	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), traversal.NewNoopPinger(), endpointFactory, &mockDnsManager{}, &mockHandshakeWaiter{})
+	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), endpointFactory, &mockDnsManager{}, &mockHandshakeWaiter{})
 	assert.NoError(t, err)
 	return conn.(*Connection)
 }

@@ -308,7 +308,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 			nodeOptions.Directories.Runtime,
 			di.SignerFactory,
 			di.IPResolver,
-			di.NATPinger,
 		)
 	}
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory)
