@@ -151,7 +151,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 	switch status {
-	case registry.Unregistered, registry.InProgress, registry.RegistrationError:
+	case registry.Unregistered, registry.RegistrationError:
 		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
