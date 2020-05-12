@@ -152,10 +152,6 @@ func PackageAndroid() error {
 	})
 	logconfig.Bootstrap()
 
-	if os.Getenv("SKIP_VENDOR") != "1" {
-		mg.Deps(vendordModules)
-	}
-
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
 	}
