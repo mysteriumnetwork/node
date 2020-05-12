@@ -29,6 +29,7 @@ import (
 )
 
 type configProvider interface {
+	GetDefaultConfig() map[string]interface{}
 	GetUserConfig() map[string]interface{}
 	SetUser(key string, value interface{})
 	RemoveUser(key string)
@@ -47,6 +48,25 @@ type configAPI struct {
 
 func newConfigAPI(config configProvider) *configAPI {
 	return &configAPI{config: config}
+}
+
+// GetDefaultConfig returns default configuration
+// swagger:operation GET /user/default Configuration getDefaultConfig
+// ---
+// summary: Returns default configuration
+// description: Returns default configuration
+// responses:
+//   200:
+//     description: Default configuration
+//     schema:
+//       "$ref": "#/definitions/configPayload"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (api *configAPI) GetDefaultConfig(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+	res := configPayload{Data: api.config.GetDefaultConfig()}
+	utils.WriteAsJSON(res, writer)
 }
 
 // GetUserConfig returns current user configuration
@@ -128,6 +148,7 @@ func AddRoutesForConfig(
 	router *httprouter.Router,
 ) {
 	api := newConfigAPI(config.Current)
+	router.GET("/config/default", api.GetDefaultConfig)
 	router.GET("/config/user", api.GetUserConfig)
 	router.POST("/config/user", api.SetUserConfig)
 }
