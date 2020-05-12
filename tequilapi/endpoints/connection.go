@@ -155,8 +155,11 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
+	case registry.InProgress:
+		log.Info().Msgf("identity %q registration is in progress, continuing...", cr.ConsumerID)
+	default:
+		log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 	}
-	log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 
 	// TODO Pass proposal ID directly in request
 	proposal, err := ce.proposalRepository.Proposal(market.ProposalID{
