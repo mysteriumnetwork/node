@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
@@ -254,9 +253,6 @@ func AddRoutesForConnection(router *httprouter.Router, manager connection.Manage
 
 func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, error) {
 	var connectionRequest = contract.ConnectionCreateRequest{
-		// This defaults the service type to openvpn, for backward compatibility
-		// If specified in the request, the value will get overridden
-		ServiceType: openvpn.ServiceType,
 		ConnectOptions: contract.ConnectOptions{
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,

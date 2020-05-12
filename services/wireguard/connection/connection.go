@@ -24,10 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -129,15 +127,6 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		options.ProviderNATConn.Close()
 		config.LocalPort = options.ProviderNATConn.LocalAddr().(*net.UDPAddr).Port
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
-	} else if len(config.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we migrate to the p2p communication.
-		ip := config.Provider.Endpoint.IP.String()
-		lPort, rPort, err := c.natPinger.PingProvider(ctx, ip, c.ports, config.Ports, 0)
-		if err != nil {
-			return errors.Wrap(err, "could not ping provider")
-		}
-
-		config.LocalPort = lPort
-		config.Provider.Endpoint.Port = rPort
 	}
 
 	log.Info().Msg("Starting new connection")
@@ -217,29 +206,8 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "could not get public key from private key")
 	}
 
-	var publicIP string
-	{ // TODO this is backward compatibility block. It needs to be removed once most of the nodes migrated to the p2p communication.
-		if !c.isNoopPinger() {
-			var err error
-			publicIP, err = c.ipResolver.GetPublicIP()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to get consumer public IP")
-			}
-		}
-
-		ports, err := port.NewPool().AcquireMultiple(config.GetInt(config.FlagNATPunchingMaxTTL))
-		if err != nil {
-			return nil, err
-		}
-
-		for _, p := range ports {
-			c.ports = append(c.ports, p.Num())
-		}
-	}
-
 	return wg.ConsumerConfig{
 		PublicKey: publicKey,
-		IP:        publicIP,
 		Ports:     c.ports,
 	}, nil
 }

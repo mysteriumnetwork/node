@@ -134,19 +134,6 @@ func (c *Client) Start(ctx context.Context, options connection.ConnectOptions) e
 		return errors.Wrap(err, "failed to add allowed IP address")
 	}
 
-	// TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-	if len(sessionConfig.Ports) > 0 {
-		ip := sessionConfig.RemoteIP
-		lPort, rPort, err := c.natPinger.PingProvider(ctx, ip, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
-		if err != nil {
-			c.removeAllowedIPRule()
-			return errors.Wrap(err, "could not ping provider")
-		}
-
-		sessionConfig.LocalPort = lPort
-		sessionConfig.RemotePort = rPort
-	}
-
 	proc, clientConfig, err := c.processFactory(options, sessionConfig)
 	if err != nil {
 		log.Info().Err(err).Msg("Client config factory error")

@@ -22,8 +22,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -58,41 +56,6 @@ func (service *serviceFake) GetType() string {
 
 func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
 	return &session.ConfigParams{TraversalParams: traversal.Params{}}, nil
-}
-
-type mockDialogWaiter struct {
-	contact  market.Contact
-	stopErr  error
-	serveErr error
-}
-
-func (mdw *mockDialogWaiter) GetContact() market.Contact {
-	return mdw.contact
-}
-
-func (mdw *mockDialogWaiter) Stop() error {
-	return mdw.stopErr
-}
-
-func (mdw *mockDialogWaiter) Start(_ communication.DialogHandler) error {
-	return mdw.serveErr
-}
-
-// MockDialogWaiterFactory returns a new instance of communication dialog waiter.
-func MockDialogWaiterFactory(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
-	return &mockDialogWaiter{}, nil
-}
-
-type mockDialogHandler struct {
-}
-
-func (mdh *mockDialogHandler) Handle(communication.Dialog) error {
-	return nil
-}
-
-// MockDialogHandlerFactory creates a new mock dialog handler
-func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error) {
-	return &mockDialogHandler{}, nil
 }
 
 type mockDiscovery struct {

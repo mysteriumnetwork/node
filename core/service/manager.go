@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
@@ -50,12 +49,6 @@ type Service interface {
 	session.ConfigProvider
 }
 
-// DialogWaiterFactory initiates communication channel which waits for incoming dialogs
-type DialogWaiterFactory func(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error)
-
-// DialogHandlerFactory initiates instance which is able to handle incoming dialogs
-type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider, string) (communication.DialogHandler, error)
-
 // DiscoveryFactory initiates instance which is able announce service discoverability
 type DiscoveryFactory func() Discovery
 
@@ -72,8 +65,6 @@ type WaitForNATHole func() error
 // NewManager creates new instance of pluggable instances manager
 func NewManager(
 	serviceRegistry *Registry,
-	dialogWaiterFactory DialogWaiterFactory,
-	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
@@ -82,24 +73,19 @@ func NewManager(
 	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
-		serviceRegistry:      serviceRegistry,
-		servicePool:          NewPool(eventPublisher),
-		dialogWaiterFactory:  dialogWaiterFactory,
-		dialogHandlerFactory: dialogHandlerFactory,
-		discoveryFactory:     discoveryFactory,
-		eventPublisher:       eventPublisher,
-		policyOracle:         policyOracle,
-		p2pListener:          p2pListener,
-		sessionManager:       sessionManager,
-		statusStorage:        statusStorage,
+		serviceRegistry:  serviceRegistry,
+		servicePool:      NewPool(eventPublisher),
+		discoveryFactory: discoveryFactory,
+		eventPublisher:   eventPublisher,
+		policyOracle:     policyOracle,
+		p2pListener:      p2pListener,
+		sessionManager:   sessionManager,
+		statusStorage:    statusStorage,
 	}
 }
 
 // Manager entrypoint which knows how to start pluggable Mysterium instances
 type Manager struct {
-	dialogWaiterFactory  DialogWaiterFactory
-	dialogHandlerFactory DialogHandlerFactory
-
 	serviceRegistry *Registry
 	servicePool     *Pool
 
@@ -133,21 +119,10 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		proposal.SetAccessPolicies(&policies)
 	}
 
-	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType, policyRules)
-	if err != nil {
-		return id, err
-	}
-	proposal.SetProviderContacts(providerID, market.ContactList{dialogWaiter.GetContact(), manager.p2pListener.GetContact()})
+	proposal.SetProviderContacts(providerID, market.ContactList{manager.p2pListener.GetContact()})
 
 	id, err = generateID()
 	if err != nil {
-		return id, err
-	}
-	dialogHandler, err := manager.dialogHandlerFactory(proposal, service, string(id))
-	if err != nil {
-		return id, err
-	}
-	if err = dialogWaiter.Start(dialogHandler); err != nil {
 		return id, err
 	}
 
@@ -161,7 +136,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		service:        service,
 		proposal:       proposal,
 		policies:       policyRules,
-		dialogWaiter:   dialogWaiter,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
 	}

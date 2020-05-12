@@ -237,42 +237,8 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		vpnConfig.DNSIPs = m.dnsIP.String()
 	}
 
-	if conn == nil { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-		if _, noop := m.natPinger.(*traversal.NoopPinger); noop {
-			return &session.ConfigParams{SessionServiceConfig: vpnConfig}, nil
-		}
-
-		var consumerConfig openvpn_service.ConsumerConfig
-		err := json.Unmarshal(sessionConfig, &consumerConfig)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse consumer config: %w", err)
-		}
-
-		if m.behindNAT(publicIP) && m.portMappingFailed() {
-			for range consumerConfig.Ports {
-				pp, err := m.natPingerPorts.Acquire()
-				if err != nil {
-					return nil, err
-				}
-
-				vpnConfig.Ports = append(vpnConfig.Ports, pp.Num())
-				vpnConfig.RemotePort = pp.Num()
-			}
-
-			// For OpenVPN only one running NAT proxy required.
-			if consumerConfig.IP == "" {
-				return nil, errors.New("remote party does not support NAT Hole punching, public IP is missing")
-			}
-
-			traversalParams.IP = consumerConfig.IP
-			traversalParams.LocalPorts = vpnConfig.Ports
-			traversalParams.RemotePorts = consumerConfig.Ports
-			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
-		}
-	} else {
-		if err := proxyOpenVPN(conn, m.vpnServerPort); err != nil {
-			return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
-		}
+	if err := proxyOpenVPN(conn, m.vpnServerPort); err != nil {
+		return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
 	}
 
 	destroy := func() {

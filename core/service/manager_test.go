@@ -49,8 +49,6 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
 	manager := NewManager(
 		registry,
-		MockDialogWaiterFactory,
-		MockDialogHandlerFactory,
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
@@ -75,8 +73,6 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
 	manager := NewManager(
 		registry,
-		MockDialogWaiterFactory,
-		MockDialogHandlerFactory,
 		discoveryFactory,
 		mocks.NewEventBus(),
 		mockPolicyOracle,
@@ -103,8 +99,6 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	eventBus := &mockPublisher{}
 	manager := NewManager(
 		registry,
-		MockDialogWaiterFactory,
-		MockDialogHandlerFactory,
 		discoveryFactory,
 		eventBus,
 		mockPolicyOracle,

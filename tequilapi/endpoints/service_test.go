@@ -79,9 +79,9 @@ var (
 		PaymentMethodType: mocks.DefaultPaymentMethodType,
 		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
-	mockServiceRunning                 = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposal, nil, nil, nil)
-	mockServiceStopped                 = service.NewInstance(mockServiceOptions, servicestate.NotRunning, nil, mockProposal, nil, nil, nil)
-	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposalWithAccessPolicy, nil, nil, nil)
+	mockServiceRunning                 = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposal, nil, nil)
+	mockServiceStopped                 = service.NewInstance(mockServiceOptions, servicestate.NotRunning, nil, mockProposal, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposalWithAccessPolicy, nil, nil)
 )
 
 type fancyServiceOptions struct {

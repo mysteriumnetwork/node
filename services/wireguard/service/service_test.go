@@ -67,7 +67,6 @@ func Test_Manager_Stop(t *testing.T) {
 		market.ServiceProposal{},
 		policy.NewRepository(),
 		nil,
-		nil,
 	)
 
 	go func() {

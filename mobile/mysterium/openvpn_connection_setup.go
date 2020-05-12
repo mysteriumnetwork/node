@@ -179,31 +179,6 @@ func (c *openvpnConnection) Start(ctx context.Context, options connection.Connec
 
 		localAddr := fmt.Sprintf("127.0.0.1:%d", sessionConfig.LocalPort)
 		c.stopProxy = proxy.ConsumerHandOff(localAddr, options.ProviderNATConn)
-	} else if len(sessionConfig.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
-			c.ports = []int{sessionConfig.LocalPort}
-			sessionConfig.Ports = []int{sessionConfig.RemotePort}
-		}
-
-		if sessionConfig.LocalPort == 0 {
-			lport, err := port.NewPool().Acquire()
-			if err != nil {
-				return errors.Wrap(err, "failed to acquire free port")
-			}
-
-			sessionConfig.LocalPort = lport.Num()
-		}
-
-		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
-
-		remoteIP := sessionConfig.RemoteIP
-		_, _, err = c.natPinger.PingProvider(ctx, remoteIP, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
-		if err != nil {
-			return errors.Wrap(err, "could not ping provider")
-		}
-
-		sessionConfig.RemoteIP = "127.0.0.1"
-		sessionConfig.RemotePort = sessionConfig.LocalPort
 	}
 
 	newSession, clientConfig, err := c.createSession(options, sessionConfig)
