@@ -450,7 +450,8 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		stdErr.Is(err, ErrAccountantInvalidSignature),
 		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
 		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
-		stdErr.Is(err, ErrAccountantOverspend):
+		stdErr.Is(err, ErrAccountantOverspend),
+		stdErr.Is(err, ErrConsumerUnregistered):
 		// these are critical, return and cancel session
 		return err
 	default:
