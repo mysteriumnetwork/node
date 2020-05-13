@@ -71,13 +71,14 @@ services:
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   transactor:
-    image: mysteriumnetwork/transactor:0.1.4
+    image: mysteriumnetwork/transactor:0.3.0
     environment:
       PORT: 8888
     expose:
       - 8888
     depends_on:
       - ganache
+      - mongodb
     command: >
       -settlemntFee 1000
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -86,6 +87,10 @@ services:
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -balanceCheckInterval 1s
+      -MongoUser transactor
+      -MongoPass transactor
+      -MongoHost mongodb:27017
+      -MongoReplSet ""
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
@@ -98,7 +103,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   accountant:
-    image: mysteriumnetwork/hermes:0.4.0
+    image: mysteriumnetwork/hermes:0.5.0
     environment:
       PORT: 8889
     expose:

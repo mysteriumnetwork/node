@@ -20,6 +20,8 @@ package pingpong
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -41,16 +43,20 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[identity.Identity]ConsumerBalance
 
-	accountantAddress          common.Address
-	mystSCAddress              common.Address
-	consumerBalanceChecker     consumerBalanceChecker
-	channelAddressCalculator   channelAddressCalculator
-	publisher                  eventbus.Publisher
-	consumerGrandTotalsStorage consumerTotalsStorage
-	consumerInfoGetter         consumerInfoGetter
+	accountantAddress                    common.Address
+	mystSCAddress                        common.Address
+	consumerBalanceChecker               consumerBalanceChecker
+	channelAddressCalculator             channelAddressCalculator
+	publisher                            eventbus.Publisher
+	consumerGrandTotalsStorage           consumerTotalsStorage
+	consumerInfoGetter                   consumerInfoGetter
+	transactorRegistrationStatusProvider transactorRegistrationStatusProvider
+	stop                                 chan struct{}
+	once                                 sync.Once
+}
 
-	stop chan struct{}
-	once sync.Once
+type transactorRegistrationStatusProvider interface {
+	FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error)
 }
 
 // NewConsumerBalanceTracker creates a new instance
@@ -62,16 +68,18 @@ func NewConsumerBalanceTracker(
 	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,
 	consumerInfoGetter consumerInfoGetter,
+	transactorRegistrationStatusProvider transactorRegistrationStatusProvider,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
-		balances:                   make(map[identity.Identity]ConsumerBalance),
-		consumerBalanceChecker:     consumerBalanceChecker,
-		mystSCAddress:              mystSCAddress,
-		accountantAddress:          accountantAddress,
-		publisher:                  publisher,
-		channelAddressCalculator:   channelAddressCalculator,
-		consumerGrandTotalsStorage: consumerGrandTotalsStorage,
-		consumerInfoGetter:         consumerInfoGetter,
+		balances:                             make(map[identity.Identity]ConsumerBalance),
+		consumerBalanceChecker:               consumerBalanceChecker,
+		mystSCAddress:                        mystSCAddress,
+		accountantAddress:                    accountantAddress,
+		publisher:                            publisher,
+		channelAddressCalculator:             channelAddressCalculator,
+		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
+		consumerInfoGetter:                   consumerInfoGetter,
+		transactorRegistrationStatusProvider: transactorRegistrationStatusProvider,
 
 		stop: make(chan struct{}),
 	}
@@ -84,6 +92,7 @@ type consumerInfoGetter interface {
 type consumerBalanceChecker interface {
 	SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error)
 	GetConsumerChannel(addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error)
+	GetMystBalance(mystAddress, identity common.Address) (*big.Int, error)
 }
 
 // Subscribe subscribes the consumer balance tracker to relevant events
@@ -221,9 +230,84 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 
 func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEventIdentityRegistration) {
 	switch event.Status {
+	case registry.InProgress:
+		cbt.alignWithTransactor(event.ID)
 	case registry.RegisteredConsumer, registry.RegisteredProvider:
 		cbt.ForceBalanceUpdate(event.ID)
 	}
+}
+
+func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
+	balance, ok := cbt.getBalance(id)
+	if ok {
+		// do not override existing values with transactor data
+		return
+	}
+
+	// do not override existing balances with transactor data
+	if balance.BCBalance != 0 {
+		return
+	}
+
+	var boff backoff.BackOff
+	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
+	boff = backoff.WithMaxRetries(eback, 5)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-cbt.stop:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	var data registry.TransactorStatusResponse
+	boff = backoff.WithContext(boff, ctx)
+	toRetry := func() error {
+		resp, err := cbt.transactorRegistrationStatusProvider.FetchRegistrationStatus(id.Address)
+		if err != nil {
+			return err
+		}
+		data = resp
+		return nil
+	}
+
+	if err := backoff.Retry(toRetry, boff); err != nil {
+		log.Error().Err(fmt.Errorf("could not fetch registration status from transactor: %w", err))
+		return
+	}
+
+	if data.Status != registry.TransactorRegistrationEntryStatusCreated &&
+		data.Status != registry.TransactorRegistrationEntryStatusPriceIncreased {
+		return
+	}
+
+	if data.BountyAmount == 0 {
+		// if we've got no bounty, get myst balance from BC and use that as bounty
+		addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
+		if err != nil {
+			log.Error().Err(err).Msg("could not compute channel address")
+			return
+		}
+		balance, err := cbt.consumerBalanceChecker.GetMystBalance(cbt.mystSCAddress, addr)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get myst balance on consumer channel")
+			return
+		}
+
+		data.BountyAmount = balance.Uint64()
+	}
+
+	c := ConsumerBalance{
+		BCBalance:          data.BountyAmount,
+		BCSettled:          0,
+		GrandTotalPromised: 0,
+	}
+	log.Debug().Msgf("Loaded transactor state, current balance: %v MYST", data.BountyAmount)
+	cbt.setBalance(id, c)
+	go cbt.publishChangeEvent(id, balance.GetBalance(), c.GetBalance())
 }
 
 func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.Identity) error {

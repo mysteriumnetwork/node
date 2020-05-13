@@ -191,7 +191,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		return
 	}
 
-	info("Registration succesful, you can now connect.")
+	info("Registration successful, you can now connect.")
 }
 
 const usageTopupIdentity = "topup <identity>"
