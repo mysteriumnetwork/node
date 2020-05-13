@@ -38,4 +38,3 @@ fi
 mkdir -p $GOBIN/config
 copy_config $GOOS $GOBIN
 
-exit 0

@@ -58,4 +58,4 @@ fi
 rm -rf ${DIR_TEMP}
 
 print_success "Standalone package '$PACKAGE_FILE' complete!"
-exit 0
+

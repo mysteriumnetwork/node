@@ -51,4 +51,4 @@ fi
 rm -rf ${DIR_TEMP}
 
 print_success "Supervisor package '$PACKAGE_FILE' complete!"
-exit 0
+
