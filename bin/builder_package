@@ -33,4 +33,4 @@ while test $# -gt 0; do
 done
 
 printf "\e[0;32m%s\e[0m\n" "Docker image building process complete!"
-exit 0
+

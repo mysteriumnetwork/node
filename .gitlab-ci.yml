@@ -115,10 +115,15 @@ package:linux-raspberry-image:
   tags: [go,high_performance]
   script: go run mage.go -v PackageLinuxRaspberryImage
 
-package:osx-amd64:
+package:macos-amd64:
   stage: build
   tags: [go]
-  script: go run mage.go -v PackageOsxAmd64
+  script: go run mage.go -v PackageMacOSAmd64
+
+package:supervisor-macos-amd64:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageSupervisorMacOSAmd64
 
 package:windows-amd64:
    stage: build

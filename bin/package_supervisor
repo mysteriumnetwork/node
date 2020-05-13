@@ -1,51 +1,44 @@
 #!/bin/bash
 
 ###########################################################################
-# Packaging script which creates standalone package.
+# Packaging script which creates standalone supervisor package.
 #
 # Usage:
-#> bin/package_standalone <os>
 #
-# Package (specific OS: linux, darwin, windows):
-#> bin/package_standalone linux
+# Package (specific OS and arch: linux, darwin, windows):
+#> GOOS=darwin GOARCH=amd64 bin/package_standalone
 #
-# Package (specific binary):
-#> BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin
 
 set -e
 
 source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
-OS=$1
-if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
+if [[ ! "$GOOS" =~ ^(linux|darwin|windows)$ ]]; then
     print_error "Missing OS! Should be: linux, darwin or windows"
     exit 1
 fi
 
-ARCH=$2
-if [[ ! "$ARCH" =~ ^(amd64|arm)$ ]]; then
+if [[ ! "$GOARCH" =~ ^(amd64|arm)$ ]]; then
     print_error "Missing ARCH! Should be: amd64 or arm"
     exit 1
 fi
 
-BINARY=${BINARY:-"build/myst/myst"}
+BINARY=${BINARY:-"build/supervisor/supervisor"}
 DIR_BUILD="build/package"
 
 mkdir -p $DIR_BUILD
-bin/build_xgo $OS/$ARCH
+go build -o $BINARY ./cmd/supervisor
 
 # Put all files to package directory (to avoid preserving directory structure)
-printf "Building Standalone package for OS '$OS' ..\n"
+printf "Building supervisor package for OS '$GOOS/$GOARCH' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 if [ "$OS" == "windows" ]; then
-    cp -vp ${BINARY} ${DIR_TEMP}/myst.exe
+    cp -vp ${BINARY} ${DIR_TEMP}/myst_supervisor.exe
 else
-    cp -vp ${BINARY} ${DIR_TEMP}/myst
+    cp -vp ${BINARY} ${DIR_TEMP}/myst_supervisor
 fi
-
-copy_config $OS $DIR_TEMP
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
@@ -57,5 +50,5 @@ else
 fi
 rm -rf ${DIR_TEMP}
 
-print_success "Standalone package '$PACKAGE_FILE' complete!"
+print_success "Supervisor package '$PACKAGE_FILE' complete!"
 

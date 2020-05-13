@@ -108,7 +108,7 @@ func (c *client) RemovePeer(iface string, publicKey string) error {
 	}}})
 }
 
-func (c *client) PeerStats() (*wg.Stats, error) {
+func (c *client) PeerStats(string) (*wg.Stats, error) {
 	d, err := c.wgClient.Device(c.iface)
 	if err != nil {
 		return nil, err

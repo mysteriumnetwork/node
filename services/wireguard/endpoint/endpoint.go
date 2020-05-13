@@ -48,7 +48,7 @@ type connectionEndpoint struct {
 	ipAddr            net.IPNet
 	endpoint          net.UDPAddr
 	resourceAllocator *resources.Allocator
-	wgClient          wgClient
+	wgClient          WgClient
 }
 
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.
@@ -61,6 +61,7 @@ func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) er
 	if err != nil {
 		return errors.Wrap(err, "could not allocate interface")
 	}
+	log.Debug().Msgf("Allocated interface: %s", iface)
 
 	ce.iface = iface
 	ce.ipAddr = config.IPAddress
@@ -134,7 +135,7 @@ func (ce *connectionEndpoint) RemovePeer(publicKey string) error {
 
 // PeerStats returns stats information about connected peer.
 func (ce *connectionEndpoint) PeerStats() (*wg.Stats, error) {
-	return ce.wgClient.PeerStats()
+	return ce.wgClient.PeerStats(ce.iface)
 }
 
 // Config provides wireguard service configuration for the current connection endpoint.
