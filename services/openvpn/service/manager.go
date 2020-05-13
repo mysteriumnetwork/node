@@ -52,11 +52,6 @@ import (
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
-type natPinger interface {
-	BindServicePort(key string, port int)
-	Stop()
-}
-
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
 	LastEvent() *nat_event.Event
@@ -66,8 +61,6 @@ type NATEventGetter interface {
 type Manager struct {
 	natService      nat.NATService
 	ports           port.ServicePortSupplier
-	natPingerPorts  port.ServicePortSupplier
-	natPinger       natPinger
 	natEventGetter  NATEventGetter
 	dnsProxy        *dns.Proxy
 	bus             eventbus.EventBus
@@ -134,24 +127,10 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	pubIP, err := m.ipResolver.GetPublicIP()
-	if err != nil {
-		return fmt.Errorf("could not get public IP: %w", err)
-	}
-
-	if m.behindNAT(pubIP) {
-		if releasePorts, ok := m.tryAddPortMapping(m.vpnServerPort); ok {
-			defer releasePorts()
-		}
-	}
-
 	m.tlsPrimitives, err = primitiveFactory(m.country, instance.Proposal().ProviderID)
 	if err != nil {
 		return
 	}
-
-	// register service port to which NATProxy will forward connects attempts to
-	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return fmt.Errorf("failed to add firewall rule: %w", err)
@@ -186,15 +165,6 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 
 	log.Info().Msg("OpenVPN server waiting")
 	return m.openvpnProcess.Wait()
-}
-
-func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
-	release, ok = m.portMapper.Map(
-		m.serviceOptions.Protocol,
-		port,
-		"Myst node OpenVPN port mapping")
-
-	return release, ok
 }
 
 // Stop stops service
@@ -237,42 +207,8 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		vpnConfig.DNSIPs = m.dnsIP.String()
 	}
 
-	if conn == nil { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-		if _, noop := m.natPinger.(*traversal.NoopPinger); noop {
-			return &session.ConfigParams{SessionServiceConfig: vpnConfig}, nil
-		}
-
-		var consumerConfig openvpn_service.ConsumerConfig
-		err := json.Unmarshal(sessionConfig, &consumerConfig)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse consumer config: %w", err)
-		}
-
-		if m.behindNAT(publicIP) && m.portMappingFailed() {
-			for range consumerConfig.Ports {
-				pp, err := m.natPingerPorts.Acquire()
-				if err != nil {
-					return nil, err
-				}
-
-				vpnConfig.Ports = append(vpnConfig.Ports, pp.Num())
-				vpnConfig.RemotePort = pp.Num()
-			}
-
-			// For OpenVPN only one running NAT proxy required.
-			if consumerConfig.IP == "" {
-				return nil, errors.New("remote party does not support NAT Hole punching, public IP is missing")
-			}
-
-			traversalParams.IP = consumerConfig.IP
-			traversalParams.LocalPorts = vpnConfig.Ports
-			traversalParams.RemotePorts = consumerConfig.Ports
-			traversalParams.ProxyPortMappingKey = openvpn_service.ServiceType
-		}
-	} else {
-		if err := proxyOpenVPN(conn, m.vpnServerPort); err != nil {
-			return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
-		}
+	if err := proxyOpenVPN(conn, m.vpnServerPort); err != nil {
+		return nil, fmt.Errorf("could not proxy connection to OpenVPN server: %w", err)
 	}
 
 	destroy := func() {
@@ -352,20 +288,4 @@ func (m *Manager) startServer() error {
 
 	log.Info().Msg("OpenVPN service started successfully")
 	return nil
-}
-
-func (m *Manager) portMappingFailed() bool {
-	lastEvent := m.natEventGetter.LastEvent()
-	if lastEvent == nil {
-		return false
-	}
-
-	if lastEvent.Stage == traversal.StageName {
-		return true
-	}
-	return lastEvent.Stage == mapping.StageName && !lastEvent.Successful
-}
-
-func (m *Manager) behindNAT(pubIP string) bool {
-	return m.outboundIP != pubIP
 }

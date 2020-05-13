@@ -56,11 +56,6 @@ type PeerExchangeMessageSender interface {
 	Send(crypto.ExchangeMessage) error
 }
 
-type consumerInvoiceStorage interface {
-	Get(consumerIdentity, providerIdentity identity.Identity) (crypto.Invoice, error)
-	Store(consumerIdentity, providerIdentity identity.Identity, invoice crypto.Invoice) error
-}
-
 type consumerTotalsStorage interface {
 	Store(id identity.Identity, accountantID common.Address, amount uint64) error
 	Get(id identity.Identity, accountantID common.Address) (uint64, error)

@@ -18,8 +18,6 @@
 package traversal
 
 import (
-	"fmt"
-	"io"
 	"net"
 
 	"github.com/rs/zerolog/log"
@@ -160,48 +158,9 @@ func (np *natProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 	}
 }
 
-// handOff traffic incoming through NATPinger punched hole should be handed off to natProxy
-func (np *natProxy) handOff(key string, incomingConn *net.UDPConn) {
-	proxyConn, err := np.getConnection(key)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to connect to natProxy")
-		return
-	}
-	log.Info().Msg("Handing off a connection to a service on " + proxyConn.RemoteAddr().String())
-	go copyStreams(proxyConn, incomingConn)
-	go copyStreams(incomingConn, proxyConn)
-}
-
-func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
-	buf := make([]byte, bufferLen)
-
-	defer dstConn.Close()
-	defer srcConn.Close()
-	totalBytes, err := io.CopyBuffer(dstConn, srcConn, buf)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to write/read a stream to/from natProxy")
-	}
-	log.Debug().Msgf("Total bytes transferred from %s to %s: %d",
-		srcConn.RemoteAddr().String(),
-		dstConn.RemoteAddr().String(),
-		totalBytes)
-}
-
 func (np *natProxy) registerServicePort(key string, port int) {
 	log.Info().Msgf("Registering service %s for port %d to natProxy", key, port)
 	np.servicePorts[key] = port
-}
-
-func (np *natProxy) getConnection(key string) (*net.UDPConn, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", np.servicePorts[key]))
-	if err != nil {
-		return nil, err
-	}
-	return net.DialUDP("udp", nil, udpAddr)
-}
-
-func (np *natProxy) isAvailable(key string) bool {
-	return np.servicePorts[key] > 0
 }
 
 func (np *natProxy) SetProtectSocketCallback(socketProtect func(socket int) bool) {

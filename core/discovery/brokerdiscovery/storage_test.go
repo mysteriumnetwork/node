@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,20 +41,6 @@ var (
 		ProviderID:  "0x2",
 	}
 )
-
-type filter struct {
-	serviceType string
-}
-
-func (filter *filter) Matches(proposal market.ServiceProposal) bool {
-	return filter.serviceType == "" || proposal.ServiceType == filter.serviceType
-}
-
-func (filter *filter) ToAPIQuery() mysterium.ProposalsQuery {
-	return mysterium.ProposalsQuery{
-		ServiceType: filter.serviceType,
-	}
-}
 
 func Test_Storage_Proposals(t *testing.T) {
 	storage := createEmptyStorage()

@@ -25,9 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/config"
 	appconfig "github.com/mysteriumnetwork/node/config"
@@ -57,7 +55,6 @@ import (
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
@@ -311,7 +308,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 			nodeOptions.Directories.Runtime,
 			di.SignerFactory,
 			di.IPResolver,
-			di.NATPinger,
 		)
 	}
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory)
@@ -402,11 +398,6 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
-	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
-		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID), di.BrokerConnector)
-		return dialogEstablisher.EstablishDialog(providerID, contact)
-	}
-
 	// Consumer current session bandwidth
 	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
 	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
@@ -480,7 +471,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
-		dialogFactory,
 		pingpong.ExchangeFactoryFunc(
 			di.Keystore,
 			di.SignerFactory,
@@ -492,7 +482,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
-		connectivity.NewStatusSender(),
 		di.IPResolver,
 		connection.DefaultConfig(),
 		connection.DefaultStatsReportInterval,
@@ -555,47 +544,6 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	return tequilapi.NewServer(listener, router, corsPolicy), nil
-}
-
-func newSessionManagerFactory(
-	nodeOptions node.Options,
-	proposal market.ServiceProposal,
-	sessionStorage *session.EventBasedStorage,
-	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
-	natPingerChan traversal.NATPinger,
-	natTracker *event.Tracker,
-	serviceID string,
-	eventbus eventbus.EventBus,
-	bcHelper *paymentClient.BlockchainWithRetries,
-	promiseHandler *pingpong.AccountantPromiseHandler,
-	httpClient *requests.HTTPClient,
-	keystore *identity.Keystore,
-) session.ManagerFactory {
-	return func(dialog communication.Dialog) *session.Manager {
-		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
-			dialog, nil, nodeOptions.Payments.ProviderInvoiceFrequency,
-			pingpong.PromiseWaitTimeout, providerInvoiceStorage,
-			nodeOptions.Transactor.RegistryAddress,
-			nodeOptions.Transactor.ChannelImplementation,
-			pingpong.DefaultAccountantFailureCount,
-			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
-			bcHelper,
-			eventbus,
-			proposal,
-			promiseHandler,
-		)
-		return session.NewManager(
-			proposal,
-			sessionStorage,
-			paymentEngineFactory,
-			natPingerChan,
-			natTracker,
-			serviceID,
-			eventbus,
-			nil,
-			session.DefaultConfig(),
-		)
-	}
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides

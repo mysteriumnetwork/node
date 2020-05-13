@@ -46,11 +46,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type natPinger interface {
-	BindServicePort(key string, port int)
-	Stop()
-}
-
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
 	LastEvent() *natevent.Event
@@ -61,7 +56,6 @@ func NewManager(
 	ipResolver ip.Resolver,
 	country string,
 	natService nat.NATService,
-	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	eventBus eventbus.EventBus,
 	options Options,
@@ -76,9 +70,7 @@ func NewManager(
 		resourcesAllocator: resourcesAllocator,
 		ipResolver:         ipResolver,
 		natService:         natService,
-		natPinger:          natPinger,
 		natEventGetter:     natEventGetter,
-		natPingerPorts:     port.NewPool(),
 		eventBus:           eventBus,
 		portMapper:         portMapper,
 		trafficFirewall:    trafficFirewall,
@@ -100,8 +92,6 @@ type Manager struct {
 	resourcesAllocator *resources.Allocator
 
 	natService      nat.NATService
-	natPinger       natPinger
-	natPingerPorts  port.ServicePortSupplier
 	natEventGetter  NATEventGetter
 	eventBus        eventbus.EventBus
 	portMapper      mapping.PortMapper
@@ -141,26 +131,9 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 
 	var traversalParams traversal.Params
 	var releasePortMapping func()
-	var natPingerEnabled bool
-	if remoteConn == nil { // TODO this block needs to be removed once most of the nodes migrated to the p2p communication
-		providerConfig.ListenPort, err = m.resourcesAllocator.AllocatePort()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not allocate provider listen port")
-		}
 
-		var portMappingOK bool
-		releasePortMapping, portMappingOK = m.tryAddPortMapping(providerConfig.PublicIP, providerConfig.ListenPort)
-		_, noopPinger := m.natPinger.(*traversal.NoopPinger)
-		natPingerEnabled = !portMappingOK && !noopPinger && m.behindNAT(providerConfig.PublicIP)
-
-		traversalParams, err = m.newTraversalParams(natPingerEnabled, consumerConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create traversal params")
-		}
-	} else {
-		remoteConn.Close()
-		providerConfig.ListenPort = remoteConn.LocalAddr().(*net.UDPAddr).Port
-	}
+	remoteConn.Close()
+	providerConfig.ListenPort = remoteConn.LocalAddr().(*net.UDPAddr).Port
 
 	providerConfig.PublicIP, err = m.ipResolver.GetPublicIP()
 	if err != nil {
@@ -177,17 +150,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		return nil, errors.Wrap(err, "could not get peer config")
 	}
 
-	if natPingerEnabled {
-		log.Info().Msgf("NAT Pinger enabled, binding service port for proxy, key: %s", traversalParams.ProxyPortMappingKey)
-		m.natPinger.BindServicePort(traversalParams.ProxyPortMappingKey, config.Provider.Endpoint.Port)
-		newConfig, err := m.addTraversalParams(config, traversalParams)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not apply NAT traversal params")
-		}
-		config = newConfig
-	} else {
-		config.Consumer.ConnectDelay = m.connectDelayMS
-	}
+	config.Consumer.ConnectDelay = m.connectDelayMS
 
 	if err := m.addConsumerPeer(conn, config.LocalPort, config.RemotePort, consumerConfig.PublicKey); err != nil {
 		return nil, errors.Wrap(err, "could not add consumer peer")
@@ -271,18 +234,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
-func (m *Manager) tryAddPortMapping(pubIP string, port int) (release func(), ok bool) {
-	if !m.behindNAT(pubIP) {
-		return nil, false
-	}
-	release, ok = m.portMapper.Map(
-		"UDP",
-		port,
-		"Myst node wireguard(tm) port mapping")
-
-	return release, ok
-}
-
 func (m *Manager) startNewConnection(config wg.ProviderModeConfig) (wg.ConnectionEndpoint, error) {
 	connEndpoint, err := m.connEndpointFactory()
 	if err != nil {
@@ -310,46 +261,6 @@ func (m *Manager) addConsumerPeer(conn wg.ConnectionEndpoint, consumerPort, prov
 		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
 	}
 	return conn.AddPeer(conn.InterfaceName(), peerOpts)
-}
-
-func (m *Manager) addTraversalParams(config wg.ServiceConfig, traversalParams traversal.Params) (wg.ServiceConfig, error) {
-	config.Ports = traversalParams.LocalPorts
-
-	// Provide new provider endpoint which points to providers NAT Proxy.
-	newProviderEndpoint, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", config.Provider.Endpoint.IP, config.RemotePort))
-	if err != nil {
-		return wg.ServiceConfig{}, errors.Wrap(err, "could not resolve new provider endpoint")
-	}
-	config.Provider.Endpoint = *newProviderEndpoint
-	// There is no need to add any connect delay when port mapping failed.
-	config.Consumer.ConnectDelay = 0
-
-	return config, nil
-}
-
-func (m *Manager) newTraversalParams(natPingerEnabled bool, consumerConfig wg.ConsumerConfig) (params traversal.Params, err error) {
-	if !natPingerEnabled {
-		return params, nil
-	}
-
-	ports, err := m.natPingerPorts.AcquireMultiple(len(consumerConfig.Ports))
-	if err != nil {
-		return params, errors.Wrap(err, "could not acquire NAT pinger provider port")
-	}
-
-	for _, p := range ports {
-		params.LocalPorts = append(params.LocalPorts, p.Num())
-	}
-
-	if consumerConfig.IP == "" {
-		return params, errors.New("remote party does not support NAT Hole punching, public IP is missing")
-	}
-
-	params.IP = consumerConfig.IP
-	params.RemotePorts = consumerConfig.Ports
-	params.ProxyPortMappingKey = fmt.Sprintf("%s_%s", wg.ServiceType, consumerConfig.PublicKey)
-
-	return params, nil
 }
 
 // Serve starts service - does block
@@ -416,8 +327,4 @@ func (m *Manager) Stop() error {
 	close(m.done)
 	log.Info().Msg("Wireguard: stopped")
 	return nil
-}
-
-func (m *Manager) behindNAT(pubIP string) bool {
-	return m.outboundIP != pubIP
 }

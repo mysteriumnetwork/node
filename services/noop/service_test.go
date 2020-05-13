@@ -23,13 +23,8 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
-)
-
-var (
-	providerID = identity.FromAddress("provider-id")
 )
 
 var _ service.Service = NewManager()

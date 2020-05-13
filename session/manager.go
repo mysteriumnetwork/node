@@ -113,16 +113,11 @@ type NATEventGetter interface {
 	LastEvent() *event.Event
 }
 
-type natPinger interface {
-	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
-}
-
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
-	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
@@ -132,7 +127,6 @@ func NewManager(
 	return &Manager{
 		currentProposal:      currentProposal,
 		sessionStorage:       sessionStorage,
-		natPinger:            natPinger,
 		natEventGetter:       natEventGetter,
 		serviceId:            serviceId,
 		publisher:            publisher,
@@ -147,7 +141,6 @@ type Manager struct {
 	currentProposal      market.ServiceProposal
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
-	natPinger            natPinger
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher
@@ -197,10 +190,6 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 		}
 	}()
 
-	// TODO pingerParams is a backward compatibility limitation. Remove it once most of the clients will be updated.
-	if pingerParams != nil {
-		go manager.natPinger.PingConsumer(context.Background(), pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
-	}
 	go manager.keepAliveLoop(session, manager.channel)
 	manager.sessionStorage.Add(*session)
 	return nil

@@ -719,12 +719,6 @@ func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, accountantID co
 	return mcts.res, mcts.err
 }
 
-func (mcts *mockConsumerTotalsStorage) setResult(in uint64) {
-	mcts.resLock.Lock()
-	defer mcts.resLock.Unlock()
-	mcts.res = in
-}
-
 type mockTimeTracker struct {
 	timeToReturn time.Duration
 }

@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -725,26 +724,6 @@ func TestInvoiceTracker_handleAccountantError(t *testing.T) {
 			}
 		})
 	}
-}
-
-type mockSettler struct {
-	lock                 sync.Mutex
-	calledWithProvider   identity.Identity
-	calledWithAccountant common.Address
-}
-
-func (ms *mockSettler) getCalledWith() (identity.Identity, common.Address) {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-	return ms.calledWithProvider, ms.calledWithAccountant
-}
-
-func (ms *mockSettler) settle(providerID identity.Identity, accountantID common.Address) error {
-	ms.lock.Lock()
-	defer ms.lock.Unlock()
-	ms.calledWithAccountant = accountantID
-	ms.calledWithProvider = providerID
-	return nil
 }
 
 type mockPaymentMethod struct {

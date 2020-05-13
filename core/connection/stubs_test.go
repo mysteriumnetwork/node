@@ -19,13 +19,7 @@ package connection
 
 import (
 	"context"
-	"errors"
 	"sync"
-
-	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
-	"github.com/rs/zerolog/log"
 )
 
 // StubPublisherEvent represents the event in publishers history
@@ -198,83 +192,4 @@ func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
 	defer foc.Unlock()
 
 	foc.stateCallback = callback
-}
-
-type mockDialog struct {
-	peerID      identity.Identity
-	sessionID   session.ID
-	paymentInfo session.PaymentInfo
-	closed      bool
-	sync.RWMutex
-}
-
-func (md *mockDialog) PeerID() identity.Identity {
-	md.RLock()
-	defer md.RUnlock()
-
-	return md.peerID
-}
-
-func (md *mockDialog) assertNotClosed() {
-	md.RLock()
-	defer md.RUnlock()
-
-	if md.closed {
-		panic("Incorrect dialog handling! dialog was closed already")
-	}
-}
-
-func (md *mockDialog) Close() error {
-	md.Lock()
-	defer md.Unlock()
-
-	md.closed = true
-	log.Info().Msg("Dialog closed")
-	return nil
-}
-
-func (md *mockDialog) Receive(consumer communication.MessageConsumer) error {
-	md.assertNotClosed()
-	return nil
-}
-func (md *mockDialog) Respond(consumer communication.RequestConsumer) error {
-	md.assertNotClosed()
-	return nil
-}
-
-func (md *mockDialog) ReceiveUnsubscribe(endpoint communication.MessageEndpoint) {
-	md.assertNotClosed()
-}
-
-func (md *mockDialog) Unsubscribe() {
-	md.assertNotClosed()
-}
-
-func (md *mockDialog) Send(producer communication.MessageProducer) error {
-	return nil
-}
-
-var ErrUnknownRequest = errors.New("unknown request")
-
-func (md *mockDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	md.assertNotClosed()
-	if producer.GetRequestEndpoint() == communication.RequestEndpoint("session-destroy") {
-		return &session.DestroyResponse{
-				Success: true,
-			},
-			nil
-	}
-
-	if producer.GetRequestEndpoint() == communication.RequestEndpoint("session-create") {
-		return &session.CreateResponse{
-				Success: true,
-				Session: session.SessionDto{
-					ID:     md.sessionID,
-					Config: []byte("{}"),
-				},
-				PaymentInfo: md.paymentInfo,
-			},
-			nil
-	}
-	return nil, ErrUnknownRequest
 }

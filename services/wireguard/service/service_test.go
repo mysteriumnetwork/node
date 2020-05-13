@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -35,10 +34,9 @@ import (
 )
 
 var (
-	providerID = identity.FromAddress("provider-id")
-	pubIP      = "127.0.0.1"
-	outIP      = "127.0.0.1"
-	country    = "LT"
+	pubIP   = "127.0.0.1"
+	outIP   = "127.0.0.1"
+	country = "LT"
 )
 
 var connectionEndpointStub = &mockConnectionEndpoint{}
@@ -66,7 +64,6 @@ func Test_Manager_Stop(t *testing.T) {
 		nil,
 		market.ServiceProposal{},
 		policy.NewRepository(),
-		nil,
 		nil,
 	)
 

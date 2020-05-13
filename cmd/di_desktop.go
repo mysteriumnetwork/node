@@ -18,12 +18,9 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/communication"
-	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -31,12 +28,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -48,7 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
@@ -89,21 +83,17 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			// TODO: Use global port pool once migrated to p2p.
 			var portPool port.ServicePortSupplier
-			var natPinger traversal.NATPinger
 			if wgOptions.Ports.IsSpecified() {
 				log.Info().Msgf("Fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
-				natPinger = traversal.NewNoopPinger()
 			} else {
 				portPool = port.NewPool()
-				natPinger = di.NATPinger
 			}
 
 			svc := wireguard_service.NewManager(
 				di.IPResolver,
 				loc.Country,
 				di.NATService,
-				natPinger,
 				di.NATTracker,
 				di.EventBus,
 				wgOptions,
@@ -132,13 +122,10 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		// TODO: Use global port pool once migrated to p2p.
 		var portPool port.ServicePortSupplier
-		var natPinger traversal.NATPinger
 		if transportOptions.Port != 0 {
 			portPool = port.NewPoolFixed(port.Port(transportOptions.Port))
-			natPinger = traversal.NewNoopPinger()
 		} else {
 			portPool = port.NewPool()
-			natPinger = di.NATPinger
 		}
 
 		manager := openvpn_service.NewManager(
@@ -148,7 +135,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.IPResolver,
 			di.ServiceSessionStorage,
 			di.NATService,
-			natPinger,
 			di.NATTracker,
 			portPool,
 			di.EventBus,
@@ -233,16 +219,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string, policies *policy.Repository) (communication.DialogWaiter, error) {
-		return nats_dialog.NewDialogWaiter(
-			di.BrokerConnection,
-			fmt.Sprintf("%v.%v", providerID.Address, serviceType),
-			di.SignerFactory(providerID),
-			policy.ValidateAllowedIdentity(policies),
-		), nil
-	}
 	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
-		paymentEngineFactory := pingpong.InvoiceFactoryCreator(nil,
+		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
 			nodeOptions.Transactor.RegistryAddress,
@@ -258,7 +236,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			proposal,
 			di.ServiceSessionStorage,
 			paymentEngineFactory,
-			di.NATPinger,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
@@ -267,34 +244,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		)
 	}
 
-	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider, serviceID string) (communication.DialogHandler, error) {
-		sessionManagerFactory := newSessionManagerFactory(
-			nodeOptions,
-			proposal,
-			di.ServiceSessionStorage,
-			di.ProviderInvoiceStorage,
-			di.NATPinger,
-			di.NATTracker,
-			serviceID,
-			di.EventBus,
-			di.BCHelper,
-			di.AccountantPromiseHandler,
-			di.HTTPClient,
-			di.Keystore,
-		)
-
-		return session.NewDialogHandler(
-			sessionManagerFactory,
-			configProvider,
-			identity.FromAddress(proposal.ProviderID),
-			connectivity.NewStatusSubscriber(di.SessionConnectivityStatusStorage),
-		), nil
-	}
-
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,
-		newDialogWaiter,
-		newDialogHandler,
 		di.DiscoveryFactory,
 		di.EventBus,
 		di.PolicyOracle,
@@ -335,7 +286,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 			DNSConfigDir:     nodeOptions.Directories.Config,
 			HandshakeTimeout: 1 * time.Minute,
 		}
-		return wireguard_connection.NewConnection(opts, di.IPResolver, di.NATPinger, endpointFactory, dnsManager, handshakeWaiter)
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, dnsManager, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }

@@ -36,10 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 )
 
-const natPunchingMaxTTL = 10
-
-type natPinger interface {
-	PingProvider(ctx context.Context, ip string, localPorts, remotePorts []int, proxyPort int) (localPort, remotePort int, err error)
+type socketProtector interface {
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
@@ -48,11 +45,11 @@ type openvpn3SessionFactory func(connection.ConnectOptions, openvpn.VPNConfig) (
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
 // NewOpenVPNConnection creates a new openvpn connection
-func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity.SignerFactory, tunnelSetup Openvpn3TunnelSetup, natPinger natPinger, ipResolver ip.Resolver) (con connection.Connection, err error) {
+func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity.SignerFactory, tunnelSetup Openvpn3TunnelSetup, socketProtector socketProtector, ipResolver ip.Resolver) (con connection.Connection, err error) {
 	conn := &openvpnConnection{
-		stateCh:    make(chan connection.State, 100),
-		natPinger:  natPinger,
-		ipResolver: ipResolver,
+		stateCh:         make(chan connection.State, 100),
+		socketProtector: socketProtector,
+		ipResolver:      ipResolver,
 	}
 
 	sessionFactory := func(options connection.ConnectOptions, sessionConfig openvpn.VPNConfig) (*openvpn3.Session, *openvpn.ClientConfig, error) {
@@ -95,17 +92,16 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 }
 
 type openvpnConnection struct {
-	ports         []int
-	stateCh       chan connection.State
-	stats         connection.Statistics
-	tunnelSetup   Openvpn3TunnelSetup
-	statsMu       sync.RWMutex
-	session       *openvpn3.Session
-	createSession openvpn3SessionFactory
-	natPinger     natPinger
-	ipResolver    ip.Resolver
-	stopOnce      sync.Once
-	stopProxy     chan struct{}
+	stateCh         chan connection.State
+	stats           connection.Statistics
+	tunnelSetup     Openvpn3TunnelSetup
+	statsMu         sync.RWMutex
+	session         *openvpn3.Session
+	createSession   openvpn3SessionFactory
+	socketProtector socketProtector
+	ipResolver      ip.Resolver
+	stopOnce        sync.Once
+	stopProxy       chan struct{}
 }
 
 var _ connection.Connection = &openvpnConnection{}
@@ -179,31 +175,6 @@ func (c *openvpnConnection) Start(ctx context.Context, options connection.Connec
 
 		localAddr := fmt.Sprintf("127.0.0.1:%d", sessionConfig.LocalPort)
 		c.stopProxy = proxy.ConsumerHandOff(localAddr, options.ProviderNATConn)
-	} else if len(sessionConfig.Ports) > 0 { // TODO this backward compatibility block needs to be removed once we will fully migrate to the p2p communication.
-		if len(sessionConfig.Ports) == 0 || len(c.ports) == 0 {
-			c.ports = []int{sessionConfig.LocalPort}
-			sessionConfig.Ports = []int{sessionConfig.RemotePort}
-		}
-
-		if sessionConfig.LocalPort == 0 {
-			lport, err := port.NewPool().Acquire()
-			if err != nil {
-				return errors.Wrap(err, "failed to acquire free port")
-			}
-
-			sessionConfig.LocalPort = lport.Num()
-		}
-
-		c.natPinger.SetProtectSocketCallback(c.tunnelSetup.SocketProtect)
-
-		remoteIP := sessionConfig.RemoteIP
-		_, _, err = c.natPinger.PingProvider(ctx, remoteIP, c.ports, sessionConfig.Ports, sessionConfig.LocalPort)
-		if err != nil {
-			return errors.Wrap(err, "could not ping provider")
-		}
-
-		sessionConfig.RemoteIP = "127.0.0.1"
-		sessionConfig.RemotePort = sessionConfig.LocalPort
 	}
 
 	newSession, clientConfig, err := c.createSession(options, sessionConfig)
@@ -238,31 +209,7 @@ func (c *openvpnConnection) Wait() error {
 }
 
 func (c *openvpnConnection) GetConfig() (connection.ConsumerConfig, error) {
-	// TODO the whole content of this function needs to be removed once we will migrate to the p2p communication.
-	switch c.natPinger.(type) {
-	case *traversal.NoopPinger:
-		log.Info().Msg("Noop pinger detected, returning nil client config.")
-		return nil, nil
-	}
-
-	publicIP, err := c.ipResolver.GetPublicIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get consumer public IP")
-	}
-
-	ports, err := port.NewPool().AcquireMultiple(natPunchingMaxTTL)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range ports {
-		c.ports = append(c.ports, p.Num())
-	}
-
-	return &openvpn.ConsumerConfig{
-		IP:    publicIP,
-		Ports: c.ports,
-	}, nil
+	return &openvpn.ConsumerConfig{}, nil
 }
 
 // Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop

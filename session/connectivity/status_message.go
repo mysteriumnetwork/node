@@ -17,12 +17,6 @@
 
 package connectivity
 
-import (
-	"github.com/mysteriumnetwork/node/communication"
-)
-
-const endpointConnectivityStatus = communication.MessageEndpoint("session-connectivity-status")
-
 // StatusCode is a connectivity status.
 type StatusCode uint32
 
@@ -48,36 +42,4 @@ type StatusMessage struct {
 	SessionID  string     `json:"sessionID"`
 	StatusCode StatusCode `json:"statusCode"`
 	Message    string     `json:"message"`
-}
-
-// Producer boilerplate.
-type statusProducer struct {
-	message *StatusMessage
-}
-
-func (p *statusProducer) GetMessageEndpoint() communication.MessageEndpoint {
-	return endpointConnectivityStatus
-}
-
-func (p *statusProducer) Produce() (messagePtr interface{}) {
-	return p.message
-}
-
-// Consumer boilerplate.
-type statusConsumer struct {
-	callback func(msg *StatusMessage)
-}
-
-func (c *statusConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return endpointConnectivityStatus
-}
-
-func (c *statusConsumer) NewMessage() (messagePtr interface{}) {
-	return &StatusMessage{}
-}
-
-func (c *statusConsumer) Consume(messagePtr interface{}) error {
-	msg := messagePtr.(*StatusMessage)
-	c.callback(msg)
-	return nil
 }

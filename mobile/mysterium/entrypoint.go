@@ -58,7 +58,7 @@ type MobileNode struct {
 	locationResolver             *location.Cache
 	identitySelector             selector.Handler
 	signerFactory                identity.SignerFactory
-	natPinger                    natPinger
+	socketProtector              socketProtector
 	ipResolver                   ip.Resolver
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
@@ -215,7 +215,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		locationResolver:             di.LocationResolver,
 		identitySelector:             di.IdentitySelector,
 		signerFactory:                di.SignerFactory,
-		natPinger:                    di.NATPinger,
+		socketProtector:              di.NATPinger,
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
@@ -586,7 +586,7 @@ func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup)
 			st,
 			mb.signerFactory,
 			tunnelSetup,
-			mb.natPinger,
+			mb.socketProtector,
 			mb.ipResolver,
 		)
 	}
@@ -607,7 +607,6 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 			opts,
 			newWireguardDevice(wgTunnelSetup),
 			mb.ipResolver,
-			mb.natPinger,
 			wireguard_connection.NewHandshakeWaiter(),
 		)
 	}

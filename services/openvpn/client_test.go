@@ -32,7 +32,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
-	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
+	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"))
 	connectionOptions := connection.ConnectOptions{}
 	assert.Nil(t, err)
 	err = conn.Start(context.Background(), connectionOptions)
@@ -40,15 +40,7 @@ func TestConnection_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnection_CreatesConnection(t *testing.T) {
-	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
+	conn, err := NewClient("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"))
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
-}
-
-// MockNATPinger returns a mock nat pinger, that really doesn't do much
-type MockNATPinger struct{}
-
-// PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ context.Context, _ string, _, _ []int, _ int) (int, int, error) {
-	return 0, 0, nil
 }

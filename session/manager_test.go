@@ -145,6 +145,5 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 }
 
 func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *Manager {
-	return NewManager(proposal, sessionStore, mockPaymentEngineFactory, traversal.NewNoopPinger(),
-		&MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
+	return NewManager(proposal, sessionStore, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
 }
