@@ -50,6 +50,7 @@ func (d *Daemon) RunMyst() error {
 			"--openvpn.binary", d.cfg.OpenVPNPath,
 			"--mymysterium.enabled=false",
 			"--ui.enable=false",
+			"--usermode",
 			"daemon",
 		},
 		Env: []string{
