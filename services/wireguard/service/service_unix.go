@@ -234,18 +234,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
-func (m *Manager) tryAddPortMapping(pubIP string, port int) (release func(), ok bool) {
-	if !m.behindNAT(pubIP) {
-		return nil, false
-	}
-	release, ok = m.portMapper.Map(
-		"UDP",
-		port,
-		"Myst node wireguard(tm) port mapping")
-
-	return release, ok
-}
-
 func (m *Manager) startNewConnection(config wg.ProviderModeConfig) (wg.ConnectionEndpoint, error) {
 	connEndpoint, err := m.connEndpointFactory()
 	if err != nil {
@@ -339,8 +327,4 @@ func (m *Manager) Stop() error {
 	close(m.done)
 	log.Info().Msg("Wireguard: stopped")
 	return nil
-}
-
-func (m *Manager) behindNAT(pubIP string) bool {
-	return m.outboundIP != pubIP
 }

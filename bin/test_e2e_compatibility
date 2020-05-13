@@ -67,7 +67,6 @@ do
             --provider.tequilapi-host=myst-provider-$i \
             --provider.tequilapi-port=4050 \
             --consumer.tequilapi-port=4050 \
-            --geth.url=http://geth:8545 \
             --consumer.services=$consumerServices
         if [ ! $? -eq 0 ]; then
             print_error "Tests failed"

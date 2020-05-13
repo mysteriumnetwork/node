@@ -80,7 +80,6 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 
 // Client takes in the openvpn process and works with it
 type Client struct {
-	openvpnBinary       string
 	configDirectory     string
 	runtimeDirectory    string
 	signerFactory       identity.SignerFactory
@@ -90,7 +89,6 @@ type Client struct {
 	process             openvpn.Process
 	processFactory      processFactory
 	ipResolver          ip.Resolver
-	ports               []int
 	removeAllowedIPRule func()
 	stopOnce            sync.Once
 }

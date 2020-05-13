@@ -36,8 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 )
 
-const natPunchingMaxTTL = 10
-
 type socketProtector interface {
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
@@ -94,7 +92,6 @@ func NewOpenVPNConnection(sessionTracker *sessionTracker, signerFactory identity
 }
 
 type openvpnConnection struct {
-	ports           []int
 	stateCh         chan connection.State
 	stats           connection.Statistics
 	tunnelSetup     Openvpn3TunnelSetup

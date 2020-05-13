@@ -606,12 +606,6 @@ func (s *mockStatusSender) Send(msg *connectivity.StatusMessage) error {
 	return nil
 }
 
-func (s *mockStatusSender) getSentMsg() connectivity.StatusMessage {
-	s.Lock()
-	defer s.Unlock()
-	return *s.sentMsg
-}
-
 type mockPaymentMethod struct {
 	rate        market.PaymentRate
 	paymentType string

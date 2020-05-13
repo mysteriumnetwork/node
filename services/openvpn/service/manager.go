@@ -127,17 +127,6 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	pubIP, err := m.ipResolver.GetPublicIP()
-	if err != nil {
-		return fmt.Errorf("could not get public IP: %w", err)
-	}
-
-	if m.behindNAT(pubIP) {
-		if releasePorts, ok := m.tryAddPortMapping(m.vpnServerPort); ok {
-			defer releasePorts()
-		}
-	}
-
 	m.tlsPrimitives, err = primitiveFactory(m.country, instance.Proposal().ProviderID)
 	if err != nil {
 		return
@@ -176,15 +165,6 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 
 	log.Info().Msg("OpenVPN server waiting")
 	return m.openvpnProcess.Wait()
-}
-
-func (m *Manager) tryAddPortMapping(port int) (release func(), ok bool) {
-	release, ok = m.portMapper.Map(
-		m.serviceOptions.Protocol,
-		port,
-		"Myst node OpenVPN port mapping")
-
-	return release, ok
 }
 
 // Stop stops service
@@ -308,20 +288,4 @@ func (m *Manager) startServer() error {
 
 	log.Info().Msg("OpenVPN service started successfully")
 	return nil
-}
-
-func (m *Manager) portMappingFailed() bool {
-	lastEvent := m.natEventGetter.LastEvent()
-	if lastEvent == nil {
-		return false
-	}
-
-	if lastEvent.Stage == traversal.StageName {
-		return true
-	}
-	return lastEvent.Stage == mapping.StageName && !lastEvent.Successful
-}
-
-func (m *Manager) behindNAT(pubIP string) bool {
-	return m.outboundIP != pubIP
 }

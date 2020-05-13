@@ -114,45 +114,6 @@ func (p *Pinger) Stop() {
 	})
 }
 
-// pingPeer pings remote peer with a defined configuration.
-// It returns n connections if possible or all available with error.
-func (p *Pinger) pingPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
-	log.Info().Msg("NAT pinging to remote peer")
-
-	ch, err := p.multiPing(ctx, ip, localPorts, remotePorts, initialTTL)
-	if err != nil {
-		log.Err(err).Msg("Failed to ping remote peer")
-		return nil, err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case res, more := <-ch:
-			if !more {
-				return nil, errors.New("not enough connections")
-			}
-
-			if res.err != nil {
-				log.Warn().Err(res.err).Msg("One of the pings has error")
-			} else {
-				if err := ipv4.NewConn(res.conn).SetTTL(maxTTL); err != nil {
-					log.Warn().Err(res.err).Msg("Failed to set connection TTL")
-					continue
-				}
-
-				res.conn.Write([]byte("OK")) // notify peer that we are using this connection.
-
-				conns = append(conns, res.conn)
-				if len(conns) == n {
-					return conns, nil
-				}
-			}
-		}
-	}
-}
-
 // PingConsumerPeer pings remote peer with a defined configuration
 // and notifies peer which connections will be used.
 // It returns n connections if possible or error.
@@ -401,31 +362,6 @@ type pingResponse struct {
 	conn *net.UDPConn
 	err  error
 	id   int
-}
-
-func (p *Pinger) multiPing(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int) (<-chan pingResponse, error) {
-	if len(localPorts) != len(remotePorts) {
-		return nil, errors.New("number of local and remote ports does not match")
-	}
-
-	var wg sync.WaitGroup
-	ch := make(chan pingResponse, len(localPorts))
-
-	for i := range localPorts {
-		wg.Add(1)
-
-		go func(i int) {
-			conn, err := p.singlePing(ctx, ip, localPorts[i], remotePorts[i], initialTTL+i)
-
-			ch <- pingResponse{id: i, conn: conn, err: err}
-
-			wg.Done()
-		}(i)
-	}
-
-	go func() { wg.Wait(); close(ch) }()
-
-	return ch, nil
 }
 
 func (p *Pinger) multiPingN(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (<-chan pingResponse, error) {

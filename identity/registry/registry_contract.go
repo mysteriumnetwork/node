@@ -42,17 +42,15 @@ type registryStorage interface {
 }
 
 type contractRegistry struct {
-	accountantSession          *bindings.AccountantImplementationCallerSession
-	contractSession            *bindings.RegistryCallerSession
-	filterer                   *bindings.RegistryFilterer
-	accountantAddress          common.Address
-	storage                    registryStorage
-	cacheLock                  sync.Mutex
-	stop                       chan struct{}
-	once                       sync.Once
-	registrationCompletionLock sync.Mutex
-	publisher                  eventbus.Publisher
-	lock                       sync.Mutex
+	accountantSession *bindings.AccountantImplementationCallerSession
+	contractSession   *bindings.RegistryCallerSession
+	filterer          *bindings.RegistryFilterer
+	accountantAddress common.Address
+	storage           registryStorage
+	stop              chan struct{}
+	once              sync.Once
+	publisher         eventbus.Publisher
+	lock              sync.Mutex
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information

@@ -52,7 +52,6 @@ type MysteriumMORQA struct {
 	eventsMu sync.Mutex
 	events   chan *metrics.Event
 	stop     chan struct{}
-	once     sync.Once
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
@@ -185,16 +184,6 @@ func (m *MysteriumMORQA) Reconnect() {
 	defer m.clientMu.Unlock()
 	m.client.CloseIdleConnections()
 	m.client = m.clientFactory()
-}
-
-func (m *MysteriumMORQA) resolveClient() *http.Client {
-	m.clientMu.Lock()
-	defer m.clientMu.Unlock()
-	if m.client != nil {
-		return m.client
-	}
-	m.client = m.clientFactory()
-	return m.client
 }
 
 func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*http.Request, error) {

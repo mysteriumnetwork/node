@@ -368,11 +368,3 @@ func (m *listener) deletePendingConfig(peerPubKey PublicKey) {
 	defer m.pendingConfigsMu.Unlock()
 	delete(m.pendingConfigs, peerPubKey)
 }
-
-func (m *listener) sendSignedMsg(brokerConn nats.Connection, subject string, msg []byte, timeout time.Duration) ([]byte, error) {
-	reply, err := brokerConn.Request(subject, msg, timeout)
-	if err != nil {
-		return nil, fmt.Errorf("could send broker request to subject %s: %v", subject, err)
-	}
-	return reply.Data, nil
-}

@@ -29,10 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	localhostIP = net.ParseIP("127.0.0.1")
-)
-
 func TestPinger_Multiple_Stop(t *testing.T) {
 	pinger := newPinger(&PingConfig{
 		Interval: 1 * time.Millisecond,

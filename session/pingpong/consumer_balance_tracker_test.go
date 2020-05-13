@@ -179,15 +179,6 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
-type mockAccountantBalanceFetcher struct {
-	consumerData ConsumerData
-	err          error
-}
-
-func (mabf *mockAccountantBalanceFetcher) GetConsumerData(channel string) (ConsumerData, error) {
-	return mabf.consumerData, mabf.err
-}
-
 type mockConsumerBalanceChecker struct {
 	channelToReturn client.ConsumerChannel
 	errToReturn     error

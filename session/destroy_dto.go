@@ -17,12 +17,6 @@
 
 package session
 
-import (
-	"github.com/mysteriumnetwork/node/communication"
-)
-
-const endpointSessionDestroy = communication.RequestEndpoint("session-destroy")
-
 // DestroyRequest structure represents message from service consumer to destroy session for given session id
 type DestroyRequest struct {
 	SessionID string `json:"session_id"`

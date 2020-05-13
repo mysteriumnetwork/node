@@ -472,9 +472,8 @@ var mockProviderChannel = client.ProviderChannel{
 }
 
 type mockTransactor struct {
-	registerError error
-	feesToReturn  registry.FeesResponse
-	feesError     error
+	feesToReturn registry.FeesResponse
+	feesError    error
 }
 
 func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
