@@ -169,7 +169,7 @@ type channel struct {
 	stop chan struct{}
 
 	// weather channel saw remote traffic
-	remoteAlive bool
+	remoteAlive chan struct{}
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
@@ -219,6 +219,7 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		serviceConn:      nil,
 		stop:             make(chan struct{}, 1),
 		sendQueue:        make(chan *transportMsg, 100),
+		remoteAlive:      make(chan struct{}, 1),
 	}
 
 	go c.remoteReadLoop()
@@ -250,7 +251,10 @@ func (c *channel) remoteReadLoop() {
 			}
 			return
 		}
-		c.remoteAlive = true
+
+		c.once.Do(func() {
+			close(c.remoteAlive)
+		})
 
 		// Check if peer port changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
@@ -523,12 +527,10 @@ func (c *channel) checkIfChannelAlive() {
 	for {
 		select {
 		case <-c.stop:
+		case <-c.remoteAlive:
 			return
 		case <-time.After(initialTrafficTimeout):
-			if c.remoteAlive {
-				return
-			}
-			log.Warn().Msgf("No initial traffic for %d sec. Terminating channel.", initialTrafficTimeout.Seconds())
+			log.Warn().Msgf("No initial traffic for %.0f sec. Terminating channel.", initialTrafficTimeout.Seconds())
 			err := c.Close()
 			if err != nil {
 				log.Err(err).Msg("Failed to close channel on inactivity")
