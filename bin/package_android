@@ -18,8 +18,8 @@ DIR_BUILD="build/package"
 
 docker run --rm \
     -v "$PWD"/$DIR_BUILD:/build \
-    -v "$GOPATH"/.xgo-cache:/deps-cache:ro \
-    -v "$GOPATH"/src:/ext-go/1/src:ro \
+    -v "$PWD":/app \
+    -w /app \
     -e OUT=Mysterium \
     -e FLAG_V=false \
     -e FLAG_X=false \
@@ -28,8 +28,8 @@ docker run --rm \
     -e FLAG_BUILDMODE=default \
     -e TARGETS=android/. \
     -e EXT_GOPATH=/ext-go/1 \
-    -e GO111MODULE=off \
-    mysteriumnetwork/xgomobile:1.13.8 github.com/mysteriumnetwork/node/mobile/mysterium
+    -e GO111MODULE=on \
+    mysteriumnetwork/xgomobile:1.13.8-ndk19 ./mobile/mysterium
 
 print_success "Android package '$PACKAGE_FILE' complete!"
 exit 0

@@ -44,7 +44,6 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -58,7 +57,6 @@ type MobileNode struct {
 	locationResolver             *location.Cache
 	identitySelector             selector.Handler
 	signerFactory                identity.SignerFactory
-	socketProtector              socketProtector
 	ipResolver                   ip.Resolver
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
@@ -71,6 +69,7 @@ type MobileNode struct {
 	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
 	registryAddress              string
 	channelImplementationAddress string
+	startTime                    time.Time
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -149,8 +148,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 		TequilapiEnabled: false,
 
-		Openvpn: embeddedLibCheck{},
-
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},
@@ -215,7 +212,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		locationResolver:             di.LocationResolver,
 		identitySelector:             di.IdentitySelector,
 		signerFactory:                di.SignerFactory,
-		socketProtector:              di.NATPinger,
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
@@ -232,6 +228,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.MysteriumAPI,
 			di.QualityClient,
 			&proposal.Filter{
+				ServiceType:         wireguard.ServiceType,
 				UpperTimePriceBound: &nodeOptions.Payments.ConsumerUpperMinutePriceBound,
 				LowerTimePriceBound: &nodeOptions.Payments.ConsumerLowerMinutePriceBound,
 				UpperGBPriceBound:   &nodeOptions.Payments.ConsumerUpperGBPriceBound,
@@ -239,6 +236,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 				ExcludeUnsupported:  true,
 			},
 		),
+		startTime: time.Now(),
 	}
 	return mobileNode, nil
 }
@@ -576,25 +574,6 @@ func (mb *MobileNode) WaitUntilDies() error {
 	return mb.node.Wait()
 }
 
-// OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one returning session that can be reconnected
-func (mb *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) ReconnectableSession {
-	openvpn.Bootstrap()
-
-	st := &sessionTracker{}
-	factory := func() (connection.Connection, error) {
-		return NewOpenVPNConnection(
-			st,
-			mb.signerFactory,
-			tunnelSetup,
-			mb.socketProtector,
-			mb.ipResolver,
-		)
-	}
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionState, st.handleState)
-	mb.connectionRegistry.Register("openvpn", factory)
-	return st
-}
-
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
@@ -611,4 +590,31 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 		)
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
+}
+
+// HealthCheckData represents node health check info
+type HealthCheckData struct {
+	Uptime    string     `json:"uptime"`
+	Version   string     `json:"version"`
+	BuildInfo *BuildInfo `json:"build_info"`
+}
+
+// BuildInfo represents node build info.
+type BuildInfo struct {
+	Commit      string `json:"commit"`
+	Branch      string `json:"branch"`
+	BuildNumber string `json:"build_number"`
+}
+
+// HealthCheck returns node health check data.
+func (mb *MobileNode) HealthCheck() *HealthCheckData {
+	return &HealthCheckData{
+		Uptime:  time.Since(mb.startTime).String(),
+		Version: metadata.VersionAsString(),
+		BuildInfo: &BuildInfo{
+			Commit:      metadata.BuildCommit,
+			Branch:      metadata.BuildBranch,
+			BuildNumber: metadata.BuildNumber,
+		},
+	}
 }

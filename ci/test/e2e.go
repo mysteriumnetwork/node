@@ -18,9 +18,7 @@
 package test
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/magefile/mage/mg"
@@ -43,11 +41,6 @@ func BuildMystBinaryForE2eDocker() error {
 
 // BuildE2eTestBinary builds the e2e test binary.
 func BuildE2eTestBinary() error {
-	if err := replaceOpenvpnConnectionSetupPkg("github.com/mysteriumnetwork/go-openvpn/openvpn3", "github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3"); err != nil {
-		return err
-	}
-	defer replaceOpenvpnConnectionSetupPkg("github.com/mysteriumnetwork/node/mobile/mysterium/openvpn3", "github.com/mysteriumnetwork/go-openvpn/openvpn3")
-
 	err := sh.RunWith(crossCompileFlags, "go", "test", "-c", "./e2e/")
 	if err != nil {
 		return err
@@ -129,16 +122,4 @@ func TestE2ECompatibility() error {
 		}
 	}
 	return nil
-}
-
-// replaceOpenvpnConnectionSetupPkg replaces openvpn_connection_setup.go go-openvpn pacakges
-// for mobile entry e2e tests so we don't need to include any C++ dependencies.
-func replaceOpenvpnConnectionSetupPkg(from, to string) error {
-	path := "./mobile/mysterium/openvpn_connection_setup.go"
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	content = bytes.Replace(content, []byte(from), []byte(to), 1)
-	return ioutil.WriteFile(path, content, 0600)
 }

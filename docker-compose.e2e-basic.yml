@@ -92,8 +92,8 @@ services:
   redis:
     image: bitnami/redis:5.0.8
     container_name: 'accountant_redis'
-    ports:
-      - '6379:6379'
+    expose:
+      - 6379
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
 
