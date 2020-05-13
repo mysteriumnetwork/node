@@ -27,9 +27,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/xtaci/kcp-go/v5"
+	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
 )
 
@@ -45,8 +46,9 @@ var (
 )
 
 const (
-	kcpMTUSize = 1280
-	mtuLimit   = 1500
+	kcpMTUSize            = 1280
+	mtuLimit              = 1500
+	initialTrafficTimeout = 10 * time.Second
 )
 
 // ChannelSender is used to send messages.
@@ -165,6 +167,9 @@ type channel struct {
 
 	// stop is used to stop all running goroutines.
 	stop chan struct{}
+
+	// weather channel saw remote traffic
+	remoteAlive bool
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
@@ -236,6 +241,8 @@ func (c *channel) remoteReadLoop() {
 		default:
 		}
 
+		go c.checkIfChannelAlive()
+
 		n, addr, err := c.tr.remoteConn.ReadFrom(buf)
 		if err != nil {
 			if !errNetClose(err) {
@@ -243,6 +250,7 @@ func (c *channel) remoteReadLoop() {
 			}
 			return
 		}
+		c.remoteAlive = true
 
 		// Check if peer port changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
@@ -509,6 +517,24 @@ func (c *channel) setUpnpPortsRelease(release []func()) {
 	defer c.mu.Unlock()
 
 	c.upnpPortsRelease = release
+}
+
+func (c *channel) checkIfChannelAlive() {
+	for {
+		select {
+		case <-c.stop:
+			return
+		case <-time.After(initialTrafficTimeout):
+			if c.remoteAlive {
+				return
+			}
+			log.Warn().Msgf("No initial traffic for %d sec. Terminating channel.", initialTrafficTimeout.Seconds())
+			err := c.Close()
+			if err != nil {
+				log.Err(err).Msg("Failed to close channel on inactivity")
+			}
+		}
+	}
 }
 
 func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {

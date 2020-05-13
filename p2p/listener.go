@@ -273,7 +273,7 @@ func (m *listener) prepareLocalPorts(publicIP, outboundIP string) ([]int, []func
 	var portMappingOk bool
 	var portRelease func()
 	for _, p := range localPorts {
-		portRelease, portMappingOk = m.portMapper.Map("UDP", p, "Myst node port mapping")
+		portRelease, portMappingOk = m.portMapper.Map("UDP", p, "Myst node p2p port mapping")
 		if !portMappingOk {
 			break
 		}

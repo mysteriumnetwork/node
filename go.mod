@@ -10,7 +10,6 @@ require (
 	github.com/asdine/storm/v3 v3.1.1
 	github.com/aws/aws-sdk-go-v2 v0.15.0
 	github.com/cenkalti/backoff/v4 v4.0.0
-	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
