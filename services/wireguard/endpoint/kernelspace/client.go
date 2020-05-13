@@ -25,9 +25,9 @@ import (
 
 	"github.com/jackpal/gateway"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -167,24 +167,16 @@ func addDefaultRoute(iface string) error {
 }
 
 func (c *client) Close() (err error) {
-	var errs []error
-	defer func() {
-		for i := range errs {
-			log.Error().Err(errs[i]).Msg("Failed to close wireguard kernelspace client")
-			if err == nil {
-				err = errs[i]
-			}
-		}
-	}()
-
+	errs := utils.ErrorCollection{}
 	if err := c.DestroyDevice(c.iface); err != nil {
-		errs = append(errs, err)
+		errs.Add(err)
 	}
-
 	if err := c.wgClient.Close(); err != nil {
-		errs = append(errs, err)
+		errs.Add(err)
 	}
-
+	if err := errs.Error(); err != nil {
+		return fmt.Errorf("could not close client: %w", err)
+	}
 	return nil
 }
 
