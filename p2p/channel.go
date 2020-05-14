@@ -170,6 +170,9 @@ type channel struct {
 
 	// weather channel saw remote traffic
 	remoteAlive chan struct{}
+
+	// terminate remote aliveness checking only once
+	remoteAliveOnce sync.Once
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
@@ -235,14 +238,15 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 func (c *channel) remoteReadLoop() {
 	buf := make([]byte, mtuLimit)
 	latestPeerAddr := c.peer.addr()
+
+	go c.checkIfChannelAlive()
+
 	for {
 		select {
 		case <-c.stop:
 			return
 		default:
 		}
-
-		go c.checkIfChannelAlive()
 
 		n, addr, err := c.tr.remoteConn.ReadFrom(buf)
 		if err != nil {
@@ -252,7 +256,7 @@ func (c *channel) remoteReadLoop() {
 			return
 		}
 
-		c.once.Do(func() {
+		c.remoteAliveOnce.Do(func() {
 			close(c.remoteAlive)
 		})
 
@@ -524,17 +528,15 @@ func (c *channel) setUpnpPortsRelease(release []func()) {
 }
 
 func (c *channel) checkIfChannelAlive() {
-	for {
-		select {
-		case <-c.stop:
-		case <-c.remoteAlive:
-			return
-		case <-time.After(initialTrafficTimeout):
-			log.Warn().Msgf("No initial traffic for %.0f sec. Terminating channel.", initialTrafficTimeout.Seconds())
-			err := c.Close()
-			if err != nil {
-				log.Err(err).Msg("Failed to close channel on inactivity")
-			}
+	select {
+	case <-c.stop:
+	case <-c.remoteAlive:
+		return
+	case <-time.After(initialTrafficTimeout):
+		log.Warn().Msgf("No initial traffic for %.0f sec. Terminating channel.", initialTrafficTimeout.Seconds())
+		err := c.Close()
+		if err != nil {
+			log.Err(err).Msg("Failed to close channel on inactivity")
 		}
 	}
 }
