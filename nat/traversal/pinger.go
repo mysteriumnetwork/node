@@ -98,14 +98,6 @@ func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 	}
 }
 
-// Params contains session parameters needed to NAT ping remote peer
-type Params struct {
-	RemotePorts         []int
-	LocalPorts          []int
-	IP                  string
-	ProxyPortMappingKey string
-}
-
 // Stop stops pinger loop
 func (p *Pinger) Stop() {
 	p.once.Do(func() {

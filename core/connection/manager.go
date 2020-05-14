@@ -186,12 +186,14 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	var channel p2p.Channel
-	if contact, err := p2p.ParseContact(proposal.ProviderContacts); err == nil {
-		channel, err = m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal.ServiceType, contact)
-		if err != nil {
-			return fmt.Errorf("could not create p2p channel: %w", err)
-		}
+	contact, err := p2p.ParseContact(proposal.ProviderContacts)
+	if err != nil {
+		return fmt.Errorf("provider does not support p2p communication: %w", err)
+	}
+
+	channel, err := m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal.ServiceType, contact)
+	if err != nil {
+		return fmt.Errorf("could not create p2p channel: %w", err)
 	}
 
 	connection, err := m.newConnection(proposal.ServiceType)

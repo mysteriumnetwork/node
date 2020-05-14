@@ -35,8 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -60,7 +58,6 @@ func NewManager(
 	eventBus eventbus.EventBus,
 	options Options,
 	portSupplier port.ServicePortSupplier,
-	portMapper mapping.PortMapper,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
 	resourcesAllocator := resources.NewAllocator(portSupplier, options.Subnet)
@@ -72,7 +69,6 @@ func NewManager(
 		natService:         natService,
 		natEventGetter:     natEventGetter,
 		eventBus:           eventBus,
-		portMapper:         portMapper,
 		trafficFirewall:    trafficFirewall,
 
 		connEndpointFactory: func() (wg.ConnectionEndpoint, error) {
@@ -94,7 +90,6 @@ type Manager struct {
 	natService      nat.NATService
 	natEventGetter  NATEventGetter
 	eventBus        eventbus.EventBus
-	portMapper      mapping.PortMapper
 	trafficFirewall firewall.IncomingTrafficFirewall
 
 	dnsOK    bool
@@ -128,9 +123,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not allocate provider IP NET")
 	}
-
-	var traversalParams traversal.Params
-	var releasePortMapping func()
 
 	remoteConn.Close()
 	providerConfig.ListenPort = remoteConn.LocalAddr().(*net.UDPAddr).Port
@@ -201,11 +193,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 
 		s.Clear(ifaceName)
 
-		if releasePortMapping != nil {
-			log.Trace().Msg("Deleting port mapping")
-			releasePortMapping()
-		}
-
 		if releaseTrafficFirewall != nil {
 			if err := releaseTrafficFirewall(); err != nil {
 				log.Warn().Err(err).Msg("failed to disable traffic blocking")
@@ -231,7 +218,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	m.sessionCleanup[sessionID] = destroy
 	m.sessionCleanupMu.Unlock()
 
-	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
+	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy}, nil
 }
 
 func (m *Manager) startNewConnection(config wg.ProviderModeConfig) (wg.ConnectionEndpoint, error) {
