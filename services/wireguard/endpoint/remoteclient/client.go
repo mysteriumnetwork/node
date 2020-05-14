@@ -20,16 +20,20 @@ package remoteclient
 import (
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type client struct {
-	wgc *wgctrl.Client
+	mu    sync.Mutex
+	iface string
+	wgc   *wgctrl.Client
 }
 
 // New create new remote WireGuard client which communicates with supervisor.
@@ -45,16 +49,18 @@ func New() (*client, error) {
 }
 
 func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
-	iface := config.IfaceName
-	if err := createTUN(iface, config.Subnet); err != nil {
-		return fmt.Errorf("failed to create TUN device %s: %w", iface, err)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.iface = config.IfaceName
+	if err := createTUN(c.iface, config.Subnet); err != nil {
+		return fmt.Errorf("failed to create TUN device %s: %w", c.iface, err)
 	}
 
 	key, err := wgtypes.ParseKey(config.PrivateKey)
 	if err != nil {
 		return fmt.Errorf("could not parse private key: %w", err)
 	}
-	err = c.wgc.ConfigureDevice(iface, wgtypes.Config{
+	err = c.wgc.ConfigureDevice(c.iface, wgtypes.Config{
 		PrivateKey: &key,
 		ListenPort: &config.ListenPort,
 	})
@@ -137,6 +143,19 @@ func (c *client) PeerStats(iface string) (*wg.Stats, error) {
 	}, nil
 }
 
-func (c *client) Close() error {
-	return c.wgc.Close()
+func (c *client) Close() (err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	errs := utils.ErrorCollection{}
+	if err := c.DestroyDevice(c.iface); err != nil {
+		errs.Add(err)
+	}
+	if err := c.wgc.Close(); err != nil {
+		errs.Add(err)
+	}
+	if err := errs.Error(); err != nil {
+		return fmt.Errorf("could not close client: %w", err)
+	}
+	return nil
 }

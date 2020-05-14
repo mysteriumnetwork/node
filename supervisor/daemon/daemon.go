@@ -58,6 +58,7 @@ func (d Daemon) dialog(conn io.ReadWriter) {
 	for scan.Scan() {
 		line := scan.Bytes()
 		line = bytes.ToLower(line)
+		log.Printf("scan line: %s", line)
 		cmd := strings.Split(string(line), " ")
 		op := cmd[0]
 		switch op {
