@@ -120,7 +120,7 @@ func InvoiceFactoryCreator(
 			InvoiceStorage:             invoiceStorage,
 			TimeTracker:                &timeTracker,
 			ChargePeriod:               balanceSendPeriod,
-			ChargePeriodLeeway:         15 * time.Minute,
+			ChargePeriodLeeway:         2 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
 			FirstInvoiceSendTimeout:    10 * time.Second,
