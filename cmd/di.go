@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/config"
 	appconfig "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
@@ -163,7 +162,6 @@ type Dependencies struct {
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Configure(&nodeOptions.LogOptions)
-	nats_discovery.Bootstrap()
 	p2p.RegisterContactUnserializer()
 	di.BrokerConnector = nats.NewBrokerConnector()
 
