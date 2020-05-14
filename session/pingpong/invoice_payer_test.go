@@ -564,7 +564,6 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Equal(t, event.AppTopicInvoicePaid, ev.name)
 	assert.EqualValues(t, event.AppEventInvoicePaid{
 		ConsumerID: emt.deps.Identity,
-		SessionID:  "",
 		Invoice: crypto.Invoice{
 			AgreementTotal: 15,
 			Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",

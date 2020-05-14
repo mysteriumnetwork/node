@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
@@ -58,6 +57,10 @@ func (m mockBalanceTracker) Stop() {
 
 }
 
+func (m mockBalanceTracker) WaitFirstInvoice(time.Duration) error {
+	return nil
+}
+
 func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accountant common.Address, sessionID string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
@@ -69,14 +72,12 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	pingerParams := &traversal.Params{}
 	session, err := NewSession()
 	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session.done
 
-	assert.Equal(t, expectedResult.Config, session.Config)
 	assert.Equal(t, expectedResult.Last, session.Last)
 	assert.Equal(t, expectedResult.done, session.done)
 	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
@@ -88,10 +89,9 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	pingerParams := &traversal.Params{}
 	session, err := NewSession()
 	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Empty(t, session.CreatedAt)
 }
@@ -116,9 +116,8 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	pingerParams := &traversal.Params{}
 	session, err := NewSession()
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(identity.FromAddress("some other id"), string(session.ID))
@@ -132,10 +131,9 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	manager := newManager(currentProposal, sessionStore)
 	manager.publisher = mp
 
-	pingerParams := &traversal.Params{}
 	session, err := NewSession()
 	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
+	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(consumerID, string(session.ID))
