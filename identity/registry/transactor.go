@@ -363,3 +363,40 @@ func (t *Transactor) signSetBeneficiaryRequest(signer identity.Signer, req pc.Se
 
 	return signature.Bytes(), nil
 }
+
+// TransactorRegistrationEntryStatus represents the registration status.
+type TransactorRegistrationEntryStatus string
+
+const (
+	// TransactorRegistrationEntryStatusCreated tells us that the registration is created.
+	TransactorRegistrationEntryStatusCreated = TransactorRegistrationEntryStatus("created")
+	// TransactorRegistrationEntryStatusPriceIncreased tells us that registration was requeued with an increased price.
+	TransactorRegistrationEntryStatusPriceIncreased = TransactorRegistrationEntryStatus("priceIncreased")
+	// TransactorRegistrationEntryStatusFailed tells us that the registration has failed.
+	TransactorRegistrationEntryStatusFailed = TransactorRegistrationEntryStatus("failed")
+	// TransactorRegistrationEntryStatusSucceed tells us that the registration has succeeded.
+	TransactorRegistrationEntryStatusSucceed = TransactorRegistrationEntryStatus("succeed")
+)
+
+// TransactorStatusResponse represents the current registration status.
+type TransactorStatusResponse struct {
+	IdentityID   string                            `json:"identity_id"`
+	Status       TransactorRegistrationEntryStatus `json:"status"`
+	TxHash       string                            `json:"tx_hash"`
+	CreatedAt    time.Time                         `json:"created_at"`
+	UpdatedAt    time.Time                         `json:"updated_at"`
+	BountyAmount uint64                            `json:"bounty_amount"`
+}
+
+// FetchRegistrationStatus fetches current transactor registration status for given identity.
+func (t *Transactor) FetchRegistrationStatus(id string) (TransactorStatusResponse, error) {
+	f := TransactorStatusResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("identity/%v/status", id), nil)
+	if err != nil {
+		return f, fmt.Errorf("failed to fetch transactor registration status: %w", err)
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	return f, err
+}

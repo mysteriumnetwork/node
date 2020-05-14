@@ -449,6 +449,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
 		di.AccountantCaller,
+		di.Transactor,
 	)
 
 	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)

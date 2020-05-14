@@ -191,27 +191,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		return
 	}
 
-	info("Waiting for registration to complete")
-	timeout := time.After(3 * time.Minute)
-	for {
-		select {
-		case <-timeout:
-			warn("Identity registration timed out")
-			return
-		case <-time.After(2 * time.Second):
-			status, err := c.tequilapi.IdentityRegistrationStatus(address)
-			if err != nil {
-				warn(err)
-			}
-			fmt.Print(status.Status, ".. ")
-
-			if status.Registered {
-				fmt.Println()
-				success("Identity registered")
-				return
-			}
-		}
-	}
+	info("Registration successful, you can now connect.")
 }
 
 const usageTopupIdentity = "topup <identity>"

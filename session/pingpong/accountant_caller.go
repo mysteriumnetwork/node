@@ -335,6 +335,9 @@ var ErrAccountantNotFound = errors.New("resource not found")
 // ErrTooManyRequests occurs when we call the reveal R or request promise errors asynchronously at the same time.
 var ErrTooManyRequests = errors.New("too many simultaneous requests")
 
+// ErrConsumerUnregistered indicates that the consumer is not registered.
+var ErrConsumerUnregistered = errors.New("consumer unregistered")
+
 var accountantCauseToError = map[string]error{
 	ErrAccountantInvalidSignature.Error():         ErrAccountantInvalidSignature,
 	ErrAccountantInternal.Error():                 ErrAccountantInternal,
@@ -349,6 +352,7 @@ var accountantCauseToError = map[string]error{
 	ErrAccountantNotFound.Error():                 ErrAccountantNotFound,
 	ErrNeedsRRecovery.Error():                     ErrNeedsRRecovery,
 	ErrTooManyRequests.Error():                    ErrTooManyRequests,
+	ErrConsumerUnregistered.Error():               ErrConsumerUnregistered,
 }
 
 type rRecoveryDetails struct {
