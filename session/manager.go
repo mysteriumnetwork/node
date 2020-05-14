@@ -20,6 +20,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -151,7 +152,7 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (err error) {
+func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int) (err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -164,7 +165,6 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
 	session.done = make(chan struct{})
-	session.Config = config
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
@@ -189,6 +189,12 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 			}
 		}
 	}()
+
+	log.Info().Msg("Waiting for a first invoice to be paid")
+	// TODO 3 seconds timeout should be increased when all consumers will be able to pay for the first invoice before session start.
+	if err := engine.WaitFirstInvoice(3 * time.Second); err != nil {
+		return fmt.Errorf("first invoice was not paid: %w", err)
+	}
 
 	go manager.keepAliveLoop(session, manager.channel)
 	manager.sessionStorage.Add(*session)

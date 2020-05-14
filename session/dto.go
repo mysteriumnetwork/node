@@ -30,6 +30,7 @@ type ID string
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
 type PaymentEngine interface {
 	Start() error
+	WaitFirstInvoice(time.Duration) error
 	Stop()
 }
 
@@ -42,7 +43,6 @@ type DataTransferred struct {
 type Session struct {
 	ID              ID
 	ConsumerID      identity.Identity
-	Config          ServiceConfiguration
 	ServiceID       string
 	ServiceType     string
 	CreatedAt       time.Time

@@ -269,11 +269,6 @@ func (ip *InvoicePayer) Stop() {
 }
 
 func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.AppEventConnectionStatistics) {
-	// skip irrelevant sessions
-	if !strings.EqualFold(string(e.SessionInfo.SessionID), ip.deps.SessionID) {
-		return
-	}
-
 	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
 	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
 	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
@@ -305,4 +300,9 @@ func (ip *InvoicePayer) getDataTransferred() DataTransferred {
 	defer ip.dataTransferredLock.Unlock()
 
 	return ip.dataTransferred
+}
+
+// SetSessionID updates invoice payer dependencies to set session ID once session established.
+func (ip *InvoicePayer) SetSessionID(sessionID string) {
+	ip.deps.SessionID = sessionID
 }
