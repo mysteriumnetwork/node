@@ -27,9 +27,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/xtaci/kcp-go/v5"
+	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
 )
 
@@ -45,8 +46,9 @@ var (
 )
 
 const (
-	kcpMTUSize = 1280
-	mtuLimit   = 1500
+	kcpMTUSize            = 1280
+	mtuLimit              = 1500
+	initialTrafficTimeout = 10 * time.Second
 )
 
 // ChannelSender is used to send messages.
@@ -165,6 +167,12 @@ type channel struct {
 
 	// stop is used to stop all running goroutines.
 	stop chan struct{}
+
+	// weather channel saw remote traffic
+	remoteAlive chan struct{}
+
+	// terminate remote aliveness checking only once
+	remoteAliveOnce sync.Once
 }
 
 // newChannel creates new p2p channel with initialized crypto primitives for data encryption
@@ -214,6 +222,7 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		serviceConn:      nil,
 		stop:             make(chan struct{}, 1),
 		sendQueue:        make(chan *transportMsg, 100),
+		remoteAlive:      make(chan struct{}, 1),
 	}
 
 	go c.remoteReadLoop()
@@ -229,6 +238,9 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 func (c *channel) remoteReadLoop() {
 	buf := make([]byte, mtuLimit)
 	latestPeerAddr := c.peer.addr()
+
+	go c.checkIfChannelAlive()
+
 	for {
 		select {
 		case <-c.stop:
@@ -243,6 +255,10 @@ func (c *channel) remoteReadLoop() {
 			}
 			return
 		}
+
+		c.remoteAliveOnce.Do(func() {
+			close(c.remoteAlive)
+		})
 
 		// Check if peer port changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
@@ -509,6 +525,20 @@ func (c *channel) setUpnpPortsRelease(release []func()) {
 	defer c.mu.Unlock()
 
 	c.upnpPortsRelease = release
+}
+
+func (c *channel) checkIfChannelAlive() {
+	select {
+	case <-c.stop:
+	case <-c.remoteAlive:
+		return
+	case <-time.After(initialTrafficTimeout):
+		log.Warn().Msgf("No initial traffic for %.0f sec. Terminating channel.", initialTrafficTimeout.Seconds())
+		err := c.Close()
+		if err != nil {
+			log.Err(err).Msg("Failed to close channel on inactivity")
+		}
+	}
 }
 
 func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
