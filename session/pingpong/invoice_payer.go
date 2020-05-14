@@ -96,6 +96,7 @@ type InvoicePayerDeps struct {
 	Ks                        hashSigner
 	Identity, Peer            identity.Identity
 	Proposal                  market.ServiceProposal
+	SessionID                 string
 	ChannelAddressCalculator  channelAddressCalculator
 	EventBus                  eventbus.EventBus
 	AccountantAddress         common.Address
@@ -249,6 +250,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 
 	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
 		ConsumerID: ip.deps.Identity,
+		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,
 	})
 
@@ -298,4 +300,9 @@ func (ip *InvoicePayer) getDataTransferred() DataTransferred {
 	defer ip.dataTransferredLock.Unlock()
 
 	return ip.dataTransferred
+}
+
+// SetSessionID updates invoice payer dependencies to set session ID once session established.
+func (ip *InvoicePayer) SetSessionID(sessionID string) {
+	ip.deps.SessionID = sessionID
 }

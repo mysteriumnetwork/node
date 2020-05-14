@@ -594,6 +594,9 @@ func (mpm *MockPaymentIssuer) Stop() {
 	close(mpm.stopChan)
 }
 
+func (mpm *MockPaymentIssuer) SetSessionID(string) {
+}
+
 type mockStatusSender struct {
 	sentMsg *connectivity.StatusMessage
 	sync.Mutex

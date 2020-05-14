@@ -96,6 +96,7 @@ type Creator func(serviceType string) (Connection, error)
 // PaymentIssuer handles the payments for service
 type PaymentIssuer interface {
 	Start() error
+	SetSessionID(string)
 	Stop()
 }
 
@@ -201,7 +202,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	var serviceConn, channelConn *net.UDPConn
 	var sessionDTO session.CreateResponse
 
-	err = m.launchPayments(channel, consumerID, providerID, accountantID, proposal)
+	paymentSession, err := m.launchPayments(channel, consumerID, providerID, accountantID, proposal)
 	if err != nil {
 		return err
 	}
@@ -213,6 +214,8 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		m.sendSessionStatus(channel, consumerID, sessionDTO.Session.ID, connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
+
+	paymentSession.SetSessionID(string(sessionDTO.Session.ID))
 
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
@@ -307,10 +310,10 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) error {
+func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
 	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, accountantID, proposal)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: payments")
@@ -320,7 +323,7 @@ func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, prov
 	})
 
 	go m.payForService(payments)
-	return nil
+	return payments, nil
 }
 
 func (m *connectionManager) cleanConnection() {
