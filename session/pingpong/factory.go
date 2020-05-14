@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -180,19 +179,8 @@ func ExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(paymentInfo session.PaymentInfo,
-	channel p2p.Channel,
-	consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
-	return func(paymentInfo session.PaymentInfo,
-		channel p2p.Channel,
-		consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
-
-		if paymentInfo.Supports != string(session.PaymentVersionV3) {
-			log.Info().Msg("provider requested old payments")
-			return nil, errors.New("provider requested old payments")
-		}
-
-		log.Info().Msg("Using new payments")
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
@@ -210,7 +198,6 @@ func ExchangeFactoryFunc(
 			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Hex(), channelImplementation, registryAddress),
 			EventBus:                  eventBus,
 			AccountantAddress:         accountant,
-			SessionID:                 sessionID,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
 		}
 		return NewInvoicePayer(deps), nil

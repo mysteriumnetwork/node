@@ -96,7 +96,6 @@ type InvoicePayerDeps struct {
 	Ks                        hashSigner
 	Identity, Peer            identity.Identity
 	Proposal                  market.ServiceProposal
-	SessionID                 string
 	ChannelAddressCalculator  channelAddressCalculator
 	EventBus                  eventbus.EventBus
 	AccountantAddress         common.Address
@@ -250,7 +249,6 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 
 	ip.deps.EventBus.Publish(event.AppTopicInvoicePaid, event.AppEventInvoicePaid{
 		ConsumerID: ip.deps.Identity,
-		SessionID:  ip.deps.SessionID,
 		Invoice:    invoice,
 	})
 
@@ -269,11 +267,6 @@ func (ip *InvoicePayer) Stop() {
 }
 
 func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.AppEventConnectionStatistics) {
-	// skip irrelevant sessions
-	if !strings.EqualFold(string(e.SessionInfo.SessionID), ip.deps.SessionID) {
-		return
-	}
-
 	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
 	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
 	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.

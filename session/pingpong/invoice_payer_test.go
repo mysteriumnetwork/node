@@ -533,7 +533,6 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Nil(t, err)
 
 	peerID := identity.FromAddress("0x01")
-	sessionID := "100"
 
 	mp := &mockPublisher{
 		publicationChan: make(chan testEvent, 10),
@@ -546,11 +545,10 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 			ConsumerTotalsStorage: &mockConsumerTotalsStorage{
 				bus: mp,
 			},
-			Ks:        ks,
-			EventBus:  mp,
-			Identity:  identity.FromAddress(acc.Address.Hex()),
-			Peer:      peerID,
-			SessionID: sessionID,
+			Ks:       ks,
+			EventBus: mp,
+			Identity: identity.FromAddress(acc.Address.Hex()),
+			Peer:     peerID,
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -566,7 +564,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Equal(t, event.AppTopicInvoicePaid, ev.name)
 	assert.EqualValues(t, event.AppEventInvoicePaid{
 		ConsumerID: emt.deps.Identity,
-		SessionID:  sessionID,
+		SessionID:  "",
 		Invoice: crypto.Invoice{
 			AgreementTotal: 15,
 			Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",

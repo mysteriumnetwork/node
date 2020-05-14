@@ -107,8 +107,7 @@ type validator interface {
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(paymentInfo session.PaymentInfo, channel p2p.Channel,
-	consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -202,17 +201,16 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	var serviceConn, channelConn *net.UDPConn
 	var sessionDTO session.CreateResponse
 
+	err = m.launchPayments(channel, consumerID, providerID, accountantID, proposal)
+	if err != nil {
+		return err
+	}
+
 	sessionDTO, err = m.createP2PSession(m.currentCtx(), connection, channel, consumerID, accountantID, proposal)
 	serviceConn = channel.ServiceConn()
 	channelConn = channel.Conn()
 	if err != nil {
 		m.sendSessionStatus(channel, consumerID, sessionDTO.Session.ID, connectivity.StatusSessionEstablishmentFailed, err)
-		return err
-	}
-
-	err = m.launchPayments(sessionDTO.PaymentInfo, channel, consumerID, providerID, accountantID, proposal, sessionDTO.Session.ID)
-	if err != nil {
-		m.sendSessionStatus(channel, consumerID, sessionDTO.Session.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
 	}
 
@@ -309,8 +307,8 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) launchPayments(paymentInfo session.PaymentInfo, channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, sessionID session.ID) error {
-	payments, err := m.paymentEngineFactory(paymentInfo, channel, consumerID, providerID, accountantID, proposal, string(sessionID))
+func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) error {
+	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, accountantID, proposal)
 	if err != nil {
 		return err
 	}
