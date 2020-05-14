@@ -40,8 +40,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	nat_event "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils/netutil"
@@ -64,7 +62,6 @@ type Manager struct {
 	natEventGetter  NATEventGetter
 	dnsProxy        *dns.Proxy
 	bus             eventbus.EventBus
-	portMapper      mapping.PortMapper
 	trafficFirewall firewall.IncomingTrafficFirewall
 	vpnNetwork      net.IPNet
 	vpnServerPort   int
@@ -188,8 +185,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		return nil, errors.New("service port not initialized")
 	}
 
-	traversalParams := traversal.Params{}
-
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
 		return nil, fmt.Errorf("could not get public IP: %w", err)
@@ -222,7 +217,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		}
 	}
 
-	return &session.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
+	return &session.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy}, nil
 }
 
 func (m *Manager) startServer() error {

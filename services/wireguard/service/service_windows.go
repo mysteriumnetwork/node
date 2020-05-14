@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 )
@@ -47,7 +46,6 @@ func NewManager(
 	eventPublisher eventbus.Publisher,
 	options Options,
 	portSupplier port.ServicePortSupplier,
-	portMapper mapping.PortMapper,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
 	return &Manager{}

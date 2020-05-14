@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -46,7 +45,7 @@ type Manager struct {
 
 // ProvideConfig provides the session configuration
 func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
-	return &session.ConfigParams{TraversalParams: traversal.Params{}}, nil
+	return &session.ConfigParams{}, nil
 }
 
 // Serve starts service - does block

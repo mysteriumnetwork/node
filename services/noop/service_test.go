@@ -47,7 +47,6 @@ func Test_Manager_ProvideConfig(t *testing.T) {
 	manager := NewManager()
 	sessionConfig, err := manager.ProvideConfig("", nil, nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, sessionConfig.TraversalParams)
 	assert.Nil(t, sessionConfig.SessionServiceConfig)
 	assert.Nil(t, sessionConfig.SessionDestroyCallback)
 }

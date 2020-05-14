@@ -98,7 +98,6 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				di.EventBus,
 				wgOptions,
 				portPool,
-				di.PortMapper,
 				di.ServiceFirewall,
 			)
 			return svc, wireguard_service.GetProposal(loc), nil
@@ -138,7 +137,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.NATTracker,
 			portPool,
 			di.EventBus,
-			di.PortMapper,
 			di.ServiceFirewall,
 		)
 		return manager, proposal, nil

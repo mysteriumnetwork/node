@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -55,7 +54,7 @@ func (service *serviceFake) GetType() string {
 }
 
 func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
-	return &session.ConfigParams{TraversalParams: traversal.Params{}}, nil
+	return &session.ConfigParams{}, nil
 }
 
 type mockDiscovery struct {

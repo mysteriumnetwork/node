@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	sevent "github.com/mysteriumnetwork/node/session/event"
@@ -53,7 +52,6 @@ type IDGenerator func() (ID, error)
 type ConfigParams struct {
 	SessionServiceConfig   ServiceConfiguration
 	SessionDestroyCallback DestroyCallback
-	TraversalParams        traversal.Params
 }
 
 type publisher interface {
