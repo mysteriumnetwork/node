@@ -69,7 +69,7 @@ func (d Daemon) dialog(conn io.ReadWriter) {
 			answer.ok("pong")
 		case commandRun:
 			go func() {
-				err := d.RunMyst()
+				err := d.runMyst(cmd...)
 				if err != nil {
 					log.Printf("failed %s: %s", commandRun, err)
 					answer.err(err)

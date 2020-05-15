@@ -19,6 +19,7 @@ package daemon
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,8 +33,15 @@ import (
 
 const pidFile = "/var/run/myst.pid"
 
-// RunMyst runs mysterium node daemon. Blocks.
-func (d *Daemon) RunMyst() error {
+// runMyst runs mysterium node daemon. Blocks.
+func (d *Daemon) runMyst(args ...string) error {
+	flags := flag.NewFlagSet("", flag.ContinueOnError)
+	uid := flags.Int("uid", 0, "")
+	gid := flags.Int("gid", 0, "")
+	if err := flags.Parse(args[1:]); err != nil {
+		return err
+	}
+
 	paths := []string{
 		d.cfg.OpenVPNPath,
 		"/usr/bin",
@@ -43,6 +51,9 @@ func (d *Daemon) RunMyst() error {
 		"/usr/local/bin",
 	}
 	var stdout, stderr bytes.Buffer
+	sysProcAttr := &syscall.SysProcAttr{}
+	sysProcAttr.Credential = &syscall.Credential{Uid: uint32(*uid), Gid: uint32(*gid)}
+
 	cmd := exec.Cmd{
 		Path: d.cfg.MystPath,
 		Args: []string{
@@ -57,8 +68,9 @@ func (d *Daemon) RunMyst() error {
 			"HOME=" + d.cfg.MystHome,
 			"PATH=" + strings.Join(paths, ":"),
 		},
-		Stdout: &stdout,
-		Stderr: &stderr,
+		Stdout:      &stdout,
+		Stderr:      &stderr,
+		SysProcAttr: sysProcAttr,
 	}
 	if err := cmd.Start(); err != nil {
 		return err

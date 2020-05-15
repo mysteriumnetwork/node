@@ -19,8 +19,8 @@ package daemon
 
 import "errors"
 
-// RunMyst runs mysterium node daemon. Blocks.
-func (d *Daemon) RunMyst() error {
+// runMyst runs mysterium node daemon. Blocks.
+func (d *Daemon) runMyst(args ...string) error {
 	return errors.New("not implemented")
 }
 
