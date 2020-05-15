@@ -46,7 +46,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		TransactorRegistryAddress:       "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
 		TransactorChannelImplementation: "0x599d43715DF3070f83355D9D90AE62c159E62A75",
 		AccountantEndpointAddress:       "http://accountant:8889/api/v1",
-		AccountantID:                    "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8",
+		AccountantID:                    "0x7621a5E6EC206309f8E703A653f03F7C8a3097a8",
 		MystSCAddress:                   "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665",
 	}
 

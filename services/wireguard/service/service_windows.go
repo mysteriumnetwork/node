@@ -28,15 +28,9 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 )
-
-type natPinger interface {
-	BindServicePort(key string, port int)
-	Stop()
-}
 
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
@@ -48,12 +42,10 @@ func NewManager(
 	ipResolver ip.Resolver,
 	country string,
 	natService nat.NATService,
-	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	eventPublisher eventbus.Publisher,
 	options Options,
 	portSupplier port.ServicePortSupplier,
-	portMapper mapping.PortMapper,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
 	return &Manager{}

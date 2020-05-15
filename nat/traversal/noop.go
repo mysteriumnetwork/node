@@ -49,15 +49,6 @@ func (np *NoopPinger) SetProtectSocketCallback(socketProtect func(socket int) bo
 // Stop does nothing
 func (np *NoopPinger) Stop() {}
 
-// PingProvider does nothing
-func (np *NoopPinger) PingProvider(ctx context.Context, _ string, _, _ []int, _ int) (int, int, error) {
-	return 0, 0, nil
-}
-
-// PingConsumer does nothing
-func (np *NoopPinger) PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string) {
-}
-
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(key string, port int) {}
 

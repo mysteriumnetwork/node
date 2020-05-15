@@ -170,6 +170,12 @@ var (
 		Usage: "the port to run ui on",
 		Value: 4449,
 	}
+	// FlagUserMode allows to run node under current user without sudo.
+	FlagUserMode = cli.BoolFlag{
+		Name:  "usermode",
+		Usage: "Run as a regular user. Delegate elevated commands to the supervisor.",
+		Value: false,
+	}
 	// FlagVendorID identifies 3rd party vendor (distributor) of Mysterium node.
 	FlagVendorID = cli.StringFlag{
 		Name: "vendor.id",
@@ -216,9 +222,10 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagQualityAddress,
 		&FlagTequilapiAddress,
 		&FlagTequilapiPort,
-		&FlagUIEnable,
 		&FlagPProfEnable,
+		&FlagUIEnable,
 		&FlagUIPort,
+		&FlagUserMode,
 		&FlagVendorID,
 		&FlagP2PListenPorts,
 	)
@@ -258,6 +265,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseIntFlag(ctx, FlagUIPort)
+	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 

@@ -73,7 +73,6 @@ func (r *Runner) Test(providerHost string) error {
 		"-provider.tequilapi-host", providerHost,
 		"-provider.tequilapi-port=4050",
 		"-consumer.tequilapi-port=4050",
-		"-geth.url=ws://ganache:8545",
 		"-consumer.services", r.services,
 	)
 	return errors.Wrap(err, "tests failed!")

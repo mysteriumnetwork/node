@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
@@ -44,7 +43,6 @@ type testContext struct {
 	suite.Suite
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
-	mockDialog            *mockDialog
 	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *StubPublisher
 	mockStatistics        Statistics
@@ -81,16 +79,6 @@ func (tc *testContext) SetupTest() {
 	defer tc.Unlock()
 
 	tc.stubPublisher = NewStubPublisher()
-	dialogCreator := func(consumer, provider identity.Identity, contact market.Contact) (communication.Dialog, error) {
-		tc.Lock()
-		defer tc.Unlock()
-		tc.mockDialog = &mockDialog{
-			sessionID:   establishedSessionID,
-			paymentInfo: paymentInfo,
-		}
-		return tc.mockDialog, nil
-	}
-
 	tc.mockStatistics = Statistics{
 		BytesReceived: 10,
 		BytesSent:     20,
@@ -136,12 +124,10 @@ func (tc *testContext) SetupTest() {
 	tc.mockTime = time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC)
 
 	tc.connManager = NewManager(
-		dialogCreator,
-		func(paymentInfo session.PaymentInfo,
-			dialog communication.Dialog, channel p2p.Channel,
-			consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (PaymentIssuer, error) {
+		func(channel p2p.Channel,
+			consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
-				initialState:      paymentInfo,
+				initialState:      session.PaymentInfo{},
 				paymentDefinition: market.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
@@ -149,7 +135,6 @@ func (tc *testContext) SetupTest() {
 		},
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
-		tc.statusSender,
 		tc.fakeResolver,
 		tc.config,
 		tc.statsReportInterval,
@@ -609,22 +594,19 @@ func (mpm *MockPaymentIssuer) Stop() {
 	close(mpm.stopChan)
 }
 
+func (mpm *MockPaymentIssuer) SetSessionID(string) {
+}
+
 type mockStatusSender struct {
 	sentMsg *connectivity.StatusMessage
 	sync.Mutex
 }
 
-func (s *mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) error {
+func (s *mockStatusSender) Send(msg *connectivity.StatusMessage) error {
 	s.Lock()
 	defer s.Unlock()
 	s.sentMsg = msg
 	return nil
-}
-
-func (s *mockStatusSender) getSentMsg() connectivity.StatusMessage {
-	s.Lock()
-	defer s.Unlock()
-	return *s.sentMsg
 }
 
 type mockPaymentMethod struct {

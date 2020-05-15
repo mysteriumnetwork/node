@@ -62,6 +62,8 @@ func (c *cliApp) identities(argsString string) {
 		c.unlockIdentity(actionArgs)
 	case "register":
 		c.registerIdentity(actionArgs)
+	case "beneficiary":
+		c.setBeneficiary(actionArgs)
 	case "topup":
 		c.topupIdentity(actionArgs)
 	case "settle":
@@ -189,27 +191,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		return
 	}
 
-	info("Waiting for registration to complete")
-	timeout := time.After(3 * time.Minute)
-	for {
-		select {
-		case <-timeout:
-			warn("Identity registration timed out")
-			return
-		case <-time.After(2 * time.Second):
-			status, err := c.tequilapi.IdentityRegistrationStatus(address)
-			if err != nil {
-				warn(err)
-			}
-			fmt.Print(status.Status, ".. ")
-
-			if status.Registered {
-				fmt.Println()
-				success("Identity registered")
-				return
-			}
-		}
-	}
+	info("Registration successful, you can now connect.")
 }
 
 const usageTopupIdentity = "topup <identity>"
@@ -261,6 +243,51 @@ func (c *cliApp) settle(args []string) {
 			}
 			info("settlement succeeded")
 			return
+		}
+	}
+}
+
+func (c *cliApp) setBeneficiary(actionArgs []string) {
+	const usageSetBeneficiary = "beneficiary <identity> [new beneficiary]"
+
+	if len(actionArgs) < 1 || len(actionArgs) > 3 {
+		info("Usage: " + usageSetBeneficiary)
+		return
+	}
+
+	var address = actionArgs[0]
+	var beneficiary string
+	if len(actionArgs) >= 1 {
+		beneficiary = actionArgs[1]
+	}
+
+	accountantID := config.GetString(config.FlagAccountantID)
+	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, accountantID)
+	if err != nil {
+		warn(errors.Wrap(err, "could not set beneficiary"))
+		return
+	}
+
+	info("Waiting for new beneficiary to be set")
+	timeout := time.After(1 * time.Minute)
+
+	for {
+		select {
+		case <-timeout:
+			warn("Setting new beneficiary timed out")
+			return
+		case <-time.After(time.Second):
+			data, err := c.tequilapi.Beneficiary(address)
+			if err != nil {
+				warn(err)
+			}
+
+			if strings.EqualFold(data.Beneficiary, beneficiary) {
+				success("New beneficiary address set")
+				return
+			}
+
+			fmt.Print(".")
 		}
 	}
 }

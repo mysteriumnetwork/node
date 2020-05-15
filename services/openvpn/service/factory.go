@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,23 +37,18 @@ func NewManager(nodeOptions node.Options,
 	ipResolver ip.Resolver,
 	sessionMap SessionMap,
 	natService nat.NATService,
-	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
 	bus eventbus.EventBus,
-	portMapper mapping.PortMapper,
 	trafficFirewall firewall.IncomingTrafficFirewall,
 ) *Manager {
 	return &Manager{
 		nodeOptions:     nodeOptions,
 		serviceOptions:  serviceOptions,
 		natService:      natService,
-		natPingerPorts:  port.NewPool(),
-		natPinger:       natPinger,
 		natEventGetter:  natEventGetter,
 		ports:           portPool,
 		bus:             bus,
-		portMapper:      portMapper,
 		trafficFirewall: trafficFirewall,
 		country:         country,
 		ipResolver:      ipResolver,

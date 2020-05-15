@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/payments/client"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
@@ -38,6 +39,10 @@ const AppTopicTransactorRegistration = "transactor_identity_registration"
 // AppTopicTransactorTopUp represents the top up topic to which events regarding top up attempts are sent.
 const AppTopicTransactorTopUp = "transactor_top_up"
 
+type channelProvider interface {
+	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+}
+
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
 	httpClient            *requests.HTTPClient
@@ -47,10 +52,11 @@ type Transactor struct {
 	accountantID          string
 	channelImplementation string
 	publisher             eventbus.Publisher
+	bc                    channelProvider
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
 	return &Transactor{
 		httpClient:            httpClient,
 		endpointAddress:       endpointAddress,
@@ -59,6 +65,7 @@ func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAdd
 		accountantID:          accountantID,
 		channelImplementation: channelImplementation,
 		publisher:             publisher,
+		bc:                    bc,
 	}
 }
 
@@ -209,20 +216,21 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
-	regReq := IdentityRegistrationRequest{RegistryAddress: t.registryAddress, AccountantID: t.accountantID}
+	regReq := IdentityRegistrationRequest{
+		RegistryAddress: t.registryAddress,
+		AccountantID:    t.accountantID,
+		Stake:           regReqDTO.Stake,
+		Fee:             regReqDTO.Fee,
+		Beneficiary:     regReqDTO.Beneficiary,
+	}
 
-	regReq.Stake = regReqDTO.Stake
-	regReq.Fee = regReqDTO.Fee
-
-	if regReqDTO.Beneficiary == "" {
+	if regReq.Beneficiary == "" {
 		channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
 
 		regReq.Beneficiary = channelAddress
-	} else {
-		regReq.Beneficiary = regReqDTO.Beneficiary
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
@@ -269,5 +277,126 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 	if err != nil {
 		return nil, errors.Wrap(err, "signature reformat failed")
 	}
-	return signature.Bytes(), err
+
+	return signature.Bytes(), nil
+}
+
+// SettleWithBeneficiaryRequest represent the request for setting new beneficiary address.
+type SettleWithBeneficiaryRequest struct {
+	Promise     PromiseSettlementRequest
+	Beneficiary string `json:"beneficiary"`
+	Nonce       uint64 `json:"nonce"`
+	Signature   string `json:"signature"`
+}
+
+// SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
+func (t *Transactor) SettleWithBeneficiary(id, beneficiary, accountantID string, promise pc.Promise) error {
+	signedReq, err := t.fillSetBeneficiaryRequest(id, beneficiary)
+	if err != nil {
+		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
+	}
+
+	payload := SettleWithBeneficiaryRequest{
+		Promise: PromiseSettlementRequest{
+			AccountantID:  accountantID,
+			ChannelID:     hex.EncodeToString(promise.ChannelID),
+			Amount:        promise.Amount,
+			TransactorFee: promise.Fee,
+			Preimage:      hex.EncodeToString(promise.R),
+			Signature:     hex.EncodeToString(promise.Signature),
+		},
+		Beneficiary: signedReq.Beneficiary,
+		Nonce:       signedReq.Nonce,
+		Signature:   signedReq.Signature,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
+	if err != nil {
+		return fmt.Errorf("failed to create RegisterIdentity request %w", err)
+	}
+
+	return t.httpClient.DoRequest(req)
+}
+
+func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
+	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.accountantID), common.HexToAddress(id), false)
+	if err != nil {
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
+	}
+
+	addr, err := pc.GenerateProviderChannelID(id, t.accountantID)
+	if err != nil {
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
+	}
+
+	regReq := pc.SetBeneficiaryRequest{
+		Beneficiary: strings.ToLower(beneficiary),
+		ChannelID:   strings.ToLower(addr),
+		Nonce:       ch.LastUsedNonce.Uint64() + 1,
+	}
+
+	signer := t.signerFactory(identity.FromAddress(id))
+
+	sig, err := t.signSetBeneficiaryRequest(signer, regReq)
+	if err != nil {
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to sign set beneficiary request: %w", err)
+	}
+
+	signatureHex := common.Bytes2Hex(sig)
+	regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
+
+	return regReq, nil
+}
+
+func (t *Transactor) signSetBeneficiaryRequest(signer identity.Signer, req pc.SetBeneficiaryRequest) ([]byte, error) {
+	message := req.GetMessage()
+
+	signature, err := signer.Sign(message)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign set beneficiary request: %w", err)
+	}
+
+	err = pc.ReformatSignatureVForBC(signature.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("signature reformat failed: %w", err)
+	}
+
+	return signature.Bytes(), nil
+}
+
+// TransactorRegistrationEntryStatus represents the registration status.
+type TransactorRegistrationEntryStatus string
+
+const (
+	// TransactorRegistrationEntryStatusCreated tells us that the registration is created.
+	TransactorRegistrationEntryStatusCreated = TransactorRegistrationEntryStatus("created")
+	// TransactorRegistrationEntryStatusPriceIncreased tells us that registration was requeued with an increased price.
+	TransactorRegistrationEntryStatusPriceIncreased = TransactorRegistrationEntryStatus("priceIncreased")
+	// TransactorRegistrationEntryStatusFailed tells us that the registration has failed.
+	TransactorRegistrationEntryStatusFailed = TransactorRegistrationEntryStatus("failed")
+	// TransactorRegistrationEntryStatusSucceed tells us that the registration has succeeded.
+	TransactorRegistrationEntryStatusSucceed = TransactorRegistrationEntryStatus("succeed")
+)
+
+// TransactorStatusResponse represents the current registration status.
+type TransactorStatusResponse struct {
+	IdentityID   string                            `json:"identity_id"`
+	Status       TransactorRegistrationEntryStatus `json:"status"`
+	TxHash       string                            `json:"tx_hash"`
+	CreatedAt    time.Time                         `json:"created_at"`
+	UpdatedAt    time.Time                         `json:"updated_at"`
+	BountyAmount uint64                            `json:"bounty_amount"`
+}
+
+// FetchRegistrationStatus fetches current transactor registration status for given identity.
+func (t *Transactor) FetchRegistrationStatus(id string) (TransactorStatusResponse, error) {
+	f := TransactorStatusResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("identity/%v/status", id), nil)
+	if err != nil {
+		return f, fmt.Errorf("failed to fetch transactor registration status: %w", err)
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	return f, err
 }

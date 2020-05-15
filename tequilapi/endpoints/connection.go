@@ -29,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/pkg/errors"
@@ -152,12 +151,15 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 	switch status {
-	case registry.Unregistered, registry.InProgress, registry.RegistrationError:
+	case registry.Unregistered, registry.RegistrationError:
 		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
+	case registry.InProgress:
+		log.Info().Msgf("identity %q registration is in progress, continuing...", cr.ConsumerID)
+	default:
+		log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 	}
-	log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 
 	// TODO Pass proposal ID directly in request
 	proposal, err := ce.proposalRepository.Proposal(market.ProposalID{
@@ -254,9 +256,6 @@ func AddRoutesForConnection(router *httprouter.Router, manager connection.Manage
 
 func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, error) {
 	var connectionRequest = contract.ConnectionCreateRequest{
-		// This defaults the service type to openvpn, for backward compatibility
-		// If specified in the request, the value will get overridden
-		ServiceType: openvpn.ServiceType,
 		ConnectOptions: contract.ConnectOptions{
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,

@@ -40,7 +40,7 @@ var (
 	consumerPassphrase = "localconsumer"
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
-	accountantID       = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
+	accountantID       = "0x7621a5E6EC206309f8E703A653f03F7C8a3097a8"
 )
 
 const (
@@ -166,7 +166,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "RegisteredProvider", idStatus.RegistrationStatus)
-	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
+	assert.Equal(t, "0x7F78C316d90713f19aeEeA840cEA47Fc3E8f92F4", idStatus.ChannelAddress)
 	assert.Equal(t, initialBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings)
 	assert.Zero(t, idStatus.EarningsTotal)

@@ -20,11 +20,8 @@ package session
 import (
 	"encoding/json"
 
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 )
-
-const endpointSessionCreate = communication.RequestEndpoint("session-create")
 
 var (
 	responseInvalidProposal    = CreateResponse{Success: false, Message: "Invalid Proposal"}

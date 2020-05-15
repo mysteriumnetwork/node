@@ -472,9 +472,11 @@ var mockProviderChannel = client.ProviderChannel{
 }
 
 type mockTransactor struct {
-	registerError error
-	feesToReturn  registry.FeesResponse
-	feesError     error
+	feesError    error
+	feesToReturn registry.FeesResponse
+
+	statusToReturn registry.TransactorStatusResponse
+	statusError    error
 }
 
 func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
@@ -483,4 +485,12 @@ func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
 
 func (mt *mockTransactor) SettleAndRebalance(id string, promise crypto.Promise) error {
 	return nil
+}
+
+func (mt *mockTransactor) SettleWithBeneficiary(_, _, _ string, _ crypto.Promise) error {
+	return nil
+}
+
+func (mt *mockTransactor) FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error) {
+	return mt.statusToReturn, mt.statusError
 }

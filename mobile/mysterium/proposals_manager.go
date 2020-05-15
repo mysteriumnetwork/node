@@ -44,9 +44,7 @@ const (
 
 // GetProposalsRequest represents proposals request.
 type GetProposalsRequest struct {
-	ShowOpenvpnProposals   bool
-	ShowWireguardProposals bool
-	Refresh                bool
+	Refresh bool
 }
 
 // GetProposalRequest represents proposal request.

@@ -1,3 +1,5 @@
+db.auth('root', 'root');
+db = db.getSiblingDB('accountant');
 db.createUser(
     {
         user: "accountant",
@@ -9,4 +11,17 @@ db.createUser(
             }
         ]
     }
+);
+db = db.getSiblingDB('transactor');
+db.createUser(
+    {
+        user: "transactor",
+        pwd: "transactor",
+        roles: [
+            {
+                role: "readWrite",
+                db: "transactor"
+            }
+        ]
+    }    
 );

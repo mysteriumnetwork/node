@@ -82,9 +82,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 	}
 
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
-		ShowOpenvpnProposals:   false,
-		ShowWireguardProposals: false,
-		Refresh:                false,
+		Refresh: false,
 	})
 
 	assert.NoError(s.T(), err)
@@ -97,9 +95,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 	}
 	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{}
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
-		ShowOpenvpnProposals:   false,
-		ShowWireguardProposals: false,
-		Refresh:                true,
+		Refresh: true,
 	})
 
 	assert.NoError(s.T(), err)

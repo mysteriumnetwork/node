@@ -20,7 +20,6 @@ package service
 import (
 	"sync"
 
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/market"
@@ -129,17 +128,15 @@ func NewInstance(
 	service RunnableService,
 	proposal market.ServiceProposal,
 	policies *policy.Repository,
-	dialog communication.DialogWaiter,
 	discovery Discovery,
 ) *Instance {
 	return &Instance{
-		options:      options,
-		state:        state,
-		service:      service,
-		proposal:     proposal,
-		policies:     policies,
-		dialogWaiter: dialog,
-		discovery:    discovery,
+		options:   options,
+		state:     state,
+		service:   service,
+		proposal:  proposal,
+		policies:  policies,
+		discovery: discovery,
 	}
 }
 
@@ -152,7 +149,6 @@ type Instance struct {
 	service         RunnableService
 	proposal        market.ServiceProposal
 	policies        *policy.Repository
-	dialogWaiter    communication.DialogWaiter
 	discovery       Discovery
 	eventPublisher  Publisher
 	p2pChannelsLock sync.Mutex
@@ -216,9 +212,6 @@ func (i *Instance) stop() error {
 	errStop := utils.ErrorCollection{}
 	if i.discovery != nil {
 		i.discovery.Stop()
-	}
-	if i.dialogWaiter != nil {
-		errStop.Add(i.dialogWaiter.Stop())
 	}
 	if i.service != nil {
 		errStop.Add(i.service.Stop())

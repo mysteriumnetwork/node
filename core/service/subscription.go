@@ -52,14 +52,14 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 			return fmt.Errorf("cannot create new session: %w", err)
 		}
 
+		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()))
+		if err != nil {
+			return fmt.Errorf("cannot start session %s: %w", string(session.ID), err)
+		}
+
 		config, err := service.ProvideConfig(string(session.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
 			return fmt.Errorf("cannot get provider config for session %s: %w", string(session.ID), err)
-		}
-
-		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()), config, nil)
-		if err != nil {
-			return fmt.Errorf("cannot start session %s: %w", string(session.ID), err)
 		}
 
 		if config.SessionDestroyCallback != nil {

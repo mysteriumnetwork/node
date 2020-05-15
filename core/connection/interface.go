@@ -21,13 +21,9 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
-
-// DialogCreator creates new dialog between consumer and provider, using given contact information
-type DialogCreator func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error)
 
 // ConsumerConfig are the parameters used for the initiation of connection
 type ConsumerConfig interface{}
@@ -51,9 +47,6 @@ type PromiseIssuer interface {
 	Start(proposal market.ServiceProposal) error
 	Stop() error
 }
-
-// PromiseIssuerCreator creates new PromiseIssuer given context
-type PromiseIssuerCreator func(issuerID identity.Identity, dialog communication.Dialog) PromiseIssuer
 
 // Manager interface provides methods to manage connection
 type Manager interface {

@@ -138,8 +138,7 @@ func (r *runner) startAppContainers() error {
 	err := r.compose("run", "go-runner",
 		"go", "run", "./e2e/blockchain/deployer.go",
 		"--keystore.directory=./e2e/blockchain/keystore",
-		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
-		"--geth.url=ws://ganache:8545")
+		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}

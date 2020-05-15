@@ -20,6 +20,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -28,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	sevent "github.com/mysteriumnetwork/node/session/event"
@@ -52,7 +52,6 @@ type IDGenerator func() (ID, error)
 type ConfigParams struct {
 	SessionServiceConfig   ServiceConfiguration
 	SessionDestroyCallback DestroyCallback
-	TraversalParams        traversal.Params
 }
 
 type publisher interface {
@@ -113,16 +112,11 @@ type NATEventGetter interface {
 	LastEvent() *event.Event
 }
 
-type natPinger interface {
-	PingConsumer(ctx context.Context, ip string, localPorts, remotePorts []int, mappingKey string)
-}
-
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
-	natPinger natPinger,
 	natEventGetter NATEventGetter,
 	serviceId string,
 	publisher publisher,
@@ -132,7 +126,6 @@ func NewManager(
 	return &Manager{
 		currentProposal:      currentProposal,
 		sessionStorage:       sessionStorage,
-		natPinger:            natPinger,
 		natEventGetter:       natEventGetter,
 		serviceId:            serviceId,
 		publisher:            publisher,
@@ -147,7 +140,6 @@ type Manager struct {
 	currentProposal      market.ServiceProposal
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
-	natPinger            natPinger
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher
@@ -158,7 +150,7 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (err error) {
+func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int) (err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -171,7 +163,6 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
 	session.done = make(chan struct{})
-	session.Config = config
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
@@ -197,10 +188,12 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 		}
 	}()
 
-	// TODO pingerParams is a backward compatibility limitation. Remove it once most of the clients will be updated.
-	if pingerParams != nil {
-		go manager.natPinger.PingConsumer(context.Background(), pingerParams.IP, pingerParams.LocalPorts, pingerParams.RemotePorts, pingerParams.ProxyPortMappingKey)
+	log.Info().Msg("Waiting for a first invoice to be paid")
+	// TODO 3 seconds timeout should be increased when all consumers will be able to pay for the first invoice before session start.
+	if err := engine.WaitFirstInvoice(3 * time.Second); err != nil {
+		return fmt.Errorf("first invoice was not paid: %w", err)
 	}
+
 	go manager.keepAliveLoop(session, manager.channel)
 	manager.sessionStorage.Add(*session)
 	return nil

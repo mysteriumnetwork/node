@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -33,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -96,7 +94,6 @@ func (pm PaymentMethod) GetRate() market.PaymentRate {
 
 // InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
-	dialog communication.Dialog,
 	channel p2p.Channel,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
@@ -110,7 +107,7 @@ func InvoiceFactoryCreator(
 	promiseHandler promiseHandler,
 ) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
-		exchangeChan, err := exchangeMessageReceiver(dialog, channel)
+		exchangeChan, err := exchangeMessageReceiver(channel)
 		if err != nil {
 			return nil, err
 		}
@@ -118,11 +115,11 @@ func InvoiceFactoryCreator(
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
 			Peer:                       consumerID,
-			PeerInvoiceSender:          NewInvoiceSender(dialog, channel),
+			PeerInvoiceSender:          NewInvoiceSender(channel),
 			InvoiceStorage:             invoiceStorage,
 			TimeTracker:                &timeTracker,
 			ChargePeriod:               balanceSendPeriod,
-			ChargePeriodLeeway:         15 * time.Minute,
+			ChargePeriodLeeway:         2 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
 			FirstInvoiceSendTimeout:    10 * time.Second,
@@ -143,17 +140,8 @@ func InvoiceFactoryCreator(
 	}
 }
 
-func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
+func exchangeMessageReceiver(channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
 	exchangeChan := make(chan crypto.ExchangeMessage, 1)
-
-	if channel == nil { // TODO this block should go away once p2p communication will replace communication dialog.
-		listener := NewExchangeListener(exchangeChan)
-		if err := dialog.Receive(listener.GetConsumer()); err != nil {
-			return nil, err
-		}
-
-		return exchangeChan, nil
-	}
 
 	channel.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
 		var msg pb.ExchangeMessage
@@ -183,7 +171,7 @@ func exchangeMessageReceiver(dialog communication.Dialog, channel p2p.ChannelHan
 	return exchangeChan, nil
 }
 
-// ExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
+// ExchangeFactoryFunc returns a exchange factory.
 func ExchangeFactoryFunc(
 	keystore hashSigner,
 	signer identity.SignerFactory,
@@ -191,27 +179,16 @@ func ExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(paymentInfo session.PaymentInfo,
-	dialog communication.Dialog, channel p2p.Channel,
-	consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
-	return func(paymentInfo session.PaymentInfo,
-		dialog communication.Dialog, channel p2p.Channel,
-		consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal, sessionID string) (connection.PaymentIssuer, error) {
-
-		if paymentInfo.Supports != string(session.PaymentVersionV3) {
-			log.Info().Msg("provider requested old payments")
-			return nil, errors.New("provider requested old payments")
-		}
-
-		log.Info().Msg("Using new payments")
-		invoices, err := invoiceReceiver(dialog, channel)
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
 		}
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoicePayerDeps{
 			InvoiceChan:               invoices,
-			PeerExchangeMessageSender: NewExchangeSender(dialog, channel),
+			PeerExchangeMessageSender: NewExchangeSender(channel),
 			ConsumerTotalsStorage:     totalStorage,
 			TimeTracker:               &timeTracker,
 			Ks:                        keystore,
@@ -221,23 +198,14 @@ func ExchangeFactoryFunc(
 			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Hex(), channelImplementation, registryAddress),
 			EventBus:                  eventBus,
 			AccountantAddress:         accountant,
-			SessionID:                 sessionID,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
 		}
 		return NewInvoicePayer(deps), nil
 	}
 }
 
-func invoiceReceiver(dialog communication.Dialog, channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
+func invoiceReceiver(channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
 	invoices := make(chan crypto.Invoice)
-	if channel == nil { // TODO this block should go away once p2p communication will replace communication dialog.
-		listener := NewInvoiceListener(invoices)
-		err := dialog.Receive(listener.GetConsumer())
-		if err != nil {
-			return nil, err
-		}
-		return invoices, nil
-	}
 
 	channel.Handle(p2p.TopicPaymentInvoice, func(c p2p.Context) error {
 		var msg pb.Invoice

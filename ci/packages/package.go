@@ -109,10 +109,19 @@ func PackageLinuxDebianArm64() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
-// PackageOsxAmd64 builds and stores OSX amd64 package
-func PackageOsxAmd64() error {
+// PackageMacOSAmd64 builds and stores macOS amd64 package
+func PackageMacOSAmd64() error {
 	logconfig.Bootstrap()
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
+}
+
+// PackageSupervisorMacOSAmd64 builds and stores macOS amd64 supervisor package
+func PackageSupervisorMacOSAmd64() error {
+	logconfig.Bootstrap()
+	if err := packageSupervisor("darwin", "amd64"); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -151,10 +160,6 @@ func PackageAndroid() error {
 		return !pr || fullBuild
 	})
 	logconfig.Bootstrap()
-
-	if os.Getenv("SKIP_VENDOR") != "1" {
-		mg.Deps(vendordModules)
-	}
 
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
@@ -280,6 +285,15 @@ func packageStandalone(binaryPath, os, arch string) error {
 		"BINARY": binaryPath,
 	}
 	return sh.RunWith(envs, "bin/package_standalone", os, arch)
+}
+
+func packageSupervisor(os, arch string) error {
+	log.Info().Msgf("Packaging supervisor %s %s", os, arch)
+	envs := map[string]string{
+		"GOOS":   os,
+		"GOARCH": arch,
+	}
+	return sh.RunWith(envs, "bin/package_supervisor", os, arch)
 }
 
 func packageDebian(binaryPath, arch string) error {

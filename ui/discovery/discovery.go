@@ -26,9 +26,8 @@ type LANDiscovery interface {
 }
 
 type multiDiscovery struct {
-	ssdp       LANDiscovery
-	bonjour    LANDiscovery
-	httpClient *requests.HTTPClient
+	ssdp    LANDiscovery
+	bonjour LANDiscovery
 }
 
 // NewLANDiscoveryService creates SSDP and Bonjour services for LAN discovery.

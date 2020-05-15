@@ -91,7 +91,7 @@ type sentInvoice struct {
 	r       []byte
 }
 
-// DataTransferred represents the data transfered in a session.
+// DataTransferred represents the data transferred in a session.
 type DataTransferred struct {
 	Up, Down uint64
 }
@@ -117,6 +117,7 @@ type InvoiceTracker struct {
 	rnd                            *rand.Rand
 	agreementID                    uint64
 	lastExchangeMessage            crypto.ExchangeMessage
+	firstInvoicePaid               bool
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
 	deps                           InvoiceTrackerDeps
@@ -182,6 +183,10 @@ func (it *InvoiceTracker) markInvoiceSent(invoice sentInvoice) {
 func (it *InvoiceTracker) markInvoicePaid(hashlock []byte) {
 	it.invoiceLock.Lock()
 	defer it.invoiceLock.Unlock()
+
+	if !it.firstInvoicePaid {
+		it.firstInvoicePaid = true
+	}
 
 	delete(it.invoicesSent, hex.EncodeToString(hashlock))
 }
@@ -293,6 +298,29 @@ func (it *InvoiceTracker) Start() error {
 			if err != nil {
 				return fmt.Errorf("could not request promise %w", err)
 			}
+		}
+	}
+}
+
+// WaitFirstInvoice waits for a first invoice to be paid.
+func (it *InvoiceTracker) WaitFirstInvoice(wait time.Duration) error {
+	timeout := time.After(wait)
+
+	for {
+		select {
+		case <-time.After(10 * time.Millisecond):
+			it.invoiceLock.Lock()
+			paid := it.firstInvoicePaid
+			it.invoiceLock.Unlock()
+			if paid {
+				return nil
+			}
+		case <-timeout:
+			// TODO uncomment this error return when all consumers will be able to pay for the first invoice before session start.
+			// return fmt.Errorf("failed waiting for first invoice")
+			return nil
+		case <-it.stop:
+			return nil
 		}
 	}
 }
@@ -450,7 +478,8 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		stdErr.Is(err, ErrAccountantInvalidSignature),
 		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
 		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
-		stdErr.Is(err, ErrAccountantOverspend):
+		stdErr.Is(err, ErrAccountantOverspend),
+		stdErr.Is(err, ErrConsumerUnregistered):
 		// these are critical, return and cancel session
 		return err
 	default:

@@ -57,7 +57,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}
 	calc := mockChannelAddressCalculator{}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -96,6 +96,78 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
+func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	accountantID := common.HexToAddress("0x000000acc")
+	t.Run("Takes balance from accountant response", func(t *testing.T) {
+		bus := eventbus.New()
+		mcts := mockConsumerTotalsStorage{
+			bus: bus,
+		}
+		bc := mockConsumerBalanceChecker{
+			channelToReturn: client.ConsumerChannel{
+				Balance: big.NewInt(initialBalance),
+				Settled: big.NewInt(0),
+			},
+		}
+		calc := mockChannelAddressCalculator{}
+
+		var ba uint64 = 10000000
+		cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
+			statusToReturn: registry.TransactorStatusResponse{
+				Status:       registry.TransactorRegistrationEntryStatusCreated,
+				BountyAmount: ba,
+			},
+		})
+
+		err := cbt.Subscribe(bus)
+		assert.NoError(t, err)
+
+		bus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
+			ID:     id1,
+			Status: registry.InProgress,
+		})
+
+		assert.Eventually(t, func() bool {
+			return cbt.GetBalance(id1) == ba
+		}, defaultWaitTime, defaultWaitInterval)
+	})
+	t.Run("Falls back to blockchain balance if no bounty is specified on transactor", func(t *testing.T) {
+		bus := eventbus.New()
+		mcts := mockConsumerTotalsStorage{
+			bus: bus,
+		}
+		var ba uint64 = 10000000
+		bc := mockConsumerBalanceChecker{
+			channelToReturn: client.ConsumerChannel{
+				Balance: big.NewInt(initialBalance),
+				Settled: big.NewInt(0),
+			},
+			mystBalanceToReturn: big.NewInt(0).SetUint64(ba),
+		}
+		calc := mockChannelAddressCalculator{}
+
+		cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
+			statusToReturn: registry.TransactorStatusResponse{
+				Status:       registry.TransactorRegistrationEntryStatusCreated,
+				BountyAmount: 0,
+			},
+		})
+
+		err := cbt.Subscribe(bus)
+		assert.NoError(t, err)
+
+		bus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
+			ID:     id1,
+			Status: registry.InProgress,
+		})
+
+		assert.Eventually(t, func() bool {
+			return cbt.GetBalance(id1) == ba
+		}, defaultWaitTime, defaultWaitInterval)
+	})
+}
+
 func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	accountantID := common.HexToAddress("0x000000acc")
@@ -112,7 +184,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 		},
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -159,7 +231,7 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 		ch: make(chan *bindings.MystTokenTransfer),
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -179,19 +251,13 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
-type mockAccountantBalanceFetcher struct {
-	consumerData ConsumerData
-	err          error
-}
-
-func (mabf *mockAccountantBalanceFetcher) GetConsumerData(channel string) (ConsumerData, error) {
-	return mabf.consumerData, mabf.err
-}
-
 type mockConsumerBalanceChecker struct {
 	channelToReturn client.ConsumerChannel
 	errToReturn     error
 	ch              chan *bindings.MystTokenTransfer
+
+	mystBalanceToReturn *big.Int
+	mystBalanceError    error
 }
 
 func (mcbc *mockConsumerBalanceChecker) GetConsumerChannel(addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error) {
@@ -200,6 +266,10 @@ func (mcbc *mockConsumerBalanceChecker) GetConsumerChannel(addr common.Address, 
 
 func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error) {
 	return mcbc.ch, func() {}, nil
+}
+
+func (mcbc *mockConsumerBalanceChecker) GetMystBalance(mystAddress, identity common.Address) (*big.Int, error) {
+	return mcbc.mystBalanceToReturn, mcbc.mystBalanceError
 }
 
 type mockChannelAddressCalculator struct {
@@ -221,6 +291,26 @@ func (mcig *mockconsumerInfoGetter) GetConsumerData(_ string) (ConsumerData, err
 			Amount: mcig.amount,
 		},
 	}, nil
+}
+
+func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) {
+	accountantID := common.HexToAddress("0x000000acc")
+
+	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{bus: bus}
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
+		},
+	}
+	calc := mockChannelAddressCalculator{}
+
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{})
+
+	// Make sure we are not dead locked here. https://github.com/mysteriumnetwork/node/issues/2181
+	cbt.increaseBCBalance(identity.FromAddress("0x0000"), 1)
+	cbt.updateGrandTotal(identity.FromAddress("0x0000"), 1)
 }
 
 func TestConsumerBalance_GetBalance(t *testing.T) {

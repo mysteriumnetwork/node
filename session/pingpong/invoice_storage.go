@@ -31,7 +31,6 @@ var ErrNotFound = errors.New("entry does not exist")
 
 type bucketName string
 
-const receivedInvoices bucketName = "received_invoices"
 const sentInvoices bucketName = "sent_invoices"
 const agreementRBucket bucketName = "agreement_r"
 

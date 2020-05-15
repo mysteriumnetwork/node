@@ -27,7 +27,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/stretchr/testify/assert"
 )
@@ -96,7 +95,7 @@ func newConn(t *testing.T) *wireguardConnection {
 	opts := wireGuardOptions{
 		statsUpdateInterval: 1 * time.Millisecond,
 	}
-	conn, err := NewWireGuardConnection(opts, &mockWireGuardDevice{}, ip.NewResolverMock("172.44.1.12"), traversal.NewNoopPinger(), &mockHandshakeWaiter{})
+	conn, err := NewWireGuardConnection(opts, &mockWireGuardDevice{}, ip.NewResolverMock("172.44.1.12"), &mockHandshakeWaiter{})
 	assert.NoError(t, err)
 	return conn.(*wireguardConnection)
 }
