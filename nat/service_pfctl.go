@@ -172,7 +172,7 @@ func ifaceByAddress(ip net.IP) (string, error) {
 
 func (service *servicePFCtl) pfctlExec(rules []string) error {
 	natRule := strings.Join(rules, "\n")
-	arguments := fmt.Sprintf(`echo "%v" | /sbin/pfctl -vEf -`, natRule)
+	arguments := fmt.Sprintf(`echo "%v" | pfctl -vEf -`, natRule)
 
 	if output, err := cmdutil.ExecOutput("sh", "-c", arguments); err != nil {
 		if !strings.Contains(output, natRule) {
@@ -185,7 +185,7 @@ func (service *servicePFCtl) pfctlExec(rules []string) error {
 }
 
 func (service *servicePFCtl) disableRules() {
-	_, err := cmdutil.ExecOutput("/sbin/pfctl", "-F", "nat")
+	_, err := cmdutil.ExecOutput("pfctl", "-F", "nat")
 	if err != nil {
 		log.Warn().Err(err).Msgf("Failed cleanup NAT rules (pfctl)")
 	} else {

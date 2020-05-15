@@ -315,7 +315,6 @@ func (aps *accountantPromiseSettler) ForceSettle(providerID identity.Identity, a
 // ForceSettle forces the settlement for a provider
 func (aps *accountantPromiseSettler) SettleWithBeneficiary(providerID identity.Identity, beneficiary, accountantID common.Address) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
-	fmt.Println(promise, err)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
 	}
