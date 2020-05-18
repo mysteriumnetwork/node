@@ -144,7 +144,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	checkTxStatus(client, tx)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Approve(transactor, registryAddress, big.NewInt(100000000000))
+	tx, err = ts.Approve(transactor, registryAddress, big.NewInt(100000000000000))
 	checkError("allow myst", err)
 	checkTxStatus(client, tx)
 
@@ -155,7 +155,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	tx, err = rt.RegisterAccountant(
 		transactor,
 		transactor.From,
-		big.NewInt(100000000000),
+		big.NewInt(100000000000000),
 		400,
 		big.NewInt(125000000000),
 	)
