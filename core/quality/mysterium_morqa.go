@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/rs/zerolog/log"
 )
@@ -39,10 +40,17 @@ const (
 	maxBatchMetricsToWait = 30 * time.Second
 )
 
+type metric struct {
+	owner string
+	event *metrics.Event
+}
+
 // MysteriumMORQA HTTP client for Mysterium Quality Oracle - MORQA
 type MysteriumMORQA struct {
 	// http    HTTPClient
 	baseURL string
+
+	signer identity.SignerFactory
 
 	client        *http.Client
 	clientMu      sync.Mutex
@@ -50,15 +58,16 @@ type MysteriumMORQA struct {
 
 	batch    metrics.Batch
 	eventsMu sync.Mutex
-	events   chan *metrics.Event
+	metrics  chan metric
 	stop     chan struct{}
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(srcIP, baseURL string, timeout time.Duration) *MysteriumMORQA {
+func NewMorqaClient(srcIP, baseURL string, signer identity.SignerFactory, timeout time.Duration) *MysteriumMORQA {
 	morqa := &MysteriumMORQA{
 		baseURL: baseURL,
-		events:  make(chan *metrics.Event, maxBatchMetricsToKeep),
+		signer:  signer,
+		metrics: make(chan metric, maxBatchMetricsToKeep),
 		stop:    make(chan struct{}),
 		clientFactory: func() *http.Client {
 			return &http.Client{
@@ -78,7 +87,13 @@ func (m *MysteriumMORQA) Start() {
 
 	for {
 		select {
-		case event := <-m.events:
+		case metric := <-m.metrics:
+			event, err := m.SignMetric(metric)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to sign metrics event")
+				continue
+			}
+
 			m.addMetric(event)
 
 			m.eventsMu.Lock()
@@ -99,6 +114,23 @@ func (m *MysteriumMORQA) Start() {
 
 		trigger = time.After(maxBatchMetricsToWait)
 	}
+}
+
+func (m *MysteriumMORQA) SignMetric(metric metric) (*metrics.Event, error) {
+	bin, err := proto.Marshal(metric.event)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metrics event: %w", err)
+	}
+
+	signer := m.signer(identity.FromAddress(metric.owner))
+	signature, err := signer.Sign(bin)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sing metrics event: %w", err)
+	}
+
+	metric.event.Signature = signature.Base64()
+
+	return metric.event, nil
 }
 
 // Stop sends the final metrics to the MORQA and stops the sending process.
@@ -173,8 +205,12 @@ func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
 }
 
 // SendMetric submits new metric
-func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
-	m.events <- event
+func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
+	m.metrics <- metric{
+		owner: id,
+		event: event,
+	}
+
 	return nil
 }
 
