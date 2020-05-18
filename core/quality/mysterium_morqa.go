@@ -88,7 +88,7 @@ func (m *MysteriumMORQA) Start() {
 	for {
 		select {
 		case metric := <-m.metrics:
-			event, err := m.SignMetric(metric)
+			event, err := m.signMetric(metric)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to sign metrics event")
 				continue
@@ -116,7 +116,8 @@ func (m *MysteriumMORQA) Start() {
 	}
 }
 
-func (m *MysteriumMORQA) SignMetric(metric metric) (*metrics.Event, error) {
+// signMetric creates signature and adds to to the metrics event.
+func (m *MysteriumMORQA) signMetric(metric metric) (*metrics.Event, error) {
 	bin, err := proto.Marshal(metric.event)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal metrics event: %w", err)

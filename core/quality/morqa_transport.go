@@ -45,8 +45,8 @@ func (transport *morqaTransport) SendEvent(event Event) error {
 
 func mapEventToMetric(event Event) (string, *metrics.Event) {
 	switch event.EventName {
-	case startupEventName:
-		return nodeVersionToMetricsEvent(event.Application)
+	case unlockEventName:
+		return identityUnlockToMetricsEvent(event.Context.(string), event.Application)
 	case sessionEventName:
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
@@ -59,8 +59,8 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 	return "", nil
 }
 
-func nodeVersionToMetricsEvent(info appInfo) *metrics.Event {
-	return &metrics.Event{
+func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Event) {
+	return id, &metrics.Event{
 		Metric: &metrics.Event_VersionPayload{
 			VersionPayload: &metrics.VersionPayload{
 				Version: info.Version,
