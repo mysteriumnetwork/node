@@ -808,7 +808,6 @@ func (di *Dependencies) handleConnStateChange() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()
-			di.BrokerConnector.ReconnectAll()
 			if err := di.EtherClient.Reconnect(); err != nil {
 				log.Error().Err(err).Msg("Ethereum client failed to reconnect")
 			}

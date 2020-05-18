@@ -27,7 +27,6 @@ import (
 // Connection represents is publish-subscriber instance which can deliver messages
 type Connection interface {
 	Open() error
-	Reopen() error
 	Close()
 	Servers() []string
 	Publish(subject string, payload []byte) error

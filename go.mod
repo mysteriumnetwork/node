@@ -74,5 +74,3 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
-
-replace github.com/nats-io/go-nats v1.4.0 => github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed
