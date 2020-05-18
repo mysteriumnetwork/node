@@ -27,7 +27,7 @@ require (
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/klauspost/compress v1.10.5 // indirect
-	github.com/klauspost/pgzip v1.2.3 // indirect
+	github.com/klauspost/pgzip v1.2.4 // indirect
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magefile/mage v1.9.0
@@ -35,7 +35,7 @@ require (
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.41
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.42
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.3
@@ -67,7 +67,7 @@ require (
 	github.com/xtaci/kcp-go/v5 v5.5.8
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
-	golang.org/x/sys v0.0.0-20200513112337-417ce2331b5c
+	golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/protobuf v1.21.0
