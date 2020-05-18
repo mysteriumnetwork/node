@@ -27,13 +27,19 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	eventStartup = Event{
-		EventName:   startupEventName,
+		EventName:   unlockEventName,
 		Application: appInfo{Version: "test version"},
+		Context:     "0x1234567890abcdef",
+	}
+
+	signerFactory = func(id identity.Identity) identity.Signer {
+		return &identity.SignerFake{}
 	}
 )
 
@@ -45,7 +51,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 		response.WriteHeader(http.StatusAccepted)
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
 	go morqa.Start()
 	defer morqa.Stop()
 
@@ -62,6 +68,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	assert.Exactly(
 		t,
 		&metrics.Event{
+			Signature:  "c2lnbmVkIg4KDHRlc3QgdmVyc2lvbg==",
 			IsProvider: false,
 			TargetId:   "",
 			Metric: &metrics.Event_VersionPayload{
@@ -82,7 +89,7 @@ func TestMORQAT_sendMetrics_HandlesErrorsWithMessages(t *testing.T) {
 		}`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
 	morqa.addMetric(&metrics.Event{})
 	err := morqa.sendMetrics()
 
@@ -103,7 +110,7 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 		}`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
 	morqa.addMetric(&metrics.Event{})
 	err := morqa.sendMetrics()
 
@@ -127,7 +134,7 @@ func TestMORQA_ProposalsMetrics(t *testing.T) {
 		}] }`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, 1*time.Second)
+	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
 	metrics := morqa.ProposalsMetrics()
 
 	assert.Equal(t,

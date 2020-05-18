@@ -654,7 +654,7 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, 20*time.Second)
+	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, di.SignerFactory, 20*time.Second)
 	go di.QualityClient.Start()
 
 	var transport quality.Transport
