@@ -31,13 +31,12 @@ import (
 
 var (
 	flagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagMystHome    = flag.String("mystHome", "", "Home directory for running myst (required for -install)")
 	flagMystPath    = flag.String("mystPath", "", "Path to myst executable (required for -install)")
 	flagOpenVPNPath = flag.String("openvpnPath", "", "Path to openvpn executable (required for -install)")
 )
 
 func ensureInstallFlags() {
-	if *flagMystHome == "" || *flagMystPath == "" || *flagOpenVPNPath == "" {
+	if *flagMystPath == "" || *flagOpenVPNPath == "" {
 		fmt.Println("Error: required flags were not set")
 		flag.Usage()
 		os.Exit(1)
@@ -62,7 +61,6 @@ func main() {
 		}
 		log.Println("Creating supervisor configuration")
 		cfg := config.Config{
-			MystHome:    *flagMystHome,
 			MystPath:    *flagMystPath,
 			OpenVPNPath: *flagOpenVPNPath,
 		}
