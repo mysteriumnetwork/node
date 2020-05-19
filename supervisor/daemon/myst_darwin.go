@@ -19,6 +19,7 @@ package daemon
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -97,9 +98,12 @@ func (d *Daemon) runMyst(args ...string) error {
 
 func parseRunOptions(args ...string) (*runOptions, error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	uid := flags.Int("uid", 0, "")
+	uid := flags.Int("uid", -1, "")
 	if err := flags.Parse(args[1:]); err != nil {
 		return nil, fmt.Errorf("failed to parse flags: %w", err)
+	}
+	if *uid == -1 {
+		return nil, errors.New("uid is required")
 	}
 	runUser, err := user.LookupId(strconv.Itoa(*uid))
 	if err != nil {
