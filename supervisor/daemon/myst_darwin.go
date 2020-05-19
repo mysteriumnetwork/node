@@ -19,12 +19,14 @@ package daemon
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"strconv"
 	"strings"
 	"syscall"
@@ -33,15 +35,18 @@ import (
 
 const pidFile = "/var/run/myst.pid"
 
+type runOptions struct {
+	uid  int
+	gid  int
+	home string
+}
+
 // runMyst runs mysterium node daemon. Blocks.
 func (d *Daemon) runMyst(args ...string) error {
-	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	uid := flags.Int("uid", 0, "")
-	gid := flags.Int("gid", 0, "")
-	if err := flags.Parse(args[1:]); err != nil {
+	options, err := parseRunOptions(args...)
+	if err != nil {
 		return err
 	}
-
 	paths := []string{
 		d.cfg.OpenVPNPath,
 		"/usr/bin",
@@ -50,9 +55,8 @@ func (d *Daemon) runMyst(args ...string) error {
 		"/sbin",
 		"/usr/local/bin",
 	}
+
 	var stdout, stderr bytes.Buffer
-	sysProcAttr := &syscall.SysProcAttr{}
-	sysProcAttr.Credential = &syscall.Credential{Uid: uint32(*uid), Gid: uint32(*gid)}
 
 	cmd := exec.Cmd{
 		Path: d.cfg.MystPath,
@@ -65,18 +69,20 @@ func (d *Daemon) runMyst(args ...string) error {
 			"daemon",
 		},
 		Env: []string{
-			"HOME=" + d.cfg.MystHome,
+			"HOME=" + options.home,
 			"PATH=" + strings.Join(paths, ":"),
 		},
-		Stdout:      &stdout,
-		Stderr:      &stderr,
-		SysProcAttr: sysProcAttr,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		SysProcAttr: &syscall.SysProcAttr{
+			Credential: &syscall.Credential{Uid: uint32(options.uid), Gid: uint32(options.gid)},
+		},
 	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	err := runWithSuccessTimeout(cmd.Wait, 5*time.Second)
+	err = runWithSuccessTimeout(cmd.Wait, 5*time.Second)
 	if err != nil {
 		log.Printf("myst output [err=%s]:\n%s\n%s\n", err, stderr.String(), stdout.String())
 		return err
@@ -88,6 +94,30 @@ func (d *Daemon) runMyst(args ...string) error {
 	}
 
 	return nil
+}
+
+func parseRunOptions(args ...string) (*runOptions, error) {
+	flags := flag.NewFlagSet("", flag.ContinueOnError)
+	uid := flags.Int("uid", -1, "")
+	if err := flags.Parse(args[1:]); err != nil {
+		return nil, fmt.Errorf("failed to parse flags: %w", err)
+	}
+	if *uid == -1 {
+		return nil, errors.New("uid is required")
+	}
+	runUser, err := user.LookupId(strconv.Itoa(*uid))
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup user: %w", err)
+	}
+	gid, err := strconv.Atoi(runUser.Gid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse group ID %q for user %q: %w", runUser.Gid, runUser.Username, err)
+	}
+	return &runOptions{
+		uid:  *uid,
+		gid:  gid,
+		home: runUser.HomeDir,
+	}, nil
 }
 
 func runWithSuccessTimeout(f func() error, timeout time.Duration) error {
