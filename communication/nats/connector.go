@@ -19,9 +19,7 @@ package nats
 
 import (
 	"strings"
-	"sync"
 
-	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -29,15 +27,11 @@ import (
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
-	registry map[uuid.UUID]Connection
-	mu       sync.Mutex
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
 func NewBrokerConnector() *BrokerConnector {
-	return &BrokerConnector{
-		registry: make(map[uuid.UUID]Connection),
-	}
+	return &BrokerConnector{}
 }
 
 // Connect establishes a new connection to the broker(s).
@@ -57,45 +51,8 @@ func (b *BrokerConnector) Connect(serverURIs ...string) (Connection, error) {
 	if err := conn.Open(); err != nil {
 		return nil, errors.Wrapf(err, `failed to connect to NATS servers "%v"`, conn.servers)
 	}
-	id, err := uuid.NewV4()
-	if err != nil {
-		removeFirewallRule()
-		return nil, errors.Wrap(err, "could not generate UUID for the new connection")
-	}
 
-	b.mu.Lock()
-	b.registry[id] = conn
-	b.mu.Unlock()
-	conn.onClose = func() {
-		b.mu.Lock()
-		log.Info().Msgf("Removing broker connection from the registry: %v", id)
-		delete(b.registry, id)
-		removeFirewallRule()
-		b.mu.Unlock()
-	}
+	conn.onClose = removeFirewallRule
 
 	return conn, nil
-}
-
-// ReconnectAll checks all established connections to trigger reconnects.
-func (b *BrokerConnector) ReconnectAll() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	log.Info().Msgf("Attempting to reconnect to broker (%d connections)", len(b.registry))
-	var wg sync.WaitGroup
-	for k, v := range b.registry {
-		wg.Add(1)
-		go func(id uuid.UUID, conn Connection) {
-			defer wg.Done()
-			log.Info().Msgf("Re-establishing broker connection %v", id)
-			if err := conn.Reopen(); err != nil {
-				log.Err(err).Msgf("Re-establishing broker connection %v failed", id)
-			} else {
-				log.Info().Msgf("Re-establishing broker connection %v DONE", id)
-			}
-		}(k, v)
-	}
-	wg.Wait()
-	log.Info().Msg("All broker connections re-established")
 }

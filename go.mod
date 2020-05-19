@@ -40,10 +40,8 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.3
 	github.com/mysteriumnetwork/payments v0.0.13
-	github.com/nats-io/gnatsd v1.4.1 // indirect
-	github.com/nats-io/go-nats v1.4.0
-	github.com/nats-io/nats-server v1.4.1
-	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect
+	github.com/nats-io/nats-server/v2 v2.1.7
+	github.com/nats-io/nats.go v1.10.0
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
@@ -70,9 +68,7 @@ require (
 	golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	google.golang.org/protobuf v1.21.0
+	google.golang.org/protobuf v1.22.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
-
-replace github.com/nats-io/go-nats v1.4.0 => github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed

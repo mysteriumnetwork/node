@@ -258,7 +258,7 @@ func PackageDockerSwaggerRedoc() error {
 // does not support go modules yet and go mod vendor does not include c dependencies.
 func vendordModules() error {
 	mg.Deps(checkVend)
-	return sh.RunV("vend", "-replace", "github.com/nats-io/go-nats=github.com/mysteriumnetwork/nats.go")
+	return sh.RunV("vend")
 }
 
 func checkVend() error {
