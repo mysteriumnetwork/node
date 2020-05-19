@@ -231,6 +231,28 @@ install() {
         esac
 }
 
+ensure_paths() {
+    iptables_path=`which iptables`
+    if [[ ${iptables_path} == "" ]]; then
+       echo "required dependecy missing: iptables"
+       return
+    fi
+
+    # validate utility against valid system paths
+    basepath=${iptables_path%/*}
+    echo "iptables basepath detected: ${basepath}"
+    if ! [[ ${basepath} =~ (^/usr/sbin|^/sbin|^/bin|^/usr/bin) ]]; then
+      echo "invalid basepath for dependecy - check if system PATH has not been altered"
+      return
+    fi
+
+    iptables_required_path="/usr/sbin/iptables"
+
+    if ! [[ -x ${iptables_required_path} ]]; then
+        ln -s ${iptables_path} ${iptables_required_path}
+    fi
+}
+
 echo "### Installing script dependencies"
 install_script_dependencies
 echo "### Installing script dependencies - done"
@@ -253,5 +275,9 @@ echo "### Detecting platform - done"
 echo "### Installing myst & dependencies"
 install
 echo "### Installing myst & dependencies - done"
+
+echo "### Ensuring sane paths for dependencies"
+ensure_paths
+echo "### Ensuring sane paths for dependencies - done"
 
 echo "### Installation complete!"
