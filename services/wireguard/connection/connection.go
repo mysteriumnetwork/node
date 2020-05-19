@@ -35,7 +35,7 @@ import (
 
 // Options represents connection options.
 type Options struct {
-	DNSConfigDir     string
+	DNSScriptDir     string
 	HandshakeTimeout time.Duration
 }
 
@@ -154,7 +154,7 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		return errors.Wrap(err, "could not resolve DNS IPs")
 	}
 	config.Consumer.DNSIPs = dnsIPs[0]
-	if err := c.dnsManager.Set(c.opts.DNSConfigDir, conn.InterfaceName(), config.Consumer.DNSIPs); err != nil {
+	if err := c.dnsManager.Set(c.opts.DNSScriptDir, conn.InterfaceName(), config.Consumer.DNSIPs); err != nil {
 		return errors.Wrap(err, "failed to configure DNS")
 	}
 
@@ -212,7 +212,7 @@ func (c *Connection) Stop() {
 		c.stateCh <- connection.Disconnecting
 
 		if c.connectionEndpoint != nil {
-			if err := c.dnsManager.Clean(c.opts.DNSConfigDir, c.connectionEndpoint.InterfaceName()); err != nil {
+			if err := c.dnsManager.Clean(c.opts.DNSScriptDir, c.connectionEndpoint.InterfaceName()); err != nil {
 				log.Error().Err(err).Msg("Failed to clear DNS")
 			}
 			if err := c.connectionEndpoint.Stop(); err != nil {

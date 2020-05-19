@@ -223,7 +223,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 func (m *Manager) startServer() error {
 	vpnServerConfig := NewServerConfig(
 		m.nodeOptions.Directories.Runtime,
-		m.nodeOptions.Directories.Config,
+		m.nodeOptions.Directories.Script,
 		m.serviceOptions.Subnet,
 		m.serviceOptions.Netmask,
 		m.tlsPrimitives,

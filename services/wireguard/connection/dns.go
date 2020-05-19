@@ -20,7 +20,7 @@ package connection
 // DNSManager is connection DNS configuration manager.
 type DNSManager interface {
 	// Set applies DNS configuration.
-	Set(configDir, dev, dns string) error
+	Set(scriptDir, dev, dns string) error
 	// Clean removes DNS configuration.
-	Clean(configDir, dev string) error
+	Clean(scriptDir, dev string) error
 }

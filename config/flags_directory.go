@@ -25,10 +25,10 @@ import (
 )
 
 var (
-	// FlagConfigDir directory containing all configuration, script and helper files.
+	// FlagConfigDir directory containing all configuration files.
 	FlagConfigDir = cli.StringFlag{
 		Name:  "config-dir",
-		Usage: "Configs directory containing all configuration, script and helper files",
+		Usage: "Config directory containing all configuration files",
 	}
 	// FlagDataDir data directory for keystore and other persistent files.
 	FlagDataDir = cli.StringFlag{
@@ -45,6 +45,11 @@ var (
 		Name:  "runtime-dir",
 		Usage: "Runtime writable directory for temp files",
 	}
+	// FlagScriptDir directory containing script and helper files.
+	FlagScriptDir = cli.StringFlag{
+		Name:  "script-dir",
+		Usage: "Script directory containing all script and helper files",
+	}
 )
 
 // RegisterFlagsDirectory function register directory flags to flag list
@@ -59,26 +64,29 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 		return err
 	}
 
-	FlagConfigDir.Value = filepath.Join(currentDir, "config")
 	FlagDataDir.Value = filepath.Join(userHomeDir, ".mysterium")
+	FlagConfigDir.Value = FlagDataDir.Value
 	FlagLogDir.Value = filepath.Join(FlagDataDir.Value, "logs")
 	FlagRuntimeDir.Value = currentDir
+	FlagScriptDir.Value = filepath.Join(currentDir, "config")
 
 	*flags = append(*flags,
 		&FlagConfigDir,
 		&FlagDataDir,
 		&FlagLogDir,
 		&FlagRuntimeDir,
+		&FlagScriptDir,
 	)
 	return nil
 }
 
 // ParseFlagsDirectory function fills in directory options from CLI context
 func ParseFlagsDirectory(ctx *cli.Context) {
-	Current.ParseStringFlag(ctx, FlagLogDir)
-	Current.ParseStringFlag(ctx, FlagDataDir)
 	Current.ParseStringFlag(ctx, FlagConfigDir)
+	Current.ParseStringFlag(ctx, FlagDataDir)
+	Current.ParseStringFlag(ctx, FlagLogDir)
 	Current.ParseStringFlag(ctx, FlagRuntimeDir)
+	Current.ParseStringFlag(ctx, FlagScriptDir)
 }
 
 func getExecutableDir() (string, error) {

@@ -302,7 +302,7 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		return service_openvpn.NewClient(
 			// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
 			nodeOptions.Openvpn.BinaryPath(),
-			nodeOptions.Directories.Config,
+			nodeOptions.Directories.Script,
 			nodeOptions.Directories.Runtime,
 			di.SignerFactory,
 			di.IPResolver,
@@ -705,7 +705,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	case node.LocationTypeBuiltin:
 		resolver, err = location.NewBuiltInResolver(di.IPResolver)
 	case node.LocationTypeMMDB:
-		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Config, options.Location.Address), di.IPResolver)
+		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Script, options.Location.Address), di.IPResolver)
 	case node.LocationTypeOracle:
 		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
 			return err
