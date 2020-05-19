@@ -38,6 +38,8 @@ if ! [ -x "$(command -v vend)" ]; then
     go get github.com/mysteriumnetwork/vend
 fi
 
+vend
+
 DATE=`date -R`
 
 echo "myst ($VERSION+build$BUILD+$DISTR) $DISTR; urgency=medium
