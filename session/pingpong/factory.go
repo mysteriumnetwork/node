@@ -101,6 +101,7 @@ func InvoiceFactoryCreator(
 	channelImplementationAddress string,
 	maxAccountantFailureCount uint64,
 	maxAllowedAccountantFee uint16,
+	maxUnpaidInvoiceValue uint64,
 	blockchainHelper bcHelper,
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
@@ -134,6 +135,7 @@ func InvoiceFactoryCreator(
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Hex(), channelImplementationAddress, registryAddress),
+			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

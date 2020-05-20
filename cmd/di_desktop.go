@@ -225,6 +225,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
+			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.BCHelper,
 			di.EventBus,
 			proposal,
