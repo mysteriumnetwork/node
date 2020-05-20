@@ -44,15 +44,15 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 type processFactory func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error)
 
 // NewClient creates a new openvpn connection
-func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
+func NewClient(openvpnBinary, scriptDir, runtimeDir string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
 ) (connection.Connection, error) {
 
 	stateCh := make(chan connection.State, 100)
 	client := &Client{
-		configDirectory:     configDirectory,
-		runtimeDirectory:    runtimeDirectory,
+		scriptDir:           scriptDir,
+		runtimeDir:          runtimeDir,
 		signerFactory:       signerFactory,
 		stateCh:             stateCh,
 		ipResolver:          ipResolver,
@@ -60,7 +60,7 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 	}
 
 	procFactory := func(options connection.ConnectOptions, sessionConfig VPNConfig) (openvpn.Process, *ClientConfig, error) {
-		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, configDirectory, runtimeDirectory, options)
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, scriptDir, runtimeDir, options)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -80,8 +80,8 @@ func NewClient(openvpnBinary, configDirectory, runtimeDirectory string,
 
 // Client takes in the openvpn process and works with it
 type Client struct {
-	configDirectory     string
-	runtimeDirectory    string
+	scriptDir           string
+	runtimeDir          string
 	signerFactory       identity.SignerFactory
 	stateCh             chan connection.State
 	stats               connection.Statistics

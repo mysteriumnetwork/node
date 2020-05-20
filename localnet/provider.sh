@@ -4,6 +4,7 @@ set -e
 
 exec /node/build/myst/myst \
   --config-dir=/etc/mysterium-node \
+  --script-dir=/etc/mysterium-node \
   --log-dir= --data-dir=/var/lib/mysterium-node \
   --runtime-dir=/var/run/mysterium-node \
   --tequilapi.address=0.0.0.0 \
