@@ -43,7 +43,7 @@ func (r *responder) err(result ...error) {
 }
 
 func (r *responder) message(msg string) {
-
+	log.Println("<", msg)
 	if _, err := fmt.Fprintln(r, msg); err != nil {
 		log.Printf("Could not send message: %q error: %s\n", msg, err)
 	}

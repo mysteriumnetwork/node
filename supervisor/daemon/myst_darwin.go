@@ -149,10 +149,60 @@ func (d *Daemon) killMyst() error {
 	if err != nil {
 		return fmt.Errorf("could not find process %d: %w", pid, err)
 	}
-	if err := proc.Signal(syscall.SIGINT); err != nil {
-		return fmt.Errorf("could not interrupt process %d: %w", pid, err)
+	if err := interrupt(proc, 3*time.Second); err != nil {
+		log.Println("Attempting to kill", pid, "due to interrupt failure:", err)
+		if err := kill(proc); err != nil {
+			return err
+		}
+	} else {
+		log.Println("Process successfully interrupted")
 	}
-	// TODO kill if doesn't terminate in 5secs
+
 	_ = os.Remove(pidFile)
+	return nil
+}
+
+func interrupt(proc *os.Process, timeout time.Duration) error {
+	err := proc.Signal(os.Interrupt)
+	if err != nil {
+		return err
+	}
+
+	interruptCh := make(chan error)
+	go func() {
+		state, err := proc.Wait()
+		if err != nil {
+			if errors.Is(err, syscall.ECHILD) {
+				// no child process exists - we're good
+				interruptCh <- nil
+			} else {
+				interruptCh <- fmt.Errorf("failed process wait: %w", err)
+			}
+		} else {
+			if state.Exited() {
+				interruptCh <- nil
+			} else {
+				interruptCh <- errors.New("process did not exit")
+			}
+		}
+	}()
+
+	select {
+	case err = <-interruptCh:
+	case <-time.After(timeout):
+		err = errors.New("process interrupt timed out")
+	}
+	return err
+}
+
+func kill(proc *os.Process) error {
+	err := proc.Kill()
+	if err != nil {
+		return fmt.Errorf("could not kill process %d: %w", proc.Pid, err)
+	}
+	state, err := proc.Wait()
+	if err == nil && !state.Exited() {
+		return fmt.Errorf("process left in running state: %d: %w", proc.Pid, err)
+	}
 	return nil
 }
