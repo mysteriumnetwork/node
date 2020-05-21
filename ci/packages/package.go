@@ -60,7 +60,8 @@ func PackageLinuxDebianAmd64() error {
 		return err
 	}
 	envi := map[string]string{
-		"GOOS": "linux",
+		"GOOS":   "linux",
+		"GOARCH": "amd64",
 	}
 	if err := sh.RunWith(envi, "bin/build"); err != nil {
 		return err
@@ -281,10 +282,14 @@ func goGet(pkg string) error {
 
 func packageStandalone(binaryPath, os, arch string) error {
 	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
+	if err := buildCrossBinary(os, arch); err != nil {
+		return err
+	}
+
 	envs := map[string]string{
 		"BINARY": binaryPath,
 	}
-	return sh.RunWith(envs, "bin/package_standalone", os, arch)
+	return sh.RunWith(envs, "bin/package_standalone", os)
 }
 
 func packageSupervisor(os, arch string) error {

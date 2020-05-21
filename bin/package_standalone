@@ -23,17 +23,9 @@ if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
     exit 1
 fi
 
-ARCH=$2
-if [[ ! "$ARCH" =~ ^(amd64|arm)$ ]]; then
-    print_error "Missing ARCH! Should be: amd64 or arm"
-    exit 1
-fi
-
 BINARY=${BINARY:-"build/myst/myst"}
 DIR_BUILD="build/package"
-
 mkdir -p $DIR_BUILD
-bin/build_xgo $OS/$ARCH
 
 # Put all files to package directory (to avoid preserving directory structure)
 printf "Building Standalone package for OS '$OS' ..\n"
