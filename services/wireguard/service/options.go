@@ -30,15 +30,13 @@ import (
 
 // Options describes options which are required to start Wireguard service.
 type Options struct {
-	ConnectDelay int
-	Ports        *port.Range
-	Subnet       net.IPNet
+	Ports  *port.Range
+	Subnet net.IPNet
 }
 
 // DefaultOptions is a wireguard service configuration that will be used if no options provided.
 var DefaultOptions = Options{
-	ConnectDelay: 2000,
-	Ports:        port.UnspecifiedRange(),
+	Ports: port.UnspecifiedRange(),
 	Subnet: net.IPNet{
 		IP:   net.ParseIP("10.182.0.0").To4(),
 		Mask: net.IPv4Mask(255, 255, 0, 0),
@@ -64,9 +62,8 @@ func GetOptions() Options {
 		portRange = port.UnspecifiedRange()
 	}
 	return Options{
-		ConnectDelay: config.GetInt(config.FlagWireguardConnectDelay),
-		Ports:        portRange,
-		Subnet:       *ipnet,
+		Ports:  portRange,
+		Subnet: *ipnet,
 	}
 }
 
@@ -85,31 +82,25 @@ func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
 func (o Options) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		ConnectDelay int    `json:"connectDelay"`
-		Ports        string `json:"ports"`
-		Subnet       string `json:"subnet"`
+		Ports  string `json:"ports"`
+		Subnet string `json:"subnet"`
 	}{
-		ConnectDelay: o.ConnectDelay,
-		Ports:        o.Ports.String(),
-		Subnet:       o.Subnet.String(),
+		Ports:  o.Ports.String(),
+		Subnet: o.Subnet.String(),
 	})
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface to receive human readable configuration.
 func (o *Options) UnmarshalJSON(data []byte) error {
 	var options struct {
-		ConnectDelay int    `json:"connectDelay"`
-		Ports        string `json:"ports"`
-		Subnet       string `json:"subnet"`
+		Ports  string `json:"ports"`
+		Subnet string `json:"subnet"`
 	}
 
 	if err := json.Unmarshal(data, &options); err != nil {
 		return err
 	}
 
-	if options.ConnectDelay != 0 {
-		o.ConnectDelay = options.ConnectDelay
-	}
 	if options.Ports != "" {
 		p, err := port.ParseRange(options.Ports)
 		if err != nil {

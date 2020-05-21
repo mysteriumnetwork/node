@@ -92,7 +92,7 @@ func Test_incomingFirewallIptables_TeardownIfPreviousCleanupFailed(t *testing.T)
 			"-S FORWARD": {
 				output: []string{
 					"-P FORWARD ACCEPT",
-					// leftover - DNS direwall is still enabled
+					// leftover - DNS firewall is still enabled
 					"-A FORWARD -s 10.8.0.1/24 -j MYST_PROVIDER_FIREWALL",
 				},
 			},
