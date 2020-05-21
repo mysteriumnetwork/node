@@ -62,7 +62,7 @@ func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr
 		return fmt.Errorf("service %s already exists", name)
 	}
 
-	s, err = m.CreateService(name, options.SupervisorPath, config, "-configPath", options.ConfigPath)
+	s, err = m.CreateService(name, options.SupervisorPath, config, "")
 	if err != nil {
 		return err
 	}

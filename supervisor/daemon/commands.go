@@ -19,7 +19,6 @@ package daemon
 
 const (
 	commandPing         = "ping"
-	commandRun          = "run"
 	commandKill         = "kill"
 	commandBye          = "bye"
 	commandWgUp         = "wg-up"

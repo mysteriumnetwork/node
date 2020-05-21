@@ -28,16 +28,14 @@ import (
 
 // Config for supervisor, created during -install.
 type Config struct {
-	MystPath    string
-	OpenVPNPath string
 }
 
 func (c Config) valid() bool {
-	return c.MystPath != "" && c.OpenVPNPath != ""
+	return true
 }
 
 // Write config file.
-func (c Config) Write() error {
+func (c Config) Write(confPath string) error {
 	if !c.valid() {
 		return errors.New("configuration is not valid")
 	}
@@ -53,7 +51,7 @@ func (c Config) Write() error {
 }
 
 // Read config file.
-func Read() (*Config, error) {
+func Read(confPath string) (*Config, error) {
 	c := Config{}
 	_, err := toml.DecodeFile(confPath, &c)
 	if err != nil {

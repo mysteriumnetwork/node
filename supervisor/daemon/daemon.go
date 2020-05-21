@@ -25,13 +25,12 @@ import (
 	"io"
 	"log"
 	"net"
-	"os/exec"
 	"strings"
 
-	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 // Daemon - supervisor process.
@@ -65,16 +64,6 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 			return
 		case commandPing:
 			answer.ok("pong")
-		case commandRun:
-			go func() {
-				err := d.runMyst(cmd...)
-				if err != nil {
-					log.Printf("failed %s: %s", commandRun, err)
-					answer.err(err)
-				} else {
-					answer.ok()
-				}
-			}()
 		case commandWgUp:
 			up, err := d.wgUp(cmd...)
 			if err != nil {
@@ -173,10 +162,8 @@ func (d *Daemon) assignIP(args ...string) (err error) {
 	if err != nil {
 		return fmt.Errorf("-net could not be parsed: %w", err)
 	}
-	output, err := exec.Command("sudo", "ifconfig", *interfaceName, *network, peerIP(*ipNet).String()).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("ifconfig returned error: %w", err)
+	if err := netutil.AssignIP(*interfaceName, *ipNet); err != nil {
+		return fmt.Errorf("could not assign IP: %w", err)
 	}
 	return nil
 }
@@ -194,14 +181,9 @@ func (d *Daemon) excludeRoute(args ...string) (err error) {
 	if parsedIP == nil {
 		return fmt.Errorf("-ip could not be parsed: %w", err)
 	}
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-	output, err := exec.Command("route", "add", "-host", parsedIP.String(), gw.String()).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("route add returned error: %w", err)
+
+	if err := netutil.ExcludeRoute(parsedIP); err != nil {
+		return fmt.Errorf("could not exclude route: %w", err)
 	}
 	return nil
 }
@@ -215,25 +197,9 @@ func (d *Daemon) defaultRoute(args ...string) (err error) {
 	if *interfaceName == "" {
 		return errors.New("-iface is required")
 	}
-	output, err := exec.Command("route", "add", "-net", "0.0.0.0/1", "-interface", *interfaceName).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("route add returned error: %w", err)
-	}
-	output, err = exec.Command("route", "add", "-net", "128.0.0.0/1", "-interface", *interfaceName).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("route add returned error: %w", err)
+
+	if err := netutil.AddDefaultRoute(*interfaceName); err != nil {
+		return fmt.Errorf("could not add default route: %w", err)
 	}
 	return nil
-}
-
-func peerIP(subnet net.IPNet) net.IP {
-	lastOctetID := len(subnet.IP) - 1
-	if subnet.IP[lastOctetID] == byte(1) {
-		subnet.IP[lastOctetID] = byte(2)
-	} else {
-		subnet.IP[lastOctetID] = byte(1)
-	}
-	return subnet.IP
 }
