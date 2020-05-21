@@ -17,9 +17,88 @@
 
 package install
 
-import "errors"
+import (
+	"fmt"
+	"log"
 
-// Install installs service for linux. Not implemented yet.
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
+	"golang.org/x/sys/windows/svc/mgr"
+)
+
+const serviceName = "MystSupervisor"
+
+// Install installs service for Windows.
 func Install(options Options) error {
-	return errors.New("not implemented")
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer m.Disconnect()
+
+	config := mgr.Config{
+		ServiceType:  windows.SERVICE_WIN32_OWN_PROCESS,
+		StartType:    mgr.StartAutomatic,
+		ErrorControl: mgr.ErrorNormal,
+		DisplayName:  "MystSupervisor Service",
+		Description:  "Mysterium Network dApp supervisor service is responsible for manages network configurations",
+	}
+
+	if err := uninstallService(m, serviceName); err != nil {
+		log.Printf("Failed to remove service: %v", err)
+	}
+
+	if err := installAndStartService(m, serviceName, options, config); err != nil {
+		return fmt.Errorf("could not install and run service: %w", err)
+	}
+	return nil
+}
+
+func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr.Config) error {
+	s, err := m.OpenService(name)
+	if err == nil {
+		s.Close()
+		return fmt.Errorf("service %s already exists", name)
+	}
+
+	s, err = m.CreateService(name, options.SupervisorPath, config, "-configPath", options.ConfigPath)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	err = eventlog.Remove(name)
+	err = eventlog.InstallAsEventCreate(name, eventlog.Error|eventlog.Warning|eventlog.Info)
+	if err != nil {
+		s.Delete()
+		return fmt.Errorf("SetupEventLogSource() failed: %s", err)
+	}
+	if err := s.Start(); err != nil {
+		return fmt.Errorf("could not start service: %w", err)
+	}
+	return nil
+}
+
+func uninstallService(m *mgr.Mgr, name string) error {
+	s, err := m.OpenService(name)
+	if err != nil {
+		return fmt.Errorf("service %s is not installed", name)
+	}
+	defer s.Close()
+	log.Println("Detected previously installed service, uninstalling...")
+
+	s.Control(svc.Stop)
+	err = s.Delete()
+	err2 := s.Close()
+	if err != nil {
+		return fmt.Errorf("could not delete service: %w", err)
+	}
+	if err2 != nil {
+		return fmt.Errorf("could not close service handle: %w", err)
+	}
+	err = eventlog.Remove(name)
+	if err != nil {
+		return fmt.Errorf("RemoveEventLogSource() failed: %s", err)
+	}
+	return nil
 }
