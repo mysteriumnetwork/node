@@ -18,20 +18,68 @@
 package wginterface
 
 import (
-	"errors"
+	"fmt"
+	"log"
+
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/ipc"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
 // New creates new WgInterface instance.
-func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
-	return nil, errors.New("not implemented")
+func New(interfaceName string, uid string) (*WgInterface, error) {
+	log.Println("Creating Wintun interface")
+	// guid := &windows.GUID{}
+	wintun, err := tun.CreateTUN(interfaceName, 0)
+	if err != nil {
+		return nil, fmt.Errorf("could not create wintun: %w", err)
+	}
+	nativeTun := wintun.(*tun.NativeTun)
+	wintunVersion, ndisVersion, err := nativeTun.Version()
+	if err != nil {
+		log.Printf("Warning: unable to determine Wintun version: %v", err)
+	} else {
+		log.Printf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
+	}
+
+	log.Println("Creating interface instance")
+	// TODO: User ring logger?
+	logger := device.NewLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", interfaceName))
+	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
+	wgDevice := device.NewDevice(wintun, logger)
+
+	log.Println("Setting interface configuration")
+	uapi, err := ipc.UAPIListen(interfaceName)
+	if err != nil {
+		return nil, fmt.Errorf("could not listen for user API wg configuration: %w", err)
+	}
+
+	wg := &WgInterface{
+		Name:   interfaceName,
+		device: wgDevice,
+		uapi:   uapi,
+	}
+	go wg.handleUAPI()
+
+	return wg, nil
 }
 
-// Listen listens for WireGuard configuration changes via user space socket.
-func (a *WgInterface) Listen() {
-
+// handleUAPI listens for WireGuard configuration changes via user space socket.
+func (a *WgInterface) handleUAPI() {
+	for {
+		conn, err := a.uapi.Accept()
+		if err != nil {
+			log.Println("Closing UAPI listener, err:", err)
+			return
+		}
+		go a.device.IpcHandle(conn)
+	}
 }
 
 // Down closes device and user space api socket.
 func (a *WgInterface) Down() {
-
+	if err := a.uapi.Close(); err != nil {
+		log.Printf("could not close uapi socket: %w", err)
+	}
+	a.device.Close()
 }
