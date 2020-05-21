@@ -97,9 +97,8 @@ type ServiceConfig struct {
 		Endpoint  net.UDPAddr
 	}
 	Consumer struct {
-		IPAddress    net.IPNet
-		DNSIPs       string
-		ConnectDelay int
+		IPAddress net.IPNet
+		DNSIPs    string
 	}
 }
 
@@ -110,9 +109,8 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 		Endpoint  string `json:"endpoint"`
 	}
 	type consumer struct {
-		IPAddress    string `json:"ip_address"`
-		DNSIPs       string `json:"dns_ips"`
-		ConnectDelay int    `json:"connect_delay"`
+		IPAddress string `json:"ip_address"`
+		DNSIPs    string `json:"dns_ips"`
 	}
 
 	return json.Marshal(&struct {
@@ -130,9 +128,8 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 			Endpoint:  s.Provider.Endpoint.String(),
 		},
 		Consumer: consumer{
-			IPAddress:    s.Consumer.IPAddress.String(),
-			ConnectDelay: s.Consumer.ConnectDelay,
-			DNSIPs:       s.Consumer.DNSIPs,
+			IPAddress: s.Consumer.IPAddress.String(),
+			DNSIPs:    s.Consumer.DNSIPs,
 		},
 	})
 }
@@ -144,9 +141,8 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 		Endpoint  string `json:"endpoint"`
 	}
 	type consumer struct {
-		IPAddress    string `json:"ip_address"`
-		DNSIPs       string `json:"dns_ips"`
-		ConnectDelay int    `json:"connect_delay"`
+		IPAddress string `json:"ip_address"`
+		DNSIPs    string `json:"dns_ips"`
 	}
 	var config struct {
 		LocalPort  int      `json:"local_port"`
@@ -177,7 +173,6 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	s.Consumer.DNSIPs = config.Consumer.DNSIPs
 	s.Consumer.IPAddress = *ipnet
 	s.Consumer.IPAddress.IP = ip
-	s.Consumer.ConnectDelay = config.Consumer.ConnectDelay
 
 	return nil
 }

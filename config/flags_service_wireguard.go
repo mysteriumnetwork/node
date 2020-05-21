@@ -22,12 +22,6 @@ import (
 )
 
 var (
-	// FlagWireguardConnectDelay consumer is delayed by the specified time if provider is behind the NAT.
-	FlagWireguardConnectDelay = cli.IntFlag{
-		Name:  "wireguard.connect.delay",
-		Usage: "Consumer is delayed by specified time if provider is behind NAT",
-		Value: 2000,
-	}
 	// FlagWireguardListenPorts range of listen ports.
 	FlagWireguardListenPorts = cli.StringFlag{
 		Name:  "wireguard.listen.ports",
@@ -60,7 +54,6 @@ var (
 // RegisterFlagsServiceWireguard function register Wireguard flags to flag list
 func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 	*flags = append(*flags,
-		&FlagWireguardConnectDelay,
 		&FlagWireguardListenPorts,
 		&FlagWireguardListenSubnet,
 		&FlagWireguardPriceMinute,
@@ -71,7 +64,6 @@ func RegisterFlagsServiceWireguard(flags *[]cli.Flag) {
 
 // ParseFlagsServiceWireguard parses CLI flags and registers value to configuration
 func ParseFlagsServiceWireguard(ctx *cli.Context) {
-	Current.ParseIntFlag(ctx, FlagWireguardConnectDelay)
 	Current.ParseStringFlag(ctx, FlagWireguardListenPorts)
 	Current.ParseStringFlag(ctx, FlagWireguardListenSubnet)
 	Current.ParseFloat64Flag(ctx, FlagWireguardPriceMinute)

@@ -75,7 +75,6 @@ func NewManager(
 			return endpoint.NewConnectionEndpoint(resourcesAllocator)
 		},
 		country:        country,
-		connectDelayMS: options.ConnectDelay,
 		sessionCleanup: map[string]func(){},
 	}
 }
@@ -104,9 +103,8 @@ type Manager struct {
 	sessionCleanup   map[string]func()
 	sessionCleanupMu sync.Mutex
 
-	country        string
-	connectDelayMS int
-	outboundIP     string
+	country    string
+	outboundIP string
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
@@ -141,8 +139,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer config")
 	}
-
-	config.Consumer.ConnectDelay = m.connectDelayMS
 
 	if err := m.addConsumerPeer(conn, config.LocalPort, config.RemotePort, consumerConfig.PublicKey); err != nil {
 		return nil, errors.Wrap(err, "could not add consumer peer")
