@@ -90,6 +90,12 @@ var (
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
 		Value: 20,
 	}
+	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
+	FlagPaymentsMaxUnpaidInvoiceValue = cli.Uint64Flag{
+		Name:  "payments.provider.max-unpaid-invoice-value",
+		Usage: "sets the upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
+		Value: 3000000,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -107,6 +113,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsConsumerPricePerGBUpperBound,
 		&FlagPaymentsConsumerPricePerGBLowerBound,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
+		&FlagPaymentsMaxUnpaidInvoiceValue,
 	)
 }
 
@@ -123,4 +130,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
+	Current.ParseUInt64Flag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 }

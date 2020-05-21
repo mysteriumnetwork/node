@@ -453,6 +453,69 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	assert.NoError(t, <-errChan)
 }
 
+func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
+	tracker := session.NewTracker(mbtime.Now)
+	tracker.StartTracking()
+	deps := InvoiceTrackerDeps{
+		TimeTracker: &tracker,
+		EventBus:    mocks.NewEventBus(),
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate: market.PaymentRate{
+					PerTime: time.Minute,
+					PerByte: 1,
+				},
+			},
+		},
+		MaxNotPaidInvoice: 100,
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+	invoiceTracker.dataTransferred = DataTransferred{
+		Up:   100,
+		Down: 100,
+	}
+	invoiceTracker.invoiceDebounceRate = time.Nanosecond
+	defer invoiceTracker.Stop()
+
+	go invoiceTracker.sendInvoicesWhenNeeded(time.Millisecond * 5)
+
+	res := <-invoiceTracker.invoiceChannel
+	assert.True(t, res)
+}
+
+func Test_sendsInvoiceIfTimePassed(t *testing.T) {
+	tracker := session.NewTracker(mbtime.Now)
+	tracker.StartTracking()
+	deps := InvoiceTrackerDeps{
+		TimeTracker: &tracker,
+		EventBus:    mocks.NewEventBus(),
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(10, money.CurrencyMyst),
+				rate: market.PaymentRate{
+					PerTime: time.Minute,
+					PerByte: 1,
+				},
+			},
+		},
+		MaxNotPaidInvoice: 100,
+		ChargePeriod:      time.Millisecond,
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+	invoiceTracker.dataTransferred = DataTransferred{
+		Up:   1,
+		Down: 1,
+	}
+	invoiceTracker.invoiceDebounceRate = time.Nanosecond
+	defer invoiceTracker.Stop()
+
+	go invoiceTracker.sendInvoicesWhenNeeded(time.Millisecond * 5)
+
+	res := <-invoiceTracker.invoiceChannel
+	assert.False(t, res)
+}
+
 func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
 	res := calculateMaxNotReceivedExchangeMessageCount(time.Minute*5, time.Second*240)
 	assert.Equal(t, uint64(1), res)
