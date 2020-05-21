@@ -76,6 +76,10 @@ func buildBinary(source, target string) error {
 	if !ok {
 		targetArch = runtime.GOARCH
 	}
+	return buildBinaryFor(source, target, targetOS, targetArch)
+}
+
+func buildBinaryFor(source, target, targetOS, targetArch string) error {
 	log.Info().Msgf("Building %s -> %s %s/%s", source, target, targetOS, targetArch)
 
 	buildDir, err := filepath.Abs(path.Join("build", target))

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"text/template"
 
@@ -283,6 +284,10 @@ func goGet(pkg string) error {
 func packageStandalone(binaryPath, os, arch string) error {
 	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
 	if err := buildCrossBinary(os, arch); err != nil {
+		return err
+	}
+	err := buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch)
+	if err != nil {
 		return err
 	}
 

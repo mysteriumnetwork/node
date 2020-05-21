@@ -36,8 +36,8 @@ if [ "$OS" == "windows" ]; then
 else
     cp -vp ${BINARY} ${DIR_TEMP}/myst
 fi
-
 copy_config $OS $DIR_TEMP
+cp -vp build/myst_supervisor/myst_supervisor ${DIR_TEMP}
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
