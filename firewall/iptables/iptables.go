@@ -30,7 +30,7 @@ import (
 var Exec = defaultExec
 
 func defaultExec(args ...string) ([]string, error) {
-	args = append([]string{"sudo", "/sbin/iptables"}, args...)
+	args = append([]string{"sudo", "/usr/sbin/iptables"}, args...)
 	output, err := cmdutil.ExecOutput(args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "iptables cmd error")
