@@ -230,6 +230,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.EventBus,
 			proposal,
 			di.AccountantPromiseHandler,
+			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
 		return session.NewManager(
 			proposal,

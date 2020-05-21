@@ -20,6 +20,7 @@ package pingpong
 import (
 	"encoding/hex"
 	stdErrors "errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -107,7 +108,8 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -157,7 +159,8 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
 		MaxAllowedAccountantFee:    1500,
@@ -212,7 +215,8 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
@@ -266,7 +270,8 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
@@ -327,7 +332,8 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
@@ -384,7 +390,8 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
@@ -433,7 +440,8 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		AccountantID:               acc.Address,
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
@@ -642,7 +650,8 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				Peer:                       tt.fields.peer,
 				ExchangeMessageChan:        tt.fields.exchangeMessageChan,
 				ExchangeMessageWaitTimeout: tt.fields.exchangeMessageWaitTimeout,
-				AccountantID:               tt.fields.accountantID,
+				ConsumersAccountantID:      tt.fields.accountantID,
+				ProvidersAccountantID:      tt.fields.accountantID,
 				Registry:                   tt.fields.registryAddress,
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
@@ -662,62 +671,17 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 	}
 }
 
-type mockAccountantPromiseStorage struct {
-	toReturn    AccountantPromise
-	errToReturn error
-}
-
-func (maps *mockAccountantPromiseStorage) Store(_ identity.Identity, _ common.Address, _ AccountantPromise) error {
-	return maps.errToReturn
-}
-
-func (maps *mockAccountantPromiseStorage) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
-	return maps.toReturn, maps.errToReturn
-}
-
-type mockBlockchainHelper struct {
-	feeToReturn   uint16
-	errorToReturn error
-
-	isRegistered      bool
-	isRegisteredError error
-}
-
-func (mbh *mockBlockchainHelper) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
-	return mbh.feeToReturn, mbh.errorToReturn
-}
-
-func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
-	return mbh.isRegistered, mbh.isRegisteredError
-}
-
-type testEvent struct {
-	name  string
-	value interface{}
-}
-
-type mockPublisher struct {
-	publicationChan chan testEvent
-}
-
-func (mp *mockPublisher) Publish(topic string, payload interface{}) {
-	if mp.publicationChan != nil {
-		mp.publicationChan <- testEvent{
-			name:  topic,
-			value: payload,
-		}
+func Test_InvoiceTracker_RejectsInvalidAccountant(t *testing.T) {
+	tracker := session.NewTracker(mbtime.Now)
+	deps := InvoiceTrackerDeps{
+		EventBus:              mocks.NewEventBus(),
+		TimeTracker:           &tracker,
+		ConsumersAccountantID: common.HexToAddress("0x1"),
+		ProvidersAccountantID: common.HexToAddress("0x0"),
 	}
-}
-
-func (mp *mockPublisher) Subscribe(topic string, fn interface{}) error {
-	return nil
-}
-func (mp *mockPublisher) SubscribeAsync(topic string, fn interface{}) error {
-	return nil
-}
-
-func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
-	return nil
+	invoiceTracker := NewInvoiceTracker(deps)
+	err := invoiceTracker.Start()
+	assert.EqualError(t, err, fmt.Errorf("consumer wants to work with an unsupported accountant(%q) while provider expects %q", common.HexToAddress("0x1").Hex(), common.HexToAddress("0x0").Hex()).Error())
 }
 
 func TestInvoiceTracker_handleAccountantError(t *testing.T) {
@@ -818,4 +782,62 @@ func (me *mockEncryptor) Decrypt(addr common.Address, encrypted []byte) ([]byte,
 
 func (me *mockEncryptor) Encrypt(addr common.Address, plaintext []byte) ([]byte, error) {
 	return plaintext, me.errToReturn
+}
+
+type mockAccountantPromiseStorage struct {
+	toReturn    AccountantPromise
+	errToReturn error
+}
+
+func (maps *mockAccountantPromiseStorage) Store(_ identity.Identity, _ common.Address, _ AccountantPromise) error {
+	return maps.errToReturn
+}
+
+func (maps *mockAccountantPromiseStorage) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
+	return maps.toReturn, maps.errToReturn
+}
+
+type mockBlockchainHelper struct {
+	feeToReturn   uint16
+	errorToReturn error
+
+	isRegistered      bool
+	isRegisteredError error
+}
+
+func (mbh *mockBlockchainHelper) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
+	return mbh.feeToReturn, mbh.errorToReturn
+}
+
+func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
+	return mbh.isRegistered, mbh.isRegisteredError
+}
+
+type testEvent struct {
+	name  string
+	value interface{}
+}
+
+type mockPublisher struct {
+	publicationChan chan testEvent
+}
+
+func (mp *mockPublisher) Publish(topic string, payload interface{}) {
+	if mp.publicationChan != nil {
+		mp.publicationChan <- testEvent{
+			name:  topic,
+			value: payload,
+		}
+	}
+}
+
+func (mp *mockPublisher) Subscribe(topic string, fn interface{}) error {
+	return nil
+}
+func (mp *mockPublisher) SubscribeAsync(topic string, fn interface{}) error {
+	return nil
+}
+
+func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
+	return nil
 }

@@ -148,7 +148,8 @@ type InvoiceTrackerDeps struct {
 	FirstInvoiceSendDuration   time.Duration
 	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
-	AccountantID               common.Address
+	ConsumersAccountantID      common.Address
+	ProvidersAccountantID      common.Address
 	Registry                   string
 	MaxAccountantFailureCount  uint64
 	MaxAllowedAccountantFee    uint16
@@ -270,7 +271,11 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.AccountantID)
+	if !bytes.EqualFold(it.deps.ConsumersAccountantID.Bytes(), it.deps.ProvidersAccountantID.Bytes()) {
+		return fmt.Errorf("consumer wants to work with an unsupported accountant(%q) while provider expects %q", it.deps.ConsumersAccountantID.Hex(), it.deps.ProvidersAccountantID.Hex())
+	}
+
+	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.ConsumersAccountantID)
 	if err != nil {
 		return errors.Wrap(err, "could not get accountants fee")
 	}
