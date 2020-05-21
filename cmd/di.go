@@ -811,6 +811,7 @@ func (di *Dependencies) handleConnStateChange() error {
 			if err := di.EtherClient.Reconnect(); err != nil {
 				log.Error().Err(err).Msg("Ethereum client failed to reconnect")
 			}
+			di.EventBus.Publish(registry.AppTopicEthereumClientReconnected, struct{}{})
 		}
 		latestState = e.State
 	})
