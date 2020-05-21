@@ -120,15 +120,6 @@ func PackageMacOSAmd64() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
-// PackageSupervisorMacOSAmd64 builds and stores macOS amd64 supervisor package
-func PackageSupervisorMacOSAmd64() error {
-	logconfig.Bootstrap()
-	if err := packageSupervisor("darwin", "amd64"); err != nil {
-		return err
-	}
-	return env.IfRelease(storage.UploadArtifacts)
-}
-
 // PackageWindowsAmd64 builds and stores Windows amd64 package
 func PackageWindowsAmd64() error {
 	logconfig.Bootstrap()
