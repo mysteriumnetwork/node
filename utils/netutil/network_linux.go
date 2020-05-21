@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package userspace
+package netutil
 
 import (
 	"net"
@@ -24,14 +24,14 @@ import (
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
+func AssignIP(iface string, subnet net.IPNet) error {
 	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, subnet.String()); err != nil {
 		return err
 	}
 	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
-func excludeRoute(ip net.IP) error {
+func ExcludeRoute(ip net.IP) error {
 	gw, err := gateway.DiscoverGateway()
 	if err != nil {
 		return err
@@ -40,14 +40,10 @@ func excludeRoute(ip net.IP) error {
 	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
 }
 
-func addDefaultRoute(iface string) error {
+func AddDefaultRoute(iface string) error {
 	if err := cmdutil.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
 		return err
 	}
 
 	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
-}
-
-func destroyDevice(name string) error {
-	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }

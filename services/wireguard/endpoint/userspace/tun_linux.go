@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,25 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteclient
+package userspace
 
 import (
-	"net"
-
-	supervisorclient "github.com/mysteriumnetwork/node/supervisor/client"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
-	_, err := supervisorclient.Command("assign-ip", "-iface", iface, "-net", subnet.String())
-	return err
-}
-
-func excludeRoute(ip net.IP) error {
-	_, err := supervisorclient.Command("exclude-route", "-ip", ip.String())
-	return err
-}
-
-func addDefaultRoute(iface string) error {
-	_, err := supervisorclient.Command("default-route", "-iface", iface)
-	return err
+func destroyDevice(name string) error {
+	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }
