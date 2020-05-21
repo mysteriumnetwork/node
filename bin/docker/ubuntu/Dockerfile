@@ -37,6 +37,11 @@ COPY bin/helpers/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh
 COPY bin/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
+# Install dependencies
+RUN apt-get update \
+    && apt-get install -y sudo iptables ipset ca-certificates openvpn \
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+
 # Install application
 COPY --from=builder /go/src/github.com/mysteriumnetwork/node/build/package/myst_linux_amd64.deb /tmp/myst.deb
 RUN apt-get update \
