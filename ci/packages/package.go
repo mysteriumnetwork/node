@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"text/template"
 
@@ -60,7 +61,8 @@ func PackageLinuxDebianAmd64() error {
 		return err
 	}
 	envi := map[string]string{
-		"GOOS": "linux",
+		"GOOS":   "linux",
+		"GOARCH": "amd64",
 	}
 	if err := sh.RunWith(envi, "bin/build"); err != nil {
 		return err
@@ -113,15 +115,6 @@ func PackageLinuxDebianArm64() error {
 func PackageMacOSAmd64() error {
 	logconfig.Bootstrap()
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
-		return err
-	}
-	return env.IfRelease(storage.UploadArtifacts)
-}
-
-// PackageSupervisorMacOSAmd64 builds and stores macOS amd64 supervisor package
-func PackageSupervisorMacOSAmd64() error {
-	logconfig.Bootstrap()
-	if err := packageSupervisor("darwin", "amd64"); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -281,10 +274,18 @@ func goGet(pkg string) error {
 
 func packageStandalone(binaryPath, os, arch string) error {
 	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
+	if err := buildCrossBinary(os, arch); err != nil {
+		return err
+	}
+	err := buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch)
+	if err != nil {
+		return err
+	}
+
 	envs := map[string]string{
 		"BINARY": binaryPath,
 	}
-	return sh.RunWith(envs, "bin/package_standalone", os, arch)
+	return sh.RunWith(envs, "bin/package_standalone", os)
 }
 
 func packageSupervisor(os, arch string) error {
