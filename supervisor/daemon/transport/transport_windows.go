@@ -48,23 +48,21 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 		}
 	}()
 
-	for {
-		select {
-		case c := <-r:
-			switch c.Cmd {
-			case svc.Interrogate:
-				s <- c.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				return
-			case svc.Pause:
-				s <- svc.Status{State: svc.Paused, Accepts: cmdsAccepted}
-			case svc.Continue:
-				s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
-			default:
-				log.Printf("unexpected control request #%d", c)
-			}
+	for c := range r {
+		switch c.Cmd {
+		case svc.Interrogate:
+			s <- c.CurrentStatus
+		case svc.Stop, svc.Shutdown:
+			return
+		case svc.Pause:
+			s <- svc.Status{State: svc.Paused, Accepts: cmdsAccepted}
+		case svc.Continue:
+			s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+		default:
+			log.Printf("unexpected control request #%d", c)
 		}
 	}
+	return
 }
 
 func (m *managerService) listenPipe() error {

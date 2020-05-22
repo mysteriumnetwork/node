@@ -19,6 +19,7 @@ package daemon
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -46,9 +47,7 @@ func (d *Daemon) killMyst() error {
 }
 
 func gracefulKill(timeout time.Duration) error {
-	client := http.Client{
-		Timeout: timeout,
-	}
+	client := http.Client{Timeout: timeout}
 	resp, err := client.Post(fmt.Sprintf("%s/stop", tequilapiHost), "application/json", nil)
 	if err != nil {
 		return err
@@ -56,7 +55,20 @@ func gracefulKill(timeout time.Duration) error {
 	if resp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("expected status %d, got %d", http.StatusAccepted, resp.StatusCode)
 	}
-	return nil
+
+	timeoutCh := time.After(timeout)
+	for {
+		select {
+		case <-timeoutCh:
+			return errors.New("timeout waiting for myst to exit")
+		default:
+			_, err := mystPid()
+			if err != nil {
+				return nil
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 }
 
 func forceKill(pid int) error {

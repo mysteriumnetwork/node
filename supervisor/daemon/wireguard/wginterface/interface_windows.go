@@ -29,7 +29,7 @@ import (
 // New creates new WgInterface instance.
 func New(interfaceName string, uid string) (*WgInterface, error) {
 	log.Println("Creating Wintun interface")
-	// guid := &windows.GUID{}
+
 	wintun, err := tun.CreateTUN(interfaceName, 0)
 	if err != nil {
 		return nil, fmt.Errorf("could not create wintun: %w", err)
@@ -43,7 +43,7 @@ func New(interfaceName string, uid string) (*WgInterface, error) {
 	}
 
 	log.Println("Creating interface instance")
-	// TODO: User ring logger?
+	// TODO: Use ring logger?
 	logger := device.NewLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", interfaceName))
 	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
 	wgDevice := device.NewDevice(wintun, logger)

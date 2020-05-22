@@ -19,7 +19,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,23 +29,13 @@ import (
 )
 
 var (
-	flagInstall  = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagMystPath = flag.String("mystPath", "", "Path to myst executable (required for -install)")
+	flagInstall = flag.Bool("install", false, "Install or repair myst supervisor")
 )
-
-func ensureInstallFlags() {
-	if *flagMystPath == "" {
-		fmt.Println("Error: required flags were not set")
-		flag.Usage()
-		os.Exit(1)
-	}
-}
 
 func main() {
 	flag.Parse()
 
 	if *flagInstall {
-		ensureInstallFlags()
 		log.Println("Installing supervisor")
 		path, err := thisPath()
 		if err != nil {
