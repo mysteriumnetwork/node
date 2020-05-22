@@ -19,31 +19,19 @@ package netutil
 
 import (
 	"net"
-
-	"github.com/jackpal/gateway"
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
-	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, subnet.String()); err != nil {
-		return err
-	}
-	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
+// AssignIP assigns subnet to given interface.
+func AssignIP(iface string, subnet net.IPNet) error {
+	return assignIP(iface, subnet)
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-
-	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
+// ExcludeRoute excludes given IP from VPN tunnel.
+func ExcludeRoute(ip net.IP) error {
+	return excludeRoute(ip)
 }
 
-func addDefaultRoute(iface string) error {
-	if err := cmdutil.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
-		return err
-	}
-
-	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
+// AddDefaultRoute adds default VPN tunnel route.
+func AddDefaultRoute(iface string) error {
+	return addDefaultRoute(iface)
 }

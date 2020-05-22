@@ -24,11 +24,11 @@ import (
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-func AssignIP(iface string, subnet net.IPNet) error {
+func assignIP(iface string, subnet net.IPNet) error {
 	return cmdutil.SudoExec("ifconfig", iface, subnet.String(), peerIP(subnet).String())
 }
 
-func ExcludeRoute(ip net.IP) error {
+func excludeRoute(ip net.IP) error {
 	gw, err := gateway.DiscoverGateway()
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func ExcludeRoute(ip net.IP) error {
 	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
 }
 
-func AddDefaultRoute(iface string) error {
+func addDefaultRoute(iface string) error {
 	if err := cmdutil.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
 		return err
 	}

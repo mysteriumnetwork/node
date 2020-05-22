@@ -27,12 +27,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func AssignIP(iface string, subnet net.IPNet) error {
+func assignIP(iface string, subnet net.IPNet) error {
 	out, err := exec.Command("powershell", "-Command", "netsh interface ip set address name=\""+iface+"\" source=static "+subnet.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
 }
 
-func ExcludeRoute(ip net.IP) error {
+func excludeRoute(ip net.IP) error {
 	gw, err := gateway.DiscoverGateway()
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func ExcludeRoute(ip net.IP) error {
 	return errors.Wrap(err, string(out))
 }
 
-func AddDefaultRoute(name string) error {
+func addDefaultRoute(name string) error {
 	id, gw, err := interfaceInfo(name)
 	if err != nil {
 		return errors.Wrap(err, "failed to get info of interface: "+name)
