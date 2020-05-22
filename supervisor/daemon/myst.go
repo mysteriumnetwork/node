@@ -30,12 +30,13 @@ import (
 const tequilapiHost = "http://localhost:4050"
 
 func (d *Daemon) killMyst() error {
-	err := gracefulKill(3 * time.Second)
+	log.Println("Trying to stop node process gracefully")
+	err := gracefulStop(3 * time.Second)
 	if err == nil {
 		return nil
 	}
 
-	log.Printf("Failed to kill node gracefully, will continue with force kill: %v", err)
+	log.Printf("Failed to stop node gracefully, will continue with force kill: %v", err)
 	pid, err := mystPid()
 	if err != nil {
 		return fmt.Errorf("could not get myst pid: %w", err)
@@ -46,12 +47,13 @@ func (d *Daemon) killMyst() error {
 	return nil
 }
 
-func gracefulKill(timeout time.Duration) error {
+func gracefulStop(timeout time.Duration) error {
 	client := http.Client{Timeout: timeout}
 	resp, err := client.Post(fmt.Sprintf("%s/stop", tequilapiHost), "application/json", nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not call stop: %w", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("expected status %d, got %d", http.StatusAccepted, resp.StatusCode)
 	}
@@ -97,7 +99,7 @@ func mystPid() (int, error) {
 	}
 	resp, err := client.Get(fmt.Sprintf("%s/healthcheck", tequilapiHost))
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("could not call healthcheck: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

@@ -158,10 +158,11 @@ func (d *Daemon) assignIP(args ...string) (err error) {
 	if *network == "" {
 		return errors.New("-net is required")
 	}
-	_, ipNet, err := net.ParseCIDR(*network)
+	ip, ipNet, err := net.ParseCIDR(*network)
 	if err != nil {
 		return fmt.Errorf("-net could not be parsed: %w", err)
 	}
+	ipNet.IP = ip
 	if err := netutil.AssignIP(*interfaceName, *ipNet); err != nil {
 		return fmt.Errorf("could not assign IP: %w", err)
 	}

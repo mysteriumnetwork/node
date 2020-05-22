@@ -104,7 +104,7 @@ func (m *managerService) listenPipe() error {
 			log.Println("Client connected:", peer)
 			m.handle(conn)
 			if err := conn.Close(); err != nil {
-				log.Println("Error closing connection for:", peer, err)
+				log.Printf("Error closing connection for: %v error: %v", peer, err)
 			}
 			log.Println("Client disconnected:", peer)
 		}()

@@ -33,7 +33,7 @@ const serviceName = "MystSupervisor"
 func Install(options Options) error {
 	m, err := mgr.Connect()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not connect to service manager: %w", err)
 	}
 	defer m.Disconnect()
 
@@ -42,7 +42,7 @@ func Install(options Options) error {
 		StartType:    mgr.StartAutomatic,
 		ErrorControl: mgr.ErrorNormal,
 		DisplayName:  "MystSupervisor Service",
-		Description:  "Mysterium Network dApp supervisor service is responsible for manages network configurations",
+		Description:  "Mysterium Network dApp supervisor service is responsible for managing network configurations",
 	}
 
 	if err := uninstallService(m, serviceName); err != nil {
@@ -67,7 +67,7 @@ func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr
 		return err
 	}
 	defer s.Close()
-	err = eventlog.Remove(name)
+
 	err = eventlog.InstallAsEventCreate(name, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
@@ -89,12 +89,8 @@ func uninstallService(m *mgr.Mgr, name string) error {
 
 	s.Control(svc.Stop)
 	err = s.Delete()
-	err2 := s.Close()
 	if err != nil {
-		return fmt.Errorf("could not delete service: %w", err)
-	}
-	if err2 != nil {
-		return fmt.Errorf("could not close service handle: %w", err)
+		return fmt.Errorf("could not mark service for deletion: %w", err)
 	}
 	err = eventlog.Remove(name)
 	if err != nil {
