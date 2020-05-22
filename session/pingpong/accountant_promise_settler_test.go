@@ -420,6 +420,8 @@ type mockProviderChannelStatusProvider struct {
 	sinkToReturn       chan *bindings.AccountantImplementationPromiseSettled
 	subCancel          func()
 	subError           error
+	feeToReturn        uint16
+	feeError           error
 }
 
 func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error) {
@@ -428,6 +430,10 @@ func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(p
 
 func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
+	return mpcsp.feeToReturn, mpcsp.feeError
 }
 
 var cfg = AccountantPromiseSettlerConfig{

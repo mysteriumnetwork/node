@@ -46,3 +46,8 @@ func (n *NoopAccountantPromiseSettler) ForceSettle(_ identity.Identity, _ common
 func (n *NoopAccountantPromiseSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
 	return nil
 }
+
+// GetAccountantFee does absolutely nothing.
+func (n *NoopAccountantPromiseSettler) GetAccountantFee() (uint16, error) {
+	return 0, nil
+}
