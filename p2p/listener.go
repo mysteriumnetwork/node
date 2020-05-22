@@ -33,7 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/pb"
 
-	nats_lib "github.com/nats-io/go-nats"
+	nats_lib "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )

@@ -39,6 +39,24 @@ function install_chkconfig {
         && chkconfig --add mysterium-node
 }
 
+function ensure_paths {
+    iptables_path=`which iptables`
+
+    # validate utility against valid system paths
+    basepath=${iptables_path%/*}
+    echo "iptables basepath detected: ${basepath}"
+    if ! [[ ${basepath} =~ (^/usr/sbin|^/sbin|^/bin|^/usr/bin) ]]; then
+      echo "invalid basepath for dependency - check if system PATH has not been altered"
+      exit 1
+    fi
+
+    iptables_required_path="/usr/sbin/iptables"
+
+    if ! [[ -x ${iptables_required_path} ]]; then
+        ln -s ${iptables_path} ${iptables_required_path}
+    fi
+}
+
 printf "Creating user '$DAEMON_USER:$DAEMON_GROUP'...\n" \
     && useradd --system -U $DAEMON_USER -G root -s /bin/false -m -d $OS_DIR_DATA \
     && usermod -a -G root $DAEMON_USER \
@@ -61,30 +79,32 @@ if [[ -f /etc/redhat-release ]]; then
     # RHEL-variant logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-	install_systemd
+    	install_systemd
     else
-	# Assuming sysv
-	install_initd
-	install_chkconfig
+	    # Assuming sysv
+	    install_initd
+	    install_chkconfig
     fi
 elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-	install_systemd
+    	install_systemd
     else
-	# Assuming sysv
-	install_initd
-	install_update_rcd
+	    # Assuming sysv
+    	install_initd
+    	install_update_rcd
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ $ID = "amzn" ]]; then
-	# Amazon Linux logic
-	install_initd
-	install_chkconfig
+    	# Amazon Linux logic
+    	install_initd
+    	install_chkconfig
     fi
 fi
+
+ensure_paths
 
 # Add defaults file, if it doesn't exist
 if [[ ! -f $DAEMON_DEFAULT ]]; then

@@ -19,7 +19,6 @@ package daemon
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -47,20 +46,19 @@ func New(cfg *config.Config) Daemon {
 }
 
 // Start supervisor daemon. Blocks.
-func (d Daemon) Start() error {
+func (d *Daemon) Start() error {
 	return transport.Start(d.dialog)
 }
 
 // dialog talks to the client via established connection.
-func (d Daemon) dialog(conn io.ReadWriter) {
+func (d *Daemon) dialog(conn io.ReadWriter) {
 	scan := bufio.NewScanner(conn)
 	answer := responder{conn}
 	for scan.Scan() {
 		line := scan.Bytes()
-		line = bytes.ToLower(line)
-		log.Printf("scan line: %s", line)
+		log.Printf("> %s", line)
 		cmd := strings.Split(string(line), " ")
-		op := cmd[0]
+		op := strings.ToLower(cmd[0])
 		switch op {
 		case commandBye:
 			answer.ok("bye")
@@ -128,7 +126,7 @@ func (d Daemon) dialog(conn io.ReadWriter) {
 	}
 }
 
-func (d Daemon) wgUp(args ...string) (interfaceName string, err error) {
+func (d *Daemon) wgUp(args ...string) (interfaceName string, err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	requestedInterfaceName := flags.String("iface", "", "Requested tunnel interface name")
 	uid := flags.String("uid", "", "User ID."+
@@ -146,7 +144,7 @@ func (d Daemon) wgUp(args ...string) (interfaceName string, err error) {
 	return d.monitor.Up(*requestedInterfaceName, *uid)
 }
 
-func (d Daemon) wgDown(args ...string) (err error) {
+func (d *Daemon) wgDown(args ...string) (err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	interfaceName := flags.String("iface", "", "")
 	if err := flags.Parse(args[1:]); err != nil {
@@ -158,7 +156,7 @@ func (d Daemon) wgDown(args ...string) (err error) {
 	return d.monitor.Down(*interfaceName)
 }
 
-func (d Daemon) assignIP(args ...string) (err error) {
+func (d *Daemon) assignIP(args ...string) (err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	interfaceName := flags.String("iface", "", "")
 	network := flags.String("net", "", "")
@@ -183,7 +181,7 @@ func (d Daemon) assignIP(args ...string) (err error) {
 	return nil
 }
 
-func (d Daemon) excludeRoute(args ...string) (err error) {
+func (d *Daemon) excludeRoute(args ...string) (err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	ip := flags.String("ip", "", "")
 	if err := flags.Parse(args[1:]); err != nil {
@@ -208,7 +206,7 @@ func (d Daemon) excludeRoute(args ...string) (err error) {
 	return nil
 }
 
-func (d Daemon) defaultRoute(args ...string) (err error) {
+func (d *Daemon) defaultRoute(args ...string) (err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	interfaceName := flags.String("iface", "", "")
 	if err := flags.Parse(args[1:]); err != nil {

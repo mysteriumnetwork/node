@@ -78,7 +78,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig VPNConfig, configDir string, runtimeDir string, options connection.ConnectOptions) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig VPNConfig, scriptDir string, runtimeDir string, options connection.ConnectOptions) (*ClientConfig, error) {
 	// TODO Rename `vpnConfig` to `sessionConfig`
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
@@ -90,7 +90,7 @@ func NewClientConfigFromSession(vpnConfig VPNConfig, configDir string, runtimeDi
 		return nil, err
 	}
 
-	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	clientFileConfig := newClientConfig(runtimeDir, scriptDir)
 	dnsIPs, err := options.DNS.ResolveIPs(vpnConfig.DNSIPs)
 	if err != nil {
 		return nil, err

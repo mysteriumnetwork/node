@@ -294,12 +294,6 @@ func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, co
 	wgTunnSetup.AddRoute("0.0.0.0", 1)
 	wgTunnSetup.AddRoute("128.0.0.0", 1)
 
-	// Provider requests to delay consumer connection since it might be in a process of setting up NAT traversal for given consumer
-	if config.Consumer.ConnectDelay > 0 {
-		log.Info().Msgf("Delaying tunnel creation for %v milliseconds", config.Consumer.ConnectDelay)
-		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
-	}
-
 	fd, err := wgTunnSetup.Establish()
 	if err != nil {
 		return nil, err

@@ -113,16 +113,14 @@ func newServiceConfig() wg.ServiceConfig {
 			Endpoint:  *endpoint,
 		},
 		Consumer: struct {
-			IPAddress    net.IPNet
-			DNSIPs       string
-			ConnectDelay int
+			IPAddress net.IPNet
+			DNSIPs    string
 		}{
 			IPAddress: net.IPNet{
 				IP:   net.IPv4(127, 0, 0, 1),
 				Mask: net.IPv4Mask(255, 255, 255, 128),
 			},
-			DNSIPs:       "128.0.0.1",
-			ConnectDelay: 3000,
+			DNSIPs: "128.0.0.1",
 		},
 	}
 }

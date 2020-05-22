@@ -24,7 +24,7 @@ import (
 	"net"
 	"sync"
 
-	nats_lib "github.com/nats-io/go-nats"
+	nats_lib "github.com/nats-io/nats.go"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"

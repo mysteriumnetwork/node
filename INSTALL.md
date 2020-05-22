@@ -53,7 +53,7 @@ sudo tail -f /var/log/mysterium-node/*
 
 ### Debugging standalone
 ```bash
-sudo myst --data-dir=/var/lib/mysterium-node --config-dir=/etc/mysterium-node --runtime-dir=/tmp --identity=0x123456..
+sudo myst --data-dir=/var/lib/mysterium-node --config-dir=/etc/mysterium-node --script-dir=/etc/mysterium-node --runtime-dir=/tmp --identity=0x123456..
 ```
 
 ## Mysterium VPN node and client standalone binaries (.tar.gz)

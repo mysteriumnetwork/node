@@ -28,15 +28,12 @@ import (
 
 // Config for supervisor, created during -install.
 type Config struct {
-	MystHome    string
 	MystPath    string
 	OpenVPNPath string
 }
 
 func (c Config) valid() bool {
-	return c.MystHome != "" &&
-		c.MystPath != "" &&
-		c.OpenVPNPath != ""
+	return c.MystPath != "" && c.OpenVPNPath != ""
 }
 
 // Write config file.

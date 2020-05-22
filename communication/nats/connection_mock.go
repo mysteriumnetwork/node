@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 )
 
@@ -187,11 +187,6 @@ func (conn *ConnectionMock) RequestWithContext(ctx context.Context, subject stri
 // Open starts the connection
 func (conn *ConnectionMock) Open() error {
 	go conn.queueProcessing()
-	return nil
-}
-
-// Reopen restarts the connection
-func (conn *ConnectionMock) Reopen() error {
 	return nil
 }
 
