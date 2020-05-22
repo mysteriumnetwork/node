@@ -1,9 +1,33 @@
 #!/usr/bin/env bash
 
-setDefaultRoute() {
+source bin/helpers/functions.sh
+
+function setDefaultRoute {
     GW=$1;
     ip route del default
     ip route add default via ${GW}
+}
+
+function ensure_paths {
+    iptables_path=`which iptables`
+    if [[ ${iptables_path} == "" ]]; then
+      echo "required dependency missing: iptables"
+      exit 1
+    fi
+
+    # validate utility against valid system paths
+    basepath=${iptables_path%/*}
+    echo "iptables basepath detected: ${basepath}"
+    if ! [[ ${basepath} =~ (^/usr/sbin|^/sbin|^/bin|^/usr/bin) ]]; then
+      echo "invalid basepath for dependency - check if system PATH has not been altered"
+      exit 1
+    fi
+
+    iptables_required_path="/usr/sbin/iptables"
+
+    if ! [[ -x ${iptables_required_path} ]]; then
+        ln -s ${iptables_path} ${iptables_required_path}
+    fi
 }
 
 if [ -n "$GATEWAY" ]; then
@@ -30,3 +54,4 @@ if [ ! -d "$OS_DIR_DATA" ]; then
     mkdir -p $OS_DIR_DATA
 fi
 
+ensure_paths

@@ -87,8 +87,9 @@ type promiseHandler interface {
 }
 
 type sentInvoice struct {
-	invoice crypto.Invoice
-	r       []byte
+	invoice    crypto.Invoice
+	r          []byte
+	isCritical bool
 }
 
 // DataTransferred represents the data transferred in a session.
@@ -104,6 +105,7 @@ func (dt DataTransferred) sum() uint64 {
 type InvoiceTracker struct {
 	stop                       chan struct{}
 	promiseErrors              chan error
+	invoiceChannel             chan bool
 	accountantFailureCount     uint64
 	accountantFailureCountLock sync.Mutex
 
@@ -116,7 +118,6 @@ type InvoiceTracker struct {
 	once                           sync.Once
 	rnd                            *rand.Rand
 	agreementID                    uint64
-	lastExchangeMessage            crypto.ExchangeMessage
 	firstInvoicePaid               bool
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
@@ -124,6 +125,13 @@ type InvoiceTracker struct {
 
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
+
+	criticalInvoiceErrors chan error
+	lastInvoiceSent       time.Duration
+	invoiceDebounceRate   time.Duration
+
+	lastExchangeMessage     crypto.ExchangeMessage
+	lastExchangeMessageLock sync.Mutex
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -149,6 +157,7 @@ type InvoiceTrackerDeps struct {
 	ChannelAddressCalculator   channelAddressCalculator
 	SessionID                  string
 	PromiseHandler             promiseHandler
+	MaxNotPaidInvoice          uint64
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -162,6 +171,9 @@ func NewInvoiceTracker(
 		invoicesSent:                   make(map[string]sentInvoice),
 		rnd:                            rand.New(rand.NewSource(1)),
 		promiseErrors:                  make(chan error),
+		criticalInvoiceErrors:          make(chan error),
+		invoiceChannel:                 make(chan bool),
+		invoiceDebounceRate:            time.Second * 5,
 	}
 }
 
@@ -229,7 +241,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 		return err
 	}
 
-	it.lastExchangeMessage = em
+	it.saveLastExchangeMessage(em)
 	it.markInvoicePaid(em.Promise.Hashlock)
 	it.resetNotReceivedExchangeMessageCount()
 	it.resetNotSentExchangeMessageCount()
@@ -280,15 +292,18 @@ func (it *InvoiceTracker) Start() error {
 		return fmt.Errorf("could not send first invoice: %w", err)
 	}
 
+	go it.sendInvoicesWhenNeeded(time.Second * 2)
 	for {
 		select {
 		case <-it.stop:
 			return nil
-		case <-time.After(it.deps.ChargePeriod):
-			err := it.sendInvoice()
+		case critical := <-it.invoiceChannel:
+			err := it.sendInvoice(critical)
 			if err != nil {
 				return fmt.Errorf("sending of invoice failed: %w", err)
 			}
+		case err := <-it.criticalInvoiceErrors:
+			return err
 		case emErr := <-emErrors:
 			if emErr != nil {
 				return errors.Wrap(emErr, "failed to get exchange message")
@@ -297,6 +312,28 @@ func (it *InvoiceTracker) Start() error {
 			err := it.handleAccountantError(pErr)
 			if err != nil {
 				return fmt.Errorf("could not request promise %w", err)
+			}
+		}
+	}
+}
+
+func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
+	it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
+	for {
+		select {
+		case <-it.stop:
+			return
+		case <-time.After(interval):
+			currentlyElapsed := it.deps.TimeTracker.Elapsed()
+			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
+			lastEM := it.getLastExchangeMessage()
+			diff := safeSub(shouldBe, lastEM.AgreementTotal)
+			if diff >= it.deps.MaxNotPaidInvoice && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
+				it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
+				it.invoiceChannel <- true
+			} else if currentlyElapsed-it.lastInvoiceSent > it.deps.ChargePeriod {
+				it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
+				it.invoiceChannel <- false
 			}
 		}
 	}
@@ -373,7 +410,19 @@ func (it *InvoiceTracker) generateR() []byte {
 	return r
 }
 
-func (it *InvoiceTracker) sendInvoice() error {
+func (it *InvoiceTracker) saveLastExchangeMessage(em crypto.ExchangeMessage) {
+	it.lastExchangeMessageLock.Lock()
+	defer it.lastExchangeMessageLock.Unlock()
+	it.lastExchangeMessage = em
+}
+
+func (it *InvoiceTracker) getLastExchangeMessage() crypto.ExchangeMessage {
+	it.lastExchangeMessageLock.Lock()
+	defer it.lastExchangeMessageLock.Unlock()
+	return it.lastExchangeMessage
+}
+
+func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	if it.getNotSentExchangeMessageCount() >= it.maxNotSentExchangeMessages {
 		return ErrInvoiceSendMaxFailCountReached
 	}
@@ -388,7 +437,8 @@ func (it *InvoiceTracker) sendInvoice() error {
 	// This is due to the fact that both payment providers start at different times.
 	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
 	// Over the long run, this becomes redundant as the difference should become miniscule.
-	if it.lastExchangeMessage.AgreementTotal == 0 {
+	lastEm := it.getLastExchangeMessage()
+	if lastEm.AgreementTotal == 0 {
 		shouldBe = uint64(math.Trunc(float64(shouldBe) * providerFirstInvoiceTolerance))
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
@@ -407,8 +457,9 @@ func (it *InvoiceTracker) sendInvoice() error {
 	}
 
 	it.markInvoiceSent(sentInvoice{
-		invoice: invoice,
-		r:       r,
+		invoice:    invoice,
+		r:          r,
+		isCritical: true,
 	})
 
 	hlock, err := hex.DecodeString(invoice.Hashlock)
@@ -431,7 +482,7 @@ func (it *InvoiceTracker) sendFirstInvoice() error {
 		case <-timeout:
 			return ErrFirstInvoiceSendTimeout
 		case <-time.After(it.deps.FirstInvoiceSendDuration):
-			err := it.sendInvoice()
+			err := it.sendInvoice(true)
 			if stdErr.Is(err, p2p.ErrHandlerNotFound) {
 				continue
 			}
@@ -444,11 +495,19 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	select {
 	case <-time.After(it.deps.ExchangeMessageWaitTimeout):
 		inv, ok := it.getMarkedInvoice(hlock)
-		if ok {
-			log.Info().Msgf("did not get paid for invoice with hashlock %v, incrementing failure count", inv.invoice.Hashlock)
-			it.markInvoicePaid(hlock)
-			it.markExchangeMessageNotReceived()
+		if !ok {
+			return
 		}
+
+		if inv.isCritical {
+			log.Info().Msgf("did not get paid for invoice with hashlock %v, invoice is critical. Aborting.", inv.invoice.Hashlock)
+			it.criticalInvoiceErrors <- fmt.Errorf("did not get paid for critical invoice with hashlock %v", inv.invoice.Hashlock)
+			return
+		}
+
+		log.Info().Msgf("did not get paid for invoice with hashlock %v, incrementing failure count", inv.invoice.Hashlock)
+		it.markInvoicePaid(hlock)
+		it.markExchangeMessageNotReceived()
 	case <-it.stop:
 		return
 	}
@@ -517,8 +576,9 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.New("identity missmatch")
 	}
 
-	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
-		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
+	lastEm := it.getLastExchangeMessage()
+	if em.Promise.Amount < lastEm.Promise.Amount {
+		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", lastEm.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
