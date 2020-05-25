@@ -158,6 +158,7 @@ type Dependencies struct {
 	AccountantCaller         *pingpong.AccountantCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 	AccountantPromiseHandler *pingpong.AccountantPromiseHandler
+	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -398,6 +399,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
+	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage, pingpong.DefaultMaxEntriesPerChannel)
 	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
