@@ -281,7 +281,7 @@ func (aps *accountantPromiseSettler) listenForSettlementRequests() {
 		case <-aps.stop:
 			return
 		case p := <-aps.settleQueue:
-			go aps.settle(p)
+			go aps.settle(p, nil)
 		}
 	}
 }
@@ -316,7 +316,7 @@ func (aps *accountantPromiseSettler) ForceSettle(providerID identity.Identity, a
 	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
-	})
+	}, nil)
 }
 
 // ForceSettle forces the settlement for a provider
@@ -336,73 +336,16 @@ func (aps *accountantPromiseSettler) SettleWithBeneficiary(providerID identity.I
 	}
 
 	promise.Promise.R = hexR
-	return aps.settleWithBeneficiary(receivedPromise{
+	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
-	}, beneficiary)
-}
-
-func (aps *accountantPromiseSettler) settleWithBeneficiary(p receivedPromise, beneficiary common.Address) error {
-	if aps.isSettling(p.provider) {
-		return errors.New("provider already has settlement in progress")
-	}
-
-	aps.setSettling(p.provider, true)
-	log.Info().Msgf("Marked provider %v as requesting settlement", p.provider)
-	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.AccountantAddress)
-	if err != nil {
-		aps.setSettling(p.provider, false)
-		log.Error().Err(err).Msg("Could not subscribe to promise settlement")
-		return err
-	}
-
-	errCh := make(chan error)
-	go func() {
-		defer cancel()
-		defer aps.setSettling(p.provider, false)
-		defer close(errCh)
-		select {
-		case <-aps.stop:
-			return
-		case _, more := <-sink:
-			if !more {
-				break
-			}
-
-			log.Info().Msgf("Settling complete for provider %v", p.provider)
-
-			err := aps.resyncState(p.provider)
-			if err != nil {
-				// This will get retried so we do not need to explicitly retry
-				// TODO: maybe add a sane limit of retries
-				log.Error().Err(err).Msgf("Resync failed for provider %v", p.provider)
-			} else {
-				log.Info().Msgf("Resync success for provider %v", p.provider)
-			}
-			return
-		case <-time.After(aps.config.MaxWaitForSettlement):
-			log.Info().Msgf("Settle timeout for %v", p.provider)
-
-			// send a signal to waiter that the settlement has timed out
-			errCh <- ErrSettleTimeout
-			return
-		}
-	}()
-
-	err = aps.transactor.SettleWithBeneficiary(p.provider.Address, beneficiary.Hex(), aps.config.AccountantAddress.Hex(), p.promise)
-	if err != nil {
-		cancel()
-		log.Error().Err(err).Msgf("Could not settle promise for %v", p.provider.Address)
-		return err
-	}
-
-	return <-errCh
+	}, &beneficiary)
 }
 
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
-func (aps *accountantPromiseSettler) settle(p receivedPromise) error {
+func (aps *accountantPromiseSettler) settle(p receivedPromise, beneficiary *common.Address) error {
 	if aps.isSettling(p.provider) {
 		return errors.New("provider already has settlement in progress")
 	}
@@ -449,7 +392,16 @@ func (aps *accountantPromiseSettler) settle(p receivedPromise) error {
 		}
 	}()
 
-	err = aps.transactor.SettleAndRebalance(aps.config.AccountantAddress.Hex(), p.promise)
+	var settleFunc = func() error {
+		return aps.transactor.SettleAndRebalance(aps.config.AccountantAddress.Hex(), p.promise)
+	}
+	if beneficiary != nil {
+		settleFunc = func() error {
+			return aps.transactor.SettleWithBeneficiary(p.provider.Address, beneficiary.Hex(), aps.config.AccountantAddress.Hex(), p.promise)
+		}
+	}
+
+	err = settleFunc()
 	if err != nil {
 		cancel()
 		log.Error().Err(err).Msgf("Could not settle promise for %v", p.provider.Address)
