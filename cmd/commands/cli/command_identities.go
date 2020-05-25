@@ -216,6 +216,12 @@ const usageSettle = "settle <providerIdentity>"
 func (c *cliApp) settle(args []string) {
 	if len(args) != 1 {
 		info("Usage: " + usageSettle)
+		fees, err := c.tequilapi.GetTransactorFees()
+		if err != nil {
+			warn("could not get transactor fee: ", err)
+		}
+		info(fmt.Sprintf("Transactor fee: %.5fMYST", float64(fees.Settlement)/money.MystSize))
+		info(fmt.Sprintf("Accountant fee: %.5fMYST", float64(fees.Accountant)/money.MystSize))
 		return
 	}
 	accountantID := config.GetString(config.FlagAccountantID)

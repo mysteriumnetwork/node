@@ -27,6 +27,7 @@ import (
 type Fees struct {
 	Registration uint64 `json:"registration"`
 	Settlement   uint64 `json:"settlement"`
+	Accountant   uint16 `json:"accountant"`
 }
 
 // HealthcheckDTO holds returned healthcheck response

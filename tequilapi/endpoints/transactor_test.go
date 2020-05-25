@@ -71,7 +71,9 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, nil)
+	AddRoutesForTransactor(router, tr, &mockSettler{
+		feeToReturn: 11,
+	})
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -84,7 +86,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"registration":1, "settlement":1}`, resp.Body.String())
+	assert.JSONEq(t, `{"registration":1, "settlement":1, "accountant":11}`, resp.Body.String())
 }
 
 func Test_TopUp_OK(t *testing.T) {
@@ -267,6 +269,9 @@ func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
 
 type mockSettler struct {
 	errToReturn error
+
+	feeToReturn      uint16
+	feeErrorToReturn error
 }
 
 func (ms *mockSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
@@ -275,4 +280,8 @@ func (ms *mockSettler) ForceSettle(_ identity.Identity, _ common.Address) error 
 
 func (ms *mockSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
 	return ms.errToReturn
+}
+
+func (ms *mockSettler) GetAccountantFee() (uint16, error) {
+	return ms.feeToReturn, ms.feeErrorToReturn
 }
