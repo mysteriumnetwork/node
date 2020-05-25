@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteclient
+package userspace
 
 import (
-	"errors"
-	"net"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
-	return errors.New("not implemented")
-}
-
-func excludeRoute(ip net.IP) error {
-	return errors.New("not implemented")
-}
-
-func addDefaultRoute(iface string) error {
-	return errors.New("not implemented")
+func destroyDevice(name string) error {
+	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }

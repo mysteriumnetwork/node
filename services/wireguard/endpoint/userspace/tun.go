@@ -22,6 +22,7 @@ package userspace
 import (
 	"net"
 
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
@@ -32,7 +33,7 @@ func CreateTUN(name string, subnet net.IPNet) (tunDevice tun.Device, err error) 
 	if tunDevice, err = tun.CreateTUN(name, device.DefaultMTU); err != nil {
 		return nil, errors.Wrap(err, "failed to create TUN device")
 	}
-	if err = assignIP(name, subnet); err != nil {
+	if err = netutil.AssignIP(name, subnet); err != nil {
 		return nil, errors.Wrap(err, "failed to assign IP address")
 	}
 	return tunDevice, nil

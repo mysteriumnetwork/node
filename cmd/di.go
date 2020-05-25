@@ -328,6 +328,13 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
+	// Kill node first which includes current active VPN connection cleanup.
+	if di.Node != nil {
+		if err := di.Node.Kill(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	if di.ServicesManager != nil {
 		if err := di.ServicesManager.Kill(); err != nil {
 			errs = append(errs, err)
@@ -359,11 +366,6 @@ func (di *Dependencies) Shutdown() (err error) {
 	}
 	firewall.Reset()
 
-	if di.Node != nil {
-		if err := di.Node.Kill(); err != nil {
-			errs = append(errs, err)
-		}
-	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
 			errs = append(errs, err)

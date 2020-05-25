@@ -15,21 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteclient
+package netutil
 
 import (
-	"errors"
 	"net"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
-	return errors.New("not implemented")
+// AssignIP assigns subnet to given interface.
+func AssignIP(iface string, subnet net.IPNet) error {
+	return assignIP(iface, subnet)
 }
 
-func excludeRoute(ip net.IP) error {
-	return errors.New("not implemented")
+// ExcludeRoute excludes given IP from VPN tunnel.
+func ExcludeRoute(ip net.IP) error {
+	return excludeRoute(ip)
 }
 
-func addDefaultRoute(iface string) error {
-	return errors.New("not implemented")
+// AddDefaultRoute adds default VPN tunnel route.
+func AddDefaultRoute(iface string) error {
+	return addDefaultRoute(iface)
 }
