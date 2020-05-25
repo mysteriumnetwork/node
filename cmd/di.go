@@ -808,8 +808,17 @@ func (di *Dependencies) handleConnStateChange() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()
+
 			if err := di.EtherClient.Reconnect(); err != nil {
-				log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
+				// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
+				// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
+				// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
+				// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
+				// https://github.com/mysteriumnetwork/node/issues/2282
+				if err := di.EtherClient.Reconnect(); err != nil {
+					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+				}
 			}
 			di.EventBus.Publish(registry.AppTopicEthereumClientReconnected, struct{}{})
 		}
