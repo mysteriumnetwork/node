@@ -187,6 +187,7 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 		di.BCHelper,
 		di.IdentityRegistry,
 		di.Keystore,
+		di.SettlementHistoryStorage,
 		pingpong.AccountantPromiseSettlerConfig{
 			AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
 			Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,

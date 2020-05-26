@@ -70,6 +70,9 @@ func (shs *SettlementHistoryStorage) Store(provider identity.Identity, accountan
 	}
 
 	she.Time = time.Now().UTC()
+	bytes := common.Hex2Bytes(addr)
+	copy(she.ChannelID[:], bytes)
+
 	toStore := []SettlementHistoryEntry{she}
 	entries, err := shs.get(addr)
 	if err != nil {

@@ -38,6 +38,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type settlementHistoryStorage interface {
+	Store(provider identity.Identity, accountant common.Address, she SettlementHistoryEntry) error
+}
+
 type providerChannelStatusProvider interface {
 	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
 	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
@@ -86,6 +90,7 @@ type accountantPromiseSettler struct {
 	ks                         ks
 	transactor                 transactor
 	promiseStorage             promiseStorage
+	settlementHistoryStorage   settlementHistoryStorage
 
 	currentState map[identity.Identity]settlementState
 	settleQueue  chan receivedPromise
@@ -101,7 +106,7 @@ type AccountantPromiseSettlerConfig struct {
 }
 
 // NewAccountantPromiseSettler creates a new instance of accountant promise settler.
-func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, config AccountantPromiseSettlerConfig) *accountantPromiseSettler {
+func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transactor, promiseStorage promiseStorage, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, config AccountantPromiseSettlerConfig) *accountantPromiseSettler {
 	return &accountantPromiseSettler{
 		eventBus:                   eventBus,
 		bc:                         providerChannelStatusProvider,
@@ -110,6 +115,7 @@ func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transact
 		config:                     config,
 		currentState:               make(map[identity.Identity]settlementState),
 		promiseStorage:             promiseStorage,
+		settlementHistoryStorage:   settlementHistoryStorage,
 
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
@@ -367,14 +373,29 @@ func (aps *accountantPromiseSettler) settle(p receivedPromise, beneficiary *comm
 		select {
 		case <-aps.stop:
 			return
-		case _, more := <-sink:
-			if !more {
+		case info, more := <-sink:
+			if !more || info == nil {
 				break
 			}
 
 			log.Info().Msgf("Settling complete for provider %v", p.provider)
 
-			err := aps.resyncState(p.provider)
+			she := SettlementHistoryEntry{
+				TxHash:       info.Raw.TxHash,
+				Promise:      p.promise,
+				Amount:       info.Amount,
+				TotalSettled: info.TotalSettled,
+			}
+			if beneficiary != nil {
+				she.Beneficiary = *beneficiary
+			}
+
+			err := aps.settlementHistoryStorage.Store(p.provider, aps.config.AccountantAddress, she)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not store settlement history")
+			}
+
+			err = aps.resyncState(p.provider)
 			if err != nil {
 				// This will get retried so we do not need to explicitly retry
 				// TODO: maybe add a sane limit of retries
