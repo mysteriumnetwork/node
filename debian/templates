@@ -4,31 +4,46 @@ Description: You have to accept terms and conditions to install this software
                        MYSTERIUM NETWORK OPEN ALPHA
                                TERMS OF USE
                            FOR MYSTERIUM NODES
- SHORT VERSION IN HUMAN LANGUAGE:
  .
- . Mysterium Platform and Mysterium Software is still in its development
-   (alpha) stage. We will do our best to develop it further, but we cannot
-   guarantee this.
+ SHORT VERSION IN HUMAN LANGUAGE FOR EXIT NODE:
  .
- . You will join our network and act as an exit node for others.
- .
- . No compensation will be paid to you for your participation in the Program.
- .
+ . Mysterium Network is still in its development (alpha) stage.
+   We will do our best to develop it further, but we cannot guarantee this.
+ . You will join our network and act as an exit node for others who will
+   use your equipment and internet traffic to access internet resources.
  . We strive to protect you from any legal liability and believe that you
-   should not be liable for running an exit node, but we cannot guarantee that
-   you might not face it.
- .
- . You cannot monitor or log any data which passes through your equipment and
-   must treat all data equally.
- .
- . Your use of the platform and software is at your own risk. We provide it to
-   you "as is" without any warranties.
- .
+   should not be liable for running an exit node, but we cannot guarantee
+   that you might not face it.
+ . You cannot use or encourage or assist others to use the network in any
+   way which violates any laws or rights of any party, including intellectual
+   property rights.
+ . You can monitor data which passes through your equipment only to whitelist
+   the exit destinations for outgoing traffic
+ . You can use the network with our Mysterium software
+   or any other compatible software.
+ . Your use of the network is at your own risk.
+   We provide it to you “as is” without any warranties.
  . In no event will we be liable for any damages which you may incur.
  .
- . We recommend you read the full version to get acquainted with all of the
-   terms and conditions available here:
-        https://github.com/mysteriumnetwork/node/blob/master/TERMS.md
+ SHORT VERSION IN HUMAN LANGUAGE FOR END USER:
+ .
+ . Mysterium Network is still in its development (alpha version) stage.
+   We will do our best to develop it further, but we cannot guarantee this.
+ . You cannot use or encourage or assist others to use the network in any way
+   which violates any laws or rights of any party, including intellectual
+   property rights.
+ . Your use of the network is at your own risk.
+   We provide it to you “as is” without any warranties.
+ . You are responsible for all the content that you receive,
+   distribute or otherwise transmit through the network.
+ . You can use the network with our Mysterium software
+   or any other compatible software.
+ . In no event will we be liable for any damages which you may incur.
+ .
+ We recommend that you read the full versions below to get acquainted
+   with all of the terms and conditions available here:
+      https://github.com/mysteriumnetwork/terms/documents/TERMS_EXIT_NODE.md
+      https://github.com/mysteriumnetwork/terms/documents/TERMS_EXIT_USER.md
 
 Template: mysterium/accept_terms
 Type: boolean
