@@ -94,6 +94,11 @@ func (ebs *EventBasedStorage) Find(id ID) (Session, bool) {
 	return ebs.storage.Find(id)
 }
 
+// FindBy returns a session by find options.
+func (ebs *EventBasedStorage) FindBy(opts FindOpts) (ID, bool) {
+	return ebs.storage.FindBy(opts)
+}
+
 // Remove removes the session and publishes a removal event
 func (ebs *EventBasedStorage) Remove(id ID) {
 	ebs.storage.Remove(id)
