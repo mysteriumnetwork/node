@@ -52,7 +52,6 @@ type SettlementHistoryEntry struct {
 	Time         time.Time      `json:"time,omitempty"`
 	TxHash       common.Hash    `json:"tx_hash,omitempty"`
 	Promise      crypto.Promise `json:"promise,omitempty"`
-	ChannelID    [32]byte       `json:"channel_id,omitempty"`
 	Beneficiary  common.Address `json:"beneficiary,omitempty"`
 	Amount       *big.Int       `json:"amount,omitempty"`
 	TotalSettled *big.Int       `json:"total_settled,omitempty"`
@@ -70,9 +69,6 @@ func (shs *SettlementHistoryStorage) Store(provider identity.Identity, accountan
 	}
 
 	she.Time = time.Now().UTC()
-	bytes := common.Hex2Bytes(addr)
-	copy(she.ChannelID[:], bytes)
-
 	toStore := []SettlementHistoryEntry{she}
 	entries, err := shs.get(addr)
 	if err != nil {

@@ -43,13 +43,9 @@ func TestSettlementHistoryStorage(t *testing.T) {
 
 	accountantID := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
 	providerID := identity.FromAddress("0x79bb2a1c5E0075005F084a66A44D5e930A88eC86")
-	channelAddress, err := crypto.GenerateProviderChannelID(providerID.Address, accountantID.Hex())
-	chID := [32]byte{}
-	copy(chID[:], common.Hex2Bytes(channelAddress))
 	entry := SettlementHistoryEntry{
 		TxHash:       common.BigToHash(big.NewInt(123123123)),
 		Promise:      crypto.Promise{},
-		ChannelID:    chID,
 		Beneficiary:  common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),
 		Amount:       big.NewInt(123),
 		TotalSettled: big.NewInt(321),
