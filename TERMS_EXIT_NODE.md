@@ -184,5 +184,5 @@ We may update our Privacy Policy from time to time. Such changes, modifications,
 
 D. CONTACT US
 
- If you have any questions about this Privacy Policy, please contact us by email: privacy@mysterium.network
+ If you have any questions about this Privacy Policy, please contact us by email: support@netsys.technology
 
