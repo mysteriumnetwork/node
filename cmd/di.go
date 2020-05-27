@@ -72,6 +72,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -162,6 +163,9 @@ type Dependencies struct {
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Configure(&nodeOptions.LogOptions)
+
+	netutil.LogNetworkStats()
+
 	p2p.RegisterContactUnserializer()
 	di.BrokerConnector = nats.NewBrokerConnector()
 
@@ -807,6 +811,8 @@ func (di *Dependencies) handleConnStateChange() error {
 		isDisconnected := latestState == connection.Connected && e.State == connection.NotConnected
 		isConnected := latestState == connection.NotConnected && e.State == connection.Connected
 		if isDisconnected || isConnected {
+			netutil.LogNetworkStats()
+
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()

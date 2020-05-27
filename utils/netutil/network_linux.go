@@ -19,6 +19,7 @@ package netutil
 
 import (
 	"net"
+	"os/exec"
 
 	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
@@ -46,4 +47,11 @@ func addDefaultRoute(iface string) error {
 	}
 
 	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
+}
+
+func logNetworkStats() {
+	for _, args := range [][]string{{"iptables", "-L", "-n"}, {"iptables", "-L", "-n", "-t", "nat"}, {"ip", "route", "list"}, {"ip", "address", "list"}} {
+		out, err := exec.Command("sudo", args...).CombinedOutput()
+		logOutputToTrace(out, err, args...)
+	}
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -174,6 +175,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 		discovery.Wait()
 	}()
+
+	netutil.LogNetworkStats()
 
 	return id, nil
 }
