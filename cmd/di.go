@@ -158,6 +158,7 @@ type Dependencies struct {
 	AccountantCaller         *pingpong.AccountantCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 	AccountantPromiseHandler *pingpong.AccountantPromiseHandler
+	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -398,6 +399,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
+	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage, pingpong.DefaultMaxEntriesPerChannel)
 	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
@@ -535,7 +537,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler, di.SettlementHistoryStorage)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
