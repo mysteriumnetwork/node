@@ -19,6 +19,10 @@ package netutil
 
 import (
 	"net"
+	"strings"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // AssignIP assigns subnet to given interface.
@@ -34,4 +38,23 @@ func ExcludeRoute(ip net.IP) error {
 // AddDefaultRoute adds default VPN tunnel route.
 func AddDefaultRoute(iface string) error {
 	return addDefaultRoute(iface)
+}
+
+// LogNetworkStats logs network information to the Trace log level.
+func LogNetworkStats() {
+	if log.Logger.GetLevel() != zerolog.TraceLevel {
+		return
+	}
+
+	logNetworkStats()
+}
+
+func logOutputToTrace(out []byte, err error, args ...string) {
+	logSkipFrame := log.With().CallerWithSkipFrameCount(3).Logger()
+
+	if err != nil {
+		(&logSkipFrame).Trace().Msgf("Failed to get %s error: %v", strings.Join(args, " "), err)
+	} else {
+		(&logSkipFrame).Trace().Msgf("%q output:\n%s", strings.Join(args, " "), out)
+	}
 }

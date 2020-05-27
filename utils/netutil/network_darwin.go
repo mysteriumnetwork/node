@@ -19,6 +19,7 @@ package netutil
 
 import (
 	"net"
+	"os/exec"
 
 	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
@@ -53,4 +54,11 @@ func peerIP(subnet net.IPNet) net.IP {
 		subnet.IP[lastOctetID] = byte(1)
 	}
 	return subnet.IP
+}
+
+func logNetworkStats() {
+	for _, args := range [][]string{{"ifconfig", "-a"}, {"netstat", "-rn"}, {"pfctl", "-s", "all"}} {
+		out, err := exec.Command("sudo", args...).CombinedOutput()
+		logOutputToTrace(out, err, args...)
+	}
 }

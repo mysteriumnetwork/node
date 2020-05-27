@@ -88,3 +88,10 @@ func interfaceInfo(name string) (id, gw string, err error) {
 
 	return strconv.Itoa(iface.Index), ipv4.String(), nil
 }
+
+func logNetworkStats() {
+	for _, args := range []string{"ipconfig /all", "netstat -r"} {
+		out, err := exec.Command("powershell", "-Command", args).CombinedOutput()
+		logOutputToTrace(out, err, args)
+	}
+}
