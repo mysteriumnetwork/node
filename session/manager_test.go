@@ -84,6 +84,42 @@ func TestManager_Start_StoresSession(t *testing.T) {
 	assert.False(t, session.CreatedAt.IsZero())
 }
 
+func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
+	expectedResult := expectedSession
+
+	sessionStore := NewStorageMemory()
+
+	manager := newManager(currentProposal, sessionStore)
+
+	session1, err := NewSession()
+	assert.NoError(t, err)
+	err = manager.Start(session1, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	assert.NoError(t, err)
+	expectedResult.done = session1.done
+	_, found := sessionStore.Find(session1.ID)
+
+	assert.Equal(t, expectedResult.Last, session1.Last)
+	assert.Equal(t, expectedResult.done, session1.done)
+	assert.Equal(t, expectedResult.ConsumerID, session1.ConsumerID)
+	assert.False(t, session1.CreatedAt.IsZero())
+	assert.True(t, found)
+
+	session2, err := NewSession()
+	assert.NoError(t, err)
+	err = manager.Start(session2, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	assert.NoError(t, err)
+	expectedResult.done = session2.done
+
+	assert.Equal(t, expectedResult.Last, session2.Last)
+	assert.Equal(t, expectedResult.done, session2.done)
+	assert.Equal(t, expectedResult.ConsumerID, session2.ConsumerID)
+	assert.False(t, session2.CreatedAt.IsZero())
+	assert.Eventuallyf(t, func() bool {
+		_, found = sessionStore.Find(session1.ID)
+		return !found
+	}, time.Second, 10*time.Millisecond, "Waiting for session destroy")
+}
+
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 

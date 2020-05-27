@@ -225,6 +225,8 @@ func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID stri
 }
 
 func (manager *Manager) clearStaleSession(consumerID identity.Identity, serviceType string) {
+	// Reading stale session before starting the clean up in goroutine.
+	// This is required to make sure we are not cleaning the newly created session.
 	session, ok := manager.sessionStorage.FindBy(FindOpts{
 		Peer:        &consumerID,
 		ServiceType: serviceType,
