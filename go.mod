@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/BurntSushi/toml v0.3.1
+	github.com/Microsoft/go-winio v0.4.14
 	github.com/andybalholm/brotli v1.0.0 // indirect
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
@@ -27,7 +28,7 @@ require (
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/klauspost/compress v1.10.5 // indirect
-	github.com/klauspost/pgzip v1.2.3 // indirect
+	github.com/klauspost/pgzip v1.2.4 // indirect
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magefile/mage v1.9.0
@@ -35,15 +36,13 @@ require (
 	github.com/miekg/dns v1.1.22
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
-	github.com/mysteriumnetwork/go-dvpn-web v0.0.40
+	github.com/mysteriumnetwork/go-dvpn-web v0.0.42
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/metrics v0.0.3
 	github.com/mysteriumnetwork/payments v0.0.13
-	github.com/nats-io/gnatsd v1.4.1 // indirect
-	github.com/nats-io/go-nats v1.4.0
-	github.com/nats-io/nats-server v1.4.1
-	github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe // indirect
+	github.com/nats-io/nats-server/v2 v2.1.7
+	github.com/nats-io/nats.go v1.10.0
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
@@ -66,13 +65,11 @@ require (
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/xtaci/kcp-go/v5 v5.5.8
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
-	golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f
+	golang.org/x/net v0.0.0-20200513185701-a91f0712d120
+	golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	google.golang.org/protobuf v1.21.0
+	google.golang.org/protobuf v1.22.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
-
-replace github.com/nats-io/go-nats v1.4.0 => github.com/mysteriumnetwork/nats.go v1.4.1-0.20200303115848-b4a5324c56ed

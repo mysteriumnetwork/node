@@ -65,11 +65,14 @@ func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("failed to chown wireguard socket to uid %s: %w", uid, err)
 	}
 
-	return &WgInterface{
+	wg := &WgInterface{
 		Name:   interfaceName,
 		device: wgDevice,
 		uapi:   uapi,
-	}, nil
+	}
+	go wg.handleUAPI()
+
+	return wg, nil
 }
 
 func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceName string, err error) {
@@ -84,8 +87,8 @@ func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceNa
 	return tunnel, interfaceName, err
 }
 
-// Listen listens for WireGuard configuration changes via user space socket.
-func (a *WgInterface) Listen() {
+// handleUAPI listens for WireGuard configuration changes via user space socket.
+func (a *WgInterface) handleUAPI() {
 	for {
 		conn, err := a.uapi.Accept()
 		if err != nil {

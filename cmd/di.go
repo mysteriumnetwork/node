@@ -302,7 +302,7 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		return service_openvpn.NewClient(
 			// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
 			nodeOptions.Openvpn.BinaryPath(),
-			nodeOptions.Directories.Config,
+			nodeOptions.Directories.Script,
 			nodeOptions.Directories.Runtime,
 			di.SignerFactory,
 			di.IPResolver,
@@ -327,6 +327,13 @@ func (di *Dependencies) Shutdown() (err error) {
 			}
 		}
 	}()
+
+	// Kill node first which includes current active VPN connection cleanup.
+	if di.Node != nil {
+		if err := di.Node.Kill(); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	if di.ServicesManager != nil {
 		if err := di.ServicesManager.Kill(); err != nil {
@@ -359,11 +366,6 @@ func (di *Dependencies) Shutdown() (err error) {
 	}
 	firewall.Reset()
 
-	if di.Node != nil {
-		if err := di.Node.Kill(); err != nil {
-			errs = append(errs, err)
-		}
-	}
 	if di.Storage != nil {
 		if err := di.Storage.Close(); err != nil {
 			errs = append(errs, err)
@@ -654,7 +656,7 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, 20*time.Second)
+	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, di.SignerFactory, 20*time.Second)
 	go di.QualityClient.Start()
 
 	var transport quality.Transport
@@ -705,7 +707,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	case node.LocationTypeBuiltin:
 		resolver, err = location.NewBuiltInResolver(di.IPResolver)
 	case node.LocationTypeMMDB:
-		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Config, options.Location.Address), di.IPResolver)
+		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Script, options.Location.Address), di.IPResolver)
 	case node.LocationTypeOracle:
 		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
 			return err
@@ -808,10 +810,19 @@ func (di *Dependencies) handleConnStateChange() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()
-			di.BrokerConnector.ReconnectAll()
+
 			if err := di.EtherClient.Reconnect(); err != nil {
-				log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
+				// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
+				// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
+				// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
+				// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
+				// https://github.com/mysteriumnetwork/node/issues/2282
+				if err := di.EtherClient.Reconnect(); err != nil {
+					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+				}
 			}
+			di.EventBus.Publish(registry.AppTopicEthereumClientReconnected, struct{}{})
 		}
 		latestState = e.State
 	})

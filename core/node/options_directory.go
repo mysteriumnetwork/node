@@ -34,8 +34,8 @@ type OptionsDirectory struct {
 	Storage string
 	// Data directory stores identity keys
 	Keystore string
-	// Config directory stores all data needed for runtime (db scripts etc.)
-	Config string
+	// Script directory stores all data needed for runtime, e.g. DNS scripts.
+	Script string
 	// Runtime directory for various temp file - usually current working dir
 	Runtime string
 }
@@ -47,7 +47,7 @@ func GetOptionsDirectory() *OptionsDirectory {
 		Data:     dataDir,
 		Storage:  filepath.Join(dataDir, "db"),
 		Keystore: filepath.Join(dataDir, "keystore"),
-		Config:   config.GetString(config.FlagConfigDir),
+		Script:   config.GetString(config.FlagScriptDir),
 		Runtime:  config.GetString(config.FlagRuntimeDir),
 	}
 }

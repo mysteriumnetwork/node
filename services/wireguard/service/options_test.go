@@ -48,13 +48,12 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
 	configureDefaults()
-	request := json.RawMessage(`{"connectDelay": 3000, "ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
+	request := json.RawMessage(`{"ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
 	assert.Equal(t, Options{
-		ConnectDelay: 3000,
-		Ports:        &port.Range{Start: 52820, End: 53075},
+		Ports: &port.Range{Start: 52820, End: 53075},
 		Subnet: net.IPNet{
 			IP:   net.ParseIP("10.10.0.0").To4(),
 			Mask: net.IPv4Mask(255, 255, 0, 0),

@@ -40,6 +40,26 @@ const (
 	BintrayToken = env.BuildVar("BINTRAY_TOKEN")
 )
 
+// ReleaseAndroidSDKSnapshot releases Android SKD snapshot from master branch to Bintray
+func ReleaseAndroidSDKSnapshot() error {
+	logconfig.Bootstrap()
+
+	err := env.EnsureEnvVars(
+		env.SnapshotBuild,
+		env.BuildVersion,
+		env.BuildNumber,
+	)
+	if err != nil {
+		return err
+	}
+	if !env.Bool(env.SnapshotBuild) {
+		log.Info().Msg("Not a snapshot build, skipping ReleaseAndroidSDKSnapshot action...")
+		return nil
+	}
+
+	return releaseAndroidSDK()
+}
+
 // ReleaseAndroidSDK releases Android SDK to Bintray
 func ReleaseAndroidSDK() error {
 	logconfig.Bootstrap()
@@ -56,7 +76,11 @@ func ReleaseAndroidSDK() error {
 		return nil
 	}
 
-	err = storage.DownloadArtifacts()
+	return releaseAndroidSDK()
+}
+
+func releaseAndroidSDK() error {
+	err := storage.DownloadArtifacts()
 	if err != nil {
 		return err
 	}

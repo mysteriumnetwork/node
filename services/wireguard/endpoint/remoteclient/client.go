@@ -24,6 +24,7 @@ import (
 	"time"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	supervisorclient "github.com/mysteriumnetwork/node/supervisor/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -158,4 +159,14 @@ func (c *client) Close() (err error) {
 		return fmt.Errorf("could not close client: %w", err)
 	}
 	return nil
+}
+
+func excludeRoute(ip net.IP) error {
+	_, err := supervisorclient.Command("exclude-route", "-ip", ip.String())
+	return err
+}
+
+func addDefaultRoute(iface string) error {
+	_, err := supervisorclient.Command("default-route", "-iface", iface)
+	return err
 }

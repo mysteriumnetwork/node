@@ -107,6 +107,11 @@ func (cfg *Config) SaveUserConfig() error {
 	return nil
 }
 
+// GetDefaultConfig returns default configuration.
+func (cfg *Config) GetDefaultConfig() map[string]interface{} {
+	return cfg.defaults
+}
+
 // GetUserConfig returns user configuration.
 func (cfg *Config) GetUserConfig() map[string]interface{} {
 	return cfg.user

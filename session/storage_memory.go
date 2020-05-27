@@ -106,19 +106,19 @@ type FindOpts struct {
 }
 
 // FindBy returns a session by find options.
-func (storage *StorageMemory) FindBy(opts FindOpts) (ID, bool) {
+func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
-	for id, session := range storage.sessions {
+	for _, session := range storage.sessions {
 		if opts.Peer != nil && *opts.Peer != session.ConsumerID {
 			continue
 		}
 		if opts.ServiceType != "" && opts.ServiceType != session.ServiceType {
 			continue
 		}
-		return id, true
+		return session, true
 	}
-	return "", false
+	return Session{}, false
 }
 
 // Remove removes given session from underlying storage

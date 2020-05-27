@@ -15,25 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteclient
+package netutil
 
 import (
 	"net"
 
-	supervisorclient "github.com/mysteriumnetwork/node/supervisor/client"
+	"github.com/jackpal/gateway"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
 func assignIP(iface string, subnet net.IPNet) error {
-	_, err := supervisorclient.Command("assign-ip", "-iface", iface, "-net", subnet.String())
-	return err
+	if err := cmdutil.SudoExec("ip", "address", "replace", "dev", iface, subnet.String()); err != nil {
+		return err
+	}
+	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
 func excludeRoute(ip net.IP) error {
-	_, err := supervisorclient.Command("exclude-route", "-ip", ip.String())
-	return err
+	gw, err := gateway.DiscoverGateway()
+	if err != nil {
+		return err
+	}
+
+	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
 }
 
 func addDefaultRoute(iface string) error {
-	_, err := supervisorclient.Command("default-route", "-iface", iface)
-	return err
+	if err := cmdutil.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
+		return err
+	}
+
+	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
 }

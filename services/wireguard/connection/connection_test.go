@@ -96,7 +96,7 @@ func newConn(t *testing.T) *Connection {
 		return &mockConnectionEndpoint{}, nil
 	}
 	opts := Options{
-		DNSConfigDir: "/dns/dir",
+		DNSScriptDir: "/dns/dir",
 	}
 	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), endpointFactory, &mockDnsManager{}, &mockHandshakeWaiter{})
 	assert.NoError(t, err)
@@ -116,16 +116,14 @@ func newServiceConfig() wg.ServiceConfig {
 			Endpoint:  *endpoint,
 		},
 		Consumer: struct {
-			IPAddress    net.IPNet
-			DNSIPs       string
-			ConnectDelay int
+			IPAddress net.IPNet
+			DNSIPs    string
 		}{
 			IPAddress: net.IPNet{
 				IP:   net.IPv4(127, 0, 0, 1),
 				Mask: net.IPv4Mask(255, 255, 255, 128),
 			},
-			DNSIPs:       "128.0.0.1",
-			ConnectDelay: 3000,
+			DNSIPs: "128.0.0.1",
 		},
 	}
 }
@@ -154,5 +152,5 @@ func (m *mockHandshakeWaiter) Wait(statsFetch func() (*wg.Stats, error), timeout
 
 type mockDnsManager struct{}
 
-func (m mockDnsManager) Set(configDir, dev, dns string) error { return nil }
-func (m mockDnsManager) Clean(configDir, dev string) error    { return nil }
+func (m mockDnsManager) Set(scriptDir, dev, dns string) error { return nil }
+func (m mockDnsManager) Clean(scriptDir, dev string) error    { return nil }

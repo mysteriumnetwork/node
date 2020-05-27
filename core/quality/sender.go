@@ -26,9 +26,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/core/node/event"
-	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/rs/zerolog/log"
@@ -39,7 +38,7 @@ const (
 	sessionDataName     = "session_data"
 	sessionTokensName   = "session_tokens"
 	sessionEventName    = "session_event"
-	startupEventName    = "startup"
+	unlockEventName     = "unlock"
 	proposalEventName   = "proposal_event"
 	natMappingEventName = "nat_mapping"
 )
@@ -136,7 +135,8 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
 		return err
 	}
-	return bus.SubscribeAsync(nodevent.AppTopicNode, sender.sendStartupEvent)
+
+	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, sender.sendUnlockEvent)
 }
 
 // sendSessionData sends transferred information about session.
@@ -200,9 +200,9 @@ func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
 	}
 }
 
-// sendStartupEvent sends startup event
-func (sender *Sender) sendStartupEvent(e event.Payload) {
-	sender.sendEvent(startupEventName, e.Status)
+// sendUnlockEvent sends startup event
+func (sender *Sender) sendUnlockEvent(id string) {
+	sender.sendEvent(unlockEventName, id)
 }
 
 // sendProposalEvent sends provider proposal event.

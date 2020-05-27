@@ -26,11 +26,6 @@ func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
 	return nil, errors.New("not implemented")
 }
 
-// Listen listens for WireGuard configuration changes via user space socket.
-func (a *WgInterface) Listen() {
-
-}
-
 // Down closes device and user space api socket.
 func (a *WgInterface) Down() {
 

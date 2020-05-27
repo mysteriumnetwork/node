@@ -36,17 +36,17 @@ type morqaTransport struct {
 }
 
 func (transport *morqaTransport) SendEvent(event Event) error {
-	if metric := mapEventToMetric(event); metric != nil {
-		return transport.morqaClient.SendMetric(metric)
+	if id, metric := mapEventToMetric(event); metric != nil {
+		return transport.morqaClient.SendMetric(id, metric)
 	}
 
 	return fmt.Errorf("event not implemented")
 }
 
-func mapEventToMetric(event Event) *metrics.Event {
+func mapEventToMetric(event Event) (string, *metrics.Event) {
 	switch event.EventName {
-	case startupEventName:
-		return nodeVersionToMetricsEvent(event.Application)
+	case unlockEventName:
+		return identityUnlockToMetricsEvent(event.Context.(string), event.Application)
 	case sessionEventName:
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
@@ -56,11 +56,11 @@ func mapEventToMetric(event Event) *metrics.Event {
 	case proposalEventName:
 		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
 	}
-	return nil
+	return "", nil
 }
 
-func nodeVersionToMetricsEvent(info appInfo) *metrics.Event {
-	return &metrics.Event{
+func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Event) {
+	return id, &metrics.Event{
 		Metric: &metrics.Event_VersionPayload{
 			VersionPayload: &metrics.VersionPayload{
 				Version: info.Version,
@@ -71,9 +71,8 @@ func nodeVersionToMetricsEvent(info appInfo) *metrics.Event {
 	}
 }
 
-func sessionEventToMetricsEvent(ctx sessionEventContext) *metrics.Event {
-	return &metrics.Event{
-		Signature:  ctx.Consumer,
+func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event) {
+	return ctx.Consumer, &metrics.Event{
 		TargetId:   ctx.Provider,
 		IsProvider: false,
 		Metric: &metrics.Event_SessionEventPayload{
@@ -91,9 +90,8 @@ func sessionEventToMetricsEvent(ctx sessionEventContext) *metrics.Event {
 	}
 }
 
-func sessionDataToMetricsEvent(ctx sessionDataContext) *metrics.Event {
-	return &metrics.Event{
-		Signature:  ctx.Consumer,
+func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) {
+	return ctx.Consumer, &metrics.Event{
 		TargetId:   ctx.Provider,
 		IsProvider: false,
 		Metric: &metrics.Event_SessionStatisticsPayload{
@@ -112,9 +110,8 @@ func sessionDataToMetricsEvent(ctx sessionDataContext) *metrics.Event {
 	}
 }
 
-func sessionTokensToMetricsEvent(ctx sessionTokensContext) *metrics.Event {
-	return &metrics.Event{
-		Signature:  ctx.Consumer,
+func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Event) {
+	return ctx.Consumer, &metrics.Event{
 		TargetId:   ctx.Provider,
 		IsProvider: false,
 		Metric: &metrics.Event_SessionTokensPayload{
@@ -132,9 +129,10 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) *metrics.Event {
 	}
 }
 
-func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) *metrics.Event {
+func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (string, *metrics.Event) {
 	location := ctx.ServiceDefinition.GetLocation()
-	return &metrics.Event{
+	return ctx.ProviderID, &metrics.Event{
+		IsProvider: true,
 		Metric: &metrics.Event_ProposalPayload{
 			ProposalPayload: &metrics.ProposalPayload{
 				ProviderId:  ctx.ProviderID,

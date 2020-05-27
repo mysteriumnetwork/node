@@ -22,7 +22,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,10 +43,10 @@ func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	sender.sendStartupEvent(event.Payload{Status: event.StatusStarted})
+	sender.sendUnlockEvent("0x1234567890abcdef")
 
 	sentEvent := mockTransport.sentEvent
-	assert.Equal(t, "startup", sentEvent.EventName)
+	assert.Equal(t, "unlock", sentEvent.EventName)
 	assert.Equal(t, appInfo{Name: "myst", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
 }

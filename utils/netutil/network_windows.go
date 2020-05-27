@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package userspace
+package netutil
 
 import (
 	"net"
@@ -29,11 +29,6 @@ import (
 
 func assignIP(iface string, subnet net.IPNet) error {
 	out, err := exec.Command("powershell", "-Command", "netsh interface ip set address name=\""+iface+"\" source=static "+subnet.String()).CombinedOutput()
-	return errors.Wrap(err, string(out))
-}
-
-func renameInterface(name, newname string) error {
-	out, err := exec.Command("powershell", "-Command", "netsh interface set interface name=\""+name+"\" newname=\""+newname+"\"").CombinedOutput()
 	return errors.Wrap(err, string(out))
 }
 
@@ -59,12 +54,6 @@ func addDefaultRoute(name string) error {
 
 	out, err := exec.Command("powershell", "-Command", "route add 128.0.0.0/1 "+gw+" if "+id).CombinedOutput()
 	return errors.Wrap(err, string(out))
-}
-
-func destroyDevice(name string) error {
-	// Windows implementation is using single device that are reused for the future needs.
-	// Nothing to destroy here.
-	return nil
 }
 
 func interfaceInfo(name string) (id, gw string, err error) {

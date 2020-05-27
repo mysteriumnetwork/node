@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
@@ -74,10 +75,10 @@ func (c *client) Close() error {
 }
 
 func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
-	if err := excludeRoute(ip); err != nil {
+	if err := netutil.ExcludeRoute(ip); err != nil {
 		return err
 	}
-	return addDefaultRoute(iface)
+	return netutil.AddDefaultRoute(iface)
 }
 
 func (c *client) PeerStats(string) (*wg.Stats, error) {

@@ -49,8 +49,6 @@ func (m *Monitor) Up(requestedInterfaceName string, uid string) (string, error) 
 	if err != nil {
 		return "", err
 	}
-
-	go iface.Listen()
 	m.interfaces[iface.Name] = iface
 	return iface.Name, err
 }

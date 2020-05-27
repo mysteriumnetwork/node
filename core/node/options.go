@@ -145,6 +145,7 @@ func GetOptions() *Options {
 			ConsumerLowerMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
 			ConsumerDataLeewayMegabytes:        config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
 			ProviderInvoiceFrequency:           config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:              config.GetUInt64(config.FlagPaymentsMaxUnpaidInvoiceValue),
 		},
 		Accountant: OptionsAccountant{
 			AccountantID:              config.GetString(config.FlagAccountantID),

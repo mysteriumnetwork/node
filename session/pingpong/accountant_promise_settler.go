@@ -41,6 +41,7 @@ import (
 type providerChannelStatusProvider interface {
 	SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error)
 	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetAccountantFee(accountantAddress common.Address) (uint16, error)
 }
 
 type ks interface {
@@ -72,6 +73,7 @@ type AccountantPromiseSettler interface {
 	ForceSettle(providerID identity.Identity, accountantID common.Address) error
 	SettleWithBeneficiary(providerID identity.Identity, beneficiary, accountantID common.Address) error
 	Subscribe() error
+	GetAccountantFee() (uint16, error)
 }
 
 // accountantPromiseSettler is responsible for settling the accountant promises.
@@ -114,6 +116,11 @@ func NewAccountantPromiseSettler(eventBus eventbus.EventBus, transactor transact
 		stop:        make(chan struct{}),
 		transactor:  transactor,
 	}
+}
+
+// GetAccountantFee fetches the accountant fee.
+func (aps *accountantPromiseSettler) GetAccountantFee() (uint16, error) {
+	return aps.bc.GetAccountantFee(aps.config.AccountantAddress)
 }
 
 // loadInitialState loads the initial state for the given identity. Inteded to be called on service start.

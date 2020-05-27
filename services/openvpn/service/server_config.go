@@ -52,14 +52,14 @@ func (c *ServerConfig) SetProtocol(protocol string) {
 // NewServerConfig creates server configuration structure from given basic parameters
 func NewServerConfig(
 	runtimeDir string,
-	configDir string,
+	scriptDir string,
 	network, netmask string,
 	secPrimitives *tls.Primitives,
 	bindAddress string,
 	port int,
 	protocol string,
 ) *ServerConfig {
-	serverConfig := ServerConfig{config.NewConfig(runtimeDir, configDir)}
+	serverConfig := ServerConfig{config.NewConfig(runtimeDir, scriptDir)}
 	serverConfig.SetServerMode(port, network, netmask)
 	serverConfig.SetTLSServer()
 	serverConfig.SetProtocol(protocol)

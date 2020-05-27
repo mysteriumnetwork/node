@@ -56,7 +56,7 @@ func Start(handle handlerFunc) error {
 			log.Println("Client connected:", peer)
 			handle(conn)
 			if err := conn.Close(); err != nil {
-				log.Println("Error closing connection for:", peer, err)
+				log.Printf("Error closing connection for: %v error: %v", peer, err)
 			}
 			log.Println("Client disconnected:", peer)
 		}()

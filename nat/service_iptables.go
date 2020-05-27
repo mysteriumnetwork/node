@@ -165,7 +165,7 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 }
 
 func iptablesExec(args ...string) error {
-	args = append([]string{"/sbin/iptables"}, args...)
+	args = append([]string{"/usr/sbin/iptables"}, args...)
 	if err := cmdutil.SudoExec(args...); err != nil {
 		return errors.Wrap(err, "error calling IPTables")
 	}

@@ -19,7 +19,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,25 +29,13 @@ import (
 )
 
 var (
-	flagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagMystHome    = flag.String("mystHome", "", "Home directory for running myst (required for -install)")
-	flagMystPath    = flag.String("mystPath", "", "Path to myst executable (required for -install)")
-	flagOpenVPNPath = flag.String("openvpnPath", "", "Path to openvpn executable (required for -install)")
+	flagInstall = flag.Bool("install", false, "Install or repair myst supervisor")
 )
-
-func ensureInstallFlags() {
-	if *flagMystHome == "" || *flagMystPath == "" || *flagOpenVPNPath == "" {
-		fmt.Println("Error: required flags were not set")
-		flag.Usage()
-		os.Exit(1)
-	}
-}
 
 func main() {
 	flag.Parse()
 
 	if *flagInstall {
-		ensureInstallFlags()
 		log.Println("Installing supervisor")
 		path, err := thisPath()
 		if err != nil {
@@ -60,23 +47,9 @@ func main() {
 		if err != nil {
 			log.Fatalln("Failed to install supervisor:", err)
 		}
-		log.Println("Creating supervisor configuration")
-		cfg := config.Config{
-			MystHome:    *flagMystHome,
-			MystPath:    *flagMystPath,
-			OpenVPNPath: *flagOpenVPNPath,
-		}
-		err = cfg.Write()
-		if err != nil {
-			log.Fatalln("Failed to create supervisor configuration:", err)
-		}
 	} else {
 		log.Println("Running myst supervisor daemon")
-		cfg, err := config.Read()
-		if err != nil {
-			log.Println("Failed to read supervisor configuration:", err)
-		}
-		supervisor := daemon.New(cfg)
+		supervisor := daemon.New(&config.Config{})
 		if err := supervisor.Start(); err != nil {
 			log.Fatalln("Error running supervisor:", err)
 		}

@@ -225,10 +225,12 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
+			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.BCHelper,
 			di.EventBus,
 			proposal,
 			di.AccountantPromiseHandler,
+			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
 		return session.NewManager(
 			proposal,
@@ -281,7 +283,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	}
 	connFactory := func() (connection.Connection, error) {
 		opts := wireguard_connection.Options{
-			DNSConfigDir:     nodeOptions.Directories.Config,
+			DNSScriptDir:     nodeOptions.Directories.Script,
 			HandshakeTimeout: 1 * time.Minute,
 		}
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, dnsManager, handshakeWaiter)

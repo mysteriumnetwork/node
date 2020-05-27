@@ -45,6 +45,7 @@ type Transactor interface {
 type promiseSettler interface {
 	ForceSettle(providerID identity.Identity, accountantID common.Address) error
 	SettleWithBeneficiary(id identity.Identity, beneficiary, accountantID common.Address) error
+	GetAccountantFee() (uint16, error)
 }
 
 type transactorEndpoint struct {
@@ -65,6 +66,7 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler)
 type Fees struct {
 	Registration uint64 `json:"registration"`
 	Settlement   uint64 `json:"settlement"`
+	Accountant   uint16 `json:"accountant"`
 }
 
 // swagger:operation GET /transactor/fees Fees
@@ -91,10 +93,16 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+	accountantFees, err := te.promiseSettler.GetAccountantFee()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 
 	f := Fees{
 		Registration: registrationFees.Fee,
 		Settlement:   settlementFees.Fee,
+		Accountant:   accountantFees,
 	}
 
 	utils.WriteAsJSON(f, resp)

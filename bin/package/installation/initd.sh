@@ -111,6 +111,7 @@ function start() {
         --exec $DAEMON_BIN \
         -- \
         --config-dir=$OS_DIR_CONFIG \
+        --script-dir=$OS_DIR_CONFIG \
         --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
         $DAEMON_OPTS \

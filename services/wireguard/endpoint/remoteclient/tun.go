@@ -1,5 +1,3 @@
-// +build !windows
-
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -52,4 +50,9 @@ func destroyTUN(iface string) error {
 		return fmt.Errorf("failed to destroy wg interface: %w", err)
 	}
 	return nil
+}
+
+func assignIP(iface string, subnet net.IPNet) error {
+	_, err := supervisorclient.Command("assign-ip", "-iface", iface, "-net", subnet.String())
+	return err
 }

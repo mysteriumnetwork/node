@@ -21,14 +21,15 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/mysteriumnetwork/node/ci/packages"
 )
 
 // Daemon builds and runs myst daemon
 func Daemon() error {
-	if err := sh.RunV("bin/build"); err != nil {
-		return err
-	}
+	mg.Deps(packages.Build)
+
 	cmd := "build/myst/myst daemon"
 	if runtime.GOOS == "darwin" {
 		cmd = "sudo " + cmd
@@ -39,9 +40,8 @@ func Daemon() error {
 
 // Openvpn builds and starts openvpn service with terms accepted
 func Openvpn() error {
-	if err := sh.RunV("bin/build"); err != nil {
-		return err
-	}
+	mg.Deps(packages.Build)
+
 	cmd := "build/myst/myst service --agreed-terms-and-conditions openvpn"
 	if runtime.GOOS == "darwin" {
 		cmd = "sudo " + cmd
@@ -52,9 +52,8 @@ func Openvpn() error {
 
 // Wireguard builds and starts wireguard service with terms accepted
 func Wireguard() error {
-	if err := sh.RunV("bin/build"); err != nil {
-		return err
-	}
+	mg.Deps(packages.Build)
+
 	cmd := "build/myst/myst service --agreed-terms-and-conditions wireguard"
 	if runtime.GOOS == "darwin" {
 		cmd = "sudo " + cmd
@@ -65,8 +64,7 @@ func Wireguard() error {
 
 // CLI builds and runs myst CLI
 func CLI() error {
-	if err := sh.RunV("bin/build"); err != nil {
-		return err
-	}
+	mg.Deps(packages.Build)
+
 	return sh.RunV("build/myst/myst", "cli")
 }

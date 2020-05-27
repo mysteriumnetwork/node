@@ -19,6 +19,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -42,55 +43,26 @@ type registryStorage interface {
 }
 
 type contractRegistry struct {
-	accountantSession *bindings.AccountantImplementationCallerSession
-	contractSession   *bindings.RegistryCallerSession
-	filterer          *bindings.RegistryFilterer
 	accountantAddress common.Address
 	storage           registryStorage
 	stop              chan struct{}
 	once              sync.Once
 	publisher         eventbus.Publisher
 	lock              sync.Mutex
+	ethC              *paymentClient.ReconnectableEthClient
+	registryAddress   common.Address
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
 func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, accountantAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
 	log.Info().Msgf("Using registryAddress %v accountantAddress %v", registryAddress.Hex(), accountantAddress.Hex())
-	contract, err := bindings.NewRegistryCaller(registryAddress, ethClient.Client())
-	if err != nil {
-		return nil, err
-	}
-
-	contractSession := &bindings.RegistryCallerSession{
-		Contract: contract,
-		CallOpts: bind.CallOpts{
-			Pending: false, //we want to find out true registration status - not pending transactions
-		},
-	}
-
-	accountantContract, err := bindings.NewAccountantImplementationCaller(accountantAddress, ethClient.Client())
-	if err != nil {
-		return nil, err
-	}
-	accountantSession := &bindings.AccountantImplementationCallerSession{
-		Contract: accountantContract,
-		CallOpts: bind.CallOpts{
-			Pending: false, //we want to find out true registration status - not pending transactions
-		},
-	}
-
-	filterer, err := bindings.NewRegistryFilterer(registryAddress, ethClient.Client())
-	if err != nil {
-		return nil, err
-	}
 	return &contractRegistry{
-		contractSession:   contractSession,
-		accountantSession: accountantSession,
-		filterer:          filterer,
 		accountantAddress: accountantAddress,
 		storage:           registryStorage,
 		stop:              make(chan struct{}),
 		publisher:         publisher,
+		ethC:              ethClient,
+		registryAddress:   registryAddress,
 	}, nil
 }
 
@@ -100,7 +72,10 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-
+	err = eb.SubscribeAsync(AppTopicEthereumClientReconnected, registry.handleEtherClientReconnect)
+	if err != nil {
+		return err
+	}
 	return eb.Subscribe(AppTopicTransactorRegistration, registry.handleRegistrationEvent)
 }
 
@@ -200,7 +175,14 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 	go func() {
 		log.Info().Msgf("Waiting on identities %s accountant %s", userIdentities[0].Hex(), accountantIdentities[0].Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
-		subscription, err := registry.filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
+
+		filterer, err := bindings.NewRegistryFilterer(registry.registryAddress, registry.ethC.Client())
+		if err != nil {
+			log.Error().Err(err).Msg("could not create registry filterer")
+			return
+		}
+
+		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
 		if err != nil {
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,
@@ -219,8 +201,9 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 		}
 		defer subscription.Unsubscribe()
 
-		// TODO: maybe add appropriate timeout?
 		select {
+		case <-registry.stop:
+			return
 		case <-sink:
 			log.Info().Msgf("Received registration event for %v", identity)
 			s, err := registry.storage.Get(identity)
@@ -247,13 +230,15 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 				log.Error().Err(err).Msg("Could not store registration status")
 			}
 		case err := <-subscription.Err():
+			if err == nil {
+				return
+			}
+
+			log.Error().Err(err).Msg("Subscription error")
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,
 				Status: RegistrationError,
 			})
-			if err != nil {
-				log.Error().Err(err).Msg("Subscription error")
-			}
 			updateErr := registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: RegistrationError,
@@ -294,7 +279,7 @@ func (registry *contractRegistry) loadInitialState() error {
 
 	for i := range entries {
 		if time.Now().UTC().Sub(entries[i].UpdatedAt) > month {
-			log.Info().Msgf("Skipping identity %q as it has not been updated recently", entries[i].Identity)
+			log.Debug().Msgf("Skipping identity %q as it has not been updated recently", entries[i].Identity)
 			continue
 		}
 		switch entries[i].RegistrationStatus {
@@ -304,7 +289,7 @@ func (registry *contractRegistry) loadInitialState() error {
 				return errors.Wrapf(err, "could not check %q registration status", entries[i].Identity)
 			}
 		default:
-			log.Info().Msgf("Identity %q already registered, skipping", entries[i].Identity)
+			log.Debug().Msgf("Identity %q already registered, skipping", entries[i].Identity)
 		}
 	}
 	return nil
@@ -347,7 +332,31 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(id ident
 }
 
 func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (RegistrationStatus, error) {
-	registered, err := registry.contractSession.IsRegistered(
+	contract, err := bindings.NewRegistryCaller(registry.registryAddress, registry.ethC.Client())
+	if err != nil {
+		return RegistrationError, fmt.Errorf("could not get registry caller %w", err)
+	}
+
+	contractSession := &bindings.RegistryCallerSession{
+		Contract: contract,
+		CallOpts: bind.CallOpts{
+			Pending: false, //we want to find out true registration status - not pending transactions
+		},
+	}
+
+	accountantContract, err := bindings.NewAccountantImplementationCaller(registry.accountantAddress, registry.ethC.Client())
+	if err != nil {
+		return RegistrationError, fmt.Errorf("could not get accountant implementation caller %w", err)
+	}
+
+	accountantSession := &bindings.AccountantImplementationCallerSession{
+		Contract: accountantContract,
+		CallOpts: bind.CallOpts{
+			Pending: false, //we want to find out true registration status - not pending transactions
+		},
+	}
+
+	registered, err := contractSession.IsRegistered(
 		common.HexToAddress(id.Address),
 	)
 	if err != nil {
@@ -363,7 +372,7 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		return RegistrationError, errors.Wrap(err, "could not get provider channel address")
 	}
 
-	providerChannel, err := registry.accountantSession.Channels(providerAddressBytes)
+	providerChannel, err := accountantSession.Channels(providerAddressBytes)
 	if err != nil {
 		return RegistrationError, errors.Wrap(err, "could not get provider channel")
 	}
@@ -373,4 +382,14 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 	}
 
 	return RegisteredConsumer, nil
+}
+
+// AppTopicEthereumClientReconnected indicates that the ethereum client has reconnected.
+var AppTopicEthereumClientReconnected = "ether-client-reconnect"
+
+func (registry *contractRegistry) handleEtherClientReconnect(_ interface{}) {
+	err := registry.loadInitialState()
+	if err != nil {
+		log.Error().Err(err).Msg("could not resubscribe to identity status changes")
+	}
 }

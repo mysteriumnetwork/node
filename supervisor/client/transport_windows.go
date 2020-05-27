@@ -15,15 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package daemon
+package client
 
-import "errors"
+import (
+	"fmt"
+	"io"
+	"time"
 
-// runMyst runs mysterium node daemon. Blocks.
-func (d *Daemon) runMyst(args ...string) error {
-	return errors.New("not implemented")
-}
+	"github.com/Microsoft/go-winio"
+)
 
-func (d *Daemon) killMyst() error {
-	return errors.New("not implemented")
+const sock = `\\.\pipe\mystpipe`
+
+func connect() (io.ReadWriteCloser, error) {
+	timeout := 5 * time.Second
+	conn, err := winio.DialPipe(sock, &timeout)
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to the supervisor socket %s: %w", sock, err)
+	}
+	return conn, nil
 }

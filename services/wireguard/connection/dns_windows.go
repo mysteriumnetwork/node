@@ -24,10 +24,10 @@ func NewDNSManager() DNSManager {
 
 type dnsManager struct{}
 
-func (dm dnsManager) Set(configDir, dev, dns string) error {
+func (dm dnsManager) Set(scriptDir, dev, dns string) error {
 	return nil
 }
 
-func (dm dnsManager) Clean(configDir, dev string) error {
+func (dm dnsManager) Clean(scriptDir, dev string) error {
 	return nil
 }

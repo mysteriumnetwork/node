@@ -101,10 +101,12 @@ func InvoiceFactoryCreator(
 	channelImplementationAddress string,
 	maxAccountantFailureCount uint64,
 	maxAllowedAccountantFee uint16,
+	maxUnpaidInvoiceValue uint64,
 	blockchainHelper bcHelper,
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
+	providersAccountant common.Address,
 ) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(channel)
@@ -125,7 +127,8 @@ func InvoiceFactoryCreator(
 			FirstInvoiceSendTimeout:    10 * time.Second,
 			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
-			AccountantID:               accountantID,
+			ConsumersAccountantID:      accountantID,
+			ProvidersAccountantID:      providersAccountant,
 			Registry:                   registryAddress,
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
@@ -134,6 +137,7 @@ func InvoiceFactoryCreator(
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
 			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Hex(), channelImplementationAddress, registryAddress),
+			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

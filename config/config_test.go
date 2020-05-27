@@ -145,6 +145,25 @@ func TestConfig_ParseStringSliceFlag(t *testing.T) {
 	}
 }
 
+func TestUserConfig_Get(t *testing.T) {
+	cfg := NewConfig()
+
+	// when
+	cfg.SetDefault("openvpn.port", 1001)
+	// then
+	assert.Equal(t, 1001, cfg.Get("openvpn.port"))
+
+	// when
+	cfg.SetUser("openvpn.port", 1002)
+	// then
+	assert.Equal(t, 1002, cfg.Get("openvpn.port"))
+
+	// when
+	cfg.SetCLI("openvpn.port", 1003)
+	// then
+	assert.Equal(t, 1003, cfg.Get("openvpn.port"))
+}
+
 func must(t *testing.T, err error) {
 	assert.NoError(t, err)
 }
