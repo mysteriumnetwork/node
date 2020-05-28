@@ -269,10 +269,31 @@ func (aps *accountantPromiseSettler) handleAccountantPromiseReceived(apep event.
 	log.Info().Msgf("Accountant promise state updated for provider %q", id)
 
 	if s.needsSettling(aps.config.Threshold) {
-		aps.settleQueue <- receivedPromise{
-			provider: apep.ProviderID,
-			promise:  apep.Promise,
-		}
+		aps.initiateSettling(apep.ProviderID, apep.AccountantID)
+	}
+}
+
+func (aps *accountantPromiseSettler) initiateSettling(providerID identity.Identity, accountantID common.Address) {
+	promise, err := aps.promiseStorage.Get(providerID, accountantID)
+	if err == ErrNotFound {
+		log.Debug().Msgf("no promise to settle for %q %q", providerID, accountantID.Hex())
+		return
+	}
+	if err != nil {
+		log.Error().Err(fmt.Errorf("could not get promise from storage: %w", err))
+		return
+	}
+
+	hexR, err := hex.DecodeString(promise.R)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("could encode R: %w", err))
+		return
+	}
+	promise.Promise.R = hexR
+
+	aps.settleQueue <- receivedPromise{
+		provider: providerID,
+		promise:  promise.Promise,
 	}
 }
 
