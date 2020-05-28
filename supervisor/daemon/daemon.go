@@ -19,18 +19,18 @@ package daemon
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"strings"
 
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
-	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 // Daemon - supervisor process.
@@ -80,30 +80,6 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 			} else {
 				answer.ok()
 			}
-		case commandAssignIP:
-			err := d.assignIP(cmd...)
-			if err != nil {
-				log.Printf("failed %s: %s", commandAssignIP, err)
-				answer.err(err)
-			} else {
-				answer.ok()
-			}
-		case commandExcludeRoute:
-			err := d.excludeRoute(cmd...)
-			if err != nil {
-				log.Printf("failed %s: %s", commandExcludeRoute, err)
-				answer.err(err)
-			} else {
-				answer.ok()
-			}
-		case commandDefaultRoute:
-			err := d.defaultRoute(cmd...)
-			if err != nil {
-				log.Printf("failed %s: %s", commandDefaultRoute, err)
-				answer.err(err)
-			} else {
-				answer.ok()
-			}
 		case commandKill:
 			if err := d.killMyst(); err != nil {
 				log.Println("Could not kill myst:", err)
@@ -117,20 +93,26 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 
 func (d *Daemon) wgUp(args ...string) (interfaceName string, err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	requestedInterfaceName := flags.String("iface", "", "Requested tunnel interface name")
+	deviceConfigStr := flags.String("config", "", "Device configuration JSON string")
 	uid := flags.String("uid", "", "User ID."+
 		" On POSIX systems, this is a decimal number representing the uid."+
 		" On Windows, this is a security identifier (SID) in a string format.")
 	if err := flags.Parse(args[1:]); err != nil {
 		return "", err
 	}
-	if *requestedInterfaceName == "" {
-		return "", errors.New("-iface is required")
+	if *deviceConfigStr == "" {
+		return "", errors.New("-config is required")
 	}
 	if *uid == "" {
 		return "", errors.New("-uid is required")
 	}
-	return d.monitor.Up(*requestedInterfaceName, *uid)
+
+	deviceConfig := wg.DeviceConfig{}
+	if err := json.Unmarshal([]byte(*deviceConfigStr), &deviceConfig); err != nil {
+		return "", fmt.Errorf("could not unmarshal device config: %w", err)
+	}
+
+	return d.monitor.Up(deviceConfig, *uid)
 }
 
 func (d *Daemon) wgDown(args ...string) (err error) {
@@ -143,64 +125,4 @@ func (d *Daemon) wgDown(args ...string) (err error) {
 		return errors.New("-iface is required")
 	}
 	return d.monitor.Down(*interfaceName)
-}
-
-func (d *Daemon) assignIP(args ...string) (err error) {
-	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	interfaceName := flags.String("iface", "", "")
-	network := flags.String("net", "", "")
-	if err := flags.Parse(args[1:]); err != nil {
-		return err
-	}
-	if *interfaceName == "" {
-		return errors.New("-iface is required")
-	}
-	if *network == "" {
-		return errors.New("-net is required")
-	}
-	ip, ipNet, err := net.ParseCIDR(*network)
-	if err != nil {
-		return fmt.Errorf("-net could not be parsed: %w", err)
-	}
-	ipNet.IP = ip
-	if err := netutil.AssignIP(*interfaceName, *ipNet); err != nil {
-		return fmt.Errorf("could not assign IP: %w", err)
-	}
-	return nil
-}
-
-func (d *Daemon) excludeRoute(args ...string) (err error) {
-	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	ip := flags.String("ip", "", "")
-	if err := flags.Parse(args[1:]); err != nil {
-		return err
-	}
-	if *ip == "" {
-		return errors.New("-ip is required")
-	}
-	parsedIP := net.ParseIP(*ip)
-	if parsedIP == nil {
-		return fmt.Errorf("-ip could not be parsed: %w", err)
-	}
-
-	if err := netutil.ExcludeRoute(parsedIP); err != nil {
-		return fmt.Errorf("could not exclude route: %w", err)
-	}
-	return nil
-}
-
-func (d *Daemon) defaultRoute(args ...string) (err error) {
-	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	interfaceName := flags.String("iface", "", "")
-	if err := flags.Parse(args[1:]); err != nil {
-		return err
-	}
-	if *interfaceName == "" {
-		return errors.New("-iface is required")
-	}
-
-	if err := netutil.AddDefaultRoute(*interfaceName); err != nil {
-		return fmt.Errorf("could not add default route: %w", err)
-	}
-	return nil
 }

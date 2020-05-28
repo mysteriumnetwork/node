@@ -18,7 +18,6 @@
 package endpoint
 
 import (
-	"net"
 	"runtime"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -33,10 +32,7 @@ import (
 // WgClient represents WireGuard client.
 type WgClient interface {
 	ConfigureDevice(config wg.DeviceConfig) error
-	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
-	AddPeer(iface string, peer wg.Peer) error
-	RemovePeer(name string, publicKey string) error
 	PeerStats(iface string) (*wg.Stats, error)
 	Close() error
 }

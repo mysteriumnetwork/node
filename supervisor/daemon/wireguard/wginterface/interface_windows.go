@@ -18,19 +18,22 @@
 package wginterface
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"strings"
 
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
 )
 
 // New creates new WgInterface instance.
-func New(interfaceName string, uid string) (*WgInterface, error) {
+func New(cfg wg.DeviceConfig, uid string) (*WgInterface, error) {
 	log.Println("Creating Wintun interface")
 
-	wintun, err := tun.CreateTUN(interfaceName, 0)
+	wintun, err := tun.CreateTUN(cfg.IfaceName, 0)
 	if err != nil {
 		return nil, fmt.Errorf("could not create wintun: %w", err)
 	}
@@ -44,24 +47,32 @@ func New(interfaceName string, uid string) (*WgInterface, error) {
 
 	log.Println("Creating interface instance")
 	// TODO: Use ring logger?
-	logger := device.NewLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", interfaceName))
+	logger := device.NewLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", cfg.IfaceName))
 	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
 	wgDevice := device.NewDevice(wintun, logger)
 
 	log.Println("Setting interface configuration")
-	uapi, err := ipc.UAPIListen(interfaceName)
+	uapi, err := ipc.UAPIListen(cfg.IfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not listen for user API wg configuration: %w", err)
 	}
+	if err := wgDevice.IpcSetOperation(bufio.NewReader(strings.NewReader(cfg.Encode()))); err != nil {
+		return nil, fmt.Errorf("could not set device uapi config: %w", err)
+	}
 
-	wg := &WgInterface{
-		Name:   interfaceName,
+	// TODO: Will configure network and add tunnel routes in separate PR.
+
+	log.Println("Bringing peers up")
+	wgDevice.Up()
+
+	wgInterface := &WgInterface{
+		Name:   cfg.IfaceName,
 		device: wgDevice,
 		uapi:   uapi,
 	}
-	go wg.handleUAPI()
+	go wgInterface.handleUAPI()
 
-	return wg, nil
+	return wgInterface, nil
 }
 
 // handleUAPI listens for WireGuard configuration changes via user space socket.
