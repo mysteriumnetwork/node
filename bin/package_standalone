@@ -37,7 +37,11 @@ else
     cp -vp ${BINARY} ${DIR_TEMP}/myst
 fi
 copy_config $OS $DIR_TEMP
-cp -vp build/myst_supervisor/myst_supervisor ${DIR_TEMP}
+if [ "$OS" == "windows" ]; then
+    cp -vp build/myst_supervisor/myst_supervisor.exe ${DIR_TEMP}/myst_supervisor.exe
+else
+    cp -vp build/myst_supervisor/myst_supervisor ${DIR_TEMP}/myst_supervisor
+fi
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
