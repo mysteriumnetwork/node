@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -545,6 +546,16 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		stdErr.Is(err, ErrAccountantOverspend),
 		stdErr.Is(err, ErrConsumerUnregistered):
 		// these are critical, return and cancel session
+		return err
+	// under normal use, this should not occur. If it does, we should drop sessions until we settle because we're not getting paid.
+	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
+		it.deps.EventBus.Publish(
+			event.AppTopicSettlementRequest,
+			event.AppEventSettlementRequest{
+				AccountantID: it.deps.ProvidersAccountantID,
+				ProviderID:   it.deps.ProviderID,
+			},
+		)
 		return err
 	default:
 		log.Err(err).Msgf("unknown accountant error encountered")
