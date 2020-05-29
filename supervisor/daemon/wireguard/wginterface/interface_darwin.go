@@ -82,7 +82,7 @@ func New(cfg wg.DeviceConfig, uid string) (*WgInterface, error) {
 
 	wgInterface := &WgInterface{
 		Name:   interfaceName,
-		device: wgDevice,
+		Device: wgDevice,
 		uapi:   uapi,
 	}
 	log.Println("Listening for UAPI requests")
@@ -111,7 +111,7 @@ func (a *WgInterface) handleUAPI() {
 			log.Println("Closing UAPI listener, err:", err)
 			return
 		}
-		go a.device.IpcHandle(conn)
+		go a.Device.IpcHandle(conn)
 	}
 }
 
@@ -134,5 +134,5 @@ func configureNetwork(cfg wg.DeviceConfig) error {
 // Down closes device and user space api socket.
 func (a *WgInterface) Down() {
 	_ = a.uapi.Close()
-	a.device.Close()
+	a.Device.Close()
 }

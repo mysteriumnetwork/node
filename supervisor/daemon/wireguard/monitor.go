@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard/wginterface"
 )
 
@@ -67,4 +68,25 @@ func (m *Monitor) Down(interfaceName string) error {
 	iface.Down()
 	delete(m.interfaces, interfaceName)
 	return nil
+}
+
+// Stats requests interface statistics.
+func (m *Monitor) Stats(interfaceName string) (*wg.Stats, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	iface, ok := m.interfaces[interfaceName]
+	if !ok {
+		return nil, fmt.Errorf("interface %s not found", interfaceName)
+	}
+
+	deviceState, err := userspace.ParseUserspaceDevice(iface.Device.IpcGetOperation)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse device state: %w", err)
+	}
+	stats, err := userspace.ParseDevicePeerStats(deviceState)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse device stats: %w", err)
+	}
+	return stats, nil
 }

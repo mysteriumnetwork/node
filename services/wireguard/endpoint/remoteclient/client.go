@@ -27,25 +27,17 @@ import (
 	supervisorclient "github.com/mysteriumnetwork/node/supervisor/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/rs/zerolog/log"
-	"golang.zx2c4.com/wireguard/wgctrl"
 )
 
 type client struct {
 	mu    sync.Mutex
 	iface string
-	wgc   *wgctrl.Client
 }
 
 // New create new remote WireGuard client which communicates with supervisor.
 func New() (*client, error) {
-	wgc, err := wgctrl.New()
-	if err != nil {
-		return nil, err
-	}
 	log.Debug().Msg("Creating remote wg client")
-	return &client{
-		wgc: wgc,
-	}, nil
+	return &client{}, nil
 }
 
 func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
@@ -79,20 +71,16 @@ func (c *client) DestroyDevice(iface string) error {
 }
 
 func (c *client) PeerStats(iface string) (*wg.Stats, error) {
-	d, err := c.wgc.Device(iface)
+	statsJSON, err := supervisorclient.Command("wg-stats", "-iface", iface)
 	if err != nil {
-		return nil, fmt.Errorf("could not get peer stats: %w", err)
-	}
-	if len(d.Peers) != 1 {
-		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
+		return nil, fmt.Errorf("failed to get wg stats: %w", err)
 	}
 
-	p := d.Peers[0]
-	return &wg.Stats{
-		BytesSent:     uint64(p.TransmitBytes),
-		BytesReceived: uint64(p.ReceiveBytes),
-		LastHandshake: p.LastHandshakeTime,
-	}, nil
+	stats := wg.Stats{}
+	if err := json.Unmarshal([]byte(statsJSON), &stats); err != nil {
+		return nil, fmt.Errorf("could not unmarshal stats: %w", err)
+	}
+	return &stats, nil
 }
 
 func (c *client) Close() (err error) {
@@ -101,9 +89,6 @@ func (c *client) Close() (err error) {
 
 	errs := utils.ErrorCollection{}
 	if err := c.DestroyDevice(c.iface); err != nil {
-		errs.Add(err)
-	}
-	if err := c.wgc.Close(); err != nil {
 		errs.Add(err)
 	}
 	if err := errs.Error(); err != nil {
