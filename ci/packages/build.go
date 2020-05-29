@@ -95,11 +95,16 @@ func buildBinaryFor(source, target, targetOS, targetArch string) error {
 	ldFlags := linkerFlags()
 	flags = append(flags, fmt.Sprintf(`-ldflags=-w -s %s`, strings.Join(ldFlags, " ")))
 
-	if os.Getenv("GOOS") == "windows" {
+	if targetOS == "windows" {
 		target += ".exe"
 	}
 	flags = append(flags, "-o", path.Join(buildDir, target), source)
-	return sh.Run("go", flags...)
+
+	envi := map[string]string{
+		"GOOS":   targetOS,
+		"GOARCH": targetArch,
+	}
+	return sh.RunWith(envi, "go", flags...)
 }
 
 func copyConfig(target string) error {
