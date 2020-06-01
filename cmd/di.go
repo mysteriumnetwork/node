@@ -194,6 +194,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	netutil.ClearStaleRoutes()
+
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
@@ -393,6 +395,8 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	}
 
 	di.Storage = localStorage
+
+	netutil.SetRouteManagerStorage(di.Storage)
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)

@@ -21,7 +21,6 @@ import (
 	"net"
 	"os/exec"
 
-	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
@@ -32,13 +31,12 @@ func assignIP(iface string, subnet net.IPNet) error {
 	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
+func excludeRoute(ip, gw net.IP) error {
+	return cmdutil.SudoExec("ip", "route", "add", ip.String(), "via", gw.String())
+}
 
-	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
+func deleteRoute(ip, gw string) error {
+	return cmdutil.SudoExec("ip", "route", "delete", ip, "via", gw)
 }
 
 func addDefaultRoute(iface string) error {

@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/jackpal/gateway"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -32,14 +32,13 @@ func assignIP(iface string, subnet net.IPNet) error {
 	return errors.Wrap(err, string(out))
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-
+func excludeRoute(ip, gw net.IP) error {
 	out, err := exec.Command("powershell", "-Command", "route add "+ip.String()+"/32 "+gw.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
+}
+
+func deleteRoute(ip, gw string) error {
+	return cmdutil.SudoExec("route", "delete", ip+"/32", "gw")
 }
 
 func addDefaultRoute(name string) error {

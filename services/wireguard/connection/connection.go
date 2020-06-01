@@ -30,6 +30,7 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -217,4 +218,6 @@ func (c *Connection) Stop() {
 		close(c.stateCh)
 		close(c.done)
 	})
+
+	netutil.ClearStaleRoutes()
 }
