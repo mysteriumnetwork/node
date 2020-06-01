@@ -1,4 +1,4 @@
-FROM alpine:3.11
+FROM alpine:3.12
 
 # Install packages
 RUN apk add --update --no-cache iptables ipset ca-certificates openvpn bash sudo openresolv
@@ -11,4 +11,3 @@ COPY bin/package/config/common /etc/mysterium-node
 COPY bin/package/config/linux /etc/mysterium-node
 
 COPY ./build/e2e/myst /usr/bin/myst
-
