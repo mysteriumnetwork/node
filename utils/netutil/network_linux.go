@@ -40,11 +40,11 @@ func deleteRoute(ip, gw string) error {
 }
 
 func addDefaultRoute(iface string) error {
-	if err := cmdutil.SudoExec("route", "add", "-net", "0.0.0.0/1", "-interface", iface); err != nil {
+	if err := cmdutil.SudoExec("ip", "route", "add", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
 
-	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
+	return cmdutil.SudoExec("ip", "route", "add", "128.0.0.0/1", "dev", iface)
 }
 
 func logNetworkStats() {
