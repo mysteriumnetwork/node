@@ -39,6 +39,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	p2pDialTimeout = 30 * time.Second
+)
+
 var (
 	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
 	ErrNoConnection = errors.New("no connection exists")
@@ -357,7 +361,10 @@ func (m *connectionManager) cleanAfterDisconnect() {
 }
 
 func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
-	channel, err := m.p2pDialer.Dial(ctx, consumerID, providerID, serviceType, contactDef)
+	timeoutCtx, cancel := context.WithTimeout(ctx, p2pDialTimeout)
+	defer cancel()
+
+	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, serviceType, contactDef)
 	if err != nil {
 		return nil, err
 	}
