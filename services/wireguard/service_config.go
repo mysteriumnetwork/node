@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,8 @@
 package wireguard
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net"
-	"strings"
-	"time"
 
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -47,44 +42,6 @@ func (service ServiceDefinition) GetLocation() market.Location {
 	return service.Location
 }
 
-// EndpointFactory creates new connection endpoint.
-type EndpointFactory func() (ConnectionEndpoint, error)
-
-// ConnectionEndpoint represents Wireguard network instance, it provide information
-// required for establishing connection between service provider and consumer.
-type ConnectionEndpoint interface {
-	StartConsumerMode(config ConsumerModeConfig) error
-	StartProviderMode(config ProviderModeConfig) error
-	AddPeer(iface string, peer Peer) error
-	PeerStats() (*Stats, error)
-	ConfigureRoutes(ip net.IP) error
-	Config() (ServiceConfig, error)
-	InterfaceName() string
-	Stop() error
-}
-
-// ConsumerModeConfig is consumer endpoint startup configuration.
-type ConsumerModeConfig struct {
-	PrivateKey string
-	IPAddress  net.IPNet
-	ListenPort int
-}
-
-// ProviderModeConfig is provider endpoint startup configuration.
-type ProviderModeConfig struct {
-	Network    net.IPNet
-	ListenPort int
-	PublicIP   string
-}
-
-// ConsumerConfig is used for sending the public key and IP from consumer to provider
-type ConsumerConfig struct {
-	PublicKey string `json:"PublicKey"`
-	// IP is needed when provider is behind NAT. In such case provider parses this IP and tries to ping consumer.
-	IP    string `json:"IP,omitempty"`
-	Ports []int  `json:"Ports"`
-}
-
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {
 	// LocalPort and RemotePort are needed for NAT hole punching only.
@@ -100,6 +57,14 @@ type ServiceConfig struct {
 		IPAddress net.IPNet
 		DNSIPs    string
 	}
+}
+
+// ConsumerConfig is used for sending the public key and IP from consumer to provider.
+type ConsumerConfig struct {
+	PublicKey string `json:"PublicKey"`
+	// IP is needed when provider is behind NAT. In such case provider parses this IP and tries to ping consumer.
+	IP    string `json:"IP,omitempty"`
+	Ports []int  `json:"Ports"`
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
@@ -175,78 +140,4 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	s.Consumer.IPAddress.IP = ip
 
 	return nil
-}
-
-// DeviceConfig describes wireguard device configuration.
-type DeviceConfig struct {
-	IfaceName string
-	Subnet    net.IPNet
-
-	PrivateKey string
-	ListenPort int
-}
-
-// Encode encodes device config into string representation which is used for
-// userspace and kernel space wireguard configuration.
-func (dc *DeviceConfig) Encode() string {
-	var res strings.Builder
-	keyBytes, err := base64.StdEncoding.DecodeString(dc.PrivateKey)
-	if err != nil {
-		return ""
-	}
-	hexKey := hex.EncodeToString(keyBytes)
-
-	res.WriteString(fmt.Sprintf("private_key=%s\n", hexKey))
-	res.WriteString(fmt.Sprintf("listen_port=%d\n", dc.ListenPort))
-	return res.String()
-}
-
-// Peer represents wireguard peer.
-type Peer struct {
-	PublicKey              string
-	Endpoint               *net.UDPAddr
-	AllowedIPs             []string
-	KeepAlivePeriodSeconds int
-}
-
-// Encode encodes device peer config into string representation which is used for
-// userspace and kernel space wireguard configuration.
-func (p *Peer) Encode() string {
-	var res strings.Builder
-
-	keyBytes, err := base64.StdEncoding.DecodeString(p.PublicKey)
-	if err != nil {
-		return ""
-	}
-	hexKey := hex.EncodeToString(keyBytes)
-	res.WriteString(fmt.Sprintf("public_key=%s\n", hexKey))
-	res.WriteString(fmt.Sprintf("persistent_keepalive_interval=%d\n", p.KeepAlivePeriodSeconds))
-	if p.Endpoint != nil {
-		res.WriteString(fmt.Sprintf("endpoint=%s\n", p.Endpoint.String()))
-	}
-	for _, ip := range p.AllowedIPs {
-		res.WriteString(fmt.Sprintf("allowed_ip=%s\n", ip))
-	}
-	return res.String()
-}
-
-// Stats represents wireguard peer statistics information.
-type Stats struct {
-	BytesSent     uint64
-	BytesReceived uint64
-	LastHandshake time.Time
-}
-
-// ParseDevicePeerStats parses current active consumer stats.
-func ParseDevicePeerStats(d *UserspaceDevice) (*Stats, error) {
-	if len(d.Peers) != 1 {
-		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
-	}
-
-	p := d.Peers[0]
-	return &Stats{
-		BytesSent:     uint64(p.TransmitBytes),
-		BytesReceived: uint64(p.ReceiveBytes),
-		LastHandshake: p.LastHandshakeTime,
-	}, nil
 }

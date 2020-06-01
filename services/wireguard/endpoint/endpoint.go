@@ -30,7 +30,6 @@ import (
 
 // NewConnectionEndpoint returns new connection endpoint instance.
 func NewConnectionEndpoint(resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
-
 	wgClient, err := newWGClient()
 	if err != nil {
 		return nil, err
@@ -53,10 +52,10 @@ type connectionEndpoint struct {
 
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.
 func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) error {
+
 	if err := ce.cleanAbandonedInterfaces(); err != nil {
 		return err
 	}
-
 	iface, err := ce.resourceAllocator.AllocateInterface()
 	if err != nil {
 		return errors.Wrap(err, "could not allocate interface")
@@ -72,6 +71,7 @@ func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) er
 		Subnet:     ce.ipAddr,
 		ListenPort: config.ListenPort,
 		PrivateKey: ce.privateKey,
+		Peer:       config.Peer,
 	}
 	if err := ce.wgClient.ConfigureDevice(deviceConfig); err != nil {
 		return errors.Wrap(err, "could not configure device")
@@ -111,6 +111,7 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 		Subnet:     ce.ipAddr,
 		ListenPort: ce.endpoint.Port,
 		PrivateKey: ce.privateKey,
+		Peer:       config.Peer,
 	}
 	if err := ce.wgClient.ConfigureDevice(deviceConfig); err != nil {
 		return errors.Wrap(err, "could not configure device")
@@ -121,16 +122,6 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 // InterfaceName returns a connection endpoint interface name.
 func (ce *connectionEndpoint) InterfaceName() string {
 	return ce.iface
-}
-
-// AddPeer adds new wireguard peer to the wireguard device config.
-func (ce *connectionEndpoint) AddPeer(iface string, peer wg.Peer) error {
-	return ce.wgClient.AddPeer(iface, peer)
-}
-
-// RemovePeer removes a wireguard peer from the wireguard network interface.
-func (ce *connectionEndpoint) RemovePeer(publicKey string) error {
-	return ce.wgClient.RemovePeer(ce.iface, publicKey)
 }
 
 // PeerStats returns stats information about connected peer.
@@ -151,10 +142,6 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = ce.consumerIP(ce.ipAddr)
 	return config, nil
-}
-
-func (ce *connectionEndpoint) ConfigureRoutes(ip net.IP) error {
-	return ce.wgClient.ConfigureRoutes(ce.iface, ip)
 }
 
 // Stop closes wireguard client and destroys wireguard network interface.

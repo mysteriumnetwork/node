@@ -58,15 +58,26 @@ func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
 	if err := c.up(config.IfaceName, config.Subnet); err != nil {
 		return err
 	}
+
+	if config.Peer.Endpoint != nil {
+		if err := configureRoutes(config.IfaceName, config.Peer.Endpoint.IP); err != nil {
+			return err
+		}
+	}
+	peer, err := addPeerConfig(config.Peer)
+	if err != nil {
+		return err
+	}
+	deviceConfig.Peers = []wgtypes.PeerConfig{peer}
 	c.iface = config.IfaceName
 	return c.wgClient.ConfigureDevice(c.iface, deviceConfig)
 }
 
-func (c *client) AddPeer(iface string, peer wg.Peer) error {
+func addPeerConfig(peer wg.Peer) (wgtypes.PeerConfig, error) {
 	endpoint := peer.Endpoint
 	publicKey, err := stringToKey(peer.PublicKey)
 	if err != nil {
-		return errors.Wrap(err, "could not convert string key to wgtypes.Key")
+		return wgtypes.PeerConfig{}, errors.Wrap(err, "could not convert string key to wgtypes.Key")
 	}
 
 	// Apply keep alive interval
@@ -81,31 +92,17 @@ func (c *client) AddPeer(iface string, peer wg.Peer) error {
 	for _, ip := range peer.AllowedIPs {
 		_, network, err := net.ParseCIDR(ip)
 		if err != nil {
-			return fmt.Errorf("could not parse IP %q: %v", ip, err)
+			return wgtypes.PeerConfig{}, fmt.Errorf("could not parse IP %q: %v", ip, err)
 		}
 		allowedIPs = append(allowedIPs, *network)
 	}
 
-	var deviceConfig wgtypes.Config
-	deviceConfig.Peers = []wgtypes.PeerConfig{{
+	return wgtypes.PeerConfig{
 		Endpoint:                    endpoint,
 		PublicKey:                   publicKey,
 		AllowedIPs:                  allowedIPs,
 		PersistentKeepaliveInterval: keepAliveInterval,
-	}}
-	return c.wgClient.ConfigureDevice(iface, deviceConfig)
-}
-
-func (c *client) RemovePeer(iface string, publicKey string) error {
-	key, err := stringToKey(publicKey)
-	if err != nil {
-		return err
-	}
-
-	return c.wgClient.ConfigureDevice(iface, wgtypes.Config{Peers: []wgtypes.PeerConfig{{
-		PublicKey: key,
-		Remove:    true,
-	}}})
+	}, nil
 }
 
 func (c *client) PeerStats(string) (*wg.Stats, error) {
@@ -143,7 +140,21 @@ func (c *client) up(iface string, ipAddr net.IPNet) error {
 	return cmdutil.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
-func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
+func (c *client) Close() (err error) {
+	errs := utils.ErrorCollection{}
+	if err := c.DestroyDevice(c.iface); err != nil {
+		errs.Add(err)
+	}
+	if err := c.wgClient.Close(); err != nil {
+		errs.Add(err)
+	}
+	if err := errs.Error(); err != nil {
+		return fmt.Errorf("could not close client: %w", err)
+	}
+	return nil
+}
+
+func configureRoutes(iface string, ip net.IP) error {
 	if err := excludeRoute(ip); err != nil {
 		return err
 	}
@@ -164,20 +175,6 @@ func addDefaultRoute(iface string) error {
 		return err
 	}
 	return cmdutil.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
-}
-
-func (c *client) Close() (err error) {
-	errs := utils.ErrorCollection{}
-	if err := c.DestroyDevice(c.iface); err != nil {
-		errs.Add(err)
-	}
-	if err := c.wgClient.Close(); err != nil {
-		errs.Add(err)
-	}
-	if err := errs.Error(); err != nil {
-		return fmt.Errorf("could not close client: %w", err)
-	}
-	return nil
 }
 
 func stringToKey(key string) (wgtypes.Key, error) {

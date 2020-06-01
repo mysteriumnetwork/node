@@ -19,8 +19,7 @@ package userspace
 
 import (
 	"bufio"
-	"encoding/base64"
-	"net"
+	"fmt"
 	"strings"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -49,44 +48,31 @@ func (c *client) ConfigureDevice(config wg.DeviceConfig) (err error) {
 	if err := c.setDeviceConfig(config.Encode()); err != nil {
 		return errors.Wrap(err, "failed to configure initial device")
 	}
-	return nil
-}
 
-func (c *client) AddPeer(_ string, peer wg.Peer) error {
-	if err := c.setDeviceConfig(peer.Encode()); err != nil {
-		return errors.Wrap(err, "failed to add device peer")
-	}
-	return nil
-}
-
-func (c *client) RemovePeer(_ string, publicKey string) error {
-	key, err := base64stringTo32ByteArray(publicKey)
-	if err != nil {
-		return err
+	// For consumer mode we need to exclude provider's IP from VPN tunnel
+	// and add default routes to forward all traffic via VPN tunnel.
+	if config.Peer.Endpoint != nil {
+		if err := netutil.ExcludeRoute(config.Peer.Endpoint.IP); err != nil {
+			return fmt.Errorf("could not exclude route %s: %w", config.Peer.Endpoint.IP.String(), err)
+		}
+		if err := netutil.AddDefaultRoute(config.IfaceName); err != nil {
+			return fmt.Errorf("could not add default route for %s: %w", config.IfaceName, err)
+		}
 	}
 
-	c.devAPI.RemovePeer(key)
 	return nil
 }
-
 func (c *client) Close() error {
 	c.devAPI.Close() // c.devAPI.Close() closes c.tun too
 	return nil
 }
 
-func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
-	if err := netutil.ExcludeRoute(ip); err != nil {
-		return err
-	}
-	return netutil.AddDefaultRoute(iface)
-}
-
 func (c *client) PeerStats(string) (*wg.Stats, error) {
-	deviceState, err := wg.ParseUserspaceDevice(c.devAPI.IpcGetOperation)
+	deviceState, err := ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
 		return nil, err
 	}
-	stats, err := wg.ParseDevicePeerStats(deviceState)
+	stats, err := ParseDevicePeerStats(deviceState)
 	if err != nil {
 		return nil, err
 	}
@@ -103,16 +89,4 @@ func (c *client) setDeviceConfig(config string) error {
 	}
 	c.devAPI.Up()
 	return nil
-}
-
-func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
-	decoded, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return res, err
-	} else if len(decoded) != 32 {
-		return res, errors.New("unexpected key size")
-	}
-
-	copy(res[:], decoded)
-	return
 }

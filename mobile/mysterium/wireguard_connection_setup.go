@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -238,11 +239,11 @@ func (w *wireguardDeviceImpl) Stats() (*wireguard.Stats, error) {
 	if w.device == nil {
 		return nil, errors.New("device is not started")
 	}
-	deviceState, err := wireguard.ParseUserspaceDevice(w.device.IpcGetOperation)
+	deviceState, err := userspace.ParseUserspaceDevice(w.device.IpcGetOperation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse userspace wg device state")
 	}
-	stats, err := wireguard.ParseDevicePeerStats(deviceState)
+	stats, err := userspace.ParseDevicePeerStats(deviceState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get userspace wg peer stats")
 	}

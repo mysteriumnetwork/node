@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync"
 
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard/wginterface"
 )
 
@@ -38,14 +39,14 @@ func NewMonitor() *Monitor {
 }
 
 // Up requests interface creation.
-func (m *Monitor) Up(requestedInterfaceName string, uid string) (string, error) {
+func (m *Monitor) Up(cfg wg.DeviceConfig, uid string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, exists := m.interfaces[requestedInterfaceName]; exists {
-		return "", fmt.Errorf("interface %s already exists", requestedInterfaceName)
+	if _, exists := m.interfaces[cfg.IfaceName]; exists {
+		return "", fmt.Errorf("interface %s already exists", cfg.IfaceName)
 	}
-	iface, err := wginterface.New(requestedInterfaceName, uid)
+	iface, err := wginterface.New(cfg, uid)
 	if err != nil {
 		return "", err
 	}

@@ -116,18 +116,11 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		return nil, errors.Wrap(err, "could not unmarshal wg consumer config")
 	}
 
-	providerConfig := wg.ProviderModeConfig{}
-	providerConfig.Network, err = m.resourcesAllocator.AllocateIPNet()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not allocate provider IP NET")
-	}
-
 	remoteConn.Close()
-	providerConfig.ListenPort = remoteConn.LocalAddr().(*net.UDPAddr).Port
-
-	providerConfig.PublicIP, err = m.ipResolver.GetPublicIP()
+	listenPort := remoteConn.LocalAddr().(*net.UDPAddr).Port
+	providerConfig, err := m.createProviderConfig(listenPort, consumerConfig.PublicKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get public IP")
+		return nil, fmt.Errorf("could not create provider mode wg config: %w", err)
 	}
 
 	conn, err := m.startNewConnection(providerConfig)
@@ -138,10 +131,6 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	config, err := conn.Config()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer config")
-	}
-
-	if err := m.addConsumerPeer(conn, config.LocalPort, config.RemotePort, consumerConfig.PublicKey); err != nil {
-		return nil, errors.Wrap(err, "could not add consumer peer")
 	}
 
 	var dnsIP net.IP
@@ -217,6 +206,30 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy}, nil
 }
 
+func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg.ProviderModeConfig, error) {
+	network, err := m.resourcesAllocator.AllocateIPNet()
+	if err != nil {
+		return wg.ProviderModeConfig{}, errors.Wrap(err, "could not allocate provider IP NET")
+	}
+
+	publicIP, err := m.ipResolver.GetPublicIP()
+	if err != nil {
+		return wg.ProviderModeConfig{}, errors.Wrap(err, "could not get public IP")
+	}
+
+	return wg.ProviderModeConfig{
+		Network:    network,
+		ListenPort: listenPort,
+		PublicIP:   publicIP,
+		Peer: wg.Peer{
+			PublicKey:  peerPublicKey,
+			AllowedIPs: []string{"0.0.0.0/0", "::/0"},
+			// Peer endpoint is set automatically by wg once client does handshake.
+			Endpoint: nil,
+		},
+	}, nil
+}
+
 func (m *Manager) startNewConnection(config wg.ProviderModeConfig) (wg.ConnectionEndpoint, error) {
 	connEndpoint, err := m.connEndpointFactory()
 	if err != nil {
@@ -227,23 +240,6 @@ func (m *Manager) startNewConnection(config wg.ProviderModeConfig) (wg.Connectio
 		return nil, errors.Wrap(err, "could not start provider wg connection endpoint")
 	}
 	return connEndpoint, nil
-}
-
-func (m *Manager) addConsumerPeer(conn wg.ConnectionEndpoint, consumerPort, providerPort int, peerPublicKey string) error {
-	var peerEndpoint *net.UDPAddr
-	if consumerPort > 0 {
-		var err error
-		peerEndpoint, err = net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", "127.0.0.1", providerPort))
-		if err != nil {
-			return errors.Wrap(err, "could not resolve new peer addr")
-		}
-	}
-	peerOpts := wg.Peer{
-		PublicKey:  peerPublicKey,
-		Endpoint:   peerEndpoint,
-		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
-	}
-	return conn.AddPeer(conn.InterfaceName(), peerOpts)
 }
 
 // Serve starts service - does block

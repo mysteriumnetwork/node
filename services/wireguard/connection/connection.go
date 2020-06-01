@@ -127,6 +127,12 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		PrivateKey: c.privateKey,
 		IPAddress:  config.Consumer.IPAddress,
 		ListenPort: config.LocalPort,
+		Peer: wg.Peer{
+			Endpoint:               &config.Provider.Endpoint,
+			PublicKey:              config.Provider.PublicKey,
+			AllowedIPs:             []string{"0.0.0.0/0", "::/0"},
+			KeepAlivePeriodSeconds: 18,
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not start new connection")
@@ -134,15 +140,6 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 	c.connectionEndpoint = conn
 
 	log.Info().Msgf("Adding connection peer %s", config.Provider.Endpoint.String())
-
-	if err := c.addProviderPeer(conn, config.Provider.Endpoint, config.Provider.PublicKey); err != nil {
-		return errors.Wrap(err, "failed to add peer to the connection endpoint")
-	}
-
-	log.Info().Msg("Configuring routes")
-	if err := conn.ConfigureRoutes(config.Provider.Endpoint.IP); err != nil {
-		return errors.Wrap(err, "failed to configure routes for connection endpoint")
-	}
 
 	log.Info().Msg("Waiting for initial handshake")
 	if err := c.handshakeWaiter.Wait(conn.PeerStats, c.opts.HandshakeTimeout, c.done); err != nil {
@@ -174,16 +171,6 @@ func (c *Connection) startConn(conf wg.ConsumerModeConfig) (wg.ConnectionEndpoin
 	}
 
 	return conn, nil
-}
-
-func (c *Connection) addProviderPeer(conn wg.ConnectionEndpoint, endpoint net.UDPAddr, publicKey string) error {
-	peerInfo := wg.Peer{
-		Endpoint:               &endpoint,
-		PublicKey:              publicKey,
-		AllowedIPs:             []string{"0.0.0.0/0", "::/0"},
-		KeepAlivePeriodSeconds: 18,
-	}
-	return conn.AddPeer(conn.InterfaceName(), peerInfo)
 }
 
 // Wait blocks until wireguard connection not stopped.

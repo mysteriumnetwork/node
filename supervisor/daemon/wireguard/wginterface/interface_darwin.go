@@ -18,12 +18,16 @@
 package wginterface
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
@@ -34,10 +38,10 @@ func socketPath(interfaceName string) string {
 }
 
 // New creates new WgInterface instance.
-func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
-	tunnel, interfaceName, err := createTunnel(requestedInterfaceName)
+func New(cfg wg.DeviceConfig, uid string) (*WgInterface, error) {
+	tunnel, interfaceName, err := createTunnel(cfg.IfaceName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create TUN device %s: %w", requestedInterfaceName, err)
+		return nil, fmt.Errorf("failed to create TUN device %s: %w", cfg.IfaceName, err)
 	}
 
 	logger := device.NewLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", interfaceName))
@@ -46,14 +50,25 @@ func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
 	wgDevice := device.NewDevice(tunnel, logger)
 	logger.Info.Println("Device started")
 
+	log.Println("Setting interface configuration")
 	fileUAPI, err := ipc.UAPIOpen(interfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("UAPI listen error: %w", err)
 	}
-
 	uapi, err := ipc.UAPIListen(interfaceName, fileUAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen on UAPI socket: %w", err)
+	}
+	if err := wgDevice.IpcSetOperation(bufio.NewReader(strings.NewReader(cfg.Encode()))); err != nil {
+		return nil, fmt.Errorf("could not set device uapi config: %w", err)
+	}
+
+	log.Println("Bringing peers up")
+	wgDevice.Up()
+
+	log.Println("Configuring network")
+	if err := configureNetwork(cfg); err != nil {
+		return nil, fmt.Errorf("could not setup network: %w", err)
 	}
 
 	numUid, err := strconv.Atoi(uid)
@@ -65,14 +80,15 @@ func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("failed to chown wireguard socket to uid %s: %w", uid, err)
 	}
 
-	wg := &WgInterface{
+	wgInterface := &WgInterface{
 		Name:   interfaceName,
 		device: wgDevice,
 		uapi:   uapi,
 	}
-	go wg.handleUAPI()
+	log.Println("Listening for UAPI requests")
+	go wgInterface.handleUAPI()
 
-	return wg, nil
+	return wgInterface, nil
 }
 
 func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceName string, err error) {
@@ -97,6 +113,22 @@ func (a *WgInterface) handleUAPI() {
 		}
 		go a.device.IpcHandle(conn)
 	}
+}
+
+func configureNetwork(cfg wg.DeviceConfig) error {
+	if err := netutil.AssignIP(cfg.IfaceName, cfg.Subnet); err != nil {
+		return fmt.Errorf("failed to assign IP address: %w", err)
+	}
+
+	if cfg.Peer.Endpoint != nil {
+		if err := netutil.ExcludeRoute(cfg.Peer.Endpoint.IP); err != nil {
+			return err
+		}
+		if err := netutil.AddDefaultRoute(cfg.IfaceName); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Down closes device and user space api socket.

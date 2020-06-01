@@ -15,20 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wginterface
+package userspace
 
 import (
-	"errors"
+	"fmt"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-// New creates new WgInterface instance.
-func New(cfg wg.DeviceConfig, uid string) (*WgInterface, error) {
-	return nil, errors.New("not implemented")
-}
+// ParseDevicePeerStats parses current active consumer stats.
+func ParseDevicePeerStats(d *UserspaceDevice) (*wg.Stats, error) {
+	if len(d.Peers) != 1 {
+		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
+	}
 
-// Down closes device and user space api socket.
-func (a *WgInterface) Down() {
-
+	p := d.Peers[0]
+	return &wg.Stats{
+		BytesSent:     uint64(p.TransmitBytes),
+		BytesReceived: uint64(p.ReceiveBytes),
+		LastHandshake: p.LastHandshakeTime,
+	}, nil
 }
