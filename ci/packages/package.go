@@ -31,9 +31,10 @@ import (
 	"github.com/mysteriumnetwork/go-ci/job"
 	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/go-ci/util"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/rs/zerolog/log"
 )
 
 // PackageLinuxAmd64 builds and stores linux amd64 package
@@ -277,9 +278,16 @@ func packageStandalone(binaryPath, os, arch string) error {
 	if err := buildCrossBinary(os, arch); err != nil {
 		return err
 	}
-	err := buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch)
-	if err != nil {
-		return err
+
+	if os == "windows" {
+		err := buildBinaryFor(path.Join("cmd", "supervisor", "supervisor.go"), "myst_supervisor", os, arch)
+		if err != nil {
+			return err
+		}
+	} else {
+		if err := buildSupervisorCrossBinary(os, arch); err != nil {
+			return err
+		}
 	}
 
 	envs := map[string]string{

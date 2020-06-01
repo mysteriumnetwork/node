@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Usage:
+#> bin/build_supervisor_xgo <os>/<arch>..
+#
+# Cross compile (Unix):
+#> bin/build_supervisor_xgo linux/amd64
+#
+# Cross compile (OSX + Windows):
+#> bin/build_supervisor_xgo darwin/amd64 windows/amd64
+#
+# Check if program has dynamic libraries:
+#> brew install readelf
+#> readelf -d build/node/mysterium_node
+
+set -e
+source bin/helpers/functions.sh
+source bin/helpers/output.sh
+
+XGO_TARGETS=`IFS=','; echo "$*"`
+if [ -z "$XGO_TARGETS" ]; then
+    print_error "Missing targets!"
+    exit 1
+fi
+
+DIR_BUILD="build/myst_supervisor"
+mkdir -p ${DIR_BUILD}
+DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
+
+IMAGE="mysteriumnetwork/xgo:1.13.8"
+if [[ $XGO_TARGETS == windows* ]]
+then
+    IMAGE="mysteriumnetwork/xgo:windows-0.0.1-go-1.13.6"
+fi
+
+docker run --rm \
+    -v "$PWD"/$DIR_TEMP:/build \
+    -v "$GOPATH"/xgo-cache:/deps-cache:ro \
+    -v "$PWD":/source \
+    -e OUT=myst_supervisor \
+    -e FLAG_V=false \
+    -e FLAG_X=false \
+    -e FLAG_RACE=false \
+    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
+    -e FLAG_BUILDMODE=default \
+    -e TARGETS="$XGO_TARGETS" \
+    "$IMAGE" ./cmd/supervisor
+
+# Remove version from binary name:
+#  - myst_supervisor-darwin-10.6-amd64 -> myst_supervisor_darwin_amd64
+#  - myst_supervisor-linux-amd64       -> myst_supervisor_linux_amd64
+for BINARY in `ls ${DIR_TEMP}`; do
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/myst_supervisor-([a-z]*)(-[0-9.]*)?-([0-z]*)(-[0-9]*)?/myst_supervisor_\1_\3/p'`
+    cp ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/myst_supervisor
+    mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
+done
+rm -rf ${DIR_TEMP}

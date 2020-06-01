@@ -40,6 +40,11 @@ copy_config $OS $DIR_TEMP
 if [ "$OS" == "windows" ]; then
     cp -vp build/myst_supervisor/myst_supervisor.exe ${DIR_TEMP}/myst_supervisor.exe
 else
+    echo "current dir: `pwd`"
+    echo "dir contents: `ls -la`"
+    echo "build dir contents: `ls -la build`"
+    echo "build myst dir contents: `ls -la build/myst_supervisor`"
+
     cp -vp build/myst_supervisor/myst_supervisor ${DIR_TEMP}/myst_supervisor
 fi
 

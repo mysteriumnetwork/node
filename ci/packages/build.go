@@ -67,6 +67,10 @@ func buildCrossBinary(os, arch string) error {
 	return sh.Run("bin/build_xgo", os+"/"+arch)
 }
 
+func buildSupervisorCrossBinary(os, arch string) error {
+	return sh.Run("bin/build_supervisor_xgo", os+"/"+arch)
+}
+
 func buildBinary(source, target string) error {
 	targetOS, ok := os.LookupEnv("GOOS")
 	if !ok {
