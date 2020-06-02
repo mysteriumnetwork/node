@@ -774,7 +774,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
-	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall()
+	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall(config.GetBool(config.FlagOutgoingFirewall))
 	if err := firewall.DefaultOutgoingFirewall.Setup(); err != nil {
 		return err
 	}

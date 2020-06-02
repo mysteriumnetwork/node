@@ -20,7 +20,7 @@
 package firewall
 
 // NewOutgoingTrafficFirewall creates firewall instance for outgoing traffic.
-func NewOutgoingTrafficFirewall() OutgoingTrafficFirewall {
+func NewOutgoingTrafficFirewall(enabled bool) OutgoingTrafficFirewall {
 	return &outgoingFirewallNoop{}
 }
 
