@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/jackpal/gateway"
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
@@ -46,7 +46,7 @@ func NewWireguardClient() (*client, error) {
 	return &client{wgClient: wgClient}, nil
 }
 
-func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
+func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	var deviceConfig wgtypes.Config
 	port := config.ListenPort
 	privateKey, err := stringToKey(config.PrivateKey)
@@ -73,7 +73,7 @@ func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
 	return c.wgClient.ConfigureDevice(c.iface, deviceConfig)
 }
 
-func addPeerConfig(peer wg.Peer) (wgtypes.PeerConfig, error) {
+func addPeerConfig(peer wgcfg.Peer) (wgtypes.PeerConfig, error) {
 	endpoint := peer.Endpoint
 	publicKey, err := stringToKey(peer.PublicKey)
 	if err != nil {
@@ -105,7 +105,7 @@ func addPeerConfig(peer wg.Peer) (wgtypes.PeerConfig, error) {
 	}, nil
 }
 
-func (c *client) PeerStats(string) (*wg.Stats, error) {
+func (c *client) PeerStats(string) (*wgcfg.Stats, error) {
 	d, err := c.wgClient.Device(c.iface)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (c *client) PeerStats(string) (*wg.Stats, error) {
 		return nil, errors.New("kernelspace: exactly 1 peer expected")
 	}
 
-	return &wg.Stats{
+	return &wgcfg.Stats{
 		BytesReceived: uint64(d.Peers[0].ReceiveBytes),
 		BytesSent:     uint64(d.Peers[0].TransmitBytes),
 		LastHandshake: d.Peers[0].LastHandshakeTime,

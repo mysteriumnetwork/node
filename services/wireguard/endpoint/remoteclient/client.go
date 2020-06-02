@@ -23,7 +23,7 @@ import (
 	"os/user"
 	"sync"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	supervisorclient "github.com/mysteriumnetwork/node/supervisor/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/rs/zerolog/log"
@@ -40,7 +40,7 @@ func New() (*client, error) {
 	return &client{}, nil
 }
 
-func (c *client) ConfigureDevice(config wg.DeviceConfig) error {
+func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.iface = config.IfaceName
@@ -70,13 +70,13 @@ func (c *client) DestroyDevice(iface string) error {
 	return nil
 }
 
-func (c *client) PeerStats(iface string) (*wg.Stats, error) {
+func (c *client) PeerStats(iface string) (*wgcfg.Stats, error) {
 	statsJSON, err := supervisorclient.Command("wg-stats", "-iface", iface)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wg stats: %w", err)
 	}
 
-	stats := wg.Stats{}
+	stats := wgcfg.Stats{}
 	if err := json.Unmarshal([]byte(statsJSON), &stats); err != nil {
 		return nil, fmt.Errorf("could not unmarshal stats: %w", err)
 	}

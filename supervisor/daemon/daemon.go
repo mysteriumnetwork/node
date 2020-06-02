@@ -27,7 +27,7 @@ import (
 	"log"
 	"strings"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
@@ -115,7 +115,7 @@ func (d *Daemon) wgUp(args ...string) (interfaceName string, err error) {
 		return "", errors.New("-uid is required")
 	}
 
-	deviceConfig := wg.DeviceConfig{}
+	deviceConfig := wgcfg.DeviceConfig{}
 	if err := json.Unmarshal([]byte(*deviceConfigStr), &deviceConfig); err != nil {
 		return "", fmt.Errorf("could not unmarshal device config: %w", err)
 	}

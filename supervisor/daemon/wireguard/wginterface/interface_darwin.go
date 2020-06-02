@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
@@ -38,7 +38,7 @@ func socketPath(interfaceName string) string {
 }
 
 // New creates new WgInterface instance.
-func New(cfg wg.DeviceConfig, uid string) (*WgInterface, error) {
+func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	tunnel, interfaceName, err := createTunnel(cfg.IfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TUN device %s: %w", cfg.IfaceName, err)
@@ -115,7 +115,7 @@ func (a *WgInterface) handleUAPI() {
 	}
 }
 
-func configureNetwork(cfg wg.DeviceConfig) error {
+func configureNetwork(cfg wgcfg.DeviceConfig) error {
 	if err := netutil.AssignIP(cfg.IfaceName, cfg.Subnet); err != nil {
 		return fmt.Errorf("failed to assign IP address: %w", err)
 	}

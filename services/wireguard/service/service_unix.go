@@ -38,6 +38,7 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
@@ -221,7 +222,7 @@ func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wg
 		Network:    network,
 		ListenPort: listenPort,
 		PublicIP:   publicIP,
-		Peer: wg.Peer{
+		Peer: wgcfg.Peer{
 			PublicKey:  peerPublicKey,
 			AllowedIPs: []string{"0.0.0.0/0", "::/0"},
 			// Peer endpoint is set automatically by wg once client does handshake.

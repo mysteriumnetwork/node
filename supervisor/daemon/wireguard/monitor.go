@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"sync"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard/wginterface"
 )
 
@@ -40,7 +40,7 @@ func NewMonitor() *Monitor {
 }
 
 // Up requests interface creation.
-func (m *Monitor) Up(cfg wg.DeviceConfig, uid string) (string, error) {
+func (m *Monitor) Up(cfg wgcfg.DeviceConfig, uid string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -71,7 +71,7 @@ func (m *Monitor) Down(interfaceName string) error {
 }
 
 // Stats requests interface statistics.
-func (m *Monitor) Stats(interfaceName string) (*wg.Stats, error) {
+func (m *Monitor) Stats(interfaceName string) (*wgcfg.Stats, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

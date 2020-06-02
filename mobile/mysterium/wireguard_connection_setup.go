@@ -33,6 +33,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/device"
@@ -178,7 +179,7 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 type wireguardDevice interface {
 	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error
 	Stop()
-	Stats() (*wireguard.Stats, error)
+	Stats() (*wgcfg.Stats, error)
 }
 
 func newWireguardDevice(tunnelSetup WireguardTunnelSetup) wireguardDevice {
@@ -235,7 +236,7 @@ func (w *wireguardDeviceImpl) Stop() {
 	}
 }
 
-func (w *wireguardDeviceImpl) Stats() (*wireguard.Stats, error) {
+func (w *wireguardDeviceImpl) Stats() (*wgcfg.Stats, error) {
 	if w.device == nil {
 		return nil, errors.New("device is not started")
 	}
@@ -251,7 +252,7 @@ func (w *wireguardDeviceImpl) Stats() (*wireguard.Stats, error) {
 }
 
 func (w *wireguardDeviceImpl) applyConfig(devApi *device.Device, privateKey string, config wireguard.ServiceConfig) error {
-	deviceConfig := wireguard.DeviceConfig{
+	deviceConfig := wgcfg.DeviceConfig{
 		PrivateKey: privateKey,
 		ListenPort: config.LocalPort,
 	}
@@ -260,7 +261,7 @@ func (w *wireguardDeviceImpl) applyConfig(devApi *device.Device, privateKey stri
 		return err
 	}
 
-	peer := wireguard.Peer{
+	peer := wgcfg.Peer{
 		Endpoint:               &config.Provider.Endpoint,
 		PublicKey:              config.Provider.PublicKey,
 		KeepAlivePeriodSeconds: 18,

@@ -23,6 +23,7 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -66,7 +67,7 @@ func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) er
 	ce.ipAddr = config.IPAddress
 	ce.privateKey = config.PrivateKey
 
-	deviceConfig := wg.DeviceConfig{
+	deviceConfig := wgcfg.DeviceConfig{
 		IfaceName:  ce.iface,
 		Subnet:     ce.ipAddr,
 		ListenPort: config.ListenPort,
@@ -106,7 +107,7 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 
 	ce.endpoint = net.UDPAddr{IP: net.ParseIP(config.PublicIP), Port: config.ListenPort}
 
-	deviceConfig := wg.DeviceConfig{
+	deviceConfig := wgcfg.DeviceConfig{
 		IfaceName:  ce.iface,
 		Subnet:     ce.ipAddr,
 		ListenPort: ce.endpoint.Port,
@@ -125,7 +126,7 @@ func (ce *connectionEndpoint) InterfaceName() string {
 }
 
 // PeerStats returns stats information about connected peer.
-func (ce *connectionEndpoint) PeerStats() (*wg.Stats, error) {
+func (ce *connectionEndpoint) PeerStats() (*wgcfg.Stats, error) {
 	return ce.wgClient.PeerStats(ce.iface)
 }
 

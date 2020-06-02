@@ -21,19 +21,19 @@ import (
 	"runtime"
 
 	"github.com/mysteriumnetwork/node/config"
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/remoteclient"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/rs/zerolog/log"
 )
 
 // WgClient represents WireGuard client.
 type WgClient interface {
-	ConfigureDevice(config wg.DeviceConfig) error
+	ConfigureDevice(config wgcfg.DeviceConfig) error
 	DestroyDevice(name string) error
-	PeerStats(iface string) (*wg.Stats, error)
+	PeerStats(iface string) (*wgcfg.Stats, error)
 	Close() error
 }
 

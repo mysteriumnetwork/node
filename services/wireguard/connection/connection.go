@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -127,7 +128,7 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		PrivateKey: c.privateKey,
 		IPAddress:  config.Consumer.IPAddress,
 		ListenPort: config.LocalPort,
-		Peer: wg.Peer{
+		Peer: wgcfg.Peer{
 			Endpoint:               &config.Provider.Endpoint,
 			PublicKey:              config.Provider.PublicKey,
 			AllowedIPs:             []string{"0.0.0.0/0", "::/0"},
