@@ -200,8 +200,20 @@ func (aps *accountantPromiseSettler) Subscribe() error {
 		return errors.Wrap(err, "could not subscribe to service status event")
 	}
 
+	err = aps.eventBus.SubscribeAsync(event.AppTopicSettlementRequest, aps.handleSettlementEvent)
+	if err != nil {
+		return errors.Wrap(err, "could not subscribe to settlement event")
+	}
+
 	err = aps.eventBus.SubscribeAsync(event.AppTopicAccountantPromise, aps.handleAccountantPromiseReceived)
 	return errors.Wrap(err, "could not subscribe to accountant promise event")
+}
+
+func (aps *accountantPromiseSettler) handleSettlementEvent(event event.AppEventSettlementRequest) {
+	err := aps.ForceSettle(event.ProviderID, event.AccountantID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not settle promise")
+	}
 }
 
 func (aps *accountantPromiseSettler) handleServiceEvent(event servicestate.AppEventServiceStatus) {
