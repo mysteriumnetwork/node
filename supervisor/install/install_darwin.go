@@ -52,8 +52,11 @@ func Install(options Options) error {
 	if !options.valid() {
 		return errors.New("invalid options")
 	}
-	log.Info().Msg("Installing launchd daemon")
+
+	log.Info().Msg("Cleaning up previous installation")
 	clean()
+
+	log.Info().Msg("Installing launchd daemon")
 	tpl, err := template.New("plistTpl").Parse(plistTpl)
 	if err != nil {
 		return fmt.Errorf("could not create template for %s: %w", plistPath, err)
@@ -79,10 +82,17 @@ func Install(options Options) error {
 	return nil
 }
 
-func clean() {
-	log.Info().Msg("Cleaning up previous installation")
-	_, _ = runV("launchctl", "unload", plistPath)
-	_ = os.RemoveAll(plistPath)
+// Uninstall launchd supervisor daemon on Darwin OS.
+func Uninstall() error {
+	log.Info().Msg("Uninstalling launchd daemon")
+	return clean()
+}
+
+func clean() error {
+	if _, err := runV("launchctl", "unload", plistPath); err != nil {
+		return err
+	}
+	return os.RemoveAll(plistPath)
 }
 
 func runV(c ...string) (string, error) {
