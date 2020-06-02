@@ -38,7 +38,7 @@ func excludeRoute(ip, gw net.IP) error {
 }
 
 func deleteRoute(ip, gw string) error {
-	return cmdutil.SudoExec("route", "delete", ip+"/32", "gw")
+	return cmdutil.SudoExec("route", "delete", ip+"/32")
 }
 
 func addDefaultRoute(name string) error {
