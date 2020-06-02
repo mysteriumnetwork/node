@@ -26,6 +26,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	timestampFmt = "2006-01-02T15:04:05.000"
+)
+
 // Configure configures supervisor global logger instance.
 func Configure(logPath string) error {
 	rw, err := rollingwriter.NewRollingWriter(logPath)
@@ -36,7 +40,7 @@ func Configure(logPath string) error {
 		log.Printf("Failed to cleanup obsolete logs: %v", err)
 	}
 
-	logger := log.Output(zerolog.ConsoleWriter{Out: rw, NoColor: true}).
+	logger := log.Output(zerolog.ConsoleWriter{Out: rw, NoColor: true, TimeFormat: timestampFmt}).
 		Level(zerolog.DebugLevel).
 		With().
 		Timestamp().
