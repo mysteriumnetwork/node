@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package boltdb
+package migrator
 
 import (
 	"errors"
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/asdine/storm/v3"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/boltdbtest"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
 	"github.com/stretchr/testify/assert"
@@ -48,8 +49,8 @@ func (mma *mockMigrationApplier) Migrate(*storm.DB) error {
 	return mma.mockErr
 }
 
-func createDBAndMigrator(t *testing.T, dir string) (*Bolt, *Migrator) {
-	bolt, err := NewStorage(dir)
+func createDBAndMigrator(t *testing.T, dir string) (*boltdb.Bolt, *Migrator) {
+	bolt, err := boltdb.NewStorage(dir)
 	assert.Nil(t, err)
 
 	return bolt, NewMigrator(bolt)
