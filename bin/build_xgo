@@ -1,13 +1,10 @@
 #!/bin/bash
 
 # Usage:
-#> bin/build_xgo <os>/<arch>..
+#> bin/build_xgo <os> <arch>
 #
 # Cross compile (Unix):
-#> bin/build_xgo linux/amd64
-#
-# Cross compile (OSX + Windows):
-#> bin/build_xgo darwin/amd64 windows/amd64
+#> bin/build_xgo linux amd64
 #
 # Check if program has dynamic libraries:
 #> brew install readelf
@@ -17,9 +14,15 @@ set -e
 source bin/helpers/functions.sh
 source bin/helpers/output.sh
 
-XGO_TARGETS=`IFS=','; echo "$*"`
-if [ -z "$XGO_TARGETS" ]; then
-    print_error "Missing targets!"
+OS=$1
+if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
+    print_error "Missing OS! Should be: linux, darwin or windows"
+    exit 1
+fi
+
+ARCH=$2
+if [ -z "$ARCH" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing architecture!"
     exit 1
 fi
 
@@ -28,7 +31,7 @@ mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 IMAGE="mysteriumnetwork/xgo:1.13.8"
-if [[ $XGO_TARGETS == windows* ]]
+if [[ $OS == windows ]]
 then
     IMAGE="mysteriumnetwork/xgo:windows-0.0.1-go-1.13.6"
 fi
@@ -43,14 +46,40 @@ docker run --rm \
     -e FLAG_RACE=false \
     -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
     -e FLAG_BUILDMODE=default \
-    -e TARGETS="$XGO_TARGETS" \
+    -e TARGETS="$OS/$ARCH" \
     "$IMAGE" ./cmd/mysterium_node
-
 # Remove version from binary name:
-#  - myst-darwin-10.6-amd64 -> myst_darwin_amd64
-#  - myst-linux-amd64       -> myst_linux_amd64
+#  - myst-darwin-10.6-amd64      -> myst
+#  - myst_supervisor-linux-arm-5 -> myst
+#  - myst-linux-amd64            -> myst
 for BINARY in `ls ${DIR_TEMP}`; do
-    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/myst-([a-z]*)(-[0-9.]*)?-([0-z]*)(-[0-9]*)?/myst_\1_\3/p'`
-    mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/myst-(.*)/myst/p'`
+    mv ${DIR_TEMP}/${BINARY} ${DIR_TEMP}/${BINARY_RENAMED}
 done
+mkdir -p "build/myst"
+mv ${DIR_TEMP}/myst build/myst/myst
+
+docker run --rm \
+    -v "$PWD"/$DIR_TEMP:/build \
+    -v "$GOPATH"/xgo-cache:/deps-cache:ro \
+    -v "$PWD":/source \
+    -e OUT=myst_supervisor \
+    -e FLAG_V=false \
+    -e FLAG_X=false \
+    -e FLAG_RACE=false \
+    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
+    -e FLAG_BUILDMODE=default \
+    -e TARGETS="$OS/$ARCH" \
+    "$IMAGE" ./cmd/supervisor
+# Remove version from binary name:
+#  - myst_supervisor-darwin-10.6-amd64  -> myst_supervisor
+#  - myst_supervisor-linux-arm-5        -> myst_supervisor
+#  - myst_supervisor-linux-amd64        -> myst_supervisor
+for BINARY in `ls ${DIR_TEMP}`; do
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/myst_supervisor-(.*)/myst_supervisor/p'`
+    mv ${DIR_TEMP}/${BINARY} ${DIR_TEMP}/${BINARY_RENAMED}
+done
+mkdir -p "build/myst_supervisor"
+mv ${DIR_TEMP}/myst_supervisor build/myst_supervisor/myst_supervisor
+
 rm -rf ${DIR_TEMP}

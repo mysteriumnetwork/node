@@ -54,10 +54,10 @@ func PackageLinuxRaspberryImage() error {
 	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
 		return err
 	}
-	if err := shell.NewCmd("bin/build_xgo linux/arm").Run(); err != nil {
+	if err := shell.NewCmd("bin/build_xgo linux arm").Run(); err != nil {
 		return err
 	}
-	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
+	if err := packageDebian("build/myst/myst", "armhf"); err != nil {
 		return err
 	}
 	if err := buildMystRaspbianImage(); err != nil {

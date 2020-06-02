@@ -10,7 +10,7 @@
 #> bin/package_standalone linux
 #
 # Package (specific binary):
-#> BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin
+#> BINARY_MYST=build/myst/myst_darwin_amd64 bin/package_standalone darwin
 
 set -e
 
@@ -23,7 +23,7 @@ if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
     exit 1
 fi
 
-BINARY=${BINARY:-"build/myst/myst"}
+PACKAGE_NAME=${PACKAGE_NAME:-"build/package/myst"}
 DIR_BUILD="build/package"
 mkdir -p $DIR_BUILD
 
@@ -32,31 +32,24 @@ printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 if [ "$OS" == "windows" ]; then
-    cp -vp ${BINARY} ${DIR_TEMP}/myst.exe
+    cp -vp build/myst/myst ${DIR_TEMP}/myst.exe
 else
-    cp -vp ${BINARY} ${DIR_TEMP}/myst
+    cp -vp build/myst/myst ${DIR_TEMP}/myst
 fi
 copy_config $OS $DIR_TEMP
 if [ "$OS" == "windows" ]; then
-    cp -vp build/myst_supervisor/myst_supervisor.exe ${DIR_TEMP}/myst_supervisor.exe
+    cp -vp build/myst_supervisor/myst_supervisor ${DIR_TEMP}/myst_supervisor.exe
 else
-    echo "current dir: `pwd`"
-    echo "dir contents: `ls -la`"
-    echo "build dir contents: `ls -la build`"
-    echo "build myst dir contents: `ls -la build/myst_supervisor`"
-
     cp -vp build/myst_supervisor/myst_supervisor ${DIR_TEMP}/myst_supervisor
 fi
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
-    PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.zip"
-    (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
+    (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_NAME}.zip
 else
-    PACKAGE_FILE="${DIR_BUILD}/`basename ${BINARY}`.tar.gz"
-    tar -zcv -f ${PACKAGE_FILE} -C ${DIR_TEMP} .
+    tar -zcv -f ${PACKAGE_NAME}.tar.gz -C ${DIR_TEMP} .
 fi
 rm -rf ${DIR_TEMP}
 
-print_success "Standalone package '$PACKAGE_FILE' complete!"
+print_success "Standalone package '$PACKAGE_NAME' complete!"
 

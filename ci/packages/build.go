@@ -64,11 +64,7 @@ func linkerFlags() (flags []string) {
 }
 
 func buildCrossBinary(os, arch string) error {
-	return sh.Run("bin/build_xgo", os+"/"+arch)
-}
-
-func buildSupervisorCrossBinary(os, arch string) error {
-	return sh.Run("bin/build_supervisor_xgo", os+"/"+arch)
+	return sh.Run("bin/build_xgo", os, arch)
 }
 
 func buildBinary(source, target string) error {
