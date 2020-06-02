@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -98,11 +99,11 @@ func (mce *mockConnectionEndpoint) StartProviderMode(config wg.ProviderModeConfi
 func (mce *mockConnectionEndpoint) InterfaceName() string                                { return "mce0" }
 func (mce *mockConnectionEndpoint) Stop() error                                          { return nil }
 func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)                    { return wg.ServiceConfig{}, nil }
-func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wg.Peer) error                    { return nil }
+func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wgcfg.Peer) error                 { return nil }
 func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                            { return nil }
 func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error                       { return nil }
-func (mce *mockConnectionEndpoint) PeerStats() (*wg.Stats, error) {
-	return &wg.Stats{LastHandshake: time.Now()}, nil
+func (mce *mockConnectionEndpoint) PeerStats() (*wgcfg.Stats, error) {
+	return &wgcfg.Stats{LastHandshake: time.Now()}, nil
 }
 
 func newManagerStub(pub, out, country string) *Manager {

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +30,7 @@ func TestParsePeerStats(t *testing.T) {
 	tests := []struct {
 		name          string
 		device        *UserspaceDevice
-		expectedStats *wg.Stats
+		expectedStats *wgcfg.Stats
 		expectedErr   error
 	}{
 		{
@@ -44,7 +44,7 @@ func TestParsePeerStats(t *testing.T) {
 					},
 				},
 			},
-			expectedStats: &wg.Stats{
+			expectedStats: &wgcfg.Stats{
 				BytesSent:     10,
 				BytesReceived: 12,
 				LastHandshake: time.Date(2020, 1, 1, 1, 1, 1, 1, time.UTC),

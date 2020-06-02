@@ -19,6 +19,8 @@ package wireguard
 
 import (
 	"net"
+
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
 
 // EndpointFactory creates new connection endpoint.
@@ -29,7 +31,7 @@ type EndpointFactory func() (ConnectionEndpoint, error)
 type ConnectionEndpoint interface {
 	StartConsumerMode(config ConsumerModeConfig) error
 	StartProviderMode(config ProviderModeConfig) error
-	PeerStats() (*Stats, error)
+	PeerStats() (*wgcfg.Stats, error)
 	Config() (ServiceConfig, error)
 	InterfaceName() string
 	Stop() error
@@ -41,7 +43,7 @@ type ConsumerModeConfig struct {
 	IPAddress  net.IPNet
 	ListenPort int
 
-	Peer Peer
+	Peer wgcfg.Peer
 }
 
 // ProviderModeConfig is provider endpoint startup configuration.
@@ -50,5 +52,5 @@ type ProviderModeConfig struct {
 	ListenPort int
 	PublicIP   string
 
-	Peer Peer
+	Peer wgcfg.Peer
 }

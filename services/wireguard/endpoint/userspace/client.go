@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/device"
@@ -39,7 +39,7 @@ func NewWireguardClient() (*client, error) {
 	return &client{}, nil
 }
 
-func (c *client) ConfigureDevice(config wg.DeviceConfig) (err error) {
+func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 	if c.tun, err = CreateTUN(config.IfaceName, config.Subnet); err != nil {
 		return errors.Wrap(err, "failed to create TUN device")
 	}
@@ -67,7 +67,7 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) PeerStats(string) (*wg.Stats, error) {
+func (c *client) PeerStats(string) (*wgcfg.Stats, error) {
 	deviceState, err := ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
 		return nil, err

@@ -22,21 +22,22 @@ import (
 	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeviceConfig_Encode(t *testing.T) {
 	tests := []struct {
 		name     string
-		config   DeviceConfig
+		config   wgcfg.DeviceConfig
 		expected string
 	}{
 		{
 			name: "Test encode all filled values",
-			config: DeviceConfig{
+			config: wgcfg.DeviceConfig{
 				PrivateKey: "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 				ListenPort: 53511,
-				Peer: Peer{
+				Peer: wgcfg.Peer{
 					PublicKey:              "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 					Endpoint:               endpoint(),
 					AllowedIPs:             []string{"192.168.4.10/32", "192.168.4.11/32"},
@@ -54,7 +55,7 @@ allowed_ip=192.168.4.11/32
 		},
 		{
 			name: "Test encode default values",
-			config: DeviceConfig{
+			config: wgcfg.DeviceConfig{
 				PrivateKey: "",
 				ListenPort: 0,
 			},
@@ -76,17 +77,17 @@ persistent_keepalive_interval=0
 func TestDeviceConfig_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		config   DeviceConfig
+		config   wgcfg.DeviceConfig
 		expected string
 	}{
 		{
 			name: "Test marshal all filled values",
-			config: DeviceConfig{
+			config: wgcfg.DeviceConfig{
 				IfaceName:  "myst0",
 				Subnet:     net.IPNet{IP: net.ParseIP("10.0.182.2"), Mask: net.IPv4Mask(255, 255, 255, 0)},
 				PrivateKey: "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 				ListenPort: 53511,
-				Peer: Peer{
+				Peer: wgcfg.Peer{
 					PublicKey:              "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 					Endpoint:               endpoint(),
 					AllowedIPs:             []string{"192.168.4.10/32", "192.168.4.11/32"},
@@ -97,7 +98,7 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 		},
 		{
 			name: "Test marshal default values",
-			config: DeviceConfig{
+			config: wgcfg.DeviceConfig{
 				PrivateKey: "",
 				IfaceName:  "",
 				Subnet: net.IPNet{
@@ -105,7 +106,7 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 					Mask: nil,
 				},
 				ListenPort: 0,
-				Peer: Peer{
+				Peer: wgcfg.Peer{
 					PublicKey:              "",
 					Endpoint:               nil,
 					AllowedIPs:             nil,
@@ -128,18 +129,18 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 func TestDeviceConfig_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		expected DeviceConfig
+		expected wgcfg.DeviceConfig
 		config   string
 	}{
 		{
 			name:   "Test unmarshal all filled values",
 			config: `{"iface_name":"myst0","subnet":"10.0.182.2/24","private_key":"DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=","listen_port":53511,"peer":{"public_key":"DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=","endpoint":"182.122.22.19:3233","allowed_i_ps":["192.168.4.10/32","192.168.4.11/32"],"keep_alive_period_seconds":20}}`,
-			expected: DeviceConfig{
+			expected: wgcfg.DeviceConfig{
 				IfaceName:  "myst0",
 				Subnet:     net.IPNet{IP: net.ParseIP("10.0.182.2"), Mask: net.IPv4Mask(255, 255, 255, 0)},
 				PrivateKey: "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 				ListenPort: 53511,
-				Peer: Peer{
+				Peer: wgcfg.Peer{
 					PublicKey:              "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 					Endpoint:               endpoint(),
 					AllowedIPs:             []string{"192.168.4.10/32", "192.168.4.11/32"},
@@ -151,7 +152,7 @@ func TestDeviceConfig_UnmarshalJSON(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actualCfg := DeviceConfig{}
+			actualCfg := wgcfg.DeviceConfig{}
 			err := json.Unmarshal([]byte(test.config), &actualCfg)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expected, actualCfg)

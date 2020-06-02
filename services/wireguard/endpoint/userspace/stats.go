@@ -20,17 +20,17 @@ package userspace
 import (
 	"fmt"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
 
 // ParseDevicePeerStats parses current active consumer stats.
-func ParseDevicePeerStats(d *UserspaceDevice) (*wg.Stats, error) {
+func ParseDevicePeerStats(d *UserspaceDevice) (*wgcfg.Stats, error) {
 	if len(d.Peers) != 1 {
 		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
 	}
 
 	p := d.Peers[0]
-	return &wg.Stats{
+	return &wgcfg.Stats{
 		BytesSent:     uint64(p.TransmitBytes),
 		BytesReceived: uint64(p.ReceiveBytes),
 		LastHandshake: p.LastHandshakeTime,
