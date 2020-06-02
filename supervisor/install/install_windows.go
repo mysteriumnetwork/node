@@ -19,7 +19,8 @@ package install
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
@@ -85,7 +86,7 @@ func uninstallService(m *mgr.Mgr, name string) error {
 		return fmt.Errorf("service %s is not installed", name)
 	}
 	defer s.Close()
-	log.Println("Detected previously installed service, uninstalling...")
+	log.Info().Msg("Detected previously installed service, uninstalling...")
 
 	s.Control(svc.Stop)
 	err = s.Delete()

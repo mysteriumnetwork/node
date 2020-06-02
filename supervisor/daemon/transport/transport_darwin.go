@@ -19,9 +19,10 @@ package transport
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
+
+	"github.com/rs/zerolog/log"
 )
 
 const sock = "/var/run/myst.sock"
@@ -42,23 +43,23 @@ func Start(handle handlerFunc) error {
 	}
 	defer func() {
 		if err := l.Close(); err != nil {
-			log.Println("Error closing listener:", err)
+			log.Printf("Error closing listener: %v", err)
 		}
 	}()
 	for {
-		log.Println("Waiting for connections...")
+		log.Print("Waiting for connections...")
 		conn, err := l.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %w", err)
 		}
 		go func() {
 			peer := conn.RemoteAddr().Network()
-			log.Println("Client connected:", peer)
+			log.Printf("Client connected: %s", peer)
 			handle(conn)
 			if err := conn.Close(); err != nil {
 				log.Printf("Error closing connection for: %v error: %v", peer, err)
 			}
-			log.Println("Client disconnected:", peer)
+			log.Print("Client disconnected:", peer)
 		}()
 	}
 }

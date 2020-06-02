@@ -20,11 +20,12 @@ package install
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"text/template"
+
+	"github.com/rs/zerolog/log"
 )
 
 const daemonID = "network.mysterium.myst_supervisor"
@@ -42,10 +43,6 @@ const plistTpl = `
 	</array>
 	<key>KeepAlive</key>
 	<true/>
-	<key>StandardOutPath</key>
-	<string>{{.LogPath}}</string>
-	<key>StandardErrorPath</key>
-	<string>{{.LogPath}}</string>
 </dict>
 </plist>
 `
@@ -55,7 +52,7 @@ func Install(options Options) error {
 	if !options.valid() {
 		return errors.New("invalid options")
 	}
-	log.Println("Installing launchd daemon")
+	log.Info().Msg("Installing launchd daemon")
 	clean()
 	tpl, err := template.New("plistTpl").Parse(plistTpl)
 	if err != nil {
@@ -67,7 +64,6 @@ func Install(options Options) error {
 	}
 	err = tpl.Execute(fd, map[string]string{
 		"DaemonID":       daemonID,
-		"LogPath":        "/var/log/myst_supervisor.log",
 		"SupervisorPath": options.SupervisorPath,
 	})
 	if err != nil {
@@ -84,7 +80,7 @@ func Install(options Options) error {
 }
 
 func clean() {
-	log.Println("Cleaning up previous installation")
+	log.Info().Msg("Cleaning up previous installation")
 	_, _ = runV("launchctl", "unload", plistPath)
 	_ = os.RemoveAll(plistPath)
 }

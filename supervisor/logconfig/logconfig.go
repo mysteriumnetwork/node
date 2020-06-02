@@ -15,37 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package daemon
+package logconfig
 
 import (
 	"fmt"
-	"io"
-	"strings"
+	stdlog "log"
 
+	"github.com/mysteriumnetwork/node/logconfig/rollingwriter"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-type responder struct {
-	io.Writer
-}
-
-func (r *responder) ok(result ...string) {
-	args := []string{"ok"}
-	args = append(args, result...)
-	r.message(strings.Join(args, ": "))
-}
-
-func (r *responder) err(result ...error) {
-	args := []string{"error"}
-	for _, err := range result {
-		args = append(args, err.Error())
+// Configure configures supervisor global logger instance.
+func Configure(logPath string) error {
+	rw, err := rollingwriter.NewRollingWriter(logPath)
+	if err != nil {
+		return fmt.Errorf("could not to create rolling logs writer: %w", err)
 	}
-	r.message(strings.Join(args, ": "))
-}
-
-func (r *responder) message(msg string) {
-	log.Print("<", msg)
-	if _, err := fmt.Fprintln(r, msg); err != nil {
-		log.Printf("Could not send message: %q error: %s\n", msg, err)
+	if err := rw.CleanObsoleteLogs(); err != nil {
+		log.Printf("Failed to cleanup obsolete logs: %v", err)
 	}
+
+	logger := log.Output(zerolog.ConsoleWriter{Out: rw, NoColor: true}).
+		Level(zerolog.DebugLevel).
+		With().
+		Timestamp().
+		Logger()
+
+	log.Logger = logger
+	stdlog.SetFlags(0)
+	stdlog.SetOutput(log.Logger)
+
+	return nil
 }
