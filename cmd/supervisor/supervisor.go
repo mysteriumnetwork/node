@@ -51,6 +51,7 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to install supervisor")
 		}
+		log.Info().Msg("Supervisor installed")
 	} else {
 		logPath := *logFilePath
 		if logPath == "" {
