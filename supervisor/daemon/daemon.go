@@ -80,9 +80,17 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 			} else {
 				answer.ok()
 			}
+		case commandWgStats:
+			stats, err := d.wgStats(cmd...)
+			if err != nil {
+				log.Printf("failed %s: %s", commandWgStats, err)
+				answer.err(err)
+			} else {
+				answer.ok(stats)
+			}
 		case commandKill:
 			if err := d.killMyst(); err != nil {
-				log.Println("Could not kill myst:", err)
+				log.Printf("failed %s: %s", commandKill, err)
 				answer.err(err)
 			} else {
 				answer.ok()
@@ -125,4 +133,25 @@ func (d *Daemon) wgDown(args ...string) (err error) {
 		return errors.New("-iface is required")
 	}
 	return d.monitor.Down(*interfaceName)
+}
+
+func (d *Daemon) wgStats(args ...string) (string, error) {
+	flags := flag.NewFlagSet("", flag.ContinueOnError)
+	interfaceName := flags.String("iface", "", "")
+	if err := flags.Parse(args[1:]); err != nil {
+		return "", err
+	}
+	if *interfaceName == "" {
+		return "", errors.New("-iface is required")
+	}
+	stats, err := d.monitor.Stats(*interfaceName)
+	if err != nil {
+		return "", fmt.Errorf("could not get device stats for %s interface: %w", *interfaceName, err)
+	}
+
+	statsJSON, err := json.Marshal(stats)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal stats to JSON: %w", err)
+	}
+	return string(statsJSON), nil
 }

@@ -31,7 +31,7 @@ const sock = `\\.\pipe\mystpipe`
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
 func Start(handle handlerFunc) error {
-	return svc.Run("WireGuardManager", &managerService{handle: handle})
+	return svc.Run("MystSupervisor", &managerService{handle: handle})
 }
 
 type managerService struct {

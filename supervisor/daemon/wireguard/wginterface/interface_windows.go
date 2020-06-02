@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
@@ -60,14 +61,17 @@ func New(cfg wg.DeviceConfig, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("could not set device uapi config: %w", err)
 	}
 
-	// TODO: Will configure network and add tunnel routes in separate PR.
-
 	log.Println("Bringing peers up")
 	wgDevice.Up()
 
+	log.Println("Configuring network")
+	if err := configureNetwork(cfg); err != nil {
+		return nil, fmt.Errorf("could not setup network: %w", err)
+	}
+
 	wgInterface := &WgInterface{
 		Name:   cfg.IfaceName,
-		device: wgDevice,
+		Device: wgDevice,
 		uapi:   uapi,
 	}
 	go wgInterface.handleUAPI()
@@ -83,7 +87,7 @@ func (a *WgInterface) handleUAPI() {
 			log.Println("Closing UAPI listener, err:", err)
 			return
 		}
-		go a.device.IpcHandle(conn)
+		go a.Device.IpcHandle(conn)
 	}
 }
 
@@ -92,5 +96,21 @@ func (a *WgInterface) Down() {
 	if err := a.uapi.Close(); err != nil {
 		log.Printf("could not close uapi socket: %w", err)
 	}
-	a.device.Close()
+	a.Device.Close()
+}
+
+func configureNetwork(cfg wg.DeviceConfig) error {
+	if err := netutil.AssignIP(cfg.IfaceName, cfg.Subnet); err != nil {
+		return fmt.Errorf("failed to assign IP address: %w", err)
+	}
+
+	if cfg.Peer.Endpoint != nil {
+		if err := netutil.ExcludeRoute(cfg.Peer.Endpoint.IP); err != nil {
+			return fmt.Errorf("could not exclude route %s: %w", cfg.Peer.Endpoint.IP.String(), err)
+		}
+		if err := netutil.AddDefaultRoute(cfg.IfaceName); err != nil {
+			return fmt.Errorf("could not add default route for %s: %w", cfg.IfaceName, err)
+		}
+	}
+	return nil
 }

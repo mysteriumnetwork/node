@@ -31,9 +31,9 @@ import (
 
 // Stats represents wireguard peer statistics information.
 type Stats struct {
-	BytesSent     uint64
-	BytesReceived uint64
-	LastHandshake time.Time
+	BytesSent     uint64    `json:"bytes_sent"`
+	BytesReceived uint64    `json:"bytes_received"`
+	LastHandshake time.Time `json:"last_handshake"`
 }
 
 // DeviceConfig describes wireguard device configuration.

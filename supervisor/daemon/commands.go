@@ -18,9 +18,10 @@
 package daemon
 
 const (
-	commandPing   = "ping"
-	commandKill   = "kill"
-	commandBye    = "bye"
-	commandWgUp   = "wg-up"
-	commandWgDown = "wg-down"
+	commandPing    = "ping"
+	commandKill    = "kill"
+	commandBye     = "bye"
+	commandWgUp    = "wg-up"
+	commandWgDown  = "wg-down"
+	commandWgStats = "wg-stats"
 )

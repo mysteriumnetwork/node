@@ -26,6 +26,6 @@ import (
 // WgInterface represents WireGuard tunnel with underlying device.
 type WgInterface struct {
 	Name   string
-	device *device.Device
+	Device *device.Device
 	uapi   net.Listener
 }
