@@ -3,7 +3,7 @@
 Supervisor is a system background service that allows seamless installation/running of [Mysterium node](https://github.com/mysteriumnetwork/node) under elevated permissions.
 Clients (e.g. desktop applications) can ask the supervisor to RUN or KILL the node instance via OS dependent mechanism.
 
-Currently, only macOS is supported and it is using unix domain sockets for communication.
+Currently, only macOS and Windows are supported and it is using unix domain sockets or named pipes for communication.
 
 For usage see:
 
@@ -15,13 +15,16 @@ myst_supervisor -help
 
 | Command                           | OS           | Args | Output | Implemented | Notes |
 | --------------------------------- | ------------ | ---- | ------ | ----------- | ----- |
-| isWgSupported (kernel)            | linux        |      | ok     | -           | |
-| NAT ipForward                     | linux, macOS |      | ok     | -           | | `/sbin/sysctl -w net.ipv4.ip_forward=1` |
-| NAT/firewall rules                | ALL          | vpnNetwork <br> dnsIP <br> dnsPort <br> protectedNetworks <br> providerExternalIP <br> enableDNSRedirect | ok | - | |
-| NAT/firewall allowIP              | linux        | IP   | ok     | -           | |
-| NAT/firewall allowURL             | linux        | URL  | ok     | -           | |
-| Create tun (wg userspace)         | ALL          | iface name | `windows.GUID / FD int` | - | FD to be used in `wg/tun.CreateTUNFromFile(*os.File, int) (Device, error)` see `tun_linux.go/tun_darwin.go` <br> windows: `CreateTUNWithRequestedGUID` |
-| Destroy device (wg userspace)     | ALL          | iface name | ok | 
-| assignIP                          | ALL          | iface name, subnet | ok |
-| excludeRoute                      | ALL          | IP | ok |
-| defaultRoute                      | ALL          | iface name | ok |
+| ping                              | macOS, Win   |      | ok     | ✅           | Ping supervisor |
+| kill                              | macOS, Win   |      | ok     | ✅          | Kill myst process gracefully |
+| bye                               | macOS   |      | ok     | ✅            | Kill supervisor |
+| wg-up                             | macOS, Win   | -uid, -config    | ok     | ✅           | Setup WireGuard device with given configuration in JSON string format |
+| wg-down                           | macOS, Win   | -iface     | ok     | ✅           | Destroy WireGuard device |
+| wg-stats                          | macOS, Win   | -iface     | `{"bytes_send": 100, "bytes_received": 200, "last_handshake": "2020-06-02T13:42:55.786Z"}`     | ✅           | Get WireGuard device peer statistics |
+
+
+## Logs
+
+On Windows logs could be found at `C:\Windows\system32\myst_supervisor.log`
+
+On macOS logs could be found at `/var/log/myst_supervisor.log`

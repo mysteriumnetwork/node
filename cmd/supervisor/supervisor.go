@@ -19,39 +19,47 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon"
 	"github.com/mysteriumnetwork/node/supervisor/install"
+	"github.com/mysteriumnetwork/node/supervisor/logconfig"
 )
 
 var (
 	flagInstall = flag.Bool("install", false, "Install or repair myst supervisor")
+	logFilePath = flag.String("log-path", "", "Supervisor log file path")
 )
 
 func main() {
 	flag.Parse()
 
 	if *flagInstall {
-		log.Println("Installing supervisor")
+		log.Info().Msg("Installing supervisor")
 		path, err := thisPath()
 		if err != nil {
-			log.Fatalln("Failed to determine supervisor's path:", err)
+			log.Fatal().Err(err).Msg("Failed to determine supervisor's path")
 		}
 		err = install.Install(install.Options{
 			SupervisorPath: path,
 		})
 		if err != nil {
-			log.Fatalln("Failed to install supervisor:", err)
+			log.Fatal().Err(err).Msg("Failed to install supervisor")
 		}
+		log.Info().Msg("Supervisor installed")
 	} else {
-		log.Println("Running myst supervisor daemon")
+		if err := logconfig.Configure(*logFilePath); err != nil {
+			log.Fatal().Err(err).Msg("Failed to configure logging")
+		}
+
+		log.Info().Msg("Running myst supervisor daemon")
 		supervisor := daemon.New(&config.Config{})
 		if err := supervisor.Start(); err != nil {
-			log.Fatalln("Error running supervisor:", err)
+			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}
 }

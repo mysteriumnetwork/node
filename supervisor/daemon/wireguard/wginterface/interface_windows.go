@@ -20,10 +20,14 @@ package wginterface
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"io"
+	"io/ioutil"
+	stdlog "log"
 	"strings"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
@@ -32,7 +36,7 @@ import (
 
 // New creates new WgInterface instance.
 func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
-	log.Println("Creating Wintun interface")
+	log.Print("Creating Wintun interface")
 
 	wintun, err := tun.CreateTUN(cfg.IfaceName, 0)
 	if err != nil {
@@ -46,13 +50,12 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		log.Printf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
 	}
 
-	log.Println("Creating interface instance")
-	// TODO: Use ring logger?
-	logger := device.NewLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", cfg.IfaceName))
+	log.Print("Creating interface instance")
+	logger := newLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", cfg.IfaceName))
 	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
 	wgDevice := device.NewDevice(wintun, logger)
 
-	log.Println("Setting interface configuration")
+	log.Print("Setting interface configuration")
 	uapi, err := ipc.UAPIListen(cfg.IfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not listen for user API wg configuration: %w", err)
@@ -61,10 +64,10 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("could not set device uapi config: %w", err)
 	}
 
-	log.Println("Bringing peers up")
+	log.Print("Bringing peers up")
 	wgDevice.Up()
 
-	log.Println("Configuring network")
+	log.Print("Configuring network")
 	if err := configureNetwork(cfg); err != nil {
 		return nil, fmt.Errorf("could not setup network: %w", err)
 	}
@@ -84,7 +87,7 @@ func (a *WgInterface) handleUAPI() {
 	for {
 		conn, err := a.uapi.Accept()
 		if err != nil {
-			log.Println("Closing UAPI listener, err:", err)
+			log.Printf("Closing UAPI listener, err: %v", err)
 			return
 		}
 		go a.Device.IpcHandle(conn)
@@ -94,7 +97,7 @@ func (a *WgInterface) handleUAPI() {
 // Down closes device and user space api socket.
 func (a *WgInterface) Down() {
 	if err := a.uapi.Close(); err != nil {
-		log.Printf("could not close uapi socket: %w", err)
+		log.Printf("could not close uapi socket: %v", err)
 	}
 	a.Device.Close()
 }
@@ -113,4 +116,38 @@ func configureNetwork(cfg wgcfg.DeviceConfig) error {
 		}
 	}
 	return nil
+}
+
+// newLogger creates WireGuard logger which uses already configured global zero log instance.
+func newLogger(level int, prepend string) *device.Logger {
+	output := log.Logger
+	logger := new(device.Logger)
+
+	logErr, logInfo, logDebug := func() (io.Writer, io.Writer, io.Writer) {
+		if level >= device.LogLevelDebug {
+			return output, output, output
+		}
+		if level >= device.LogLevelInfo {
+			return output, output, ioutil.Discard
+		}
+		if level >= device.LogLevelError {
+			return output, ioutil.Discard, ioutil.Discard
+		}
+		return ioutil.Discard, ioutil.Discard, ioutil.Discard
+	}()
+
+	logger.Debug = stdlog.New(logDebug,
+		"DEBUG: "+prepend,
+		stdlog.Ldate|stdlog.Ltime,
+	)
+
+	logger.Info = stdlog.New(logInfo,
+		"INFO: "+prepend,
+		stdlog.Ldate|stdlog.Ltime,
+	)
+	logger.Error = stdlog.New(logErr,
+		"ERROR: "+prepend,
+		stdlog.Ldate|stdlog.Ltime,
+	)
+	return logger
 }

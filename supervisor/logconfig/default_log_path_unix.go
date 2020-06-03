@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -15,37 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package daemon
+package logconfig
 
-import (
-	"fmt"
-	"io"
-	"strings"
-
-	"github.com/rs/zerolog/log"
-)
-
-type responder struct {
-	io.Writer
-}
-
-func (r *responder) ok(result ...string) {
-	args := []string{"ok"}
-	args = append(args, result...)
-	r.message(strings.Join(args, ": "))
-}
-
-func (r *responder) err(result ...error) {
-	args := []string{"error"}
-	for _, err := range result {
-		args = append(args, err.Error())
-	}
-	r.message(strings.Join(args, ": "))
-}
-
-func (r *responder) message(msg string) {
-	log.Print("<", msg)
-	if _, err := fmt.Fprintln(r, msg); err != nil {
-		log.Printf("Could not send message: %q error: %s\n", msg, err)
-	}
+func defaultLogPath() (string, error) {
+	return "/var/log/myst_supervisor", nil
 }
