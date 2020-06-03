@@ -25,12 +25,15 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 // Daemon - supervisor process.
@@ -46,6 +49,14 @@ func New(cfg *config.Config) Daemon {
 
 // Start supervisor daemon. Blocks.
 func (d *Daemon) Start() error {
+	db, err := boltdb.NewStorage(os.TempDir())
+	if err != nil {
+		log.Printf("failed to init routes storage: %s", err)
+	} else {
+		netutil.SetRouteManagerStorage(db)
+		netutil.ClearStaleRoutes()
+	}
+
 	return transport.Start(d.dialog)
 }
 
@@ -132,7 +143,15 @@ func (d *Daemon) wgDown(args ...string) (err error) {
 	if *interfaceName == "" {
 		return errors.New("-iface is required")
 	}
-	return d.monitor.Down(*interfaceName)
+
+	err = d.monitor.Down(*interfaceName)
+	if err != nil {
+		return fmt.Errorf("failed to down wg interface %s: %w", *interfaceName, err)
+	}
+
+	netutil.ClearStaleRoutes()
+
+	return nil
 }
 
 func (d *Daemon) wgStats(args ...string) (string, error) {

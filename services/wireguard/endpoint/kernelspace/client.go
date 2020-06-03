@@ -23,10 +23,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -155,26 +155,10 @@ func (c *client) Close() (err error) {
 }
 
 func configureRoutes(iface string, ip net.IP) error {
-	if err := excludeRoute(ip); err != nil {
+	if err := netutil.ExcludeRoute(ip); err != nil {
 		return err
 	}
-	return addDefaultRoute(iface)
-}
-
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-
-	return cmdutil.SudoExec("ip", "route", "replace", ip.String(), "via", gw.String())
-}
-
-func addDefaultRoute(iface string) error {
-	if err := cmdutil.SudoExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
-		return err
-	}
-	return cmdutil.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
+	return netutil.AddDefaultRoute(iface)
 }
 
 func stringToKey(key string) (wgtypes.Key, error) {

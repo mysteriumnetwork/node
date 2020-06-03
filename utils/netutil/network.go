@@ -18,26 +18,98 @@
 package netutil
 
 import (
+	"fmt"
 	"net"
 	"strings"
 
+	"github.com/jackpal/gateway"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-// AssignIP assigns subnet to given interface.
-func AssignIP(iface string, subnet net.IPNet) error {
-	return assignIP(iface, subnet)
+var defaultRouteManager *routeManager = nil
+
+const (
+	routeRecordDelimeter = "|"
+	routeRecordBucket    = "exclude_route"
+)
+
+type route struct {
+	Record string `storm:"id"`
+}
+
+type routeManager struct {
+	db *boltdb.Bolt
+}
+
+// SetRouteManagerStorage initiate defaultRouteManager with a provided storage.
+func SetRouteManagerStorage(db *boltdb.Bolt) {
+	defaultRouteManager = &routeManager{
+		db: db,
+	}
+}
+
+// ClearStaleRoutes removes stale route from the host routing table.
+func ClearStaleRoutes() {
+	if defaultRouteManager == nil {
+		return
+	}
+
+	var records []route
+	err := defaultRouteManager.db.GetAllFrom(routeRecordBucket, &records)
+
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to get %s records", routeRecordBucket)
+		return
+	}
+
+	for _, r := range records {
+		args := strings.Split(r.Record, routeRecordDelimeter)
+
+		if len(args) != 2 {
+			log.Error().Err(err).Msgf("Failed to parse %s record", r.Record)
+		} else {
+			log.Info().Msgf("Cleaning stale route: %s %s", args[0], args[1])
+			if err := deleteRoute(args[0], args[1]); err != nil {
+				log.Error().Err(err).Msgf("Failed to delete route: %s %s", args[0], args[1])
+			}
+		}
+
+		err := defaultRouteManager.db.Delete(routeRecordBucket, &r)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to delete %s record", r.Record)
+		}
+	}
 }
 
 // ExcludeRoute excludes given IP from VPN tunnel.
 func ExcludeRoute(ip net.IP) error {
-	return excludeRoute(ip)
+	gw, err := gateway.DiscoverGateway()
+	if err != nil {
+		return fmt.Errorf("failed to get default gateway: %w", err)
+	}
+
+	if defaultRouteManager != nil {
+		err := defaultRouteManager.db.Store(routeRecordBucket, &route{
+			Record: strings.Join([]string{ip.String(), gw.String()}, routeRecordDelimeter),
+		})
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to save %s record", routeRecordBucket)
+		}
+	}
+
+	return excludeRoute(ip, gw)
 }
 
 // AddDefaultRoute adds default VPN tunnel route.
 func AddDefaultRoute(iface string) error {
 	return addDefaultRoute(iface)
+}
+
+// AssignIP assigns subnet to given interface.
+func AssignIP(iface string, subnet net.IPNet) error {
+	return assignIP(iface, subnet)
 }
 
 // LogNetworkStats logs network information to the Trace log level.

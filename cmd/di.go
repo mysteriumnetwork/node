@@ -46,6 +46,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrator"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -193,6 +194,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
+
+	netutil.ClearStaleRoutes()
 
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
@@ -386,13 +389,17 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 		return err
 	}
 
-	migrator := boltdb.NewMigrator(localStorage)
+	migrator := migrator.NewMigrator(localStorage)
 	err = migrator.RunMigrations(history.Sequence)
 	if err != nil {
 		return err
 	}
 
 	di.Storage = localStorage
+
+	if !config.GetBool(config.FlagUserMode) {
+		netutil.SetRouteManagerStorage(di.Storage)
+	}
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)

@@ -85,6 +85,11 @@ func (b *Bolt) GetBuckets() []string {
 	return b.db.Bucket()
 }
 
+// DB returns raw storm DB.
+func (b *Bolt) DB() *storm.DB {
+	return b.db
+}
+
 // Close closes database
 func (b *Bolt) Close() error {
 	return b.db.Close()
