@@ -397,7 +397,9 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	di.Storage = localStorage
 
-	netutil.SetRouteManagerStorage(di.Storage)
+	if !config.GetBool(config.FlagUserMode) {
+		netutil.SetRouteManagerStorage(di.Storage)
+	}
 
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
