@@ -16,15 +16,7 @@ RUN GOOS=linux GOARCH=amd64 bin/build \
     && bin/package_debian ${PACKAGE_VERSION} amd64
 
 
-FROM ubuntu:16.04
-
-# Install packages
-RUN apt-get update \
-    && apt-get install -y curl software-properties-common \
-    && curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add \
-    && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list \
-    && add-apt-repository ppa:wireguard/wireguard \
-    && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+FROM ubuntu:20.04
 
 # Make resolvconf skip the post install (see https://github.com/moby/moby/issues/1297)
 RUN apt-get update \
