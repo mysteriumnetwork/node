@@ -20,11 +20,12 @@ package wginterface
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
@@ -50,7 +51,7 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	wgDevice := device.NewDevice(tunnel, logger)
 	logger.Info.Println("Device started")
 
-	log.Println("Setting interface configuration")
+	log.Info().Msg("Setting interface configuration")
 	fileUAPI, err := ipc.UAPIOpen(interfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("UAPI listen error: %w", err)
@@ -63,10 +64,10 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("could not set device uapi config: %w", err)
 	}
 
-	log.Println("Bringing peers up")
+	log.Info().Msg("Bringing peers up")
 	wgDevice.Up()
 
-	log.Println("Configuring network")
+	log.Info().Msg("Configuring network")
 	if err := configureNetwork(cfg); err != nil {
 		return nil, fmt.Errorf("could not setup network: %w", err)
 	}
@@ -85,7 +86,7 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		Device: wgDevice,
 		uapi:   uapi,
 	}
-	log.Println("Listening for UAPI requests")
+	log.Info().Msg("Listening for UAPI requests")
 	go wgInterface.handleUAPI()
 
 	return wgInterface, nil
@@ -108,7 +109,7 @@ func (a *WgInterface) handleUAPI() {
 	for {
 		conn, err := a.uapi.Accept()
 		if err != nil {
-			log.Println("Closing UAPI listener, err:", err)
+			log.Err(err).Msg("Failed to close UAPI listener")
 			return
 		}
 		go a.Device.IpcHandle(conn)

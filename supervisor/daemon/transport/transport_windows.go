@@ -45,7 +45,7 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 	s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 	go func() {
 		if err := m.listenPipe(); err != nil {
-			log.Printf("could not listen pipe: %v", err)
+			log.Err(err).Msgf("Could not listen pipe on %s", sock)
 		}
 	}()
 
@@ -60,7 +60,7 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 		case svc.Continue:
 			s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 		default:
-			log.Printf("unexpected control request #%d", c)
+			log.Error().Msgf("unexpected control request #%d", c)
 		}
 	}
 	return
@@ -91,23 +91,23 @@ func (m *managerService) listenPipe() error {
 	}
 	defer func() {
 		if err := l.Close(); err != nil {
-			log.Printf("Error closing listener:", err)
+			log.Err(err).Msg("Error closing listener")
 		}
 	}()
 	for {
-		log.Print("Waiting for connections...")
+		log.Debug().Msg("Waiting for connections...")
 		conn, err := l.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %w", err)
 		}
 		go func() {
 			peer := conn.RemoteAddr().Network()
-			log.Printf("Client connected: %s", peer)
+			log.Debug().Msgf("Client connected: %s", peer)
 			m.handle(conn)
 			if err := conn.Close(); err != nil {
-				log.Printf("Error closing connection for: %s error: %v", peer, err)
+				log.Err(err).Msgf("Error closing connection for: %s", peer)
 			}
-			log.Printf("Client disconnected: %s", peer)
+			log.Debug().Msgf("Client disconnected: %s", peer)
 		}()
 	}
 }
