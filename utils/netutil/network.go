@@ -18,6 +18,7 @@
 package netutil
 
 import (
+	"fmt"
 	"net"
 	"strings"
 
@@ -86,7 +87,7 @@ func ClearStaleRoutes() {
 func ExcludeRoute(ip net.IP) error {
 	gw, err := gateway.DiscoverGateway()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get default gateway: %w", err)
 	}
 
 	if defaultRouteManager != nil {

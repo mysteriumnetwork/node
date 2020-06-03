@@ -146,7 +146,7 @@ func (d *Daemon) wgDown(args ...string) (err error) {
 
 	err = d.monitor.Down(*interfaceName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to down wg interface %s: %w", *interfaceName, err)
 	}
 
 	netutil.ClearStaleRoutes()
