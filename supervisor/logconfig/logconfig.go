@@ -32,6 +32,13 @@ const (
 
 // Configure configures supervisor global logger instance.
 func Configure(logPath string) error {
+	if logPath == "" {
+		var err error
+		logPath, err = defaultLogPath()
+		if err != nil {
+			return fmt.Errorf("could not get default log path: %w", err)
+		}
+	}
 	rw, err := rollingwriter.NewRollingWriter(logPath)
 	if err != nil {
 		return fmt.Errorf("could not to create rolling logs writer: %w", err)

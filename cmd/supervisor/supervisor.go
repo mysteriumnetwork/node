@@ -21,7 +21,6 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/rs/zerolog/log"
 
@@ -53,12 +52,7 @@ func main() {
 		}
 		log.Info().Msg("Supervisor installed")
 	} else {
-		logPath := *logFilePath
-		if logPath == "" {
-			logPath = defaultLogPath()
-		}
-
-		if err := logconfig.Configure(logPath); err != nil {
+		if err := logconfig.Configure(*logFilePath); err != nil {
 			log.Fatal().Err(err).Msg("Failed to configure logging")
 		}
 
@@ -68,15 +62,6 @@ func main() {
 			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}
-}
-
-func defaultLogPath() string {
-	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-		return "/var/log/myst_supervisor"
-	}
-
-	// On Windows default log file location will be under C:\Windows\system32\myst_supervisor.log
-	return "./myst_supervisor"
 }
 
 func thisPath() (string, error) {
