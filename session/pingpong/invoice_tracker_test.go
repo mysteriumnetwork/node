@@ -409,6 +409,64 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 	}
 }
 
+func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
+	dir, err := ioutil.TempDir("", "invoice_tracker_test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ks := identity.NewMockKeystore()
+	acc, err := ks.NewAccount("")
+	assert.Nil(t, err)
+	mockSender := &MockPeerInvoiceSender{
+		chanToWriteTo: make(chan crypto.Invoice, 10),
+	}
+
+	exchangeMessageChan := make(chan crypto.ExchangeMessage)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(mbtime.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	deps := InvoiceTrackerDeps{
+		Proposal: market.ServiceProposal{
+			PaymentMethod: &mockPaymentMethod{
+				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				rate:  market.PaymentRate{PerTime: time.Minute},
+			},
+		},
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ChargePeriodLeeway:         15 * time.Minute,
+		FirstInvoiceSendDuration:   time.Nanosecond,
+		FirstInvoiceSendTimeout:    time.Minute,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		ConsumersAccountantID:      acc.Address,
+		ProvidersAccountantID:      acc.Address,
+		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		EventBus:                   mocks.NewEventBus(),
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
+	defer invoiceTracker.Stop()
+
+	errChan := make(chan error)
+	go func() { errChan <- invoiceTracker.Start() }()
+
+	invoice := <-mockSender.chanToWriteTo
+	assert.Equal(t, uint64(providerFirstInvoiceValue), invoice.AgreementTotal)
+	assert.Len(t, invoice.Hashlock, 64)
+	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
+
+	invoiceTracker.Stop()
+	assert.NoError(t, <-errChan)
+}
+
 func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)

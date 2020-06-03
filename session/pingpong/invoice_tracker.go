@@ -65,7 +65,7 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
-const providerFirstInvoiceTolerance = 0.8
+const providerFirstInvoiceValue = 1
 
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
@@ -439,13 +439,10 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 
 	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 
-	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
-	// This is due to the fact that both payment providers start at different times.
-	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
-	// Over the long run, this becomes redundant as the difference should become miniscule.
 	lastEm := it.getLastExchangeMessage()
-	if lastEm.AgreementTotal == 0 {
-		shouldBe = uint64(math.Trunc(float64(shouldBe) * providerFirstInvoiceTolerance))
+	if lastEm.AgreementTotal == 0 && shouldBe > 0 {
+		// The first invoice should have minimal static value.
+		shouldBe = providerFirstInvoiceValue
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
