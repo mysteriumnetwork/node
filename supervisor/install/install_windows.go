@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-const serviceName = "MystSupervisor"
+const serviceName = "MysteriumVPNSupervisor"
 
 // Install installs service for Windows.
 func Install(options Options) error {
@@ -38,32 +38,35 @@ func Install(options Options) error {
 	}
 	defer m.Disconnect()
 
+	log.Info().Msg("Cleaning up previous installation")
+	uninstallService(m, serviceName)
+
 	config := mgr.Config{
 		ServiceType:  windows.SERVICE_WIN32_OWN_PROCESS,
 		StartType:    mgr.StartAutomatic,
 		ErrorControl: mgr.ErrorNormal,
-		DisplayName:  "MystSupervisor Service",
-		Description:  "Mysterium Network dApp supervisor service is responsible for managing network configurations",
+		DisplayName:  "MysteriumVPN Supervisor",
+		Description:  "Handles network configuration for MysteriumVPN application.",
 	}
-
-	if err := uninstallService(m, serviceName); err != nil {
-		log.Printf("Failed to remove service: %v", err)
-	}
-
 	if err := installAndStartService(m, serviceName, options, config); err != nil {
 		return fmt.Errorf("could not install and run service: %w", err)
 	}
 	return nil
 }
 
-func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr.Config) error {
-	s, err := m.OpenService(name)
-	if err == nil {
-		s.Close()
-		return fmt.Errorf("service %s already exists", name)
+// Uninstall uninstalls service for Windows.
+func Uninstall() error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return fmt.Errorf("could not connect to service manager: %w", err)
 	}
+	defer m.Disconnect()
 
-	s, err = m.CreateService(name, options.SupervisorPath, config, "")
+	return uninstallService(m, serviceName)
+}
+
+func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr.Config) error {
+	s, err := m.CreateService(name, options.SupervisorPath, config, "")
 	if err != nil {
 		return err
 	}
@@ -72,8 +75,9 @@ func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr
 	err = eventlog.InstallAsEventCreate(name, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
-		return fmt.Errorf("SetupEventLogSource() failed: %s", err)
+		return fmt.Errorf("could not configure event logging: %s", err)
 	}
+
 	if err := s.Start(); err != nil {
 		return fmt.Errorf("could not start service: %w", err)
 	}
@@ -86,16 +90,17 @@ func uninstallService(m *mgr.Mgr, name string) error {
 		return fmt.Errorf("service %s is not installed", name)
 	}
 	defer s.Close()
-	log.Info().Msg("Detected previously installed service, uninstalling...")
 
 	s.Control(svc.Stop)
+
 	err = s.Delete()
 	if err != nil {
 		return fmt.Errorf("could not mark service for deletion: %w", err)
 	}
+
 	err = eventlog.Remove(name)
 	if err != nil {
-		return fmt.Errorf("RemoveEventLogSource() failed: %s", err)
+		return fmt.Errorf("cound not remove event logging: %s", err)
 	}
 	return nil
 }

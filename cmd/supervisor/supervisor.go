@@ -31,26 +31,33 @@ import (
 )
 
 var (
-	flagInstall = flag.Bool("install", false, "Install or repair myst supervisor")
-	logFilePath = flag.String("log-path", "", "Supervisor log file path")
+	flagInstall   = flag.Bool("install", false, "Install or repair myst supervisor")
+	flagUninstall = flag.Bool("uninstall", false, "Uninstall myst supervisor")
+	logFilePath   = flag.String("log-path", "", "Supervisor log file path")
 )
 
 func main() {
 	flag.Parse()
 
 	if *flagInstall {
-		log.Info().Msg("Installing supervisor")
 		path, err := thisPath()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to determine supervisor's path")
 		}
-		err = install.Install(install.Options{
+
+		options := install.Options{
 			SupervisorPath: path,
-		})
-		if err != nil {
+		}
+		log.Info().Msgf("Installing supervisor with options: %#v", options)
+		if err = install.Install(options); err != nil {
 			log.Fatal().Err(err).Msg("Failed to install supervisor")
 		}
 		log.Info().Msg("Supervisor installed")
+	} else if *flagUninstall {
+		log.Info().Msg("Uninstalling supervisor")
+		if err := install.Uninstall(); err != nil {
+			log.Fatal().Err(err).Msg("Failed to uninstall supervisor")
+		}
 	} else {
 		if err := logconfig.Configure(*logFilePath); err != nil {
 			log.Fatal().Err(err).Msg("Failed to configure logging")
