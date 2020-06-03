@@ -54,7 +54,8 @@ import (
 
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping services bootstrap for consumer mode")
 		return nil
 	}
 
@@ -159,7 +160,8 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping provider registrar for consumer mode")
 		return nil
 	}
 
@@ -175,7 +177,8 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping accountant promise settler for consumer mode")
 		di.AccountantPromiseSettler = &pingpong_noop.NoopAccountantPromiseSettler{}
 		return nil
 	}
@@ -264,7 +267,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping connections registration for consumer mode")
 		di.registerNoopConnection()
 		return
 	}

@@ -196,8 +196,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ConsumerLowerGBPriceBound:          0,
 			ConsumerUpperGBPriceBound:          11000000,
 		},
-		MobileConsumer: true,
-		P2PPorts:       port.UnspecifiedRange(),
+		Consumer: true,
+		P2PPorts: port.UnspecifiedRange(),
 	}
 
 	err := di.Bootstrap(nodeOptions)

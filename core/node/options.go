@@ -78,7 +78,7 @@ type Options struct {
 
 	Payments OptionsPayments
 
-	MobileConsumer bool
+	Consumer bool
 
 	P2PPorts *port.Range
 }
@@ -158,6 +158,7 @@ func GetOptions() *Options {
 			BlockAlways: config.GetBool(config.FlagFirewallKillSwitch),
 		},
 		P2PPorts: getP2PListenPorts(),
+		Consumer: config.GetBool(config.FlagConsumer),
 	}
 }
 
