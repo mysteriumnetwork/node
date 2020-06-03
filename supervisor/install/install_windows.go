@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-const serviceName = "MystSupervisor"
+const serviceName = "MysteriumVPNSupervisor"
 
 // Install installs service for Windows.
 func Install(options Options) error {
