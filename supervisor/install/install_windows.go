@@ -45,8 +45,8 @@ func Install(options Options) error {
 		ServiceType:  windows.SERVICE_WIN32_OWN_PROCESS,
 		StartType:    mgr.StartAutomatic,
 		ErrorControl: mgr.ErrorNormal,
-		DisplayName:  "MystSupervisor Service",
-		Description:  "Mysterium Network dApp supervisor service is responsible for managing network configurations",
+		DisplayName:  "MysteriumVPN Supervisor",
+		Description:  "Handles network configuration for MysteriumVPN application.",
 	}
 	if err := installAndStartService(m, serviceName, options, config); err != nil {
 		return fmt.Errorf("could not install and run service: %w", err)
@@ -75,7 +75,7 @@ func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr
 	err = eventlog.InstallAsEventCreate(name, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
-		return fmt.Errorf("SetupEventLogSource() failed: %s", err)
+		return fmt.Errorf("could not configure event logging: %s", err)
 	}
 
 	if err := s.Start(); err != nil {
@@ -100,7 +100,7 @@ func uninstallService(m *mgr.Mgr, name string) error {
 
 	err = eventlog.Remove(name)
 	if err != nil {
-		return fmt.Errorf("RemoveEventLogSource() failed: %s", err)
+		return fmt.Errorf("cound not remove event logging: %s", err)
 	}
 	return nil
 }
