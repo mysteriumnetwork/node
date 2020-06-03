@@ -60,7 +60,7 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 		case svc.Continue:
 			s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 		default:
-			log.Error().Msgf("unexpected control request #%d", c)
+			log.Error().Msgf("Unexpected control request #%d", c)
 		}
 	}
 	return
