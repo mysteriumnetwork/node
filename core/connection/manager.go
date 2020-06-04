@@ -249,10 +249,22 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		return err
 	}
 
+	m.clearIPCache()
+	m.addCleanup(func() error {
+		m.clearIPCache()
+		return nil
+	})
+
 	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
 	go m.checkSessionIP(channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
 
 	return err
+}
+
+func (m *connectionManager) clearIPCache() {
+	if cr, ok := m.ipResolver.(*ip.CachedResolver); ok {
+		cr.ClearCache()
+	}
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
@@ -693,7 +705,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 		return nil
 	}
 
-	outboundIP, err := m.ipResolver.GetOutboundIPAsString()
+	outboundIP, err := m.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}
