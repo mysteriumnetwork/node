@@ -27,11 +27,22 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 )
 
 func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
+		tracer := trace.NewTracer()
+		sessionCreateTrace := tracer.StartStage("Whole session create")
+
+		defer func() {
+			tracer.EndStage(sessionCreateTrace)
+			traceResult := tracer.Finish()
+			log.Debug().Msgf("Provider connection trace: %s", traceResult)
+		}()
+
+		sessionStartTrace := tracer.StartStage("Session start")
 		var sr pb.SessionRequest
 		if err := c.Request().UnmarshalProto(&sr); err != nil {
 			return err
@@ -56,11 +67,14 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		if err != nil {
 			return fmt.Errorf("cannot start session %s: %w", string(session.ID), err)
 		}
+		tracer.EndStage(sessionStartTrace)
 
+		provideConfigTrace := tracer.StartStage("Provide config")
 		config, err := service.ProvideConfig(string(session.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
 			return fmt.Errorf("cannot get provider config for session %s: %w", string(session.ID), err)
 		}
+		tracer.EndStage(provideConfigTrace)
 
 		if config.SessionDestroyCallback != nil {
 			go func() {

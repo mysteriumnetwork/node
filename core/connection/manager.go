@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -167,6 +168,15 @@ func NewManager(
 }
 
 func (m *connectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+	tracer := trace.NewTracer()
+	connectTrace := tracer.StartStage("Whole Connect")
+
+	defer func() {
+		tracer.EndStage(connectTrace)
+		traceResult := tracer.Finish()
+		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
+	}()
+
 	if m.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -190,6 +200,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
+	p2pChannelTrace := tracer.StartStage("P2P channel creation")
 	contact, err := p2p.ParseContact(proposal.ProviderContacts)
 	if err != nil {
 		return fmt.Errorf("provider does not support p2p communication: %w", err)
@@ -199,7 +210,9 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	if err != nil {
 		return fmt.Errorf("could not create p2p channel: %w", err)
 	}
+	tracer.EndStage(p2pChannelTrace)
 
+	sessionCreateTrace := tracer.StartStage("Session creation")
 	connection, err := m.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
@@ -222,7 +235,9 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	}
 
 	paymentSession.SetSessionID(string(sessionDTO.Session.ID))
+	tracer.EndStage(sessionCreateTrace)
 
+	connectionTrace := tracer.StartStage("Start connection")
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
 	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
@@ -235,6 +250,8 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		ProviderNATConn: serviceConn,
 		ChannelConn:     channelConn,
 	})
+	tracer.EndStage(connectionTrace)
+
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
