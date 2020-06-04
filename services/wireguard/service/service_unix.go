@@ -250,7 +250,7 @@ func (m *Manager) Serve(instance *service.Instance) error {
 	m.serviceInstance = instance
 
 	var err error
-	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
+	m.outboundIP, err = m.ipResolver.GetOutboundIP()
 	if err != nil {
 		return errors.Wrap(err, "could not get outbound IP")
 	}
