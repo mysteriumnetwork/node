@@ -267,12 +267,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	if nodeOptions.Consumer {
-		log.Debug().Msg("Skipping connections registration for consumer mode")
-		di.registerNoopConnection()
-		return
-	}
-
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
 	di.registerWireguardConnection(nodeOptions)
