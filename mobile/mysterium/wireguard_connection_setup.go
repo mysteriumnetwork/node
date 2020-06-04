@@ -255,21 +255,17 @@ func (w *wireguardDeviceImpl) applyConfig(devApi *device.Device, privateKey stri
 	deviceConfig := wgcfg.DeviceConfig{
 		PrivateKey: privateKey,
 		ListenPort: config.LocalPort,
+		Peer: wgcfg.Peer{
+			Endpoint:               &config.Provider.Endpoint,
+			PublicKey:              config.Provider.PublicKey,
+			KeepAlivePeriodSeconds: 18,
+			// All traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
+			AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
+		},
 	}
 
 	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(deviceConfig.Encode()))); err != nil {
-		return err
-	}
-
-	peer := wgcfg.Peer{
-		Endpoint:               &config.Provider.Endpoint,
-		PublicKey:              config.Provider.PublicKey,
-		KeepAlivePeriodSeconds: 18,
-		// All traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
-		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
-	}
-	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(peer.Encode()))); err != nil {
-		return err
+		return fmt.Errorf("could not complete ipc operation: %w", err)
 	}
 	return nil
 }
