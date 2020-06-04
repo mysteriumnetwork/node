@@ -43,7 +43,7 @@ func Start(handle handlerFunc) error {
 	}
 	defer func() {
 		if err := l.Close(); err != nil {
-			log.Printf("Error closing listener: %v", err)
+			log.Err(err).Msg("Error closing listener")
 		}
 	}()
 	for {
@@ -54,12 +54,12 @@ func Start(handle handlerFunc) error {
 		}
 		go func() {
 			peer := conn.RemoteAddr().Network()
-			log.Printf("Client connected: %s", peer)
+			log.Debug().Msgf("Client connected: %s", peer)
 			handle(conn)
 			if err := conn.Close(); err != nil {
-				log.Printf("Error closing connection for: %v error: %v", peer, err)
+				log.Err(err).Msgf("Error closing connection for: %v", peer)
 			}
-			log.Print("Client disconnected:", peer)
+			log.Debug().Msgf("Client disconnected: %s", peer)
 		}()
 	}
 }

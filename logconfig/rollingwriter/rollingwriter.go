@@ -76,7 +76,7 @@ func (w *RollingWriter) CleanObsoleteLogs() error {
 		log.Debug().Msgf("Found %d old log files in log directory, skipping cleanup", len(oldLogFiles))
 		return nil
 	}
-	log.Info().Msgf("Found %d old log files in log directory, proceeding to cleanup", len(oldLogFiles))
+	log.Debug().Msgf("Found %d old log files in log directory, proceeding to cleanup", len(oldLogFiles))
 	sort.Slice(oldLogFiles, func(i, j int) bool {
 		return oldLogFiles[i].ModTime().After(oldLogFiles[j].ModTime())
 	})

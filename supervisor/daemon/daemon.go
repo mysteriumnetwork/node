@@ -52,7 +52,7 @@ func New(cfg *config.Config) Daemon {
 func (d *Daemon) Start() error {
 	db, err := boltdb.NewStorage(os.TempDir())
 	if err != nil {
-		log.Printf("failed to init routes storage: %s", err)
+		log.Err(err).Msg("Failed to init routes storage")
 	} else {
 		netutil.SetRouteManagerStorage(db)
 		netutil.ClearStaleRoutes()
@@ -67,7 +67,7 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 	answer := responder{conn}
 	for scan.Scan() {
 		line := scan.Bytes()
-		log.Printf("> %s", line)
+		log.Debug().Msgf("> %s", line)
 		cmd := strings.Split(string(line), " ")
 		op := strings.ToLower(cmd[0])
 		switch op {
@@ -79,7 +79,7 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 		case commandWgUp:
 			up, err := d.wgUp(cmd...)
 			if err != nil {
-				log.Printf("failed %s: %s", commandWgUp, err)
+				log.Err(err).Msgf("%s failed", commandWgUp)
 				answer.err(err)
 			} else {
 				answer.ok(up)
@@ -87,7 +87,7 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 		case commandWgDown:
 			err := d.wgDown(cmd...)
 			if err != nil {
-				log.Printf("failed %s: %s", commandWgDown, err)
+				log.Err(err).Msgf("%s failed", commandWgDown)
 				answer.err(err)
 			} else {
 				answer.ok()
@@ -95,14 +95,14 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 		case commandWgStats:
 			stats, err := d.wgStats(cmd...)
 			if err != nil {
-				log.Printf("failed %s: %s", commandWgStats, err)
+				log.Err(err).Msgf("%s failed", commandWgStats)
 				answer.err(err)
 			} else {
 				answer.ok(stats)
 			}
 		case commandKill:
 			if err := d.killMyst(); err != nil {
-				log.Printf("failed %s: %s", commandKill, err)
+				log.Err(err).Msgf("%s failed", commandKill)
 				answer.err(err)
 			} else {
 				answer.ok()

@@ -18,7 +18,9 @@
 package install
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -30,7 +32,8 @@ import (
 
 const serviceName = "MysteriumVPNSupervisor"
 
-// Install installs service for Windows.
+// Install installs service for Windows. If there is previous service instance
+// running it will be first uninstalled before installing new version.
 func Install(options Options) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -38,8 +41,15 @@ func Install(options Options) error {
 	}
 	defer m.Disconnect()
 
-	log.Info().Msg("Cleaning up previous installation")
-	uninstallService(m, serviceName)
+	log.Info().Msg("Checking previous installation")
+	if err := uninstallService(m, serviceName); err != nil {
+		log.Info().Err(err).Msg("Previous service was not uninstalled")
+	} else {
+		if err := waitServiceDeleted(m, serviceName); err != nil {
+			return fmt.Errorf("could not wait for service to deletion: %w", err)
+		}
+		log.Info().Msg("Uninstalled previous service")
+	}
 
 	config := mgr.Config{
 		ServiceType:  windows.SERVICE_WIN32_OWN_PROCESS,
@@ -68,7 +78,7 @@ func Uninstall() error {
 func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr.Config) error {
 	s, err := m.CreateService(name, options.SupervisorPath, config, "")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create service: %w", err)
 	}
 	defer s.Close()
 
@@ -87,10 +97,12 @@ func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr
 func uninstallService(m *mgr.Mgr, name string) error {
 	s, err := m.OpenService(name)
 	if err != nil {
-		return fmt.Errorf("service %s is not installed", name)
+		return fmt.Errorf("skipping uninstall, service %s is not installed", name)
 	}
 	defer s.Close()
 
+	// Send stop signal and ignore errors as if service is already stopped it will
+	// return error which we don't care about as we just want to delete service anyway.
 	s.Control(svc.Stop)
 
 	err = s.Delete()
@@ -102,5 +114,24 @@ func uninstallService(m *mgr.Mgr, name string) error {
 	if err != nil {
 		return fmt.Errorf("cound not remove event logging: %s", err)
 	}
+
 	return nil
+}
+
+// waitServiceDeleted checks if service is deleted.
+// It is considered as deleted if OpenService fails.
+func waitServiceDeleted(m *mgr.Mgr, name string) error {
+	timeout := time.After(10 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			return errors.New("timeout waiting for service deletion")
+		case <-time.After(100 * time.Millisecond):
+			s, err := m.OpenService(name)
+			if err != nil {
+				return nil
+			}
+			s.Close()
+		}
+	}
 }

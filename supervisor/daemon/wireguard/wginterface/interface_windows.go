@@ -50,12 +50,12 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		log.Printf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
 	}
 
-	log.Print("Creating interface instance")
+	log.Info().Msg("Creating interface instance")
 	logger := newLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", cfg.IfaceName))
 	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
 	wgDevice := device.NewDevice(wintun, logger)
 
-	log.Print("Setting interface configuration")
+	log.Info().Msg("Setting interface configuration")
 	uapi, err := ipc.UAPIListen(cfg.IfaceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not listen for user API wg configuration: %w", err)
@@ -64,10 +64,10 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		return nil, fmt.Errorf("could not set device uapi config: %w", err)
 	}
 
-	log.Print("Bringing peers up")
+	log.Info().Msg("Bringing peers up")
 	wgDevice.Up()
 
-	log.Print("Configuring network")
+	log.Info().Msg("Configuring network")
 	if err := configureNetwork(cfg); err != nil {
 		return nil, fmt.Errorf("could not setup network: %w", err)
 	}
@@ -77,6 +77,7 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 		Device: wgDevice,
 		uapi:   uapi,
 	}
+	log.Info().Msg("Listening for UAPI requests")
 	go wgInterface.handleUAPI()
 
 	return wgInterface, nil
@@ -87,7 +88,7 @@ func (a *WgInterface) handleUAPI() {
 	for {
 		conn, err := a.uapi.Accept()
 		if err != nil {
-			log.Printf("Closing UAPI listener, err: %v", err)
+			log.Err(err).Msg("Failed to close UAPI listener")
 			return
 		}
 		go a.Device.IpcHandle(conn)

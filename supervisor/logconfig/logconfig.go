@@ -19,7 +19,9 @@ package logconfig
 
 import (
 	"fmt"
+	"io"
 	stdlog "log"
+	"os"
 
 	"github.com/mysteriumnetwork/node/logconfig/rollingwriter"
 	"github.com/rs/zerolog"
@@ -30,25 +32,36 @@ const (
 	timestampFmt = "2006-01-02T15:04:05.000"
 )
 
+// LogOptions describes logging options.
+type LogOptions struct {
+	LogLevel string
+	Filepath string
+}
+
 // Configure configures supervisor global logger instance.
-func Configure(logPath string) error {
-	if logPath == "" {
+func Configure(opts LogOptions) error {
+	logLevel, err := zerolog.ParseLevel(opts.LogLevel)
+	if err != nil {
+		return fmt.Errorf("could not parse log level: %w", err)
+	}
+	log.Logger = log.Logger.Level(logLevel)
+
+	// Set default file path if not specified.
+	if opts.Filepath == "" {
 		var err error
-		logPath, err = defaultLogPath()
+		opts.Filepath, err = defaultLogPath()
 		if err != nil {
 			return fmt.Errorf("could not get default log path: %w", err)
 		}
 	}
-	rw, err := rollingwriter.NewRollingWriter(logPath)
+
+	logsWriter, err := newLogWriter(opts.Filepath)
 	if err != nil {
-		return fmt.Errorf("could not to create rolling logs writer: %w", err)
-	}
-	if err := rw.CleanObsoleteLogs(); err != nil {
-		log.Printf("Failed to cleanup obsolete logs: %v", err)
+		return fmt.Errorf("could not create logs writer: %w", err)
 	}
 
-	logger := log.Output(zerolog.ConsoleWriter{Out: rw, NoColor: true, TimeFormat: timestampFmt}).
-		Level(zerolog.DebugLevel).
+	logger := log.Output(logsWriter).
+		Level(logLevel).
 		With().
 		Timestamp().
 		Logger()
@@ -58,4 +71,28 @@ func Configure(logPath string) error {
 	stdlog.SetOutput(log.Logger)
 
 	return nil
+}
+
+// newLogWriter returns multi writer which can log to both file and console.
+func newLogWriter(filepath string) (io.Writer, error) {
+	rw, err := rollingwriter.NewRollingWriter(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("could not to create rolling logs writer: %w", err)
+	}
+
+	if err := rw.CleanObsoleteLogs(); err != nil {
+		log.Err(err).Msg("Failed to cleanup obsolete logs")
+	}
+
+	fileWriter := zerolog.ConsoleWriter{
+		Out:        rw,
+		NoColor:    true,
+		TimeFormat: timestampFmt,
+	}
+	stderrWriter := zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		NoColor:    true,
+		TimeFormat: timestampFmt,
+	}
+	return io.MultiWriter(fileWriter, stderrWriter), nil
 }
