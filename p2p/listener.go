@@ -106,7 +106,7 @@ func (m *listener) GetContact() market.Contact {
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 // to channelHandlers
 func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) error {
-	outboundIP, err := m.ipResolver.GetOutboundIPAsString()
+	outboundIP, err := m.ipResolver.GetOutboundIP()
 	if err != nil {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
