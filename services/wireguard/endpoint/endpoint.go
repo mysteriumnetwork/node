@@ -43,17 +43,14 @@ func NewConnectionEndpoint(resourceAllocator *resources.Allocator) (wg.Connectio
 }
 
 type connectionEndpoint struct {
-	iface             string
-	privateKey        string
-	ipAddr            net.IPNet
+	cfg               wgcfg.DeviceConfig
 	endpoint          net.UDPAddr
 	resourceAllocator *resources.Allocator
 	wgClient          WgClient
 }
 
 // StartConsumerMode starts and configure wireguard network interface running in consumer mode.
-func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) error {
-
+func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 	if err := ce.cleanAbandonedInterfaces(); err != nil {
 		return err
 	}
@@ -63,25 +60,17 @@ func (ce *connectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) er
 	}
 	log.Debug().Msgf("Allocated interface: %s", iface)
 
-	ce.iface = iface
-	ce.ipAddr = config.IPAddress
-	ce.privateKey = config.PrivateKey
+	cfg.IfaceName = iface
+	ce.cfg = cfg
 
-	deviceConfig := wgcfg.DeviceConfig{
-		IfaceName:  ce.iface,
-		Subnet:     ce.ipAddr,
-		ListenPort: config.ListenPort,
-		PrivateKey: ce.privateKey,
-		Peer:       config.Peer,
-	}
-	if err := ce.wgClient.ConfigureDevice(deviceConfig); err != nil {
+	if err := ce.wgClient.ConfigureDevice(cfg); err != nil {
 		return errors.Wrap(err, "could not configure device")
 	}
 	return nil
 }
 
-func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (err error) {
-	if config.PublicIP == "" {
+func (ce *connectionEndpoint) StartProviderMode(publicIP string, config wgcfg.DeviceConfig) (err error) {
+	if publicIP == "" {
 		return errors.New("public IP is required")
 	}
 	if config.ListenPort == 0 {
@@ -92,29 +81,17 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 		return err
 	}
 
-	ce.iface, err = ce.resourceAllocator.AllocateInterface()
+	iface, err := ce.resourceAllocator.AllocateInterface()
 	if err != nil {
 		return errors.Wrap(err, "could not allocate interface")
 	}
 
-	ce.privateKey, err = key.GeneratePrivateKey()
-	if err != nil {
-		return errors.Wrap(err, "could not generate private key")
-	}
+	config.IfaceName = iface
+	config.Subnet.IP = netutil.FirstIP(config.Subnet)
+	ce.cfg = config
+	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: config.ListenPort}
 
-	ce.ipAddr = config.Network
-	ce.ipAddr.IP = netutil.FirstIP(ce.ipAddr)
-
-	ce.endpoint = net.UDPAddr{IP: net.ParseIP(config.PublicIP), Port: config.ListenPort}
-
-	deviceConfig := wgcfg.DeviceConfig{
-		IfaceName:  ce.iface,
-		Subnet:     ce.ipAddr,
-		ListenPort: ce.endpoint.Port,
-		PrivateKey: ce.privateKey,
-		Peer:       config.Peer,
-	}
-	if err := ce.wgClient.ConfigureDevice(deviceConfig); err != nil {
+	if err := ce.wgClient.ConfigureDevice(config); err != nil {
 		return errors.Wrap(err, "could not configure device")
 	}
 	return nil
@@ -122,17 +99,17 @@ func (ce *connectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) (e
 
 // InterfaceName returns a connection endpoint interface name.
 func (ce *connectionEndpoint) InterfaceName() string {
-	return ce.iface
+	return ce.cfg.IfaceName
 }
 
 // PeerStats returns stats information about connected peer.
 func (ce *connectionEndpoint) PeerStats() (*wgcfg.Stats, error) {
-	return ce.wgClient.PeerStats(ce.iface)
+	return ce.wgClient.PeerStats(ce.cfg.IfaceName)
 }
 
 // Config provides wireguard service configuration for the current connection endpoint.
 func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
-	publicKey, err := key.PrivateKeyToPublicKey(ce.privateKey)
+	publicKey, err := key.PrivateKeyToPublicKey(ce.cfg.PrivateKey)
 	if err != nil {
 		return wg.ServiceConfig{}, err
 	}
@@ -140,8 +117,8 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	var config wg.ServiceConfig
 	config.Provider.PublicKey = publicKey
 	config.Provider.Endpoint = ce.endpoint
-	config.Consumer.IPAddress = ce.ipAddr
-	config.Consumer.IPAddress.IP = ce.consumerIP(ce.ipAddr)
+	config.Consumer.IPAddress = ce.cfg.Subnet
+	config.Consumer.IPAddress.IP = ce.consumerIP(ce.cfg.Subnet)
 	return config, nil
 }
 
@@ -151,7 +128,7 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
-	return ce.resourceAllocator.ReleaseInterface(ce.iface)
+	return ce.resourceAllocator.ReleaseInterface(ce.cfg.IfaceName)
 }
 
 func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
