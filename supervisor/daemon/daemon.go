@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/rs/zerolog/log"
 
@@ -71,6 +72,8 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 		cmd := strings.Split(string(line), " ")
 		op := strings.ToLower(cmd[0])
 		switch op {
+		case commandVersion:
+			answer.ok(metadata.VersionAsString())
 		case commandBye:
 			answer.ok("bye")
 			return
