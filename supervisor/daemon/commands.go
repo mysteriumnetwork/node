@@ -18,6 +18,7 @@
 package daemon
 
 const (
+	commandVersion = "version"
 	commandPing    = "ping"
 	commandKill    = "kill"
 	commandBye     = "bye"
