@@ -110,13 +110,17 @@ ensure_paths
 if [[ ! -f $DAEMON_DEFAULT ]]; then
     cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
 else
-    # TODO remove this hack when all nodes updated to both services.
+    # TODO remove these hacks when all nodes updates
     sed -i -e 's/SERVICE_OPTS="openvpn"/SERVICE_OPTS="openvpn,wireguard"/g' /etc/default/mysterium-node
     sed -i -e 's/--tequilapi.address=0.0.0.0/--tequilapi.address=127.0.0.1/g' /etc/default/mysterium-node
     # Append script-dir for existing installations only if missing
     sed -i -e '/^\(SCRIPT_DIR=\).*/{s//\1\"--script-dir=\/etc\/mysterium-node\"/;:a;n;ba;q}' \
            -e '$aSCRIPT_DIR="--script-dir=/etc/mysterium-node"' /etc/default/mysterium-node
 fi
+
+# TODO: remove me when all nodes updates
+printf "Ensuring that sudoers config is consistent...\n" \
+    && sed -i -e 's| /sbin/iptables/| /usr/sbin/iptables|g' /etc/sudoers.d/mysterium-node
 
 # Cleanup old log files (before log file rolling has been fixed)
 printf "Cleaning legacy log files...\n" \

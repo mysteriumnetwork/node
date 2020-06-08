@@ -98,6 +98,10 @@ else
            -e '$aSCRIPT_DIR="--script-dir=/etc/mysterium-node"' /etc/default/mysterium-node
 fi
 
+# TODO: remove me when all nodes updates
+printf "Ensuring that sudoers config is consistent...\n" \
+    && sed -i -e 's| /sbin/iptables/| /usr/sbin/iptables|g' /etc/sudoers.d/mysterium-node
+
 # Cleanup old log files (before log file rolling has been fixed)
 printf "Cleaning legacy log files...\n" \
     && rm -rf /var/lib/mysterium-node/.mysterium.log*
