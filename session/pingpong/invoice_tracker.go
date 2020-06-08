@@ -575,6 +575,10 @@ func (it *InvoiceTracker) resetAccountantFailureCount() {
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
+	if em.HermesID != "" && !strings.EqualFold(em.HermesID, it.deps.ProvidersAccountantID.Hex()) {
+		return fmt.Errorf("invalid hermesID sent in exchange message. Expected %v, got %v", it.deps.ProvidersAccountantID.Hex(), em.HermesID)
+	}
+
 	peerAddr := common.HexToAddress(it.deps.Peer.Address)
 	if res := em.IsMessageValid(peerAddr); !res {
 		return ErrExchangeValidationFailed

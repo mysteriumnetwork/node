@@ -95,7 +95,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   accountant:
-    image: mysteriumnetwork/hermes:0.5.0
+    image: mysteriumnetwork/hermes:0.5.3
     environment:
       PORT: 8889
     expose:
