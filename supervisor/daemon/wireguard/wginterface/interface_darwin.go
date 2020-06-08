@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
@@ -68,7 +69,8 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	wgDevice.Up()
 
 	log.Info().Msg("Configuring network")
-	if err := configureNetwork(cfg); err != nil {
+	dnsManager := dns.NewManager()
+	if err := configureNetwork(cfg, dnsManager); err != nil {
 		return nil, fmt.Errorf("could not setup network: %w", err)
 	}
 
@@ -82,9 +84,10 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	}
 
 	wgInterface := &WgInterface{
-		Name:   interfaceName,
-		Device: wgDevice,
-		uapi:   uapi,
+		Name:       interfaceName,
+		Device:     wgDevice,
+		uapi:       uapi,
+		dnsManager: dnsManager,
 	}
 	log.Info().Msg("Listening for UAPI requests")
 	go wgInterface.handleUAPI()
@@ -116,7 +119,7 @@ func (a *WgInterface) handleUAPI() {
 	}
 }
 
-func configureNetwork(cfg wgcfg.DeviceConfig) error {
+func configureNetwork(cfg wgcfg.DeviceConfig, dnsManager dns.Manager) error {
 	if err := netutil.AssignIP(cfg.IfaceName, cfg.Subnet); err != nil {
 		return fmt.Errorf("failed to assign IP address: %w", err)
 	}
@@ -129,6 +132,15 @@ func configureNetwork(cfg wgcfg.DeviceConfig) error {
 			return err
 		}
 	}
+
+	if err := dnsManager.Set(dns.Config{
+		ScriptDir: cfg.DNSScriptDir,
+		IfaceName: cfg.IfaceName,
+		DNS:       cfg.DNS,
+	}); err != nil {
+		return fmt.Errorf("could not set DNS: %w", err)
+	}
+
 	return nil
 }
 
@@ -136,4 +148,7 @@ func configureNetwork(cfg wgcfg.DeviceConfig) error {
 func (a *WgInterface) Down() {
 	_ = a.uapi.Close()
 	a.Device.Close()
+	if err := a.dnsManager.Clean(); err != nil {
+		log.Err(err).Msg("Could not clean DNS")
+	}
 }

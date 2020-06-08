@@ -23,6 +23,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
@@ -33,8 +34,9 @@ import (
 )
 
 type client struct {
-	iface    string
-	wgClient *wgctrl.Client
+	iface      string
+	wgClient   *wgctrl.Client
+	dnsManager dns.Manager
 }
 
 // NewWireguardClient creates new wireguard kernel space client.
@@ -43,7 +45,10 @@ func NewWireguardClient() (*client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &client{wgClient: wgClient}, nil
+	return &client{
+		wgClient:   wgClient,
+		dnsManager: dns.NewManager(),
+	}, nil
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
@@ -55,6 +60,7 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	}
 	deviceConfig.PrivateKey = &privateKey
 	deviceConfig.ListenPort = &port
+
 	if err := c.up(config.IfaceName, config.Subnet); err != nil {
 		return err
 	}
@@ -70,7 +76,18 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 	}
 	deviceConfig.Peers = []wgtypes.PeerConfig{peer}
 	c.iface = config.IfaceName
-	return c.wgClient.ConfigureDevice(c.iface, deviceConfig)
+	if err := c.wgClient.ConfigureDevice(c.iface, deviceConfig); err != nil {
+		return fmt.Errorf("could not configure kernel space device: %w", err)
+	}
+	if err := c.dnsManager.Set(dns.Config{
+		ScriptDir: config.DNSScriptDir,
+		IfaceName: config.IfaceName,
+		DNS:       config.DNS,
+	}); err != nil {
+		return fmt.Errorf("could not set DNS: %w", err)
+	}
+
+	return nil
 }
 
 func addPeerConfig(peer wgcfg.Peer) (wgtypes.PeerConfig, error) {
@@ -146,6 +163,9 @@ func (c *client) Close() (err error) {
 		errs.Add(err)
 	}
 	if err := c.wgClient.Close(); err != nil {
+		errs.Add(err)
+	}
+	if err := c.dnsManager.Clean(); err != nil {
 		errs.Add(err)
 	}
 	if err := errs.Error(); err != nil {

@@ -99,7 +99,7 @@ func newConn(t *testing.T) *Connection {
 	opts := Options{
 		DNSScriptDir: "/dns/dir",
 	}
-	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), endpointFactory, &mockDnsManager{}, &mockHandshakeWaiter{})
+	conn, err := NewConnection(opts, ip.NewResolverMock("172.44.1.12"), endpointFactory, &mockHandshakeWaiter{})
 	assert.NoError(t, err)
 	return conn.(*Connection)
 }
@@ -131,14 +131,16 @@ func newServiceConfig() wg.ServiceConfig {
 
 type mockConnectionEndpoint struct{}
 
-func (mce *mockConnectionEndpoint) StartConsumerMode(config wg.ConsumerModeConfig) error { return nil }
-func (mce *mockConnectionEndpoint) StartProviderMode(config wg.ProviderModeConfig) error { return nil }
-func (mce *mockConnectionEndpoint) InterfaceName() string                                { return "mce0" }
-func (mce *mockConnectionEndpoint) Stop() error                                          { return nil }
-func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)                    { return wg.ServiceConfig{}, nil }
-func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wgcfg.Peer) error                 { return nil }
-func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                            { return nil }
-func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error                       { return nil }
+func (mce *mockConnectionEndpoint) StartConsumerMode(config wgcfg.DeviceConfig) error { return nil }
+func (mce *mockConnectionEndpoint) StartProviderMode(ip string, config wgcfg.DeviceConfig) error {
+	return nil
+}
+func (mce *mockConnectionEndpoint) InterfaceName() string                { return "mce0" }
+func (mce *mockConnectionEndpoint) Stop() error                          { return nil }
+func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)    { return wg.ServiceConfig{}, nil }
+func (mce *mockConnectionEndpoint) AddPeer(_ string, _ wgcfg.Peer) error { return nil }
+func (mce *mockConnectionEndpoint) RemovePeer(_ string) error            { return nil }
+func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error       { return nil }
 func (mce *mockConnectionEndpoint) PeerStats() (*wgcfg.Stats, error) {
 	return &wgcfg.Stats{LastHandshake: time.Now(), BytesSent: 10, BytesReceived: 11}, nil
 }
@@ -150,8 +152,3 @@ type mockHandshakeWaiter struct {
 func (m *mockHandshakeWaiter) Wait(statsFetch func() (*wgcfg.Stats, error), timeout time.Duration, stop <-chan struct{}) error {
 	return m.err
 }
-
-type mockDnsManager struct{}
-
-func (m mockDnsManager) Set(scriptDir, dev, dns string) error { return nil }
-func (m mockDnsManager) Clean(scriptDir, dev string) error    { return nil }

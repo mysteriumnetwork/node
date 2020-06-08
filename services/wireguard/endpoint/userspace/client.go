@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
@@ -30,13 +31,16 @@ import (
 )
 
 type client struct {
-	tun    tun.Device
-	devAPI *device.Device
+	tun        tun.Device
+	devAPI     *device.Device
+	dnsManager dns.Manager
 }
 
 // NewWireguardClient creates new wireguard user space client.
 func NewWireguardClient() (*client, error) {
-	return &client{}, nil
+	return &client{
+		dnsManager: dns.NewManager(),
+	}, nil
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
@@ -49,6 +53,8 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 		return errors.Wrap(err, "failed to configure initial device")
 	}
 
+	c.devAPI.Up()
+
 	// For consumer mode we need to exclude provider's IP from VPN tunnel
 	// and add default routes to forward all traffic via VPN tunnel.
 	if config.Peer.Endpoint != nil {
@@ -60,10 +66,22 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 		}
 	}
 
+	if err := c.dnsManager.Set(dns.Config{
+		ScriptDir: config.DNSScriptDir,
+		IfaceName: config.IfaceName,
+		DNS:       config.DNS,
+	}); err != nil {
+		return fmt.Errorf("could not set DNS: %w", err)
+	}
+
 	return nil
 }
+
 func (c *client) Close() error {
 	c.devAPI.Close() // c.devAPI.Close() closes c.tun too
+	if err := c.dnsManager.Clean(); err != nil {
+		return fmt.Errorf("could not clean DNS: %w", err)
+	}
 	return nil
 }
 
@@ -87,6 +105,5 @@ func (c *client) setDeviceConfig(config string) error {
 	if err := c.devAPI.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
 		return errors.Wrap(err, "failed to set device config")
 	}
-	c.devAPI.Up()
 	return nil
 }

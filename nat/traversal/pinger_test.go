@@ -72,6 +72,10 @@ func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	conn2 := conns[1]
 	peerConn1 := <-peerConns
 	peerConn2 := <-peerConns
+	conn1.Close()
+	conn2.Close()
+	peerConn1.Close()
+	peerConn2.Close()
 	assert.Equal(t, conn1.RemoteAddr().(*net.UDPAddr).Port, peerConn1.LocalAddr().(*net.UDPAddr).Port)
 	assert.Equal(t, conn2.RemoteAddr().(*net.UDPAddr).Port, peerConn2.LocalAddr().(*net.UDPAddr).Port)
 }

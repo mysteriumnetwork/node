@@ -22,7 +22,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/utils/stringutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -91,24 +90,17 @@ func (o *DNSOption) ResolveIPs(providerDNS string) ([]string, error) {
 	case DNSOptionProvider:
 		return selectProviderDNS(providerDNS)
 	case DNSOptionSystem:
-		return selectSystemDNS()
+		return nil, nil
 	case DNSOptionAuto:
 		log.Debug().Msg("Attempting to use provider DNS")
 		if providerDNS, err := selectProviderDNS(providerDNS); err == nil {
 			return providerDNS, nil
 		}
 		log.Debug().Msg("Attempting to use system DNS")
-		if systemDNS, err := selectSystemDNS(); err == nil {
-			return systemDNS, nil
-		}
+		return nil, nil
 	}
 	log.Debug().Msg("Falling back to public DNS")
 	return []string{"1.1.1.1", "8.8.8.8"}, nil
-}
-
-func selectSystemDNS() ([]string, error) {
-	systemDNS, err := dns.ConfiguredServers()
-	return systemDNS, errors.Wrap(err, "system DNS is not available")
 }
 
 func selectProviderDNS(providerDNS string) ([]string, error) {

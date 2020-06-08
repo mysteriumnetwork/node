@@ -42,6 +42,9 @@ type DeviceConfig struct {
 	Subnet     net.IPNet `json:"subnet"`
 	PrivateKey string    `json:"private_key"`
 	ListenPort int       `json:"listen_port"`
+	DNS        []string  `json:"dns"`
+	// Used only for unix.
+	DNSScriptDir string `json:"dns_script_dir"`
 
 	Peer Peer `json:"peer"`
 }
@@ -56,11 +59,13 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 	}
 
 	type deviceConfig struct {
-		IfaceName  string `json:"iface_name"`
-		Subnet     string `json:"subnet"`
-		PrivateKey string `json:"private_key"`
-		ListenPort int    `json:"listen_port"`
-		Peer       peer   `json:"peer"`
+		IfaceName    string   `json:"iface_name"`
+		Subnet       string   `json:"subnet"`
+		PrivateKey   string   `json:"private_key"`
+		ListenPort   int      `json:"listen_port"`
+		DNS          []string `json:"dns"`
+		DNSScriptDir string   `json:"dns_script_dir"`
+		Peer         peer     `json:"peer"`
 	}
 
 	var peerEndpoint string
@@ -69,10 +74,12 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(&deviceConfig{
-		IfaceName:  dc.IfaceName,
-		Subnet:     dc.Subnet.String(),
-		PrivateKey: dc.PrivateKey,
-		ListenPort: dc.ListenPort,
+		IfaceName:    dc.IfaceName,
+		Subnet:       dc.Subnet.String(),
+		PrivateKey:   dc.PrivateKey,
+		ListenPort:   dc.ListenPort,
+		DNS:          dc.DNS,
+		DNSScriptDir: dc.DNSScriptDir,
 		Peer: peer{
 			PublicKey:              dc.Peer.PublicKey,
 			Endpoint:               peerEndpoint,
@@ -92,11 +99,13 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	type deviceConfig struct {
-		IfaceName  string `json:"iface_name"`
-		Subnet     string `json:"subnet"`
-		PrivateKey string `json:"private_key"`
-		ListenPort int    `json:"listen_port"`
-		Peer       peer   `json:"peer"`
+		IfaceName    string   `json:"iface_name"`
+		Subnet       string   `json:"subnet"`
+		PrivateKey   string   `json:"private_key"`
+		ListenPort   int      `json:"listen_port"`
+		DNS          []string `json:"dns"`
+		DNSScriptDir string   `json:"dns_script_dir"`
+		Peer         peer     `json:"peer"`
 	}
 
 	cfg := deviceConfig{}
@@ -123,6 +132,8 @@ func (dc *DeviceConfig) UnmarshalJSON(data []byte) error {
 	dc.Subnet.IP = ip
 	dc.PrivateKey = cfg.PrivateKey
 	dc.ListenPort = cfg.ListenPort
+	dc.DNS = cfg.DNS
+	dc.DNSScriptDir = cfg.DNSScriptDir
 	dc.Peer = Peer{
 		PublicKey:              cfg.Peer.PublicKey,
 		Endpoint:               peerEndpoint,
