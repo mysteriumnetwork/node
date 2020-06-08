@@ -18,11 +18,11 @@
 package netutil
 
 import (
+	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
 
-	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -38,7 +38,12 @@ func excludeRoute(ip, gw net.IP) error {
 }
 
 func deleteRoute(ip, gw string) error {
-	return cmdutil.SudoExec("route", "delete", ip+"/32")
+	out, err := exec.Command("powershell", "-Command", "route delete "+ip+"/32").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to delete route: %w, %s", err, string(out))
+	}
+
+	return nil
 }
 
 func addDefaultRoute(name string) error {
