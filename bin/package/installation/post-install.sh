@@ -120,7 +120,7 @@ fi
 
 # TODO: remove me when all nodes updates
 printf "Ensuring that sudoers config is consistent...\n" \
-    && sed -i -e 's/\/sbin\/iptables/\/usr\/sbin\/iptables/g' /etc/sudoers.d/mysterium-node
+    && sed -i -e 's| /sbin/iptables/| /usr/sbin/iptables|g' /etc/sudoers.d/mysterium-node
 
 # Cleanup old log files (before log file rolling has been fixed)
 printf "Cleaning legacy log files...\n" \
