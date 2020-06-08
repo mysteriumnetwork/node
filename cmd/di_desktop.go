@@ -274,7 +274,6 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	wireguard.Bootstrap()
-	dnsManager := wireguard_connection.NewDNSManager()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
 		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
@@ -285,7 +284,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 			DNSScriptDir:     nodeOptions.Directories.Script,
 			HandshakeTimeout: 1 * time.Minute,
 		}
-		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, dnsManager, handshakeWaiter)
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }

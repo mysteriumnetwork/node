@@ -82,11 +82,12 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 		{
 			name: "Test marshal all filled values",
 			config: DeviceConfig{
-				IfaceName:  "myst0",
-				Subnet:     net.IPNet{IP: net.ParseIP("10.0.182.2"), Mask: net.IPv4Mask(255, 255, 255, 0)},
-				PrivateKey: "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
-				ListenPort: 53511,
-				DNS:        []string{"1.1.1.1"},
+				IfaceName:    "myst0",
+				Subnet:       net.IPNet{IP: net.ParseIP("10.0.182.2"), Mask: net.IPv4Mask(255, 255, 255, 0)},
+				PrivateKey:   "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
+				ListenPort:   53511,
+				DNS:          []string{"1.1.1.1"},
+				DNSScriptDir: "/etc/resolv.conf",
 				Peer: Peer{
 					PublicKey:              "DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=",
 					Endpoint:               endpoint(),
@@ -94,7 +95,7 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 					KeepAlivePeriodSeconds: 20,
 				},
 			},
-			expected: `{"iface_name":"myst0","subnet":"10.0.182.2/24","private_key":"DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=","listen_port":53511,"dns":["1.1.1.1"],"peer":{"public_key":"DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=","endpoint":"182.122.22.19:3233","allowed_i_ps":["192.168.4.10/32","192.168.4.11/32"],"keep_alive_period_seconds":20}}`,
+			expected: `{"iface_name":"myst0","subnet":"10.0.182.2/24","private_key":"DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=","listen_port":53511,"dns":["1.1.1.1"],"dns_script_dir":"/etc/resolv.conf","peer":{"public_key":"DyxwLJ++jVO+azusu7rPEnzdgfm+0fiOBQ1GTbkk3QQ=","endpoint":"182.122.22.19:3233","allowed_i_ps":["192.168.4.10/32","192.168.4.11/32"],"keep_alive_period_seconds":20}}`,
 		},
 		{
 			name: "Test marshal default values",
@@ -105,8 +106,9 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 					IP:   nil,
 					Mask: nil,
 				},
-				ListenPort: 0,
-				DNS:        []string{},
+				ListenPort:   0,
+				DNS:          []string{},
+				DNSScriptDir: "",
 				Peer: Peer{
 					PublicKey:              "",
 					Endpoint:               nil,
@@ -114,7 +116,7 @@ func TestDeviceConfig_MarshalJSON(t *testing.T) {
 					KeepAlivePeriodSeconds: 0,
 				},
 			},
-			expected: `{"iface_name":"","subnet":"\u003cnil\u003e","private_key":"","listen_port":0,"dns":[],"peer":{"public_key":"","endpoint":"","allowed_i_ps":null,"keep_alive_period_seconds":0}}`,
+			expected: `{"iface_name":"","subnet":"\u003cnil\u003e","private_key":"","listen_port":0,"dns":[],"dns_script_dir":"","peer":{"public_key":"","endpoint":"","allowed_i_ps":null,"keep_alive_period_seconds":0}}`,
 		},
 	}
 

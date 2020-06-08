@@ -1,5 +1,7 @@
+// +build !windows
+
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +17,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package dns
 
-// DNSManager is connection DNS configuration manager.
-type DNSManager interface {
-	// Set applies DNS configuration.
-	Set(scriptDir, dev, dns string) error
-	// Clean removes DNS configuration.
-	Clean(scriptDir, dev string) error
+import (
+	"os"
+	"os/exec"
+	"path"
+)
+
+func setDNS(cfg Config) error {
+	cmd := exec.Command(path.Join(cfg.ScriptDir, "update-resolv-conf"))
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "script_type=up", "dev="+cfg.IfaceName, "foreign_option_1=dhcp-option DNS "+cfg.DNS[0])
+	return cmd.Run()
+}
+
+func cleanDNS(cfg Config) error {
+	cmd := exec.Command(path.Join(cfg.ScriptDir, "update-resolv-conf"))
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "script_type=down", "dev="+cfg.IfaceName)
+	return cmd.Run()
 }
