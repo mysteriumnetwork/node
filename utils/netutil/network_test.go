@@ -40,6 +40,8 @@ func TestClearStaleRoutes(t *testing.T) {
 	assert.NoError(t, err)
 	SetRouteManagerStorage(db)
 
+	defaultRouteManager.deleteRoute = noopDeleteRoute
+
 	t.Run("record deleted", func(t *testing.T) {
 		err := db.Store(routeRecordBucket, &route{Record: "8.9.7.6|1.2.3.4"})
 		assert.NoError(t, err)
@@ -59,4 +61,8 @@ func TestClearStaleRoutes(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, records, 0)
 	})
+}
+
+func noopDeleteRoute(ip, wg string) error {
+	return nil
 }

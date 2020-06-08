@@ -40,13 +40,15 @@ type route struct {
 }
 
 type routeManager struct {
-	db *boltdb.Bolt
+	db          *boltdb.Bolt
+	deleteRoute func(ip, wg string) error
 }
 
 // SetRouteManagerStorage initiate defaultRouteManager with a provided storage.
 func SetRouteManagerStorage(db *boltdb.Bolt) {
 	defaultRouteManager = &routeManager{
-		db: db,
+		db:          db,
+		deleteRoute: deleteRoute,
 	}
 }
 
@@ -71,7 +73,7 @@ func ClearStaleRoutes() {
 			log.Error().Err(err).Msgf("Failed to parse %s record", r.Record)
 		} else {
 			log.Info().Msgf("Cleaning stale route: %s %s", args[0], args[1])
-			if err := deleteRoute(args[0], args[1]); err != nil {
+			if err := defaultRouteManager.deleteRoute(args[0], args[1]); err != nil {
 				log.Error().Err(err).Msgf("Failed to delete route: %s %s", args[0], args[1])
 			}
 		}
