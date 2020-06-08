@@ -19,9 +19,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/supervisor/logconfig"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -32,6 +34,7 @@ import (
 )
 
 var (
+	flagVersion   = flag.Bool("version", false, "Print version")
 	flagInstall   = flag.Bool("install", false, "Install or repair myst supervisor")
 	flagUninstall = flag.Bool("uninstall", false, "Uninstall myst supervisor")
 	logFilePath   = flag.String("log-path", "", "Supervisor log file path")
@@ -40,6 +43,11 @@ var (
 
 func main() {
 	flag.Parse()
+
+	if *flagVersion {
+		fmt.Println(metadata.VersionAsString())
+		os.Exit(0)
+	}
 
 	logOpts := logconfig.LogOptions{
 		LogLevel: *logLevel,
