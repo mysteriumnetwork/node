@@ -144,37 +144,6 @@ func InvoiceFactoryCreator(
 	}
 }
 
-func exchangeMessageReceiver(channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
-	exchangeChan := make(chan crypto.ExchangeMessage, 1)
-
-	channel.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
-		var msg pb.ExchangeMessage
-		if err := c.Request().UnmarshalProto(&msg); err != nil {
-			return err
-		}
-		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
-
-		exchangeChan <- crypto.ExchangeMessage{
-			Promise: crypto.Promise{
-				ChannelID: msg.GetPromise().GetChannelID(),
-				Amount:    msg.GetPromise().GetAmount(),
-				Fee:       msg.GetPromise().GetFee(),
-				Hashlock:  msg.GetPromise().GetHashlock(),
-				R:         msg.GetPromise().GetR(),
-				Signature: msg.GetPromise().GetSignature(),
-			},
-			AgreementID:    msg.GetAgreementID(),
-			AgreementTotal: msg.GetAgreementTotal(),
-			Provider:       msg.GetProvider(),
-			Signature:      msg.GetSignature(),
-		}
-
-		return nil
-	})
-
-	return exchangeChan, nil
-}
-
 // ExchangeFactoryFunc returns a exchange factory.
 func ExchangeFactoryFunc(
 	keystore hashSigner,

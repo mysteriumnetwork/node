@@ -609,7 +609,7 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 		channel = addr
 	}
 
-	em, err := crypto.CreateExchangeMessage(invoice, amount, channel, ks, acc.Address)
+	em, err := crypto.CreateExchangeMessage(invoice, amount, channel, "", ks, acc.Address)
 	assert.Nil(t, err)
 	if em != nil {
 		return *em, acc.Address.Hex()
@@ -898,4 +898,44 @@ func (mp *mockPublisher) SubscribeAsync(topic string, fn interface{}) error {
 
 func (mp *mockPublisher) Unsubscribe(topic string, fn interface{}) error {
 	return nil
+}
+
+func TestInvoiceTracker_validateExchangeMessage(t *testing.T) {
+	type fields struct {
+		deps InvoiceTrackerDeps
+	}
+	type args struct {
+		em crypto.ExchangeMessage
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			args: args{
+				em: crypto.ExchangeMessage{
+					HermesID: "0x1",
+				},
+			},
+			name:    "rejects exchange message with unsupported hermes",
+			wantErr: true,
+			fields: fields{
+				deps: InvoiceTrackerDeps{
+					ProvidersAccountantID: common.HexToAddress("0x0"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			it := &InvoiceTracker{
+				deps: tt.fields.deps,
+			}
+			if err := it.validateExchangeMessage(tt.args.em); (err != nil) != tt.wantErr {
+				t.Errorf("InvoiceTracker.validateExchangeMessage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

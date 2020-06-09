@@ -238,7 +238,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
+	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.AccountantAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
