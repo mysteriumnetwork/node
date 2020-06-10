@@ -101,6 +101,7 @@ type PromiseProcessor interface {
 type Storage interface {
 	Add(sessionInstance Session)
 	Find(id ID) (Session, bool)
+	FindBy(opts FindOpts) (Session, bool)
 	Remove(id ID)
 }
 
@@ -158,6 +159,8 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 		err = ErrorInvalidProposal
 		return
 	}
+
+	manager.clearStaleSession(consumerID, manager.currentProposal.ServiceType)
 
 	session.ServiceType = manager.currentProposal.ServiceType
 	session.ServiceID = manager.serviceId
@@ -221,13 +224,22 @@ func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID stri
 	return nil
 }
 
+func (manager *Manager) clearStaleSession(consumerID identity.Identity, serviceType string) {
+	// Reading stale session before starting the clean up in goroutine.
+	// This is required to make sure we are not cleaning the newly created session.
+	session, ok := manager.sessionStorage.FindBy(FindOpts{
+		Peer:        &consumerID,
+		ServiceType: serviceType,
+	})
+	if ok {
+		log.Info().Msgf("Cleaning stale session %s for %s consumer", session.ID, consumerID.Address)
+		go manager.destroySession(session)
+	}
+}
+
 // Destroy destroys session by given sessionID
 func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) error {
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
-
 	session, found := manager.sessionStorage.Find(ID(sessionID))
-
 	if !found {
 		return ErrorSessionNotExists
 	}
@@ -236,10 +248,18 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 		return ErrorWrongSessionOwner
 	}
 
-	manager.sessionStorage.Remove(ID(sessionID))
-	close(session.done)
+	manager.destroySession(session)
 
 	return nil
+}
+
+func (manager *Manager) destroySession(session Session) {
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
+
+	manager.sessionStorage.Remove(session.ID)
+
+	close(session.done)
 }
 
 func (manager *Manager) keepAliveLoop(sess *Session, channel p2p.Channel) {

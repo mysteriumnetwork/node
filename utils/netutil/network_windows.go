@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package userspace
+package netutil
 
 import (
+	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
 
-	"github.com/jackpal/gateway"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -32,19 +32,18 @@ func assignIP(iface string, subnet net.IPNet) error {
 	return errors.Wrap(err, string(out))
 }
 
-func renameInterface(name, newname string) error {
-	out, err := exec.Command("powershell", "-Command", "netsh interface set interface name=\""+name+"\" newname=\""+newname+"\"").CombinedOutput()
+func excludeRoute(ip, gw net.IP) error {
+	out, err := exec.Command("powershell", "-Command", "route add "+ip.String()+"/32 "+gw.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
+func deleteRoute(ip, gw string) error {
+	out, err := exec.Command("powershell", "-Command", "route delete "+ip+"/32").CombinedOutput()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete route: %w, %s", err, string(out))
 	}
 
-	out, err := exec.Command("powershell", "-Command", "route add "+ip.String()+"/32 "+gw.String()).CombinedOutput()
-	return errors.Wrap(err, string(out))
+	return nil
 }
 
 func addDefaultRoute(name string) error {
@@ -59,12 +58,6 @@ func addDefaultRoute(name string) error {
 
 	out, err := exec.Command("powershell", "-Command", "route add 128.0.0.0/1 "+gw+" if "+id).CombinedOutput()
 	return errors.Wrap(err, string(out))
-}
-
-func destroyDevice(name string) error {
-	// Windows implementation is using single device that are reused for the future needs.
-	// Nothing to destroy here.
-	return nil
 }
 
 func interfaceInfo(name string) (id, gw string, err error) {
@@ -98,4 +91,11 @@ func interfaceInfo(name string) (id, gw string, err error) {
 	}
 
 	return strconv.Itoa(iface.Index), ipv4.String(), nil
+}
+
+func logNetworkStats() {
+	for _, args := range []string{"ipconfig /all", "netstat -r"} {
+		out, err := exec.Command("powershell", "-Command", args).CombinedOutput()
+		logOutputToTrace(out, err, args)
+	}
 }

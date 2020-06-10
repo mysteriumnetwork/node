@@ -44,7 +44,7 @@ func TestPromiseSettler_resyncState_returns_errors(t *testing.T) {
 
 	ks := identity.NewMockKeystore()
 
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 	err := settler.resyncState(mockID)
 	assert.Equal(t, fmt.Sprintf("could not get provider channel for %v: %v", mockID, errMock.Error()), err.Error())
 
@@ -66,7 +66,7 @@ func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
 	ks := identity.NewMockKeystore()
 
 	id := identity.FromAddress("test")
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 	err := settler.resyncState(id)
 	assert.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 
 	ks := identity.NewMockKeystore()
 
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 	err := settler.resyncState(mockID)
 	assert.NoError(t, err)
 
@@ -117,7 +117,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	mapg := &mockAccountantPromiseGetter{}
 	ks := identity.NewMockKeystore()
 
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 	settler.currentState[mockID] = settlementState{}
 
 	// check if existing gets skipped
@@ -181,7 +181,7 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 	}
 	mapg := &mockAccountantPromiseGetter{}
 	ks := identity.NewMockKeystore()
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	statusesWithNoChangeExpected := []string{string(servicestate.Starting), string(servicestate.NotRunning)}
 
@@ -218,7 +218,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	}
 	mapg := &mockAccountantPromiseGetter{}
 	ks := identity.NewMockKeystore()
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
@@ -256,7 +256,7 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	ks := identity.NewMockKeystore()
 
 	// no receive on unknown provider
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 	settler.handleAccountantPromiseReceived(event.AppEventAccountantPromise{
 		AccountantID: cfg.AccountantAddress,
 		ProviderID:   mockID,
@@ -341,7 +341,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		},
 	}
 
-	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, cfg)
+	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	settler.handleNodeStart()
 
@@ -420,6 +420,8 @@ type mockProviderChannelStatusProvider struct {
 	sinkToReturn       chan *bindings.AccountantImplementationPromiseSettled
 	subCancel          func()
 	subError           error
+	feeToReturn        uint16
+	feeError           error
 }
 
 func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(providerID, accountantID common.Address) (sink chan *bindings.AccountantImplementationPromiseSettled, cancel func(), err error) {
@@ -428,6 +430,10 @@ func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(p
 
 func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
+	return mpcsp.feeToReturn, mpcsp.feeError
 }
 
 var cfg = AccountantPromiseSettlerConfig{
@@ -493,4 +499,10 @@ func (mt *mockTransactor) SettleWithBeneficiary(_, _, _ string, _ crypto.Promise
 
 func (mt *mockTransactor) FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error) {
 	return mt.statusToReturn, mt.statusError
+}
+
+type settlementHistoryStorageMock struct{}
+
+func (shsm *settlementHistoryStorageMock) Store(provider identity.Identity, accountant common.Address, she SettlementHistoryEntry) error {
+	return nil
 }

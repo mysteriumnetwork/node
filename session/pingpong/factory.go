@@ -106,6 +106,7 @@ func InvoiceFactoryCreator(
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
+	providersAccountant common.Address,
 ) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(channel)
@@ -126,7 +127,8 @@ func InvoiceFactoryCreator(
 			FirstInvoiceSendTimeout:    10 * time.Second,
 			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
-			AccountantID:               accountantID,
+			ConsumersAccountantID:      accountantID,
+			ProvidersAccountantID:      providersAccountant,
 			Registry:                   registryAddress,
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
 			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
@@ -140,37 +142,6 @@ func InvoiceFactoryCreator(
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
 	}
-}
-
-func exchangeMessageReceiver(channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
-	exchangeChan := make(chan crypto.ExchangeMessage, 1)
-
-	channel.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
-		var msg pb.ExchangeMessage
-		if err := c.Request().UnmarshalProto(&msg); err != nil {
-			return err
-		}
-		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
-
-		exchangeChan <- crypto.ExchangeMessage{
-			Promise: crypto.Promise{
-				ChannelID: msg.GetPromise().GetChannelID(),
-				Amount:    msg.GetPromise().GetAmount(),
-				Fee:       msg.GetPromise().GetFee(),
-				Hashlock:  msg.GetPromise().GetHashlock(),
-				R:         msg.GetPromise().GetR(),
-				Signature: msg.GetPromise().GetSignature(),
-			},
-			AgreementID:    msg.GetAgreementID(),
-			AgreementTotal: msg.GetAgreementTotal(),
-			Provider:       msg.GetProvider(),
-			Signature:      msg.GetSignature(),
-		}
-
-		return nil
-	})
-
-	return exchangeChan, nil
 }
 
 // ExchangeFactoryFunc returns a exchange factory.

@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state/event"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -566,7 +567,7 @@ func Test_getSessionByID(t *testing.T) {
 
 	assert.EqualValues(t, keeper.state.Sessions[0], s)
 
-	_, found = keeper.getServiceByID("something else")
+	_, found = serviceByID(keeper.GetState().Services, "something else")
 	assert.False(t, found)
 }
 
@@ -602,14 +603,14 @@ func Test_incrementConnectionCount(t *testing.T) {
 	}
 
 	keeper.incrementConnectCount(myID, false)
-	s, found := keeper.getServiceByID(myID)
+	s, found := serviceByID(keeper.GetState().Services, myID)
 	assert.True(t, found)
 
 	assert.Equal(t, 1, s.ConnectionStatistics.Attempted)
 	assert.Equal(t, 0, s.ConnectionStatistics.Successful)
 
 	keeper.incrementConnectCount(myID, true)
-	s, found = keeper.getServiceByID(myID)
+	s, found = serviceByID(keeper.GetState().Services, myID)
 	assert.True(t, found)
 
 	assert.Equal(t, 1, s.ConnectionStatistics.Successful)
@@ -638,4 +639,15 @@ type mockEarningsProvider struct {
 // GetEarnings returns a pre-defined settlement state.
 func (mep *mockEarningsProvider) GetEarnings(_ identity.Identity) pingpongEvent.Earnings {
 	return mep.Earnings
+}
+
+func serviceByID(services []stateEvent.ServiceInfo, id string) (se stateEvent.ServiceInfo, found bool) {
+	for i := range services {
+		if services[i].ID == id {
+			se = services[i]
+			found = true
+			return
+		}
+	}
+	return
 }

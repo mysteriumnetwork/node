@@ -20,11 +20,12 @@ package install
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"text/template"
+
+	"github.com/rs/zerolog/log"
 )
 
 const daemonID = "network.mysterium.myst_supervisor"
@@ -42,10 +43,6 @@ const plistTpl = `
 	</array>
 	<key>KeepAlive</key>
 	<true/>
-	<key>StandardOutPath</key>
-	<string>{{.LogPath}}</string>
-	<key>StandardErrorPath</key>
-	<string>{{.LogPath}}</string>
 </dict>
 </plist>
 `
@@ -55,8 +52,11 @@ func Install(options Options) error {
 	if !options.valid() {
 		return errors.New("invalid options")
 	}
-	log.Println("Installing launchd daemon")
+
+	log.Info().Msg("Cleaning up previous installation")
 	clean()
+
+	log.Info().Msg("Installing launchd daemon")
 	tpl, err := template.New("plistTpl").Parse(plistTpl)
 	if err != nil {
 		return fmt.Errorf("could not create template for %s: %w", plistPath, err)
@@ -67,7 +67,6 @@ func Install(options Options) error {
 	}
 	err = tpl.Execute(fd, map[string]string{
 		"DaemonID":       daemonID,
-		"LogPath":        "/var/log/myst_supervisor.log",
 		"SupervisorPath": options.SupervisorPath,
 	})
 	if err != nil {
@@ -83,10 +82,17 @@ func Install(options Options) error {
 	return nil
 }
 
-func clean() {
-	log.Println("Cleaning up previous installation")
-	_, _ = runV("launchctl", "unload", plistPath)
-	_ = os.RemoveAll(plistPath)
+// Uninstall launchd supervisor daemon on Darwin OS.
+func Uninstall() error {
+	log.Info().Msg("Uninstalling launchd daemon")
+	return clean()
+}
+
+func clean() error {
+	if _, err := runV("launchctl", "unload", plistPath); err != nil {
+		return err
+	}
+	return os.RemoveAll(plistPath)
 }
 
 func runV(c ...string) (string, error) {

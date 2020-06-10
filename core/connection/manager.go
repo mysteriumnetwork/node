@@ -35,8 +35,13 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	p2pDialTimeout = 30 * time.Second
 )
 
 var (
@@ -163,6 +168,15 @@ func NewManager(
 }
 
 func (m *connectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+	tracer := trace.NewTracer()
+	connectTrace := tracer.StartStage("Whole Connect")
+
+	defer func() {
+		tracer.EndStage(connectTrace)
+		traceResult := tracer.Finish()
+		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
+	}()
+
 	if m.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -186,6 +200,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
+	p2pChannelTrace := tracer.StartStage("P2P channel creation")
 	contact, err := p2p.ParseContact(proposal.ProviderContacts)
 	if err != nil {
 		return fmt.Errorf("provider does not support p2p communication: %w", err)
@@ -195,7 +210,9 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	if err != nil {
 		return fmt.Errorf("could not create p2p channel: %w", err)
 	}
+	tracer.EndStage(p2pChannelTrace)
 
+	sessionCreateTrace := tracer.StartStage("Session creation")
 	connection, err := m.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
@@ -218,7 +235,9 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	}
 
 	paymentSession.SetSessionID(string(sessionDTO.Session.ID))
+	tracer.EndStage(sessionCreateTrace)
 
+	connectionTrace := tracer.StartStage("Start connection")
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
 	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
@@ -231,6 +250,8 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		ProviderNATConn: serviceConn,
 		ChannelConn:     channelConn,
 	})
+	tracer.EndStage(connectionTrace)
+
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
@@ -245,10 +266,22 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		return err
 	}
 
+	m.clearIPCache()
+	m.addCleanup(func() error {
+		m.clearIPCache()
+		return nil
+	})
+
 	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
 	go m.checkSessionIP(channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
 
 	return err
+}
+
+func (m *connectionManager) clearIPCache() {
+	if cr, ok := m.ipResolver.(*ip.CachedResolver); ok {
+		cr.ClearCache()
+	}
 }
 
 // checkSessionIP checks if IP has changed after connection was established.
@@ -357,7 +390,10 @@ func (m *connectionManager) cleanAfterDisconnect() {
 }
 
 func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
-	channel, err := m.p2pDialer.Dial(ctx, consumerID, providerID, serviceType, contactDef)
+	timeoutCtx, cancel := context.WithTimeout(ctx, p2pDialTimeout)
+	defer cancel()
+
+	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, serviceType, contactDef)
 	if err != nil {
 		return nil, err
 	}
@@ -415,6 +451,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	if err != nil {
 		return session.CreateResponse{}, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
 	}
+	log.Info().Msgf("Provider's session config: %s", string(sessionResponse.Config))
 
 	m.acknowledge = func() {
 		pc := &pb.SessionInfo{
@@ -685,7 +722,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 		return nil
 	}
 
-	outboundIP, err := m.ipResolver.GetOutboundIPAsString()
+	outboundIP, err := m.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}

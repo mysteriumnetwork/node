@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -64,7 +65,7 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
-const providerFirstInvoiceTolerance = 0.8
+const providerFirstInvoiceValue = 1
 
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
@@ -148,7 +149,8 @@ type InvoiceTrackerDeps struct {
 	FirstInvoiceSendDuration   time.Duration
 	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
-	AccountantID               common.Address
+	ConsumersAccountantID      common.Address
+	ProvidersAccountantID      common.Address
 	Registry                   string
 	MaxAccountantFailureCount  uint64
 	MaxAllowedAccountantFee    uint16
@@ -270,7 +272,11 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.AccountantID)
+	if !bytes.EqualFold(it.deps.ConsumersAccountantID.Bytes(), it.deps.ProvidersAccountantID.Bytes()) {
+		return fmt.Errorf("consumer wants to work with an unsupported accountant(%q) while provider expects %q", it.deps.ConsumersAccountantID.Hex(), it.deps.ProvidersAccountantID.Hex())
+	}
+
+	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.ConsumersAccountantID)
 	if err != nil {
 		return errors.Wrap(err, "could not get accountants fee")
 	}
@@ -433,13 +439,10 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 
 	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 
-	// In case we're sending a first invoice, there might be a big missmatch percentage wise on the consumer side.
-	// This is due to the fact that both payment providers start at different times.
-	// To compensate for this, be a bit more lenient on the first invoice - ask for a reduced amount.
-	// Over the long run, this becomes redundant as the difference should become miniscule.
 	lastEm := it.getLastExchangeMessage()
-	if lastEm.AgreementTotal == 0 {
-		shouldBe = uint64(math.Trunc(float64(shouldBe) * providerFirstInvoiceTolerance))
+	if lastEm.AgreementTotal == 0 && shouldBe > 0 {
+		// The first invoice should have minimal static value.
+		shouldBe = providerFirstInvoiceValue
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
@@ -541,6 +544,16 @@ func (it *InvoiceTracker) handleAccountantError(err error) error {
 		stdErr.Is(err, ErrConsumerUnregistered):
 		// these are critical, return and cancel session
 		return err
+	// under normal use, this should not occur. If it does, we should drop sessions until we settle because we're not getting paid.
+	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
+		it.deps.EventBus.Publish(
+			event.AppTopicSettlementRequest,
+			event.AppEventSettlementRequest{
+				AccountantID: it.deps.ProvidersAccountantID,
+				ProviderID:   it.deps.ProviderID,
+			},
+		)
+		return err
 	default:
 		log.Err(err).Msgf("unknown accountant error encountered")
 		return err
@@ -562,6 +575,10 @@ func (it *InvoiceTracker) resetAccountantFailureCount() {
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
+	if em.HermesID != "" && !strings.EqualFold(em.HermesID, it.deps.ProvidersAccountantID.Hex()) {
+		return fmt.Errorf("invalid hermesID sent in exchange message. Expected %v, got %v", it.deps.ProvidersAccountantID.Hex(), em.HermesID)
+	}
+
 	peerAddr := common.HexToAddress(it.deps.Peer.Address)
 	if res := em.IsMessageValid(peerAddr); !res {
 		return ErrExchangeValidationFailed

@@ -20,9 +20,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/supervisor/logconfig"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon"
@@ -30,53 +34,54 @@ import (
 )
 
 var (
-	flagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagMystPath    = flag.String("mystPath", "", "Path to myst executable (required for -install)")
-	flagOpenVPNPath = flag.String("openvpnPath", "", "Path to openvpn executable (required for -install)")
+	flagVersion   = flag.Bool("version", false, "Print version")
+	flagInstall   = flag.Bool("install", false, "Install or repair myst supervisor")
+	flagUninstall = flag.Bool("uninstall", false, "Uninstall myst supervisor")
+	logFilePath   = flag.String("log-path", "", "Supervisor log file path")
+	logLevel      = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
 )
-
-func ensureInstallFlags() {
-	if *flagMystPath == "" || *flagOpenVPNPath == "" {
-		fmt.Println("Error: required flags were not set")
-		flag.Usage()
-		os.Exit(1)
-	}
-}
 
 func main() {
 	flag.Parse()
 
+	if *flagVersion {
+		fmt.Println(metadata.VersionAsString())
+		os.Exit(0)
+	}
+
+	logOpts := logconfig.LogOptions{
+		LogLevel: *logLevel,
+		Filepath: *logFilePath,
+	}
+	if err := logconfig.Configure(logOpts); err != nil {
+		log.Fatal().Err(err).Msg("Failed to configure logging")
+	}
+
 	if *flagInstall {
-		ensureInstallFlags()
-		log.Println("Installing supervisor")
 		path, err := thisPath()
 		if err != nil {
-			log.Fatalln("Failed to determine supervisor's path:", err)
+			log.Fatal().Err(err).Msg("Failed to determine supervisor's path")
 		}
-		err = install.Install(install.Options{
+
+		options := install.Options{
 			SupervisorPath: path,
-		})
-		if err != nil {
-			log.Fatalln("Failed to install supervisor:", err)
 		}
-		log.Println("Creating supervisor configuration")
-		cfg := config.Config{
-			MystPath:    *flagMystPath,
-			OpenVPNPath: *flagOpenVPNPath,
+		log.Info().Msgf("Installing supervisor with options: %#v", options)
+		if err = install.Install(options); err != nil {
+			log.Fatal().Err(err).Msg("Failed to install supervisor")
 		}
-		err = cfg.Write()
-		if err != nil {
-			log.Fatalln("Failed to create supervisor configuration:", err)
+		log.Info().Msg("Supervisor installed")
+	} else if *flagUninstall {
+		log.Info().Msg("Uninstalling supervisor")
+		if err := install.Uninstall(); err != nil {
+			log.Fatal().Err(err).Msg("Failed to uninstall supervisor")
 		}
+		log.Info().Msg("Supervisor uninstalled")
 	} else {
-		log.Println("Running myst supervisor daemon")
-		cfg, err := config.Read()
-		if err != nil {
-			log.Println("Failed to read supervisor configuration:", err)
-		}
-		supervisor := daemon.New(cfg)
+		log.Info().Msg("Running myst supervisor daemon")
+		supervisor := daemon.New(&config.Config{})
 		if err := supervisor.Start(); err != nil {
-			log.Fatalln("Error running supervisor:", err)
+			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}
 }

@@ -22,7 +22,9 @@ package userspace
 import (
 	"net"
 	"os"
+	"os/exec"
 
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"github.com/songgao/water"
 	"golang.zx2c4.com/wireguard/device"
@@ -47,7 +49,7 @@ func CreateTUN(name string, subnet net.IPNet) (tun.Device, error) {
 		return nil, errors.Wrap(err, "failed to create new TUN device")
 	}
 
-	if err := assignIP(tunDevice.Name(), subnet); err != nil {
+	if err := netutil.AssignIP(tunDevice.Name(), subnet); err != nil {
 		return nil, errors.Wrap(err, "failed to assign IP address")
 	}
 
@@ -94,4 +96,15 @@ func (tun *nativeTun) Flush() error {
 
 func (tun *nativeTun) MTU() (int, error) {
 	return device.DefaultMTU, nil
+}
+
+func renameInterface(name, newname string) error {
+	out, err := exec.Command("powershell", "-Command", "netsh interface set interface name=\""+name+"\" newname=\""+newname+"\"").CombinedOutput()
+	return errors.Wrap(err, string(out))
+}
+
+func destroyDevice(name string) error {
+	// Windows implementation is using single device that are reused for the future needs.
+	// Nothing to destroy here.
+	return nil
 }

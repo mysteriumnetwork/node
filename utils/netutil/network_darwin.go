@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package userspace
+package netutil
 
 import (
 	"net"
+	"os/exec"
 
-	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
@@ -28,13 +28,12 @@ func assignIP(iface string, subnet net.IPNet) error {
 	return cmdutil.SudoExec("ifconfig", iface, subnet.String(), peerIP(subnet).String())
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-
+func excludeRoute(ip, gw net.IP) error {
 	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
+}
+
+func deleteRoute(ip, gw string) error {
+	return cmdutil.SudoExec("route", "delete", ip, gw)
 }
 
 func addDefaultRoute(iface string) error {
@@ -55,6 +54,9 @@ func peerIP(subnet net.IPNet) net.IP {
 	return subnet.IP
 }
 
-func destroyDevice(name string) error {
-	return cmdutil.SudoExec("ifconfig", name, "delete")
+func logNetworkStats() {
+	for _, args := range [][]string{{"ifconfig", "-a"}, {"netstat", "-rn"}, {"pfctl", "-s", "all"}} {
+		out, err := exec.Command("sudo", args...).CombinedOutput()
+		logOutputToTrace(out, err, args...)
+	}
 }

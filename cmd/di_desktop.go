@@ -54,7 +54,8 @@ import (
 
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping services bootstrap for consumer mode")
 		return nil
 	}
 
@@ -159,7 +160,8 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) error {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping provider registrar for consumer mode")
 		return nil
 	}
 
@@ -175,7 +177,8 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
-	if nodeOptions.MobileConsumer {
+	if nodeOptions.Consumer {
+		log.Debug().Msg("Skipping accountant promise settler for consumer mode")
 		di.AccountantPromiseSettler = &pingpong_noop.NoopAccountantPromiseSettler{}
 		return nil
 	}
@@ -187,6 +190,7 @@ func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Optio
 		di.BCHelper,
 		di.IdentityRegistry,
 		di.Keystore,
+		di.SettlementHistoryStorage,
 		pingpong.AccountantPromiseSettlerConfig{
 			AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
 			Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
@@ -230,6 +234,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.EventBus,
 			proposal,
 			di.AccountantPromiseHandler,
+			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
 		return session.NewManager(
 			proposal,
@@ -262,11 +267,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	if nodeOptions.MobileConsumer {
-		di.registerNoopConnection()
-		return
-	}
-
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
 	di.registerWireguardConnection(nodeOptions)
@@ -274,7 +274,6 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 
 func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	wireguard.Bootstrap()
-	dnsManager := wireguard_connection.NewDNSManager()
 	handshakeWaiter := wireguard_connection.NewHandshakeWaiter()
 	endpointFactory := func() (wireguard.ConnectionEndpoint, error) {
 		resourceAllocator := resources.NewAllocator(nil, wireguard_service.DefaultOptions.Subnet)
@@ -285,7 +284,7 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 			DNSScriptDir:     nodeOptions.Directories.Script,
 			HandshakeTimeout: 1 * time.Minute,
 		}
-		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, dnsManager, handshakeWaiter)
+		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }

@@ -15,21 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteclient
+package userspace
 
 import (
-	"errors"
-	"net"
+	"fmt"
+
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
-	return errors.New("not implemented")
-}
+// ParseDevicePeerStats parses current active consumer stats.
+func ParseDevicePeerStats(d *UserspaceDevice) (*wgcfg.Stats, error) {
+	if len(d.Peers) != 1 {
+		return nil, fmt.Errorf("exactly 1 peer expected, got %d", len(d.Peers))
+	}
 
-func excludeRoute(ip net.IP) error {
-	return errors.New("not implemented")
-}
-
-func addDefaultRoute(iface string) error {
-	return errors.New("not implemented")
+	p := d.Peers[0]
+	return &wgcfg.Stats{
+		BytesSent:     uint64(p.TransmitBytes),
+		BytesReceived: uint64(p.ReceiveBytes),
+		LastHandshake: p.LastHandshakeTime,
+	}, nil
 }

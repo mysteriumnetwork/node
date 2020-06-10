@@ -15,11 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package boltdb
+package migrator
 
 import (
 	"sort"
 
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
 	"github.com/rs/zerolog/log"
 )
@@ -28,11 +29,11 @@ const migrationIndexBucketName = "migrations"
 
 // Migrator represents the component responsible for running migrations on bolt db
 type Migrator struct {
-	db *Bolt
+	db *boltdb.Bolt
 }
 
 // NewMigrator returns a new instance of migrator
-func NewMigrator(db *Bolt) *Migrator {
+func NewMigrator(db *boltdb.Bolt) *Migrator {
 	return &Migrator{
 		db: db,
 	}
@@ -40,7 +41,7 @@ func NewMigrator(db *Bolt) *Migrator {
 
 func (m *Migrator) isApplied(migration migrations.Migration) (bool, error) {
 	migrations := []migrations.Migration{}
-	err := m.db.db.From(migrationIndexBucketName).All(&migrations)
+	err := m.db.GetAllFrom(migrationIndexBucketName, &migrations)
 	if err != nil {
 		return true, err
 	}
@@ -54,7 +55,7 @@ func (m *Migrator) isApplied(migration migrations.Migration) (bool, error) {
 }
 
 func (m *Migrator) saveMigrationRun(migration migrations.Migration) error {
-	return m.db.db.From(migrationIndexBucketName).Save(&migration)
+	return m.db.Store(migrationIndexBucketName, &migration)
 }
 
 func (m *Migrator) migrate(migration migrations.Migration) error {
@@ -63,7 +64,7 @@ func (m *Migrator) migrate(migration migrations.Migration) error {
 		return err
 	}
 	log.Info().Msg("Running migration " + migration.Name)
-	err = migration.Migrate(m.db.db)
+	err = migration.Migrate(m.db.DB())
 	if err != nil {
 		return err
 	}

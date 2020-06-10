@@ -19,16 +19,13 @@ package wginterface
 
 import (
 	"errors"
+
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
 
 // New creates new WgInterface instance.
-func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
+func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	return nil, errors.New("not implemented")
-}
-
-// Listen listens for WireGuard configuration changes via user space socket.
-func (a *WgInterface) Listen() {
-
 }
 
 // Down closes device and user space api socket.

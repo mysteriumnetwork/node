@@ -29,6 +29,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -45,18 +46,25 @@ type Transactor interface {
 type promiseSettler interface {
 	ForceSettle(providerID identity.Identity, accountantID common.Address) error
 	SettleWithBeneficiary(id identity.Identity, beneficiary, accountantID common.Address) error
+	GetAccountantFee() (uint16, error)
+}
+
+type settlementHistoryProvider interface {
+	Get(provider identity.Identity, accountant common.Address) ([]pingpong.SettlementHistoryEntry, error)
 }
 
 type transactorEndpoint struct {
-	transactor     Transactor
-	promiseSettler promiseSettler
+	transactor                Transactor
+	promiseSettler            promiseSettler
+	settlementHistoryProvider settlementHistoryProvider
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
-func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler) *transactorEndpoint {
+func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider) *transactorEndpoint {
 	return &transactorEndpoint{
-		transactor:     transactor,
-		promiseSettler: promiseSettler,
+		transactor:                transactor,
+		promiseSettler:            promiseSettler,
+		settlementHistoryProvider: settlementHistoryProvider,
 	}
 }
 
@@ -65,6 +73,7 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler)
 type Fees struct {
 	Registration uint64 `json:"registration"`
 	Settlement   uint64 `json:"settlement"`
+	Accountant   uint16 `json:"accountant"`
 }
 
 // swagger:operation GET /transactor/fees Fees
@@ -91,10 +100,16 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+	accountantFees, err := te.promiseSettler.GetAccountantFee()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 
 	f := Fees{
 		Registration: registrationFees.Fee,
 		Settlement:   settlementFees.Fee,
+		Accountant:   accountantFees,
 	}
 
 	utils.WriteAsJSON(f, resp)
@@ -286,13 +301,46 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+// swagger:operation GET /settle/history SettlementHistory
+// ---
+// summary: Returns settlement history
+// description: Returns settlement history
+// responses:
+//   200:
+//     description: Returns settlement history
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	providerID := req.URL.Query().Get("providerID")
+	if providerID == "" {
+		utils.SendError(resp, errors.New("providerID is required"), http.StatusBadRequest)
+		return
+	}
+	accountantID := req.URL.Query().Get("accountantID")
+	if accountantID == "" {
+		utils.SendError(resp, errors.New("accountantID is required"), http.StatusBadRequest)
+		return
+	}
+
+	history, err := te.settlementHistoryProvider.Get(identity.FromAddress(providerID), common.HexToAddress(accountantID))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(history, resp)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler) {
-	te := NewTransactorEndpoint(transactor, promiseSettler)
+func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider) {
+	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/topup", te.TopUp)
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)
+	router.GET("/transactor/settle/history", te.SettlementHistory)
 }

@@ -19,19 +19,23 @@ package daemon
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"log"
-	"net"
-	"os/exec"
+	"os"
 	"strings"
 
-	"github.com/jackpal/gateway"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 )
 
 // Daemon - supervisor process.
@@ -47,6 +51,14 @@ func New(cfg *config.Config) Daemon {
 
 // Start supervisor daemon. Blocks.
 func (d *Daemon) Start() error {
+	db, err := boltdb.NewStorage(os.TempDir())
+	if err != nil {
+		log.Err(err).Msg("Failed to init routes storage")
+	} else {
+		netutil.SetRouteManagerStorage(db)
+		netutil.ClearStaleRoutes()
+	}
+
 	return transport.Start(d.dialog)
 }
 
@@ -56,29 +68,21 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 	answer := responder{conn}
 	for scan.Scan() {
 		line := scan.Bytes()
-		log.Printf("> %s", line)
+		log.Debug().Msgf("> %s", line)
 		cmd := strings.Split(string(line), " ")
 		op := strings.ToLower(cmd[0])
 		switch op {
+		case commandVersion:
+			answer.ok(metadata.VersionAsString())
 		case commandBye:
 			answer.ok("bye")
 			return
 		case commandPing:
 			answer.ok("pong")
-		case commandRun:
-			go func() {
-				err := d.runMyst(cmd...)
-				if err != nil {
-					log.Printf("failed %s: %s", commandRun, err)
-					answer.err(err)
-				} else {
-					answer.ok()
-				}
-			}()
 		case commandWgUp:
 			up, err := d.wgUp(cmd...)
 			if err != nil {
-				log.Printf("failed %s: %s", commandWgUp, err)
+				log.Err(err).Msgf("%s failed", commandWgUp)
 				answer.err(err)
 			} else {
 				answer.ok(up)
@@ -86,38 +90,22 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 		case commandWgDown:
 			err := d.wgDown(cmd...)
 			if err != nil {
-				log.Printf("failed %s: %s", commandWgDown, err)
+				log.Err(err).Msgf("%s failed", commandWgDown)
 				answer.err(err)
 			} else {
 				answer.ok()
 			}
-		case commandAssignIP:
-			err := d.assignIP(cmd...)
+		case commandWgStats:
+			stats, err := d.wgStats(cmd...)
 			if err != nil {
-				log.Printf("failed %s: %s", commandAssignIP, err)
+				log.Err(err).Msgf("%s failed", commandWgStats)
 				answer.err(err)
 			} else {
-				answer.ok()
-			}
-		case commandExcludeRoute:
-			err := d.excludeRoute(cmd...)
-			if err != nil {
-				log.Printf("failed %s: %s", commandExcludeRoute, err)
-				answer.err(err)
-			} else {
-				answer.ok()
-			}
-		case commandDefaultRoute:
-			err := d.defaultRoute(cmd...)
-			if err != nil {
-				log.Printf("failed %s: %s", commandDefaultRoute, err)
-				answer.err(err)
-			} else {
-				answer.ok()
+				answer.ok(stats)
 			}
 		case commandKill:
 			if err := d.killMyst(); err != nil {
-				log.Println("Could not kill myst:", err)
+				log.Err(err).Msgf("%s failed", commandKill)
 				answer.err(err)
 			} else {
 				answer.ok()
@@ -128,20 +116,26 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 
 func (d *Daemon) wgUp(args ...string) (interfaceName string, err error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	requestedInterfaceName := flags.String("iface", "", "Requested tunnel interface name")
+	deviceConfigStr := flags.String("config", "", "Device configuration JSON string")
 	uid := flags.String("uid", "", "User ID."+
 		" On POSIX systems, this is a decimal number representing the uid."+
 		" On Windows, this is a security identifier (SID) in a string format.")
 	if err := flags.Parse(args[1:]); err != nil {
 		return "", err
 	}
-	if *requestedInterfaceName == "" {
-		return "", errors.New("-iface is required")
+	if *deviceConfigStr == "" {
+		return "", errors.New("-config is required")
 	}
 	if *uid == "" {
 		return "", errors.New("-uid is required")
 	}
-	return d.monitor.Up(*requestedInterfaceName, *uid)
+
+	deviceConfig := wgcfg.DeviceConfig{}
+	if err := json.Unmarshal([]byte(*deviceConfigStr), &deviceConfig); err != nil {
+		return "", fmt.Errorf("could not unmarshal device config: %w", err)
+	}
+
+	return d.monitor.Up(deviceConfig, *uid)
 }
 
 func (d *Daemon) wgDown(args ...string) (err error) {
@@ -153,87 +147,34 @@ func (d *Daemon) wgDown(args ...string) (err error) {
 	if *interfaceName == "" {
 		return errors.New("-iface is required")
 	}
-	return d.monitor.Down(*interfaceName)
-}
 
-func (d *Daemon) assignIP(args ...string) (err error) {
-	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	interfaceName := flags.String("iface", "", "")
-	network := flags.String("net", "", "")
-	if err := flags.Parse(args[1:]); err != nil {
-		return err
-	}
-	if *interfaceName == "" {
-		return errors.New("-iface is required")
-	}
-	if *network == "" {
-		return errors.New("-net is required")
-	}
-	_, ipNet, err := net.ParseCIDR(*network)
+	err = d.monitor.Down(*interfaceName)
 	if err != nil {
-		return fmt.Errorf("-net could not be parsed: %w", err)
+		return fmt.Errorf("failed to down wg interface %s: %w", *interfaceName, err)
 	}
-	output, err := exec.Command("sudo", "ifconfig", *interfaceName, *network, peerIP(*ipNet).String()).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("ifconfig returned error: %w", err)
-	}
+
+	netutil.ClearStaleRoutes()
+
 	return nil
 }
 
-func (d *Daemon) excludeRoute(args ...string) (err error) {
-	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	ip := flags.String("ip", "", "")
-	if err := flags.Parse(args[1:]); err != nil {
-		return err
-	}
-	if *ip == "" {
-		return errors.New("-ip is required")
-	}
-	parsedIP := net.ParseIP(*ip)
-	if parsedIP == nil {
-		return fmt.Errorf("-ip could not be parsed: %w", err)
-	}
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-	output, err := exec.Command("route", "add", "-host", parsedIP.String(), gw.String()).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("route add returned error: %w", err)
-	}
-	return nil
-}
-
-func (d *Daemon) defaultRoute(args ...string) (err error) {
+func (d *Daemon) wgStats(args ...string) (string, error) {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	interfaceName := flags.String("iface", "", "")
 	if err := flags.Parse(args[1:]); err != nil {
-		return err
+		return "", err
 	}
 	if *interfaceName == "" {
-		return errors.New("-iface is required")
+		return "", errors.New("-iface is required")
 	}
-	output, err := exec.Command("route", "add", "-net", "0.0.0.0/1", "-interface", *interfaceName).CombinedOutput()
+	stats, err := d.monitor.Stats(*interfaceName)
 	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("route add returned error: %w", err)
+		return "", fmt.Errorf("could not get device stats for %s interface: %w", *interfaceName, err)
 	}
-	output, err = exec.Command("route", "add", "-net", "128.0.0.0/1", "-interface", *interfaceName).CombinedOutput()
-	if err != nil {
-		log.Println(output)
-		return fmt.Errorf("route add returned error: %w", err)
-	}
-	return nil
-}
 
-func peerIP(subnet net.IPNet) net.IP {
-	lastOctetID := len(subnet.IP) - 1
-	if subnet.IP[lastOctetID] == byte(1) {
-		subnet.IP[lastOctetID] = byte(2)
-	} else {
-		subnet.IP[lastOctetID] = byte(1)
+	statsJSON, err := json.Marshal(stats)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal stats to JSON: %w", err)
 	}
-	return subnet.IP
+	return string(statsJSON), nil
 }

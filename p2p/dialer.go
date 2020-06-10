@@ -214,7 +214,7 @@ func (m *dialer) exchangeConfig(ctx context.Context, brokerConn nats.Connection,
 func (m *dialer) sendSignedMsg(ctx context.Context, subject string, msg []byte, brokerConn nats.Connection) ([]byte, error) {
 	reply, err := brokerConn.RequestWithContext(ctx, subject, msg)
 	if err != nil {
-		return nil, fmt.Errorf("could send broker request to subject %s: %v", subject, err)
+		return nil, fmt.Errorf("could not send broker request to subject %s: %v", subject, err)
 	}
 	return reply.Data, nil
 }

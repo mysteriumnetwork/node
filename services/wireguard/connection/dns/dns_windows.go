@@ -15,21 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteclient
+package dns
 
 import (
-	"errors"
-	"net"
+	"fmt"
+	"os/exec"
 )
 
-func assignIP(iface string, subnet net.IPNet) error {
-	return errors.New("not implemented")
+func setDNS(cfg Config) error {
+	cmd := fmt.Sprintf("netsh interface ipv4 add dnsservers name=%s address=%s validate=no", cfg.IfaceName, cfg.DNS[0])
+	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("could not configure DNS, %s:%v", string(out), err)
+	}
+	return nil
 }
 
-func excludeRoute(ip net.IP) error {
-	return errors.New("not implemented")
-}
-
-func addDefaultRoute(iface string) error {
-	return errors.New("not implemented")
+func cleanDNS(cfg Config) error {
+	cmd := fmt.Sprintf("netsh interface ipv4 set dnsservers name=%s source=static address=none validate=no register=both", cfg.IfaceName)
+	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("could not clean DNS, %s:%w", string(out), err)
+	}
+	return nil
 }

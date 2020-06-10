@@ -32,7 +32,7 @@ type storage interface {
 	UpdateDataTransfer(id ID, up, down uint64)
 	UpdateEarnings(id ID, total uint64)
 	Find(id ID) (Session, bool)
-	FindBy(opts FindOpts) (ID, bool)
+	FindBy(opts FindOpts) (Session, bool)
 	Remove(id ID)
 	RemoveForService(serviceID string)
 }
@@ -92,6 +92,11 @@ func (ebs *EventBasedStorage) UpdateDataTransfer(id ID, up, down uint64) {
 // Find finds a session
 func (ebs *EventBasedStorage) Find(id ID) (Session, bool) {
 	return ebs.storage.Find(id)
+}
+
+// FindBy returns a session by find options.
+func (ebs *EventBasedStorage) FindBy(opts FindOpts) (Session, bool) {
+	return ebs.storage.FindBy(opts)
 }
 
 // Remove removes the session and publishes a removal event

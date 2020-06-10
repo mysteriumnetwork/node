@@ -32,7 +32,15 @@ const (
 	AppTopicEarningsChanged = "earnings_change"
 	// AppTopicInvoicePaid is a topic for publish events exchange message send to provider as a consumer.
 	AppTopicInvoicePaid = "invoice_paid"
+	// AppTopicSettlementRequest forces the settlement of promises for given provider/accountant.
+	AppTopicSettlementRequest = "settlement_request"
 )
+
+// AppEventSettlementRequest represents the payload that is sent on the AppTopicSettlementRequest topic.
+type AppEventSettlementRequest struct {
+	AccountantID common.Address
+	ProviderID   identity.Identity
+}
 
 // AppEventAccountantPromise represents the payload that is sent on the AppTopicAccountantPromise.
 type AppEventAccountantPromise struct {

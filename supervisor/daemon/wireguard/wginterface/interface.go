@@ -20,12 +20,14 @@ package wginterface
 import (
 	"net"
 
+	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"golang.zx2c4.com/wireguard/device"
 )
 
 // WgInterface represents WireGuard tunnel with underlying device.
 type WgInterface struct {
-	Name   string
-	device *device.Device
-	uapi   net.Listener
+	Name       string
+	Device     *device.Device
+	uapi       net.Listener
+	dnsManager dns.Manager
 }

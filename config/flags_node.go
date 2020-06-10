@@ -188,6 +188,13 @@ var (
 		Usage: "Range of P2P listen ports (e.g. 51820:52075), value of 0:0 means disabled",
 		Value: "0:0",
 	}
+
+	//FlagConsumer sets to run as consumer only which allows to skip bootstrap for some of the dependencies.
+	FlagConsumer = cli.BoolFlag{
+		Name:  "consumer",
+		Usage: "Run in consumer mode only.",
+		Value: false,
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -228,6 +235,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagUserMode,
 		&FlagVendorID,
 		&FlagP2PListenPorts,
+		&FlagConsumer,
 	)
 
 	return nil
@@ -268,6 +276,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
+	Current.ParseBoolFlag(ctx, FlagConsumer)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

@@ -17,6 +17,7 @@ message ExchangeMessage {
   uint64 AgreementTotal = 3;
   string Provider = 4;
   string Signature = 5;
+  string HermesID = 6;
 }
 
 message Promise {

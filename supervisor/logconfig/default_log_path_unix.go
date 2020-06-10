@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -15,19 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package logconfig
 
-// NewDNSManager returns DNSManager instance.
-func NewDNSManager() DNSManager {
-	return &dnsManager{}
-}
-
-type dnsManager struct{}
-
-func (dm dnsManager) Set(scriptDir, dev, dns string) error {
-	return nil
-}
-
-func (dm dnsManager) Clean(scriptDir, dev string) error {
-	return nil
+func defaultLogPath() (string, error) {
+	return "/var/log/myst_supervisor", nil
 }

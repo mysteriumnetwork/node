@@ -1,5 +1,3 @@
-// +build !windows
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,31 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package userspace
 
 import (
-	"os"
-	"os/exec"
-	"path"
+	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-// NewDNSManager returns DNSManager instance.
-func NewDNSManager() DNSManager {
-	return &dnsManager{}
-}
-
-type dnsManager struct{}
-
-func (dm dnsManager) Set(scriptDir, dev, dns string) error {
-	cmd := exec.Command(path.Join(scriptDir, "update-resolv-conf"))
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "script_type=up", "dev="+dev, "foreign_option_1=dhcp-option DNS "+dns)
-	return cmd.Run()
-}
-
-func (dm dnsManager) Clean(scriptDir, dev string) error {
-	cmd := exec.Command(path.Join(scriptDir, "update-resolv-conf"))
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "script_type=down", "dev="+dev)
-	return cmd.Run()
+func destroyDevice(name string) error {
+	return cmdutil.SudoExec("ip", "link", "del", "dev", name)
 }

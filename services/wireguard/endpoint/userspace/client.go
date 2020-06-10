@@ -19,27 +19,31 @@ package userspace
 
 import (
 	"bufio"
-	"encoding/base64"
-	"net"
+	"fmt"
 	"strings"
 
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 )
 
 type client struct {
-	tun    tun.Device
-	devAPI *device.Device
+	tun        tun.Device
+	devAPI     *device.Device
+	dnsManager dns.Manager
 }
 
 // NewWireguardClient creates new wireguard user space client.
 func NewWireguardClient() (*client, error) {
-	return &client{}, nil
+	return &client{
+		dnsManager: dns.NewManager(),
+	}, nil
 }
 
-func (c *client) ConfigureDevice(config wg.DeviceConfig) (err error) {
+func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) (err error) {
 	if c.tun, err = CreateTUN(config.IfaceName, config.Subnet); err != nil {
 		return errors.Wrap(err, "failed to create TUN device")
 	}
@@ -48,44 +52,45 @@ func (c *client) ConfigureDevice(config wg.DeviceConfig) (err error) {
 	if err := c.setDeviceConfig(config.Encode()); err != nil {
 		return errors.Wrap(err, "failed to configure initial device")
 	}
-	return nil
-}
 
-func (c *client) AddPeer(_ string, peer wg.Peer) error {
-	if err := c.setDeviceConfig(peer.Encode()); err != nil {
-		return errors.Wrap(err, "failed to add device peer")
-	}
-	return nil
-}
+	c.devAPI.Up()
 
-func (c *client) RemovePeer(_ string, publicKey string) error {
-	key, err := base64stringTo32ByteArray(publicKey)
-	if err != nil {
-		return err
+	// For consumer mode we need to exclude provider's IP from VPN tunnel
+	// and add default routes to forward all traffic via VPN tunnel.
+	if config.Peer.Endpoint != nil {
+		if err := netutil.ExcludeRoute(config.Peer.Endpoint.IP); err != nil {
+			return fmt.Errorf("could not exclude route %s: %w", config.Peer.Endpoint.IP.String(), err)
+		}
+		if err := netutil.AddDefaultRoute(config.IfaceName); err != nil {
+			return fmt.Errorf("could not add default route for %s: %w", config.IfaceName, err)
+		}
 	}
 
-	c.devAPI.RemovePeer(key)
+	if err := c.dnsManager.Set(dns.Config{
+		ScriptDir: config.DNSScriptDir,
+		IfaceName: config.IfaceName,
+		DNS:       config.DNS,
+	}); err != nil {
+		return fmt.Errorf("could not set DNS: %w", err)
+	}
+
 	return nil
 }
 
 func (c *client) Close() error {
 	c.devAPI.Close() // c.devAPI.Close() closes c.tun too
+	if err := c.dnsManager.Clean(); err != nil {
+		return fmt.Errorf("could not clean DNS: %w", err)
+	}
 	return nil
 }
 
-func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
-	if err := excludeRoute(ip); err != nil {
-		return err
-	}
-	return addDefaultRoute(iface)
-}
-
-func (c *client) PeerStats(string) (*wg.Stats, error) {
-	deviceState, err := wg.ParseUserspaceDevice(c.devAPI.IpcGetOperation)
+func (c *client) PeerStats(string) (*wgcfg.Stats, error) {
+	deviceState, err := ParseUserspaceDevice(c.devAPI.IpcGetOperation)
 	if err != nil {
 		return nil, err
 	}
-	stats, err := wg.ParseDevicePeerStats(deviceState)
+	stats, err := ParseDevicePeerStats(deviceState)
 	if err != nil {
 		return nil, err
 	}
@@ -100,18 +105,5 @@ func (c *client) setDeviceConfig(config string) error {
 	if err := c.devAPI.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
 		return errors.Wrap(err, "failed to set device config")
 	}
-	c.devAPI.Up()
 	return nil
-}
-
-func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
-	decoded, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return res, err
-	} else if len(decoded) != 32 {
-		return res, errors.New("unexpected key size")
-	}
-
-	copy(res[:], decoded)
-	return
 }

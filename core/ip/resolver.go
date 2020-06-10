@@ -30,8 +30,7 @@ const apiClient = "goclient-v0.1"
 
 // Resolver allows resolving current public and outbound IPs
 type Resolver interface {
-	GetOutboundIPAsString() (string, error)
-	GetOutboundIP() (net.IP, error)
+	GetOutboundIP() (string, error)
 	GetPublicIP() (string, error)
 }
 
@@ -58,17 +57,16 @@ type ipResponse struct {
 // declared as var for override in test
 var checkAddress = "8.8.8.8:53"
 
-// GetOutboundIPAsString returns current outbound IP as string for current system
-func (r *ResolverImpl) GetOutboundIPAsString() (string, error) {
-	ip, err := r.GetOutboundIP()
+// GetOutboundIP returns current outbound IP as string for current system
+func (r *ResolverImpl) GetOutboundIP() (string, error) {
+	ip, err := r.getOutboundIP()
 	if err != nil {
 		return "", nil
 	}
 	return ip.String(), nil
 }
 
-// GetOutboundIP returns current outbound IP for current system
-func (r *ResolverImpl) GetOutboundIP() (net.IP, error) {
+func (r *ResolverImpl) getOutboundIP() (net.IP, error) {
 	ipAddress := net.ParseIP(r.bindAddress)
 	localIPAddress := net.UDPAddr{IP: ipAddress}
 

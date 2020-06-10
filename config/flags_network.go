@@ -69,6 +69,12 @@ var (
 		Usage: "Enables incoming traffic filtering",
 		Value: false,
 	}
+	// FlagOutgoingFirewall enables outgoing traffic filtering.
+	FlagOutgoingFirewall = cli.BoolFlag{
+		Name:  "outgoing-firewall",
+		Usage: "Enables outgoing traffic filtering",
+		Value: false,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -83,6 +89,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagBrokerAddress,
 		&FlagEtherRPC,
 		&FlagIncomingFirewall,
+		&FlagOutgoingFirewall,
 	)
 }
 
@@ -96,4 +103,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
+	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 }

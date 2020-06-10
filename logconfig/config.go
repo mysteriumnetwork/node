@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
+	"github.com/mysteriumnetwork/node/logconfig/rollingwriter"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -65,15 +66,15 @@ func Configure(opts *LogOptions) {
 	log.Info().Msgf("Log level: %s", opts.LogLevel)
 	if opts.Filepath != "" {
 		log.Info().Msgf("Log file path: %s", opts.Filepath)
-		rollingWriter, err := newRollingWriter(opts)
+		rollingWriter, err := rollingwriter.NewRollingWriter(opts.Filepath)
 		if err != nil {
 			log.Err(err).Msg("Failed to configure file logger")
 		} else {
-			multiWriter := io.MultiWriter(consoleWriter(), rollingWriter.zeroLogger())
+			multiWriter := io.MultiWriter(consoleWriter(), zeroLogger(rollingWriter.Writer))
 			logger := makeLogger(multiWriter)
 			setGlobalLogger(&logger)
 		}
-		if err := rollingWriter.cleanObsoleteLogs(); err != nil {
+		if err := rollingWriter.CleanObsoleteLogs(); err != nil {
 			log.Err(err).Msg("Failed to cleanup obsolete logs")
 		}
 	}
@@ -83,6 +84,14 @@ func Configure(opts *LogOptions) {
 func consoleWriter() io.Writer {
 	return zerolog.ConsoleWriter{
 		Out:        os.Stderr,
+		TimeFormat: timestampFmt,
+	}
+}
+
+func zeroLogger(out io.Writer) io.Writer {
+	return zerolog.ConsoleWriter{
+		Out:        out,
+		NoColor:    true,
 		TimeFormat: timestampFmt,
 	}
 }
