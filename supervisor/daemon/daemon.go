@@ -19,6 +19,7 @@ package daemon
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -130,8 +131,13 @@ func (d *Daemon) wgUp(args ...string) (interfaceName string, err error) {
 		return "", errors.New("-uid is required")
 	}
 
+	configJSON, err := base64.StdEncoding.DecodeString(*deviceConfigStr)
+	if err != nil {
+		return "", fmt.Errorf("could not decode config from base64: %w", err)
+	}
+
 	deviceConfig := wgcfg.DeviceConfig{}
-	if err := json.Unmarshal([]byte(*deviceConfigStr), &deviceConfig); err != nil {
+	if err := json.Unmarshal(configJSON, &deviceConfig); err != nil {
 		return "", fmt.Errorf("could not unmarshal device config: %w", err)
 	}
 
