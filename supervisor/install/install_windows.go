@@ -76,7 +76,7 @@ func Uninstall() error {
 }
 
 func installAndStartService(m *mgr.Mgr, name string, options Options, config mgr.Config) error {
-	s, err := m.CreateService(name, options.SupervisorPath, config, "")
+	s, err := m.CreateService(name, options.SupervisorPath, config, "-winservice")
 	if err != nil {
 		return fmt.Errorf("could not create service: %w", err)
 	}

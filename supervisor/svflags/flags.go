@@ -15,14 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package transport
+package svflags
 
-import "io"
+import (
+	"flag"
 
-// handlerFunc talks to a connected client.
-type handlerFunc func(conn io.ReadWriter)
+	"github.com/rs/zerolog"
+)
 
-// Options for transport.
-type Options struct {
-	WinService bool
+// Supervisor CLI flags.
+var (
+	FlagVersion     = flag.Bool("version", false, "Print version")
+	FlagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
+	FlagUninstall   = flag.Bool("uninstall", false, "Uninstall myst supervisor")
+	FlagLogFilePath = flag.String("log-path", "", "Supervisor log file path")
+	FlagLogLevel    = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
+	FlagWinService  = flag.Bool("winservice", false, "Run via service manager instead of standalone (windows only).")
+)
+
+// Parse parses supervisor flags.
+func Parse() {
+	flag.Parse()
 }

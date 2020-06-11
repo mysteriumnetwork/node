@@ -31,20 +31,25 @@ const sock = `\\.\pipe\mystpipe`
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
-func Start(handle handlerFunc) error {
-	return svc.Run("MysteriumVPNSupervisor", &managerService{handle: handle})
+func Start(handle handlerFunc, options Options) error {
+	if options.WinService {
+		return svc.Run("MysteriumVPNSupervisor", &managerService{handle: handle})
+	} else {
+		return listenPipe(handle)
+	}
 }
 
 type managerService struct {
 	handle handlerFunc
 }
 
+// Execute is an entrypoint for a windows service.
 func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 
 	s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 	go func() {
-		if err := m.listenPipe(); err != nil {
+		if err := listenPipe(m.handle); err != nil {
 			log.Err(err).Msgf("Could not listen pipe on %s", sock)
 		}
 	}()
@@ -66,7 +71,7 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 	return
 }
 
-func (m *managerService) listenPipe() error {
+func listenPipe(handle handlerFunc) error {
 	// TODO: Check these permissions, it would be much more secure to pass user id
 	// during supervisor installation as adding whole Users group is not secure.
 	socketGroup := "Users"
@@ -103,7 +108,7 @@ func (m *managerService) listenPipe() error {
 		go func() {
 			peer := conn.RemoteAddr().Network()
 			log.Debug().Msgf("Client connected: %s", peer)
-			m.handle(conn)
+			handle(conn)
 			if err := conn.Close(); err != nil {
 				log.Err(err).Msgf("Error closing connection for: %s", peer)
 			}
