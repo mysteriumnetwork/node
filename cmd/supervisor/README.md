@@ -18,13 +18,13 @@ myst_supervisor -help
 | ping                              | macOS, Win   |      | ok     | ✅           | Ping supervisor |
 | kill                              | macOS, Win   |      | ok     | ✅          | Kill myst process gracefully |
 | bye                               | macOS   |      | ok     | ✅            | Kill supervisor |
-| wg-up                             | macOS, Win   | -uid, -config    | ok     | ✅           | Setup WireGuard device with given configuration in JSON string format |
+| wg-up                             | macOS, Win   | -uid, -config    | ok     | ✅           | Setup WireGuard device with given configuration in JSON string encoded as base64 |
 | wg-down                           | macOS, Win   | -iface     | ok     | ✅           | Destroy WireGuard device |
 | wg-stats                          | macOS, Win   | -iface     | `{"bytes_send": 100, "bytes_received": 200, "last_handshake": "2020-06-02T13:42:55.786Z"}`     | ✅           | Get WireGuard device peer statistics |
 
 
 ## Logs
 
-On Windows logs could be found at `C:\Windows\system32\myst_supervisor.log`
+On Windows logs could be found at `C:\Windows\System32\config\systemprofile\AppData\Local\MystSupervisor\myst_supervisor.log`
 
 On macOS logs could be found at `/var/log/myst_supervisor.log`

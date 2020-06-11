@@ -18,6 +18,7 @@
 package remoteclient
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os/user"
@@ -54,7 +55,10 @@ func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {
 		return fmt.Errorf("could not marshal device config to JSON: %w", err)
 	}
 
-	actualIface, err := supervisorclient.Command("wg-up", "-uid", currentUser.Uid, "-config", string(jsonCfg))
+	// Convert config to base64 to prevent nasty parsing issues on supervisor.
+	jsonb64 := base64.StdEncoding.EncodeToString(jsonCfg)
+
+	actualIface, err := supervisorclient.Command("wg-up", "-uid", currentUser.Uid, "-config", jsonb64)
 	if err != nil {
 		return fmt.Errorf("failed to create wg interface: %w", err)
 	}
