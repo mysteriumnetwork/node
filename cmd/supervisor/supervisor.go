@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/logconfig"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -34,11 +35,12 @@ import (
 )
 
 var (
-	flagVersion   = flag.Bool("version", false, "Print version")
-	flagInstall   = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagUninstall = flag.Bool("uninstall", false, "Uninstall myst supervisor")
-	logFilePath   = flag.String("log-path", "", "Supervisor log file path")
-	logLevel      = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
+	flagVersion    = flag.Bool("version", false, "Print version")
+	flagInstall    = flag.Bool("install", false, "Install or repair myst supervisor")
+	flagUninstall  = flag.Bool("uninstall", false, "Uninstall myst supervisor")
+	logFilePath    = flag.String("log-path", "", "Supervisor log file path")
+	logLevel       = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
+	flagWinService = flag.Bool("winservice", false, "Run via service manager instead of standalone (windows only).")
 )
 
 func main() {
@@ -80,7 +82,7 @@ func main() {
 	} else {
 		log.Info().Msg("Running myst supervisor daemon")
 		supervisor := daemon.New(&config.Config{})
-		if err := supervisor.Start(); err != nil {
+		if err := supervisor.Start(transport.Options{WinService: *flagWinService}); err != nil {
 			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}

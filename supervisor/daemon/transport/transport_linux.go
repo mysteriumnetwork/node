@@ -21,6 +21,6 @@ import "errors"
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
-func Start(handle handlerFunc) error {
+func Start(handle handlerFunc, _ Options) error {
 	return errors.New("not implemented")
 }

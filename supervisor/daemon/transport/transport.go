@@ -21,3 +21,8 @@ import "io"
 
 // handlerFunc talks to a connected client.
 type handlerFunc func(conn io.ReadWriter)
+
+// Options for transport.
+type Options struct {
+	WinService bool
+}

@@ -51,7 +51,7 @@ func New(cfg *config.Config) Daemon {
 }
 
 // Start supervisor daemon. Blocks.
-func (d *Daemon) Start() error {
+func (d *Daemon) Start(options transport.Options) error {
 	db, err := boltdb.NewStorage(os.TempDir())
 	if err != nil {
 		log.Err(err).Msg("Failed to init routes storage")
@@ -60,7 +60,7 @@ func (d *Daemon) Start() error {
 		netutil.ClearStaleRoutes()
 	}
 
-	return transport.Start(d.dialog)
+	return transport.Start(d.dialog, options)
 }
 
 // dialog talks to the client via established connection.

@@ -29,7 +29,7 @@ const sock = "/var/run/myst.sock"
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
-func Start(handle handlerFunc) error {
+func Start(handle handlerFunc, _ Options) error {
 	if err := os.RemoveAll(sock); err != nil {
 		return fmt.Errorf("could not remove sock: %w", err)
 	}
