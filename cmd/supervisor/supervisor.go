@@ -18,7 +18,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,7 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/logconfig"
-	"github.com/rs/zerolog"
+	"github.com/mysteriumnetwork/node/supervisor/svflags"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/supervisor/config"
@@ -34,32 +33,23 @@ import (
 	"github.com/mysteriumnetwork/node/supervisor/install"
 )
 
-var (
-	flagVersion     = flag.Bool("version", false, "Print version")
-	flagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagUninstall   = flag.Bool("uninstall", false, "Uninstall myst supervisor")
-	flagLogFilePath = flag.String("log-path", "", "Supervisor log file path")
-	flagLogLevel    = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
-	flagWinService  = flag.Bool("winservice", false, "Run via service manager instead of standalone (windows only).")
-)
-
 func main() {
-	flag.Parse()
+	svflags.Parse()
 
-	if *flagVersion {
+	if *svflags.FlagVersion {
 		fmt.Println(metadata.VersionAsString())
 		os.Exit(0)
 	}
 
 	logOpts := logconfig.LogOptions{
-		LogLevel: *flagLogLevel,
-		Filepath: *flagLogFilePath,
+		LogLevel: *svflags.FlagLogLevel,
+		Filepath: *svflags.FlagLogFilePath,
 	}
 	if err := logconfig.Configure(logOpts); err != nil {
 		log.Fatal().Err(err).Msg("Failed to configure logging")
 	}
 
-	if *flagInstall {
+	if *svflags.FlagInstall {
 		path, err := thisPath()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to determine supervisor's path")
@@ -73,7 +63,7 @@ func main() {
 			log.Fatal().Err(err).Msg("Failed to install supervisor")
 		}
 		log.Info().Msg("Supervisor installed")
-	} else if *flagUninstall {
+	} else if *svflags.FlagUninstall {
 		log.Info().Msg("Uninstalling supervisor")
 		if err := install.Uninstall(); err != nil {
 			log.Fatal().Err(err).Msg("Failed to uninstall supervisor")
@@ -82,7 +72,7 @@ func main() {
 	} else {
 		log.Info().Msg("Running myst supervisor daemon")
 		supervisor := daemon.New(&config.Config{})
-		if err := supervisor.Start(transport.Options{WinService: *flagWinService}); err != nil {
+		if err := supervisor.Start(transport.Options{WinService: *svflags.FlagWinService}); err != nil {
 			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}
