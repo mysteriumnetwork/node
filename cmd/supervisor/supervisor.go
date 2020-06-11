@@ -35,12 +35,12 @@ import (
 )
 
 var (
-	flagVersion    = flag.Bool("version", false, "Print version")
-	flagInstall    = flag.Bool("install", false, "Install or repair myst supervisor")
-	flagUninstall  = flag.Bool("uninstall", false, "Uninstall myst supervisor")
-	logFilePath    = flag.String("log-path", "", "Supervisor log file path")
-	logLevel       = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
-	flagWinService = flag.Bool("winservice", false, "Run via service manager instead of standalone (windows only).")
+	flagVersion     = flag.Bool("version", false, "Print version")
+	flagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
+	flagUninstall   = flag.Bool("uninstall", false, "Uninstall myst supervisor")
+	flagLogFilePath = flag.String("log-path", "", "Supervisor log file path")
+	flagLogLevel    = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
+	flagWinService  = flag.Bool("winservice", false, "Run via service manager instead of standalone (windows only).")
 )
 
 func main() {
@@ -52,8 +52,8 @@ func main() {
 	}
 
 	logOpts := logconfig.LogOptions{
-		LogLevel: *logLevel,
-		Filepath: *logFilePath,
+		LogLevel: *flagLogLevel,
+		Filepath: *flagLogFilePath,
 	}
 	if err := logconfig.Configure(logOpts); err != nil {
 		log.Fatal().Err(err).Msg("Failed to configure logging")
