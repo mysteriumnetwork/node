@@ -157,7 +157,7 @@ func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
 	}, nil
 }
 
-func (ss *ssdpServer) deviceDescription(ip net.IP) string {
+func (ss *ssdpServer) deviceDescription(ip string) string {
 	var buf bytes.Buffer
 	deviceDescription := template.Must(template.New("SSDPDeviceDescription").Parse(deviceDescriptionTemplate))
 	_ = deviceDescription.Execute(&buf,

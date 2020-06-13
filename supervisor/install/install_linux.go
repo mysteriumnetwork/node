@@ -17,9 +17,16 @@
 
 package install
 
-import "errors"
+import (
+	"errors"
+)
 
 // Install installs service for linux. Not implemented yet.
 func Install(options Options) error {
+	return errors.New("not implemented")
+}
+
+// Uninstall installs service for linux. Not implemented yet.
+func Uninstall() error {
 	return errors.New("not implemented")
 }

@@ -31,7 +31,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/device"
@@ -177,7 +179,7 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 type wireguardDevice interface {
 	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error
 	Stop()
-	Stats() (*wireguard.Stats, error)
+	Stats() (*wgcfg.Stats, error)
 }
 
 func newWireguardDevice(tunnelSetup WireguardTunnelSetup) wireguardDevice {
@@ -234,15 +236,15 @@ func (w *wireguardDeviceImpl) Stop() {
 	}
 }
 
-func (w *wireguardDeviceImpl) Stats() (*wireguard.Stats, error) {
+func (w *wireguardDeviceImpl) Stats() (*wgcfg.Stats, error) {
 	if w.device == nil {
 		return nil, errors.New("device is not started")
 	}
-	deviceState, err := wireguard.ParseUserspaceDevice(w.device.IpcGetOperation)
+	deviceState, err := userspace.ParseUserspaceDevice(w.device.IpcGetOperation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse userspace wg device state")
 	}
-	stats, err := wireguard.ParseDevicePeerStats(deviceState)
+	stats, err := userspace.ParseDevicePeerStats(deviceState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get userspace wg peer stats")
 	}
@@ -250,24 +252,20 @@ func (w *wireguardDeviceImpl) Stats() (*wireguard.Stats, error) {
 }
 
 func (w *wireguardDeviceImpl) applyConfig(devApi *device.Device, privateKey string, config wireguard.ServiceConfig) error {
-	deviceConfig := wireguard.DeviceConfig{
+	deviceConfig := wgcfg.DeviceConfig{
 		PrivateKey: privateKey,
 		ListenPort: config.LocalPort,
+		Peer: wgcfg.Peer{
+			Endpoint:               &config.Provider.Endpoint,
+			PublicKey:              config.Provider.PublicKey,
+			KeepAlivePeriodSeconds: 18,
+			// All traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
+			AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
+		},
 	}
 
 	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(deviceConfig.Encode()))); err != nil {
-		return err
-	}
-
-	peer := wireguard.Peer{
-		Endpoint:               &config.Provider.Endpoint,
-		PublicKey:              config.Provider.PublicKey,
-		KeepAlivePeriodSeconds: 18,
-		// All traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
-		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
-	}
-	if err := devApi.IpcSetOperation(bufio.NewReader(strings.NewReader(peer.Encode()))); err != nil {
-		return err
+		return fmt.Errorf("could not complete ipc operation: %w", err)
 	}
 	return nil
 }

@@ -19,8 +19,9 @@ package transport
 
 import (
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows/svc"
@@ -30,21 +31,26 @@ const sock = `\\.\pipe\mystpipe`
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
-func Start(handle handlerFunc) error {
-	return svc.Run("WireGuardManager", &managerService{handle: handle})
+func Start(handle handlerFunc, options Options) error {
+	if options.WinService {
+		return svc.Run("MysteriumVPNSupervisor", &managerService{handle: handle})
+	} else {
+		return listenPipe(handle)
+	}
 }
 
 type managerService struct {
 	handle handlerFunc
 }
 
+// Execute is an entrypoint for a windows service.
 func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
 
 	s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 	go func() {
-		if err := m.listenPipe(); err != nil {
-			log.Printf("could not listen pipe: %v", err)
+		if err := listenPipe(m.handle); err != nil {
+			log.Err(err).Msgf("Could not listen pipe on %s", sock)
 		}
 	}()
 
@@ -59,13 +65,13 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 		case svc.Continue:
 			s <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 		default:
-			log.Printf("unexpected control request #%d", c)
+			log.Error().Msgf("Unexpected control request #%d", c)
 		}
 	}
 	return
 }
 
-func (m *managerService) listenPipe() error {
+func listenPipe(handle handlerFunc) error {
 	// TODO: Check these permissions, it would be much more secure to pass user id
 	// during supervisor installation as adding whole Users group is not secure.
 	socketGroup := "Users"
@@ -90,23 +96,23 @@ func (m *managerService) listenPipe() error {
 	}
 	defer func() {
 		if err := l.Close(); err != nil {
-			log.Println("Error closing listener:", err)
+			log.Err(err).Msg("Error closing listener")
 		}
 	}()
 	for {
-		log.Println("Waiting for connections...")
+		log.Debug().Msg("Waiting for connections...")
 		conn, err := l.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %w", err)
 		}
 		go func() {
 			peer := conn.RemoteAddr().Network()
-			log.Println("Client connected:", peer)
-			m.handle(conn)
+			log.Debug().Msgf("Client connected: %s", peer)
+			handle(conn)
 			if err := conn.Close(); err != nil {
-				log.Printf("Error closing connection for: %v error: %v", peer, err)
+				log.Err(err).Msgf("Error closing connection for: %s", peer)
 			}
-			log.Println("Client disconnected:", peer)
+			log.Debug().Msgf("Client disconnected: %s", peer)
 		}()
 	}
 }

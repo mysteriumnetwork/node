@@ -19,16 +19,17 @@ package transport
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
+
+	"github.com/rs/zerolog/log"
 )
 
 const sock = "/var/run/myst.sock"
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
-func Start(handle handlerFunc) error {
+func Start(handle handlerFunc, _ Options) error {
 	if err := os.RemoveAll(sock); err != nil {
 		return fmt.Errorf("could not remove sock: %w", err)
 	}
@@ -42,23 +43,23 @@ func Start(handle handlerFunc) error {
 	}
 	defer func() {
 		if err := l.Close(); err != nil {
-			log.Println("Error closing listener:", err)
+			log.Err(err).Msg("Error closing listener")
 		}
 	}()
 	for {
-		log.Println("Waiting for connections...")
+		log.Print("Waiting for connections...")
 		conn, err := l.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %w", err)
 		}
 		go func() {
 			peer := conn.RemoteAddr().Network()
-			log.Println("Client connected:", peer)
+			log.Debug().Msgf("Client connected: %s", peer)
 			handle(conn)
 			if err := conn.Close(); err != nil {
-				log.Printf("Error closing connection for: %v error: %v", peer, err)
+				log.Err(err).Msgf("Error closing connection for: %v", peer)
 			}
-			log.Println("Client disconnected:", peer)
+			log.Debug().Msgf("Client disconnected: %s", peer)
 		}()
 	}
 }

@@ -15,19 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package svflags
 
-// NewDNSManager returns DNSManager instance.
-func NewDNSManager() DNSManager {
-	return &dnsManager{}
-}
+import (
+	"flag"
 
-type dnsManager struct{}
+	"github.com/rs/zerolog"
+)
 
-func (dm dnsManager) Set(scriptDir, dev, dns string) error {
-	return nil
-}
+// Supervisor CLI flags.
+var (
+	FlagVersion     = flag.Bool("version", false, "Print version")
+	FlagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
+	FlagUninstall   = flag.Bool("uninstall", false, "Uninstall myst supervisor")
+	FlagLogFilePath = flag.String("log-path", "", "Supervisor log file path")
+	FlagLogLevel    = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")
+	FlagWinService  = flag.Bool("winservice", false, "Run via service manager instead of standalone (windows only).")
+)
 
-func (dm dnsManager) Clean(scriptDir, dev string) error {
-	return nil
+// Parse parses supervisor flags.
+func Parse() {
+	flag.Parse()
 }

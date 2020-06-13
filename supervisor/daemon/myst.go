@@ -21,16 +21,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const tequilapiHost = "http://localhost:4050"
 
 func (d *Daemon) killMyst() error {
-	log.Println("Trying to stop node process gracefully")
+	log.Info().Msg("Trying to stop node process gracefully")
 	err := gracefulStop(3 * time.Second)
 	if err == nil {
 		return nil

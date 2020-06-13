@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package logconfig
+package rollingwriter
 
 import (
 	"io"
@@ -26,35 +26,41 @@ import (
 	"strings"
 
 	"github.com/arthurkiller/rollingwriter"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-type rollingWriter struct {
+// RollingWriter represents logs writer with logs rolling and cleanup support.
+type RollingWriter struct {
 	config rollingwriter.Config
-	fw     io.Writer
+	Writer io.Writer
 }
 
-func newRollingWriter(opts *LogOptions) (writer *rollingWriter, err error) {
-	writer = &rollingWriter{}
+// NewRollingWriter creates new rolling writer.
+func NewRollingWriter(filepath string) (writer *RollingWriter, err error) {
+	writer = &RollingWriter{}
 	writer.config = rollingwriter.Config{
 		TimeTagFormat:     "20060102T150405",
-		LogPath:           path.Dir(opts.Filepath),
-		FileName:          path.Base(opts.Filepath),
+		LogPath:           path.Dir(filepath),
+		FileName:          path.Base(filepath),
 		RollingPolicy:     rollingwriter.VolumeRolling,
 		RollingVolumeSize: "50MB",
 		Compress:          true,
 		WriterMode:        "lock",
 		MaxRemain:         5,
 	}
-	writer.fw, err = rollingwriter.NewWriterFromConfig(&writer.config)
+	writer.Writer, err = rollingwriter.NewWriterFromConfig(&writer.config)
 	return writer, err
 }
 
-// cleanObsoleteLogs cleans obsolete logs so that the count of remaining log files is equal to w.config.MaxRemain.
+// Write writes to underlying rolling writer.
+func (w *RollingWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+// CleanObsoleteLogs cleans obsolete logs so that the count of remaining log files is equal to w.config.MaxRemain.
 // rollingWriter only handles file rolling at runtime, but if the node is restarted, the count is lost thus we have
 // to do this manually.
-func (w *rollingWriter) cleanObsoleteLogs() error {
+func (w *RollingWriter) CleanObsoleteLogs() error {
 	files, err := ioutil.ReadDir(w.config.LogPath)
 	if err != nil {
 		return err
@@ -70,7 +76,7 @@ func (w *rollingWriter) cleanObsoleteLogs() error {
 		log.Debug().Msgf("Found %d old log files in log directory, skipping cleanup", len(oldLogFiles))
 		return nil
 	}
-	log.Info().Msgf("Found %d old log files in log directory, proceeding to cleanup", len(oldLogFiles))
+	log.Debug().Msgf("Found %d old log files in log directory, proceeding to cleanup", len(oldLogFiles))
 	sort.Slice(oldLogFiles, func(i, j int) bool {
 		return oldLogFiles[i].ModTime().After(oldLogFiles[j].ModTime())
 	})
@@ -81,12 +87,4 @@ func (w *rollingWriter) cleanObsoleteLogs() error {
 		}
 	}
 	return nil
-}
-
-func (w *rollingWriter) zeroLogger() io.Writer {
-	return zerolog.ConsoleWriter{
-		Out:        w.fw,
-		NoColor:    true,
-		TimeFormat: timestampFmt,
-	}
 }

@@ -20,8 +20,9 @@ package daemon
 import (
 	"fmt"
 	"io"
-	"log"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type responder struct {
@@ -43,7 +44,7 @@ func (r *responder) err(result ...error) {
 }
 
 func (r *responder) message(msg string) {
-	log.Println("<", msg)
+	log.Debug().Msgf("< %s", msg)
 	if _, err := fmt.Fprintln(r, msg); err != nil {
 		log.Printf("Could not send message: %q error: %s\n", msg, err)
 	}

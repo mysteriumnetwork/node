@@ -18,11 +18,11 @@
 package netutil
 
 import (
+	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
 
-	"github.com/jackpal/gateway"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -32,14 +32,18 @@ func assignIP(iface string, subnet net.IPNet) error {
 	return errors.Wrap(err, string(out))
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-
+func excludeRoute(ip, gw net.IP) error {
 	out, err := exec.Command("powershell", "-Command", "route add "+ip.String()+"/32 "+gw.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
+}
+
+func deleteRoute(ip, gw string) error {
+	out, err := exec.Command("powershell", "-Command", "route delete "+ip+"/32").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to delete route: %w, %s", err, string(out))
+	}
+
+	return nil
 }
 
 func addDefaultRoute(name string) error {
@@ -87,4 +91,11 @@ func interfaceInfo(name string) (id, gw string, err error) {
 	}
 
 	return strconv.Itoa(iface.Index), ipv4.String(), nil
+}
+
+func logNetworkStats() {
+	for _, args := range []string{"ipconfig /all", "netstat -r"} {
+		out, err := exec.Command("powershell", "-Command", args).CombinedOutput()
+		logOutputToTrace(out, err, args)
+	}
 }

@@ -19,10 +19,12 @@ package wginterface
 
 import (
 	"errors"
+
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 )
 
 // New creates new WgInterface instance.
-func New(requestedInterfaceName string, uid string) (*WgInterface, error) {
+func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	return nil, errors.New("not implemented")
 }
 

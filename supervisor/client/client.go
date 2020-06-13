@@ -29,7 +29,7 @@ import (
 // Command executes supervisor command.
 func Command(args ...string) (result string, err error) {
 	cmdLine := strings.Join(args, " ")
-	log.Debug().Msgf("Supervisor command invoked: %q", cmdLine)
+	log.Trace().Msgf("Supervisor command invoked: %q", cmdLine)
 	conn, err := connect()
 	if err != nil {
 		return "", err

@@ -18,40 +18,62 @@
 package main
 
 import (
-	"flag"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
+	"github.com/mysteriumnetwork/node/supervisor/logconfig"
+	"github.com/mysteriumnetwork/node/supervisor/svflags"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon"
 	"github.com/mysteriumnetwork/node/supervisor/install"
 )
 
-var (
-	flagInstall = flag.Bool("install", false, "Install or repair myst supervisor")
-)
-
 func main() {
-	flag.Parse()
+	svflags.Parse()
 
-	if *flagInstall {
-		log.Println("Installing supervisor")
+	if *svflags.FlagVersion {
+		fmt.Println(metadata.VersionAsString())
+		os.Exit(0)
+	}
+
+	logOpts := logconfig.LogOptions{
+		LogLevel: *svflags.FlagLogLevel,
+		Filepath: *svflags.FlagLogFilePath,
+	}
+	if err := logconfig.Configure(logOpts); err != nil {
+		log.Fatal().Err(err).Msg("Failed to configure logging")
+	}
+
+	if *svflags.FlagInstall {
 		path, err := thisPath()
 		if err != nil {
-			log.Fatalln("Failed to determine supervisor's path:", err)
+			log.Fatal().Err(err).Msg("Failed to determine supervisor's path")
 		}
-		err = install.Install(install.Options{
+
+		options := install.Options{
 			SupervisorPath: path,
-		})
-		if err != nil {
-			log.Fatalln("Failed to install supervisor:", err)
 		}
+		log.Info().Msgf("Installing supervisor with options: %#v", options)
+		if err = install.Install(options); err != nil {
+			log.Fatal().Err(err).Msg("Failed to install supervisor")
+		}
+		log.Info().Msg("Supervisor installed")
+	} else if *svflags.FlagUninstall {
+		log.Info().Msg("Uninstalling supervisor")
+		if err := install.Uninstall(); err != nil {
+			log.Fatal().Err(err).Msg("Failed to uninstall supervisor")
+		}
+		log.Info().Msg("Supervisor uninstalled")
 	} else {
-		log.Println("Running myst supervisor daemon")
+		log.Info().Msg("Running myst supervisor daemon")
 		supervisor := daemon.New(&config.Config{})
-		if err := supervisor.Start(); err != nil {
-			log.Fatalln("Error running supervisor:", err)
+		if err := supervisor.Start(transport.Options{WinService: *svflags.FlagWinService}); err != nil {
+			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}
 }

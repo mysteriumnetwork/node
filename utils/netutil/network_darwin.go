@@ -19,8 +19,8 @@ package netutil
 
 import (
 	"net"
+	"os/exec"
 
-	"github.com/jackpal/gateway"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
@@ -28,13 +28,12 @@ func assignIP(iface string, subnet net.IPNet) error {
 	return cmdutil.SudoExec("ifconfig", iface, subnet.String(), peerIP(subnet).String())
 }
 
-func excludeRoute(ip net.IP) error {
-	gw, err := gateway.DiscoverGateway()
-	if err != nil {
-		return err
-	}
-
+func excludeRoute(ip, gw net.IP) error {
 	return cmdutil.SudoExec("route", "add", "-host", ip.String(), gw.String())
+}
+
+func deleteRoute(ip, gw string) error {
+	return cmdutil.SudoExec("route", "delete", ip, gw)
 }
 
 func addDefaultRoute(iface string) error {
@@ -53,4 +52,11 @@ func peerIP(subnet net.IPNet) net.IP {
 		subnet.IP[lastOctetID] = byte(1)
 	}
 	return subnet.IP
+}
+
+func logNetworkStats() {
+	for _, args := range [][]string{{"ifconfig", "-a"}, {"netstat", "-rn"}, {"pfctl", "-s", "all"}} {
+		out, err := exec.Command("sudo", args...).CombinedOutput()
+		logOutputToTrace(out, err, args...)
+	}
 }

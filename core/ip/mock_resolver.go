@@ -66,11 +66,7 @@ func (client *mockResolver) GetPublicIP() (string, error) {
 	return client.publicIP, client.error
 }
 
-func (client *mockResolver) GetOutboundIP() (net.IP, error) {
-	return client.outboundIP, client.error
-}
-
-func (client *mockResolver) GetOutboundIPAsString() (string, error) {
+func (client *mockResolver) GetOutboundIP() (string, error) {
 	return client.outboundIP.String(), client.error
 }
 

@@ -17,7 +17,7 @@ ADD . .
 RUN bin/build
 
 
-FROM alpine:3.11
+FROM alpine:3.12
 
 # Install packages
 RUN apk add --update --no-cache iptables ipset ca-certificates openvpn bash sudo openresolv

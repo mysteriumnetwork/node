@@ -46,6 +46,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrator"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -72,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -157,11 +159,15 @@ type Dependencies struct {
 	AccountantCaller         *pingpong.AccountantCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 	AccountantPromiseHandler *pingpong.AccountantPromiseHandler
+	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 }
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Configure(&nodeOptions.LogOptions)
+
+	netutil.LogNetworkStats()
+
 	p2p.RegisterContactUnserializer()
 	di.BrokerConnector = nats.NewBrokerConnector()
 
@@ -188,6 +194,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
+
+	netutil.ClearStaleRoutes()
 
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
@@ -381,7 +389,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 		return err
 	}
 
-	migrator := boltdb.NewMigrator(localStorage)
+	migrator := migrator.NewMigrator(localStorage)
 	err = migrator.RunMigrations(history.Sequence)
 	if err != nil {
 		return err
@@ -389,11 +397,16 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	di.Storage = localStorage
 
+	if !config.GetBool(config.FlagUserMode) {
+		netutil.SetRouteManagerStorage(di.Storage)
+	}
+
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
+	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage, pingpong.DefaultMaxEntriesPerChannel)
 	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
@@ -531,7 +544,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler, di.SettlementHistoryStorage)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
@@ -698,7 +711,8 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	di.IPResolver = ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
+	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
+	di.IPResolver = ip.NewCachedResolver(ipResolver, 5*time.Minute)
 
 	var resolver location.Resolver
 	switch options.Location.Type {
@@ -768,7 +782,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
-	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall()
+	firewall.DefaultOutgoingFirewall = firewall.NewOutgoingTrafficFirewall(config.GetBool(config.FlagOutgoingFirewall))
 	if err := firewall.DefaultOutgoingFirewall.Setup(); err != nil {
 		return err
 	}
@@ -781,7 +795,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	if options.BlockAlways {
 		bindAddress := "0.0.0.0"
 		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "")
-		outboundIP, err := resolver.GetOutboundIPAsString()
+		outboundIP, err := resolver.GetOutboundIP()
 		if err != nil {
 			return err
 		}
@@ -807,6 +821,8 @@ func (di *Dependencies) handleConnStateChange() error {
 		isDisconnected := latestState == connection.Connected && e.State == connection.NotConnected
 		isConnected := latestState == connection.NotConnected && e.State == connection.Connected
 		if isDisconnected || isConnected {
+			netutil.LogNetworkStats()
+
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
 			di.QualityClient.Reconnect()

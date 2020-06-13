@@ -119,7 +119,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 	}
 	m.vpnServerPort = servicePort.Num()
 
-	m.outboundIP, err = m.ipResolver.GetOutboundIPAsString()
+	m.outboundIP, err = m.ipResolver.GetOutboundIP()
 	if err != nil {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}

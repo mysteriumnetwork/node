@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,8 +30,8 @@ import (
 type fakeSupplier struct {
 }
 
-func (f fakeSupplier) PeerStats() (*wireguard.Stats, error) {
-	return &wireguard.Stats{
+func (f fakeSupplier) PeerStats() (*wgcfg.Stats, error) {
+	return &wgcfg.Stats{
 		BytesSent:     25,
 		BytesReceived: 52,
 		LastHandshake: time.Now(),
