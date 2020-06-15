@@ -118,6 +118,7 @@ type IdentityRegistrationRequest struct {
 // PromiseSettlementRequest represents the settlement request body
 type PromiseSettlementRequest struct {
 	AccountantID  string `json:"accountantID"`
+	Provider      string `json:"provider"`
 	ChannelID     string `json:"channelID"`
 	Amount        uint64 `json:"amount"`
 	TransactorFee uint64 `json:"fee"`
@@ -174,9 +175,10 @@ func (t *Transactor) TopUp(id string) error {
 }
 
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel
-func (t *Transactor) SettleAndRebalance(accountantID string, promise pc.Promise) error {
+func (t *Transactor) SettleAndRebalance(accountantID, providerID string, promise pc.Promise) error {
 	payload := PromiseSettlementRequest{
 		AccountantID:  accountantID,
+		Provider:      providerID,
 		ChannelID:     hex.EncodeToString(promise.ChannelID),
 		Amount:        promise.Amount,
 		TransactorFee: promise.Fee,
@@ -186,7 +188,7 @@ func (t *Transactor) SettleAndRebalance(accountantID string, promise pc.Promise)
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_and_rebalance", payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to create TopUp request")
+		return errors.Wrap(err, "failed to create settle and rebalance request")
 	}
 	return t.httpClient.DoRequest(req)
 }

@@ -102,6 +102,11 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println("v2 accountant impl address: ", accountantImplAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	configAddress, err := crypto.DeployConfigContract("45bb96530f3d1972fdcd2005c1987a371d0b6d378b77561c6beeaca27498f46b", client)
+	checkError("Deploy config v2", err)
+	fmt.Println("v2 config address:", configAddress.Hex())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	registrationFee := big.NewInt(0)
 	minimalStake := big.NewInt(0)
 	registryAddress, tx, _, err := bindings.DeployRegistry(
@@ -109,7 +114,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		client,
 		mystTokenAddress,
 		mystDexAddress,
-		common.HexToAddress("0x46e9742C098267122DA466d6b7a3fb844436Ac37"),
+		configAddress,
 		registrationFee,
 		minimalStake,
 	)
@@ -117,22 +122,8 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println("v2 registry address: ", registryAddress.String())
 	checkTxStatus(client, tx)
 
-	configAddress, err := crypto.DeployConfigContract("45bb96530f3d1972fdcd2005c1987a371d0b6d378b77561c6beeaca27498f46b", client)
-	checkError("Deploy config v2", err)
-	fmt.Println("v2 config address:", configAddress.Hex())
-
-	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	channelImplProxyAddress, _, _, err := bindings.DeployChannelImplementationProxy(transactor, client)
-	checkError("Deploy channel impl proxy v2", err)
-	fmt.Println("v2 channel impl proxy address: ", channelImplProxyAddress.String())
-
-	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	accountantImplProxyAddress, _, _, err := bindings.DeployAccountantImplementationProxy(transactor, client)
-	checkError("Deploy accountant impl proxy v2", err)
-	fmt.Println("v2 accountant impl proxy address: ", accountantImplProxyAddress.String())
-
 	transactor.Nonce = nil
-	err = crypto.SetupConfig(transactor, client, transactor.From.Hex(), channelImplProxyAddress, channelImplAddress, accountantImplAddress, accountantImplProxyAddress)
+	err = crypto.SetupConfig(transactor, client, configAddress, transactor.From.Hex(), channelImplAddress, channelImplAddress, accountantImplAddress, accountantImplAddress)
 	checkError("Setup config v2", err)
 
 	ts, err := bindings.NewMystTokenTransactor(mystTokenAddress, client)

@@ -377,7 +377,7 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		return RegistrationError, errors.Wrap(err, "could not get provider channel")
 	}
 
-	if providerChannel.Loan.Cmp(big.NewInt(0)) == 1 {
+	if providerChannel.Stake.Cmp(big.NewInt(0)) == 1 {
 		return RegisteredProvider, nil
 	}
 

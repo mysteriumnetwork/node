@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.14
+	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/andybalholm/brotli v1.0.0 // indirect
 	github.com/arthurkiller/rollingwriter v1.1.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
@@ -20,9 +21,11 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-gonic/gin v1.4.0
+	github.com/go-kit/kit v0.9.0
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/protobuf v1.4.2
 	github.com/huin/goupnp v1.0.0
+	github.com/influxdata/influxdb1-client v0.0.0-20200515024757-02f0bf5dbca3 // indirect
 	github.com/jackpal/gateway v1.0.5
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
@@ -39,8 +42,8 @@ require (
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.42
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
-	github.com/mysteriumnetwork/metrics v0.0.4
-	github.com/mysteriumnetwork/payments v0.0.14-0.20200603103214-337588427715
+	github.com/mysteriumnetwork/metrics v0.0.3
+	github.com/mysteriumnetwork/payments v0.0.14-0.20200615024917-31bd2215aeaa
 	github.com/nats-io/nats-server/v2 v2.1.7
 	github.com/nats-io/nats.go v1.10.0
 	github.com/nwaples/rardecode v1.1.0 // indirect

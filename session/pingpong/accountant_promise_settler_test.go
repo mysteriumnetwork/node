@@ -474,7 +474,7 @@ var mockID = identity.FromAddress("test")
 var mockProviderChannel = client.ProviderChannel{
 	Balance: big.NewInt(1000000000000),
 	Settled: big.NewInt(9000000),
-	Loan:    big.NewInt(12312323),
+	Stake:   big.NewInt(12312323),
 }
 
 type mockTransactor struct {
@@ -489,7 +489,7 @@ func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 
-func (mt *mockTransactor) SettleAndRebalance(id string, promise crypto.Promise) error {
+func (mt *mockTransactor) SettleAndRebalance(_, _ string, _ crypto.Promise) error {
 	return nil
 }
 

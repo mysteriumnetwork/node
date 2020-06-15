@@ -58,7 +58,7 @@ type registrationStatusProvider interface {
 
 type transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
-	SettleAndRebalance(id string, promise crypto.Promise) error
+	SettleAndRebalance(accountantID, providerID string, promise crypto.Promise) error
 	SettleWithBeneficiary(id, beneficiary, accountantID string, promise crypto.Promise) error
 }
 
@@ -447,7 +447,7 @@ func (aps *accountantPromiseSettler) settle(p receivedPromise, beneficiary *comm
 	}()
 
 	var settleFunc = func() error {
-		return aps.transactor.SettleAndRebalance(aps.config.AccountantAddress.Hex(), p.promise)
+		return aps.transactor.SettleAndRebalance(aps.config.AccountantAddress.Hex(), p.provider.Address, p.promise)
 	}
 	if beneficiary != nil {
 		settleFunc = func() error {
