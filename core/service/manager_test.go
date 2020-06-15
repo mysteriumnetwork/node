@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,6 +37,10 @@ var (
 	serviceType      = "the-very-awesome-test-service-type"
 	mockPolicyOracle = policy.NewOracle(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
 )
+
+func init() {
+	netutil.LogNetworkStats = func() {}
+}
 
 func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	registry := NewRegistry()

@@ -28,7 +28,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var defaultRouteManager *routeManager = nil
+var (
+	defaultRouteManager *routeManager = nil
+	// LogNetworkStats logs network information to the Trace log level.
+	LogNetworkStats = defaultLogNetworkStats
+)
 
 const (
 	routeRecordDelimeter = "|"
@@ -114,8 +118,7 @@ func AssignIP(iface string, subnet net.IPNet) error {
 	return assignIP(iface, subnet)
 }
 
-// LogNetworkStats logs network information to the Trace log level.
-func LogNetworkStats() {
+func defaultLogNetworkStats() {
 	if log.Logger.GetLevel() != zerolog.TraceLevel {
 		return
 	}
