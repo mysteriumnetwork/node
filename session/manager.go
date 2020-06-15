@@ -216,8 +216,8 @@ func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID stri
 		return ErrorWrongSessionOwner
 	}
 
-	manager.publisher.Publish(sevent.AppTopicSession, sevent.Payload{
-		Action: sevent.Acknowledged,
+	manager.publisher.Publish(sevent.AppTopicSession, sevent.AppEventSession{
+		Status: sevent.AcknowledgedStatus,
 		ID:     sessionID,
 	})
 

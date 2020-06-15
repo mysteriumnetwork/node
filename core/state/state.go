@@ -221,8 +221,8 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 }
 
 // consumeServiceSessionStateEvent consumes the session change events
-func (k *Keeper) consumeServiceSessionStateEvent(e sevent.Payload) {
-	if e.Action == sevent.Acknowledged {
+func (k *Keeper) consumeServiceSessionStateEvent(e sevent.AppEventSession) {
+	if e.Status == sevent.AcknowledgedStatus {
 		k.consumeServiceSessionAcknowledgeEvent(e)
 		return
 	}
@@ -230,10 +230,10 @@ func (k *Keeper) consumeServiceSessionStateEvent(e sevent.Payload) {
 	k.consumeServiceSessionStateEventDebounced(e)
 }
 
-func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.Payload) {
+func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.AppEventSession) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	if e.Action != sevent.Acknowledged {
+	if e.Status != sevent.AcknowledgedStatus {
 		return
 	}
 	session, found := k.getSessionByID(e.ID)

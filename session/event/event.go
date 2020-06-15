@@ -26,8 +26,8 @@ const (
 	AppTopicSession = "Session change"
 	// AppTopicDataTransferred represents the data transfer topic.
 	AppTopicDataTransferred = "Session data transferred"
-	// AppTopicSessionTokensEarned is a topic for publish events about tokens earned as a provider.
-	AppTopicSessionTokensEarned = "SessionTokensEarned"
+	// AppTopicTokensEarned is a topic for publish events about tokens earned as a provider.
+	AppTopicTokensEarned = "SessionTokensEarned"
 )
 
 // AppEventDataTransferred represents the data transfer event
@@ -36,29 +36,29 @@ type AppEventDataTransferred struct {
 	Up, Down uint64
 }
 
-// AppEventSessionTokensEarned is an update on tokens earned during current session
-type AppEventSessionTokensEarned struct {
+// AppEventTokensEarned is an update on tokens earned during current session
+type AppEventTokensEarned struct {
 	ProviderID identity.Identity
 	SessionID  string
 	Total      uint64
 }
 
-// Action represents the different actions that might happen on a session
-type Action string
+// Status represents the different actions that might happen on a session
+type Status string
 
 const (
-	// Created indicates a session has been created
-	Created Action = "Created"
-	// Removed indicates a session has been removed
-	Removed Action = "Removed"
-	// Updated indicates a session has been updated
-	Updated Action = "Updated"
-	// Acknowledged indicates a session has been reported as a success from consumer side
-	Acknowledged Action = "Acknowledged"
+	// CreatedStatus indicates a session has been created
+	CreatedStatus Status = "CreatedStatus"
+	// RemovedStatus indicates a session has been removed
+	RemovedStatus Status = "RemovedStatus"
+	// UpdatedStatus indicates a session has been updated
+	UpdatedStatus Status = "UpdatedStatus"
+	// AcknowledgedStatus indicates a session has been reported as a success from consumer side
+	AcknowledgedStatus Status = "AcknowledgedStatus"
 )
 
-// Payload represents the event payload
-type Payload struct {
-	Action Action
+// AppEventSession represents the session change payload
+type AppEventSession struct {
+	Status Status
 	ID     string
 }

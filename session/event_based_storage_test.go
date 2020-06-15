@@ -34,7 +34,7 @@ func TestEventBasedStorage_PublishesEventsOnCreate(t *testing.T) {
 
 	sessionStore.Add(session)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
@@ -42,11 +42,11 @@ func TestEventBasedStorage_PublishesEventsOnDelete(t *testing.T) {
 	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 1*time.Second, 5*time.Millisecond)
 
 	sessionStore.Remove(session.ID)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Removed), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.RemovedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
@@ -55,11 +55,11 @@ func TestEventBasedStorage_PublishesEventsOnDataTransferUpdate(t *testing.T) {
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 1*time.Second, 5*time.Millisecond)
 
 	sessionStore.UpdateDataTransfer(session.ID, 1, 2)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Updated), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.UpdatedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
@@ -69,14 +69,14 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 1*time.Second, 5*time.Millisecond)
 
 	storedSession, ok := sessionStore.Find(session.ID)
 	assert.True(t, ok)
 	assert.Zero(t, storedSession.TokensEarned)
 
 	// when
-	sessionStore.consumeTokensEarnedEvent(sessionEvent.AppEventSessionTokensEarned{
+	sessionStore.consumeTokensEarnedEvent(sessionEvent.AppEventTokensEarned{
 		ProviderID: identity.FromAddress("0x1"),
 		SessionID:  string(session.ID),
 		Total:      500,
@@ -85,7 +85,7 @@ func TestNewEventBasedStorage_HandlesAppEventTokensEarned(t *testing.T) {
 	storedSession, ok = sessionStore.Find(session.ID)
 	assert.True(t, ok)
 	assert.EqualValues(t, 500, storedSession.TokensEarned)
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Updated), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.UpdatedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
@@ -93,20 +93,20 @@ func TestEventBasedStorage_PublishesEventsOnRemoveForService(t *testing.T) {
 	mp := mocks.NewEventBus()
 	sessionStore := NewEventBasedStorage(mp, NewStorageMemory())
 	sessionStore.Add(session)
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Created), 1*time.Second, 5*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 1*time.Second, 5*time.Millisecond)
 
 	sessionStore.RemoveForService("whatever")
 
-	assert.Eventually(t, lastEventMatches(mp, "", sessionEvent.Removed), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, "", sessionEvent.RemovedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Action) func() bool {
+func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Status) func() bool {
 	return func() bool {
 		last := mp.Pop()
-		evt, ok := last.(sessionEvent.Payload)
+		evt, ok := last.(sessionEvent.AppEventSession)
 		if !ok {
 			return false
 		}
-		return evt.ID == string(id) && evt.Action == action
+		return evt.ID == string(id) && evt.Status == action
 	}
 }

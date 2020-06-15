@@ -210,7 +210,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.consumeServiceSessionStateEvent(sessionEvent.Payload{})
+		keeper.consumeServiceSessionStateEvent(sessionEvent.AppEventSession{})
 	}
 
 	assert.Eventually(t, interacted(sessionStorage, 1), 2*time.Second, 10*time.Millisecond)
@@ -252,8 +252,8 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 		expected,
 	}
 
-	keeper.consumeServiceSessionStateEvent(sessionEvent.Payload{
-		Action: sessionEvent.Acknowledged,
+	keeper.consumeServiceSessionStateEvent(sessionEvent.AppEventSession{
+		Status: sessionEvent.AcknowledgedStatus,
 		ID:     string(expected.ID),
 	})
 

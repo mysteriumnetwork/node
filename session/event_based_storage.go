@@ -54,9 +54,9 @@ func NewEventBasedStorage(bus eventPublisher, storage storage) *EventBasedStorag
 // Add adds a session and publishes a creation event
 func (ebs *EventBasedStorage) Add(sessionInstance Session) {
 	ebs.storage.Add(sessionInstance)
-	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.AppEventSession{
 		ID:     string(sessionInstance.ID),
-		Action: event.Created,
+		Status: event.CreatedStatus,
 	})
 }
 
@@ -72,20 +72,20 @@ func (ebs *EventBasedStorage) consumeDataTransferredEvent(e event.AppEventDataTr
 	ebs.UpdateDataTransfer(ID(e.ID), e.Down, e.Up)
 }
 
-func (ebs *EventBasedStorage) consumeTokensEarnedEvent(e event.AppEventSessionTokensEarned) {
+func (ebs *EventBasedStorage) consumeTokensEarnedEvent(e event.AppEventTokensEarned) {
 	ebs.storage.UpdateEarnings(ID(e.SessionID), e.Total)
-	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.AppEventSession{
 		ID:     e.SessionID,
-		Action: event.Updated,
+		Status: event.UpdatedStatus,
 	})
 }
 
 // UpdateDataTransfer updates the data transfer for a session
 func (ebs *EventBasedStorage) UpdateDataTransfer(id ID, up, down uint64) {
 	ebs.storage.UpdateDataTransfer(id, up, down)
-	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.AppEventSession{
 		ID:     string(id),
-		Action: event.Updated,
+		Status: event.UpdatedStatus,
 	})
 }
 
@@ -102,18 +102,18 @@ func (ebs *EventBasedStorage) FindBy(opts FindOpts) (Session, bool) {
 // Remove removes the session and publishes a removal event
 func (ebs *EventBasedStorage) Remove(id ID) {
 	ebs.storage.Remove(id)
-	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.AppEventSession{
 		ID:     string(id),
-		Action: event.Removed,
+		Status: event.RemovedStatus,
 	})
 }
 
 // RemoveForService removes all the sessions for a service and publishes a delete event
 func (ebs *EventBasedStorage) RemoveForService(serviceID string) {
 	ebs.storage.RemoveForService(serviceID)
-	go ebs.bus.Publish(event.AppTopicSession, event.Payload{
+	go ebs.bus.Publish(event.AppTopicSession, event.AppEventSession{
 		ID:     "",
-		Action: event.Removed,
+		Status: event.RemovedStatus,
 	})
 }
 
@@ -122,7 +122,7 @@ func (ebs *EventBasedStorage) Subscribe() error {
 	if err := ebs.bus.SubscribeAsync(event.AppTopicDataTransferred, ebs.consumeDataTransferredEvent); err != nil {
 		return err
 	}
-	if err := ebs.bus.SubscribeAsync(event.AppTopicSessionTokensEarned, ebs.consumeTokensEarnedEvent); err != nil {
+	if err := ebs.bus.SubscribeAsync(event.AppTopicTokensEarned, ebs.consumeTokensEarnedEvent); err != nil {
 		return err
 	}
 	return nil

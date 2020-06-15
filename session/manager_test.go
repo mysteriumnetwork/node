@@ -175,7 +175,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	err = manager.Acknowledge(consumerID, string(session.ID))
 	assert.Nil(t, err)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Acknowledged), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.AcknowledgedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *Manager {
