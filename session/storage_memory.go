@@ -20,30 +20,36 @@ package session
 import (
 	"sync"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/event"
 )
 
 // NewStorageMemory initiates new session storage
-func NewStorageMemory() *StorageMemory {
+func NewStorageMemory(publisher publisher) *StorageMemory {
 	sm := &StorageMemory{
-		sessions: make(map[ID]Session),
-		lock:     sync.Mutex{},
+		sessions:  make(map[ID]Session),
+		lock:      sync.Mutex{},
+		publisher: publisher,
 	}
 	return sm
 }
 
 // StorageMemory maintains all current sessions in memory
 type StorageMemory struct {
-	sessions map[ID]Session
-	lock     sync.Mutex
+	sessions  map[ID]Session
+	lock      sync.Mutex
+	publisher publisher
 }
 
-// Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
-func (storage *StorageMemory) Add(sessionInstance Session) {
+// Add puts given session to storage and publishes a creation event.
+// Multiple sessions per peerID is possible in case different services are used
+func (storage *StorageMemory) Add(instance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	storage.sessions[sessionInstance.ID] = sessionInstance
+	storage.sessions[instance.ID] = instance
+	go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.CreatedStatus))
 }
 
 // GetAll returns all sessions in storage
@@ -78,27 +84,6 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	return Session{}, false
 }
 
-// UpdateDataTransfer updates the data transfer info on the session
-func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down uint64) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
-	if instance, found := storage.sessions[id]; found {
-		instance.DataTransferred.Down = down
-		instance.DataTransferred.Up = up
-		storage.sessions[id] = instance
-	}
-}
-
-// UpdateEarnings updates total tokens earned during the session.
-func (storage *StorageMemory) UpdateEarnings(id ID, total uint64) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
-	if session, found := storage.sessions[id]; found {
-		session.TokensEarned = total
-		storage.sessions[id] = session
-	}
-}
-
 // FindOpts provides fields to search sessions.
 type FindOpts struct {
 	Peer        *identity.Identity
@@ -109,6 +94,7 @@ type FindOpts struct {
 func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
+
 	for _, session := range storage.sessions {
 		if opts.Peer != nil && *opts.Peer != session.ConsumerID {
 			continue
@@ -125,7 +111,11 @@ func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
-	delete(storage.sessions, id)
+
+	if instance, found := storage.sessions[id]; found {
+		delete(storage.sessions, id)
+		go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.RemovedStatus))
+	}
 }
 
 // RemoveForService removes all sessions which belong to given service
@@ -135,5 +125,46 @@ func (storage *StorageMemory) RemoveForService(serviceID string) {
 		if session.ServiceID == serviceID {
 			storage.Remove(session.ID)
 		}
+	}
+}
+
+// Subscribe subscribes to relevant events
+func (storage *StorageMemory) Subscribe(bus eventbus.Subscriber) error {
+	if err := bus.SubscribeAsync(event.AppTopicDataTransferred, storage.consumeDataTransferredEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(event.AppTopicTokensEarned, storage.consumeTokensEarnedEvent); err != nil {
+		return err
+	}
+	return nil
+}
+
+// updates the data transfer info on the session
+func (storage *StorageMemory) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
+	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
+	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
+	id := ID(e.ID)
+	if instance, found := storage.sessions[id]; found {
+		instance.DataTransferred.Down = e.Up
+		instance.DataTransferred.Up = e.Down
+		storage.sessions[id] = instance
+	}
+}
+
+// updates total tokens earned during the session.
+func (storage *StorageMemory) consumeTokensEarnedEvent(e event.AppEventTokensEarned) {
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	id := ID(e.SessionID)
+	if instance, found := storage.sessions[id]; found {
+		instance.TokensEarned = e.Total
+		storage.sessions[id] = instance
+
+		go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.UpdatedStatus))
 	}
 }

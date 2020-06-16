@@ -18,7 +18,11 @@
 package event
 
 import (
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 const (
@@ -59,6 +63,22 @@ const (
 
 // AppEventSession represents the session change payload
 type AppEventSession struct {
-	Status Status
-	ID     string
+	Status  Status
+	ID      string
+	Service ServiceContext
+	Session SessionContext
+}
+
+// ServiceContext holds service context metadata
+type ServiceContext struct {
+	ID string
+}
+
+// SessionContext holds session context metadata
+type SessionContext struct {
+	ID           string
+	StartedAt    time.Time
+	ConsumerID   identity.Identity
+	AccountantID common.Address
+	Proposal     market.ServiceProposal
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/event"
 )
 
 // ID represents session id type.
@@ -55,6 +56,21 @@ type Session struct {
 // Done returns readonly done channel.
 func (s *Session) Done() <-chan struct{} {
 	return s.done
+}
+
+func (s Session) toEvent(status event.Status) event.AppEventSession {
+	return event.AppEventSession{
+		Status: status,
+		ID:     string(s.ID),
+		Service: event.ServiceContext{
+			ID: s.ServiceID,
+		},
+		Session: event.SessionContext{
+			ID:         string(s.ID),
+			StartedAt:  s.CreatedAt,
+			ConsumerID: s.ConsumerID,
+		},
+	}
 }
 
 // NewSession creates a blank new session with an ID.

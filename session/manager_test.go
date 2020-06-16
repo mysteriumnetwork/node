@@ -68,7 +68,7 @@ func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accounta
 func TestManager_Start_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -87,7 +87,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -121,7 +121,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 }
 
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -140,7 +140,7 @@ func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 }
 
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 	err := manager.Acknowledge(consumerID, "")
@@ -148,7 +148,7 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 }
 
 func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -161,7 +161,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 }
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	mp := mocks.NewEventBus()
 	manager := newManager(currentProposal, sessionStore)

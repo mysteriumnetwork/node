@@ -128,7 +128,7 @@ type Dependencies struct {
 
 	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
-	ServiceSessionStorage *session.EventBasedStorage
+	ServiceSessionStorage *session.StorageMemory
 	ServiceFirewall       firewall.IncomingTrafficFirewall
 
 	NATPinger  traversal.NATPinger
