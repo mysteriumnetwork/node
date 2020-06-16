@@ -25,15 +25,23 @@ import (
 )
 
 const (
-	// SessionStatusNew means that newly created session object is written to storage
-	SessionStatusNew = "New"
-	// SessionStatusCompleted means that session object is updated on connection disconnect event
-	SessionStatusCompleted = "Completed"
+	// StatusNew means that newly created session object is written to storage
+	StatusNew = "New"
+	// StatusCompleted means that session object is updated on connection disconnect event
+	StatusCompleted = "Completed"
+)
+
+const (
+	// DirectionConsumer marks traffic transaction where node participated as consumer.
+	DirectionConsumer = "Consumer"
+	// DirectionProvider marks traffic transaction where node participated as provider.
+	DirectionProvider = "Provider"
 )
 
 // History holds structure for saving session history
 type History struct {
 	SessionID       node_session.ID `storm:"id"`
+	Direction       string
 	ConsumerID      identity.Identity
 	AccountantID    string
 	ProviderID      identity.Identity

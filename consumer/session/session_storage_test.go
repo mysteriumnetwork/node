@@ -26,18 +26,29 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	node_session "github.com/mysteriumnetwork/node/session"
+	session_node "github.com/mysteriumnetwork/node/session"
+	session_event "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	errMock       = errors.New("error")
-	mockSessionID = "sessionID"
-	mockSession   = connection.Status{
+	serviceSessionMock = session_node.Session{
+		ID:           "session1",
+		ServiceID:    "service1",
+		ConsumerID:   identity.FromAddress("consumer1"),
+		AccountantID: common.HexToAddress("0x00000000000000000000000000000000000000AC"),
+		Proposal: market.ServiceProposal{
+			ServiceDefinition: &StubServiceDefinition{},
+			ServiceType:       "serviceType",
+			ProviderID:        "providerID",
+		},
+		CreatedAt: time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+	}
+	connectionSessionMock = connection.Status{
 		StartedAt:    time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
-		SessionID:    node_session.ID(mockSessionID),
+		SessionID:    session_node.ID("sessionID"),
 		ConsumerID:   identity.FromAddress("consumerID"),
 		AccountantID: common.HexToAddress("0x00000000000000000000000000000000000000AC"),
 		Proposal: market.ServiceProposal{
@@ -46,13 +57,13 @@ var (
 			ProviderID:        "providerID",
 		},
 	}
-	mockStats   = connection.Statistics{BytesReceived: 100000, BytesSent: 50000}
-	mockInvoice = crypto.Invoice{AgreementID: 10, AgreementTotal: 1000, TransactorFee: 10}
+	connectionStatsMock   = connection.Statistics{BytesReceived: 100000, BytesSent: 50000}
+	connectionInvoiceMock = crypto.Invoice{AgreementID: 10, AgreementTotal: 1000, TransactorFee: 10}
 )
 
 func TestSessionStorageGetAll(t *testing.T) {
 	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer)
+	storage := NewSessionStorage(storer, nil)
 	sessions, err := storage.GetAll()
 	assert.Nil(t, err)
 	assert.True(t, storer.GetAllCalled)
@@ -61,38 +72,116 @@ func TestSessionStorageGetAll(t *testing.T) {
 
 func TestSessionStorageGetAllReturnsError(t *testing.T) {
 	storer := &StubSessionStorer{
-		GetAllError: errMock,
+		GetAllError: errors.New("error"),
 	}
-	storage := NewSessionStorage(storer)
+	storage := NewSessionStorage(storer, nil)
 	sessions, err := storage.GetAll()
 	assert.NotNil(t, err)
 	assert.True(t, storer.GetAllCalled)
 	assert.Nil(t, sessions)
 }
 
-func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
+func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
+	currentSessions := serviceSessionStorageMock{
+		sessionToReturn: serviceSessionMock,
+	}
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer)
+	storage := NewSessionStorage(storer, &currentSessions)
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
-	storage.consumeSessionEvent(connection.AppEventConnectionSession{
-		Status:      connection.SessionCreatedStatus,
-		SessionInfo: mockSession,
-	})
-	storage.consumeSessionStatisticsEvent(connection.AppEventConnectionStatistics{
-		Stats:       mockStats,
-		SessionInfo: mockSession,
-	})
-	storage.consumeSessionEvent(connection.AppEventConnectionSession{
-		Status:      connection.SessionEndedStatus,
-		SessionInfo: mockSession,
+	storage.consumeServiceSessionEvent(session_event.AppEventSession{
+		Status: session_event.CreatedStatus,
+		ID:     string(currentSessions.sessionToReturn.ID),
 	})
 	assert.Equal(
 		t,
 		&History{
-			SessionID:       node_session.ID("sessionID"),
+			SessionID:       session_node.ID("session1"),
+			Direction:       "Provider",
+			ConsumerID:      identity.FromAddress("consumer1"),
+			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			ProviderID:      identity.FromAddress("providerID"),
+			ServiceType:     "serviceType",
+			ProviderCountry: "MU",
+			Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+			Status:          "New",
+		},
+		storer.SavedObject,
+	)
+
+	currentSessions.sessionToReturn.DataTransferred = session_node.DataTransferred{Up: 1234, Down: 123}
+	storage.consumeServiceSessionEvent(session_event.AppEventSession{
+		Status: session_event.UpdatedStatus,
+		ID:     string(currentSessions.sessionToReturn.ID),
+	})
+	assert.Equal(
+		t,
+		&History{
+			SessionID:       session_node.ID("session1"),
+			Direction:       "Provider",
+			ConsumerID:      identity.FromAddress("consumer1"),
+			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			ProviderID:      identity.FromAddress("providerID"),
+			ServiceType:     "serviceType",
+			ProviderCountry: "MU",
+			Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+			Status:          "New",
+		},
+		storer.SavedObject,
+	)
+
+	currentSessions.sessionToReturn.TokensEarned = 12
+	storage.consumeServiceSessionEvent(session_event.AppEventSession{
+		Status: session_event.RemovedStatus,
+		ID:     string(currentSessions.sessionToReturn.ID),
+	})
+	assert.Equal(
+		t,
+		&History{
+			SessionID:       session_node.ID("session1"),
+			Direction:       "Provider",
+			ConsumerID:      identity.FromAddress("consumer1"),
+			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			ProviderID:      identity.FromAddress("providerID"),
+			ServiceType:     "serviceType",
+			ProviderCountry: "MU",
+			Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+			Status:          "Completed",
+			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
+			DataSent:        1234,
+			DataReceived:    123,
+			Tokens:          12,
+		},
+		storer.UpdatedObject,
+	)
+}
+
+func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
+	storer := &StubSessionStorer{}
+
+	storage := NewSessionStorage(storer, nil)
+	storage.timeGetter = func() time.Time {
+		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
+	}
+	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionCreatedStatus,
+		SessionInfo: connectionSessionMock,
+	})
+	storage.consumeConnectionStatisticsEvent(connection.AppEventConnectionStatistics{
+		Stats:       connectionStatsMock,
+		SessionInfo: connectionSessionMock,
+	})
+	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
+		Status:      connection.SessionEndedStatus,
+		SessionInfo: connectionSessionMock,
+	})
+	assert.Equal(
+		t,
+		&History{
+			SessionID:       session_node.ID("sessionID"),
+			Direction:       "Consumer",
 			ConsumerID:      identity.FromAddress("consumerID"),
 			AccountantID:    "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -101,8 +190,8 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
 			Status:          "Completed",
 			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			DataSent:        mockStats.BytesSent,
-			DataReceived:    mockStats.BytesReceived,
+			DataSent:        connectionStatsMock.BytesSent,
+			DataReceived:    connectionStatsMock.BytesReceived,
 		},
 		storer.UpdatedObject,
 	)
@@ -111,15 +200,16 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer)
-	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+	storage := NewSessionStorage(storer, nil)
+	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
 		Status:      connection.SessionCreatedStatus,
-		SessionInfo: mockSession,
+		SessionInfo: connectionSessionMock,
 	})
 	assert.Equal(
 		t,
 		&History{
-			SessionID:       node_session.ID("sessionID"),
+			SessionID:       session_node.ID("sessionID"),
+			Direction:       "Consumer",
 			ConsumerID:      identity.FromAddress("consumerID"),
 			AccountantID:    "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -136,31 +226,32 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer)
+	storage := NewSessionStorage(storer, nil)
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
-	storage.consumeSessionEvent(connection.AppEventConnectionSession{
+	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
 		Status:      connection.SessionCreatedStatus,
-		SessionInfo: mockSession,
+		SessionInfo: connectionSessionMock,
 	})
 
-	storage.consumeSessionSpendingEvent(event.AppEventInvoicePaid{
+	storage.consumeConnectionSpendingEvent(event.AppEventInvoicePaid{
 		ConsumerID: identity.FromAddress("me"),
 		SessionID:  "unknown",
-		Invoice:    mockInvoice,
+		Invoice:    connectionInvoiceMock,
 	})
 	assert.Nil(t, storer.UpdatedObject)
 
-	storage.consumeSessionSpendingEvent(event.AppEventInvoicePaid{
+	storage.consumeConnectionSpendingEvent(event.AppEventInvoicePaid{
 		ConsumerID: identity.FromAddress("me"),
-		SessionID:  mockSessionID,
-		Invoice:    mockInvoice,
+		SessionID:  "sessionID",
+		Invoice:    connectionInvoiceMock,
 	})
 	assert.Equal(
 		t,
 		&History{
-			SessionID:       node_session.ID("sessionID"),
+			SessionID:       session_node.ID("sessionID"),
+			Direction:       "Consumer",
 			ConsumerID:      identity.FromAddress("consumerID"),
 			AccountantID:    "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -169,10 +260,21 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
 			Status:          "New",
 			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			Tokens:          mockInvoice.AgreementTotal,
+			Tokens:          connectionInvoiceMock.AgreementTotal,
 		},
 		storer.UpdatedObject,
 	)
+}
+
+type serviceSessionStorageMock struct {
+	sessionToReturn session_node.Session
+}
+
+func (sssm *serviceSessionStorageMock) Find(id session_node.ID) (session_node.Session, bool) {
+	if sssm.sessionToReturn.ID != id {
+		return session_node.Session{}, false
+	}
+	return sssm.sessionToReturn, true
 }
 
 // StubSessionStorer allows us to get all sessions, save and update them

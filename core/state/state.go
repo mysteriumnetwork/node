@@ -298,18 +298,6 @@ func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.AppEventSession) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-	if e.Status != sevent.AcknowledgedStatus {
-		return
-	}
-
-	k.incrementConnectCount(e.Service.ID, true)
-
-	go k.announceStateChanges(nil)
-}
-
 func (k *Keeper) addSession(e sevent.AppEventSession) {
 	k.state.Sessions = append(k.state.Sessions, stateEvent.ServiceSession{
 		ID:          e.Session.ID,
