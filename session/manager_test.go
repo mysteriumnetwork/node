@@ -78,7 +78,6 @@ func TestManager_Start_StoresSession(t *testing.T) {
 	assert.NoError(t, err)
 	expectedResult.done = session.done
 
-	assert.Equal(t, expectedResult.Last, session.Last)
 	assert.Equal(t, expectedResult.done, session.done)
 	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
 	assert.False(t, session.CreatedAt.IsZero())
@@ -98,7 +97,6 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	expectedResult.done = session1.done
 	_, found := sessionStore.Find(session1.ID)
 
-	assert.Equal(t, expectedResult.Last, session1.Last)
 	assert.Equal(t, expectedResult.done, session1.done)
 	assert.Equal(t, expectedResult.ConsumerID, session1.ConsumerID)
 	assert.False(t, session1.CreatedAt.IsZero())
@@ -110,7 +108,6 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	assert.NoError(t, err)
 	expectedResult.done = session2.done
 
-	assert.Equal(t, expectedResult.Last, session2.Last)
 	assert.Equal(t, expectedResult.done, session2.done)
 	assert.Equal(t, expectedResult.ConsumerID, session2.ConsumerID)
 	assert.False(t, session2.CreatedAt.IsZero())

@@ -31,7 +31,6 @@ import (
 var (
 	sessionExisting = Session{
 		ID:         ID("mocked-id"),
-		Last:       true,
 		ConsumerID: identity.FromAddress("deadbeef"),
 		ServiceID:  "1",
 	}
