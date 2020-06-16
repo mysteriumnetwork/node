@@ -52,7 +52,7 @@ func discoveryWithMockedDependencies() *Discovery {
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.RegisteredProvider}
+	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Registered}
 
 	d.Start(providerID, serviceProposal)
 
@@ -71,7 +71,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 
 	d.eventBus.Publish(identityregistry.AppTopicIdentityRegistration, identityregistry.AppEventIdentityRegistration{
 		ID:     providerID,
-		Status: identityregistry.RegisteredProvider,
+		Status: identityregistry.Registered,
 	})
 
 	actualStatus = observeStatus(d, PingProposal)
@@ -100,7 +100,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 
 func TestStartStopUnregisterProposal(t *testing.T) {
 	d := discoveryWithMockedDependencies()
-	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.RegisteredProvider}
+	d.identityRegistry = &identityregistry.FakeRegistry{RegistrationStatus: identityregistry.Registered}
 
 	d.Start(providerID, serviceProposal)
 

@@ -109,8 +109,8 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	}
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: mockRegistrationStatus{
-				status: registry.RegisteredProvider,
+			mockID: {
+				status: registry.Registered,
 			},
 		},
 	}
@@ -131,7 +131,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	delete(settler.currentState, mockID)
 
 	mrsp.identities[mockID] = mockRegistrationStatus{
-		status: registry.RegisteredConsumer,
+		status: registry.Registered,
 	}
 
 	err = settler.loadInitialState(mockID)
@@ -144,7 +144,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	delete(settler.currentState, mockID)
 
 	mrsp.identities[mockID] = mockRegistrationStatus{
-		status: registry.RegisteredProvider,
+		status: registry.Registered,
 	}
 
 	err = settler.loadInitialState(mockID)
@@ -160,7 +160,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	delete(settler.currentState, mockID)
 
 	mrsp.identities[mockID] = mockRegistrationStatus{
-		status: registry.RegisteredProvider,
+		status: registry.Registered,
 		err:    errMock,
 	}
 
@@ -174,8 +174,8 @@ func TestPromiseSettler_handleServiceEvent(t *testing.T) {
 	}
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: mockRegistrationStatus{
-				status: registry.RegisteredProvider,
+			mockID: {
+				status: registry.Registered,
 			},
 		},
 	}
@@ -211,8 +211,8 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	}
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: mockRegistrationStatus{
-				status: registry.RegisteredProvider,
+			mockID: {
+				status: registry.Registered,
 			},
 		},
 	}
@@ -220,7 +220,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	ks := identity.NewMockKeystore()
 	settler := NewAccountantPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
-	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.RegisteredConsumer, registry.Unregistered, registry.InProgress, registry.Promoting, registry.RegistrationError}
+	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Registered, registry.Unregistered, registry.InProgress, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
 		settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 			ID:     mockID,
@@ -234,7 +234,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 
 	settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 		ID:     mockID,
-		Status: registry.RegisteredProvider,
+		Status: registry.Registered,
 	})
 
 	_, ok := settler.currentState[mockID]
@@ -247,8 +247,8 @@ func TestPromiseSettler_handleAccountantPromiseReceived(t *testing.T) {
 	}
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: mockRegistrationStatus{
-				status: registry.RegisteredProvider,
+			mockID: {
+				status: registry.Registered,
 			},
 		},
 	}
@@ -332,11 +332,11 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 
 	mrsp := &mockRegistrationStatusProvider{
 		identities: map[identity.Identity]mockRegistrationStatus{
-			identity.FromAddress(acc2.Address.Hex()): mockRegistrationStatus{
-				status: registry.RegisteredProvider,
+			identity.FromAddress(acc2.Address.Hex()): {
+				status: registry.Registered,
 			},
-			identity.FromAddress(acc1.Address.Hex()): mockRegistrationStatus{
-				status: registry.RegisteredConsumer,
+			identity.FromAddress(acc1.Address.Hex()): {
+				status: registry.Registered,
 			},
 		},
 	}

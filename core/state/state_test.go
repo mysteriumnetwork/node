@@ -455,7 +455,7 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
 		BalanceProvider:           &mockBalanceProvider{Balance: 0},
 		EarningsProvider:          &mockEarningsProvider{},
@@ -490,7 +490,7 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredProvider},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
 		BalanceProvider:           &mockBalanceProvider{Balance: 0},
 		EarningsProvider:          &mockEarningsProvider{},
@@ -538,12 +538,12 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 	// when
 	eventBus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
 		ID:     identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Status: registry.RegisteredConsumer,
+		Status: registry.Registered,
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].RegistrationStatus == registry.RegisteredConsumer
+		return keeper.GetState().Identities[0].RegistrationStatus == registry.Registered
 	}, 2*time.Second, 10*time.Millisecond)
 }
 

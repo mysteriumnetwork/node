@@ -20,7 +20,6 @@ package registry
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"sync"
 	"time"
 
@@ -132,15 +131,12 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 		}
 	}
 
-	if status.RegistrationStatus == RegisteredProvider {
-		log.Info().Msgf("Identity %q already fully registered, skipping", ev.Identity)
+	if status.RegistrationStatus == Registered {
+		log.Info().Msgf("Identity %q already registered, skipping", ev.Identity)
 		return
 	}
 
 	s := InProgress
-	if ev.Stake > 0 {
-		s = Promoting
-	}
 
 	ID := identity.FromAddress(ev.Identity)
 
@@ -206,15 +202,12 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			return
 		case <-sink:
 			log.Info().Msgf("Received registration event for %v", identity)
-			s, err := registry.storage.Get(identity)
+			_, err := registry.storage.Get(identity)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not store registration status")
 			}
 
-			status := RegisteredConsumer
-			if s.RegistrationStatus == Promoting {
-				status = RegisteredProvider
-			}
+			status := Registered
 
 			log.Debug().Msgf("Sending registration success event for %v", identity)
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
@@ -283,7 +276,7 @@ func (registry *contractRegistry) loadInitialState() error {
 			continue
 		}
 		switch entries[i].RegistrationStatus {
-		case RegistrationError, InProgress, Promoting, RegisteredConsumer:
+		case RegistrationError, InProgress:
 			err := registry.handleUnregisteredIdentityInitialLoad(entries[i].Identity)
 			if err != nil {
 				return errors.Wrapf(err, "could not check %q registration status", entries[i].Identity)
@@ -317,7 +310,7 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(id ident
 	}
 
 	switch registered {
-	case RegisteredConsumer, RegisteredProvider:
+	case Registered:
 		err := registry.storage.Store(StoredRegistrationStatus{
 			Identity:           id,
 			RegistrationStatus: registered,
@@ -372,16 +365,12 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		return RegistrationError, errors.Wrap(err, "could not get provider channel address")
 	}
 
-	providerChannel, err := accountantSession.Channels(providerAddressBytes)
+	_, err = accountantSession.Channels(providerAddressBytes)
 	if err != nil {
 		return RegistrationError, errors.Wrap(err, "could not get provider channel")
 	}
 
-	if providerChannel.Stake.Cmp(big.NewInt(0)) == 1 {
-		return RegisteredProvider, nil
-	}
-
-	return RegisteredConsumer, nil
+	return Registered, nil
 }
 
 // AppTopicEthereumClientReconnected indicates that the ethereum client has reconnected.

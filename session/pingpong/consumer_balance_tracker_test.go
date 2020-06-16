@@ -64,7 +64,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 
 	bus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
 		ID:     id1,
-		Status: registry.RegisteredProvider,
+		Status: registry.Registered,
 	})
 	bus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
 		ID:     id2,

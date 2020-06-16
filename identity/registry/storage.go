@@ -65,22 +65,8 @@ func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) err
 	}
 
 	switch s.RegistrationStatus {
-	// can only be overridden by registeredProvider and promotion
-	case RegisteredConsumer:
-		if status.RegistrationStatus == RegisteredProvider || status.RegistrationStatus == Promoting {
-			s.RegistrationStatus = status.RegistrationStatus
-			return rss.store(s)
-		}
-		return nil
 	// can not be overridden
-	case RegisteredProvider:
-		return nil
-	// can only be overridden by registered Provider
-	case Promoting:
-		if status.RegistrationStatus == RegisteredProvider {
-			s.RegistrationStatus = status.RegistrationStatus
-			return rss.store(s)
-		}
+	case Registered:
 		return nil
 	default:
 		s.RegistrationStatus = status.RegistrationStatus

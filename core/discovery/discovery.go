@@ -171,7 +171,7 @@ func (d *Discovery) handleRegistrationEvent(rep registry.AppEventIdentityRegistr
 	}
 
 	switch rep.Status {
-	case registry.RegisteredProvider:
+	case registry.Registered:
 		log.Info().Msg("Identity registered, proceeding with proposal registration")
 		d.changeStatus(RegisterProposal)
 	case registry.RegistrationError:
@@ -234,7 +234,7 @@ func (d *Discovery) checkRegistration() {
 		return
 	}
 	switch status {
-	case identity_registry.RegisteredProvider:
+	case identity_registry.Registered:
 		d.changeStatus(RegisterProposal)
 	default:
 		log.Info().Msgf("Identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)

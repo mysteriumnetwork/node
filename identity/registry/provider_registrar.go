@@ -152,7 +152,7 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 	}
 
 	switch registered {
-	case RegisteredProvider:
+	case Registered:
 		log.Info().Msgf("Provider %q already registered on bc, skipping", qe.event.ProviderID)
 		pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 		return nil

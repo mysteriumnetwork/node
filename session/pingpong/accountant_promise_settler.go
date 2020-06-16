@@ -144,7 +144,7 @@ func (aps *accountantPromiseSettler) loadInitialState(addr identity.Identity) er
 		return errors.Wrap(err, fmt.Sprintf("could not check registration status for %v", addr))
 	}
 
-	if status != registry.RegisteredProvider {
+	if status != registry.Registered {
 		log.Info().Msgf("Provider %v not registered, skipping", addr)
 		return nil
 	}
@@ -244,7 +244,7 @@ func (aps *accountantPromiseSettler) handleRegistrationEvent(payload registry.Ap
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	if payload.Status != registry.RegisteredProvider {
+	if payload.Status != registry.Registered {
 		log.Debug().Msgf("Ignoring event %v for provider %q", payload.Status.String(), payload.ID)
 		return
 	}
@@ -561,11 +561,7 @@ func (ss settlementState) needsSettling(threshold float64) bool {
 		return false
 	}
 
-	if float64(ss.balance()) <= 0 {
-		return true
-	}
-
-	if float64(ss.balance()) <= calculatedThreshold {
+	if float64(ss.balance()) < calculatedThreshold {
 		return true
 	}
 

@@ -126,7 +126,10 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		accountantFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
 		accountantFeeUint := uint64(math.Trunc(accountantFee))
-		expected := initialBalance + providerStatus.EarningsTotal - fees.Settlement - accountantFeeUint
+
+		// 10% of the settlement are used to increase provider stake.
+		earnings := 0.9 * float64(providerStatus.EarningsTotal-fees.Settlement-accountantFeeUint)
+		expected := initialBalance + uint64(earnings)
 
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
 		assert.InDelta(t, expected, providerStatus.Balance, 2)
@@ -142,7 +145,7 @@ func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpen
 		promised := accountantData.LatestPromise.Amount
 		lastAccountant = promised
 		return promised == consumerSpending
-	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v  accountant says %v. Service type %v", consumerSpending, lastAccountant, serviceType))
+	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v accountant says %v. Service type %v", consumerSpending, lastAccountant, serviceType))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
@@ -159,13 +162,13 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 	assert.Eventually(t, func() bool {
 		idStatus, _ := tequilapi.Identity(id)
-		return "RegisteredProvider" == idStatus.RegistrationStatus
+		return "Registered" == idStatus.RegistrationStatus
 	}, time.Second*30, time.Millisecond*500)
 
 	// once we're registered, check some other information
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.Equal(t, "RegisteredProvider", idStatus.RegistrationStatus)
+	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, "0xb10A8Df58aDC28c3a211Db7d8b1bB62bE017F4c7", idStatus.ChannelAddress)
 	assert.Equal(t, initialBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings)
@@ -191,7 +194,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.Equal(t, "RegisteredConsumer", idStatus.RegistrationStatus)
+	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, initialBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings)
 	assert.Zero(t, idStatus.EarningsTotal)

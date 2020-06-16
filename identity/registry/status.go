@@ -27,16 +27,12 @@ import (
 type RegistrationStatus int
 
 const (
-	// RegisteredConsumer represents a registration with 0 stake
-	RegisteredConsumer RegistrationStatus = iota
-	// RegisteredProvider represents a registration with stake > 0
-	RegisteredProvider
+	// Registered represents a registration
+	Registered RegistrationStatus = iota
 	// Unregistered represents an unregistered identity
 	Unregistered
 	// InProgress shows that registration is still in progress
 	InProgress
-	// Promoting shows that a consumer is being promoted to provider
-	Promoting
 	// RegistrationError shows that an error occurred during registration
 	RegistrationError
 )
@@ -44,11 +40,9 @@ const (
 // String converts registration to human readable notation
 func (rs RegistrationStatus) String() string {
 	return [...]string{
-		"RegisteredConsumer",
-		"RegisteredProvider",
+		"Registered",
 		"Unregistered",
 		"InProgress",
-		"Promoting",
 		"RegistrationError",
 	}[rs]
 }
@@ -56,7 +50,7 @@ func (rs RegistrationStatus) String() string {
 // Registered returns flag if registration is in successful status
 func (rs RegistrationStatus) Registered() bool {
 	switch rs {
-	case RegisteredConsumer, Promoting, RegisteredProvider:
+	case Registered:
 		return true
 	default:
 		return false

@@ -171,7 +171,6 @@ services:
       --keystore.lightweight
       --log-level=debug
       --quality.address=http://morqa:8085/api/v1
-      --transactor.provider.registration-stake=6200000000
       --payments.provider.invoice-frequency=1s
       service
       --agreed-terms-and-conditions

@@ -76,7 +76,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		require.Eventually(t, func() bool {
 			identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 			require.NoError(t, err)
-			return identity.RegistrationStatus == "RegisteredConsumer"
+			return identity.RegistrationStatus == "Registered"
 		}, 15*time.Second, 1*time.Second)
 	})
 

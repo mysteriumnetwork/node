@@ -232,7 +232,7 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEve
 	switch event.Status {
 	case registry.InProgress:
 		cbt.alignWithTransactor(event.ID)
-	case registry.RegisteredConsumer, registry.RegisteredProvider:
+	case registry.Registered:
 		cbt.ForceBalanceUpdate(event.ID)
 	}
 }

@@ -488,4 +488,4 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	)
 }
 
-var mockIdentityRegistryInstance = &registry.FakeRegistry{RegistrationStatus: registry.RegisteredConsumer}
+var mockIdentityRegistryInstance = &registry.FakeRegistry{RegistrationStatus: registry.Registered}
