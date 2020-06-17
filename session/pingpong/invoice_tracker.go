@@ -44,8 +44,8 @@ import (
 // ErrConsumerPromiseValidationFailed represents an error where consumer tries to cheat us with incorrect promises.
 var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue promise for the correct amount")
 
-// ErrAccountantFeeTooLarge indicates that we do not allow accountants with such high fees
-var ErrAccountantFeeTooLarge = errors.New("accountants fee exceeds")
+// ErrHermesFeeTooLarge indicates that we do not allow hermess with such high fees
+var ErrHermesFeeTooLarge = errors.New("hermess fee exceeds")
 
 // ErrInvoiceExpired shows that the given invoice has already expired
 var ErrInvoiceExpired = errors.New("invoice expired")
@@ -73,7 +73,7 @@ type PeerInvoiceSender interface {
 }
 
 type bcHelper interface {
-	GetAccountantFee(accountantAddress common.Address) (uint16, error)
+	GetHermesFee(hermesAddress common.Address) (uint16, error)
 }
 
 type providerInvoiceStorage interface {
@@ -104,11 +104,11 @@ func (dt DataTransferred) sum() uint64 {
 
 // InvoiceTracker keeps tab of invoices and sends them to the consumer.
 type InvoiceTracker struct {
-	stop                       chan struct{}
-	promiseErrors              chan error
-	invoiceChannel             chan bool
-	accountantFailureCount     uint64
-	accountantFailureCountLock sync.Mutex
+	stop                   chan struct{}
+	promiseErrors          chan error
+	invoiceChannel         chan bool
+	hermesFailureCount     uint64
+	hermesFailureCountLock sync.Mutex
 
 	notReceivedExchangeMessageCount uint64
 	notSentExchangeMessageCount     uint64
@@ -149,11 +149,11 @@ type InvoiceTrackerDeps struct {
 	FirstInvoiceSendDuration   time.Duration
 	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
-	ConsumersAccountantID      common.Address
-	ProvidersAccountantID      common.Address
+	ConsumersHermesID          common.Address
+	ProvidersHermesID          common.Address
 	Registry                   string
-	MaxAccountantFailureCount  uint64
-	MaxAllowedAccountantFee    uint16
+	MaxHermesFailureCount      uint64
+	MaxAllowedHermesFee        uint16
 	BlockchainHelper           bcHelper
 	EventBus                   eventbus.EventBus
 	ChannelAddressCalculator   channelAddressCalculator
@@ -248,7 +248,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 	it.resetNotReceivedExchangeMessageCount()
 	it.resetNotSentExchangeMessageCount()
 
-	// incase of zero payment, we'll just skip going to the accountant
+	// incase of zero payment, we'll just skip going to the hermes
 	if isServiceFree(it.deps.Proposal.PaymentMethod) {
 		return nil
 	}
@@ -272,18 +272,18 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	if !bytes.EqualFold(it.deps.ConsumersAccountantID.Bytes(), it.deps.ProvidersAccountantID.Bytes()) {
-		return fmt.Errorf("consumer wants to work with an unsupported accountant(%q) while provider expects %q", it.deps.ConsumersAccountantID.Hex(), it.deps.ProvidersAccountantID.Hex())
+	if !bytes.EqualFold(it.deps.ConsumersHermesID.Bytes(), it.deps.ProvidersHermesID.Bytes()) {
+		return fmt.Errorf("consumer wants to work with an unsupported hermes(%q) while provider expects %q", it.deps.ConsumersHermesID.Hex(), it.deps.ProvidersHermesID.Hex())
 	}
 
-	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.ConsumersAccountantID)
+	fee, err := it.deps.BlockchainHelper.GetHermesFee(it.deps.ConsumersHermesID)
 	if err != nil {
-		return errors.Wrap(err, "could not get accountants fee")
+		return errors.Wrap(err, "could not get hermess fee")
 	}
 
-	if fee > it.deps.MaxAllowedAccountantFee {
-		log.Error().Msgf("Accountant fee too large, asking for %v where %v is the limit", fee, it.deps.MaxAllowedAccountantFee)
-		return ErrAccountantFeeTooLarge
+	if fee > it.deps.MaxAllowedHermesFee {
+		log.Error().Msgf("Hermes fee too large, asking for %v where %v is the limit", fee, it.deps.MaxAllowedHermesFee)
+		return ErrHermesFeeTooLarge
 	}
 
 	it.generateAgreementID()
@@ -320,7 +320,7 @@ func (it *InvoiceTracker) Start() error {
 				return errors.Wrap(emErr, "failed to get exchange message")
 			}
 		case pErr := <-it.promiseErrors:
-			err := it.handleAccountantError(pErr)
+			err := it.handleHermesError(pErr)
 			if err != nil {
 				return fmt.Errorf("could not request promise %w", err)
 			}
@@ -515,67 +515,67 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
-func (it *InvoiceTracker) handleAccountantError(err error) error {
+func (it *InvoiceTracker) handleHermesError(err error) error {
 	if err == nil {
-		it.resetAccountantFailureCount()
+		it.resetHermesFailureCount()
 		return nil
 	}
 
 	switch {
 	case
-		stdErr.Is(err, ErrAccountantHashlockMissmatch),
-		stdErr.Is(err, ErrAccountantPreviousRNotRevealed),
-		stdErr.Is(err, ErrAccountantInternal),
-		stdErr.Is(err, ErrAccountantNotFound),
-		stdErr.Is(err, ErrAccountantMalformedJSON),
+		stdErr.Is(err, ErrHermesHashlockMissmatch),
+		stdErr.Is(err, ErrHermesPreviousRNotRevealed),
+		stdErr.Is(err, ErrHermesInternal),
+		stdErr.Is(err, ErrHermesNotFound),
+		stdErr.Is(err, ErrHermesMalformedJSON),
 		stdErr.Is(err, ErrTooManyRequests):
 		// these are ignorable, we'll eventually fail
-		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
+		if it.incrementHermesFailureCount() > it.deps.MaxHermesFailureCount {
 			return err
 		}
-		log.Warn().Err(err).Msg("accountant error, will retry")
+		log.Warn().Err(err).Msg("hermes error, will retry")
 		return nil
 	case
-		stdErr.Is(err, ErrAccountantInvalidSignature),
-		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
-		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
-		stdErr.Is(err, ErrAccountantOverspend),
+		stdErr.Is(err, ErrHermesInvalidSignature),
+		stdErr.Is(err, ErrHermesPaymentValueTooLow),
+		stdErr.Is(err, ErrHermesPromiseValueTooLow),
+		stdErr.Is(err, ErrHermesOverspend),
 		stdErr.Is(err, ErrConsumerUnregistered):
 		// these are critical, return and cancel session
 		return err
 	// under normal use, this should not occur. If it does, we should drop sessions until we settle because we're not getting paid.
-	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
+	case stdErr.Is(err, ErrHermesProviderBalanceExhausted):
 		it.deps.EventBus.Publish(
 			event.AppTopicSettlementRequest,
 			event.AppEventSettlementRequest{
-				AccountantID: it.deps.ProvidersAccountantID,
-				ProviderID:   it.deps.ProviderID,
+				HermesID:   it.deps.ProvidersHermesID,
+				ProviderID: it.deps.ProviderID,
 			},
 		)
 		return err
 	default:
-		log.Err(err).Msgf("unknown accountant error encountered")
+		log.Err(err).Msgf("unknown hermes error encountered")
 		return err
 	}
 }
 
-func (it *InvoiceTracker) incrementAccountantFailureCount() uint64 {
-	it.accountantFailureCountLock.Lock()
-	defer it.accountantFailureCountLock.Unlock()
-	it.accountantFailureCount++
-	log.Trace().Msgf("accountant error count %v/%v", it.accountantFailureCount, it.deps.MaxAccountantFailureCount)
-	return it.accountantFailureCount
+func (it *InvoiceTracker) incrementHermesFailureCount() uint64 {
+	it.hermesFailureCountLock.Lock()
+	defer it.hermesFailureCountLock.Unlock()
+	it.hermesFailureCount++
+	log.Trace().Msgf("hermes error count %v/%v", it.hermesFailureCount, it.deps.MaxHermesFailureCount)
+	return it.hermesFailureCount
 }
 
-func (it *InvoiceTracker) resetAccountantFailureCount() {
-	it.accountantFailureCountLock.Lock()
-	defer it.accountantFailureCountLock.Unlock()
-	it.accountantFailureCount = 0
+func (it *InvoiceTracker) resetHermesFailureCount() {
+	it.hermesFailureCountLock.Lock()
+	defer it.hermesFailureCountLock.Unlock()
+	it.hermesFailureCount = 0
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
-	if em.HermesID != "" && !strings.EqualFold(em.HermesID, it.deps.ProvidersAccountantID.Hex()) {
-		return fmt.Errorf("invalid hermesID sent in exchange message. Expected %v, got %v", it.deps.ProvidersAccountantID.Hex(), em.HermesID)
+	if em.HermesID != "" && !strings.EqualFold(em.HermesID, it.deps.ProvidersHermesID.Hex()) {
+		return fmt.Errorf("invalid hermesID sent in exchange message. Expected %v, got %v", it.deps.ProvidersHermesID.Hex(), em.HermesID)
 	}
 
 	peerAddr := common.HexToAddress(it.deps.Peer.Address)

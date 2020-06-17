@@ -24,29 +24,29 @@ import (
 )
 
 const (
-	// AppTopicAccountantPromise represents a topic to which we send accountant promise events.
-	AppTopicAccountantPromise = "accountant_promise_received"
+	// AppTopicHermesPromise represents a topic to which we send hermes promise events.
+	AppTopicHermesPromise = "hermes_promise_received"
 	// AppTopicBalanceChanged represents the balance change topic
 	AppTopicBalanceChanged = "balance_change"
 	// AppTopicEarningsChanged represents the earnings change topic
 	AppTopicEarningsChanged = "earnings_change"
 	// AppTopicInvoicePaid is a topic for publish events exchange message send to provider as a consumer.
 	AppTopicInvoicePaid = "invoice_paid"
-	// AppTopicSettlementRequest forces the settlement of promises for given provider/accountant.
+	// AppTopicSettlementRequest forces the settlement of promises for given provider/hermes.
 	AppTopicSettlementRequest = "settlement_request"
 )
 
 // AppEventSettlementRequest represents the payload that is sent on the AppTopicSettlementRequest topic.
 type AppEventSettlementRequest struct {
-	AccountantID common.Address
-	ProviderID   identity.Identity
+	HermesID   common.Address
+	ProviderID identity.Identity
 }
 
-// AppEventAccountantPromise represents the payload that is sent on the AppTopicAccountantPromise.
-type AppEventAccountantPromise struct {
-	Promise      crypto.Promise
-	AccountantID common.Address
-	ProviderID   identity.Identity
+// AppEventHermesPromise represents the payload that is sent on the AppTopicHermesPromise.
+type AppEventHermesPromise struct {
+	Promise    crypto.Promise
+	HermesID   common.Address
+	ProviderID identity.Identity
 }
 
 // AppEventBalanceChanged represents a balance change event
@@ -81,7 +81,7 @@ const AppTopicGrandTotalChanged = "consumer_grand_total_change"
 
 // AppEventGrandTotalChanged represents the grand total changed event.
 type AppEventGrandTotalChanged struct {
-	Current      uint64
-	AccountantID common.Address
-	ConsumerID   identity.Identity
+	Current    uint64
+	HermesID   common.Address
+	ConsumerID identity.Identity
 }

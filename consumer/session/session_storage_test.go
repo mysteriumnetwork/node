@@ -35,10 +35,10 @@ import (
 
 var (
 	serviceSessionMock = session_event.SessionContext{
-		ID:           "session1",
-		StartedAt:    time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
-		ConsumerID:   identity.FromAddress("consumer1"),
-		AccountantID: common.HexToAddress("0x00000000000000000000000000000000000000AC"),
+		ID:         "session1",
+		StartedAt:  time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+		ConsumerID: identity.FromAddress("consumer1"),
+		HermesID:   common.HexToAddress("0x00000000000000000000000000000000000000AC"),
 		Proposal: market.ServiceProposal{
 			ServiceDefinition: &StubServiceDefinition{},
 			ServiceType:       "serviceType",
@@ -46,10 +46,10 @@ var (
 		},
 	}
 	connectionSessionMock = connection.Status{
-		StartedAt:    time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
-		SessionID:    session_node.ID("sessionID"),
-		ConsumerID:   identity.FromAddress("consumerID"),
-		AccountantID: common.HexToAddress("0x00000000000000000000000000000000000000AC"),
+		StartedAt:  time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+		SessionID:  session_node.ID("sessionID"),
+		ConsumerID: identity.FromAddress("consumerID"),
+		HermesID:   common.HexToAddress("0x00000000000000000000000000000000000000AC"),
 		Proposal: market.ServiceProposal{
 			ServiceDefinition: &StubServiceDefinition{},
 			ServiceType:       "serviceType",
@@ -166,7 +166,7 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 			SessionID:       session_node.ID("sessionID"),
 			Direction:       "Consumer",
 			ConsumerID:      identity.FromAddress("consumerID"),
-			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
 			ServiceType:     "serviceType",
 			ProviderCountry: "MU",
@@ -194,7 +194,7 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 			SessionID:       session_node.ID("sessionID"),
 			Direction:       "Consumer",
 			ConsumerID:      identity.FromAddress("consumerID"),
-			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
 			ServiceType:     "serviceType",
 			ProviderCountry: "MU",
@@ -236,7 +236,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 			SessionID:       session_node.ID("sessionID"),
 			Direction:       "Consumer",
 			ConsumerID:      identity.FromAddress("consumerID"),
-			AccountantID:    "0x00000000000000000000000000000000000000AC",
+			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
 			ServiceType:     "serviceType",
 			ProviderCountry: "MU",

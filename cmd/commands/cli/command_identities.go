@@ -221,15 +221,15 @@ func (c *cliApp) settle(args []string) {
 			warn("could not get transactor fee: ", err)
 		}
 		info(fmt.Sprintf("Transactor fee: %.5fMYST", float64(fees.Settlement)/money.MystSize))
-		info(fmt.Sprintf("Accountant fee: %.5fMYST", float64(fees.Accountant)/money.MystSize))
+		info(fmt.Sprintf("Hermes fee: %.5fMYST", float64(fees.Hermes)/money.MystSize))
 		return
 	}
-	accountantID := config.GetString(config.FlagAccountantID)
+	hermesID := config.GetString(config.FlagHermesID)
 	info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), identity.FromAddress(accountantID), true)
+		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), identity.FromAddress(hermesID), true)
 	}()
 
 	timeout := time.After(time.Minute * 2)
@@ -267,8 +267,8 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 		beneficiary = actionArgs[1]
 	}
 
-	accountantID := config.GetString(config.FlagAccountantID)
-	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, accountantID)
+	hermesID := config.GetString(config.FlagHermesID)
+	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
 	if err != nil {
 		warn(errors.Wrap(err, "could not set beneficiary"))
 		return

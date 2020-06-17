@@ -1,13 +1,13 @@
 db.auth('root', 'root');
-db = db.getSiblingDB('accountant');
+db = db.getSiblingDB('hermes');
 db.createUser(
     {
-        user: "accountant",
-        pwd: "accountant",
+        user: "hermes",
+        pwd: "hermes",
         roles: [
             {
                 role: "readWrite",
-                db: "accountant"
+                db: "hermes"
             }
         ]
     }
@@ -23,5 +23,5 @@ db.createUser(
                 db: "transactor"
             }
         ]
-    }    
+    }
 );

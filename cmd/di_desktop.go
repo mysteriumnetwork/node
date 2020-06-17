@@ -169,35 +169,35 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
-		AccountantAddress:   common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		HermesAddress:       common.HexToAddress(nodeOptions.Hermes.HermesID),
 		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
 	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
-func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
+func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
 	if nodeOptions.Consumer {
-		log.Debug().Msg("Skipping accountant promise settler for consumer mode")
-		di.AccountantPromiseSettler = &pingpong_noop.NoopAccountantPromiseSettler{}
+		log.Debug().Msg("Skipping hermes promise settler for consumer mode")
+		di.HermesPromiseSettler = &pingpong_noop.NoopHermesPromiseSettler{}
 		return nil
 	}
 
-	di.AccountantPromiseSettler = pingpong.NewAccountantPromiseSettler(
+	di.HermesPromiseSettler = pingpong.NewHermesPromiseSettler(
 		di.EventBus,
 		di.Transactor,
-		di.AccountantPromiseStorage,
+		di.HermesPromiseStorage,
 		di.BCHelper,
 		di.IdentityRegistry,
 		di.Keystore,
 		di.SettlementHistoryStorage,
-		pingpong.AccountantPromiseSettlerConfig{
-			AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
-			Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
+		pingpong.HermesPromiseSettlerConfig{
+			HermesAddress:        common.HexToAddress(nodeOptions.Hermes.HermesID),
+			Threshold:            nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 		},
 	)
-	return di.AccountantPromiseSettler.Subscribe()
+	return di.HermesPromiseSettler.Subscribe()
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
@@ -223,14 +223,14 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
-			pingpong.DefaultAccountantFailureCount,
+			pingpong.DefaultHermesFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.BCHelper,
 			di.EventBus,
 			proposal,
-			di.AccountantPromiseHandler,
-			common.HexToAddress(nodeOptions.Accountant.AccountantID),
+			di.HermesPromiseHandler,
+			common.HexToAddress(nodeOptions.Hermes.HermesID),
 		)
 		return session.NewManager(
 			proposal,

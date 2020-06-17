@@ -35,8 +35,8 @@ func NewConnectionStatusDTO(session connection.Status) ConnectionStatusDTO {
 		ConsumerID: session.ConsumerID.Address,
 		SessionID:  string(session.SessionID),
 	}
-	if session.AccountantID != emptyAddress {
-		response.AccountantAddress = session.AccountantID.Hex()
+	if session.HermesID != emptyAddress {
+		response.HermesAddress = session.HermesID.Hex()
 	}
 	// None exists, for not started connection
 	if session.Proposal.ProviderID != "" {
@@ -56,7 +56,7 @@ type ConnectionStatusDTO struct {
 	ConsumerID string `json:"consumer_id,omitempty"`
 
 	// example: 0x00
-	AccountantAddress string `json:"accountant_address,omitempty"`
+	HermesAddress string `json:"hermes_address,omitempty"`
 
 	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
 	Proposal *ProposalDTO `json:"proposal,omitempty"`
@@ -134,10 +134,10 @@ type ConnectionCreateRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"provider_id"`
 
-	// accountant identity
+	// hermes identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000003
-	AccountantID string `json:"accountant_id"`
+	HermesID string `json:"hermes_id"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
@@ -159,8 +159,8 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	if len(cr.ProviderID) == 0 {
 		errs.ForField("provider_id").AddError("required", "Field is required")
 	}
-	if len(cr.AccountantID) == 0 {
-		errs.ForField("accountant_id").AddError("required", "Field is required")
+	if len(cr.HermesID) == 0 {
+		errs.ForField("hermes_id").AddError("required", "Field is required")
 	}
 	return errs
 }

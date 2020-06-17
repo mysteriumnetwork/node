@@ -41,40 +41,40 @@ func TestConsumerTotalStorage(t *testing.T) {
 	consumerTotalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
 
 	channelAddress := identity.FromAddress("someAddress")
-	accountantAddress := common.HexToAddress("someOtherAddress")
+	hermesAddress := common.HexToAddress("someOtherAddress")
 	var amount uint64 = 12
 
 	// check if errors are wrapped correctly
-	_, err = consumerTotalsStorage.Get(channelAddress, accountantAddress)
+	_, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that total is stored correctly
-	err = consumerTotalsStorage.Store(channelAddress, accountantAddress, amount)
+	err = consumerTotalsStorage.Store(channelAddress, hermesAddress, amount)
 	assert.NoError(t, err)
 
-	a, err := consumerTotalsStorage.Get(channelAddress, accountantAddress)
+	a, err := consumerTotalsStorage.Get(channelAddress, hermesAddress)
 	assert.NoError(t, err)
 	assert.Equal(t, amount, a)
 
 	var newAmount uint64 = 123
 	// overwrite the amount, check if it is overwritten
-	err = consumerTotalsStorage.Store(channelAddress, accountantAddress, newAmount)
+	err = consumerTotalsStorage.Store(channelAddress, hermesAddress, newAmount)
 	assert.NoError(t, err)
 
-	a, err = consumerTotalsStorage.Get(channelAddress, accountantAddress)
+	a, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
 	someOtherChannel := identity.FromAddress("someOtherChannel")
 	// store two amounts, check if both are gotten correctly
-	err = consumerTotalsStorage.Store(someOtherChannel, accountantAddress, amount)
+	err = consumerTotalsStorage.Store(someOtherChannel, hermesAddress, amount)
 	assert.NoError(t, err)
 
-	a, err = consumerTotalsStorage.Get(channelAddress, accountantAddress)
+	a, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
-	a, err = consumerTotalsStorage.Get(someOtherChannel, accountantAddress)
+	a, err = consumerTotalsStorage.Get(someOtherChannel, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, amount, a)
 }

@@ -27,7 +27,7 @@ import (
 type Fees struct {
 	Registration uint64 `json:"registration"`
 	Settlement   uint64 `json:"settlement"`
-	Accountant   uint16 `json:"accountant"`
+	Hermes       uint16 `json:"hermes"`
 }
 
 // HealthcheckDTO holds returned healthcheck response
@@ -113,10 +113,10 @@ type NATStatusDTO struct {
 	Error  string `json:"error,omitempty"`
 }
 
-// SettleRequest represents the request to settle accountant promises
+// SettleRequest represents the request to settle hermes promises
 type SettleRequest struct {
-	AccountantID string `json:"accountant_id"`
-	ProviderID   string `json:"provider_id"`
+	HermesID   string `json:"hermes_id"`
+	ProviderID string `json:"provider_id"`
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.

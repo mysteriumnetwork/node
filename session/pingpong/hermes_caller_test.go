@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAccountantCaller_RequestPromise_OK(t *testing.T) {
+func TestHermesCaller_RequestPromise_OK(t *testing.T) {
 	promise := crypto.Promise{
 		ChannelID: []byte("ChannelID"),
 		Amount:    1,
@@ -50,38 +50,38 @@ func TestAccountantCaller_RequestPromise_OK(t *testing.T) {
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
-	caller := NewAccountantCaller(c, server.URL)
+	caller := NewHermesCaller(c, server.URL)
 	p, err := caller.RequestPromise(RequestPromise{})
 	assert.Nil(t, err)
 
 	assert.EqualValues(t, promise, p)
 }
 
-func TestAccountantCaller_RequestPromise_Error(t *testing.T) {
+func TestHermesCaller_RequestPromise_Error(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
-	caller := NewAccountantCaller(c, server.URL)
+	caller := NewHermesCaller(c, server.URL)
 	_, err := caller.RequestPromise(RequestPromise{})
 	assert.NotNil(t, err)
 }
 
-func TestAccountantCaller_RevealR_Error(t *testing.T) {
+func TestHermesCaller_RevealR_Error(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
-	caller := NewAccountantCaller(c, server.URL)
+	caller := NewHermesCaller(c, server.URL)
 	err := caller.RevealR("r", "provider", 1)
 	assert.NotNil(t, err)
 }
 
-func TestAccountantCaller_RevealR_OK(t *testing.T) {
+func TestHermesCaller_RevealR_OK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte(`{
@@ -92,25 +92,25 @@ func TestAccountantCaller_RevealR_OK(t *testing.T) {
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
-	caller := NewAccountantCaller(c, server.URL)
+	caller := NewHermesCaller(c, server.URL)
 	err := caller.RevealR("r", "provider", 1)
 	assert.Nil(t, err)
 }
 
-func TestAccountantGetConsumerData_Error(t *testing.T) {
+func TestHermesGetConsumerData_Error(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
-	caller := NewAccountantCaller(c, server.URL)
+	caller := NewHermesCaller(c, server.URL)
 	_, err := caller.GetConsumerData("something")
 	assert.NotNil(t, err)
 }
 
-func TestAccountantCaller_UnmarshalsErrors(t *testing.T) {
-	for k, v := range accountantCauseToError {
+func TestHermesCaller_UnmarshalsErrors(t *testing.T) {
+	for k, v := range hermesCauseToError {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			_, err := w.Write([]byte(fmt.Sprintf(`{
@@ -122,14 +122,14 @@ func TestAccountantCaller_UnmarshalsErrors(t *testing.T) {
 		defer server.Close()
 
 		c := requests.NewHTTPClient("0.0.0.0", time.Second)
-		caller := NewAccountantCaller(c, server.URL)
+		caller := NewHermesCaller(c, server.URL)
 		err := caller.RevealR("r", "provider", 1)
 		assert.EqualError(t, errors.Unwrap(err), v.Error())
 		server.Close()
 	}
 }
 
-func TestAccountantGetConsumerData_OK(t *testing.T) {
+func TestHermesGetConsumerData_OK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		bytes := []byte(mockConsumerData)
@@ -138,7 +138,7 @@ func TestAccountantGetConsumerData_OK(t *testing.T) {
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
-	caller := NewAccountantCaller(c, server.URL)
+	caller := NewHermesCaller(c, server.URL)
 	data, err := caller.GetConsumerData("0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b")
 	assert.Nil(t, err)
 	res, err := json.Marshal(data)

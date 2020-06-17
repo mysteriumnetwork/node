@@ -213,7 +213,7 @@ type ConsumerInfo struct {
 	unknownFields protoimpl.UnknownFields
 
 	Id             string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AccountantID   string `protobuf:"bytes,2,opt,name=accountantID,proto3" json:"accountantID,omitempty"`
+	HermesID       string `protobuf:"bytes,2,opt,name=hermesID,proto3" json:"hermesID,omitempty"`
 	PaymentVersion string `protobuf:"bytes,3,opt,name=paymentVersion,proto3" json:"paymentVersion,omitempty"`
 }
 
@@ -256,9 +256,9 @@ func (x *ConsumerInfo) GetId() string {
 	return ""
 }
 
-func (x *ConsumerInfo) GetAccountantID() string {
+func (x *ConsumerInfo) GetHermesID() string {
 	if x != nil {
-		return x.AccountantID
+		return x.HermesID
 	}
 	return ""
 }

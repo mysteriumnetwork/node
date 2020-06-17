@@ -60,10 +60,10 @@ type SettlementHistoryEntry struct {
 const settlementHistoryBucket = "settlement_history"
 
 // Store sotres a given settlement history entry.
-func (shs *SettlementHistoryStorage) Store(provider identity.Identity, accountant common.Address, she SettlementHistoryEntry) error {
+func (shs *SettlementHistoryStorage) Store(provider identity.Identity, hermes common.Address, she SettlementHistoryEntry) error {
 	shs.lock.Lock()
 	defer shs.lock.Unlock()
-	addr, err := crypto.GenerateProviderChannelID(provider.Address, accountant.Hex())
+	addr, err := crypto.GenerateProviderChannelID(provider.Address, hermes.Hex())
 	if err != nil {
 		return fmt.Errorf("could not generate provider channel address: %w", err)
 	}
@@ -103,11 +103,11 @@ func (shs *SettlementHistoryStorage) store(channel string, she []SettlementHisto
 	return nil
 }
 
-// Get returns the settlement history for given provider accountant combination.
-func (shs *SettlementHistoryStorage) Get(provider identity.Identity, accountant common.Address) ([]SettlementHistoryEntry, error) {
+// Get returns the settlement history for given provider hermes combination.
+func (shs *SettlementHistoryStorage) Get(provider identity.Identity, hermes common.Address) ([]SettlementHistoryEntry, error) {
 	shs.lock.Lock()
 	defer shs.lock.Unlock()
-	addr, err := crypto.GenerateProviderChannelID(provider.Address, accountant.Hex())
+	addr, err := crypto.GenerateProviderChannelID(provider.Address, hermes.Hex())
 	if err != nil {
 		return []SettlementHistoryEntry{}, fmt.Errorf("could not generate provider channel address: %w", err)
 	}

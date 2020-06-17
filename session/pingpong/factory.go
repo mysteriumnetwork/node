@@ -45,8 +45,8 @@ const (
 	// InvoiceSendPeriod is how often the provider will send invoice messages to the consumer
 	InvoiceSendPeriod = time.Second * 60
 
-	// DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
-	DefaultAccountantFailureCount uint64 = 10
+	// DefaultHermesFailureCount defines how many times we're allowed to fail to reach hermes in a row before announcing the failure.
+	DefaultHermesFailureCount uint64 = 10
 
 	gb       = 1024 * 1024 * 1024
 	accuracy = 50000
@@ -99,16 +99,16 @@ func InvoiceFactoryCreator(
 	invoiceStorage providerInvoiceStorage,
 	registryAddress string,
 	channelImplementationAddress string,
-	maxAccountantFailureCount uint64,
-	maxAllowedAccountantFee uint16,
+	maxHermesFailureCount uint64,
+	maxAllowedHermesFee uint16,
 	maxUnpaidInvoiceValue uint64,
 	blockchainHelper bcHelper,
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
-	providersAccountant common.Address,
+	providersHermes common.Address,
 ) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string) (session.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(channel)
 		if err != nil {
 			return nil, err
@@ -127,16 +127,16 @@ func InvoiceFactoryCreator(
 			FirstInvoiceSendTimeout:    10 * time.Second,
 			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
-			ConsumersAccountantID:      accountantID,
-			ProvidersAccountantID:      providersAccountant,
+			ConsumersHermesID:          hermesID,
+			ProvidersHermesID:          providersHermes,
 			Registry:                   registryAddress,
-			MaxAccountantFailureCount:  maxAccountantFailureCount,
-			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
+			MaxHermesFailureCount:      maxHermesFailureCount,
+			MaxAllowedHermesFee:        maxAllowedHermesFee,
 			BlockchainHelper:           blockchainHelper,
 			EventBus:                   eventBus,
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
-			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Hex(), channelImplementationAddress, registryAddress),
+			ChannelAddressCalculator:   NewChannelAddressCalculator(hermesID.Hex(), channelImplementationAddress, registryAddress),
 			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
@@ -152,8 +152,8 @@ func ExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
-	return func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
@@ -168,9 +168,9 @@ func ExchangeFactoryFunc(
 			Identity:                  consumer,
 			Peer:                      provider,
 			Proposal:                  proposal,
-			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Hex(), channelImplementation, registryAddress),
+			ChannelAddressCalculator:  NewChannelAddressCalculator(hermes.Hex(), channelImplementation, registryAddress),
 			EventBus:                  eventBus,
-			AccountantAddress:         accountant,
+			HermesAddress:             hermes,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
 		}
 		return NewInvoicePayer(deps), nil

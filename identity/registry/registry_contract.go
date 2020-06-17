@@ -42,26 +42,26 @@ type registryStorage interface {
 }
 
 type contractRegistry struct {
-	accountantAddress common.Address
-	storage           registryStorage
-	stop              chan struct{}
-	once              sync.Once
-	publisher         eventbus.Publisher
-	lock              sync.Mutex
-	ethC              *paymentClient.ReconnectableEthClient
-	registryAddress   common.Address
+	hermesAddress   common.Address
+	storage         registryStorage
+	stop            chan struct{}
+	once            sync.Once
+	publisher       eventbus.Publisher
+	lock            sync.Mutex
+	ethC            *paymentClient.ReconnectableEthClient
+	registryAddress common.Address
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, accountantAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
-	log.Info().Msgf("Using registryAddress %v accountantAddress %v", registryAddress.Hex(), accountantAddress.Hex())
+func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, hermesAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
+	log.Info().Msgf("Using registryAddress %v hermesAddress %v", registryAddress.Hex(), hermesAddress.Hex())
 	return &contractRegistry{
-		accountantAddress: accountantAddress,
-		storage:           registryStorage,
-		stop:              make(chan struct{}),
-		publisher:         publisher,
-		ethC:              ethClient,
-		registryAddress:   registryAddress,
+		hermesAddress:   hermesAddress,
+		storage:         registryStorage,
+		stop:            make(chan struct{}),
+		publisher:       publisher,
+		ethC:            ethClient,
+		registryAddress: registryAddress,
 	}, nil
 }
 
@@ -156,8 +156,8 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 }
 
 func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity.Identity) {
-	accountantIdentities := []common.Address{
-		registry.accountantAddress,
+	hermesIdentities := []common.Address{
+		registry.hermesAddress,
 	}
 
 	userIdentities := []common.Address{
@@ -169,7 +169,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 	}
 
 	go func() {
-		log.Info().Msgf("Waiting on identities %s accountant %s", userIdentities[0].Hex(), accountantIdentities[0].Hex())
+		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), hermesIdentities[0].Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 
 		filterer, err := bindings.NewRegistryFilterer(registry.registryAddress, registry.ethC.Client())
@@ -178,7 +178,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			return
 		}
 
-		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
+		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, hermesIdentities)
 		if err != nil {
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,
@@ -292,7 +292,7 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentit
 	providerAddress := providerIdentity.ToCommonAddress()
 	addressBytes := [32]byte{}
 
-	addr, err := crypto.GenerateProviderChannelID(providerAddress.Hex(), registry.accountantAddress.Hex())
+	addr, err := crypto.GenerateProviderChannelID(providerAddress.Hex(), registry.hermesAddress.Hex())
 	if err != nil {
 		return addressBytes, errors.Wrap(err, "could not generate channel address")
 	}
@@ -337,13 +337,13 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		},
 	}
 
-	accountantContract, err := bindings.NewAccountantImplementationCaller(registry.accountantAddress, registry.ethC.Client())
+	hermesContract, err := bindings.NewHermesImplementationCaller(registry.hermesAddress, registry.ethC.Client())
 	if err != nil {
-		return RegistrationError, fmt.Errorf("could not get accountant implementation caller %w", err)
+		return RegistrationError, fmt.Errorf("could not get hermes implementation caller %w", err)
 	}
 
-	accountantSession := &bindings.AccountantImplementationCallerSession{
-		Contract: accountantContract,
+	hermesSession := &bindings.HermesImplementationCallerSession{
+		Contract: hermesContract,
 		CallOpts: bind.CallOpts{
 			Pending: false, //we want to find out true registration status - not pending transactions
 		},
@@ -365,7 +365,7 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		return RegistrationError, errors.Wrap(err, "could not get provider channel address")
 	}
 
-	_, err = accountantSession.Channels(providerAddressBytes)
+	_, err = hermesSession.Channels(providerAddressBytes)
 	if err != nil {
 		return RegistrationError, errors.Wrap(err, "could not get provider channel")
 	}

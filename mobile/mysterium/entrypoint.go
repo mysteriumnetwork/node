@@ -59,7 +59,7 @@ type MobileNode struct {
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
 	proposalsManager             *proposalsManager
-	accountant                   common.Address
+	hermes                       common.Address
 	feedbackReporter             *feedback.Reporter
 	transactor                   *registry.Transactor
 	identityRegistry             registry.IdentityRegistry
@@ -85,8 +85,8 @@ type MobileNodeOptions struct {
 	TransactorEndpointAddress       string
 	TransactorRegistryAddress       string
 	TransactorChannelImplementation string
-	AccountantEndpointAddress       string
-	AccountantID                    string
+	HermesEndpointAddress           string
+	HermesID                        string
 	MystSCAddress                   string
 }
 
@@ -105,8 +105,8 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		TransactorEndpointAddress:       metadata.TestnetDefinition.TransactorAddress,
 		TransactorRegistryAddress:       metadata.TestnetDefinition.RegistryAddress,
 		TransactorChannelImplementation: metadata.TestnetDefinition.ChannelImplAddress,
-		AccountantEndpointAddress:       metadata.TestnetDefinition.AccountantAddress,
-		AccountantID:                    metadata.TestnetDefinition.AccountantID,
+		HermesEndpointAddress:           metadata.TestnetDefinition.HermesAddress,
+		HermesID:                        metadata.TestnetDefinition.HermesID,
 		MystSCAddress:                   "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
 	}
 }
@@ -179,20 +179,20 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
 			ProviderRegistrationStake:       6200000000,
 		},
-		Accountant: node.OptionsAccountant{
-			AccountantEndpointAddress: options.AccountantEndpointAddress,
-			AccountantID:              options.AccountantID,
+		Hermes: node.OptionsHermes{
+			HermesEndpointAddress: options.HermesEndpointAddress,
+			HermesID:              options.HermesID,
 		},
 		Payments: node.OptionsPayments{
-			MaxAllowedPaymentPercentile:        1500,
-			BCTimeout:                          time.Second * 30,
-			AccountantPromiseSettlingThreshold: 0.1,
-			SettlementTimeout:                  time.Hour * 2,
-			MystSCAddress:                      options.MystSCAddress,
-			ConsumerLowerMinutePriceBound:      0,
-			ConsumerUpperMinutePriceBound:      50000,
-			ConsumerLowerGBPriceBound:          0,
-			ConsumerUpperGBPriceBound:          11000000,
+			MaxAllowedPaymentPercentile:    1500,
+			BCTimeout:                      time.Second * 30,
+			HermesPromiseSettlingThreshold: 0.1,
+			SettlementTimeout:              time.Hour * 2,
+			MystSCAddress:                  options.MystSCAddress,
+			ConsumerLowerMinutePriceBound:  0,
+			ConsumerUpperMinutePriceBound:  50000,
+			ConsumerLowerGBPriceBound:      0,
+			ConsumerUpperGBPriceBound:      11000000,
 		},
 		Consumer: true,
 		P2PPorts: port.UnspecifiedRange(),
@@ -214,7 +214,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
-		accountant:                   common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		hermes:                       common.HexToAddress(nodeOptions.Hermes.HermesID),
 		feedbackReporter:             di.Reporter,
 		transactor:                   di.Transactor,
 		identityRegistry:             di.IdentityRegistry,
@@ -367,7 +367,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		DisableKillSwitch: req.DisableKillSwitch,
 		DNS:               connection.DNSOptionAuto,
 	}
-	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.accountant, *proposal, connectOptions); err != nil {
+	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.hermes, *proposal, connectOptions); err != nil {
 		if err == connection.ErrInsufficientBalance {
 			return &ConnectResponse{
 				ErrorCode: connectErrInsufficientBalance,

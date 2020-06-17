@@ -42,7 +42,7 @@ type connectionSession struct {
 	ConsumerID string `json:"consumer_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
-	AccountantID string `json:"accountant_id"`
+	HermesID string `json:"hermes_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"provider_id"`
@@ -122,7 +122,7 @@ func connectionSessionToDto(se session.History) connectionSession {
 	return connectionSession{
 		SessionID:       string(se.SessionID),
 		ConsumerID:      se.ConsumerID.Address,
-		AccountantID:    se.AccountantID,
+		HermesID:        se.HermesID,
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,

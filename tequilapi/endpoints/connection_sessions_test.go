@@ -37,7 +37,7 @@ var (
 	connectionSessionMock = session.History{
 		SessionID:       node_session.ID("SessionID"),
 		ConsumerID:      identity.FromAddress("consumerID"),
-		AccountantID:    "0x000000000000000000000000000000000000000C",
+		HermesID:        "0x000000000000000000000000000000000000000C",
 		ProviderID:      identity.FromAddress("providerID"),
 		ServiceType:     "serviceType",
 		ProviderCountry: "ProviderCountry",
@@ -53,7 +53,7 @@ func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
 	assert.Equal(t, "2010-01-01T12:00:00Z", sessionDTO.DateStarted)
 	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.SessionID)
 	assert.Equal(t, connectionSessionMock.ConsumerID.Address, sessionDTO.ConsumerID)
-	assert.Equal(t, connectionSessionMock.AccountantID, sessionDTO.AccountantID)
+	assert.Equal(t, connectionSessionMock.HermesID, sessionDTO.HermesID)
 	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
 	assert.Equal(t, connectionSessionMock.ServiceType, sessionDTO.ServiceType)
 	assert.Equal(t, connectionSessionMock.ProviderCountry, sessionDTO.ProviderCountry)

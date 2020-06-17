@@ -43,7 +43,7 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[identity.Identity]ConsumerBalance
 
-	accountantAddress                    common.Address
+	hermesAddress                        common.Address
 	mystSCAddress                        common.Address
 	consumerBalanceChecker               consumerBalanceChecker
 	channelAddressCalculator             channelAddressCalculator
@@ -63,7 +63,7 @@ type transactorRegistrationStatusProvider interface {
 func NewConsumerBalanceTracker(
 	publisher eventbus.Publisher,
 	mystSCAddress common.Address,
-	accountantAddress common.Address,
+	hermesAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
 	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,
@@ -74,7 +74,7 @@ func NewConsumerBalanceTracker(
 		balances:                             make(map[identity.Identity]ConsumerBalance),
 		consumerBalanceChecker:               consumerBalanceChecker,
 		mystSCAddress:                        mystSCAddress,
-		accountantAddress:                    accountantAddress,
+		hermesAddress:                        hermesAddress,
 		publisher:                            publisher,
 		channelAddressCalculator:             channelAddressCalculator,
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
@@ -200,12 +200,12 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 		return fallback
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
+	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
 	if errors.Is(err, ErrNotFound) {
 		if err := cbt.recoverGrandTotalPromised(id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
-		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
+		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
@@ -333,7 +333,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 	toRetry := func() error {
 		d, err := cbt.consumerInfoGetter.GetConsumerData(identity.Address)
 		if err != nil {
-			if err != ErrAccountantNotFound {
+			if err != ErrHermesNotFound {
 				return err
 			}
 			log.Debug().Msgf("No previous invoice grand total, assuming zero")
@@ -347,8 +347,8 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 		return err
 	}
 
-	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
-	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.accountantAddress, data.LatestPromise.Amount)
+	log.Debug().Msgf("Loaded hermes state: already promised: %v", data.LatestPromise.Amount)
+	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.hermesAddress, data.LatestPromise.Amount)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
@@ -427,6 +427,6 @@ type ConsumerBalance struct {
 
 // GetBalance returns the current balance
 func (cb ConsumerBalance) GetBalance() uint64 {
-	// Balance (to spend) = BCBalance - (accountantPromised - BCSettled)
+	// Balance (to spend) = BCBalance - (hermesPromised - BCSettled)
 	return safeSub(cb.BCBalance, safeSub(cb.GrandTotalPromised, cb.BCSettled))
 }

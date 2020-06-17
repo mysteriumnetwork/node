@@ -52,7 +52,7 @@ func NewRegistrationStatusStorage(bolt persistentStorage) *RegistrationStatusSto
 	}
 }
 
-// Store stores the given promise for the given accountant.
+// Store stores the given promise for the given hermes.
 func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) error {
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
@@ -93,7 +93,7 @@ func (rss *RegistrationStatusStorage) get(identity identity.Identity) (StoredReg
 	return *result, err
 }
 
-// Get fetches the promise for the given accountant.
+// Get fetches the promise for the given hermes.
 func (rss *RegistrationStatusStorage) Get(identity identity.Identity) (StoredRegistrationStatus, error) {
 	rss.lock.Lock()
 	defer rss.lock.Unlock()

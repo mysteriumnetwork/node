@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/payments/bindings"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 func main() {
@@ -96,15 +95,12 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println("v2 channel impl address: ", channelImplAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	accountantImplAddress, tx, _, err := bindings.DeployAccountantImplementation(transactor, client)
-	checkError("Deploy accountant impl v2", err)
+	hermesImplAddress, tx, _, err := bindings.DeployHermesImplementation(transactor, client)
+	checkError("Deploy hermes impl v2", err)
 	checkTxStatus(client, tx)
-	fmt.Println("v2 accountant impl address: ", accountantImplAddress.String())
+	fmt.Println("v2 hermes impl address: ", hermesImplAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	configAddress, err := crypto.DeployConfigContract("45bb96530f3d1972fdcd2005c1987a371d0b6d378b77561c6beeaca27498f46b", client)
-	checkError("Deploy config v2", err)
-	fmt.Println("v2 config address:", configAddress.Hex())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	registrationFee := big.NewInt(0)
@@ -114,17 +110,14 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		client,
 		mystTokenAddress,
 		mystDexAddress,
-		configAddress,
 		registrationFee,
 		minimalStake,
+		channelImplAddress,
+		hermesImplAddress,
 	)
 	checkError("Deploy registry v2", err)
 	fmt.Println("v2 registry address: ", registryAddress.String())
 	checkTxStatus(client, tx)
-
-	transactor.Nonce = nil
-	err = crypto.SetupConfig(transactor, client, configAddress, transactor.From.Hex(), channelImplAddress, channelImplAddress, accountantImplAddress, accountantImplAddress)
-	checkError("Setup config v2", err)
 
 	ts, err := bindings.NewMystTokenTransactor(mystTokenAddress, client)
 	checkError("myst transactor", err)
@@ -143,29 +136,29 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	checkError("registry transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = rt.RegisterAccountant(
+	tx, err = rt.RegisterHermes(
 		transactor,
 		transactor.From,
 		big.NewInt(100000000000000),
 		400,
 		big.NewInt(125000000000),
 	)
-	checkError("register accountant", err)
+	checkError("register hermes", err)
 	checkTxStatus(client, tx)
 
 	rc, err := bindings.NewRegistryCaller(registryAddress, client)
 	checkError("registry caller", err)
 
-	accs, err := rc.GetAccountantAddress(&bind.CallOpts{
+	accs, err := rc.GetHermesAddress(&bind.CallOpts{
 		Context: context.Background(),
 		From:    transactor.From,
 	}, transactor.From)
-	checkError("get accountant address", err)
-	fmt.Println("registered accountant", accs.Hex())
+	checkError("get hermes address", err)
+	fmt.Println("registered hermes", accs.Hex())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	tx, err = ts.Mint(transactor, accs, big.NewInt(125000000000000000))
-	checkError("mint myst for accountant", err)
+	checkError("mint myst for hermes", err)
 	checkTxStatus(client, tx)
 }
 

@@ -51,7 +51,7 @@ type PromiseIssuer interface {
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) error
+	Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) error
 	// Status queries current status of connection
 	Status() Status
 	// Disconnect closes established connection, reports error if no connection

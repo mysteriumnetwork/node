@@ -106,7 +106,7 @@ type Storage interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {

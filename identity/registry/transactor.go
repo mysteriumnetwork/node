@@ -40,7 +40,7 @@ const AppTopicTransactorRegistration = "transactor_identity_registration"
 const AppTopicTransactorTopUp = "transactor_top_up"
 
 type channelProvider interface {
-	GetProviderChannel(accountantAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetProviderChannel(hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 // Transactor allows for convenient calls to the transactor service
@@ -49,20 +49,20 @@ type Transactor struct {
 	endpointAddress       string
 	signerFactory         identity.SignerFactory
 	registryAddress       string
-	accountantID          string
+	hermesID              string
 	channelImplementation string
 	publisher             eventbus.Publisher
 	bc                    channelProvider
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, hermesID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
 	return &Transactor{
 		httpClient:            httpClient,
 		endpointAddress:       endpointAddress,
 		signerFactory:         signerFactory,
 		registryAddress:       registryAddress,
-		accountantID:          accountantID,
+		hermesID:              hermesID,
 		channelImplementation: channelImplementation,
 		publisher:             publisher,
 		bc:                    bc,
@@ -101,7 +101,7 @@ type TopUpRequest struct {
 // IdentityRegistrationRequest represents the identity registration request body
 type IdentityRegistrationRequest struct {
 	RegistryAddress string `json:"registryAddress"`
-	AccountantID    string `json:"accountantID"`
+	HermesID        string `json:"hermesID"`
 	// Stake is used by Provider, default 0
 	Stake uint64 `json:"stake"`
 	// Fee: negotiated fee with transactor
@@ -117,7 +117,7 @@ type IdentityRegistrationRequest struct {
 
 // PromiseSettlementRequest represents the settlement request body
 type PromiseSettlementRequest struct {
-	AccountantID  string `json:"accountantID"`
+	HermesID      string `json:"hermesID"`
 	Provider      string `json:"provider"`
 	ChannelID     string `json:"channelID"`
 	Amount        uint64 `json:"amount"`
@@ -154,7 +154,7 @@ func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
 
 // TopUp requests a myst topup for testing purposes.
 func (t *Transactor) TopUp(id string) error {
-	channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
+	channelAddress, err := pc.GenerateChannelAddress(id, t.hermesID, t.registryAddress, t.channelImplementation)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate channel address")
 	}
@@ -175,9 +175,9 @@ func (t *Transactor) TopUp(id string) error {
 }
 
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel
-func (t *Transactor) SettleAndRebalance(accountantID, providerID string, promise pc.Promise) error {
+func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.Promise) error {
 	payload := PromiseSettlementRequest{
-		AccountantID:  accountantID,
+		HermesID:      hermesID,
 		Provider:      providerID,
 		ChannelID:     hex.EncodeToString(promise.ChannelID),
 		Amount:        promise.Amount,
@@ -220,14 +220,14 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
 	regReq := IdentityRegistrationRequest{
 		RegistryAddress: t.registryAddress,
-		AccountantID:    t.accountantID,
+		HermesID:        t.hermesID,
 		Stake:           regReqDTO.Stake,
 		Fee:             regReqDTO.Fee,
 		Beneficiary:     regReqDTO.Beneficiary,
 	}
 
 	if regReq.Beneficiary == "" {
-		channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
+		channelAddress, err := pc.GenerateChannelAddress(id, t.hermesID, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
@@ -250,8 +250,8 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 }
 
 func (t *Transactor) validateRegisterIdentityRequest(regReq IdentityRegistrationRequest) error {
-	if regReq.AccountantID == "" {
-		return errors.New("AccountantID is required")
+	if regReq.HermesID == "" {
+		return errors.New("HermesID is required")
 	}
 	if regReq.RegistryAddress == "" {
 		return errors.New("RegistryAddress is required")
@@ -262,7 +262,7 @@ func (t *Transactor) validateRegisterIdentityRequest(regReq IdentityRegistration
 func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq IdentityRegistrationRequest) ([]byte, error) {
 	req := registration.Request{
 		RegistryAddress: strings.ToLower(regReq.RegistryAddress),
-		AccountantID:    strings.ToLower(regReq.AccountantID),
+		HermesID:        strings.ToLower(regReq.HermesID),
 		Stake:           regReq.Stake,
 		Fee:             regReq.Fee,
 		Beneficiary:     strings.ToLower(regReq.Beneficiary),
@@ -292,7 +292,7 @@ type SettleWithBeneficiaryRequest struct {
 }
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
-func (t *Transactor) SettleWithBeneficiary(id, beneficiary, accountantID string, promise pc.Promise) error {
+func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, promise pc.Promise) error {
 	signedReq, err := t.fillSetBeneficiaryRequest(id, beneficiary)
 	if err != nil {
 		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
@@ -300,7 +300,7 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, accountantID string,
 
 	payload := SettleWithBeneficiaryRequest{
 		Promise: PromiseSettlementRequest{
-			AccountantID:  accountantID,
+			HermesID:      hermesID,
 			ChannelID:     hex.EncodeToString(promise.ChannelID),
 			Amount:        promise.Amount,
 			TransactorFee: promise.Fee,
@@ -321,12 +321,12 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, accountantID string,
 }
 
 func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
-	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.accountantID), common.HexToAddress(id), false)
+	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
 	}
 
-	addr, err := pc.GenerateProviderChannelID(id, t.accountantID)
+	addr, err := pc.GenerateProviderChannelID(id, t.hermesID)
 	if err != nil {
 		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
 	}

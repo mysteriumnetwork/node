@@ -71,7 +71,7 @@ type Options struct {
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
-	Accountant OptionsAccountant
+	Hermes     OptionsHermes
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall
@@ -134,22 +134,22 @@ func GetOptions() *Options {
 			ProviderRegistrationStake:       config.GetUInt64(config.FlagTransactorProviderRegistrationStake),
 		},
 		Payments: OptionsPayments{
-			MaxAllowedPaymentPercentile:        config.GetInt(config.FlagPaymentsMaxAccountantFee),
-			BCTimeout:                          config.GetDuration(config.FlagPaymentsBCTimeout),
-			AccountantPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsAccountantPromiseSettleThreshold),
-			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
-			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
-			ConsumerUpperGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound),
-			ConsumerLowerGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound),
-			ConsumerUpperMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
-			ConsumerLowerMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
-			ConsumerDataLeewayMegabytes:        config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
-			ProviderInvoiceFrequency:           config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
-			MaxUnpaidInvoiceValue:              config.GetUInt64(config.FlagPaymentsMaxUnpaidInvoiceValue),
+			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),
+			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
+			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
+			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
+			MystSCAddress:                  config.GetString(config.FlagPaymentsMystSCAddress),
+			ConsumerUpperGBPriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound),
+			ConsumerLowerGBPriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound),
+			ConsumerUpperMinutePriceBound:  config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
+			ConsumerLowerMinutePriceBound:  config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
+			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
+			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:          config.GetUInt64(config.FlagPaymentsMaxUnpaidInvoiceValue),
 		},
-		Accountant: OptionsAccountant{
-			AccountantID:              config.GetString(config.FlagAccountantID),
-			AccountantEndpointAddress: config.GetString(config.FlagAccountantAddress),
+		Hermes: OptionsHermes{
+			HermesID:              config.GetString(config.FlagHermesID),
+			HermesEndpointAddress: config.GetString(config.FlagHermesAddress),
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
 			BinaryPath: config.GetString(config.FlagOpenvpnBinary),

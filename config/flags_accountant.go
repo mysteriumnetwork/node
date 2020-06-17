@@ -23,31 +23,31 @@ import (
 )
 
 var (
-	// FlagAccountantAddress points to the accountant service
-	FlagAccountantAddress = cli.StringFlag{
-		Name:  "accountant.address",
-		Usage: "accountant URL address",
-		Value: metadata.DefaultNetwork.AccountantAddress,
+	// FlagHermesAddress points to the hermes service
+	FlagHermesAddress = cli.StringFlag{
+		Name:  "hermes.address",
+		Usage: "hermes URL address",
+		Value: metadata.DefaultNetwork.HermesAddress,
 	}
-	// FlagAccountantID determines the accountant ID
-	FlagAccountantID = cli.StringFlag{
-		Name:  "accountant.accountant-id",
-		Usage: "accountant contract address used to register identity",
-		Value: metadata.DefaultNetwork.AccountantID,
+	// FlagHermesID determines the hermes ID
+	FlagHermesID = cli.StringFlag{
+		Name:  "hermes.hermes-id",
+		Usage: "hermes contract address used to register identity",
+		Value: metadata.DefaultNetwork.HermesID,
 	}
 )
 
-// RegisterFlagsAccountant function register network flags to flag list
-func RegisterFlagsAccountant(flags *[]cli.Flag) {
+// RegisterFlagsHermes function register network flags to flag list
+func RegisterFlagsHermes(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		&FlagAccountantAddress,
-		&FlagAccountantID,
+		&FlagHermesAddress,
+		&FlagHermesID,
 	)
 }
 
-// ParseFlagsAccountant function fills in accountant options from CLI context
-func ParseFlagsAccountant(ctx *cli.Context) {
-	Current.ParseStringFlag(ctx, FlagAccountantAddress)
-	Current.ParseStringFlag(ctx, FlagAccountantID)
+// ParseFlagsHermes function fills in hermes options from CLI context
+func ParseFlagsHermes(ctx *cli.Context) {
+	Current.ParseStringFlag(ctx, FlagHermesAddress)
+	Current.ParseStringFlag(ctx, FlagHermesID)
 }

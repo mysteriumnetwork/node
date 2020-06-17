@@ -43,10 +43,10 @@ func TestMobileNodeConsumer(t *testing.T) {
 		IPDetectorURL:                   "http://ipify:3000/?format=json",
 		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:       "http://transactor:8888/api/v1",
-		TransactorRegistryAddress:       "0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC",
+		TransactorRegistryAddress:       "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
 		TransactorChannelImplementation: "0x599d43715DF3070f83355D9D90AE62c159E62A75",
-		AccountantEndpointAddress:       "http://accountant:8889/api/v1",
-		AccountantID:                    "0x0464a8750d728c4f34F175BD47D6B865a9c0332b",
+		HermesEndpointAddress:           "http://hermes:8889/api/v1",
+		HermesID:                        "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8",
 		MystSCAddress:                   "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665",
 	}
 

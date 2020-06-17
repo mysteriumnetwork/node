@@ -61,7 +61,7 @@ func (m mockBalanceTracker) WaitFirstInvoice(time.Duration) error {
 	return nil
 }
 
-func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accountant common.Address, sessionID string) (PaymentEngine, error) {
+func mockPaymentEngineFactory(providerID, consumerID identity.Identity, hermes common.Address, sessionID string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
 

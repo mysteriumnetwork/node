@@ -24,11 +24,11 @@ import (
 )
 
 var (
-	// FlagPaymentsMaxAccountantFee represents the max accountant fee.
-	FlagPaymentsMaxAccountantFee = cli.IntFlag{
-		Name:  "payments.accountant.max.fee",
+	// FlagPaymentsMaxHermesFee represents the max hermes fee.
+	FlagPaymentsMaxHermesFee = cli.IntFlag{
+		Name:  "payments.hermes.max.fee",
 		Value: 1500,
-		Usage: "The max fee that we'll accept from an accountant. In percentiles. 1500 means 15%",
+		Usage: "The max fee that we'll accept from an hermes. In percentiles. 1500 means 15%",
 	}
 	// FlagPaymentsBCTimeout represents the BC call timeout.
 	FlagPaymentsBCTimeout = cli.DurationFlag{
@@ -36,15 +36,15 @@ var (
 		Value: time.Second * 30,
 		Usage: "The duration we'll wait before timing out BC calls.",
 	}
-	// FlagPaymentsAccountantPromiseSettleThreshold represents the percentage of balance left when we go for promise settling.
-	FlagPaymentsAccountantPromiseSettleThreshold = cli.Float64Flag{
-		Name:  "payments.accountant.promise.threshold",
+	// FlagPaymentsHermesPromiseSettleThreshold represents the percentage of balance left when we go for promise settling.
+	FlagPaymentsHermesPromiseSettleThreshold = cli.Float64Flag{
+		Name:  "payments.hermes.promise.threshold",
 		Value: 0.1,
 		Usage: "The percentage of balance before we settle promises",
 	}
-	// FlagPaymentsAccountantPromiseSettleTimeout represents the time we wait for confirmation of the promise settlement.
-	FlagPaymentsAccountantPromiseSettleTimeout = cli.DurationFlag{
-		Name:  "payments.accountant.promise.timeout",
+	// FlagPaymentsHermesPromiseSettleTimeout represents the time we wait for confirmation of the promise settlement.
+	FlagPaymentsHermesPromiseSettleTimeout = cli.DurationFlag{
+		Name:  "payments.hermes.promise.timeout",
 		Value: time.Hour * 2,
 		Usage: "The duration we'll wait before timing out our wait for promise settle.",
 	}
@@ -102,10 +102,10 @@ var (
 func RegisterFlagsPayments(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		&FlagPaymentsMaxAccountantFee,
+		&FlagPaymentsMaxHermesFee,
 		&FlagPaymentsBCTimeout,
-		&FlagPaymentsAccountantPromiseSettleThreshold,
-		&FlagPaymentsAccountantPromiseSettleTimeout,
+		&FlagPaymentsHermesPromiseSettleThreshold,
+		&FlagPaymentsHermesPromiseSettleTimeout,
 		&FlagPaymentsMystSCAddress,
 		&FlagPaymentsProviderInvoiceFrequency,
 		&FlagPaymentsConsumerPricePerMinuteUpperBound,
@@ -119,10 +119,10 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 
 // ParseFlagsPayments function fills in payments options from CLI context.
 func ParseFlagsPayments(ctx *cli.Context) {
-	Current.ParseIntFlag(ctx, FlagPaymentsMaxAccountantFee)
+	Current.ParseIntFlag(ctx, FlagPaymentsMaxHermesFee)
 	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
-	Current.ParseFloat64Flag(ctx, FlagPaymentsAccountantPromiseSettleThreshold)
-	Current.ParseDurationFlag(ctx, FlagPaymentsAccountantPromiseSettleTimeout)
+	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
+	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
 	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)

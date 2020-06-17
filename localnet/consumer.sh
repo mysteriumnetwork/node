@@ -17,9 +17,9 @@ exec /node/build/myst/myst \
   --ether.client.rpc=ws://ganache:8545 \
   --keystore.lightweight \
   --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75 \
-  --transactor.registry-address=0x9a4D866Cb86877f9E51d4C63Bf7fdAf815A980BC \
-  --accountant.accountant-id=0x0464a8750d728c4f34F175BD47D6B865a9c0332b \
-  --accountant.address=http://accountant:8889/api/v2 \
+  --transactor.registry-address=0xbe180c8CA53F280C7BE8669596fF7939d933AA10 \
+  --hermes.hermes-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8 \
+  --hermes.address=http://hermes:8889/api/v2 \
   --transactor.address=http://transactor:8888/api/v1 \
   --quality.address=http://morqa:8085/api/v1 \
   daemon

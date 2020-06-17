@@ -41,7 +41,7 @@ func TestSettlementHistoryStorage(t *testing.T) {
 
 	storage := NewSettlementHistoryStorage(bolt, 3)
 
-	accountantID := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
+	hermesID := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
 	providerID := identity.FromAddress("0x79bb2a1c5E0075005F084a66A44D5e930A88eC86")
 	entry := SettlementHistoryEntry{
 		TxHash:       common.BigToHash(big.NewInt(123123123)),
@@ -52,18 +52,18 @@ func TestSettlementHistoryStorage(t *testing.T) {
 	}
 
 	t.Run("Returns not found if no results exist", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
+		entries, err := storage.Get(providerID, hermesID)
 		assert.EqualError(t, err, errBoltNotFound)
 		assert.Len(t, entries, 0)
 	})
 
 	t.Run("Inserts a history entry successfully", func(t *testing.T) {
-		err := storage.Store(providerID, accountantID, entry)
+		err := storage.Store(providerID, hermesID, entry)
 		assert.NoError(t, err)
 	})
 
 	t.Run("Fetches the inserted entry", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
+		entries, err := storage.Get(providerID, hermesID)
 		assert.NoError(t, err)
 		assert.Len(t, entries, 1)
 
@@ -74,22 +74,22 @@ func TestSettlementHistoryStorage(t *testing.T) {
 	})
 
 	t.Run("Overrides old values if limit exceeded", func(t *testing.T) {
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
+		err = storage.Store(providerID, hermesID, SettlementHistoryEntry{})
 		assert.NoError(t, err)
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
+		err = storage.Store(providerID, hermesID, SettlementHistoryEntry{})
 		assert.NoError(t, err)
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
+		err = storage.Store(providerID, hermesID, SettlementHistoryEntry{})
 		assert.NoError(t, err)
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
+		err = storage.Store(providerID, hermesID, SettlementHistoryEntry{})
 		assert.NoError(t, err)
 
-		entries, err := storage.Get(providerID, accountantID)
+		entries, err := storage.Get(providerID, hermesID)
 		assert.NoError(t, err)
 		assert.Len(t, entries, 3)
 	})
 
 	t.Run("Returns sorted results", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
+		entries, err := storage.Get(providerID, hermesID)
 		assert.NoError(t, err)
 		assert.Len(t, entries, 3)
 

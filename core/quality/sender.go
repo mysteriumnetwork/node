@@ -325,7 +325,7 @@ func (sender *Sender) toSessionContext(session connection.Status) sessionContext
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
 		ConsumerCountry: sender.originCountry(),
-		AccountantID:    session.AccountantID.Hex(),
+		AccountantID:    session.HermesID.Hex(),
 	}
 }
 

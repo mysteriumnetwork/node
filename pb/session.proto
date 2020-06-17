@@ -22,7 +22,7 @@ message SessionInfo {
 
 message ConsumerInfo {
   string id = 1;
-  string accountantID = 2;
+  string hermesID = 2;
   string paymentVersion = 3;
 }
 

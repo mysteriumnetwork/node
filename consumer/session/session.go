@@ -43,7 +43,7 @@ type History struct {
 	SessionID       node_session.ID `storm:"id"`
 	Direction       string
 	ConsumerID      identity.Identity
-	AccountantID    string
+	HermesID        string
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string

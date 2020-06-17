@@ -26,38 +26,38 @@ import (
 	"github.com/pkg/errors"
 )
 
-const accountantPromiseBucketName = "accountant_promises"
+const hermesPromiseBucketName = "hermes_promises"
 
 // ErrAttemptToOverwrite occurs when a promise with lower value is attempted to be overwritten on top of an existing promise.
 var ErrAttemptToOverwrite = errors.New("attempted to overwrite a promise with and equal or lower value")
 
-// AccountantPromiseStorage allows for storing of accountant promises.
-type AccountantPromiseStorage struct {
+// HermesPromiseStorage allows for storing of hermes promises.
+type HermesPromiseStorage struct {
 	lock sync.Mutex
 	bolt persistentStorage
 }
 
-// NewAccountantPromiseStorage returns a new instance of the accountant promise storage.
-func NewAccountantPromiseStorage(bolt persistentStorage) *AccountantPromiseStorage {
-	return &AccountantPromiseStorage{
+// NewHermesPromiseStorage returns a new instance of the hermes promise storage.
+func NewHermesPromiseStorage(bolt persistentStorage) *HermesPromiseStorage {
+	return &HermesPromiseStorage{
 		bolt: bolt,
 	}
 }
 
-// AccountantPromise represents a promise we store from the accountant
-type AccountantPromise struct {
+// HermesPromise represents a promise we store from the hermes
+type HermesPromise struct {
 	Promise     crypto.Promise
 	R           string
 	Revealed    bool
 	AgreementID uint64
 }
 
-// Store stores the given promise for the given accountant.
-func (aps *AccountantPromiseStorage) Store(id identity.Identity, accountantID common.Address, promise AccountantPromise) error {
+// Store stores the given promise for the given hermes.
+func (aps *HermesPromiseStorage) Store(id identity.Identity, hermesID common.Address, promise HermesPromise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	previousPromise, err := aps.get(id, accountantID)
+	previousPromise, err := aps.get(id, hermesID)
 	if err != nil && err != ErrNotFound {
 		return err
 	}
@@ -66,35 +66,35 @@ func (aps *AccountantPromiseStorage) Store(id identity.Identity, accountantID co
 		return ErrAttemptToOverwrite
 	}
 
-	channel, err := crypto.GenerateProviderChannelID(id.Address, accountantID.Hex())
+	channel, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
 	if err != nil {
 		return errors.Wrap(err, "could not generate provider channel address")
 	}
 
-	return errors.Wrap(aps.bolt.SetValue(accountantPromiseBucketName, channel, promise), "could not store accountant promise")
+	return errors.Wrap(aps.bolt.SetValue(hermesPromiseBucketName, channel, promise), "could not store hermes promise")
 }
 
-func (aps *AccountantPromiseStorage) get(id identity.Identity, accountantID common.Address) (AccountantPromise, error) {
-	channel, err := crypto.GenerateProviderChannelID(id.Address, accountantID.Hex())
+func (aps *HermesPromiseStorage) get(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
+	channel, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
 	if err != nil {
-		return AccountantPromise{}, errors.Wrap(err, "could not generate provider channel address")
+		return HermesPromise{}, errors.Wrap(err, "could not generate provider channel address")
 	}
 
-	result := &AccountantPromise{}
-	err = aps.bolt.GetValue(accountantPromiseBucketName, channel, result)
+	result := &HermesPromise{}
+	err = aps.bolt.GetValue(hermesPromiseBucketName, channel, result)
 	if err != nil {
 		if err.Error() == errBoltNotFound {
 			err = ErrNotFound
 		} else {
-			err = errors.Wrap(err, "could not get promise for accountant")
+			err = errors.Wrap(err, "could not get promise for hermes")
 		}
 	}
 	return *result, err
 }
 
-// Get fetches the promise for the given accountant.
-func (aps *AccountantPromiseStorage) Get(id identity.Identity, accountantID common.Address) (AccountantPromise, error) {
+// Get fetches the promise for the given hermes.
+func (aps *HermesPromiseStorage) Get(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
-	return aps.get(id, accountantID)
+	return aps.get(id, hermesID)
 }

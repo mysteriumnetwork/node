@@ -153,12 +153,12 @@ type Dependencies struct {
 
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
-	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
+	HermesPromiseStorage     *pingpong.HermesPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
-	AccountantPromiseSettler pingpong.AccountantPromiseSettler
-	AccountantCaller         *pingpong.AccountantCaller
+	HermesPromiseSettler     pingpong.HermesPromiseSettler
+	HermesCaller             *pingpong.HermesCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
-	AccountantPromiseHandler *pingpong.AccountantPromiseHandler
+	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 }
 
@@ -297,7 +297,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
 		BalanceProvider:           di.ConsumerBalanceTracker,
-		EarningsProvider:          di.AccountantPromiseSettler,
+		EarningsProvider:          di.HermesPromiseSettler,
 	}
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
@@ -403,7 +403,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
 	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
-	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
+	di.HermesPromiseStorage = pingpong.NewHermesPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
 	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage, pingpong.DefaultMaxEntriesPerChannel)
 	return di.SessionStorage.Subscribe(di.EventBus)
@@ -431,14 +431,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
-		nodeOptions.Accountant.AccountantID,
+		nodeOptions.Hermes.HermesID,
 		nodeOptions.Transactor.ChannelImplementation,
 		di.SignerFactory,
 		di.EventBus,
 		di.BCHelper,
 	)
 
-	if err := di.bootstrapAccountantPromiseSettler(nodeOptions); err != nil {
+	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
 
@@ -447,20 +447,20 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 
 	di.ChannelAddressCalculator = pingpong.NewChannelAddressCalculator(
-		nodeOptions.Accountant.AccountantID,
+		nodeOptions.Hermes.HermesID,
 		nodeOptions.Transactor.ChannelImplementation,
 		nodeOptions.Transactor.RegistryAddress,
 	)
 
-	di.AccountantCaller = pingpong.NewAccountantCaller(di.HTTPClient, nodeOptions.Accountant.AccountantEndpointAddress)
+	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, nodeOptions.Hermes.HermesEndpointAddress)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		common.HexToAddress(nodeOptions.Hermes.HermesID),
 		di.BCHelper,
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
-		di.AccountantCaller,
+		di.HermesCaller,
 		di.Transactor,
 	)
 
@@ -469,16 +469,16 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
-	di.AccountantPromiseHandler = pingpong.NewAccountantPromiseHandler(pingpong.AccountantPromiseHandlerDeps{
-		AccountantPromiseStorage: di.AccountantPromiseStorage,
-		AccountantCaller:         di.AccountantCaller,
-		AccountantID:             common.HexToAddress(nodeOptions.Accountant.AccountantID),
-		FeeProvider:              di.Transactor,
-		Encryption:               di.Keystore,
-		EventBus:                 di.EventBus,
+	di.HermesPromiseHandler = pingpong.NewHermesPromiseHandler(pingpong.HermesPromiseHandlerDeps{
+		HermesPromiseStorage: di.HermesPromiseStorage,
+		HermesCaller:         di.HermesCaller,
+		HermesID:             common.HexToAddress(nodeOptions.Hermes.HermesID),
+		FeeProvider:          di.Transactor,
+		Encryption:           di.Keystore,
+		EventBus:             di.EventBus,
 	})
 
-	if err := di.AccountantPromiseHandler.Subscribe(di.EventBus); err != nil {
+	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
 		return err
 	}
 
@@ -533,7 +533,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.AccountantPromiseSettler, di.BCHelper)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.HermesPromiseSettler, di.BCHelper)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -543,7 +543,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler, di.SettlementHistoryStorage)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
@@ -590,7 +590,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
-		options.Accountant.AccountantEndpointAddress,
+		options.Hermes.HermesEndpointAddress,
 	); err != nil {
 		return err
 	}
@@ -598,7 +598,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
-		options.Accountant.AccountantEndpointAddress,
+		options.Hermes.HermesEndpointAddress,
 	); err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.BCHelper = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Accountant.AccountantID), registryStorage, di.EventBus); err != nil {
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Hermes.HermesID), registryStorage, di.EventBus); err != nil {
 		return err
 	}
 

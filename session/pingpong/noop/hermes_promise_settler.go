@@ -23,31 +23,31 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 )
 
-// NoopAccountantPromiseSettler doesn't do much.
-type NoopAccountantPromiseSettler struct {
+// NoopHermesPromiseSettler doesn't do much.
+type NoopHermesPromiseSettler struct {
 }
 
 // Subscribe does nothing.
-func (n *NoopAccountantPromiseSettler) Subscribe() error {
+func (n *NoopHermesPromiseSettler) Subscribe() error {
 	return nil
 }
 
 // GetEarnings returns an empty state.
-func (n *NoopAccountantPromiseSettler) GetEarnings(_ identity.Identity) event.Earnings {
+func (n *NoopHermesPromiseSettler) GetEarnings(_ identity.Identity) event.Earnings {
 	return event.Earnings{}
 }
 
 // ForceSettle does nothing.
-func (n *NoopAccountantPromiseSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
+func (n *NoopHermesPromiseSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
 	return nil
 }
 
 // SettleWithBeneficiary does nothing.
-func (n *NoopAccountantPromiseSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
+func (n *NoopHermesPromiseSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
 	return nil
 }
 
-// GetAccountantFee does absolutely nothing.
-func (n *NoopAccountantPromiseSettler) GetAccountantFee() (uint16, error) {
+// GetHermesFee does absolutely nothing.
+func (n *NoopHermesPromiseSettler) GetHermesFee() (uint16, error) {
 	return 0, nil
 }

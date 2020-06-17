@@ -68,12 +68,12 @@ const (
 
 // Status holds connection state, session id and proposal of the connection
 type Status struct {
-	StartedAt    time.Time
-	ConsumerID   identity.Identity
-	AccountantID common.Address
-	State        State
-	SessionID    session.ID
-	Proposal     market.ServiceProposal
+	StartedAt  time.Time
+	ConsumerID identity.Identity
+	HermesID   common.Address
+	State      State
+	SessionID  session.ID
+	Proposal   market.ServiceProposal
 }
 
 // Duration returns elapsed time from marked session start

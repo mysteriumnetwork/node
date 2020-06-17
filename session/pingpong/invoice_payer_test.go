@@ -698,19 +698,19 @@ type mockConsumerTotalsStorage struct {
 	calledWith uint64
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
+func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount uint64) error {
 	mcts.calledWith = amount
 	if mcts.bus != nil {
 		go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
-			Current:      amount,
-			AccountantID: accountantID,
-			ConsumerID:   id,
+			Current:    amount,
+			HermesID:   hermesID,
+			ConsumerID: id,
 		})
 	}
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, accountantID common.Address) (uint64, error) {
+func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (uint64, error) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err

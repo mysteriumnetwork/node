@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAccountantPromiseStorage(t *testing.T) {
-	dir, err := ioutil.TempDir("", "accountantPromiseStorageTest")
+func TestHermesPromiseStorage(t *testing.T) {
+	dir, err := ioutil.TempDir("", "hermesPromiseStorageTest")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -45,14 +45,14 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer bolt.Close()
 
-	accountantStorage := NewAccountantPromiseStorage(bolt)
+	hermesStorage := NewHermesPromiseStorage(bolt)
 
 	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
-	firstAccountant := acc.Address
+	firstHermes := acc.Address
 	fp, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
 	assert.NoError(t, err)
 
-	firstPromise := AccountantPromise{
+	firstPromise := HermesPromise{
 		Promise:     *fp,
 		R:           "some r",
 		AgreementID: 123,
@@ -60,29 +60,29 @@ func TestAccountantPromiseStorage(t *testing.T) {
 
 	sp, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", 2, 2, "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
 	assert.NoError(t, err)
-	secondPromise := AccountantPromise{
+	secondPromise := HermesPromise{
 		Promise:     *sp,
 		R:           "some other r",
 		AgreementID: 1234,
 	}
 
 	// check if errors are wrapped correctly
-	_, err = accountantStorage.Get(id, firstAccountant)
+	_, err = hermesStorage.Get(id, firstHermes)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that promise is stored correctly
-	err = accountantStorage.Store(id, firstAccountant, firstPromise)
+	err = hermesStorage.Store(id, firstHermes, firstPromise)
 	assert.NoError(t, err)
 
-	promise, err := accountantStorage.Get(id, firstAccountant)
+	promise, err := hermesStorage.Get(id, firstHermes)
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
 	// overwrite the promise, check if it is overwritten
-	err = accountantStorage.Store(id, firstAccountant, secondPromise)
+	err = hermesStorage.Store(id, firstHermes, secondPromise)
 	assert.NoError(t, err)
 
-	promise, err = accountantStorage.Get(id, firstAccountant)
+	promise, err = hermesStorage.Get(id, firstHermes)
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
 
@@ -93,25 +93,25 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	err = ks.Unlock(account2, "")
 	assert.Nil(t, err)
 
-	secondAccountant := account2.Address
+	secondHermes := account2.Address
 
-	err = accountantStorage.Store(id, secondAccountant, firstPromise)
+	err = hermesStorage.Store(id, secondHermes, firstPromise)
 	assert.NoError(t, err)
 
-	promise, err = accountantStorage.Get(id, firstAccountant)
+	promise, err = hermesStorage.Get(id, firstHermes)
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
 
-	promise, err = accountantStorage.Get(id, secondAccountant)
+	promise, err = hermesStorage.Get(id, secondHermes)
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
-	overwritingPromise := AccountantPromise{
+	overwritingPromise := HermesPromise{
 		Promise:     *fp,
 		R:           "some r",
 		AgreementID: 123,
 	}
 	overwritingPromise.Promise.Amount = 0
-	err = accountantStorage.Store(id, secondAccountant, overwritingPromise)
+	err = hermesStorage.Store(id, secondHermes, overwritingPromise)
 	assert.True(t, errors.Is(err, ErrAttemptToOverwrite))
 }

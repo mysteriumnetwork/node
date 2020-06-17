@@ -61,7 +61,7 @@ type ProviderRegistrarConfig struct {
 	MaxRetries          int
 	Stake               uint64
 	DelayBetweenRetries time.Duration
-	AccountantAddress   common.Address
+	HermesAddress       common.Address
 	RegistryAddress     common.Address
 }
 

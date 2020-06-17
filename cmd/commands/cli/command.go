@@ -365,8 +365,8 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	accountantID := config.GetString(config.FlagAccountantID)
-	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, accountantID, serviceType, connectOptions)
+	hermesID := config.GetString(config.FlagHermesID)
+	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, hermesID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return

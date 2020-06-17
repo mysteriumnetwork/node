@@ -206,7 +206,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsLocation(flags)
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsTransactor(flags)
-	RegisterFlagsAccountant(flags)
+	RegisterFlagsHermes(flags)
 	RegisterFlagsPayments(flags)
 	RegisterFlagsPolicy(flags)
 
@@ -248,7 +248,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsLocation(ctx)
 	ParseFlagsNetwork(ctx)
 	ParseFlagsTransactor(ctx)
-	ParseFlagsAccountant(ctx)
+	ParseFlagsHermes(ctx)
 	ParseFlagsPayments(ctx)
 	ParseFlagsPolicy(ctx)
 

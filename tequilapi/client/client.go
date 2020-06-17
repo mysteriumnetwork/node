@@ -167,11 +167,11 @@ func (client *Client) TopUp(identity string) error {
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
 	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
 		ConsumerID:     consumerID,
 		ProviderID:     providerID,
-		AccountantID:   accountantID,
+		HermesID:       hermesID,
 		ServiceType:    serviceType,
 		ConnectOptions: options,
 	})
@@ -477,11 +477,11 @@ func filterSessionsByStatus(status string, sessions ConnectionSessionListDTO) Co
 	return sessions
 }
 
-// Settle requests the settling of accountant promises
-func (client *Client) Settle(providerID, accountantID identity.Identity, waitForBlockchain bool) error {
+// Settle requests the settling of hermes promises
+func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
 	settleRequest := SettleRequest{
-		ProviderID:   providerID.Address,
-		AccountantID: accountantID.Address,
+		ProviderID: providerID.Address,
+		HermesID:   hermesID.Address,
 	}
 
 	path := "transactor/settle/"
@@ -504,11 +504,11 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 }
 
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID string) error {
+func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
 	payload := SettleWithBeneficiaryRequest{
 		SettleRequest: SettleRequest{
-			ProviderID:   address,
-			AccountantID: accountantID,
+			ProviderID: address,
+			HermesID:   hermesID,
 		},
 		Beneficiary: beneficiary,
 	}

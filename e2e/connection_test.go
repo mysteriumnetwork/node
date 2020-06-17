@@ -40,7 +40,7 @@ var (
 	consumerPassphrase = "localconsumer"
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
-	accountantID       = "0x0464a8750d728c4f34F175BD47D6B865a9c0332b"
+	hermesID           = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
 )
 
 const (
@@ -91,12 +91,12 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			go func(c consumer) {
 				defer wg.Done()
 				proposal := consumerPicksProposal(t, c.tequila, c.serviceType)
-				balanceSpent := consumerConnectFlow(t, c.tequila, c.consumerID, accountantID, c.serviceType, proposal)
+				balanceSpent := consumerConnectFlow(t, c.tequila, c.consumerID, hermesID, c.serviceType, proposal)
 				copied := consumers[c.consumerID]
 				copied.balanceSpent = balanceSpent
 				copied.proposal = proposal
 				consumers[c.consumerID] = copied
-				recheckBalancesWithAccountant(t, c.consumerID, balanceSpent, proposal.ServiceType)
+				recheckBalancesWithHermes(t, c.consumerID, balanceSpent, proposal.ServiceType)
 			}(v)
 		}
 		wg.Wait()
@@ -115,7 +115,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, initialBalance, providerStatus.Balance)
 
-		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(accountantID), true)
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
 		assert.NoError(t, err)
 
 		providerStatus, err = tequilapiProvider.Identity(providerID)
@@ -124,11 +124,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		accountantFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
-		accountantFeeUint := uint64(math.Trunc(accountantFee))
+		hermesFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
+		hermesFeeUint := uint64(math.Trunc(hermesFee))
 
 		// 10% of the settlement are used to increase provider stake.
-		earnings := 0.9 * float64(providerStatus.EarningsTotal-fees.Settlement-accountantFeeUint)
+		earnings := 0.9 * float64(providerStatus.EarningsTotal-fees.Settlement-hermesFeeUint)
 		expected := initialBalance + uint64(earnings)
 
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
@@ -136,16 +136,16 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 }
 
-func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
-	var lastAccountant uint64
+func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
+	var lastHermes uint64
 	assert.Eventually(t, func() bool {
-		accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
-		accountantData, err := accountantCaller.GetConsumerData(consumerID)
+		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://hermes:8889/api/v2")
+		hermesData, err := hermesCaller.GetConsumerData(consumerID)
 		assert.NoError(t, err)
-		promised := accountantData.LatestPromise.Amount
-		lastAccountant = promised
+		promised := hermesData.LatestPromise.Amount
+		lastHermes = promised
 		return promised == consumerSpending
-	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v accountant says %v. Service type %v", consumerSpending, lastAccountant, serviceType))
+	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v", consumerSpending, lastHermes, serviceType))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
@@ -169,7 +169,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	assert.Equal(t, "0xb10A8Df58aDC28c3a211Db7d8b1bB62bE017F4c7", idStatus.ChannelAddress)
+	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
 	assert.Equal(t, initialBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings)
 	assert.Zero(t, idStatus.EarningsTotal)
@@ -218,7 +218,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) uint64 {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, hermesID, serviceType string, proposal contract.ProposalDTO) uint64 {
 	connectionStatus, err := tequilapi.ConnectionStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
@@ -233,7 +233,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, contract.ConnectOptions{
+	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, hermesID, serviceType, contract.ConnectOptions{
 		DisableKillSwitch: false,
 	})
 
