@@ -35,13 +35,13 @@ var (
 	currentProposal   = market.ServiceProposal{
 		ID: currentProposalID,
 	}
-	consumerID = identity.FromAddress("deadbeef")
+	consumerID   = identity.FromAddress("deadbeef")
+	accountantID = common.HexToAddress("0x1")
 
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
-		ID:          expectedID,
-		ConsumerID:  consumerID,
-		ServiceType: "wireguard",
+		ID:         expectedID,
+		ConsumerID: consumerID,
 	}
 )
 
@@ -72,9 +72,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session.done
 
@@ -90,9 +88,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session1, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session1, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session1, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session1.done
 	_, found := sessionStore.Find(session1.ID)
@@ -102,9 +98,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	assert.False(t, session1.CreatedAt.IsZero())
 	assert.True(t, found)
 
-	session2, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session2, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session2, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session2.done
 
@@ -122,9 +116,7 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69)
+	session, err := manager.Start(consumerID, accountantID, 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Empty(t, session.CreatedAt)
 }
@@ -149,8 +141,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session, err := NewSession()
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(identity.FromAddress("some other id"), string(session.ID))
@@ -164,9 +155,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	manager := newManager(currentProposal, sessionStore)
 	manager.publisher = mp
 
-	session, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(consumerID, string(session.ID))

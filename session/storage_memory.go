@@ -92,7 +92,7 @@ func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 		if opts.Peer != nil && *opts.Peer != session.ConsumerID {
 			continue
 		}
-		if opts.ServiceType != "" && opts.ServiceType != session.ServiceType {
+		if opts.ServiceType != "" && opts.ServiceType != session.Proposal.ServiceType {
 			continue
 		}
 		return session, true

@@ -151,27 +151,31 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(session *Session, consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int) (err error) {
+func (manager *Manager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
 	if manager.currentProposal.ID != proposalID {
-		err = ErrorInvalidProposal
-		return
+		return &Session{}, ErrorInvalidProposal
 	}
 
 	manager.clearStaleSession(consumerID, manager.currentProposal.ServiceType)
 
-	session.ServiceType = manager.currentProposal.ServiceType
+	session, err := NewSession()
+	if err != nil {
+		return &Session{}, errors.Wrap(err, "cannot create new session")
+	}
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
+	session.AccountantID = accountantID
+	session.Proposal = manager.currentProposal
 	session.done = make(chan struct{})
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, common.HexToAddress(consumerInfo.AccountantID.Address), string(session.ID))
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
 	if err != nil {
-		return err
+		return session, err
 	}
 
 	// stop the balance tracker once the session is finished
@@ -184,22 +188,20 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 		err := engine.Start()
 		if err != nil {
 			log.Error().Err(err).Msg("Payment engine error")
-			destroyErr := manager.Destroy(consumerID, string(session.ID))
-			if destroyErr != nil {
-				log.Error().Err(destroyErr).Msg("Session cleanup failed")
-			}
+			manager.destroySession(*session)
 		}
 	}()
 
 	log.Info().Msg("Waiting for a first invoice to be paid")
 	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
 		manager.destroySession(*session)
-		return fmt.Errorf("first invoice was not paid: %w", err)
+		return session, fmt.Errorf("first invoice was not paid: %w", err)
 	}
 
 	go manager.keepAliveLoop(session, manager.channel)
 	manager.sessionStorage.Add(*session)
-	return nil
+
+	return session, nil
 }
 
 // Acknowledge marks the session as successfully established as far as the consumer is concerned.
