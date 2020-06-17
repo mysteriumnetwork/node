@@ -20,10 +20,8 @@ package session
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 const (
@@ -41,11 +39,13 @@ type History struct {
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string
-	Started         time.Time
-	Status          string
-	Updated         time.Time
-	DataStats       connection.Statistics // is updated on disconnect event
-	Invoice         crypto.Invoice        // is updated on disconnect event
+	DataSent        uint64
+	DataReceived    uint64
+	Tokens          uint64
+
+	Status  string
+	Started time.Time
+	Updated time.Time
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)

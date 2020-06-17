@@ -101,8 +101,8 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
 			Status:          "Completed",
 			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			DataStats:       mockStats,
-			Invoice:         crypto.Invoice{},
+			DataSent:        mockStats.BytesSent,
+			DataReceived:    mockStats.BytesReceived,
 		},
 		storer.UpdatedObject,
 	)
@@ -128,8 +128,6 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
 			Status:          "New",
 			Updated:         time.Time{},
-			DataStats:       connection.Statistics{},
-			Invoice:         crypto.Invoice{},
 		},
 		storer.SavedObject,
 	)
@@ -171,8 +169,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
 			Status:          "New",
 			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			DataStats:       connection.Statistics{},
-			Invoice:         mockInvoice,
+			Tokens:          mockInvoice.AgreementTotal,
 		},
 		storer.UpdatedObject,
 	)

@@ -105,7 +105,8 @@ func (repo *Storage) consumeSessionStatisticsEvent(e connection.AppEventConnecti
 		return
 	}
 
-	row.DataStats = e.Stats
+	row.DataSent = e.Stats.BytesSent
+	row.DataReceived = e.Stats.BytesReceived
 	repo.sessionsActive[e.SessionInfo.SessionID] = row
 }
 
@@ -120,7 +121,7 @@ func (repo *Storage) consumeSessionSpendingEvent(e pingpongEvent.AppEventInvoice
 		return
 	}
 	row.Updated = repo.timeGetter().UTC()
-	row.Invoice = e.Invoice
+	row.Tokens = e.Invoice.AgreementTotal
 
 	err := repo.storage.Update(sessionStorageBucketName, &row)
 	if err != nil {

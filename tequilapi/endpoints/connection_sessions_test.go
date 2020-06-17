@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -44,10 +43,8 @@ var (
 		ProviderCountry: "ProviderCountry",
 		Started:         time.Date(2010, time.January, 1, 12, 00, 0, 700000000, time.UTC),
 		Updated:         time.Date(2010, time.January, 1, 12, 00, 55, 800000000, time.UTC),
-		DataStats: connection.Statistics{
-			BytesReceived: 10,
-			BytesSent:     10,
-		},
+		DataSent:        10,
+		DataReceived:    10,
 	}
 )
 
@@ -60,8 +57,8 @@ func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
 	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
 	assert.Equal(t, connectionSessionMock.ServiceType, sessionDTO.ServiceType)
 	assert.Equal(t, connectionSessionMock.ProviderCountry, sessionDTO.ProviderCountry)
-	assert.Equal(t, connectionSessionMock.DataStats.BytesReceived, sessionDTO.BytesReceived)
-	assert.Equal(t, connectionSessionMock.DataStats.BytesSent, sessionDTO.BytesSent)
+	assert.Equal(t, connectionSessionMock.DataReceived, sessionDTO.BytesReceived)
+	assert.Equal(t, connectionSessionMock.DataSent, sessionDTO.BytesSent)
 	assert.Equal(t, 55, int(sessionDTO.Duration))
 	assert.Equal(t, connectionSessionMock.Status, sessionDTO.Status)
 }
