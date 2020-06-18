@@ -204,21 +204,6 @@ func PackageDockerAlpine() error {
 	return env.IfRelease(storage.UploadDockerImages)
 }
 
-// PackageDockerUbuntu builds and stores docker ubuntu image
-func PackageDockerUbuntu() error {
-	logconfig.Bootstrap()
-	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
-		return err
-	}
-	if err := sh.RunV("bin/package_docker_ubuntu", env.Str(env.BuildVersion)); err != nil {
-		return err
-	}
-	if err := saveDockerImage("myst:ubuntu", "build/docker-images/myst_ubuntu.tgz"); err != nil {
-		return err
-	}
-	return env.IfRelease(storage.UploadDockerImages)
-}
-
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
 	logconfig.Bootstrap()
