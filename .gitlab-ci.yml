@@ -135,11 +135,6 @@ package:docker-alpine:
   tags: [go]
   script: go run mage.go -v PackageDockerAlpine
 
-package:docker-ubuntu:
-  stage: build
-  tags: [go]
-  script: go run mage.go -v PackageDockerUbuntu
-
 package:swagger-redoc-docker:
   stage: build
   tags: [go]
