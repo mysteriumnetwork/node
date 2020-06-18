@@ -61,7 +61,6 @@ func (s *Session) Done() <-chan struct{} {
 func (s Session) toEvent(status event.Status) event.AppEventSession {
 	return event.AppEventSession{
 		Status: status,
-		ID:     string(s.ID),
 		Service: event.ServiceContext{
 			ID: s.ServiceID,
 		},

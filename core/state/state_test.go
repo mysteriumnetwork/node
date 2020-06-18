@@ -232,17 +232,13 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	}
 	publisher := &mockPublisher{}
 	sl := &serviceListerMock{}
-	sessionStorage := &serviceSessionStorageMock{
-		sessionsToReturn: []session.Session{},
-	}
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: natProvider,
+		Publisher:         publisher,
+		ServiceLister:     sl,
+		IdentityProvider:  &mocks.IdentityProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	keeper.state.Services = []event.ServiceInfo{
@@ -254,7 +250,12 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 
 	keeper.consumeServiceSessionStateEvent(sessionEvent.AppEventSession{
 		Status: sessionEvent.AcknowledgedStatus,
-		ID:     string(expected.ID),
+		Service: sessionEvent.ServiceContext{
+			ID: myID,
+		},
+		Session: sessionEvent.SessionContext{
+			ID: string(expected.ID),
+		},
 	})
 
 	assert.Equal(t, 1, keeper.state.Services[0].ConnectionStatistics.Successful)

@@ -64,7 +64,6 @@ const (
 // AppEventSession represents the session change payload
 type AppEventSession struct {
 	Status  Status
-	ID      string
 	Service ServiceContext
 	Session SessionContext
 }

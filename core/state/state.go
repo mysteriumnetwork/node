@@ -236,17 +236,8 @@ func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.AppEventSession)
 	if e.Status != sevent.AcknowledgedStatus {
 		return
 	}
-	session, found := k.getSessionByID(e.ID)
-	if !found {
-		return
-	}
 
-	service, found := k.getServiceByID(session.ServiceID)
-	if !found {
-		return
-	}
-
-	k.incrementConnectCount(service.ID, true)
+	k.incrementConnectCount(e.Service.ID, true)
 
 	go k.announceStateChanges(nil)
 }
