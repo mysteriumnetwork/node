@@ -186,7 +186,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 			log.Error().Err(err).Msg("Payment engine error")
 			destroyErr := manager.Destroy(consumerID, string(session.ID))
 			if destroyErr != nil {
-				log.Error().Err(err).Msg("Session cleanup failed")
+				log.Error().Err(destroyErr).Msg("Session cleanup failed")
 			}
 		}
 	}()
