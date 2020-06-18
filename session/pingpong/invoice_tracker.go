@@ -359,9 +359,7 @@ func (it *InvoiceTracker) WaitFirstInvoice(wait time.Duration) error {
 				return nil
 			}
 		case <-timeout:
-			// TODO uncomment this error return when all consumers will be able to pay for the first invoice before session start.
-			// return fmt.Errorf("failed waiting for first invoice")
-			return nil
+			return fmt.Errorf("failed waiting for first invoice")
 		case <-it.stop:
 			return nil
 		}
