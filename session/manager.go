@@ -193,6 +193,7 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 
 	log.Info().Msg("Waiting for a first invoice to be paid")
 	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
+		manager.destroySession(*session)
 		return fmt.Errorf("first invoice was not paid: %w", err)
 	}
 
