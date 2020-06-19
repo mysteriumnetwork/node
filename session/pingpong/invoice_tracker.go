@@ -306,7 +306,12 @@ func (it *InvoiceTracker) Start() error {
 		case critical := <-it.invoiceChannel:
 			err := it.sendInvoice(critical)
 			if err != nil {
-				return fmt.Errorf("sending of invoice failed: %w", err)
+				if stdErr.Is(err, p2p.ErrSendTimeout) {
+					log.Warn().Err(err).Msg("Marking invoice as not sent")
+					it.markExchangeMessageNotSent()
+				} else {
+					return fmt.Errorf("sending of invoice failed: %w", err)
+				}
 			}
 		case err := <-it.criticalInvoiceErrors:
 			return err
@@ -449,11 +454,6 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
-		if stdErr.Is(err, p2p.ErrSendTimeout) {
-			log.Warn().Err(err).Msg("Marking invoice as not sent")
-			it.markExchangeMessageNotSent()
-			return nil
-		}
 		return err
 	}
 
@@ -484,10 +484,11 @@ func (it *InvoiceTracker) sendFirstInvoice() error {
 			return ErrFirstInvoiceSendTimeout
 		case <-time.After(it.deps.FirstInvoiceSendDuration):
 			err := it.sendInvoice(true)
-			if stdErr.Is(err, p2p.ErrHandlerNotFound) {
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to send first invoice")
 				continue
 			}
-			return err
+			return nil
 		}
 	}
 }
