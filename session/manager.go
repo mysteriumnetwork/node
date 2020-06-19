@@ -192,8 +192,8 @@ func (manager *Manager) Start(session *Session, consumerID identity.Identity, co
 	}()
 
 	log.Info().Msg("Waiting for a first invoice to be paid")
-	// TODO 3 seconds timeout should be increased when all consumers will be able to pay for the first invoice before session start.
-	if err := engine.WaitFirstInvoice(3 * time.Second); err != nil {
+	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
+		manager.destroySession(*session)
 		return fmt.Errorf("first invoice was not paid: %w", err)
 	}
 
