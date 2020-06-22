@@ -141,6 +141,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		transactor.From,
 		big.NewInt(100000000000000),
 		400,
+		big.NewInt(1),
 		big.NewInt(125000000000),
 	)
 	checkError("register hermes", err)

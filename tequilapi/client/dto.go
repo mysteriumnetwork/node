@@ -25,9 +25,10 @@ import (
 
 // Fees represents the transactor fee
 type Fees struct {
-	Registration uint64 `json:"registration"`
-	Settlement   uint64 `json:"settlement"`
-	Hermes       uint16 `json:"hermes"`
+	Registration  uint64 `json:"registration"`
+	Settlement    uint64 `json:"settlement"`
+	Hermes        uint16 `json:"hermes"`
+	DecreaseStake uint64 `json:"decreaseStake"`
 }
 
 // HealthcheckDTO holds returned healthcheck response
@@ -123,4 +124,11 @@ type SettleRequest struct {
 type SettleWithBeneficiaryRequest struct {
 	SettleRequest
 	Beneficiary string `json:"beneficiary"`
+}
+
+// DecreaseStakeRequest represents the decrease stake request.
+type DecreaseStakeRequest struct {
+	ID            string `json:"id,omitempty"`
+	Amount        uint64 `json:"amount,omitempty"`
+	TransactorFee uint64 `json:"transactor_fee,omitempty"`
 }

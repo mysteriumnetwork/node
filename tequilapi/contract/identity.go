@@ -43,6 +43,7 @@ type IdentityDTO struct {
 	Balance            uint64 `json:"balance"`
 	Earnings           uint64 `json:"earnings"`
 	EarningsTotal      uint64 `json:"earnings_total"`
+	Stake              uint64 `json:"stake"`
 }
 
 // NewIdentityDTO maps to API identity.

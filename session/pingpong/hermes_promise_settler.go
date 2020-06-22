@@ -60,6 +60,7 @@ type transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 	SettleAndRebalance(hermesID, providerID string, promise crypto.Promise) error
 	SettleWithBeneficiary(id, beneficiary, hermesID string, promise crypto.Promise) error
+	SettleIntoStake(hermesID, providerID string, promise crypto.Promise) error
 }
 
 type promiseStorage interface {
@@ -76,7 +77,8 @@ type HermesPromiseSettler interface {
 	GetEarnings(id identity.Identity) event.Earnings
 	ForceSettle(providerID identity.Identity, hermesID common.Address) error
 	SettleWithBeneficiary(providerID identity.Identity, beneficiary, hermesID common.Address) error
-	Subscribe() error
+	SettleIntoStake(providerID identity.Identity, hermesID common.Address) error
+=======
 	GetHermesFee() (uint16, error)
 }
 
@@ -320,7 +322,7 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 		case <-aps.stop:
 			return
 		case p := <-aps.settleQueue:
-			go aps.settle(p, nil)
+			go aps.settle(p, nil, false)
 		}
 	}
 }
@@ -331,6 +333,27 @@ func (aps *hermesPromiseSettler) GetEarnings(id identity.Identity) event.Earning
 	defer aps.lock.RUnlock()
 
 	return aps.currentState[id].Earnings()
+}
+
+// SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
+func (aps *accountantPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
+	promise, err := aps.promiseStorage.Get(providerID, accountantID)
+	if err == ErrNotFound {
+		return ErrNothingToSettle
+	}
+	if err != nil {
+		return errors.Wrap(err, "could not get promise from storage")
+	}
+
+	hexR, err := hex.DecodeString(promise.R)
+	if err != nil {
+		return errors.Wrap(err, "could not decode R")
+	}
+	promise.Promise.R = hexR
+	return aps.settle(receivedPromise{
+		promise:  promise.Promise,
+		provider: providerID,
+	}, nil, true)
 }
 
 // ErrNothingToSettle indicates that there is nothing to settle.
@@ -355,7 +378,7 @@ func (aps *hermesPromiseSettler) ForceSettle(providerID identity.Identity, herme
 	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
-	}, nil)
+	}, nil, false)
 }
 
 // ForceSettle forces the settlement for a provider
@@ -378,13 +401,13 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(providerID identity.Ident
 	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
-	}, &beneficiary)
+	}, &beneficiary, false)
 }
 
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
-func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.Address) error {
+func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.Address, isStakeIncrease bool) error {
 	if aps.isSettling(p.provider) {
 		return errors.New("provider already has settlement in progress")
 	}
@@ -449,7 +472,11 @@ func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.A
 	var settleFunc = func() error {
 		return aps.transactor.SettleAndRebalance(aps.config.HermesAddress.Hex(), p.provider.Address, p.promise)
 	}
-	if beneficiary != nil {
+	if isStakeIncrease {
+		settleFunc = func() error {
+			return aps.transactor.SettleIntoStake(aps.config.AccountantAddress.Hex(), p.provider.Address, p.promise)
+		}
+	} else if beneficiary != nil {
 		settleFunc = func() error {
 			return aps.transactor.SettleWithBeneficiary(p.provider.Address, beneficiary.Hex(), aps.config.HermesAddress.Hex(), p.promise)
 		}

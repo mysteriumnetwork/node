@@ -134,6 +134,28 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
 		assert.InDelta(t, expected, providerStatus.Balance, 2)
 	})
+
+	t.Run("Provider decreases stake", func(t *testing.T) {
+		providerStatus, err := tequilapiProvider.Identity(providerID)
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(6200000000), providerStatus.Stake)
+		initialStake := providerStatus.Stake
+
+		fees, err := tequilapiProvider.GetTransactorFees()
+		assert.NoError(t, err)
+
+		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), 100, fees.DecreaseStake)
+		assert.NoError(t, err)
+
+		expected := initialStake - 100
+		var lastStatus uint64
+		assert.Eventually(t, func() bool {
+			providerStatus, err := tequilapiProvider.Identity(providerID)
+			assert.NoError(t, err)
+			lastStatus = providerStatus.Stake
+			return expected == providerStatus.Stake
+		}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Incorrect stake. Expected %v, got %v", expected, lastStatus))
+	})
 }
 
 func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {

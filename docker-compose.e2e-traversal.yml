@@ -149,7 +149,7 @@ services:
         ipv4_address: 172.31.0.202
 
   transactor:
-    image: mysteriumnetwork/transactor:0.3.0
+    image: mysteriumnetwork/transactor:v3-rc2
     environment:
       PORT: 8888
     expose:
@@ -164,6 +164,7 @@ services:
       - mongodb
     command: >
       -settlemntFee 1000
+      -stakeDecreaseFee 1
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
@@ -184,20 +185,15 @@ services:
         ipv4_address: 172.31.0.203
 
   hermes:
-    image: mysteriumnetwork/hermes:0.5.3
+    image: mysteriumnetwork/hermes:v3-r1
     environment:
       PORT: 8889
     expose:
       - 8889
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
-      - mongodb
       - redis
+      - mongodb
     command: >
       -identityPassphrase ""
       -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -211,6 +207,7 @@ services:
       -MongoUser hermes
       -MongoPass hermes
       -MongoHost "mongodb:27017"
+      -MongoDatabase accountant
       -MongoReplSet ""
       -redisAddress "redis:6379"
     volumes:

@@ -88,7 +88,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"registration":1, "settlement":1, "hermes":11}`, resp.Body.String())
+	assert.JSONEq(t, `{"registration":1, "settlement":1, "hermes":11, "decreaseStake":1}`, resp.Body.String())
 }
 
 func Test_TopUp_OK(t *testing.T) {
@@ -377,6 +377,10 @@ func (ms *mockSettler) ForceSettle(_ identity.Identity, _ common.Address) error 
 
 func (ms *mockSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
 	return ms.errToReturn
+}
+
+func (ms *mockSettler) SettleIntoStake(providerID identity.Identity, hermesID common.Address) error {
+	return nil
 }
 
 func (ms *mockSettler) GetHermesFee() (uint16, error) {

@@ -64,14 +64,14 @@ services:
 
   #private blockchain
   ganache:
-    image: trufflesuite/ganache-cli:v6.8.1-beta.0
+    image: trufflesuite/ganache-cli:v6.9.1
     expose:
       - 8545
     command: >
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   transactor:
-    build: ../transactor/
+    image: mysteriumnetwork/transactor:v3-rc2
     environment:
       PORT: 8888
     expose:
@@ -82,6 +82,7 @@ services:
       - redis
     command: >
       -settlemntFee 1000
+      -stakeDecreaseFee 1
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
@@ -92,7 +93,7 @@ services:
       -MongoPass transactor
       -MongoHost mongodb:27017
       -MongoReplSet ""
-      -redisAddress redis:6379
+      -redisAddress "redis:6379"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
 
@@ -105,7 +106,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   hermes:
-    build: ../hermes/
+    image: mysteriumnetwork/hermes:v3-r1
     environment:
       PORT: 8889
     expose:
@@ -127,6 +128,7 @@ services:
       -MongoUser hermes
       -MongoPass hermes
       -MongoHost "mongodb:27017"
+      -MongoDatabase accountant
       -MongoReplSet ""
       -redisAddress "redis:6379"
     volumes:

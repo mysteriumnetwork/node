@@ -20,6 +20,7 @@ package registry
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // AppTopicTransactorRegistration represents the registration topic to which events regarding registration attempts on transactor will occur
@@ -118,12 +120,12 @@ type IdentityRegistrationRequest struct {
 // PromiseSettlementRequest represents the settlement request body
 type PromiseSettlementRequest struct {
 	HermesID      string `json:"hermesID"`
-	Provider      string `json:"provider"`
 	ChannelID     string `json:"channelID"`
 	Amount        uint64 `json:"amount"`
 	TransactorFee uint64 `json:"fee"`
 	Preimage      string `json:"preimage"`
 	Signature     string `json:"signature"`
+	ProviderID    string `json:"providerID"`
 }
 
 // FetchRegistrationFees fetches current transactor registration fees
@@ -144,6 +146,19 @@ func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
 	f := FeesResponse{}
 
 	req, err := requests.NewGetRequest(t.endpointAddress, "fee/settle", nil)
+	if err != nil {
+		return f, errors.Wrap(err, "failed to fetch transactor fees")
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	return f, err
+}
+
+// FetchStakeDecreaseFee fetches current transactor stake decrease fees.
+func (t *Transactor) FetchStakeDecreaseFee() (FeesResponse, error) {
+	f := FeesResponse{}
+
+	req, err := requests.NewGetRequest(t.endpointAddress, "fee/stake/decrease", nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
@@ -178,7 +193,7 @@ func (t *Transactor) TopUp(id string) error {
 func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.Promise) error {
 	payload := PromiseSettlementRequest{
 		HermesID:      hermesID,
-		Provider:      providerID,
+		ProviderID:    providerID,
 		ChannelID:     hex.EncodeToString(promise.ChannelID),
 		Amount:        promise.Amount,
 		TransactorFee: promise.Fee,
@@ -289,6 +304,7 @@ type SettleWithBeneficiaryRequest struct {
 	Beneficiary string `json:"beneficiary"`
 	Nonce       uint64 `json:"nonce"`
 	Signature   string `json:"signature"`
+	ProviderID  string `json:"providerID"`
 }
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
@@ -310,6 +326,7 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 		Beneficiary: signedReq.Beneficiary,
 		Nonce:       signedReq.Nonce,
 		Signature:   signedReq.Signature,
+		ProviderID:  id,
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
@@ -401,4 +418,93 @@ func (t *Transactor) FetchRegistrationStatus(id string) (TransactorStatusRespons
 
 	err = t.httpClient.DoRequestAndParseResponse(req, &f)
 	return f, err
+}
+
+// SettleIntoStake requests the transactor to settle and transfer the balance to stake.
+func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Promise) error {
+	payload := PromiseSettlementRequest{
+		HermesID:      hermesID,
+		ChannelID:     hex.EncodeToString(promise.ChannelID),
+		Amount:        promise.Amount,
+		TransactorFee: promise.Fee,
+		Preimage:      hex.EncodeToString(promise.R),
+		Signature:     hex.EncodeToString(promise.Signature),
+		ProviderID:    providerID,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle/into_stake", payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create settle into stake request")
+	}
+	return t.httpClient.DoRequest(req)
+}
+
+// DecreaseProviderStakeRequest represents all the parameters required for decreasing provider stake.
+type DecreaseProviderStakeRequest struct {
+	ChannelID     string `json:"channel_id,omitempty"`
+	Nonce         uint64 `json:"nonce,omitempty"`
+	HermesID      string `json:"hermes_id,omitempty"`
+	Amount        uint64 `json:"amount,omitempty"`
+	TransactorFee uint64 `json:"transactor_fee,omitempty"`
+	Signature     string `json:"signature,omitempty"`
+}
+
+// DecreaseStake requests the transactor to decrease stake.
+func (t *Transactor) DecreaseStake(id string, amount, transactorFee uint64) error {
+	payload, err := t.fillDecreaseStakeRequest(id, amount, transactorFee)
+	if err != nil {
+		return errors.Wrap(err, "failed to fill decrease stake request")
+	}
+
+	log.Debug().Msgf("req chid %v", payload.ChannelID)
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "stake/decrease", payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create decrease stake request")
+	}
+	return t.httpClient.DoRequest(req)
+}
+
+func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee uint64) (DecreaseProviderStakeRequest, error) {
+	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
+	if err != nil {
+		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
+	}
+
+	addr, err := pc.GenerateProviderChannelID(id, t.hermesID)
+	if err != nil {
+		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
+	}
+
+	bytes := common.FromHex(addr)
+	chid := [32]byte{}
+	copy(chid[:], bytes)
+
+	req := pc.DecreaseProviderStakeRequest{
+		ChannelID:     chid,
+		Nonce:         ch.LastUsedNonce.Add(ch.LastUsedNonce, big.NewInt(1)),
+		HermesID:      common.HexToAddress(t.hermesID),
+		Amount:        big.NewInt(0).SetUint64(amount),
+		TransactorFee: big.NewInt(0).SetUint64(transactorFee),
+	}
+	signer := t.signerFactory(identity.FromAddress(id))
+	signature, err := signer.Sign(req.GetMessage())
+	if err != nil {
+		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to sign set decrease stake request: %w", err)
+	}
+
+	err = pc.ReformatSignatureVForBC(signature.Bytes())
+	if err != nil {
+		return DecreaseProviderStakeRequest{}, fmt.Errorf("signature reformat failed: %w", err)
+	}
+	signatureHex := common.Bytes2Hex(signature.Bytes())
+	regReq := DecreaseProviderStakeRequest{
+		Signature:     signatureHex,
+		ChannelID:     common.Bytes2Hex(req.ChannelID[:]),
+		Nonce:         req.Nonce.Uint64(),
+		HermesID:      req.HermesID.Hex(),
+		Amount:        req.Amount.Uint64(),
+		TransactorFee: req.TransactorFee.Uint64(),
+	}
+	return regReq, nil
 }

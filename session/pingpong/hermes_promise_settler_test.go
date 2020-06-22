@@ -497,6 +497,10 @@ func (mt *mockTransactor) SettleWithBeneficiary(_, _, _ string, _ crypto.Promise
 	return nil
 }
 
+func (mt *mockTransactor) SettleIntoStake(accountantID, providerID string, promise crypto.Promise) error {
+	return nil
+}
+
 func (mt *mockTransactor) FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error) {
 	return mt.statusToReturn, mt.statusError
 }

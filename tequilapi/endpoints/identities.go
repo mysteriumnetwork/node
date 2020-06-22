@@ -279,6 +279,16 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
+	var stake uint64
+	if regStatus == registry.RegisteredProvider {
+		data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address), false)
+		if err != nil {
+			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
+			return
+		}
+		stake = data.Stake.Uint64()
+	}
+
 	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
 	settlement := endpoint.earningsProvider.GetEarnings(id)
 	status := contract.IdentityDTO{
@@ -288,6 +298,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		Balance:            balance,
 		Earnings:           settlement.UnsettledBalance,
 		EarningsTotal:      settlement.LifetimeBalance,
+		Stake:              stake,
 	}
 	utils.WriteAsJSON(status, resp)
 }

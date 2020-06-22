@@ -503,6 +503,54 @@ func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBloc
 	return nil
 }
 
+// SettleIntoStake requests the settling of accountant promises into a stake increase
+func (client *Client) SettleIntoStake(providerID, accountantID identity.Identity, waitForBlockchain bool) error {
+	settleRequest := SettleRequest{
+		ProviderID:   providerID.Address,
+		AccountantID: accountantID.Address,
+	}
+
+	path := "transactor/stake/increase/"
+	if waitForBlockchain {
+		path += "sync"
+	} else {
+		path += "async"
+	}
+
+	response, err := client.http.Post(path, settleRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not settle promise")
+	}
+	return nil
+}
+
+// DecreaseStake requests the decrease of stake via the transactor.
+func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee uint64) error {
+	decreaseRequest := DecreaseStakeRequest{
+		ID:            ID.Address,
+		Amount:        amount,
+		TransactorFee: transactorFee,
+	}
+
+	path := "transactor/stake/decrease"
+
+	response, err := client.http.Post(path, decreaseRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not decrease stake")
+	}
+	return nil
+}
+
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
 func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
 	payload := SettleWithBeneficiaryRequest{
