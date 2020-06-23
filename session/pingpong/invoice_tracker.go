@@ -462,7 +462,7 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	it.markInvoiceSent(sentInvoice{
 		invoice:    invoice,
 		r:          r,
-		isCritical: true,
+		isCritical: isCritical,
 	})
 
 	hlock, err := hex.DecodeString(invoice.Hashlock)
