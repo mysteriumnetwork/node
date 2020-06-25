@@ -247,7 +247,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	if session.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
 	}
-
+	manager.channel.Close()
 	manager.destroySession(session)
 
 	return nil
