@@ -177,6 +177,13 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
+	// make sure cache is cleared when connect terminates at any stage as part of disconnect
+	// we assume that IPResolver might be used / cache IP before connect
+	m.addCleanup(func() error {
+		m.clearIPCache()
+		return nil
+	})
+
 	if m.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -265,12 +272,6 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		m.Cancel()
 		return err
 	}
-
-	m.clearIPCache()
-	m.addCleanup(func() error {
-		m.clearIPCache()
-		return nil
-	})
 
 	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
 	go m.checkSessionIP(channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
