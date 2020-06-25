@@ -209,9 +209,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	di.ServiceRegistry = service.NewRegistry()
 
 	di.ServiceSessionStorage = session.NewStorageMemory(di.EventBus)
-	if err := di.ServiceSessionStorage.Subscribe(di.EventBus); err != nil {
-		return errors.Wrap(err, "could not subscribe session to node events")
-	}
 
 	di.PolicyOracle = policy.NewOracle(
 		di.HTTPClient,

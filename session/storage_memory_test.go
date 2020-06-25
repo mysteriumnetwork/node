@@ -83,52 +83,6 @@ func TestStorage_Add_PublishesEvents(t *testing.T) {
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func TestStorageMemory_HandlesAppEventTokensEarned(t *testing.T) {
-	// given
-	mp := mocks.NewEventBus()
-	storage := mockStorage(mp, sessionExisting)
-
-	storedSession, ok := storage.Find(sessionExisting.ID)
-	assert.True(t, ok)
-	assert.Zero(t, storedSession.TokensEarned)
-
-	// when
-	storage.consumeTokensEarnedEvent(sessionEvent.AppEventTokensEarned{
-		ProviderID: identity.FromAddress("0x1"),
-		SessionID:  string(sessionExisting.ID),
-		Total:      500,
-	})
-
-	// then
-	storedSession, ok = storage.Find(sessionExisting.ID)
-	assert.True(t, ok)
-	assert.EqualValues(t, 500, storedSession.TokensEarned)
-	assert.Eventually(t, lastEventMatches(mp, sessionExisting.ID, sessionEvent.UpdatedStatus), 2*time.Second, 10*time.Millisecond)
-}
-
-func TestStorageMemory_HandlesAppEventDataTransferred(t *testing.T) {
-	// given
-	mp := mocks.NewEventBus()
-	storage := mockStorage(mp, sessionExisting)
-
-	storedSession, ok := storage.Find(sessionExisting.ID)
-	assert.True(t, ok)
-	assert.Zero(t, storedSession.DataTransferred)
-
-	// when
-	storage.consumeDataTransferredEvent(sessionEvent.AppEventDataTransferred{
-		ID:   string(sessionExisting.ID),
-		Up:   1,
-		Down: 2,
-	})
-
-	// then
-	storedSession, ok = storage.Find(sessionExisting.ID)
-	assert.True(t, ok)
-	assert.EqualValues(t, 2, storedSession.DataTransferred.Up)
-	assert.EqualValues(t, 1, storedSession.DataTransferred.Down)
-}
-
 func TestStorageMemory_FindByPeer(t *testing.T) {
 	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 	session, ok := storage.FindBy(FindOpts{&sessionExisting.ConsumerID, ""})

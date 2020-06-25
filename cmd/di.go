@@ -293,7 +293,6 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
-		ServiceSessionStorage:     di.ServiceSessionStorage,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,

@@ -55,8 +55,6 @@ const (
 	CreatedStatus Status = "CreatedStatus"
 	// RemovedStatus indicates a session has been removed
 	RemovedStatus Status = "RemovedStatus"
-	// UpdatedStatus indicates a session has been updated
-	UpdatedStatus Status = "UpdatedStatus"
 	// AcknowledgedStatus indicates a session has been reported as a success from consumer side
 	AcknowledgedStatus Status = "AcknowledgedStatus"
 )

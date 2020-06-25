@@ -20,7 +20,6 @@ package session
 import (
 	"sync"
 
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/event"
 )
@@ -125,46 +124,5 @@ func (storage *StorageMemory) RemoveForService(serviceID string) {
 		if session.ServiceID == serviceID {
 			storage.Remove(session.ID)
 		}
-	}
-}
-
-// Subscribe subscribes to relevant events
-func (storage *StorageMemory) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.SubscribeAsync(event.AppTopicDataTransferred, storage.consumeDataTransferredEvent); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(event.AppTopicTokensEarned, storage.consumeTokensEarnedEvent); err != nil {
-		return err
-	}
-	return nil
-}
-
-// updates the data transfer info on the session
-func (storage *StorageMemory) consumeDataTransferredEvent(e event.AppEventDataTransferred) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
-
-	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
-	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
-	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
-	id := ID(e.ID)
-	if instance, found := storage.sessions[id]; found {
-		instance.DataTransferred.Down = e.Up
-		instance.DataTransferred.Up = e.Down
-		storage.sessions[id] = instance
-	}
-}
-
-// updates total tokens earned during the session.
-func (storage *StorageMemory) consumeTokensEarnedEvent(e event.AppEventTokensEarned) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
-
-	id := ID(e.SessionID)
-	if instance, found := storage.sessions[id]; found {
-		instance.TokensEarned = e.Total
-		storage.sessions[id] = instance
-
-		go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.UpdatedStatus))
 	}
 }

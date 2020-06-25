@@ -33,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/rs/zerolog/log"
@@ -53,10 +52,6 @@ type publisher interface {
 
 type serviceLister interface {
 	List() map[service.ID]*service.Instance
-}
-
-type serviceSessionStorage interface {
-	GetAll() []session.Session
 }
 
 type identityProvider interface {
@@ -84,9 +79,10 @@ type Keeper struct {
 	deps                   KeeperDeps
 
 	// provider
-	consumeServiceStateEvent                 func(e interface{})
-	consumeNATEvent                          func(e interface{})
-	consumeServiceSessionStateEventDebounced func(e interface{})
+	consumeServiceStateEvent             func(e interface{})
+	consumeNATEvent                      func(e interface{})
+	consumeServiceSessionStatisticsEvent func(e interface{})
+	consumeServiceSessionEarningsEvent   func(e interface{})
 	// consumer
 	consumeConnectionStatisticsEvent func(interface{})
 	consumeConnectionThroughputEvent func(interface{})
@@ -100,7 +96,6 @@ type KeeperDeps struct {
 	NATStatusProvider         natStatusProvider
 	Publisher                 publisher
 	ServiceLister             serviceLister
-	ServiceSessionStorage     serviceSessionStorage
 	IdentityProvider          identityProvider
 	IdentityRegistry          registry.IdentityRegistry
 	IdentityChannelCalculator channelAddressCalculator
@@ -115,6 +110,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 			NATStatus: stateEvent.NATStatus{
 				Status: "not_finished",
 			},
+			Sessions: make([]stateEvent.ServiceSession, 0),
 			Connection: stateEvent.Connection{
 				Session: connection.Status{
 					State: connection.NotConnected,
@@ -129,7 +125,8 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
 	k.consumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
-	k.consumeServiceSessionStateEventDebounced = debounce(k.updateSessionState, debounceDuration)
+	k.consumeServiceSessionStatisticsEvent = debounce(k.updateSessionStats, debounceDuration)
+	k.consumeServiceSessionEarningsEvent = debounce(k.updateSessionEarnings, debounceDuration)
 
 	// consumer
 	k.consumeConnectionStatisticsEvent = debounce(k.updateConnectionStats, debounceDuration)
@@ -174,7 +171,13 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(servicestate.AppTopicServiceStatus, k.consumeServiceStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeServiceSessionStateEvent); err != nil {
+	if err := bus.SubscribeAsync(sevent.AppTopicSession, k.consumeServiceSessionEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(sevent.AppTopicDataTransferred, k.consumeServiceSessionStatisticsEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(sevent.AppTopicTokensEarned, k.consumeServiceSessionEarningsEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
@@ -217,28 +220,6 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	k.updateServices()
-	go k.announceStateChanges(nil)
-}
-
-// consumeServiceSessionStateEvent consumes the session change events
-func (k *Keeper) consumeServiceSessionStateEvent(e sevent.AppEventSession) {
-	if e.Status == sevent.AcknowledgedStatus {
-		k.consumeServiceSessionAcknowledgeEvent(e)
-		return
-	}
-
-	k.consumeServiceSessionStateEventDebounced(e)
-}
-
-func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.AppEventSession) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-	if e.Status != sevent.AcknowledgedStatus {
-		return
-	}
-
-	k.incrementConnectCount(e.Service.ID, true)
-
 	go k.announceStateChanges(nil)
 }
 
@@ -299,38 +280,113 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 	go k.announceStateChanges(nil)
 }
 
-func (k *Keeper) updateSessionState(e interface{}) {
+// consumeServiceSessionEvent consumes the session change events
+func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	sessions := k.deps.ServiceSessionStorage.GetAll()
-	newSessions := make([]stateEvent.ServiceSession, 0)
-	result := make([]stateEvent.ServiceSession, len(sessions))
-	for i := range sessions {
-		result[i] = stateEvent.ServiceSession{
-			ID:           string(sessions[i].ID),
-			ConsumerID:   sessions[i].ConsumerID.Address,
-			CreatedAt:    sessions[i].CreatedAt,
-			BytesOut:     sessions[i].DataTransferred.Up,
-			BytesIn:      sessions[i].DataTransferred.Down,
-			TokensEarned: sessions[i].TokensEarned,
-			ServiceID:    sessions[i].ServiceID,
-			ServiceType:  sessions[i].ServiceType,
-		}
-
-		// each new session counts as an additional attempt, mark them for further use
-		_, found := k.getSessionByID(string(result[i].ID))
-		if !found {
-			newSessions = append(newSessions, result[i])
-		}
+	switch e.Status {
+	case sevent.CreatedStatus:
+		k.addSession(e)
+		k.incrementConnectCount(e.Service.ID, false)
+	case sevent.RemovedStatus:
+		k.removeSession(e)
+	case sevent.AcknowledgedStatus:
+		k.incrementConnectCount(e.Service.ID, true)
 	}
 
-	for i := range newSessions {
-		k.incrementConnectCount(newSessions[i].ServiceID, false)
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) consumeServiceSessionAcknowledgeEvent(e sevent.AppEventSession) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	if e.Status != sevent.AcknowledgedStatus {
+		return
 	}
 
-	k.state.Sessions = result
+	k.incrementConnectCount(e.Service.ID, true)
 
+	go k.announceStateChanges(nil)
+}
+
+func (k *Keeper) addSession(e sevent.AppEventSession) {
+	k.state.Sessions = append(k.state.Sessions, stateEvent.ServiceSession{
+		ID:          e.Session.ID,
+		ConsumerID:  e.Session.ConsumerID.Address,
+		CreatedAt:   e.Session.StartedAt,
+		ServiceID:   e.Service.ID,
+		ServiceType: e.Session.Proposal.ServiceType,
+	})
+}
+
+func (k *Keeper) removeSession(e sevent.AppEventSession) {
+	found := false
+	for i := range k.state.Sessions {
+		if k.state.Sessions[i].ID == e.Session.ID {
+			k.state.Sessions = append(k.state.Sessions[:i], k.state.Sessions[i+1:]...)
+			found = true
+			break
+		}
+	}
+	if !found {
+		log.Warn().Msgf("Couldn't find a matching session for session remove: %s", e.Session.ID)
+	}
+}
+
+// updates the data transfer info on the session
+func (k *Keeper) updateSessionStats(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	evt, ok := e.(sevent.AppEventDataTransferred)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		return
+	}
+
+	var session *stateEvent.ServiceSession
+	for i := range k.state.Sessions {
+		if k.state.Sessions[i].ID == evt.ID {
+			session = &k.state.Sessions[i]
+		}
+	}
+	if session == nil {
+		log.Warn().Msgf("Couldn't find a matching session for earnings change: %s", evt.ID)
+		return
+	}
+
+	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
+	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
+	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
+	session.BytesIn = evt.Up
+	session.BytesOut = evt.Down
+	go k.announceStateChanges(nil)
+}
+
+// updates total tokens earned during the session.
+func (k *Keeper) updateSessionEarnings(e interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	evt, ok := e.(sevent.AppEventTokensEarned)
+	if !ok {
+		log.Warn().Msg("Received a wrong kind of event for connection state update")
+		return
+	}
+
+	var session *stateEvent.ServiceSession
+	for i := range k.state.Sessions {
+		if k.state.Sessions[i].ID == evt.SessionID {
+			session = &k.state.Sessions[i]
+		}
+	}
+	if session == nil {
+		log.Warn().Msgf("Couldn't find a matching session for earnings change: %s", evt.SessionID)
+		return
+	}
+
+	session.TokensEarned = evt.Total
 	go k.announceStateChanges(nil)
 }
 
@@ -469,17 +525,6 @@ func (k *Keeper) consumeIdentityRegistrationEvent(e interface{}) {
 	}
 	id.RegistrationStatus = evt.Status
 	go k.announceStateChanges(nil)
-}
-
-func (k *Keeper) getSessionByID(id string) (ss stateEvent.ServiceSession, found bool) {
-	for i := range k.state.Sessions {
-		if k.state.Sessions[i].ID == id {
-			ss = k.state.Sessions[i]
-			found = true
-			return
-		}
-	}
-	return
 }
 
 func (k *Keeper) incrementConnectCount(serviceID string, isSuccess bool) {
