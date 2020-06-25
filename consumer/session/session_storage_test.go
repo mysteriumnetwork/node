@@ -34,9 +34,9 @@ import (
 )
 
 var (
-	serviceSessionMock = session_node.Session{
+	serviceSessionMock = session_event.SessionContext{
 		ID:           "session1",
-		ServiceID:    "service1",
+		StartedAt:    time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
 		ConsumerID:   identity.FromAddress("consumer1"),
 		AccountantID: common.HexToAddress("0x00000000000000000000000000000000000000AC"),
 		Proposal: market.ServiceProposal{
@@ -44,7 +44,6 @@ var (
 			ServiceType:       "serviceType",
 			ProviderID:        "providerID",
 		},
-		CreatedAt: time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
 	}
 	connectionSessionMock = connection.Status{
 		StartedAt:    time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
@@ -63,7 +62,7 @@ var (
 
 func TestSessionStorageGetAll(t *testing.T) {
 	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer, nil)
+	storage := NewSessionStorage(storer)
 	sessions, err := storage.GetAll()
 	assert.Nil(t, err)
 	assert.True(t, storer.GetAllCalled)
@@ -74,7 +73,7 @@ func TestSessionStorageGetAllReturnsError(t *testing.T) {
 	storer := &StubSessionStorer{
 		GetAllError: errors.New("error"),
 	}
-	storage := NewSessionStorage(storer, nil)
+	storage := NewSessionStorage(storer)
 	sessions, err := storage.GetAll()
 	assert.NotNil(t, err)
 	assert.True(t, storer.GetAllCalled)
@@ -82,18 +81,15 @@ func TestSessionStorageGetAllReturnsError(t *testing.T) {
 }
 
 func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
-	currentSessions := serviceSessionStorageMock{
-		sessionToReturn: serviceSessionMock,
-	}
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, &currentSessions)
+	storage := NewSessionStorage(storer)
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
 	storage.consumeServiceSessionEvent(session_event.AppEventSession{
-		Status: session_event.CreatedStatus,
-		ID:     string(currentSessions.sessionToReturn.ID),
+		Status:  session_event.CreatedStatus,
+		Session: serviceSessionMock,
 	})
 	assert.Equal(
 		t,
@@ -111,31 +107,18 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		storer.SavedObject,
 	)
 
-	currentSessions.sessionToReturn.DataTransferred = session_node.DataTransferred{Up: 1234, Down: 123}
-	storage.consumeServiceSessionEvent(session_event.AppEventSession{
-		Status: session_event.UpdatedStatus,
-		ID:     string(currentSessions.sessionToReturn.ID),
+	storage.consumeServiceSessionStatisticsEvent(session_event.AppEventDataTransferred{
+		ID:   serviceSessionMock.ID,
+		Up:   123,
+		Down: 1234,
 	})
-	assert.Equal(
-		t,
-		&History{
-			SessionID:       session_node.ID("session1"),
-			Direction:       "Provider",
-			ConsumerID:      identity.FromAddress("consumer1"),
-			AccountantID:    "0x00000000000000000000000000000000000000AC",
-			ProviderID:      identity.FromAddress("providerID"),
-			ServiceType:     "serviceType",
-			ProviderCountry: "MU",
-			Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
-			Status:          "New",
-		},
-		storer.SavedObject,
-	)
-
-	currentSessions.sessionToReturn.TokensEarned = 12
+	storage.consumeServiceSessionEarningsEvent(session_event.AppEventTokensEarned{
+		SessionID: serviceSessionMock.ID,
+		Total:     12,
+	})
 	storage.consumeServiceSessionEvent(session_event.AppEventSession{
-		Status: session_event.RemovedStatus,
-		ID:     string(currentSessions.sessionToReturn.ID),
+		Status:  session_event.RemovedStatus,
+		Session: serviceSessionMock,
 	})
 	assert.Equal(
 		t,
@@ -161,7 +144,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, nil)
+	storage := NewSessionStorage(storer)
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
@@ -200,7 +183,7 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, nil)
+	storage := NewSessionStorage(storer)
 	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
 		Status:      connection.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
@@ -226,7 +209,7 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 	storer := &StubSessionStorer{}
 
-	storage := NewSessionStorage(storer, nil)
+	storage := NewSessionStorage(storer)
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
@@ -264,17 +247,6 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		},
 		storer.UpdatedObject,
 	)
-}
-
-type serviceSessionStorageMock struct {
-	sessionToReturn session_node.Session
-}
-
-func (sssm *serviceSessionStorageMock) Find(id session_node.ID) (session_node.Session, bool) {
-	if sssm.sessionToReturn.ID != id {
-		return session_node.Session{}, false
-	}
-	return sssm.sessionToReturn, true
 }
 
 // StubSessionStorer allows us to get all sessions, save and update them

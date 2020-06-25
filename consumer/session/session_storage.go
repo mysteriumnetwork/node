@@ -46,26 +46,20 @@ type Storer interface {
 
 type timeGetter func() time.Time
 
-type currentSessionStorage interface {
-	Find(id session_node.ID) (session_node.Session, bool)
-}
-
 // Storage contains functions for storing, getting session objects
 type Storage struct {
-	storage         Storer
-	timeGetter      timeGetter
-	currentSessions currentSessionStorage
+	storage    Storer
+	timeGetter timeGetter
 
 	mu             sync.RWMutex
 	sessionsActive map[session_node.ID]History
 }
 
 // NewSessionStorage creates session repository with given dependencies
-func NewSessionStorage(storage Storer, currentSessions currentSessionStorage) *Storage {
+func NewSessionStorage(storage Storer) *Storage {
 	return &Storage{
-		storage:         storage,
-		timeGetter:      time.Now,
-		currentSessions: currentSessions,
+		storage:    storage,
+		timeGetter: time.Now,
 
 		sessionsActive: make(map[session_node.ID]History),
 	}
@@ -74,6 +68,12 @@ func NewSessionStorage(storage Storer, currentSessions currentSessionStorage) *S
 // Subscribe subscribes to relevant events of event bus.
 func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.Subscribe(session_event.AppTopicSession, repo.consumeServiceSessionEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(session_event.AppTopicDataTransferred, repo.consumeServiceSessionStatisticsEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(session_event.AppTopicTokensEarned, repo.consumeServiceSessionEarningsEvent); err != nil {
 		return err
 	}
 	if err := bus.Subscribe(connection.AppTopicConnectionSession, repo.consumeConnectionSessionEvent); err != nil {
@@ -97,35 +97,58 @@ func (repo *Storage) GetAll() ([]History, error) {
 
 // consumeServiceSessionEvent consumes the provided sessions
 func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession) {
-	sessionID := session_node.ID(e.ID)
-	sessionInstance, found := repo.currentSessions.Find(sessionID)
-	if !found {
-		log.Warn().Msg("Received a unknown session update")
-		return
-	}
-
-	repo.mu.Lock()
-	repo.sessionsActive[sessionID] = History{
-		SessionID:       sessionID,
-		Direction:       DirectionProvider,
-		ConsumerID:      sessionInstance.ConsumerID,
-		AccountantID:    sessionInstance.AccountantID.Hex(),
-		ProviderID:      identity.FromAddress(sessionInstance.Proposal.ProviderID),
-		ServiceType:     sessionInstance.Proposal.ServiceType,
-		ProviderCountry: sessionInstance.Proposal.ServiceDefinition.GetLocation().Country,
-		DataSent:        sessionInstance.DataTransferred.Up,
-		DataReceived:    sessionInstance.DataTransferred.Down,
-		Tokens:          sessionInstance.TokensEarned,
-		Started:         sessionInstance.CreatedAt.UTC(),
-	}
-	repo.mu.Unlock()
+	sessionID := session_node.ID(e.Session.ID)
 
 	switch e.Status {
 	case session_event.RemovedStatus:
 		repo.handleEndedEvent(sessionID)
 	case session_event.CreatedStatus:
+		repo.mu.Lock()
+		repo.sessionsActive[sessionID] = History{
+			SessionID:       sessionID,
+			Direction:       DirectionProvider,
+			ConsumerID:      e.Session.ConsumerID,
+			AccountantID:    e.Session.AccountantID.Hex(),
+			ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
+			ServiceType:     e.Session.Proposal.ServiceType,
+			ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
+			Started:         e.Session.StartedAt.UTC(),
+		}
+		repo.mu.Unlock()
+
 		repo.handleCreatedEvent(sessionID)
 	}
+}
+
+func (repo *Storage) consumeServiceSessionStatisticsEvent(e session_event.AppEventDataTransferred) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	sessionID := session_node.ID(e.ID)
+	row, ok := repo.sessionsActive[sessionID]
+	if !ok {
+		log.Warn().Msg("Received a unknown session update")
+		return
+	}
+
+	row.DataSent = e.Down
+	row.DataReceived = e.Up
+	repo.sessionsActive[sessionID] = row
+}
+
+func (repo *Storage) consumeServiceSessionEarningsEvent(e session_event.AppEventTokensEarned) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	sessionID := session_node.ID(e.SessionID)
+	row, ok := repo.sessionsActive[sessionID]
+	if !ok {
+		log.Warn().Msg("Received a unknown session update")
+		return
+	}
+
+	row.Tokens = e.Total
+	repo.sessionsActive[sessionID] = row
 }
 
 // consumeConnectionSessionEvent consumes the session state change events
