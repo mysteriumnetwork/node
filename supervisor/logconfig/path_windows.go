@@ -15,15 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package transport
+package logconfig
 
-import "io"
+import (
+	"fmt"
+	"path/filepath"
 
-// handlerFunc talks to a connected client.
-type handlerFunc func(conn io.ReadWriter)
+	"github.com/mysteriumnetwork/node/supervisor/util/winutil"
+)
 
-// Options for transport.
-type Options struct {
-	Uid        string
-	WinService bool
+// On Windows default log file location will be under C:\Windows\system32\config\systemprofile\AppData\Local\MystSupervisor\myst_supervisor.log
+func defaultLogPath() (string, error) {
+	root, err := winutil.AppDataDir()
+	if err != nil {
+		return "", fmt.Errorf("could not get root win directory for logs: %w", err)
+	}
+	return filepath.Join(root, "myst_supervisor"), nil
 }

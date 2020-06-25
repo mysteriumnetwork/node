@@ -18,6 +18,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,6 +33,14 @@ import (
 	"github.com/mysteriumnetwork/node/supervisor/daemon"
 	"github.com/mysteriumnetwork/node/supervisor/install"
 )
+
+func ensureInstallFlags() {
+	if *svflags.FlagUid == "" {
+		fmt.Println("Error: required flags were not set")
+		flag.Usage()
+		os.Exit(1)
+	}
+}
 
 func main() {
 	svflags.Parse()
@@ -50,11 +59,17 @@ func main() {
 	}
 
 	if *svflags.FlagInstall {
+		ensureInstallFlags()
 		path, err := thisPath()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to determine supervisor's path")
 		}
-
+		cfg := config.Config{
+			Uid: *svflags.FlagUid,
+		}
+		if err := cfg.Write(); err != nil {
+			log.Fatal().Err(err).Msg("Failed to write config")
+		}
 		options := install.Options{
 			SupervisorPath: path,
 		}
@@ -71,8 +86,12 @@ func main() {
 		log.Info().Msg("Supervisor uninstalled")
 	} else {
 		log.Info().Msg("Running myst supervisor daemon")
-		supervisor := daemon.New(&config.Config{})
-		if err := supervisor.Start(transport.Options{WinService: *svflags.FlagWinService}); err != nil {
+		cfg, err := config.Read()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to read configuration")
+		}
+		supervisor := daemon.New()
+		if err := supervisor.Start(transport.Options{WinService: *svflags.FlagWinService, Uid: cfg.Uid}); err != nil {
 			log.Fatal().Err(err).Msg("Error running supervisor")
 		}
 	}

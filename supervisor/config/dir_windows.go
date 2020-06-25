@@ -15,15 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package transport
+package config
 
-import "io"
+import (
+	"fmt"
 
-// handlerFunc talks to a connected client.
-type handlerFunc func(conn io.ReadWriter)
+	"github.com/mysteriumnetwork/node/supervisor/util/winutil"
+)
 
-// Options for transport.
-type Options struct {
-	Uid        string
-	WinService bool
+func configDir() (string, error) {
+	appDataDir, err := winutil.AppDataDir()
+	if err != nil {
+		return "", fmt.Errorf("could not determine appdata dir: %w", err)
+	}
+	return appDataDir, nil
 }
