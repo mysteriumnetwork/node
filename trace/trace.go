@@ -98,7 +98,11 @@ func (t *Tracer) Finish() string {
 
 	var strs []string
 	for _, s := range stages {
-		strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
+		if s.end.After(time.Time{}) {
+			strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
+		} else {
+			strs = append(strs, fmt.Sprintf("%q did not start", s.key))
+		}
 	}
 	return strings.Join(strs, ", ")
 }
