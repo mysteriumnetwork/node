@@ -27,6 +27,7 @@ import (
 var (
 	FlagVersion     = flag.Bool("version", false, "Print version")
 	FlagInstall     = flag.Bool("install", false, "Install or repair myst supervisor")
+	FlagUid         = flag.String("uid", "", "User ID for which supervisor socket should be installed (required)")
 	FlagUninstall   = flag.Bool("uninstall", false, "Uninstall myst supervisor")
 	FlagLogFilePath = flag.String("log-path", "", "Supervisor log file path")
 	FlagLogLevel    = flag.String("log-level", zerolog.InfoLevel.String(), "Logging level")

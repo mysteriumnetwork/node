@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package logconfig
+package winutil
 
 import (
 	"fmt"
@@ -25,16 +25,8 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// On Windows default log file location will be under C:\Windows\system32\config\systemprofile\AppData\Local\MystSupervisor\myst_supervisor.log
-func defaultLogPath() (string, error) {
-	root, err := rootWinDirectory()
-	if err != nil {
-		return "", fmt.Errorf("could not get root win directory for logs: %w", err)
-	}
-	return filepath.Join(root, "myst_supervisor"), nil
-}
-
-func rootWinDirectory() (string, error) {
+func AppDataDir() (string, error) {
+	// On Windows default log file location will be under C:\Windows\system32\config\systemprofile\AppData\Local\MystSupervisor\myst_supervisor.log
 	root, err := windows.KnownFolderPath(windows.FOLDERID_LocalAppData, windows.KF_FLAG_CREATE)
 	if err != nil {
 		return "", fmt.Errorf("could not get known local app data folder: %w", err)
@@ -42,7 +34,7 @@ func rootWinDirectory() (string, error) {
 	c := filepath.Join(root, "MystSupervisor")
 	err = os.MkdirAll(c, os.ModeDir|0700)
 	if err != nil {
-		return "", fmt.Errorf("could not create logs directory: %w", err)
+		return "", fmt.Errorf("could not create appdata directory: %w", err)
 	}
 	return c, nil
 }

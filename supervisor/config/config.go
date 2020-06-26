@@ -21,26 +21,35 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 )
 
+const configFile = "myst_supervisor.conf"
+
 // Config for supervisor, created during -install.
 type Config struct {
+	Uid string
 }
 
 func (c Config) valid() bool {
-	return true
+	return c.Uid != ""
 }
 
 // Write config file.
-func (c Config) Write(confPath string) error {
+func (c Config) Write() error {
 	if !c.valid() {
 		return errors.New("configuration is not valid")
 	}
+	confPath, err := configPath()
+	if err != nil {
+		return err
+	}
+
 	var out strings.Builder
-	err := toml.NewEncoder(&out).Encode(c)
+	err = toml.NewEncoder(&out).Encode(c)
 	if err != nil {
 		return fmt.Errorf("could not encode configuration: %w", err)
 	}
@@ -51,9 +60,14 @@ func (c Config) Write(confPath string) error {
 }
 
 // Read config file.
-func Read(confPath string) (*Config, error) {
+func Read() (*Config, error) {
+	confPath, err := configPath()
+	if err != nil {
+		return nil, err
+	}
+
 	c := Config{}
-	_, err := toml.DecodeFile(confPath, &c)
+	_, err = toml.DecodeFile(confPath, &c)
 	if err != nil {
 		return nil, fmt.Errorf("could not read %q: %w", confPath, err)
 	}
@@ -61,4 +75,12 @@ func Read(confPath string) (*Config, error) {
 		return nil, fmt.Errorf("invalid configuration file %q, please re-install the supervisor (-install)", confPath)
 	}
 	return &c, nil
+}
+
+func configPath() (string, error) {
+	dir, err := configDir()
+	if err != nil {
+		return "", fmt.Errorf("could not determine config dir: %w", err)
+	}
+	return filepath.Join(dir, configFile), nil
 }

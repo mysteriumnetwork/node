@@ -1,3 +1,5 @@
+// +build !windows
+
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -15,15 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package transport
+package config
 
-import "io"
-
-// handlerFunc talks to a connected client.
-type handlerFunc func(conn io.ReadWriter)
-
-// Options for transport.
-type Options struct {
-	Uid        string
-	WinService bool
+func configDir() (string, error) {
+	return "/etc", nil
 }
