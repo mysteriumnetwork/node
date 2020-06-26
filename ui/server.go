@@ -71,11 +71,11 @@ var corsConfig = cors.Config{
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
+func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.NoRoute(ReverseTequilapiProxy(bindAddress, tequilapiPort, authenticator))
+	r.NoRoute(ReverseTequilapiProxy(tequilapiAddress, tequilapiPort, authenticator))
 	r.Use(cors.New(corsConfig))
 
 	r.StaticFS("/", godvpnweb.Assets)
