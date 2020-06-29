@@ -215,7 +215,8 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
         "channel_address": "0x000000000000000000000000000000000000000A",
         "balance": 50,
         "earnings": 1,
-        "earnings_total": 100
+		"earnings_total": 100,
+		"stake": 0
       }
     ]
   },

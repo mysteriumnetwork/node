@@ -176,6 +176,7 @@ func (c *cliApp) handleActions(line string) {
 		{"license", c.license},
 		{"proposals", c.proposals},
 		{"service", c.service},
+		{"stake", c.stake},
 	}
 
 	for _, cmd := range staticCmds {
@@ -654,6 +655,11 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("settle", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem("status"),
+		readline.PcItem(
+			"stake",
+			readline.PcItem("increase"),
+			readline.PcItem("decrease"),
+		),
 		readline.PcItem("healthcheck"),
 		readline.PcItem("nat"),
 		readline.PcItem("proposals"),
