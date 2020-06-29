@@ -18,7 +18,6 @@
 package mysterium
 
 import (
-	"fmt"
 	"path/filepath"
 	"time"
 
@@ -32,8 +31,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/discovery"
-	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -46,7 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // MobileNode represents node object tuned for mobile devices
@@ -227,14 +223,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
-			&proposal.Filter{
-				ServiceType:         wireguard.ServiceType,
-				UpperTimePriceBound: &nodeOptions.Payments.ConsumerUpperMinutePriceBound,
-				LowerTimePriceBound: &nodeOptions.Payments.ConsumerLowerMinutePriceBound,
-				UpperGBPriceBound:   &nodeOptions.Payments.ConsumerUpperGBPriceBound,
-				LowerGBPriceBound:   &nodeOptions.Payments.ConsumerLowerGBPriceBound,
-				ExcludeUnsupported:  true,
-			},
 		),
 		startTime: time.Now(),
 	}
@@ -247,49 +235,9 @@ func (mb *MobileNode) GetProposals(req *GetProposalsRequest) ([]byte, error) {
 	return mb.proposalsManager.getProposals(req)
 }
 
-// GetProposal returns service proposal from cache.
-func (mb *MobileNode) GetProposal(req *GetProposalRequest) ([]byte, error) {
-	status := mb.connectionManager.Status()
-	proposal, err := mb.proposalsManager.getProposal(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get proposal")
-	}
-	if proposal == nil {
-		return nil, fmt.Errorf("proposal %s-%s not found", status.Proposal.ProviderID, status.Proposal.ServiceType)
-	}
-	return proposal, nil
-}
-
 // ProposalChangeCallback represents proposal callback.
 type ProposalChangeCallback interface {
 	OnChange(proposal []byte)
-}
-
-// RegisterProposalAddedCallback registers callback which is called on newly announced proposals
-func (mb *MobileNode) RegisterProposalAddedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.AppTopicProposalAdded, func(proposal market.ServiceProposal) {
-		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
-		log.Error().Err(err).Msg("Proposal mapping failed")
-		cb.OnChange(proposalPayload)
-	})
-}
-
-// RegisterProposalUpdatedCallback registers callback which is called on re-announced proposals
-func (mb *MobileNode) RegisterProposalUpdatedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.AppTopicProposalUpdated, func(proposal market.ServiceProposal) {
-		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
-		log.Error().Err(err).Msg("Proposal mapping failed")
-		cb.OnChange(proposalPayload)
-	})
-}
-
-// RegisterProposalRemovedCallback registers callback which is called on de-announced proposals
-func (mb *MobileNode) RegisterProposalRemovedCallback(cb ProposalChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(discovery.AppTopicProposalRemoved, func(proposal market.ServiceProposal) {
-		proposalPayload, err := mb.proposalsManager.mapToProposalResponse(&proposal)
-		log.Error().Err(err).Msg("Proposal mapping failed")
-		cb.OnChange(proposalPayload)
-	})
 }
 
 // GetLocationResponse represents location response.

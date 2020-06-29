@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -44,7 +45,13 @@ const (
 
 // GetProposalsRequest represents proposals request.
 type GetProposalsRequest struct {
-	Refresh bool
+	ServiceType         string
+	Refresh             bool
+	IncludeFailed       bool
+	UpperTimePriceBound int64
+	LowerTimePriceBound int64
+	UpperGBPriceBound   int64
+	LowerGBPriceBound   int64
 }
 
 // GetProposalRequest represents proposal request.
@@ -54,11 +61,30 @@ type GetProposalRequest struct {
 }
 
 type proposalDTO struct {
-	ID           int                  `json:"id"`
-	ProviderID   string               `json:"providerId"`
-	ServiceType  string               `json:"serviceType"`
-	CountryCode  string               `json:"countryCode"`
-	QualityLevel proposalQualityLevel `json:"qualityLevel"`
+	ID               int                    `json:"id"`
+	ProviderID       string                 `json:"providerId"`
+	ServiceType      string                 `json:"serviceType"`
+	CountryCode      string                 `json:"countryCode"`
+	NodeType         string                 `json:"nodeType"`
+	QualityLevel     proposalQualityLevel   `json:"qualityLevel"`
+	MonitoringFailed bool                   `json:"monitoringFailed"`
+	Payment          *proposalPaymentMethod `json:"payment"`
+}
+
+type proposalPaymentMethod struct {
+	Type  string                `json:"type"`
+	Price *proposalPaymentPrice `json:"price"`
+	Rate  *proposalPaymentRate  `json:"rate"`
+}
+
+type proposalPaymentPrice struct {
+	Amount   int64  `json:"amount"`
+	Currency string `json:"currency"`
+}
+
+type proposalPaymentRate struct {
+	PerSeconds int64 `json:"perSeconds"`
+	PerBytes   int64 `json:"perBytes"`
 }
 
 type getProposalsResponse struct {
@@ -81,13 +107,11 @@ func newProposalsManager(
 	repository proposal.Repository,
 	mysteriumAPI mysteriumAPI,
 	qualityFinder qualityFinder,
-	filter *proposal.Filter,
 ) *proposalsManager {
 	return &proposalsManager{
 		repository:    repository,
 		mysteriumAPI:  mysteriumAPI,
 		qualityFinder: qualityFinder,
-		filter:        filter,
 	}
 }
 
@@ -96,7 +120,6 @@ type proposalsManager struct {
 	cache         []market.ServiceProposal
 	mysteriumAPI  mysteriumAPI
 	qualityFinder qualityFinder
-	filter        *proposal.Filter
 }
 
 func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error) {
@@ -109,7 +132,21 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 	}
 
 	// Get proposals from remote discovery api and store in cache.
-	apiProposals, err := m.getFromRepository()
+	upperTimePriceBound := uint64(req.UpperTimePriceBound)
+	lowerTimePriceBound := uint64(req.LowerTimePriceBound)
+	upperGBPriceBound := uint64(req.UpperGBPriceBound)
+	lowerGBPriceBound := uint64(req.LowerGBPriceBound)
+
+	filter := &proposal.Filter{
+		ServiceType:         req.ServiceType,
+		UpperTimePriceBound: &upperTimePriceBound,
+		LowerTimePriceBound: &lowerTimePriceBound,
+		UpperGBPriceBound:   &upperGBPriceBound,
+		LowerGBPriceBound:   &lowerGBPriceBound,
+		ExcludeUnsupported:  true,
+		IncludeFailed:       req.IncludeFailed,
+	}
+	apiProposals, err := m.getFromRepository(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -118,28 +155,14 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 	return m.mapToProposalsResponse(apiProposals)
 }
 
-func (m *proposalsManager) getProposal(req *GetProposalRequest) ([]byte, error) {
-	result, err := m.repository.Proposal(market.ProposalID{
-		ProviderID:  req.ProviderID,
-		ServiceType: req.ServiceType,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if result == nil {
-		return nil, nil
-	}
-	return m.mapToProposalResponse(result)
-}
-
 func (m *proposalsManager) getFromCache() []market.ServiceProposal {
 	return m.cache
 }
 
-func (m *proposalsManager) getFromRepository() ([]market.ServiceProposal, error) {
-	allProposals, err := m.repository.Proposals(m.filter)
+func (m *proposalsManager) getFromRepository(filter *proposal.Filter) ([]market.ServiceProposal, error) {
+	allProposals, err := m.repository.Proposals(filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get proposals from repository: %w", err)
 	}
 
 	// Ideally api should allow to pass multiple service types to skip noop
@@ -158,17 +181,16 @@ func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
 }
 
 func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) ([]byte, error) {
-	var proposals []*proposalDTO
-	for _, p := range serviceProposals {
-		proposals = append(proposals, &proposalDTO{
-			ID:          p.ID,
-			ProviderID:  p.ProviderID,
-			ServiceType: p.ServiceType,
-			CountryCode: m.getServiceCountryCode(&p),
-		})
+	metrics := m.qualityFinder.ProposalsMetrics()
+	metricsMap := map[string]quality.ConnectMetric{}
+	for _, m := range metrics {
+		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
 	}
 
-	m.addQualityData(proposals)
+	var proposals []*proposalDTO
+	for _, p := range serviceProposals {
+		proposals = append(proposals, m.mapProposal(&p, metricsMap))
+	}
 
 	res := &getProposalsResponse{Proposals: proposals}
 	bytes, err := json.Marshal(res)
@@ -178,43 +200,41 @@ func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.Serv
 	return bytes, nil
 }
 
-func (m *proposalsManager) mapToProposalResponse(p *market.ServiceProposal) ([]byte, error) {
-	dto := &proposalDTO{
-		ID:          p.ID,
-		ProviderID:  p.ProviderID,
-		ServiceType: p.ServiceType,
-		CountryCode: m.getServiceCountryCode(p),
-	}
-	res := &getProposalResponse{Proposal: dto}
-	bytes, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
-}
-
-func (m *proposalsManager) getServiceCountryCode(p *market.ServiceProposal) string {
-	if p.ServiceDefinition == nil {
-		return ""
-	}
-	return p.ServiceDefinition.GetLocation().Country
-}
-
-func (m *proposalsManager) addQualityData(proposals []*proposalDTO) {
-	metrics := m.qualityFinder.ProposalsMetrics()
-
-	// Convert metrics slice to map for fast lookup.
-	metricsMap := map[string]quality.ConnectMetric{}
-	for _, m := range metrics {
-		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
+func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map[string]quality.ConnectMetric) *proposalDTO {
+	prop := &proposalDTO{
+		ID:           p.ID,
+		ProviderID:   p.ProviderID,
+		ServiceType:  p.ServiceType,
+		QualityLevel: proposalQualityLevelUnknown,
 	}
 
-	for _, p := range proposals {
-		p.QualityLevel = proposalQualityLevelUnknown
-		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			p.QualityLevel = m.calculateMetricQualityLevel(mc.ConnectCount)
+	if p.ServiceDefinition != nil {
+		loc := p.ServiceDefinition.GetLocation()
+		prop.CountryCode = loc.Country
+		prop.NodeType = loc.NodeType
+	}
+
+	payment := p.PaymentMethod
+	if payment != nil {
+		prop.Payment = &proposalPaymentMethod{
+			Type: payment.GetType(),
+			Price: &proposalPaymentPrice{
+				Amount:   int64(payment.GetPrice().Amount),
+				Currency: string(payment.GetPrice().Currency),
+			},
+			Rate: &proposalPaymentRate{
+				PerSeconds: int64(payment.GetRate().PerTime.Seconds()),
+				PerBytes:   int64(payment.GetRate().PerByte),
+			},
 		}
 	}
+
+	if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
+		prop.QualityLevel = m.calculateMetricQualityLevel(mc.ConnectCount)
+		prop.MonitoringFailed = mc.MonitoringFailed
+	}
+
+	return prop
 }
 
 func (m *proposalsManager) calculateMetricQualityLevel(counts quality.ConnectCount) proposalQualityLevel {
