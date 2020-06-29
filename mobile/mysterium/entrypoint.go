@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -49,6 +50,7 @@ import (
 type MobileNode struct {
 	shutdown                     func() error
 	node                         *cmd.Node
+	stateKeeper                  *state.Keeper
 	connectionManager            connection.Manager
 	locationResolver             *location.Cache
 	identitySelector             selector.Handler
@@ -204,6 +206,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	mobileNode := &MobileNode{
 		shutdown:                     func() error { return di.Shutdown() },
 		node:                         di.Node,
+		stateKeeper:                  di.StateKeeper,
 		connectionManager:            di.ConnectionManager,
 		locationResolver:             di.LocationResolver,
 		identitySelector:             di.IdentitySelector,
@@ -278,14 +281,15 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 
 // StatisticsChangeCallback represents statistics callback.
 type StatisticsChangeCallback interface {
-	OnChange(duration int64, bytesReceived int64, bytesSent int64)
+	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent int64)
 }
 
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
-		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent))
+		tokensSpent := mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal
+		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), int64(tokensSpent))
 	})
 }
 
