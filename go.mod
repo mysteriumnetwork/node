@@ -33,7 +33,7 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magefile/mage v1.9.0
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/miekg/dns v1.1.22
+	github.com/miekg/dns v1.1.29
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
 	github.com/mysteriumnetwork/go-dvpn-web v0.0.42
