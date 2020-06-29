@@ -93,8 +93,6 @@ func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiP
 
 // Serve starts the server
 func (s *Server) Serve() error {
-	log.Info().Msg("Server starting on: " + s.srv.Addr)
-
 	go func() {
 		err := s.discovery.Start()
 		if err != nil {
@@ -104,8 +102,10 @@ func (s *Server) Serve() error {
 
 	err := s.srv.ListenAndServe()
 	if err != http.ErrServerClosed {
-		return errors.Wrap(err, "dvpn web server crashed")
+		return errors.Wrap(err, "UI server crashed")
 	}
+
+	log.Info().Msgf("UI started on: %s", s.srv.Addr)
 	return nil
 }
 
