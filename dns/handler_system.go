@@ -28,7 +28,11 @@ import (
 // ResolveViaSystem creates proxying DNS handler.
 func ResolveViaSystem() (dns.Handler, error) {
 	handler := &proxyHandler{
-		client: &dns.Client{},
+		client: &dns.Client{
+			DialTimeout:  dnsTimeout,
+			ReadTimeout:  dnsTimeout,
+			WriteTimeout: dnsTimeout,
+		},
 	}
 	if err := handler.configure(); err != nil {
 		return nil, errors.Wrap(err, "failed to find system DNS configuration")
