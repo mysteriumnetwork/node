@@ -17,8 +17,13 @@
 
 package servicestate
 
-// AppTopicServiceStatus is used in event bus to announce the service status
-const AppTopicServiceStatus = "Service status"
+const (
+	// AppTopicServiceStatus is used in event bus to announce the service status.
+	AppTopicServiceStatus = "Service status"
+
+	// AppTopicServiceSession is used in event bus to announce the service session status.
+	AppTopicServiceSession = "Service session"
+)
 
 // AppEventServiceStatus represents the service event related information
 type AppEventServiceStatus struct {
