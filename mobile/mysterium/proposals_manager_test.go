@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -173,7 +174,7 @@ func (m mockPayment) GetPrice() money.Money {
 
 func (m mockPayment) GetRate() market.PaymentRate {
 	return market.PaymentRate{
-		PerTime: 10,
+		PerTime: 10 * time.Second,
 		PerByte: 15,
 	}
 }
