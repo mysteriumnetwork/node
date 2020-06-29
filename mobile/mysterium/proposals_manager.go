@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -161,7 +162,7 @@ func (m *proposalsManager) getFromCache() []market.ServiceProposal {
 func (m *proposalsManager) getFromRepository(filter *proposal.Filter) ([]market.ServiceProposal, error) {
 	allProposals, err := m.repository.Proposals(filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get proposals from repository: %w", err)
 	}
 
 	// Ideally api should allow to pass multiple service types to skip noop
