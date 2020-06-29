@@ -22,7 +22,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -31,18 +35,28 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service) {
+func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
+		var sessionID string
+
 		tracer := trace.NewTracer()
-		sessionCreateTrace := tracer.StartStage("Whole session create")
+		sessionCreateTrace := tracer.StartStage("Provider whole session create")
 
 		defer func() {
 			tracer.EndStage(sessionCreateTrace)
-			traceResult := tracer.Finish()
+			traceResult := tracer.Finish(eventPublisher, sessionID)
 			log.Debug().Msgf("Provider connection trace: %s", traceResult)
+
+			eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
+				Status: connection.SessionEndedStatus,
+				SessionInfo: connection.Status{
+					SessionID: session.ID(sessionID),
+					Proposal:  proposal,
+				},
+			})
 		}()
 
-		sessionStartTrace := tracer.StartStage("Session start")
+		sessionStartTrace := tracer.StartStage("Provider session start")
 		var sr pb.SessionRequest
 		if err := c.Request().UnmarshalProto(&sr); err != nil {
 			return err
@@ -63,16 +77,28 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 			return fmt.Errorf("cannot create new session: %w", err)
 		}
 
+		sessionID = string(session.ID)
+
+		eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
+			Status: connection.SessionCreatedStatus,
+			SessionInfo: connection.Status{
+				ConsumerID:   consumerID,
+				AccountantID: consumerInfo.AccountantID.ToCommonAddress(),
+				SessionID:    session.ID,
+				Proposal:     proposal,
+			},
+		})
+
 		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()))
 		if err != nil {
-			return fmt.Errorf("cannot start session %s: %w", string(session.ID), err)
+			return fmt.Errorf("cannot start session %s: %w", sessionID, err)
 		}
 		tracer.EndStage(sessionStartTrace)
 
-		provideConfigTrace := tracer.StartStage("Provide config")
-		config, err := service.ProvideConfig(string(session.ID), consumerConfig, ch.ServiceConn())
+		provideConfigTrace := tracer.StartStage("Provider config")
+		config, err := service.ProvideConfig(sessionID, consumerConfig, ch.ServiceConn())
 		if err != nil {
-			return fmt.Errorf("cannot get provider config for session %s: %w", string(session.ID), err)
+			return fmt.Errorf("cannot get provider config for session %s: %w", sessionID, err)
 		}
 		tracer.EndStage(provideConfigTrace)
 
@@ -85,11 +111,11 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		data, err := json.Marshal(config.SessionServiceConfig)
 		if err != nil {
-			return fmt.Errorf("cannot pack session %s service config: %w", string(session.ID), err)
+			return fmt.Errorf("cannot pack session %s service config: %w", sessionID, err)
 		}
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
-			ID:          string(session.ID),
+			ID:          sessionID,
 			PaymentInfo: paymentVersion,
 			Config:      data,
 		})
