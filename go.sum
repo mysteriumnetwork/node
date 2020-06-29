@@ -485,6 +485,8 @@ github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N1RaVBCEBLi1VhmIrI=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1/go.mod h1:pWWNkO73g3vPSVb+6O+GzjG8lqv4ByNHR6thSG7WmtY=
+github.com/mysteriumnetwork/metrics v0.0.4 h1:xHA9JJpfR5oMEeyJ/eFl4TolksZzS3vwfAgtN+hXOoY=
+github.com/mysteriumnetwork/metrics v0.0.4/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200603103214-337588427715 h1:DTOhrSaVx6oFOP6XRzlsAb5E34O9DMZ6Uw9cRnq2Pv0=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200603103214-337588427715/go.mod h1:e7j40M4OJQOekLcBsHvvBQfuRglmUx/uYR/msogDhlU=
 github.com/nats-io/jwt v0.3.2 h1:+RB5hMpXUUA2dfxuhBTEkMOrYmM+gKIZYS1KjSostMI=
