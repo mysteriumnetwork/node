@@ -168,12 +168,14 @@ func NewManager(
 }
 
 func (m *connectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+	var sessionID string
+
 	tracer := trace.NewTracer()
-	connectTrace := tracer.StartStage("Whole Connect")
+	connectTrace := tracer.StartStage("Consumer whole Connect")
 
 	defer func() {
 		tracer.EndStage(connectTrace)
-		traceResult := tracer.Finish()
+		traceResult := tracer.Finish(m.eventPublisher, sessionID)
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
@@ -207,7 +209,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	p2pChannelTrace := tracer.StartStage("P2P channel creation")
+	p2pChannelTrace := tracer.StartStage("Consumer P2P channel creation")
 	contact, err := p2p.ParseContact(proposal.ProviderContacts)
 	if err != nil {
 		return fmt.Errorf("provider does not support p2p communication: %w", err)
@@ -219,7 +221,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	}
 	tracer.EndStage(p2pChannelTrace)
 
-	sessionCreateTrace := tracer.StartStage("Session creation")
+	sessionCreateTrace := tracer.StartStage("Consumer session creation")
 	connection, err := m.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
@@ -241,10 +243,11 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		return err
 	}
 
-	paymentSession.SetSessionID(string(sessionDTO.Session.ID))
+	sessionID = string(sessionDTO.Session.ID)
+	paymentSession.SetSessionID(sessionID)
 	tracer.EndStage(sessionCreateTrace)
 
-	connectionTrace := tracer.StartStage("Start connection")
+	connectionTrace := tracer.StartStage("Consumer start connection")
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
 	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
@@ -276,7 +279,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
 	go m.checkSessionIP(channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
 
-	return err
+	return nil
 }
 
 func (m *connectionManager) clearIPCache() {

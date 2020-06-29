@@ -26,10 +26,12 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,6 +40,7 @@ const (
 	sessionDataName     = "session_data"
 	sessionTokensName   = "session_tokens"
 	sessionEventName    = "session_event"
+	traceEventName      = "trace_event"
 	unlockEventName     = "unlock"
 	proposalEventName   = "proposal_event"
 	natMappingEventName = "nat_mapping"
@@ -108,6 +111,12 @@ type sessionTokensContext struct {
 	sessionContext
 }
 
+type sessionTraceContext struct {
+	Duration time.Duration
+	Stage    string
+	sessionContext
+}
+
 type sessionContext struct {
 	ID              string
 	Consumer        string
@@ -126,6 +135,9 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
 		return err
 	}
+	if err := bus.SubscribeAsync(servicestate.AppTopicServiceSession, sender.sendServiceSessionEvent); err != nil {
+		return err
+	}
 	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
 		return err
 	}
@@ -133,6 +145,9 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 		return err
 	}
 	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(trace.AppTopicTraceEvent, sender.sendTraceEvent); err != nil {
 		return err
 	}
 
@@ -177,6 +192,21 @@ func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
 	})
 }
 
+func (sender *Sender) sendServiceSessionEvent(e connection.AppEventConnectionSession) {
+	if e.SessionInfo.SessionID == "" {
+		return
+	}
+
+	sessionContext := sender.toSessionContext(e.SessionInfo)
+
+	switch e.Status {
+	case connection.SessionCreatedStatus:
+		sender.rememberSessionContext(sessionContext)
+	case connection.SessionEndedStatus:
+		sender.forgetSessionContext(sessionContext)
+	}
+}
+
 // sendSessionEvent sends session update events.
 func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
 	if e.SessionInfo.SessionID == "" {
@@ -208,6 +238,20 @@ func (sender *Sender) sendUnlockEvent(id string) {
 // sendProposalEvent sends provider proposal event.
 func (sender *Sender) sendProposalEvent(p market.ServiceProposal) {
 	sender.sendEvent(proposalEventName, p)
+}
+
+func (sender *Sender) sendTraceEvent(stage trace.Event) {
+	session, err := sender.recoverSessionContext(stage.ID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Can't recover session context")
+		return
+	}
+
+	sender.sendEvent(traceEventName, sessionTraceContext{
+		Duration:       stage.Duration,
+		Stage:          stage.Key,
+		sessionContext: session,
+	})
 }
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
@@ -269,6 +313,7 @@ func (sender *Sender) recoverSessionContext(sessionID string) (sessionContext, e
 	if !found {
 		return sessionContext{}, fmt.Errorf("unknown session: %s", sessionID)
 	}
+
 	return context, nil
 }
 
