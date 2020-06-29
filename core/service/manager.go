@@ -144,7 +144,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	channelHandlers := func(ch p2p.Channel) {
 		instance.addP2PChannel(ch)
 		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service)
+		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, proposal)
 		subscribeSessionStatus(mng, ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch, func() {
@@ -167,7 +167,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 			log.Error().Err(serveErr).Msg("Service serve failed")
 		}
 
-		// TODO: fix https://github.com/mysteriumnetwork/node/issues/855
 		stopErr := manager.servicePool.Stop(id)
 		if stopErr != nil {
 			log.Error().Err(stopErr).Msg("Service stop failed")

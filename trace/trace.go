@@ -24,7 +24,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	// AppTopicTraceEvent represents event topic for Trace events
+	AppTopicTraceEvent = "Trace"
 )
 
 // NewTracer returns new tracer instance.
@@ -82,7 +88,7 @@ func (t *Tracer) EndStage(key string) {
 }
 
 // Finish finishes tracing and returns formatted string with stages durations.
-func (t *Tracer) Finish() string {
+func (t *Tracer) Finish(eventPublisher eventbus.Publisher, id string) string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.finished = true
@@ -98,16 +104,39 @@ func (t *Tracer) Finish() string {
 
 	var strs []string
 	for _, s := range stages {
+		t.publishStageEvent(eventPublisher, id, *s)
 		if s.end.After(time.Time{}) {
 			strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
 		} else {
 			strs = append(strs, fmt.Sprintf("%q did not start", s.key))
 		}
 	}
+
 	return strings.Join(strs, ", ")
+}
+
+func (t *Tracer) publishStageEvent(eventPublisher eventbus.Publisher, id string, stage stage) {
+	if eventPublisher == nil {
+		return
+	}
+
+	go eventPublisher.Publish(AppTopicTraceEvent,
+		Event{
+			ID:       id,
+			Key:      stage.key,
+			Duration: stage.end.Sub(stage.start),
+		},
+	)
 }
 
 type stage struct {
 	key        string
 	start, end time.Time
+}
+
+// Event represents a published Trace event.
+type Event struct {
+	ID       string
+	Key      string
+	Duration time.Duration
 }
