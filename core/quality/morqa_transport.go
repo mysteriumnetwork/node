@@ -19,6 +19,7 @@ package quality
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/market"
@@ -55,7 +56,10 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 		return sessionTokensToMetricsEvent(event.Context.(sessionTokensContext))
 	case proposalEventName:
 		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
+	case traceEventName:
+		return traceEventToMetricsEvent(event.Context.(sessionTraceContext), event.Application)
 	}
+
 	return "", nil
 }
 
@@ -139,6 +143,36 @@ func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (stri
 				ServiceType: ctx.ServiceType,
 				NodeType:    location.NodeType,
 				Country:     location.Country,
+				Version: &metrics.VersionPayload{
+					Version: info.Version,
+					Os:      info.OS,
+					Arch:    info.Arch,
+				},
+			},
+		},
+	}
+}
+
+func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *metrics.Event) {
+	sender, target, isProvider := ctx.Consumer, ctx.Provider, false
+	if strings.HasPrefix(ctx.Stage, "Provider") {
+		sender, target, isProvider = ctx.Provider, ctx.Consumer, true
+	}
+
+	return sender, &metrics.Event{
+		TargetId:   target,
+		IsProvider: isProvider,
+		Metric: &metrics.Event_SessionTracePayload{
+			SessionTracePayload: &metrics.SessionTracePayload{
+				Duration: uint64(ctx.Duration.Nanoseconds()),
+				Stage:    ctx.Stage,
+				Session: &metrics.SessionPayload{
+					Id:             ctx.ID,
+					ServiceType:    ctx.ServiceType,
+					ProviderContry: ctx.ProviderCountry,
+					ConsumerContry: ctx.ConsumerCountry,
+					AccountantId:   ctx.AccountantID,
+				},
 				Version: &metrics.VersionPayload{
 					Version: info.Version,
 					Os:      info.OS,
