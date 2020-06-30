@@ -92,8 +92,9 @@ func GetOptions() *Options {
 		TequilapiEnabled: true,
 		BindAddress:      config.GetString(config.FlagBindAddress),
 		UI: OptionsUI{
-			UIEnabled: config.GetBool(config.FlagUIEnable),
-			UIPort:    config.GetInt(config.FlagUIPort),
+			UIEnabled:     config.GetBool(config.FlagUIEnable),
+			UIBindAddress: config.GetString(config.FlagUIAddress),
+			UIPort:        config.GetInt(config.FlagUIPort),
 		},
 		FeedbackURL: config.GetString(config.FlagFeedbackURL),
 		Keystore: OptionsKeystore{

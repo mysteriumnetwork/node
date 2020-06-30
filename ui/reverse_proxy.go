@@ -43,11 +43,11 @@ func buildTransport() *http.Transport {
 	}
 }
 
-func buildReverseProxy(bindAddress string, transport *http.Transport, tequilapiPort int) *httputil.ReverseProxy {
+func buildReverseProxy(tequilapiAddress string, tequilapiPort int) *httputil.ReverseProxy {
 	proxy := &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
 			req.URL.Scheme = "http"
-			req.URL.Host = bindAddress + ":" + strconv.Itoa(tequilapiPort)
+			req.URL.Host = tequilapiAddress + ":" + strconv.Itoa(tequilapiPort)
 			req.URL.Path = strings.Replace(req.URL.Path, tequilapiUrlPrefix, "", 1)
 			req.URL.Path = strings.TrimRight(req.URL.Path, "/")
 		},
@@ -59,7 +59,7 @@ func buildReverseProxy(bindAddress string, transport *http.Transport, tequilapiP
 			res.Header.Del("Access-Control-Allow-Methods")
 			return nil
 		},
-		Transport: transport,
+		Transport: buildTransport(),
 	}
 
 	proxy.FlushInterval = 10 * time.Millisecond
@@ -68,8 +68,8 @@ func buildReverseProxy(bindAddress string, transport *http.Transport, tequilapiP
 }
 
 // ReverseTequilapiProxy proxies UIServer requests to the TequilAPI server
-func ReverseTequilapiProxy(bindAddress string, tequilapiPort int, authenticator jwtAuthenticator) gin.HandlerFunc {
-	proxy := buildReverseProxy(bindAddress, buildTransport(), tequilapiPort)
+func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authenticator jwtAuthenticator) gin.HandlerFunc {
+	proxy := buildReverseProxy(tequilapiAddress, tequilapiPort)
 
 	return func(c *gin.Context) {
 		// skip non Tequilapi routes
