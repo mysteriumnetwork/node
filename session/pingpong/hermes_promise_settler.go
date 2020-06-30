@@ -78,8 +78,8 @@ type HermesPromiseSettler interface {
 	ForceSettle(providerID identity.Identity, hermesID common.Address) error
 	SettleWithBeneficiary(providerID identity.Identity, beneficiary, hermesID common.Address) error
 	SettleIntoStake(providerID identity.Identity, hermesID common.Address) error
-=======
 	GetHermesFee() (uint16, error)
+	Subscribe() error
 }
 
 // hermesPromiseSettler is responsible for settling the hermes promises.
@@ -283,7 +283,14 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 	log.Info().Msgf("Hermes promise state updated for provider %q", id)
 
 	if s.needsSettling(aps.config.Threshold) {
-		aps.initiateSettling(apep.ProviderID, apep.HermesID)
+		if s.channel.Stake != nil && s.channel.StakeGoal != nil && s.channel.Stake.Uint64() < s.channel.StakeGoal.Uint64() {
+			go func() {
+				err := aps.SettleIntoStake(id, apep.HermesID)
+				log.Error().Err(err).Msgf("could not settle into stake for %q", apep.ProviderID)
+			}()
+		} else {
+			aps.initiateSettling(apep.ProviderID, apep.HermesID)
+		}
 	}
 }
 
@@ -336,7 +343,7 @@ func (aps *hermesPromiseSettler) GetEarnings(id identity.Identity) event.Earning
 }
 
 // SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
-func (aps *accountantPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
+func (aps *hermesPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
@@ -474,7 +481,7 @@ func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.A
 	}
 	if isStakeIncrease {
 		settleFunc = func() error {
-			return aps.transactor.SettleIntoStake(aps.config.AccountantAddress.Hex(), p.provider.Address, p.promise)
+			return aps.transactor.SettleIntoStake(aps.config.HermesAddress.Hex(), p.provider.Address, p.promise)
 		}
 	} else if beneficiary != nil {
 		settleFunc = func() error {
@@ -588,7 +595,7 @@ func (ss settlementState) needsSettling(threshold float64) bool {
 		return false
 	}
 
-	if float64(ss.balance()) < calculatedThreshold {
+	if float64(ss.balance()) <= calculatedThreshold {
 		return true
 	}
 

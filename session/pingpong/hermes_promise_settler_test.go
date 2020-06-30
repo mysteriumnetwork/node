@@ -138,7 +138,14 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	assert.NoError(t, err)
 
 	v = settler.currentState[mockID]
-	assert.EqualValues(t, settlementState{}, v)
+	assert.EqualValues(t, settlementState{
+		registered: true,
+		channel: client.ProviderChannel{
+			Balance: big.NewInt(1000000000000),
+			Settled: big.NewInt(9000000),
+			Stake:   big.NewInt(12312323),
+		},
+	}, v)
 
 	// check if will resync
 	delete(settler.currentState, mockID)
@@ -220,7 +227,7 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	ks := identity.NewMockKeystore()
 	settler := NewHermesPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
-	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Registered, registry.Unregistered, registry.InProgress, registry.RegistrationError}
+	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
 		settler.handleRegistrationEvent(registry.AppEventIdentityRegistration{
 			ID:     mockID,
@@ -336,7 +343,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 				status: registry.Registered,
 			},
 			identity.FromAddress(acc1.Address.Hex()): {
-				status: registry.Registered,
+				status: registry.Unregistered,
 			},
 		},
 	}

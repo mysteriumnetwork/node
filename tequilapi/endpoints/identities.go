@@ -280,8 +280,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 	}
 
 	var stake uint64
-	if regStatus == registry.RegisteredProvider {
-		data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address), false)
+	if regStatus == registry.Registered {
+		data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return

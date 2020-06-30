@@ -127,8 +127,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		hermesFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
 		hermesFeeUint := uint64(math.Trunc(hermesFee))
 
-		// 10% of the settlement are used to increase provider stake.
-		earnings := 0.9 * float64(providerStatus.EarningsTotal-fees.Settlement-hermesFeeUint)
+		earnings := float64(providerStatus.EarningsTotal - fees.Settlement - hermesFeeUint)
 		expected := initialBalance + uint64(earnings)
 
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK

@@ -207,7 +207,7 @@ services:
       -MongoUser hermes
       -MongoPass hermes
       -MongoHost "mongodb:27017"
-      -MongoDatabase accountant
+      -MongoDatabase hermes
       -MongoReplSet ""
       -redisAddress "redis:6379"
     volumes:

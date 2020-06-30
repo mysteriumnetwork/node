@@ -43,7 +43,7 @@ func (n *NoopHermesPromiseSettler) ForceSettle(_ identity.Identity, _ common.Add
 }
 
 // SettleIntoStake does nothing.
-func (n *NoopAccountantPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
+func (n *NoopHermesPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
 	return nil
 }
 

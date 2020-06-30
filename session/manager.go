@@ -151,7 +151,7 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
+func (manager *Manager) Start(consumerID identity.Identity, hermesID common.Address, proposalID int) (*Session, error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -167,13 +167,13 @@ func (manager *Manager) Start(consumerID identity.Identity, accountantID common.
 	}
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
-	session.AccountantID = accountantID
+	session.HermesID = hermesID
 	session.Proposal = manager.currentProposal
 	session.done = make(chan struct{})
 	session.CreatedAt = time.Now().UTC()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, hermesID, string(session.ID))
 	if err != nil {
 		return session, err
 	}

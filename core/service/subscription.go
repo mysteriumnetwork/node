@@ -65,7 +65,7 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
 		consumerConfig := sr.GetConfig()
-		hermesID := common.HexToAddress(sr.GetConsumer().GetAccountantID())
+		hermesID := common.HexToAddress(sr.GetConsumer().GetHermesID())
 		sessionInstance, err := mng.Start(consumerID, hermesID, int(sr.GetProposalID()))
 		if err != nil {
 			return fmt.Errorf("cannot start session %s: %w", string(sessionInstance.ID), err)
@@ -75,8 +75,8 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
 			Status: connection.SessionCreatedStatus,
 			SessionInfo: connection.Status{
-				ConsumerID: hermesID,
-				HermesID:   accountantID,
+				ConsumerID: consumerID,
+				HermesID:   hermesID,
 				SessionID:  sessionInstance.ID,
 				Proposal:   sessionInstance.Proposal,
 			},

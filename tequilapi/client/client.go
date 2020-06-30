@@ -504,10 +504,10 @@ func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBloc
 }
 
 // SettleIntoStake requests the settling of accountant promises into a stake increase
-func (client *Client) SettleIntoStake(providerID, accountantID identity.Identity, waitForBlockchain bool) error {
+func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
 	settleRequest := SettleRequest{
-		ProviderID:   providerID.Address,
-		AccountantID: accountantID.Address,
+		ProviderID: providerID.Address,
+		HermesID:   hermesID.Address,
 	}
 
 	path := "transactor/stake/increase/"

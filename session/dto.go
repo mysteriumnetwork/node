@@ -39,13 +39,13 @@ type PaymentEngine interface {
 
 // Session structure holds all required information about current session between service consumer and provider.
 type Session struct {
-	ID           ID
-	ConsumerID   identity.Identity
-	AccountantID common.Address
-	Proposal     market.ServiceProposal
-	ServiceID    string
-	CreatedAt    time.Time
-	done         chan struct{}
+	ID         ID
+	ConsumerID identity.Identity
+	HermesID   common.Address
+	Proposal   market.ServiceProposal
+	ServiceID  string
+	CreatedAt  time.Time
+	done       chan struct{}
 }
 
 // Done returns readonly done channel.
@@ -60,11 +60,11 @@ func (s Session) toEvent(status event.Status) event.AppEventSession {
 			ID: s.ServiceID,
 		},
 		Session: event.SessionContext{
-			ID:           string(s.ID),
-			StartedAt:    s.CreatedAt,
-			ConsumerID:   s.ConsumerID,
-			AccountantID: s.AccountantID,
-			Proposal:     s.Proposal,
+			ID:         string(s.ID),
+			StartedAt:  s.CreatedAt,
+			ConsumerID: s.ConsumerID,
+			HermesID:   s.HermesID,
+			Proposal:   s.Proposal,
 		},
 	}
 }
