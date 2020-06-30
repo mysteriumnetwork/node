@@ -71,11 +71,11 @@ var corsConfig = cors.Config{
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
+func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.NoRoute(ReverseTequilapiProxy(bindAddress, tequilapiPort, authenticator))
+	r.NoRoute(ReverseTequilapiProxy(tequilapiAddress, tequilapiPort, authenticator))
 	r.Use(cors.New(corsConfig))
 
 	r.StaticFS("/", godvpnweb.Assets)
@@ -93,8 +93,6 @@ func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jw
 
 // Serve starts the server
 func (s *Server) Serve() error {
-	log.Info().Msg("Server starting on: " + s.srv.Addr)
-
 	go func() {
 		err := s.discovery.Start()
 		if err != nil {
@@ -104,8 +102,10 @@ func (s *Server) Serve() error {
 
 	err := s.srv.ListenAndServe()
 	if err != http.ErrServerClosed {
-		return errors.Wrap(err, "dvpn web server crashed")
+		return errors.Wrap(err, "UI server crashed")
 	}
+
+	log.Info().Msgf("UI started on: %s", s.srv.Addr)
 	return nil
 }
 

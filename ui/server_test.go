@@ -35,7 +35,7 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 }
 
 func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer("localhost", 55555, 55554, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
+	s := NewServer("localhost", 55555, "localhost", 55554, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
 	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {

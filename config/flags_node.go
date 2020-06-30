@@ -54,7 +54,7 @@ var (
 	// FlagBindAddress IP address to bind to.
 	FlagBindAddress = cli.StringFlag{
 		Name:  "bind.address",
-		Usage: "IP address to bind to",
+		Usage: "IP address to bind provided services to",
 		Value: "0.0.0.0",
 	}
 	// FlagFeedbackURL URL of Feedback API.
@@ -143,7 +143,7 @@ var (
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
 		Name:  "tequilapi.address",
-		Usage: "IP address of interface to listen for incoming connections",
+		Usage: "IP address to bind Tequilapi to",
 		Value: "127.0.0.1",
 	}
 	// FlagTequilapiPort port for listening for incoming API requests.
@@ -164,10 +164,16 @@ var (
 		Usage: "Enables the Web UI",
 		Value: true,
 	}
+	// FlagUIAddress IP address of interface to listen for incoming connections.
+	FlagUIAddress = cli.StringFlag{
+		Name:  "ui.address",
+		Usage: "IP address to bind Web UI to (by default, local LAN IP)",
+		Value: "",
+	}
 	// FlagUIPort runs web UI on the specified port.
 	FlagUIPort = cli.IntFlag{
 		Name:  "ui.port",
-		Usage: "the port to run ui on",
+		Usage: "The port to run Web UI on",
 		Value: 4449,
 	}
 	// FlagUserMode allows to run node under current user without sudo.
@@ -231,6 +237,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagTequilapiPort,
 		&FlagPProfEnable,
 		&FlagUIEnable,
+		&FlagUIAddress,
 		&FlagUIPort,
 		&FlagUserMode,
 		&FlagVendorID,
@@ -272,6 +279,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
+	Current.ParseStringFlag(ctx, FlagUIAddress)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)

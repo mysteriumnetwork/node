@@ -285,13 +285,21 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }
 
-func (di *Dependencies) bootstrapUIServer(options node.Options) {
-	if options.UI.UIEnabled {
-		di.UIServer = ui.NewServer(options.BindAddress, options.UI.UIPort, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
-		return
+func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
+	if !options.UI.UIEnabled {
+		di.UIServer = uinoop.NewServer()
+		return nil
 	}
 
-	di.UIServer = uinoop.NewServer()
+	bindAddress := options.UI.UIBindAddress
+	if bindAddress == "" {
+		bindAddress, err = di.IPResolver.GetOutboundIP()
+		if err != nil {
+			return err
+		}
+	}
+	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
+	return nil
 }
 
 func (di *Dependencies) bootstrapMMN(options node.Options) {
