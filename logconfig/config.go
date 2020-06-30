@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig/rollingwriter"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 )
 
 const (
@@ -43,6 +44,7 @@ func Bootstrap() {
 		"/vendor",
 		"/go/pkg/mod",
 	}
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.CallerMarshalFunc = func(file string, line int) string {
 		var ok bool
