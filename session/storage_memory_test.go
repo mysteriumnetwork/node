@@ -23,19 +23,21 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/mocks"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	sessionExisting = Session{
 		ID:         ID("mocked-id"),
-		Last:       true,
 		ConsumerID: identity.FromAddress("deadbeef"),
+		ServiceID:  "1",
 	}
 )
 
 func TestStorage_FindSession_Existing(t *testing.T) {
-	storage := mockStorage(sessionExisting)
+	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 
 	sessionInstance, found := storage.Find(sessionExisting.ID)
 
@@ -44,7 +46,7 @@ func TestStorage_FindSession_Existing(t *testing.T) {
 }
 
 func TestStorage_FindSession_Unknown(t *testing.T) {
-	storage := mockStorage(sessionExisting)
+	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 
 	sessionInstance, found := storage.Find(ID("unknown-id"))
 	assert.False(t, found)
@@ -52,7 +54,7 @@ func TestStorage_FindSession_Unknown(t *testing.T) {
 }
 
 func TestStorage_Add(t *testing.T) {
-	storage := mockStorage(sessionExisting)
+	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 	sessionNew := Session{
 		ID: ID("new-id"),
 	}
@@ -65,24 +67,23 @@ func TestStorage_Add(t *testing.T) {
 	)
 }
 
-func TestStorageMemory_UpdateEarnings(t *testing.T) {
+func TestStorage_Add_PublishesEvents(t *testing.T) {
 	// given
-	storage := mockStorage(sessionExisting)
-	session, ok := storage.Find(sessionExisting.ID)
-	assert.True(t, ok)
-	assert.Zero(t, session.TokensEarned)
+	session := Session{
+		ID: ID("new-id"),
+	}
+	mp := mocks.NewEventBus()
+	storage := NewStorageMemory(mp)
 
 	// when
-	storage.UpdateEarnings(sessionExisting.ID, 420)
+	storage.Add(session)
 
 	// then
-	session, ok = storage.Find(sessionExisting.ID)
-	assert.True(t, ok)
-	assert.EqualValues(t, 420, session.TokensEarned)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func TestStorageMemory_FindByPeer(t *testing.T) {
-	storage := mockStorage(sessionExisting)
+	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 	session, ok := storage.FindBy(FindOpts{&sessionExisting.ConsumerID, ""})
 	assert.True(t, ok)
 	assert.Equal(t, sessionExisting.ID, session.ID)
@@ -110,7 +111,7 @@ func TestStorage_GetAll(t *testing.T) {
 }
 
 func TestStorage_Remove(t *testing.T) {
-	storage := mockStorage(sessionExisting)
+	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 
 	storage.Remove(sessionExisting.ID)
 	assert.Len(t, storage.sessions, 0)
@@ -118,7 +119,8 @@ func TestStorage_Remove(t *testing.T) {
 
 func TestStorage_RemoveNonExisting(t *testing.T) {
 	storage := &StorageMemory{
-		sessions: map[ID]Session{},
+		sessions:  map[ID]Session{},
+		publisher: mocks.NewEventBus(),
 	}
 	storage.Remove(sessionExisting.ID)
 	assert.Len(t, storage.sessions, 0)
@@ -126,7 +128,7 @@ func TestStorage_RemoveNonExisting(t *testing.T) {
 
 func TestStorage_Remove_Does_Not_Panic(t *testing.T) {
 	id4 := ID("id4")
-	storage := mockStorage(sessionExisting)
+	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
 	sessionFirst := Session{ID: id4}
 	sessionSecond := Session{ID: ID("id3")}
 	storage.Add(sessionFirst)
@@ -136,9 +138,45 @@ func TestStorage_Remove_Does_Not_Panic(t *testing.T) {
 	assert.Len(t, storage.sessions, 1)
 }
 
-func mockStorage(sessionInstance Session) *StorageMemory {
+func TestStorage_Remove_PublishesEvents(t *testing.T) {
+	// given
+	mp := mocks.NewEventBus()
+	storage := mockStorage(mp, sessionExisting)
+
+	// when
+	storage.Remove(sessionExisting.ID)
+
+	// then
+	assert.Eventually(t, lastEventMatches(mp, sessionExisting.ID, sessionEvent.RemovedStatus), 2*time.Second, 10*time.Millisecond)
+}
+
+func TestStorage_RemoveForService_PublishesEvents(t *testing.T) {
+	// given
+	mp := mocks.NewEventBus()
+	storage := mockStorage(mp, sessionExisting)
+
+	// when
+	storage.RemoveForService(sessionExisting.ServiceID)
+
+	// then
+	assert.Eventually(t, lastEventMatches(mp, sessionExisting.ID, sessionEvent.RemovedStatus), 2*time.Second, 10*time.Millisecond)
+}
+
+func mockStorage(publisher publisher, sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
-		sessions: map[ID]Session{sessionInstance.ID: sessionInstance},
+		sessions:  map[ID]Session{sessionInstance.ID: sessionInstance},
+		publisher: publisher,
+	}
+}
+
+func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Status) func() bool {
+	return func() bool {
+		last := mp.Pop()
+		evt, ok := last.(sessionEvent.AppEventSession)
+		if !ok {
+			return false
+		}
+		return evt.Session.ID == string(id) && evt.Status == action
 	}
 }
 
@@ -147,7 +185,7 @@ var benchmarkStorageGetAllResult int
 
 func Benchmark_Storage_GetAll(b *testing.B) {
 	// Findings are as follows - with 100k sessions, we should be fine with a performance of 0.04s on my mac
-	storage := NewStorageMemory()
+	storage := NewStorageMemory(mocks.NewEventBus())
 	sessionsToStore := 100000
 	for i := 0; i < sessionsToStore; i++ {
 		storage.Add(Session{ID: ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})

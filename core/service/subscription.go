@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -35,23 +35,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal) {
+func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
-		var sessionID string
+		var sessionInstance *session.Session
 
 		tracer := trace.NewTracer()
 		sessionCreateTrace := tracer.StartStage("Provider whole session create")
 
 		defer func() {
 			tracer.EndStage(sessionCreateTrace)
-			traceResult := tracer.Finish(eventPublisher, sessionID)
+			traceResult := tracer.Finish(eventPublisher, string(sessionInstance.ID))
 			log.Debug().Msgf("Provider connection trace: %s", traceResult)
 
 			eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
 				Status: connection.SessionEndedStatus,
 				SessionInfo: connection.Status{
-					SessionID: session.ID(sessionID),
-					Proposal:  proposal,
+					SessionID: sessionInstance.ID,
+					Proposal:  sessionInstance.Proposal,
 				},
 			})
 		}()
@@ -65,61 +65,47 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
 		consumerConfig := sr.GetConfig()
-		consumerInfo := session.ConsumerInfo{
-			IssuerID:       consumerID,
-			AccountantID:   identity.FromAddress(sr.GetConsumer().GetAccountantID()),
-			PaymentVersion: session.PaymentVersion(sr.GetConsumer().GetPaymentVersion()),
-		}
-
-		paymentVersion := string(session.PaymentVersionV3)
-		session, err := session.NewSession()
+		accountantID := common.HexToAddress(sr.GetConsumer().GetAccountantID())
+		sessionInstance, err := mng.Start(consumerID, accountantID, int(sr.GetProposalID()))
 		if err != nil {
-			return fmt.Errorf("cannot create new session: %w", err)
+			return fmt.Errorf("cannot start session %s: %w", string(sessionInstance.ID), err)
 		}
-
-		sessionID = string(session.ID)
+		tracer.EndStage(sessionStartTrace)
 
 		eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
 			Status: connection.SessionCreatedStatus,
 			SessionInfo: connection.Status{
 				ConsumerID:   consumerID,
-				AccountantID: consumerInfo.AccountantID.ToCommonAddress(),
-				SessionID:    session.ID,
-				Proposal:     proposal,
+				AccountantID: accountantID,
+				SessionID:    sessionInstance.ID,
+				Proposal:     sessionInstance.Proposal,
 			},
 		})
 
-		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()))
-		if err != nil {
-			return fmt.Errorf("cannot start session %s: %w", sessionID, err)
-		}
-		tracer.EndStage(sessionStartTrace)
-
 		provideConfigTrace := tracer.StartStage("Provider config")
-		config, err := service.ProvideConfig(sessionID, consumerConfig, ch.ServiceConn())
+		config, err := service.ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
-			return fmt.Errorf("cannot get provider config for session %s: %w", sessionID, err)
+			return fmt.Errorf("cannot get provider config for session %s: %w", string(sessionInstance.ID), err)
 		}
 		tracer.EndStage(provideConfigTrace)
 
 		if config.SessionDestroyCallback != nil {
 			go func() {
-				<-session.Done()
+				<-sessionInstance.Done()
 				config.SessionDestroyCallback()
 			}()
 		}
 
 		data, err := json.Marshal(config.SessionServiceConfig)
 		if err != nil {
-			return fmt.Errorf("cannot pack session %s service config: %w", sessionID, err)
+			return fmt.Errorf("cannot pack session %s service config: %w", string(sessionInstance.ID), err)
 		}
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
-			ID:          sessionID,
-			PaymentInfo: paymentVersion,
+			ID:          string(sessionInstance.ID),
+			PaymentInfo: string(session.PaymentVersionV3),
 			Config:      data,
 		})
-
 		return c.OkWithReply(pc)
 	})
 }

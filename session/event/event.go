@@ -18,7 +18,11 @@
 package event
 
 import (
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 const (
@@ -26,8 +30,8 @@ const (
 	AppTopicSession = "Session change"
 	// AppTopicDataTransferred represents the data transfer topic.
 	AppTopicDataTransferred = "Session data transferred"
-	// AppTopicSessionTokensEarned is a topic for publish events about tokens earned as a provider.
-	AppTopicSessionTokensEarned = "SessionTokensEarned"
+	// AppTopicTokensEarned is a topic for publish events about tokens earned as a provider.
+	AppTopicTokensEarned = "SessionTokensEarned"
 )
 
 // AppEventDataTransferred represents the data transfer event
@@ -36,29 +40,42 @@ type AppEventDataTransferred struct {
 	Up, Down uint64
 }
 
-// AppEventSessionTokensEarned is an update on tokens earned during current session
-type AppEventSessionTokensEarned struct {
+// AppEventTokensEarned is an update on tokens earned during current session
+type AppEventTokensEarned struct {
 	ProviderID identity.Identity
 	SessionID  string
 	Total      uint64
 }
 
-// Action represents the different actions that might happen on a session
-type Action string
+// Status represents the different actions that might happen on a session
+type Status string
 
 const (
-	// Created indicates a session has been created
-	Created Action = "Created"
-	// Removed indicates a session has been removed
-	Removed Action = "Removed"
-	// Updated indicates a session has been updated
-	Updated Action = "Updated"
-	// Acknowledged indicates a session has been reported as a success from consumer side
-	Acknowledged Action = "Acknowledged"
+	// CreatedStatus indicates a session has been created
+	CreatedStatus Status = "CreatedStatus"
+	// RemovedStatus indicates a session has been removed
+	RemovedStatus Status = "RemovedStatus"
+	// AcknowledgedStatus indicates a session has been reported as a success from consumer side
+	AcknowledgedStatus Status = "AcknowledgedStatus"
 )
 
-// Payload represents the event payload
-type Payload struct {
-	Action Action
-	ID     string
+// AppEventSession represents the session change payload
+type AppEventSession struct {
+	Status  Status
+	Service ServiceContext
+	Session SessionContext
+}
+
+// ServiceContext holds service context metadata
+type ServiceContext struct {
+	ID string
+}
+
+// SessionContext holds session context metadata
+type SessionContext struct {
+	ID           string
+	StartedAt    time.Time
+	ConsumerID   identity.Identity
+	AccountantID common.Address
+	Proposal     market.ServiceProposal
 }

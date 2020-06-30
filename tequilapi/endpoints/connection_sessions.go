@@ -127,10 +127,10 @@ func connectionSessionToDto(se session.History) connectionSession {
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
 		DateStarted:     se.Started.Format(time.RFC3339),
-		BytesSent:       se.DataStats.BytesSent,
-		BytesReceived:   se.DataStats.BytesReceived,
+		BytesSent:       se.DataSent,
+		BytesReceived:   se.DataReceived,
 		Duration:        uint64(se.GetDuration().Seconds()),
-		TokensSpent:     se.Invoice.AgreementTotal,
+		TokensSpent:     se.Tokens,
 		Status:          se.Status,
 	}
 }

@@ -128,7 +128,7 @@ type Dependencies struct {
 
 	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
-	ServiceSessionStorage *session.EventBasedStorage
+	ServiceSessionStorage *session.StorageMemory
 	ServiceFirewall       firewall.IncomingTrafficFirewall
 
 	NATPinger  traversal.NATPinger
@@ -293,7 +293,6 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		NATStatusProvider:         nat.NewStatusTracker(lastStageName),
 		Publisher:                 di.EventBus,
 		ServiceLister:             di.ServicesManager,
-		ServiceSessionStorage:     di.ServiceSessionStorage,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,

@@ -21,29 +21,34 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/event"
 )
 
 // NewStorageMemory initiates new session storage
-func NewStorageMemory() *StorageMemory {
+func NewStorageMemory(publisher publisher) *StorageMemory {
 	sm := &StorageMemory{
-		sessions: make(map[ID]Session),
-		lock:     sync.Mutex{},
+		sessions:  make(map[ID]Session),
+		lock:      sync.Mutex{},
+		publisher: publisher,
 	}
 	return sm
 }
 
 // StorageMemory maintains all current sessions in memory
 type StorageMemory struct {
-	sessions map[ID]Session
-	lock     sync.Mutex
+	sessions  map[ID]Session
+	lock      sync.Mutex
+	publisher publisher
 }
 
-// Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
-func (storage *StorageMemory) Add(sessionInstance Session) {
+// Add puts given session to storage and publishes a creation event.
+// Multiple sessions per peerID is possible in case different services are used
+func (storage *StorageMemory) Add(instance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	storage.sessions[sessionInstance.ID] = sessionInstance
+	storage.sessions[instance.ID] = instance
+	go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.CreatedStatus))
 }
 
 // GetAll returns all sessions in storage
@@ -68,35 +73,8 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	if instance, found := storage.sessions[id]; found {
-		if len(storage.sessions) == 1 {
-			instance.Last = true
-		}
-		return instance, true
-	}
-
-	return Session{}, false
-}
-
-// UpdateDataTransfer updates the data transfer info on the session
-func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down uint64) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
-	if instance, found := storage.sessions[id]; found {
-		instance.DataTransferred.Down = down
-		instance.DataTransferred.Up = up
-		storage.sessions[id] = instance
-	}
-}
-
-// UpdateEarnings updates total tokens earned during the session.
-func (storage *StorageMemory) UpdateEarnings(id ID, total uint64) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
-	if session, found := storage.sessions[id]; found {
-		session.TokensEarned = total
-		storage.sessions[id] = session
-	}
+	instance, found := storage.sessions[id]
+	return instance, found
 }
 
 // FindOpts provides fields to search sessions.
@@ -109,11 +87,12 @@ type FindOpts struct {
 func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
+
 	for _, session := range storage.sessions {
 		if opts.Peer != nil && *opts.Peer != session.ConsumerID {
 			continue
 		}
-		if opts.ServiceType != "" && opts.ServiceType != session.ServiceType {
+		if opts.ServiceType != "" && opts.ServiceType != session.Proposal.ServiceType {
 			continue
 		}
 		return session, true
@@ -125,7 +104,11 @@ func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
-	delete(storage.sessions, id)
+
+	if instance, found := storage.sessions[id]; found {
+		delete(storage.sessions, id)
+		go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.RemovedStatus))
+	}
 }
 
 // RemoveForService removes all sessions which belong to given service

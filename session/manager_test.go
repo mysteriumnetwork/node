@@ -35,13 +35,13 @@ var (
 	currentProposal   = market.ServiceProposal{
 		ID: currentProposalID,
 	}
-	consumerID = identity.FromAddress("deadbeef")
+	consumerID   = identity.FromAddress("deadbeef")
+	accountantID = common.HexToAddress("0x1")
 
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
-		ID:          expectedID,
-		ConsumerID:  consumerID,
-		ServiceType: "wireguard",
+		ID:         expectedID,
+		ConsumerID: consumerID,
 	}
 )
 
@@ -68,17 +68,14 @@ func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accounta
 func TestManager_Start_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session.done
 
-	assert.Equal(t, expectedResult.Last, session.Last)
 	assert.Equal(t, expectedResult.done, session.done)
 	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
 	assert.False(t, session.CreatedAt.IsZero())
@@ -87,30 +84,24 @@ func TestManager_Start_StoresSession(t *testing.T) {
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session1, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session1, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session1, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session1.done
 	_, found := sessionStore.Find(session1.ID)
 
-	assert.Equal(t, expectedResult.Last, session1.Last)
 	assert.Equal(t, expectedResult.done, session1.done)
 	assert.Equal(t, expectedResult.ConsumerID, session1.ConsumerID)
 	assert.False(t, session1.CreatedAt.IsZero())
 	assert.True(t, found)
 
-	session2, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session2, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session2, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
 	expectedResult.done = session2.done
 
-	assert.Equal(t, expectedResult.Last, session2.Last)
 	assert.Equal(t, expectedResult.done, session2.done)
 	assert.Equal(t, expectedResult.ConsumerID, session2.ConsumerID)
 	assert.False(t, session2.CreatedAt.IsZero())
@@ -121,13 +112,11 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 }
 
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, 69)
+	session, err := manager.Start(consumerID, accountantID, 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Empty(t, session.CreatedAt)
 }
@@ -140,7 +129,7 @@ func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 }
 
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 	err := manager.Acknowledge(consumerID, "")
@@ -148,12 +137,11 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 }
 
 func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
-	session, err := NewSession()
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(identity.FromAddress("some other id"), string(session.ID))
@@ -161,21 +149,19 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 }
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(mocks.NewEventBus())
 
 	mp := mocks.NewEventBus()
 	manager := newManager(currentProposal, sessionStore)
 	manager.publisher = mp
 
-	session, err := NewSession()
-	assert.NoError(t, err)
-	err = manager.Start(session, consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID)
+	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(consumerID, string(session.ID))
 	assert.Nil(t, err)
 
-	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.Acknowledged), 2*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.AcknowledgedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
 func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *Manager {

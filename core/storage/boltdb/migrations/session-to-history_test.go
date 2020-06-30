@@ -104,6 +104,6 @@ func TestSessionToHistoryMigrationWithData(t *testing.T) {
 		return histories[i].Started.Before(histories[j].Started)
 	})
 
-	assert.Equal(t, histories[0].Status, consumer_session.SessionStatusNew)
-	assert.Equal(t, histories[1].Status, consumer_session.SessionStatusCompleted)
+	assert.Equal(t, histories[0].Status, consumer_session.StatusNew)
+	assert.Equal(t, histories[1].Status, consumer_session.StatusCompleted)
 }

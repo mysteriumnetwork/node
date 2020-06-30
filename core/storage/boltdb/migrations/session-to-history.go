@@ -60,7 +60,8 @@ func (s Session) ToSessionHistory() consumer_session.History {
 		Started:         s.Started,
 		Status:          status,
 		Updated:         s.Updated,
-		DataStats:       s.DataStats,
+		DataSent:        s.DataStats.BytesSent,
+		DataReceived:    s.DataStats.BytesReceived,
 	}
 }
 

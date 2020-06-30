@@ -221,7 +221,7 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 		AccountantID: aph.deps.AccountantID,
 		ProviderID:   er.providerID,
 	})
-	aph.deps.EventBus.Publish(sessionEvent.AppTopicSessionTokensEarned, sessionEvent.AppEventSessionTokensEarned{
+	aph.deps.EventBus.Publish(sessionEvent.AppTopicTokensEarned, sessionEvent.AppEventTokensEarned{
 		ProviderID: er.providerID,
 		SessionID:  er.sessionID,
 		Total:      er.em.AgreementTotal,
