@@ -546,6 +546,8 @@ github.com/mysteriumnetwork/payments v0.0.13 h1:FIW85T0ugjNDCF4OJGhOpGh32ME63o+x
 github.com/mysteriumnetwork/payments v0.0.13/go.mod h1:e7j40M4OJQOekLcBsHvvBQfuRglmUx/uYR/msogDhlU=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200603103214-337588427715 h1:DTOhrSaVx6oFOP6XRzlsAb5E34O9DMZ6Uw9cRnq2Pv0=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200603103214-337588427715/go.mod h1:e7j40M4OJQOekLcBsHvvBQfuRglmUx/uYR/msogDhlU=
+github.com/mysteriumnetwork/payments v0.0.14-0.20200618075950-79414cc71c52 h1:Ce0vGO7v4p6g7Q1ZyVJJ84TSYwnUpP33qBZGJaPMXWc=
+github.com/mysteriumnetwork/payments v0.0.14-0.20200618075950-79414cc71c52/go.mod h1:M/yZ8111ybIYE8iHsdPEGPbHVKtVYSGCRuh+ogsvJXw=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200618090702-24ee29ad7b2b h1:urYdjiCHOrkf7kXdPGeylEqDcIEqt0Aupdx2/bfC6B4=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200618090702-24ee29ad7b2b/go.mod h1:M/yZ8111ybIYE8iHsdPEGPbHVKtVYSGCRuh+ogsvJXw=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
