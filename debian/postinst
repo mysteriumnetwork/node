@@ -116,6 +116,7 @@ else
     # Append script-dir for existing installations only if missing
     sed -i -e '/^\(SCRIPT_DIR=\).*/{s//\1\"--script-dir=\/etc\/mysterium-node\"/;:a;n;ba;q}' \
            -e '$aSCRIPT_DIR="--script-dir=/etc/mysterium-node"' /etc/default/mysterium-node
+    sed -i -e 's/SERVICE_OPTS="openvpn,wireguard"/SERVICE_OPTS=""/g' /etc/default/mysterium-node
 fi
 
 # TODO: remove me when all nodes updates
