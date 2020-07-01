@@ -69,6 +69,7 @@ type promiseStorage interface {
 
 type receivedPromise struct {
 	provider identity.Identity
+	hermesID common.Address
 	promise  crypto.Promise
 }
 
@@ -151,29 +152,34 @@ func (aps *hermesPromiseSettler) loadInitialState(addr identity.Identity) error 
 		return nil
 	}
 
-	return aps.resyncState(addr)
+	return aps.resyncState(addr, aps.config.HermesAddress)
 }
 
-func (aps *hermesPromiseSettler) resyncState(id identity.Identity) error {
-	channel, err := aps.bc.GetProviderChannel(aps.config.HermesAddress, id.ToCommonAddress(), true)
+func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID common.Address) error {
+	channel, err := aps.bc.GetProviderChannel(hermesID, id.ToCommonAddress(), true)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v", id))
+		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	hermesPromise, err := aps.promiseStorage.Get(id, aps.config.HermesAddress)
+	hermesPromise, err := aps.promiseStorage.Get(id, hermesID)
 	if err != nil && err != ErrNotFound {
-		return errors.Wrap(err, fmt.Sprintf("could not get hermes promise for %v", id))
+		return errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	s := settlementState{
+	hs := hermesState{
 		channel:     channel,
 		lastPromise: hermesPromise.Promise,
-		registered:  true,
 	}
 
+	s := aps.currentState[id]
+	if len(s.hermeses) == 0 {
+		s.hermeses = make(map[common.Address]hermesState)
+	}
+	s.registered = true
+	s.hermeses[hermesID] = hs
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[id] = s
-	log.Info().Msgf("Loaded state for provider %q: balance %v, available balance %v, unsettled balance %v", id, s.balance(), s.availableBalance(), s.unsettledBalance())
+	log.Info().Msgf("Loaded state for provider %q, hermesID %q: balance %v, available balance %v, unsettled balance %v", id, hermesID.Hex(), hs.balance(), hs.availableBalance(), hs.unsettledBalance())
 	return nil
 }
 
@@ -252,7 +258,7 @@ func (aps *hermesPromiseSettler) handleRegistrationEvent(payload registry.AppEve
 	}
 	log.Info().Msgf("Identity registration event received for provider %q", payload.ID)
 
-	err := aps.resyncState(payload.ID)
+	err := aps.resyncState(payload.ID, aps.config.HermesAddress)
 	if err != nil {
 		log.Error().Err(err).Msgf("Could not resync state for provider %v", payload.ID)
 		return
@@ -276,14 +282,26 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 		log.Error().Msgf("provider %q not registered, skipping", id)
 		return
 	}
-	s.lastPromise = apep.Promise
+
+	hermes, ok := s.hermeses[apep.HermesID]
+	if !ok {
+		err := aps.resyncState(id, apep.HermesID)
+		if err != nil {
+			log.Error().Err(err).Msgf("could not sync state for provider %v, hermesID %v", apep.ProviderID, apep.HermesID.Hex())
+			return
+		}
+		hermes = s.hermeses[apep.HermesID]
+	}
+
+	hermes.lastPromise = apep.Promise
+	s.hermeses[apep.HermesID] = hermes
 
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[apep.ProviderID] = s
-	log.Info().Msgf("Hermes promise state updated for provider %q", id)
+	log.Info().Msgf("Hermes %q promise state updated for provider %q", apep.HermesID.Hex(), id)
 
-	if s.needsSettling(aps.config.Threshold) {
-		if s.channel.Stake != nil && s.channel.StakeGoal != nil && s.channel.Stake.Uint64() < s.channel.StakeGoal.Uint64() {
+	if s.needsSettling(aps.config.Threshold, apep.HermesID) {
+		if hermes.channel.Stake != nil && hermes.channel.StakeGoal != nil && hermes.channel.Stake.Uint64() < hermes.channel.StakeGoal.Uint64() {
 			go func() {
 				err := aps.SettleIntoStake(id, apep.HermesID)
 				log.Error().Err(err).Msgf("could not settle into stake for %q", apep.ProviderID)
@@ -343,8 +361,8 @@ func (aps *hermesPromiseSettler) GetEarnings(id identity.Identity) event.Earning
 }
 
 // SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
-func (aps *hermesPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
-	promise, err := aps.promiseStorage.Get(providerID, accountantID)
+func (aps *hermesPromiseSettler) SettleIntoStake(providerID identity.Identity, hermesID common.Address) error {
+	promise, err := aps.promiseStorage.Get(providerID, hermesID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
 	}
@@ -360,6 +378,7 @@ func (aps *hermesPromiseSettler) SettleIntoStake(providerID identity.Identity, a
 	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
+		hermesID: hermesID,
 	}, nil, true)
 }
 
@@ -385,6 +404,7 @@ func (aps *hermesPromiseSettler) ForceSettle(providerID identity.Identity, herme
 	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
+		hermesID: hermesID,
 	}, nil, false)
 }
 
@@ -408,6 +428,7 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(providerID identity.Ident
 	return aps.settle(receivedPromise{
 		promise:  promise.Promise,
 		provider: providerID,
+		hermesID: hermesID,
 	}, &beneficiary, false)
 }
 
@@ -421,7 +442,7 @@ func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.A
 
 	aps.setSettling(p.provider, true)
 	log.Info().Msgf("Marked provider %v as requesting settlement", p.provider)
-	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), aps.config.HermesAddress)
+	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(p.provider.ToCommonAddress(), p.hermesID)
 	if err != nil {
 		aps.setSettling(p.provider, false)
 		log.Error().Err(err).Msg("Could not subscribe to promise settlement")
@@ -458,7 +479,7 @@ func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.A
 				log.Error().Err(err).Msgf("could not store settlement history")
 			}
 
-			err = aps.resyncState(p.provider)
+			err = aps.resyncState(p.provider, p.hermesID)
 			if err != nil {
 				// This will get retried so we do not need to explicitly retry
 				// TODO: maybe add a sane limit of retries
@@ -538,49 +559,52 @@ func (aps *hermesPromiseSettler) handleNodeStop() {
 	})
 }
 
-// settlementState earning calculations model
-type settlementState struct {
+type hermesState struct {
 	channel     client.ProviderChannel
 	lastPromise crypto.Promise
+}
 
+// settlementState earning calculations model
+type settlementState struct {
 	settleInProgress bool
 	registered       bool
+	hermeses         map[common.Address]hermesState
 }
 
 // lifetimeBalance returns earnings of all history.
-func (ss settlementState) lifetimeBalance() uint64 {
-	return ss.lastPromise.Amount
+func (hs hermesState) lifetimeBalance() uint64 {
+	return hs.lastPromise.Amount
 }
 
 // unsettledBalance returns current unsettled earnings.
-func (ss settlementState) unsettledBalance() uint64 {
+func (hs hermesState) unsettledBalance() uint64 {
 	settled := uint64(0)
-	if ss.channel.Settled != nil {
-		settled = ss.channel.Settled.Uint64()
+	if hs.channel.Settled != nil {
+		settled = hs.channel.Settled.Uint64()
 	}
 
-	return safeSub(ss.lastPromise.Amount, settled)
+	return safeSub(hs.lastPromise.Amount, settled)
 }
 
-func (ss settlementState) availableBalance() uint64 {
+func (hs hermesState) availableBalance() uint64 {
 	balance := uint64(0)
-	if ss.channel.Balance != nil {
-		balance = ss.channel.Balance.Uint64()
+	if hs.channel.Balance != nil {
+		balance = hs.channel.Balance.Uint64()
 	}
 
 	settled := uint64(0)
-	if ss.channel.Settled != nil {
-		settled = ss.channel.Settled.Uint64()
+	if hs.channel.Settled != nil {
+		settled = hs.channel.Settled.Uint64()
 	}
 
 	return balance + settled
 }
 
-func (ss settlementState) balance() uint64 {
-	return safeSub(ss.availableBalance(), ss.lastPromise.Amount)
+func (hs hermesState) balance() uint64 {
+	return safeSub(hs.availableBalance(), hs.lastPromise.Amount)
 }
 
-func (ss settlementState) needsSettling(threshold float64) bool {
+func (ss settlementState) needsSettling(threshold float64, hermesID common.Address) bool {
 	if !ss.registered {
 		return false
 	}
@@ -589,13 +613,18 @@ func (ss settlementState) needsSettling(threshold float64) bool {
 		return false
 	}
 
-	calculatedThreshold := threshold * float64(ss.availableBalance())
-	possibleEarnings := float64(ss.unsettledBalance())
+	hermes, ok := ss.hermeses[hermesID]
+	if !ok {
+		return false
+	}
+
+	calculatedThreshold := threshold * float64(hermes.availableBalance())
+	possibleEarnings := float64(hermes.unsettledBalance())
 	if possibleEarnings < calculatedThreshold {
 		return false
 	}
 
-	if float64(ss.balance()) <= calculatedThreshold {
+	if float64(hermes.balance()) <= calculatedThreshold {
 		return true
 	}
 
@@ -603,8 +632,14 @@ func (ss settlementState) needsSettling(threshold float64) bool {
 }
 
 func (ss settlementState) Earnings() event.Earnings {
+	var lifetimeBalance uint64
+	var unsettledBalance uint64
+	for _, v := range ss.hermeses {
+		lifetimeBalance += v.lifetimeBalance()
+		unsettledBalance += v.unsettledBalance()
+	}
 	return event.Earnings{
-		LifetimeBalance:  ss.lifetimeBalance(),
-		UnsettledBalance: ss.unsettledBalance(),
+		LifetimeBalance:  lifetimeBalance,
+		UnsettledBalance: unsettledBalance,
 	}
 }
