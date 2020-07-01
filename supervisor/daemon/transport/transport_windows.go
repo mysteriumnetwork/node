@@ -19,7 +19,6 @@ package transport
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -72,17 +71,12 @@ func (m *managerService) Execute(args []string, r <-chan svc.ChangeRequest, s ch
 }
 
 func listenPipe(handle handlerFunc) error {
-	// TODO: Check these permissions, it would be much more secure to pass user id
-	// during supervisor installation as adding whole Users group is not secure.
-	socketGroup := "Users"
+	// https://support.microsoft.com/en-us/help/243330/well-known-security-identifiers-in-windows-operating-systems
+	// Looking up by name appears to be unreliable: the name could not be found in localized installations.
+	// Using a well-known security identifier here instead.
+	usersSID := "S-1-5-32-545"
 	sddl := "D:P(A;;GA;;;BA)(A;;GA;;;SY)"
-	for _, g := range strings.Split(socketGroup, ",") {
-		sid, err := winio.LookupSidByName(g)
-		if err != nil {
-			return err
-		}
-		sddl += fmt.Sprintf("(A;;GRGW;;;%s)", sid)
-	}
+	sddl += fmt.Sprintf("(A;;GRGW;;;%s)", usersSID)
 	c := winio.PipeConfig{
 		SecurityDescriptor: sddl,
 		MessageMode:        true,
