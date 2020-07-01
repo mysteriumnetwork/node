@@ -26,8 +26,8 @@ import (
 )
 
 func AppDataDir() (string, error) {
-	// On Windows default log file location will be under C:\Windows\system32\config\systemprofile\AppData\Local\MystSupervisor\myst_supervisor.log
-	root, err := windows.KnownFolderPath(windows.FOLDERID_LocalAppData, windows.KF_FLAG_CREATE)
+	// Default: C:\ProgramData\MystSupervisor
+	root, err := windows.KnownFolderPath(windows.FOLDERID_ProgramData, windows.KF_FLAG_CREATE)
 	if err != nil {
 		return "", fmt.Errorf("could not get known local app data folder: %w", err)
 	}
