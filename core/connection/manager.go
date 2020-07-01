@@ -276,6 +276,9 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		return err
 	}
 
+	// Clear IP cache so session IP check can report that IP has really changed.
+	m.clearIPCache()
+
 	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
 	go m.checkSessionIP(channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
 
