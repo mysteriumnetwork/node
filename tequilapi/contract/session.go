@@ -47,3 +47,50 @@ type ServiceSessionDTO struct {
 	// example: 500000
 	TokensEarned uint64 `json:"tokens_earned"`
 }
+
+// ListConnectionSessionsResponse defines session list representable as json
+// swagger:model ListConnectionSessionsResponse
+type ListConnectionSessionsResponse struct {
+	Sessions []ConnectionSessionDTO `json:"sessions"`
+}
+
+// ConnectionSessionDTO represents the session object
+// swagger:model ConnectionSessionDTO
+type ConnectionSessionDTO struct {
+	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
+	SessionID string `json:"session_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
+	ConsumerID string `json:"consumer_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
+	AccountantID string `json:"accountant_id"`
+
+	// example: 0x0000000000000000000000000000000000000001
+	ProviderID string `json:"provider_id"`
+
+	// example: openvpn
+	ServiceType string `json:"service_type"`
+
+	// example: NL
+	ProviderCountry string `json:"provider_country"`
+
+	// example: 2018-10-29 16:22:05
+	DateStarted string `json:"date_started"`
+
+	// example: 1024
+	BytesSent uint64 `json:"bytes_sent"`
+
+	// example: 1024
+	BytesReceived uint64 `json:"bytes_received"`
+
+	// duration in seconds
+	// example: 120
+	Duration uint64 `json:"duration"`
+
+	// example: 500000
+	TokensSpent uint64 `json:"tokens_spent"`
+
+	// example: Completed
+	Status string `json:"status"`
+}
