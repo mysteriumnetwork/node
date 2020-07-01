@@ -64,25 +64,6 @@ type RegistrationDataDTO struct {
 	Registered bool   `json:"registered"`
 }
 
-// ConnectionSessionListDTO copied from tequilapi endpoint
-type ConnectionSessionListDTO struct {
-	Sessions []ConnectionSessionDTO `json:"sessions"`
-}
-
-// ConnectionSessionDTO copied from tequilapi endpoint
-type ConnectionSessionDTO struct {
-	SessionID       string `json:"session_id"`
-	ProviderID      string `json:"provider_id"`
-	ServiceType     string `json:"service_type"`
-	ProviderCountry string `json:"provider_country"`
-	DateStarted     string `json:"date_started"`
-	BytesSent       uint64 `json:"bytes_sent"`
-	BytesReceived   uint64 `json:"bytes_received"`
-	TokensSpent     uint64 `json:"tokens_spent"`
-	Duration        uint64 `json:"duration"`
-	Status          string `json:"status"`
-}
-
 // ServiceListDTO represents a list of running services on the node
 type ServiceListDTO []ServiceInfoDTO
 
@@ -94,17 +75,6 @@ type ServiceInfoDTO struct {
 	Options     json.RawMessage      `json:"options"`
 	Status      string               `json:"status"`
 	Proposal    contract.ProposalDTO `json:"proposal"`
-}
-
-// ServiceSessionListDTO copied from tequilapi endpoint
-type ServiceSessionListDTO struct {
-	Sessions []ServiceSessionDTO `json:"sessions"`
-}
-
-// ServiceSessionDTO copied from tequilapi endpoint
-type ServiceSessionDTO struct {
-	ID         string `json:"id"`
-	ConsumerID string `json:"consumer_id"`
 }
 
 // NATStatusDTO gives information about NAT traversal success or failure

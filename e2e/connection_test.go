@@ -323,20 +323,20 @@ func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string
 	}
 }
 
-type sessionAsserter func(t *testing.T, session tequilapi_client.ConnectionSessionDTO)
+type sessionAsserter func(t *testing.T, session contract.ConnectionSessionDTO)
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
-	"openvpn": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
+	"openvpn": func(t *testing.T, session contract.ConnectionSessionDTO) {
 		assert.NotZero(t, session.Duration)
 		assert.NotZero(t, session.BytesSent)
 		assert.NotZero(t, session.BytesReceived)
 	},
-	"noop": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
+	"noop": func(t *testing.T, session contract.ConnectionSessionDTO) {
 		assert.NotZero(t, session.Duration)
 		assert.Zero(t, session.BytesSent)
 		assert.Zero(t, session.BytesReceived)
 	},
-	"wireguard": func(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
+	"wireguard": func(t *testing.T, session contract.ConnectionSessionDTO) {
 		assert.NotZero(t, session.Duration)
 		assert.NotZero(t, session.BytesSent)
 		assert.NotZero(t, session.BytesReceived)
