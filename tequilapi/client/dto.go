@@ -30,21 +30,6 @@ type Fees struct {
 	Accountant   uint16 `json:"accountant"`
 }
 
-// HealthcheckDTO holds returned healthcheck response
-type HealthcheckDTO struct {
-	Uptime    string       `json:"uptime"`
-	Process   int          `json:"process"`
-	Version   string       `json:"version"`
-	BuildInfo BuildInfoDTO `json:"build_info"`
-}
-
-// BuildInfoDTO holds info about build
-type BuildInfoDTO struct {
-	Commit      string `json:"commit"`
-	Branch      string `json:"branch"`
-	BuildNumber string `json:"build_number"`
-}
-
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationDataDTO struct {
 	Status     string `json:"status"`

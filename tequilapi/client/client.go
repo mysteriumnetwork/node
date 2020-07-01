@@ -243,7 +243,7 @@ func (client *Client) ConnectionLocation() (location contract.LocationDTO, err e
 }
 
 // Healthcheck returns a healthcheck info
-func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
+func (client *Client) Healthcheck() (healthcheck contract.HealthCheckDTO, err error) {
 	response, err := client.http.Get("healthcheck", url.Values{})
 	if err != nil {
 		return
