@@ -219,22 +219,19 @@ func (client *Client) ConnectionStatus() (status contract.ConnectionStatusDTO, e
 }
 
 // ConnectionIP returns public ip
-func (client *Client) ConnectionIP() (string, error) {
+func (client *Client) ConnectionIP() (ip contract.IPDTO, err error) {
 	response, err := client.http.Get("connection/ip", url.Values{})
 	if err != nil {
-		return "", err
+		return ip, err
 	}
 	defer response.Body.Close()
 
-	var ipData struct {
-		IP string `json:"ip"`
-	}
-	err = parseResponseJSON(response, &ipData)
-	return ipData.IP, err
+	err = parseResponseJSON(response, &ip)
+	return ip, err
 }
 
 // ConnectionLocation returns current location
-func (client *Client) ConnectionLocation() (location LocationDTO, err error) {
+func (client *Client) ConnectionLocation() (location contract.LocationDTO, err error) {
 	response, err := client.http.Get("connection/location", url.Values{})
 	if err != nil {
 		return location, err
@@ -258,7 +255,7 @@ func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 }
 
 // OriginLocation returns original location
-func (client *Client) OriginLocation() (location LocationDTO, err error) {
+func (client *Client) OriginLocation() (location contract.LocationDTO, err error) {
 	response, err := client.http.Get("location", url.Values{})
 	if err != nil {
 		return location, err

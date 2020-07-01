@@ -45,19 +45,6 @@ type BuildInfoDTO struct {
 	BuildNumber string `json:"build_number"`
 }
 
-// LocationDTO describes location metadata
-type LocationDTO struct {
-	IP  string `json:"ip"`
-	ASN int    `json:"asn"`
-	ISP string `json:"isp"`
-
-	Continent string `json:"continent"`
-	Country   string `json:"country"`
-	City      string `json:"city"`
-
-	UserType string `json:"user_type"`
-}
-
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationDataDTO struct {
 	Status     string `json:"status"`

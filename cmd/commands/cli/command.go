@@ -440,7 +440,7 @@ func (c *cliApp) status() {
 	if err != nil {
 		warn(err)
 	} else {
-		info("IP:", ip)
+		info("IP:", ip.IP)
 	}
 
 	location, err := c.tequilapi.ConnectionLocation()
