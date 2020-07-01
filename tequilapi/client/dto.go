@@ -30,12 +30,6 @@ type RegistrationDataDTO struct {
 	Registered bool   `json:"registered"`
 }
 
-// NATStatusDTO gives information about NAT traversal success or failure
-type NATStatusDTO struct {
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
-}
-
 // SettleRequest represents the request to settle accountant promises
 type SettleRequest struct {
 	AccountantID string `json:"accountant_id"`

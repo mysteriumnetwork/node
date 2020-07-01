@@ -107,7 +107,7 @@ type KeeperDeps struct {
 func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
-			NATStatus: stateEvent.NATStatus{
+			NATStatus: contract.NATStatusDTO{
 				Status: "not_finished",
 			},
 			Sessions: make([]contract.ServiceSessionDTO, 0),
@@ -271,7 +271,7 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 
 	k.deps.NATStatusProvider.ConsumeNATEvent(event)
 	status := k.deps.NATStatusProvider.Status()
-	k.state.NATStatus = stateEvent.NATStatus{Status: status.Status}
+	k.state.NATStatus = contract.NATStatusDTO{Status: status.Status}
 	if status.Error != nil {
 		k.state.NATStatus.Error = status.Error.Error()
 	}

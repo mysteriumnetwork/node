@@ -35,7 +35,7 @@ const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
-	NATStatus  NATStatus
+	NATStatus  contract.NATStatusDTO
 	Services   []contract.ServiceInfoDTO
 	Sessions   []contract.ServiceSessionDTO
 	Connection Connection
@@ -72,11 +72,4 @@ func (c Connection) String() string {
 		c.Throughput.Up,
 		money.NewMoney(c.Invoice.AgreementTotal, money.CurrencyMyst),
 	)
-}
-
-// NATStatus stores the nat status related information
-// swagger:model NATStatusDTO
-type NATStatus struct {
-	Status string `json:"status"`
-	Error  string `json:"error"`
 }
