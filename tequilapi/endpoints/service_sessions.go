@@ -23,14 +23,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
-
-// serviceSessionsList defines session list representable as json
-// swagger:model ServiceSessionListDTO
-type serviceSessionsList struct {
-	Sessions []stateEvent.ServiceSession `json:"sessions"`
-}
 
 type stateStorage interface {
 	GetState() stateEvent.State
@@ -55,13 +50,13 @@ func NewServiceSessionsEndpoint(stateStorage stateStorage) *serviceSessionsEndpo
 //   200:
 //     description: List of sessions
 //     schema:
-//       "$ref": "#/definitions/ServiceSessionListDTO"
+//       "$ref": "#/definitions/ListServiceSessionsResponse"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions := endpoint.stateStorage.GetState().Sessions
 
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
 
-	sessionsSerializable := serviceSessionsList{
+	sessionsSerializable := contract.ListServiceSessionsResponse{
 		Sessions: sessions,
 	}
 	utils.WriteAsJSON(sessionsSerializable, resp)

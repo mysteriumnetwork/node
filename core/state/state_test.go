@@ -38,6 +38,7 @@ import (
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -190,7 +191,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
-		[]stateEvent.ServiceSession{
+		[]contract.ServiceSessionDTO{
 			{
 				ID:         expected.ID,
 				ConsumerID: expected.ConsumerID.Address,
@@ -215,7 +216,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	// given
 	myID := "test"
-	expected := event.ServiceSession{
+	expected := contract.ServiceSessionDTO{
 		ID:        myID,
 		ServiceID: myID,
 	}
@@ -230,7 +231,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	keeper.state.Services = []event.ServiceInfo{
 		{ID: myID},
 	}
-	keeper.state.Sessions = []event.ServiceSession{
+	keeper.state.Sessions = []contract.ServiceSessionDTO{
 		expected,
 	}
 
@@ -260,7 +261,7 @@ func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
-	keeper.state.Sessions = []event.ServiceSession{
+	keeper.state.Sessions = []contract.ServiceSessionDTO{
 		{ID: "1"},
 	}
 
@@ -276,7 +277,7 @@ func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
-		[]stateEvent.ServiceSession{
+		[]contract.ServiceSessionDTO{
 			{ID: "1", TokensEarned: 500},
 		},
 		keeper.GetState().Sessions,
@@ -292,7 +293,7 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
-	keeper.state.Sessions = []event.ServiceSession{
+	keeper.state.Sessions = []contract.ServiceSessionDTO{
 		{ID: "1"},
 	}
 
@@ -309,7 +310,7 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
-		[]stateEvent.ServiceSession{
+		[]contract.ServiceSessionDTO{
 			{ID: "1", BytesOut: 2, BytesIn: 1},
 		},
 		keeper.GetState().Sessions,

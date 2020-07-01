@@ -35,6 +35,7 @@ import (
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
 )
 
@@ -110,7 +111,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 			NATStatus: stateEvent.NATStatus{
 				Status: "not_finished",
 			},
-			Sessions: make([]stateEvent.ServiceSession, 0),
+			Sessions: make([]contract.ServiceSessionDTO, 0),
 			Connection: stateEvent.Connection{
 				Session: connection.Status{
 					State: connection.NotConnected,
@@ -299,7 +300,7 @@ func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
 }
 
 func (k *Keeper) addSession(e sevent.AppEventSession) {
-	k.state.Sessions = append(k.state.Sessions, stateEvent.ServiceSession{
+	k.state.Sessions = append(k.state.Sessions, contract.ServiceSessionDTO{
 		ID:          e.Session.ID,
 		ConsumerID:  e.Session.ConsumerID.Address,
 		CreatedAt:   e.Session.StartedAt,
@@ -333,7 +334,7 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 		return
 	}
 
-	var session *stateEvent.ServiceSession
+	var session *contract.ServiceSessionDTO
 	for i := range k.state.Sessions {
 		if k.state.Sessions[i].ID == evt.ID {
 			session = &k.state.Sessions[i]
@@ -363,7 +364,7 @@ func (k *Keeper) updateSessionEarnings(e interface{}) {
 		return
 	}
 
-	var session *stateEvent.ServiceSession
+	var session *contract.ServiceSessionDTO
 	for i := range k.state.Sessions {
 		if k.state.Sessions[i].ID == evt.SessionID {
 			session = &k.state.Sessions[i]
