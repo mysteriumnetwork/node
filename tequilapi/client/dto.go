@@ -17,12 +17,6 @@
 
 package client
 
-import (
-	"encoding/json"
-
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
-)
-
 // Fees represents the transactor fee
 type Fees struct {
 	Registration uint64 `json:"registration"`
@@ -34,19 +28,6 @@ type Fees struct {
 type RegistrationDataDTO struct {
 	Status     string `json:"status"`
 	Registered bool   `json:"registered"`
-}
-
-// ServiceListDTO represents a list of running services on the node
-type ServiceListDTO []ServiceInfoDTO
-
-// ServiceInfoDTO represents running service information
-type ServiceInfoDTO struct {
-	ID          string               `json:"id"`
-	ProviderID  string               `json:"provider_id"`
-	ServiceType string               `json:"type"`
-	Options     json.RawMessage      `json:"options"`
-	Status      string               `json:"status"`
-	Proposal    contract.ProposalDTO `json:"proposal"`
 }
 
 // NATStatusDTO gives information about NAT traversal success or failure

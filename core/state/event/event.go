@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -37,7 +36,7 @@ const AppTopicState = "State change"
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
 	NATStatus  NATStatus
-	Services   []ServiceInfo
+	Services   []contract.ServiceInfoDTO
 	Sessions   []contract.ServiceSessionDTO
 	Connection Connection
 	Identities []Identity
@@ -80,21 +79,4 @@ func (c Connection) String() string {
 type NATStatus struct {
 	Status string `json:"status"`
 	Error  string `json:"error"`
-}
-
-// ConnectionStatistics shows the successful and attempted connection count
-type ConnectionStatistics struct {
-	Attempted  int `json:"attempted"`
-	Successful int `json:"successful"`
-}
-
-// ServiceInfo stores the information about a service
-type ServiceInfo struct {
-	ID                   string                 `json:"id"`
-	ProviderID           string                 `json:"provider_id"`
-	Type                 string                 `json:"type"`
-	Options              interface{}            `json:"options"`
-	Status               string                 `json:"status"`
-	Proposal             market.ServiceProposal `json:"proposal"`
-	ConnectionStatistics ConnectionStatistics   `json:"connection_statistics"`
 }

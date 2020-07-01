@@ -28,27 +28,20 @@ import (
 // NewProposalDTO maps to API service proposal.
 func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
 	return ProposalDTO{
-		ID:          p.ID,
-		ProviderID:  p.ProviderID,
-		ServiceType: p.ServiceType,
-		ServiceDefinition: ServiceDefinitionDTO{
-			LocationOriginate: ServiceLocationDTO{
-				Continent: p.ServiceDefinition.GetLocation().Continent,
-				Country:   p.ServiceDefinition.GetLocation().Country,
-				City:      p.ServiceDefinition.GetLocation().City,
-
-				ASN:      p.ServiceDefinition.GetLocation().ASN,
-				ISP:      p.ServiceDefinition.GetLocation().ISP,
-				NodeType: p.ServiceDefinition.GetLocation().NodeType,
-			},
-		},
-		AccessPolicies: p.AccessPolicies,
-		PaymentMethod:  NewPaymentMethodDTO(p.PaymentMethod),
+		ID:                p.ID,
+		ProviderID:        p.ProviderID,
+		ServiceType:       p.ServiceType,
+		ServiceDefinition: NewServiceDefinitionDTO(p.ServiceDefinition),
+		AccessPolicies:    p.AccessPolicies,
+		PaymentMethod:     NewPaymentMethodDTO(p.PaymentMethod),
 	}
 }
 
 // NewPaymentMethodDTO maps to API payment method.
 func NewPaymentMethodDTO(m market.PaymentMethod) PaymentMethodDTO {
+	if m == nil {
+		return PaymentMethodDTO{}
+	}
 	return PaymentMethodDTO{
 		Type:  m.GetType(),
 		Price: m.GetPrice(),
@@ -56,6 +49,29 @@ func NewPaymentMethodDTO(m market.PaymentMethod) PaymentMethodDTO {
 			PerSeconds: uint64(m.GetRate().PerTime.Seconds()),
 			PerBytes:   m.GetRate().PerByte,
 		},
+	}
+}
+
+// NewServiceDefinitionDTO maps to API service definition.
+func NewServiceDefinitionDTO(s market.ServiceDefinition) ServiceDefinitionDTO {
+	if s == nil {
+		return ServiceDefinitionDTO{}
+	}
+	return ServiceDefinitionDTO{
+		LocationOriginate: NewLocationsDTO(s.GetLocation()),
+	}
+}
+
+// NewLocationsDTO maps to API service location.
+func NewLocationsDTO(l market.Location) ServiceLocationDTO {
+	return ServiceLocationDTO{
+		Continent: l.Continent,
+		Country:   l.Country,
+		City:      l.City,
+
+		ASN:      l.ASN,
+		ISP:      l.ISP,
+		NodeType: l.NodeType,
 	}
 }
 

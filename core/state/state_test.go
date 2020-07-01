@@ -26,8 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/core/state/event"
-	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -228,7 +226,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
-	keeper.state.Services = []event.ServiceInfo{
+	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 	}
 	keeper.state.Sessions = []contract.ServiceSessionDTO{
@@ -353,7 +351,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.Proposal().ProviderID, actual.ProviderID)
 	assert.Equal(t, expected.Options(), actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
-	assert.EqualValues(t, expected.Proposal(), actual.Proposal)
+	assert.EqualValues(t, contract.NewProposalDTO(expected.Proposal()), actual.Proposal)
 }
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
@@ -567,7 +565,7 @@ func Test_getServiceByID(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
-	keeper.state.Services = []event.ServiceInfo{
+	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 		{ID: "mock"},
 	}
@@ -604,7 +602,7 @@ func Test_incrementConnectionCount(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
-	keeper.state.Services = []event.ServiceInfo{
+	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 		{ID: "mock"},
 	}
@@ -648,7 +646,7 @@ func (mep *mockEarningsProvider) GetEarnings(_ identity.Identity) pingpongEvent.
 	return mep.Earnings
 }
 
-func serviceByID(services []stateEvent.ServiceInfo, id string) (se stateEvent.ServiceInfo, found bool) {
+func serviceByID(services []contract.ServiceInfoDTO, id string) (se contract.ServiceInfoDTO, found bool) {
 	for i := range services {
 		if services[i].ID == id {
 			se = services[i]

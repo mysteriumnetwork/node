@@ -370,7 +370,7 @@ func (client *Client) ConnectionSessionsByStatus(status string) (contract.ListCo
 }
 
 // Services returns all running services
-func (client *Client) Services() (services ServiceListDTO, err error) {
+func (client *Client) Services() (services contract.ListServicesResponse, err error) {
 	response, err := client.http.Get("services", url.Values{})
 	if err != nil {
 		return services, err
@@ -382,7 +382,7 @@ func (client *Client) Services() (services ServiceListDTO, err error) {
 }
 
 // Service returns a service information by the requested id
-func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
+func (client *Client) Service(id string) (service contract.ServiceInfoDTO, err error) {
 	response, err := client.http.Get("services/"+id, url.Values{})
 	if err != nil {
 		return service, err
@@ -394,7 +394,7 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service contract.ServiceInfoDTO, err error) {
 	response, err := client.http.Post("services", request)
 	if err != nil {
 		return service, err

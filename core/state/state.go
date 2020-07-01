@@ -74,10 +74,9 @@ type earningsProvider interface {
 // Keeper keeps track of state through eventual consistency.
 // This should become the de-facto place to get your info about node.
 type Keeper struct {
-	state                  *stateEvent.State
-	lock                   sync.RWMutex
-	sessionConnectionCount map[string]event.ConnectionStatistics
-	deps                   KeeperDeps
+	state *stateEvent.State
+	lock  sync.RWMutex
+	deps  KeeperDeps
 
 	// provider
 	consumeServiceStateEvent             func(e interface{})
@@ -118,8 +117,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 				},
 			},
 		},
-		deps:                   deps,
-		sessionConnectionCount: make(map[string]event.ConnectionStatistics),
+		deps: deps,
 	}
 	k.state.Identities = k.fetchIdentities()
 
@@ -226,7 +224,7 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 
 func (k *Keeper) updateServices() {
 	services := k.deps.ServiceLister.List()
-	result := make([]stateEvent.ServiceInfo, len(services))
+	result := make([]contract.ServiceInfoDTO, len(services))
 
 	i := 0
 	for key, v := range services {
@@ -235,13 +233,13 @@ func (k *Keeper) updateServices() {
 		// merge in the connection statistics
 		match, _ := k.getServiceByID(string(key))
 
-		result[i] = stateEvent.ServiceInfo{
+		result[i] = contract.ServiceInfoDTO{
 			ID:                   string(key),
 			ProviderID:           proposal.ProviderID,
 			Type:                 proposal.ServiceType,
 			Options:              v.Options(),
 			Status:               string(v.State()),
-			Proposal:             proposal,
+			Proposal:             contract.NewProposalDTO(proposal),
 			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++
@@ -250,7 +248,7 @@ func (k *Keeper) updateServices() {
 	k.state.Services = result
 }
 
-func (k *Keeper) getServiceByID(id string) (se stateEvent.ServiceInfo, found bool) {
+func (k *Keeper) getServiceByID(id string) (se contract.ServiceInfoDTO, found bool) {
 	for i := range k.state.Services {
 		if k.state.Services[i].ID == id {
 			se = k.state.Services[i]
