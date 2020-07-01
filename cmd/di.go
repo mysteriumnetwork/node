@@ -156,6 +156,7 @@ type Dependencies struct {
 	HermesPromiseStorage     *pingpong.HermesPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
 	HermesPromiseSettler     pingpong.HermesPromiseSettler
+	HermesURLGetter          *pingpong.HermesURLGetter
 	HermesCaller             *pingpong.HermesCaller
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
@@ -452,7 +453,12 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		nodeOptions.Transactor.RegistryAddress,
 	)
 
-	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, nodeOptions.Hermes.HermesEndpointAddress)
+	hermesURL, err := di.HermesURLGetter.GetHermesURL(common.HexToAddress(nodeOptions.Hermes.HermesID))
+	if err != nil {
+		return err
+	}
+
+	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
@@ -464,18 +470,20 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.Transactor,
 	)
 
-	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
+	err = di.ConsumerBalanceTracker.Subscribe(di.EventBus)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
 
 	di.HermesPromiseHandler = pingpong.NewHermesPromiseHandler(pingpong.HermesPromiseHandlerDeps{
 		HermesPromiseStorage: di.HermesPromiseStorage,
-		HermesCaller:         di.HermesCaller,
-		HermesID:             common.HexToAddress(nodeOptions.Hermes.HermesID),
-		FeeProvider:          di.Transactor,
-		Encryption:           di.Keystore,
-		EventBus:             di.EventBus,
+		HermesCallerFactory: func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		HermesURLGetter: di.HermesURLGetter,
+		FeeProvider:     di.Transactor,
+		Encryption:      di.Keystore,
+		EventBus:        di.EventBus,
 	})
 
 	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
@@ -586,23 +594,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.NetworkDefinition = network
 
-	if _, err := firewall.AllowURLAccess(
-		network.EtherClientRPC,
-		network.MysteriumAPIAddress,
-		options.Transactor.TransactorEndpointAddress,
-		options.Hermes.HermesEndpointAddress,
-	); err != nil {
-		return err
-	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(
-		network.EtherClientRPC,
-		network.MysteriumAPIAddress,
-		options.Transactor.TransactorEndpointAddress,
-		options.Hermes.HermesEndpointAddress,
-	); err != nil {
-		return err
-	}
-
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
 	brokerURL, err := nats.ParseServerURI(di.NetworkDefinition.BrokerAddress)
@@ -625,8 +616,32 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
 	di.BCHelper = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 
+	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, common.HexToAddress(options.Transactor.RegistryAddress))
+
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Hermes.HermesID), registryStorage, di.EventBus); err != nil {
+		return err
+	}
+
+	hermesURL, err := di.HermesURLGetter.GetHermesURL(common.HexToAddress(options.Hermes.HermesID))
+	if err != nil {
+		return err
+	}
+
+	if _, err := firewall.AllowURLAccess(
+		network.EtherClientRPC,
+		network.MysteriumAPIAddress,
+		options.Transactor.TransactorEndpointAddress,
+		hermesURL,
+	); err != nil {
+		return err
+	}
+	if _, err := di.ServiceFirewall.AllowURLAccess(
+		network.EtherClientRPC,
+		network.MysteriumAPIAddress,
+		options.Transactor.TransactorEndpointAddress,
+		hermesURL,
+	); err != nil {
 		return err
 	}
 

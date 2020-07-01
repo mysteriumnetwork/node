@@ -23,12 +23,6 @@ import (
 )
 
 var (
-	// FlagHermesAddress points to the hermes service
-	FlagHermesAddress = cli.StringFlag{
-		Name:  "hermes.address",
-		Usage: "hermes URL address",
-		Value: metadata.DefaultNetwork.HermesAddress,
-	}
 	// FlagHermesID determines the hermes ID
 	FlagHermesID = cli.StringFlag{
 		Name:  "hermes.hermes-id",
@@ -41,13 +35,11 @@ var (
 func RegisterFlagsHermes(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		&FlagHermesAddress,
 		&FlagHermesID,
 	)
 }
 
 // ParseFlagsHermes function fills in hermes options from CLI context
 func ParseFlagsHermes(ctx *cli.Context) {
-	Current.ParseStringFlag(ctx, FlagHermesAddress)
 	Current.ParseStringFlag(ctx, FlagHermesID)
 }

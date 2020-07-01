@@ -21,6 +21,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -33,9 +34,11 @@ import (
 
 func TestHermesPromiseHandler_RequestPromise(t *testing.T) {
 	bus := eventbus.New()
+	mockFactory := &mockHermesCallerFactory{}
 	aph := &HermesPromiseHandler{
 		deps: HermesPromiseHandlerDeps{
-			HermesCaller:         &mockHermesCaller{},
+			HermesURLGetter:      &mockHermesURLGetter{},
+			HermesCallerFactory:  mockFactory.Get,
 			Encryption:           &mockEncryptor{},
 			EventBus:             eventbus.New(),
 			HermesPromiseStorage: &mockHermesPromiseStorage{},
@@ -67,11 +70,14 @@ func TestHermesPromiseHandler_RequestPromise(t *testing.T) {
 
 func TestHermesPromiseHandler_RequestPromise_BubblesErrors(t *testing.T) {
 	bus := eventbus.New()
+	mockFactory := &mockHermesCallerFactory{
+		errToReturn: ErrNeedsRRecovery,
+	}
+
 	aph := &HermesPromiseHandler{
 		deps: HermesPromiseHandlerDeps{
-			HermesCaller: &mockHermesCaller{
-				errToReturn: ErrNeedsRRecovery,
-			},
+			HermesURLGetter:     &mockHermesURLGetter{},
+			HermesCallerFactory: mockFactory.Get,
 			Encryption: &mockEncryptor{
 				errToReturn: errors.New("beep beep boop boop"),
 			},
@@ -111,19 +117,23 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 	type fields struct {
 		deps       HermesPromiseHandlerDeps
 		providerID identity.Identity
+		hermesID   common.Address
 	}
+	mockFactory := &mockHermesCallerFactory{}
 	tests := []struct {
 		name    string
 		fields  fields
 		err     hermesError
 		wantErr bool
+		before  func()
 	}{
 		{
 			name: "green path",
 			fields: fields{
 				deps: HermesPromiseHandlerDeps{
-					HermesCaller: &mockHermesCaller{},
-					Encryption:   &mockEncryptor{},
+					HermesCallerFactory: mockFactory.Get,
+					HermesURLGetter:     &mockHermesURLGetter{},
+					Encryption:          &mockEncryptor{},
 				},
 				providerID: identity.FromAddress("0x0"),
 			},
@@ -134,16 +144,18 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
 			},
 			wantErr: false,
+			before: func() {
+				mockFactory.errToReturn = nil
+			},
 		},
 		{
 			name: "bubbles hermes errors",
 			fields: fields{
 				providerID: identity.FromAddress("0x0"),
 				deps: HermesPromiseHandlerDeps{
-					HermesCaller: &mockHermesCaller{
-						errToReturn: errors.New("explosions"),
-					},
-					Encryption: &mockEncryptor{},
+					HermesCallerFactory: mockFactory.Get,
+					HermesURLGetter:     &mockHermesURLGetter{},
+					Encryption:          &mockEncryptor{},
 				},
 			},
 			err: HermesErrorResponse{
@@ -153,13 +165,17 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
 			},
 			wantErr: true,
+			before: func() {
+				mockFactory.errToReturn = errors.New("explosions")
+			},
 		},
 		{
 			name: "bubbles decryptor errors",
 			fields: fields{
 				providerID: identity.FromAddress("0x0"),
 				deps: HermesPromiseHandlerDeps{
-					HermesCaller: &mockHermesCaller{},
+					HermesCallerFactory: mockFactory.Get,
+					HermesURLGetter:     &mockHermesURLGetter{},
 					Encryption: &mockEncryptor{
 						errToReturn: errors.New("explosions"),
 					},
@@ -172,14 +188,21 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 				ErrorData:    "7b2272223a223731373736353731373736353731373736353731333133343333333433333334363137333634363636313733363636343733363436363738363337363332373336363634376136633733363136623637363136653632363136333632366436653631363436363663366236613631373336343636363137333636222c2261677265656d656e745f6964223a3132333435367d",
 			},
 			wantErr: true,
+			before: func() {
+				mockFactory.errToReturn = nil
+			},
 		},
 	}
 	for _, tt := range tests {
+		if tt.before != nil {
+			tt.before()
+		}
+
 		t.Run(tt.name, func(t *testing.T) {
 			it := &HermesPromiseHandler{
 				deps: tt.fields.deps,
 			}
-			if err := it.recoverR(tt.err, tt.fields.providerID); (err != nil) != tt.wantErr {
+			if err := it.recoverR(tt.err, tt.fields.providerID, tt.fields.hermesID); (err != nil) != tt.wantErr {
 				t.Errorf("HermesPromiseHandler.recoverR() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -188,11 +211,13 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 
 func TestHermesPromiseHandler_handleHermesError(t *testing.T) {
 	merr := errors.New("this is a test")
+	mockFactory := &mockHermesCallerFactory{}
 	tests := []struct {
 		name       string
 		err        error
 		wantErr    error
 		providerID identity.Identity
+		hermesID   common.Address
 		deps       HermesPromiseHandlerDeps
 	}{
 		{
@@ -213,7 +238,8 @@ func TestHermesPromiseHandler_handleHermesError(t *testing.T) {
 		{
 			name: "bubbles R recovery errors",
 			deps: HermesPromiseHandlerDeps{
-				HermesCaller: &mockHermesCaller{},
+				HermesCallerFactory: mockFactory.Get,
+				HermesURLGetter:     &mockHermesURLGetter{},
 				Encryption: &mockEncryptor{
 					errToReturn: merr,
 				},
@@ -230,7 +256,7 @@ func TestHermesPromiseHandler_handleHermesError(t *testing.T) {
 			aph := &HermesPromiseHandler{
 				deps: tt.deps,
 			}
-			err := aph.handleHermesError(tt.err, tt.providerID)
+			err := aph.handleHermesError(tt.err, tt.providerID, tt.hermesID)
 			if tt.wantErr == nil {
 				assert.NoError(t, err, tt.name)
 			} else {
@@ -248,4 +274,23 @@ type mockFeeProvider struct {
 
 func (mfp *mockFeeProvider) FetchSettleFees() (registry.FeesResponse, error) {
 	return mfp.toReturn, mfp.errToReturn
+}
+
+type mockHermesCallerFactory struct {
+	errToReturn error
+}
+
+func (mhcf *mockHermesCallerFactory) Get(url string) HermesHTTPRequester {
+	return &mockHermesCaller{
+		errToReturn: mhcf.errToReturn,
+	}
+}
+
+type mockHermesURLGetter struct {
+	errToReturn error
+	urlToReturn string
+}
+
+func (mhug *mockHermesURLGetter) GetHermesURL(address common.Address) (string, error) {
+	return mhug.urlToReturn, mhug.errToReturn
 }

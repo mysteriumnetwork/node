@@ -24,7 +24,6 @@ type NetworkDefinition struct {
 	BrokerAddress             string
 	EtherClientRPC            string
 	TransactorAddress         string
-	HermesAddress             string
 	RegistryAddress           string
 	HermesID                  string
 	ChannelImplAddress        string
@@ -41,7 +40,6 @@ var TestnetDefinition = NetworkDefinition{
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
 	ChannelImplAddress:        "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
 	HermesID:                  "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
-	HermesAddress:             "https://testnet-hermes.mysterium.network/api/v2",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }
 

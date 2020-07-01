@@ -105,7 +105,6 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		TransactorEndpointAddress:       metadata.TestnetDefinition.TransactorAddress,
 		TransactorRegistryAddress:       metadata.TestnetDefinition.RegistryAddress,
 		TransactorChannelImplementation: metadata.TestnetDefinition.ChannelImplAddress,
-		HermesEndpointAddress:           metadata.TestnetDefinition.HermesAddress,
 		HermesID:                        metadata.TestnetDefinition.HermesID,
 		MystSCAddress:                   "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
 	}
@@ -180,8 +179,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ProviderRegistrationStake:       6200000000,
 		},
 		Hermes: node.OptionsHermes{
-			HermesEndpointAddress: options.HermesEndpointAddress,
-			HermesID:              options.HermesID,
+			HermesID: options.HermesID,
 		},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:    1500,

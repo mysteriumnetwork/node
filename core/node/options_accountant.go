@@ -19,6 +19,5 @@ package node
 
 // OptionsHermes describes possible parameters for interaction with Hermes
 type OptionsHermes struct {
-	HermesEndpointAddress string
-	HermesID              string
+	HermesID string
 }

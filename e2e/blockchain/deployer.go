@@ -114,6 +114,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		minimalStake,
 		channelImplAddress,
 		hermesImplAddress,
+		common.Address{},
 	)
 	checkError("Deploy registry v2", err)
 	fmt.Println("v2 registry address: ", registryAddress.String())
@@ -143,6 +144,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		400,
 		big.NewInt(1),
 		big.NewInt(125000000000),
+		[]byte("http://hermes:8889"),
 	)
 	checkError("register hermes", err)
 	checkTxStatus(client, tx)

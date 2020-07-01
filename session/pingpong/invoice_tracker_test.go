@@ -638,7 +638,6 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		hermesID                   common.Address
 		AgreementID                uint64
 		lastExchangeMessage        crypto.ExchangeMessage
-		hermesCaller               hermesCaller
 		invoicesSent               map[string]sentInvoice
 		channelImplementation      string
 		registryAddress            string
@@ -685,7 +684,6 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 			fields: fields{
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
-				hermesCaller:               &mockHermesCaller{},
 				hermesPromiseStorage:       &mockHermesPromiseStorage{},
 				peer:                       identity.FromAddress(addr3),
 				registryAddress:            mockRegistryAddress,

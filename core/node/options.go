@@ -149,8 +149,7 @@ func GetOptions() *Options {
 			MaxUnpaidInvoiceValue:          config.GetUInt64(config.FlagPaymentsMaxUnpaidInvoiceValue),
 		},
 		Hermes: OptionsHermes{
-			HermesID:              config.GetString(config.FlagHermesID),
-			HermesEndpointAddress: config.GetString(config.FlagHermesAddress),
+			HermesID: config.GetString(config.FlagHermesID),
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
 			BinaryPath: config.GetString(config.FlagOpenvpnBinary),
