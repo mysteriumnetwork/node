@@ -104,8 +104,8 @@ func (t *Tracer) Finish(eventPublisher eventbus.Publisher, id string) string {
 
 	var strs []string
 	for _, s := range stages {
-		t.publishStageEvent(eventPublisher, id, *s)
 		if s.end.After(time.Time{}) {
+			t.publishStageEvent(eventPublisher, id, *s)
 			strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
 		} else {
 			strs = append(strs, fmt.Sprintf("%q did not start", s.key))
