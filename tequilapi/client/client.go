@@ -430,7 +430,7 @@ func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 }
 
 // ServiceSessions returns all currently running sessions
-func (client *Client) ServiceSessions() (sessions contract.ListServiceSessionsResponse, err error) {
+func (client *Client) ServiceSessions() (sessions contract.ListConnectionSessionsResponse, err error) {
 	response, err := client.http.Get("service-sessions", url.Values{})
 	if err != nil {
 		return sessions, err

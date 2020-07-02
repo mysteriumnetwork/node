@@ -53,13 +53,10 @@ func NewServiceSessionsEndpoint(stateStorage stateStorage) *serviceSessionsEndpo
 //       "$ref": "#/definitions/ListServiceSessionsResponse"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions := endpoint.stateStorage.GetState().Sessions
+	sort.Slice(sessions, func(i, j int) bool { return sessions[i].Started.Before(sessions[j].Started) })
 
-	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
-
-	sessionsSerializable := contract.ListServiceSessionsResponse{
-		Sessions: sessions,
-	}
-	utils.WriteAsJSON(sessionsSerializable, resp)
+	sessionsDTO := contract.NewSessionListResponse(sessions)
+	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
 // AddRoutesForServiceSessions attaches service sessions endpoints to router

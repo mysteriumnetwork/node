@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -30,9 +32,11 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
+	nodeSession "github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -164,9 +168,13 @@ func Test_ConsumesNATEvents(t *testing.T) {
 func Test_ConsumesSessionEvents(t *testing.T) {
 	// given
 	expected := sessionEvent.SessionContext{
-		ID:         "1",
-		StartedAt:  time.Now(),
-		ConsumerID: identity.FromAddress("0x0000000000000000000000000000000000000001"),
+		ID:           "1",
+		StartedAt:    time.Now(),
+		ConsumerID:   identity.FromAddress("0x0000000000000000000000000000000000000001"),
+		AccountantID: common.HexToAddress("0x000000000000000000000000000000000000000a"),
+		Proposal: market.ServiceProposal{
+			ServiceDefinition: &StubServiceDefinition{},
+		},
 	}
 
 	eventBus := eventbus.New()
@@ -189,11 +197,15 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
-		[]contract.ServiceSessionDTO{
+		[]session.History{
 			{
-				ID:         expected.ID,
-				ConsumerID: expected.ConsumerID.Address,
-				CreatedAt:  expected.StartedAt,
+				SessionID:       nodeSession.ID(expected.ID),
+				Direction:       session.DirectionProvider,
+				ConsumerID:      expected.ConsumerID,
+				AccountantID:    expected.AccountantID.Hex(),
+				ProviderCountry: "MU",
+				Started:         expected.StartedAt,
+				Status:          session.StatusNew,
 			},
 		},
 		keeper.GetState().Sessions,
@@ -214,9 +226,8 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	// given
 	myID := "test"
-	expected := contract.ServiceSessionDTO{
-		ID:        myID,
-		ServiceID: myID,
+	expected := session.History{
+		SessionID: nodeSession.ID("1"),
 	}
 
 	eventBus := eventbus.New()
@@ -229,7 +240,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 	}
-	keeper.state.Sessions = []contract.ServiceSessionDTO{
+	keeper.state.Sessions = []session.History{
 		expected,
 	}
 
@@ -240,7 +251,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 			ID: myID,
 		},
 		Session: sessionEvent.SessionContext{
-			ID: string(expected.ID),
+			ID: string(expected.SessionID),
 		},
 	})
 
@@ -259,8 +270,8 @@ func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
-	keeper.state.Sessions = []contract.ServiceSessionDTO{
-		{ID: "1"},
+	keeper.state.Sessions = []session.History{
+		{SessionID: nodeSession.ID("1")},
 	}
 
 	// when
@@ -271,12 +282,12 @@ func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Sessions[0].TokensEarned != 0
+		return keeper.GetState().Sessions[0].Tokens != 0
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
-		[]contract.ServiceSessionDTO{
-			{ID: "1", TokensEarned: 500},
+		[]session.History{
+			{SessionID: nodeSession.ID("1"), Tokens: 500},
 		},
 		keeper.GetState().Sessions,
 	)
@@ -291,8 +302,8 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
-	keeper.state.Sessions = []contract.ServiceSessionDTO{
-		{ID: "1"},
+	keeper.state.Sessions = []session.History{
+		{SessionID: nodeSession.ID("1")},
 	}
 
 	// when
@@ -304,12 +315,12 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Sessions[0].BytesIn != 0
+		return keeper.GetState().Sessions[0].DataReceived != 0
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
-		[]contract.ServiceSessionDTO{
-			{ID: "1", BytesOut: 2, BytesIn: 1},
+		[]session.History{
+			{SessionID: nodeSession.ID("1"), DataSent: 2, DataReceived: 1},
 		},
 		keeper.GetState().Sessions,
 	)
@@ -655,4 +666,10 @@ func serviceByID(services []contract.ServiceInfoDTO, id string) (se contract.Ser
 		}
 	}
 	return
+}
+
+type StubServiceDefinition struct{}
+
+func (fs *StubServiceDefinition) GetLocation() market.Location {
+	return market.Location{Country: "MU"}
 }

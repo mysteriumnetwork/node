@@ -24,16 +24,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer/session"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	serviceSessionMock = contract.ServiceSessionDTO{
-		ID:         "session1",
-		ConsumerID: "consumer1",
-		CreatedAt:  time.Now(),
+	serviceSessionMock = session.History{
+		SessionID:  "session1",
+		ConsumerID: identity.FromAddress("consumer1"),
+		Started:    time.Now(),
 	}
 )
 
@@ -45,15 +47,15 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	anotherSession := contract.ServiceSessionDTO{
-		ID:         "session2",
-		ConsumerID: "consumer1",
-		CreatedAt:  time.Now(),
+	anotherSession := session.History{
+		SessionID:  "session2",
+		ConsumerID: identity.FromAddress("consumer1"),
+		Started:    time.Now(),
 	}
 
 	ssm := &stateProviderMock{
 		stateToReturn: stateEvent.State{
-			Sessions: []contract.ServiceSessionDTO{
+			Sessions: []session.History{
 				serviceSessionMock,
 				anotherSession,
 			},
@@ -64,16 +66,16 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	handlerFunc := NewServiceSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &contract.ListServiceSessionsResponse{}
+	parsedResponse := &contract.ListConnectionSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.Equal(t, serviceSessionMock.ConsumerID, parsedResponse.Sessions[0].ConsumerID)
-	assert.Equal(t, serviceSessionMock.ID, parsedResponse.Sessions[0].ID)
-	assert.True(t, serviceSessionMock.CreatedAt.Equal(parsedResponse.Sessions[0].CreatedAt))
+	assert.Equal(t, serviceSessionMock.ConsumerID.Address, parsedResponse.Sessions[0].ConsumerID)
+	assert.Equal(t, string(serviceSessionMock.SessionID), parsedResponse.Sessions[0].ID)
+	assert.Equal(t, serviceSessionMock.Started.Format(time.RFC3339), parsedResponse.Sessions[0].CreatedAt)
 
-	assert.Equal(t, anotherSession.ConsumerID, parsedResponse.Sessions[1].ConsumerID)
-	assert.Equal(t, anotherSession.ID, parsedResponse.Sessions[1].ID)
-	assert.True(t, anotherSession.CreatedAt.Equal(parsedResponse.Sessions[1].CreatedAt))
+	assert.Equal(t, anotherSession.ConsumerID.Address, parsedResponse.Sessions[1].ConsumerID)
+	assert.Equal(t, string(anotherSession.SessionID), parsedResponse.Sessions[1].ID)
+	assert.Equal(t, anotherSession.Started.Format(time.RFC3339), parsedResponse.Sessions[1].CreatedAt)
 
 }
 
