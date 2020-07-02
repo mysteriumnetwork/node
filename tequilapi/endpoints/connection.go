@@ -39,13 +39,6 @@ import (
 // operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 const statusConnectCancelled = 499
 
-// swagger:model IPDTO
-type ipResponse struct {
-	// public IP address
-	// example: 127.0.0.1
-	IP string `json:"ip"`
-}
-
 // ProposalGetter defines interface to fetch currently active service proposal by id
 type ProposalGetter interface {
 	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)

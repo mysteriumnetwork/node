@@ -15,26 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package winutil
+package contract
 
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-
-	"golang.org/x/sys/windows"
-)
-
-func AppDataDir() (string, error) {
-	// Default: C:\ProgramData\MystSupervisor
-	root, err := windows.KnownFolderPath(windows.FOLDERID_ProgramData, windows.KF_FLAG_CREATE)
-	if err != nil {
-		return "", fmt.Errorf("could not get known local app data folder: %w", err)
-	}
-	c := filepath.Join(root, "MystSupervisor")
-	err = os.MkdirAll(c, os.ModeDir|0700)
-	if err != nil {
-		return "", fmt.Errorf("could not create appdata directory: %w", err)
-	}
-	return c, nil
+// NATStatusDTO gives information about NAT traversal success or failure
+// swagger:model NATStatusDTO
+type NATStatusDTO struct {
+	Status string `json:"status"`
+	Error  string `json:"error"`
 }

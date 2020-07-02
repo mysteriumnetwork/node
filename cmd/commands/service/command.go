@@ -106,10 +106,9 @@ type serviceCommand struct {
 
 // Run runs a command
 func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
-	arg := ctx.Args().Get(0)
 	serviceTypes := services.Types()
-	if arg != "" {
-		serviceTypes = strings.Split(arg, ",")
+	if ctx.NArg() > 0 {
+		serviceTypes = strings.Split(ctx.Args().Get(0), ",")
 	}
 
 	providerID := sc.unlockIdentity(

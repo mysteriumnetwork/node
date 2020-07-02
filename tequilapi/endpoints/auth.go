@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -39,19 +40,6 @@ type jwtAuthenticator interface {
 type authenticator interface {
 	CheckCredentials(username, password string) error
 	ChangePassword(username, oldPassword, newPassword string) error
-}
-
-// swagger:model LoginRequest
-type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-// swagger:model ChangePasswordRequest
-type changePasswordRequest struct {
-	Username    string `json:"username"`
-	OldPassword string `json:"old_password"`
-	NewPassword string `json:"new_password"`
 }
 
 // swagger:operation POST /auth/login Authentication Login
@@ -75,7 +63,7 @@ type changePasswordRequest struct {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
-	var req *loginRequest
+	var req *contract.LoginRequest
 	var err error
 
 	req, err = toLoginRequest(httpReq)
@@ -126,7 +114,7 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *authenticationAPI) ChangePassword(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
-	var req *changePasswordRequest
+	var req *contract.ChangePasswordRequest
 	var err error
 	req, err = toChangePasswordRequest(httpReq)
 	if err != nil {
@@ -140,16 +128,16 @@ func (api *authenticationAPI) ChangePassword(httpRes http.ResponseWriter, httpRe
 	}
 }
 
-func toLoginRequest(req *http.Request) (*loginRequest, error) {
-	var loginReq = loginRequest{}
+func toLoginRequest(req *http.Request) (*contract.LoginRequest, error) {
+	var loginReq = contract.LoginRequest{}
 	if err := json.NewDecoder(req.Body).Decode(&loginReq); err != nil {
 		return nil, err
 	}
 	return &loginReq, nil
 }
 
-func toChangePasswordRequest(req *http.Request) (*changePasswordRequest, error) {
-	var cpReq = changePasswordRequest{}
+func toChangePasswordRequest(req *http.Request) (*contract.ChangePasswordRequest, error) {
+	var cpReq = contract.ChangePasswordRequest{}
 	if err := json.NewDecoder(req.Body).Decode(&cpReq); err != nil {
 		return nil, err
 	}

@@ -33,6 +33,7 @@ import (
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -148,7 +149,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState := msp.GetState()
-	changedState.NATStatus = stateEvent.NATStatus{
+	changedState.NATStatus = contract.NATStatusDTO{
 		Status: "mass panic",
 		Error:  "cookie prices rise drastically",
 	}

@@ -35,6 +35,7 @@ import (
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
 )
 
@@ -73,10 +74,9 @@ type earningsProvider interface {
 // Keeper keeps track of state through eventual consistency.
 // This should become the de-facto place to get your info about node.
 type Keeper struct {
-	state                  *stateEvent.State
-	lock                   sync.RWMutex
-	sessionConnectionCount map[string]event.ConnectionStatistics
-	deps                   KeeperDeps
+	state *stateEvent.State
+	lock  sync.RWMutex
+	deps  KeeperDeps
 
 	// provider
 	consumeServiceStateEvent             func(e interface{})
@@ -107,18 +107,17 @@ type KeeperDeps struct {
 func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
-			NATStatus: stateEvent.NATStatus{
+			NATStatus: contract.NATStatusDTO{
 				Status: "not_finished",
 			},
-			Sessions: make([]stateEvent.ServiceSession, 0),
+			Sessions: make([]contract.ServiceSessionDTO, 0),
 			Connection: stateEvent.Connection{
 				Session: connection.Status{
 					State: connection.NotConnected,
 				},
 			},
 		},
-		deps:                   deps,
-		sessionConnectionCount: make(map[string]event.ConnectionStatistics),
+		deps: deps,
 	}
 	k.state.Identities = k.fetchIdentities()
 
@@ -225,7 +224,7 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 
 func (k *Keeper) updateServices() {
 	services := k.deps.ServiceLister.List()
-	result := make([]stateEvent.ServiceInfo, len(services))
+	result := make([]contract.ServiceInfoDTO, len(services))
 
 	i := 0
 	for key, v := range services {
@@ -234,13 +233,13 @@ func (k *Keeper) updateServices() {
 		// merge in the connection statistics
 		match, _ := k.getServiceByID(string(key))
 
-		result[i] = stateEvent.ServiceInfo{
+		result[i] = contract.ServiceInfoDTO{
 			ID:                   string(key),
 			ProviderID:           proposal.ProviderID,
 			Type:                 proposal.ServiceType,
 			Options:              v.Options(),
 			Status:               string(v.State()),
-			Proposal:             proposal,
+			Proposal:             contract.NewProposalDTO(proposal),
 			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++
@@ -249,7 +248,7 @@ func (k *Keeper) updateServices() {
 	k.state.Services = result
 }
 
-func (k *Keeper) getServiceByID(id string) (se stateEvent.ServiceInfo, found bool) {
+func (k *Keeper) getServiceByID(id string) (se contract.ServiceInfoDTO, found bool) {
 	for i := range k.state.Services {
 		if k.state.Services[i].ID == id {
 			se = k.state.Services[i]
@@ -272,7 +271,7 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 
 	k.deps.NATStatusProvider.ConsumeNATEvent(event)
 	status := k.deps.NATStatusProvider.Status()
-	k.state.NATStatus = stateEvent.NATStatus{Status: status.Status}
+	k.state.NATStatus = contract.NATStatusDTO{Status: status.Status}
 	if status.Error != nil {
 		k.state.NATStatus.Error = status.Error.Error()
 	}
@@ -299,7 +298,7 @@ func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
 }
 
 func (k *Keeper) addSession(e sevent.AppEventSession) {
-	k.state.Sessions = append(k.state.Sessions, stateEvent.ServiceSession{
+	k.state.Sessions = append(k.state.Sessions, contract.ServiceSessionDTO{
 		ID:          e.Session.ID,
 		ConsumerID:  e.Session.ConsumerID.Address,
 		CreatedAt:   e.Session.StartedAt,
@@ -333,7 +332,7 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 		return
 	}
 
-	var session *stateEvent.ServiceSession
+	var session *contract.ServiceSessionDTO
 	for i := range k.state.Sessions {
 		if k.state.Sessions[i].ID == evt.ID {
 			session = &k.state.Sessions[i]
@@ -363,7 +362,7 @@ func (k *Keeper) updateSessionEarnings(e interface{}) {
 		return
 	}
 
-	var session *stateEvent.ServiceSession
+	var session *contract.ServiceSessionDTO
 	for i := range k.state.Sessions {
 		if k.state.Sessions[i].ID == evt.SessionID {
 			session = &k.state.Sessions[i]

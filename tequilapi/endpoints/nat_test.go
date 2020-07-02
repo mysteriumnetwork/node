@@ -25,12 +25,13 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 	provider := &mockStateProvider{stateToReturn: stateEvent.State{
-		NATStatus: stateEvent.NATStatus{
+		NATStatus: contract.NATStatusDTO{
 			Status: "something",
 			Error:  "maybe",
 		},

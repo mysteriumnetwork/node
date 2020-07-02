@@ -23,55 +23,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
-
-// connectionSessionsList defines session list representable as json
-// swagger:model ConnectionSessionListDTO
-type connectionSessionsList struct {
-	Sessions []connectionSession `json:"sessions"`
-}
-
-// connectionSession represents the session object
-// swagger:model ConnectionSessionDTO
-type connectionSession struct {
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	SessionID string `json:"session_id"`
-
-	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumer_id"`
-
-	// example: 0x0000000000000000000000000000000000000001
-	HermesID string `json:"hermes_id"`
-
-	// example: 0x0000000000000000000000000000000000000001
-	ProviderID string `json:"provider_id"`
-
-	// example: openvpn
-	ServiceType string `json:"service_type"`
-
-	// example: NL
-	ProviderCountry string `json:"provider_country"`
-
-	// example: 2018-10-29 16:22:05
-	DateStarted string `json:"date_started"`
-
-	// example: 1024
-	BytesSent uint64 `json:"bytes_sent"`
-
-	// example: 1024
-	BytesReceived uint64 `json:"bytes_received"`
-
-	// duration in seconds
-	// example: 120
-	Duration uint64 `json:"duration"`
-
-	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
-
-	// example: Completed
-	Status string `json:"status"`
-}
 
 type connectionSessionStorage interface {
 	GetAll() ([]session.History, error)
@@ -96,7 +50,7 @@ func NewConnectionSessionsEndpoint(sessionStorage connectionSessionStorage) *con
 //   200:
 //     description: List of sessions
 //     schema:
-//       "$ref": "#/definitions/ConnectionSessionListDTO"
+//       "$ref": "#/definitions/ListConnectionSessionsResponse"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -108,7 +62,7 @@ func (endpoint *connectionSessionsEndpoint) List(resp http.ResponseWriter, reque
 		return
 	}
 
-	sessionsSerializable := connectionSessionsList{Sessions: mapConnectionSessions(sessions, connectionSessionToDto)}
+	sessionsSerializable := contract.ListConnectionSessionsResponse{Sessions: mapConnectionSessions(sessions, connectionSessionToDto)}
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
@@ -118,8 +72,8 @@ func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage co
 	router.GET("/connection-sessions", sessionsEndpoint.List)
 }
 
-func connectionSessionToDto(se session.History) connectionSession {
-	return connectionSession{
+func connectionSessionToDto(se session.History) contract.ConnectionSessionDTO {
+	return contract.ConnectionSessionDTO{
 		SessionID:       string(se.SessionID),
 		ConsumerID:      se.ConsumerID.Address,
 		HermesID:        se.HermesID,
@@ -135,8 +89,8 @@ func connectionSessionToDto(se session.History) connectionSession {
 	}
 }
 
-func mapConnectionSessions(sessions []session.History, f func(session.History) connectionSession) []connectionSession {
-	dtoArray := make([]connectionSession, len(sessions))
+func mapConnectionSessions(sessions []session.History, f func(session.History) contract.ConnectionSessionDTO) []contract.ConnectionSessionDTO {
+	dtoArray := make([]contract.ConnectionSessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)
 	}

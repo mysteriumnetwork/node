@@ -15,26 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package winutil
+package contract
 
-import (
-	"fmt"
-	"os"
-	"path/filepath"
+// HealthCheckDTO holds API healthcheck.
+// swagger:model HealthCheckDTO
+type HealthCheckDTO struct {
+	// example: 25h53m33.540493171s
+	Uptime string `json:"uptime"`
 
-	"golang.org/x/sys/windows"
-)
+	// example: 10449
+	Process int `json:"process"`
 
-func AppDataDir() (string, error) {
-	// Default: C:\ProgramData\MystSupervisor
-	root, err := windows.KnownFolderPath(windows.FOLDERID_ProgramData, windows.KF_FLAG_CREATE)
-	if err != nil {
-		return "", fmt.Errorf("could not get known local app data folder: %w", err)
-	}
-	c := filepath.Join(root, "MystSupervisor")
-	err = os.MkdirAll(c, os.ModeDir|0700)
-	if err != nil {
-		return "", fmt.Errorf("could not create appdata directory: %w", err)
-	}
-	return c, nil
+	// example: 0.0.6
+	Version   string       `json:"version"`
+	BuildInfo BuildInfoDTO `json:"build_info"`
+}
+
+// BuildInfoDTO holds info about build.
+// swagger:model BuildInfoDTO
+type BuildInfoDTO struct {
+	// example: <unknown>
+	Commit string `json:"commit"`
+
+	// example: <unknown>
+	Branch string `json:"branch"`
+
+	// example: dev-build
+	BuildNumber string `json:"build_number"`
 }
