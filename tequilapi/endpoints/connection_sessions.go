@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -62,37 +61,12 @@ func (endpoint *connectionSessionsEndpoint) List(resp http.ResponseWriter, reque
 		return
 	}
 
-	sessionsSerializable := contract.ListConnectionSessionsResponse{Sessions: mapConnectionSessions(sessions, connectionSessionToDto)}
-	utils.WriteAsJSON(sessionsSerializable, resp)
+	sessionsDTO := contract.NewSessionListResponse(sessions)
+	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
 // AddRoutesForConnectionSessions attaches connection sessions endpoints to router
 func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage connectionSessionStorage) {
 	sessionsEndpoint := NewConnectionSessionsEndpoint(sessionStorage)
 	router.GET("/connection-sessions", sessionsEndpoint.List)
-}
-
-func connectionSessionToDto(se session.History) contract.ConnectionSessionDTO {
-	return contract.ConnectionSessionDTO{
-		SessionID:       string(se.SessionID),
-		ConsumerID:      se.ConsumerID.Address,
-		AccountantID:    se.AccountantID,
-		ProviderID:      se.ProviderID.Address,
-		ServiceType:     se.ServiceType,
-		ProviderCountry: se.ProviderCountry,
-		DateStarted:     se.Started.Format(time.RFC3339),
-		BytesSent:       se.DataSent,
-		BytesReceived:   se.DataReceived,
-		Duration:        uint64(se.GetDuration().Seconds()),
-		TokensSpent:     se.Tokens,
-		Status:          se.Status,
-	}
-}
-
-func mapConnectionSessions(sessions []session.History, f func(session.History) contract.ConnectionSessionDTO) []contract.ConnectionSessionDTO {
-	dtoArray := make([]contract.ConnectionSessionDTO, len(sessions))
-	for i, se := range sessions {
-		dtoArray[i] = f(se)
-	}
-	return dtoArray
 }

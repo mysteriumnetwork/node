@@ -36,7 +36,7 @@ import (
 
 var (
 	connectionSessionMock = session.History{
-		SessionID:       node_session.ID("SessionID"),
+		SessionID:       node_session.ID("ID"),
 		ConsumerID:      identity.FromAddress("consumerID"),
 		AccountantID:    "0x000000000000000000000000000000000000000C",
 		ProviderID:      identity.FromAddress("providerID"),
@@ -50,9 +50,9 @@ var (
 )
 
 func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
-	sessionDTO := connectionSessionToDto(connectionSessionMock)
-	assert.Equal(t, "2010-01-01T12:00:00Z", sessionDTO.DateStarted)
-	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.SessionID)
+	sessionDTO := contract.NewSessionDTO(connectionSessionMock)
+	assert.Equal(t, "2010-01-01T12:00:00Z", sessionDTO.CreatedAt)
+	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.ID)
 	assert.Equal(t, connectionSessionMock.ConsumerID.Address, sessionDTO.ConsumerID)
 	assert.Equal(t, connectionSessionMock.AccountantID, sessionDTO.AccountantID)
 	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
@@ -86,7 +86,7 @@ func Test_ConnectionSessionsEndpoint_List(t *testing.T) {
 	parsedResponse := &contract.ListConnectionSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, connectionSessionToDto(connectionSessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, contract.NewSessionDTO(connectionSessionMock), parsedResponse.Sessions[0])
 }
 
 func Test_ConnectionSessionsEndpoint_ListBubblesError(t *testing.T) {
