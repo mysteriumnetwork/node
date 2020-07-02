@@ -25,11 +25,12 @@ import (
 	"time"
 
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	serviceSessionMock = stateEvent.ServiceSession{
+	serviceSessionMock = contract.ServiceSessionDTO{
 		ID:         "session1",
 		ConsumerID: "consumer1",
 		CreatedAt:  time.Now(),
@@ -44,7 +45,7 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	anotherSession := stateEvent.ServiceSession{
+	anotherSession := contract.ServiceSessionDTO{
 		ID:         "session2",
 		ConsumerID: "consumer1",
 		CreatedAt:  time.Now(),
@@ -52,7 +53,7 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 
 	ssm := &stateProviderMock{
 		stateToReturn: stateEvent.State{
-			Sessions: []stateEvent.ServiceSession{
+			Sessions: []contract.ServiceSessionDTO{
 				serviceSessionMock,
 				anotherSession,
 			},
@@ -63,7 +64,7 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	handlerFunc := NewServiceSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &serviceSessionsList{}
+	parsedResponse := &contract.ListServiceSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
 	assert.Equal(t, serviceSessionMock.ConsumerID, parsedResponse.Sessions[0].ConsumerID)

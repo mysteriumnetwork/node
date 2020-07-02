@@ -56,3 +56,39 @@ type ServicePaymentMethod struct {
 type ServiceAccessPolicies struct {
 	IDs []string `json:"ids"`
 }
+
+// ListServicesResponse represents a list of running services on the node.
+// swagger:model ListServicesResponse
+type ListServicesResponse []ServiceInfoDTO
+
+// ServiceInfoDTO represents running service information.
+// swagger:model ServiceInfoDTO
+type ServiceInfoDTO struct {
+	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+	ID string `json:"id"`
+
+	// provider identity
+	// example: 0x0000000000000000000000000000000000000002
+	ProviderID string `json:"provider_id"`
+
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// example: openvpn
+	Type string `json:"type"`
+
+	// options with which service was started. Every service has a unique list of allowed options.
+	// example: {"port": 1123, "protocol": "udp"}
+	Options interface{} `json:"options"`
+
+	// example: Running
+	Status string `json:"status"`
+
+	Proposal ProposalDTO `json:"proposal"`
+
+	ConnectionStatistics ServiceStatisticsDTO `json:"connection_statistics"`
+}
+
+// ServiceStatisticsDTO shows the successful and attempted connection count
+type ServiceStatisticsDTO struct {
+	Attempted  int `json:"attempted"`
+	Successful int `json:"successful"`
+}

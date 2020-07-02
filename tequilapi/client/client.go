@@ -85,18 +85,17 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 }
 
 // Identity returns identity status with current balance
-func (client *Client) Identity(identityAddress string) (contract.IdentityDTO, error) {
+func (client *Client) Identity(identityAddress string) (id contract.IdentityDTO, err error) {
 	path := fmt.Sprintf("identities/%s", identityAddress)
 
 	response, err := client.http.Get(path, nil)
 	if err != nil {
-		return contract.IdentityDTO{}, err
+		return id, err
 	}
 	defer response.Body.Close()
 
-	res := contract.IdentityDTO{}
-	err = parseResponseJSON(response, &res)
-	return res, err
+	err = parseResponseJSON(response, &id)
+	return id, err
 }
 
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
@@ -196,48 +195,43 @@ func (client *Client) ConnectionDestroy() (err error) {
 }
 
 // ConnectionStatistics returns statistics about current connection
-func (client *Client) ConnectionStatistics() (contract.ConnectionStatisticsDTO, error) {
+func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStatisticsDTO, err error) {
 	response, err := client.http.Get("connection/statistics", url.Values{})
 	if err != nil {
-		return contract.ConnectionStatisticsDTO{}, err
+		return statistics, err
 	}
 	defer response.Body.Close()
 
-	var statistics contract.ConnectionStatisticsDTO
 	err = parseResponseJSON(response, &statistics)
 	return statistics, err
 }
 
 // ConnectionStatus returns connection status
-func (client *Client) ConnectionStatus() (contract.ConnectionStatusDTO, error) {
+func (client *Client) ConnectionStatus() (status contract.ConnectionStatusDTO, err error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
-		return contract.ConnectionStatusDTO{}, err
+		return status, err
 	}
 	defer response.Body.Close()
 
-	var status contract.ConnectionStatusDTO
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
 
 // ConnectionIP returns public ip
-func (client *Client) ConnectionIP() (string, error) {
+func (client *Client) ConnectionIP() (ip contract.IPDTO, err error) {
 	response, err := client.http.Get("connection/ip", url.Values{})
 	if err != nil {
-		return "", err
+		return ip, err
 	}
 	defer response.Body.Close()
 
-	var ipData struct {
-		IP string `json:"ip"`
-	}
-	err = parseResponseJSON(response, &ipData)
-	return ipData.IP, err
+	err = parseResponseJSON(response, &ip)
+	return ip, err
 }
 
 // ConnectionLocation returns current location
-func (client *Client) ConnectionLocation() (location LocationDTO, err error) {
+func (client *Client) ConnectionLocation() (location contract.LocationDTO, err error) {
 	response, err := client.http.Get("connection/location", url.Values{})
 	if err != nil {
 		return location, err
@@ -249,7 +243,7 @@ func (client *Client) ConnectionLocation() (location LocationDTO, err error) {
 }
 
 // Healthcheck returns a healthcheck info
-func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
+func (client *Client) Healthcheck() (healthcheck contract.HealthCheckDTO, err error) {
 	response, err := client.http.Get("healthcheck", url.Values{})
 	if err != nil {
 		return
@@ -261,7 +255,7 @@ func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 }
 
 // OriginLocation returns original location
-func (client *Client) OriginLocation() (location LocationDTO, err error) {
+func (client *Client) OriginLocation() (location contract.LocationDTO, err error) {
 	response, err := client.http.Get("location", url.Values{})
 	if err != nil {
 		return location, err
@@ -350,8 +344,7 @@ func (client *Client) Stop() error {
 }
 
 // ConnectionSessions returns all sessions from history
-func (client *Client) ConnectionSessions() (ConnectionSessionListDTO, error) {
-	sessions := ConnectionSessionListDTO{}
+func (client *Client) ConnectionSessions() (sessions contract.ListConnectionSessionsResponse, err error) {
 	response, err := client.http.Get("connection-sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -363,21 +356,21 @@ func (client *Client) ConnectionSessions() (ConnectionSessionListDTO, error) {
 }
 
 // ConnectionSessionsByType returns sessions from history filtered by type
-func (client *Client) ConnectionSessionsByType(serviceType string) (ConnectionSessionListDTO, error) {
+func (client *Client) ConnectionSessionsByType(serviceType string) (contract.ListConnectionSessionsResponse, error) {
 	sessions, err := client.ConnectionSessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
 // ConnectionSessionsByStatus returns sessions from history filtered by their status
-func (client *Client) ConnectionSessionsByStatus(status string) (ConnectionSessionListDTO, error) {
+func (client *Client) ConnectionSessionsByStatus(status string) (contract.ListConnectionSessionsResponse, error) {
 	sessions, err := client.ConnectionSessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
 }
 
 // Services returns all running services
-func (client *Client) Services() (services ServiceListDTO, err error) {
+func (client *Client) Services() (services contract.ListServicesResponse, err error) {
 	response, err := client.http.Get("services", url.Values{})
 	if err != nil {
 		return services, err
@@ -389,7 +382,7 @@ func (client *Client) Services() (services ServiceListDTO, err error) {
 }
 
 // Service returns a service information by the requested id
-func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
+func (client *Client) Service(id string) (service contract.ServiceInfoDTO, err error) {
 	response, err := client.http.Get("services/"+id, url.Values{})
 	if err != nil {
 		return service, err
@@ -401,7 +394,7 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service contract.ServiceInfoDTO, err error) {
 	response, err := client.http.Post("services", request)
 	if err != nil {
 		return service, err
@@ -425,9 +418,7 @@ func (client *Client) ServiceStop(id string) error {
 }
 
 // NATStatus returns status of NAT traversal
-func (client *Client) NATStatus() (NATStatusDTO, error) {
-	status := NATStatusDTO{}
-
+func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 	response, err := client.http.Get("nat/status", nil)
 	if err != nil {
 		return status, err
@@ -439,8 +430,7 @@ func (client *Client) NATStatus() (NATStatusDTO, error) {
 }
 
 // ServiceSessions returns all currently running sessions
-func (client *Client) ServiceSessions() (ServiceSessionListDTO, error) {
-	sessions := ServiceSessionListDTO{}
+func (client *Client) ServiceSessions() (sessions contract.ListServiceSessionsResponse, err error) {
 	response, err := client.http.Get("service-sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -452,7 +442,7 @@ func (client *Client) ServiceSessions() (ServiceSessionListDTO, error) {
 }
 
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
+func filterSessionsByType(serviceType string, sessions contract.ListConnectionSessionsResponse) contract.ListConnectionSessionsResponse {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.ServiceType == serviceType {
@@ -465,7 +455,7 @@ func filterSessionsByType(serviceType string, sessions ConnectionSessionListDTO)
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
+func filterSessionsByStatus(status string, sessions contract.ListConnectionSessionsResponse) contract.ListConnectionSessionsResponse {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.Status == status {

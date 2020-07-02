@@ -165,7 +165,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 							"per_bytes":7669584
 						}
 					}
-				}
+				},
+				"connection_statistics": {"attempted":0, "successful":0}
 			}]`,
 		},
 		{
@@ -197,7 +198,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 							"per_bytes":7669584
 						}
 					}
-				}
+				},
+				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
 		},
 		{
@@ -229,7 +231,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 							"per_bytes":7669584
 						}
 					}
-				}
+				},
+				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
 		},
 		{
@@ -417,7 +420,8 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 						"per_bytes":7669584
 					}
 				}
-			}
+			},
+			"connection_statistics": {"attempted":0, "successful":0}
 		}`,
 		resp.Body.String(),
 	)
@@ -524,7 +528,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 						"source": "https://some.domain/api/v1/lists/12312312332132"
 					}
 				]
-			}
+			},
+			"connection_statistics": {"attempted":0, "successful":0}
 		}`,
 		resp.Body.String(),
 	)

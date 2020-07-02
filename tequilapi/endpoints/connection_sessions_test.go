@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -82,7 +83,7 @@ func Test_ConnectionSessionsEndpoint_List(t *testing.T) {
 	handlerFunc := NewConnectionSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &connectionSessionsList{}
+	parsedResponse := &contract.ListConnectionSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
 	assert.EqualValues(t, connectionSessionToDto(connectionSessionMock), parsedResponse.Sessions[0])
