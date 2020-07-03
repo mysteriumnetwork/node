@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -379,6 +380,19 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		}
 	}
 	return &ConnectResponse{}
+}
+
+// Checks weather session is alive and reconnects if its dead.
+func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
+	// send p2p keepalive and perform full reconnect if it fails
+	if err := mb.connectionManager.CheckChannel(); err != nil {
+		log.Info().Msg("Session channel closed - attempting to reconnect")
+		if err := mb.Disconnect(); err != nil {
+			log.Err(err).Msg("Failed to disconnect previous session")
+		}
+		return mb.Connect(req)
+	}
+	return nil
 }
 
 // Disconnect disconnects or cancels current connection.
