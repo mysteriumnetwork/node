@@ -23,6 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	cli "github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
@@ -31,9 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
 )
 
 // NewCommand function creates service command
@@ -42,7 +43,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	command := &cli.Command{
 		Name:      "service",
 		Usage:     "Starts and publishes services on Mysterium Network",
-		ArgsUsage: "comma separated list of services to start",
+		ArgsUsage: "comma separated list of services to start (default: openvpn,wireguard)",
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(config.FlagAgreedTermsConditions.Name) {
@@ -80,7 +81,6 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			return di.Shutdown()
 		},
 	}
-
 	config.RegisterFlagsServiceStart(&command.Flags)
 	config.RegisterFlagsServiceOpenvpn(&command.Flags)
 	config.RegisterFlagsServiceWireguard(&command.Flags)
@@ -109,6 +109,11 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	serviceTypes := services.Types()
 	if ctx.NArg() > 0 {
 		serviceTypes = strings.Split(ctx.Args().Get(0), ",")
+	}
+
+	if len(serviceTypes) == 0 {
+		// assume openvpn and wireguard by default as an service command argument
+		serviceTypes = []string{"openvpn", "wireguard"}
 	}
 
 	providerID := sc.unlockIdentity(
