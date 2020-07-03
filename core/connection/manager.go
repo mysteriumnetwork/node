@@ -137,6 +137,8 @@ type connectionManager struct {
 	cleanupAfterDisconnect []func() error
 	acknowledge            func()
 	cancel                 func()
+	channel                p2p.Channel
+	sessionID              session.ID
 
 	discoLock sync.Mutex
 }
@@ -219,6 +221,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	if err != nil {
 		return fmt.Errorf("could not create p2p channel: %w", err)
 	}
+	m.channel = channel
 	tracer.EndStage(p2pChannelTrace)
 
 	sessionCreateTrace := tracer.StartStage("Consumer session creation")
@@ -244,6 +247,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	}
 
 	sessionID = string(sessionDTO.Session.ID)
+	m.sessionID = sessionDTO.Session.ID
 	paymentSession.SetSessionID(sessionID)
 	tracer.EndStage(sessionCreateTrace)
 
@@ -638,6 +642,13 @@ func (m *connectionManager) Disconnect() error {
 	m.statusDisconnecting()
 	m.disconnect()
 
+	return nil
+}
+
+func (m *connectionManager) CheckChannel() error {
+	if err := m.sendKeepAlivePing(m.channel, m.sessionID); err != nil {
+		return fmt.Errorf("keep alive call failed after wake up - proceeding to reconnect: %w", err)
+	}
 	return nil
 }
 
