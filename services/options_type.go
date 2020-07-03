@@ -20,7 +20,6 @@ package services
 import (
 	"encoding/json"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -44,19 +43,7 @@ type ServiceOptionsParser func(*json.RawMessage) (service.Options, error)
 
 // Types returns all possible service types.
 func Types() []string {
-	userConfig := config.Current.GetUserConfig()
-
-	var enabledServices []string
-	if _, enabled := userConfig[openvpn.ServiceType]; enabled {
-		enabledServices = append(enabledServices, openvpn.ServiceType)
-	}
-	if _, enabled := userConfig[wireguard.ServiceType]; enabled {
-		enabledServices = append(enabledServices, wireguard.ServiceType)
-	}
-	if _, enabled := userConfig[noop.ServiceType]; enabled {
-		enabledServices = append(enabledServices, noop.ServiceType)
-	}
-	return enabledServices
+	return []string{openvpn.ServiceType, wireguard.ServiceType, noop.ServiceType}
 }
 
 // TypeConfiguredOptions returns specific service options.
