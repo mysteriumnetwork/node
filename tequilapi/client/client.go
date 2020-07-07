@@ -344,7 +344,7 @@ func (client *Client) Stop() error {
 }
 
 // ConnectionSessions returns all sessions from history
-func (client *Client) ConnectionSessions() (sessions contract.ListConnectionSessionsResponse, err error) {
+func (client *Client) ConnectionSessions() (sessions contract.ListSessionsResponse, err error) {
 	response, err := client.http.Get("connection-sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -356,14 +356,14 @@ func (client *Client) ConnectionSessions() (sessions contract.ListConnectionSess
 }
 
 // ConnectionSessionsByType returns sessions from history filtered by type
-func (client *Client) ConnectionSessionsByType(serviceType string) (contract.ListConnectionSessionsResponse, error) {
+func (client *Client) ConnectionSessionsByType(serviceType string) (contract.ListSessionsResponse, error) {
 	sessions, err := client.ConnectionSessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
 // ConnectionSessionsByStatus returns sessions from history filtered by their status
-func (client *Client) ConnectionSessionsByStatus(status string) (contract.ListConnectionSessionsResponse, error) {
+func (client *Client) ConnectionSessionsByStatus(status string) (contract.ListSessionsResponse, error) {
 	sessions, err := client.ConnectionSessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
@@ -430,7 +430,7 @@ func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 }
 
 // ServiceSessions returns all currently running sessions
-func (client *Client) ServiceSessions() (sessions contract.ListConnectionSessionsResponse, err error) {
+func (client *Client) ServiceSessions() (sessions contract.ListSessionsResponse, err error) {
 	response, err := client.http.Get("service-sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -442,7 +442,7 @@ func (client *Client) ServiceSessions() (sessions contract.ListConnectionSession
 }
 
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions contract.ListConnectionSessionsResponse) contract.ListConnectionSessionsResponse {
+func filterSessionsByType(serviceType string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.ServiceType == serviceType {
@@ -455,7 +455,7 @@ func filterSessionsByType(serviceType string, sessions contract.ListConnectionSe
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions contract.ListConnectionSessionsResponse) contract.ListConnectionSessionsResponse {
+func filterSessionsByStatus(status string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.Status == status {

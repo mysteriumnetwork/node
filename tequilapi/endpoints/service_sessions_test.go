@@ -66,7 +66,7 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	handlerFunc := NewServiceSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &contract.ListConnectionSessionsResponse{}
+	parsedResponse := &contract.ListSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
 	assert.Equal(t, serviceSessionMock.ConsumerID.Address, parsedResponse.Sessions[0].ConsumerID)

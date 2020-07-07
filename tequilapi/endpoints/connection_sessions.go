@@ -49,7 +49,7 @@ func NewConnectionSessionsEndpoint(sessionStorage connectionSessionStorage) *con
 //   200:
 //     description: List of sessions
 //     schema:
-//       "$ref": "#/definitions/ListConnectionSessionsResponse"
+//       "$ref": "#/definitions/ListSessionsResponse"
 //   500:
 //     description: Internal server error
 //     schema:

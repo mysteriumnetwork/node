@@ -23,43 +23,16 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/session"
 )
 
-// ListServiceSessionsResponse defines session list representable as json
-// swagger:model ListServiceSessionsResponse
-type ListServiceSessionsResponse struct {
-	Sessions []ServiceSessionDTO `json:"sessions"`
-}
-
-// ServiceSessionDTO represents the session object
-// swagger:model ServiceSessionDTO
-type ServiceSessionDTO struct {
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	ID string `json:"id"`
-	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumer_id"`
-	// example: 2019-06-06T11:04:43.910035Z
-	CreatedAt time.Time `json:"created_at"`
-	// example: 12345
-	BytesOut uint64 `json:"bytes_out"`
-	// example: 23451
-	BytesIn uint64 `json:"bytes_in"`
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	ServiceID string `json:"service_id"`
-	// example: wireguard
-	ServiceType string `json:"service_type"`
-	// example: 500000
-	TokensEarned uint64 `json:"tokens_earned"`
-}
-
 // NewSessionListResponse maps to API session list.
-func NewSessionListResponse(sessions []session.History) ListConnectionSessionsResponse {
-	return ListConnectionSessionsResponse{
+func NewSessionListResponse(sessions []session.History) ListSessionsResponse {
+	return ListSessionsResponse{
 		Sessions: mapSessions(sessions, NewSessionDTO),
 	}
 }
 
-// ListConnectionSessionsResponse defines session list representable as json
-// swagger:model ListConnectionSessionsResponse
-type ListConnectionSessionsResponse struct {
+// ListSessionsResponse defines session list representable as json
+// swagger:model ListSessionsResponse
+type ListSessionsResponse struct {
 	Sessions []SessionDTO `json:"sessions"`
 }
 
