@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -v
 
 . /usr/share/debconf/confmodule
 
@@ -104,7 +104,7 @@ if [[ -f /etc/redhat-release ]]; then
     # RHEL-variant logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-    	install_systemd
+    	install_systemd || echo "got an error, ignoring - probably systemd-spawn issue"
     else
 	    # Assuming sysv
 	    install_initd
@@ -114,7 +114,7 @@ elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-    	install_systemd
+    	install_systemd || echo "got an error, ignoring - probably systemd-spawn issue"
     else
 	    # Assuming sysv
     	install_initd
