@@ -18,6 +18,7 @@
 package packages
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -169,7 +170,7 @@ func fetchRaspbianImage() (filename string, err error) {
 		return strings.Contains(aws.StringValue(object.Key), "-raspbian-buster-lite")
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to fetch raspbian image: %w", err)
 	}
 
 	localRaspbianZipDir, localRaspbianZipFilename := filepath.Split(localRaspbianZip)
