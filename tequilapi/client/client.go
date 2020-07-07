@@ -429,18 +429,6 @@ func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 	return status, err
 }
 
-// ServiceSessions returns all currently running sessions
-func (client *Client) ServiceSessions() (sessions contract.ListSessionsResponse, err error) {
-	response, err := client.http.Get("service-sessions", url.Values{})
-	if err != nil {
-		return sessions, err
-	}
-	defer response.Body.Close()
-
-	err = parseResponseJSON(response, &sessions)
-	return sessions, err
-}
-
 // filterSessionsByType removes all sessions of irrelevant types
 func filterSessionsByType(serviceType string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
 	matches := 0
