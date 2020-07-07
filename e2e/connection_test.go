@@ -247,7 +247,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	log.Info().Msg("Changed consumer IP: " + vpnIP.IP)
 
 	// sessions history should be created after connect
-	sessionsDTO, err := tequilapi.ConnectionSessionsByType(serviceType)
+	sessionsDTO, err := tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
@@ -271,7 +271,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	// sessions history should be updated after disconnect
-	sessionsDTO, err = tequilapi.ConnectionSessionsByType(serviceType)
+	sessionsDTO, err = tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))

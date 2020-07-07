@@ -343,9 +343,9 @@ func (client *Client) Stop() error {
 	return nil
 }
 
-// ConnectionSessions returns all sessions from history
-func (client *Client) ConnectionSessions() (sessions contract.ListSessionsResponse, err error) {
-	response, err := client.http.Get("connection-sessions", url.Values{})
+// Sessions returns all sessions from history
+func (client *Client) Sessions() (sessions contract.ListSessionsResponse, err error) {
+	response, err := client.http.Get("sessions", url.Values{})
 	if err != nil {
 		return sessions, err
 	}
@@ -355,16 +355,16 @@ func (client *Client) ConnectionSessions() (sessions contract.ListSessionsRespon
 	return sessions, err
 }
 
-// ConnectionSessionsByType returns sessions from history filtered by type
-func (client *Client) ConnectionSessionsByType(serviceType string) (contract.ListSessionsResponse, error) {
-	sessions, err := client.ConnectionSessions()
+// SessionsByServiceType returns sessions from history filtered by type
+func (client *Client) SessionsByServiceType(serviceType string) (contract.ListSessionsResponse, error) {
+	sessions, err := client.Sessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
-// ConnectionSessionsByStatus returns sessions from history filtered by their status
-func (client *Client) ConnectionSessionsByStatus(status string) (contract.ListSessionsResponse, error) {
-	sessions, err := client.ConnectionSessions()
+// SessionsByStatus returns sessions from history filtered by their status
+func (client *Client) SessionsByStatus(status string) (contract.ListSessionsResponse, error) {
+	sessions, err := client.Sessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
 }

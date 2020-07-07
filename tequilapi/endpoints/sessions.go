@@ -26,22 +26,22 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-type connectionSessionStorage interface {
+type sessionStorage interface {
 	GetAll() ([]session.History, error)
 }
 
-type connectionSessionsEndpoint struct {
-	sessionStorage connectionSessionStorage
+type sessionsEndpoint struct {
+	sessionStorage sessionStorage
 }
 
-// NewConnectionSessionsEndpoint creates and returns sessions endpoint
-func NewConnectionSessionsEndpoint(sessionStorage connectionSessionStorage) *connectionSessionsEndpoint {
-	return &connectionSessionsEndpoint{
+// NewSessionsEndpoint creates and returns sessions endpoint
+func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
+	return &sessionsEndpoint{
 		sessionStorage: sessionStorage,
 	}
 }
 
-// swagger:operation GET /connection-sessions Connection connectionSessions
+// swagger:operation GET /sessions Session sessionList
 // ---
 // summary: Returns sessions history
 // description: Returns list of sessions history
@@ -54,7 +54,7 @@ func NewConnectionSessionsEndpoint(sessionStorage connectionSessionStorage) *con
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *connectionSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions, err := endpoint.sessionStorage.GetAll()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -65,8 +65,8 @@ func (endpoint *connectionSessionsEndpoint) List(resp http.ResponseWriter, reque
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
-// AddRoutesForConnectionSessions attaches connection sessions endpoints to router
-func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage connectionSessionStorage) {
-	sessionsEndpoint := NewConnectionSessionsEndpoint(sessionStorage)
-	router.GET("/connection-sessions", sessionsEndpoint.List)
+// AddRoutesForSessions attaches sessions endpoints to router
+func AddRoutesForSessions(router *httprouter.Router, sessionStorage sessionStorage) {
+	sessionsEndpoint := NewSessionsEndpoint(sessionStorage)
+	router.GET("/sessions", sessionsEndpoint.List)
 }
