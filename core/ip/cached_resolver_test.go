@@ -76,9 +76,10 @@ func TestCachedResolverCachesOutboundIP(t *testing.T) {
 		expectedIPFetches int
 	}{
 		{
-			name:              "Test ip is fetch and cache",
+			name: "Test ip is fetch and cache",
+			// monotonic time resolution is fairly low on some OS'es, such as 15ms on Windows 2008
+			sleepAfterCall:    time.Microsecond * 20, // depends on time.Now() resolution
 			cacheDuration:     time.Millisecond,
-			sleepAfterCall:    time.Microsecond,
 			expectedIP:        "192.168.1.2",
 			expectedIPFetches: 1,
 		},
