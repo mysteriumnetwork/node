@@ -37,7 +37,7 @@ import (
 
 // New creates new WgInterface instance.
 func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
-	log.Print("Creating Wintun interface")
+	log.Info().Msg("Creating Wintun interface")
 
 	wintun, err := tun.CreateTUN(cfg.IfaceName, 0)
 	if err != nil {
@@ -46,9 +46,9 @@ func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
 	nativeTun := wintun.(*tun.NativeTun)
 	wintunVersion, ndisVersion, err := nativeTun.Version()
 	if err != nil {
-		log.Printf("Warning: unable to determine Wintun version: %v", err)
+		log.Info().Msgf("Warning: unable to determine Wintun version: %v", err)
 	} else {
-		log.Printf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
+		log.Info().Msgf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
 	}
 
 	log.Info().Msg("Creating interface instance")
@@ -101,7 +101,7 @@ func (a *WgInterface) handleUAPI() {
 // Down closes device and user space api socket.
 func (a *WgInterface) Down() {
 	if err := a.uapi.Close(); err != nil {
-		log.Printf("could not close uapi socket: %v", err)
+		log.Warn().Err(err).Msg("Could not close uapi socket")
 	}
 	a.Device.Close()
 	if err := a.dnsManager.Clean(); err != nil {
