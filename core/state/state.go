@@ -302,7 +302,7 @@ func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
 func (k *Keeper) addSession(e sevent.AppEventSession) {
 	k.state.Sessions = append(k.state.Sessions, session.History{
 		SessionID:       nodeSession.ID(e.Session.ID),
-		Direction:       session.DirectionProvider,
+		Direction:       session.DirectionProvided,
 		ConsumerID:      e.Session.ConsumerID,
 		AccountantID:    e.Session.AccountantID.Hex(),
 		ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),

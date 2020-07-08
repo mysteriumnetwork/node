@@ -32,10 +32,10 @@ const (
 )
 
 const (
-	// DirectionConsumer marks traffic transaction where node participated as consumer.
-	DirectionConsumer = "Consumer"
-	// DirectionProvider marks traffic transaction where node participated as provider.
-	DirectionProvider = "Provider"
+	// DirectionConsumed marks traffic transaction where node participated as consumer.
+	DirectionConsumed = "Consumed"
+	// DirectionProvided marks traffic transaction where node participated as provider.
+	DirectionProvided = "Provided"
 )
 
 // History holds structure for saving session history

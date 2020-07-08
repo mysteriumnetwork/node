@@ -200,7 +200,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 		[]session.History{
 			{
 				SessionID:       nodeSession.ID(expected.ID),
-				Direction:       session.DirectionProvider,
+				Direction:       session.DirectionProvided,
 				ConsumerID:      expected.ConsumerID,
 				AccountantID:    expected.AccountantID.Hex(),
 				ProviderCountry: "MU",
