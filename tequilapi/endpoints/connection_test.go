@@ -66,7 +66,6 @@ func (cm *mockConnectionManager) Disconnect() error {
 	return cm.onDisconnectReturn
 }
 
-// TODO: implement test case
 func (cm *mockConnectionManager) CheckChannel() error {
 	return cm.onCheckChannelReturn
 }

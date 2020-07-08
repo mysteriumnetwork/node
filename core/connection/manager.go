@@ -487,7 +487,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 		}
 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 		_, err := p2pChannel.Send(ctx, p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
 		if err != nil {

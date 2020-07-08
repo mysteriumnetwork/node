@@ -337,6 +337,7 @@ type ConnectRequest struct {
 	ProviderID        string
 	ServiceType       string
 	DisableKillSwitch bool
+	ForceReconnect    bool
 }
 
 // ConnectResponse represents connect response with optional error code and message.
@@ -382,17 +383,23 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 	return &ConnectResponse{}
 }
 
-// Checks weather session is alive and reconnects if its dead.
+// Reconnect checks weather session is alive and reconnects if its dead. Force reconnect if ForceReconnect is set.
 func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
-	// send p2p keepalive and perform full reconnect if it fails
-	if err := mb.connectionManager.CheckChannel(); err != nil {
-		log.Info().Msg("Session channel closed - attempting to reconnect")
+	reconnect := func() *ConnectResponse {
 		if err := mb.Disconnect(); err != nil {
 			log.Err(err).Msg("Failed to disconnect previous session")
 		}
 		return mb.Connect(req)
 	}
-	return nil
+	if req.ForceReconnect {
+		log.Info().Msg("Forcing immediate reconnect")
+		return reconnect()
+	} else if err := mb.connectionManager.CheckChannel(); err != nil {
+		log.Info().Msg("Forcing reconnect after failed channel")
+		return reconnect()
+	}
+	log.Info().Msg("Reconnect is not needed - p2p channel is alive")
+	return &ConnectResponse{}
 }
 
 // Disconnect disconnects or cancels current connection.
