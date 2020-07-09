@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	session_node "github.com/mysteriumnetwork/node/session"
@@ -37,18 +38,11 @@ type StatsRetriever interface {
 	GetDataStats() connection.Statistics
 }
 
-// Storer allows us to get all sessions, save and update them
-type Storer interface {
-	Store(bucket string, object interface{}) error
-	Update(bucket string, object interface{}) error
-	GetAllFrom(bucket string, array interface{}) error
-}
-
 type timeGetter func() time.Time
 
 // Storage contains functions for storing, getting session objects
 type Storage struct {
-	storage    Storer
+	storage    *boltdb.Bolt
 	timeGetter timeGetter
 
 	mu             sync.RWMutex
@@ -56,7 +50,7 @@ type Storage struct {
 }
 
 // NewSessionStorage creates session repository with given dependencies
-func NewSessionStorage(storage Storer) *Storage {
+func NewSessionStorage(storage *boltdb.Bolt) *Storage {
 	return &Storage{
 		storage:    storage,
 		timeGetter: time.Now,
