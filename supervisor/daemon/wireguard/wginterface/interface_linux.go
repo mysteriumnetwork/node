@@ -19,16 +19,19 @@ package wginterface
 
 import (
 	"errors"
+	"net"
 
-	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
+	"golang.zx2c4.com/wireguard/tun"
 )
 
-// New creates new WgInterface instance.
-func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
+func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceName string, err error) {
+	return nil, requestedInterfaceName, errors.New("not implemented")
+}
+
+func newUAPIListener(interfaceName string) (listener net.Listener, err error) {
 	return nil, errors.New("not implemented")
 }
 
-// Down closes device and user space api socket.
-func (a *WgInterface) Down() {
-
+func applySocketPermissions(interfaceName string, uid string) error {
+	return errors.New("not implemented")
 }
