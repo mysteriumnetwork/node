@@ -79,11 +79,16 @@ func TestSessionStorageGetAll(t *testing.T) {
 	defer storageCleanup()
 
 	// when
-	sessions, err := storage.GetAll()
-
+	sessions, err := storage.GetAll(Filter{})
 	// then
 	assert.Nil(t, err)
 	assert.Equal(t, []History{sessionExpected}, sessions)
+
+	// when
+	sessions, err = storage.GetAll(Filter{Direction: DirectionConsumed})
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, []History{}, sessions)
 }
 
 func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
@@ -100,7 +105,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		Session: serviceSessionMock,
 	})
 	// then
-	sessions, err := storage.GetAll()
+	sessions, err := storage.GetAll(Filter{})
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
@@ -135,7 +140,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		Session: serviceSessionMock,
 	})
 	// then
-	sessions, err = storage.GetAll()
+	sessions, err = storage.GetAll(Filter{})
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
@@ -183,7 +188,7 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 	})
 
 	// then
-	sessions, err := storage.GetAll()
+	sessions, err := storage.GetAll(Filter{})
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
@@ -219,7 +224,7 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 	})
 
 	// then
-	sessions, err := storage.GetAll()
+	sessions, err := storage.GetAll(Filter{})
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
@@ -260,7 +265,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		Invoice:    connectionInvoiceMock,
 	})
 	// then
-	sessions, err := storage.GetAll()
+	sessions, err := storage.GetAll(Filter{})
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
@@ -288,7 +293,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		Invoice:    connectionInvoiceMock,
 	})
 	// then
-	sessions, err = storage.GetAll()
+	sessions, err = storage.GetAll(Filter{})
 	assert.Nil(t, err)
 	assert.Equal(
 		t,

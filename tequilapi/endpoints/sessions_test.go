@@ -119,6 +119,6 @@ type sessionStorageMock struct {
 	errToReturn      error
 }
 
-func (ssm *sessionStorageMock) GetAll() ([]session.History, error) {
+func (ssm *sessionStorageMock) GetAll(_ session.Filter) ([]session.History, error) {
 	return ssm.sessionsToReturn, ssm.errToReturn
 }

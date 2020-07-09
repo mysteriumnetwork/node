@@ -27,7 +27,7 @@ import (
 )
 
 type sessionStorage interface {
-	GetAll() ([]session.History, error)
+	GetAll(filter session.Filter) ([]session.History, error)
 }
 
 type sessionsEndpoint struct {
@@ -54,8 +54,10 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions, err := endpoint.sessionStorage.GetAll()
+func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	sessions, err := endpoint.sessionStorage.GetAll(session.Filter{
+		Direction: request.URL.Query().Get("direction"),
+	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

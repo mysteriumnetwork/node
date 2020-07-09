@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asdine/storm/v3"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -32,11 +33,6 @@ import (
 )
 
 const sessionStorageBucketName = "session-history"
-
-// StatsRetriever can fetch current session stats
-type StatsRetriever interface {
-	GetDataStats() connection.Statistics
-}
 
 type timeGetter func() time.Time
 
@@ -80,12 +76,17 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // GetAll returns array of all sessions
-func (repo *Storage) GetAll() ([]History, error) {
+func (repo *Storage) GetAll(filter Filter) ([]History, error) {
+	query := repo.storage.DB().From(sessionStorageBucketName).Select(filter)
+
 	var sessions []History
-	err := repo.storage.GetAllFrom(sessionStorageBucketName, &sessions)
-	if err != nil {
+	err := query.Find(&sessions)
+	if err == storm.ErrNotFound {
+		return []History{}, nil
+	} else if err != nil {
 		return nil, err
 	}
+
 	return sessions, nil
 }
 
