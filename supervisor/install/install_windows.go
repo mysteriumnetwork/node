@@ -57,6 +57,7 @@ func Install(options Options) error {
 		ErrorControl: mgr.ErrorNormal,
 		DisplayName:  "MysteriumVPN Supervisor",
 		Description:  "Handles network configuration for MysteriumVPN application.",
+		Dependencies: []string{"Nsi"},
 	}
 	if err := installAndStartService(m, serviceName, options, config); err != nil {
 		return fmt.Errorf("could not install and run service: %w", err)
