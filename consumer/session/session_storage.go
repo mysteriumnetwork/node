@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/asdine/storm/v3"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -36,7 +35,7 @@ const sessionStorageBucketName = "session-history"
 
 type timeGetter func() time.Time
 
-// Storage contains functions for storing, getting session objects
+// Storage contains functions for storing, getting session objects.
 type Storage struct {
 	storage    *boltdb.Bolt
 	timeGetter timeGetter
@@ -45,7 +44,7 @@ type Storage struct {
 	sessionsActive map[session_node.ID]History
 }
 
-// NewSessionStorage creates session repository with given dependencies
+// NewSessionStorage creates session repository with given dependencies.
 func NewSessionStorage(storage *boltdb.Bolt) *Storage {
 	return &Storage{
 		storage:    storage,
@@ -75,22 +74,21 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	return bus.Subscribe(pingpong_event.AppTopicInvoicePaid, repo.consumeConnectionSpendingEvent)
 }
 
-// GetAll returns array of all sessions
-func (repo *Storage) GetAll(filter Filter) ([]History, error) {
-	query := repo.storage.DB().From(sessionStorageBucketName).Select(filter)
-
-	var sessions []History
-	err := query.Find(&sessions)
-	if err == storm.ErrNotFound {
-		return []History{}, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	return sessions, nil
+// Query executes given query.
+func (repo *Storage) Query(query *Query) error {
+	sq := query.toQuery(repo.storage.DB().From(sessionStorageBucketName))
+	return sq.Each(&History{}, func(interface{}) error {
+		return nil
+	})
 }
 
-// consumeServiceSessionEvent consumes the provided sessions
+// GetAll returns array of all sessions.
+func (repo *Storage) GetAll() ([]History, error) {
+	query := NewQuery().FetchSessions()
+	return query.Sessions, repo.Query(query)
+}
+
+// consumeServiceSessionEvent consumes the provided sessions.
 func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession) {
 	sessionID := session_node.ID(e.Session.ID)
 

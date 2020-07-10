@@ -24,16 +24,28 @@ import (
 )
 
 // NewSessionListResponse maps to API session list.
-func NewSessionListResponse(sessions []session.History) ListSessionsResponse {
+func NewSessionListResponse(sessions []session.History, stats session.Stats) ListSessionsResponse {
 	return ListSessionsResponse{
-		Sessions: mapSessions(sessions, NewSessionDTO),
+		Sessions:         mapSessions(sessions, NewSessionDTO),
+		Count:            stats.Count,
+		CountConsumers:   len(stats.ConsumerCounts),
+		SumBytesReceived: stats.SumDataReceived,
+		SumBytesSent:     stats.SumDataSent,
+		SumDuration:      uint64(stats.SumDuration.Seconds()),
+		SumTokens:        stats.SumTokens,
 	}
 }
 
 // ListSessionsResponse defines session list representable as json
 // swagger:model ListSessionsResponse
 type ListSessionsResponse struct {
-	Sessions []SessionDTO `json:"sessions"`
+	Sessions         []SessionDTO `json:"sessions"`
+	Count            int          `json:"count"`
+	CountConsumers   int          `json:"count_consumers"`
+	SumBytesReceived uint64       `json:"sum_bytes_received"`
+	SumBytesSent     uint64       `json:"sum_bytes_sent"`
+	SumDuration      uint64       `json:"sum_duration"`
+	SumTokens        uint64       `json:"sum_tokens"`
 }
 
 func mapSessions(sessions []session.History, f func(session.History) SessionDTO) []SessionDTO {

@@ -27,7 +27,7 @@ import (
 )
 
 type sessionStorage interface {
-	GetAll(filter session.Filter) ([]session.History, error)
+	Query(*session.Query) error
 }
 
 type sessionsEndpoint struct {
@@ -55,15 +55,17 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	sessions, err := endpoint.sessionStorage.GetAll(session.Filter{
-		Direction: request.URL.Query().Get("direction"),
-	})
-	if err != nil {
+	query := session.NewQuery().FetchSessions().FetchStats()
+	if direction := request.URL.Query().Get("direction"); direction != "" {
+		query.FilterDirection(direction)
+	}
+
+	if err := endpoint.sessionStorage.Query(query); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions)
+	sessionsDTO := contract.NewSessionListResponse(query.Sessions, query.Stats)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 

@@ -47,6 +47,12 @@ var (
 		DataSent:        10,
 		DataReceived:    10,
 	}
+	sessionsMock = []session.History{
+		connectionSessionMock,
+	}
+	sessionStatsMock = session.Stats{
+		Count: 1,
+	}
 )
 
 func Test_SessionsEndpoint_SessionToDto(t *testing.T) {
@@ -73,20 +79,18 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	assert.Nil(t, err)
 
 	ssm := &sessionStorageMock{
-		errToReturn: nil,
-		sessionsToReturn: []session.History{
-			connectionSessionMock,
-		},
+		sessionsToReturn: sessionsMock,
+		statsToReturn:    sessionStatsMock,
 	}
 
 	resp := httptest.NewRecorder()
 	handlerFunc := NewSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &contract.ListSessionsResponse{}
-	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
+	parsedResponse := contract.ListSessionsResponse{}
+	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, contract.NewSessionDTO(connectionSessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, contract.NewSessionListResponse(sessionsMock, sessionStatsMock), parsedResponse)
 }
 
 func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
@@ -99,8 +103,7 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 
 	mockErr := errors.New("something exploded")
 	ssm := &sessionStorageMock{
-		errToReturn:      mockErr,
-		sessionsToReturn: []session.History{},
+		errToReturn: mockErr,
 	}
 
 	resp := httptest.NewRecorder()
@@ -116,9 +119,12 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 
 type sessionStorageMock struct {
 	sessionsToReturn []session.History
+	statsToReturn    session.Stats
 	errToReturn      error
 }
 
-func (ssm *sessionStorageMock) GetAll(_ session.Filter) ([]session.History, error) {
-	return ssm.sessionsToReturn, ssm.errToReturn
+func (ssm *sessionStorageMock) Query(query *session.Query) error {
+	query.Sessions = ssm.sessionsToReturn
+	query.Stats = ssm.statsToReturn
+	return ssm.errToReturn
 }
