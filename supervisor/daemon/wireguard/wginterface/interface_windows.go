@@ -18,152 +18,39 @@
 package wginterface
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"io/ioutil"
-	stdlog "log"
-	"strings"
+	"net"
 
-	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
-	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/rs/zerolog/log"
 
-	"github.com/mysteriumnetwork/node/utils/netutil"
-	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
 )
 
-// New creates new WgInterface instance.
-func New(cfg wgcfg.DeviceConfig, uid string) (*WgInterface, error) {
-	log.Print("Creating Wintun interface")
-
-	wintun, err := tun.CreateTUN(cfg.IfaceName, 0)
+func createTunnel(interfaceName string) (tunnel tun.Device, _ string, err error) {
+	log.Info().Msg("Creating Wintun interface")
+	wintun, err := tun.CreateTUN(interfaceName, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not create wintun: %w", err)
+		return nil, interfaceName, fmt.Errorf("could not create Wintun tunnel: %w", err)
 	}
 	nativeTun := wintun.(*tun.NativeTun)
 	wintunVersion, ndisVersion, err := nativeTun.Version()
 	if err != nil {
-		log.Printf("Warning: unable to determine Wintun version: %v", err)
+		log.Warn().Err(err).Msg("Unable to determine Wintun version")
 	} else {
-		log.Printf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
+		log.Info().Msgf("Using Wintun/%s (NDIS %s)", wintunVersion, ndisVersion)
 	}
+	return wintun, interfaceName, nil
+}
 
-	log.Info().Msg("Creating interface instance")
-	logger := newLogger(device.LogLevelDebug, fmt.Sprintf("(%s) ", cfg.IfaceName))
-	logger.Info.Println("Starting wireguard-go version", device.WireGuardGoVersion)
-	wgDevice := device.NewDevice(wintun, logger)
-
-	log.Info().Msg("Setting interface configuration")
-	uapi, err := ipc.UAPIListen(cfg.IfaceName)
+func newUAPIListener(interfaceName string) (listener net.Listener, err error) {
+	uapi, err := ipc.UAPIListen(interfaceName)
 	if err != nil {
-		return nil, fmt.Errorf("could not listen for user API wg configuration: %w", err)
+		return nil, fmt.Errorf("could not listen for UAPI wg configuration: %w", err)
 	}
-	if err := wgDevice.IpcSetOperation(bufio.NewReader(strings.NewReader(cfg.Encode()))); err != nil {
-		return nil, fmt.Errorf("could not set device uapi config: %w", err)
-	}
-
-	log.Info().Msg("Bringing peers up")
-	wgDevice.Up()
-
-	log.Info().Msg("Configuring network")
-	dnsManager := dns.NewManager()
-	if err := configureNetwork(cfg, dnsManager); err != nil {
-		return nil, fmt.Errorf("could not setup network: %w", err)
-	}
-
-	wgInterface := &WgInterface{
-		Name:       cfg.IfaceName,
-		Device:     wgDevice,
-		uapi:       uapi,
-		dnsManager: dnsManager,
-	}
-	log.Info().Msg("Listening for UAPI requests")
-	go wgInterface.handleUAPI()
-
-	return wgInterface, nil
+	return uapi, nil
 }
 
-// handleUAPI listens for WireGuard configuration changes via user space socket.
-func (a *WgInterface) handleUAPI() {
-	for {
-		conn, err := a.uapi.Accept()
-		if err != nil {
-			log.Err(err).Msg("Failed to close UAPI listener")
-			return
-		}
-		go a.Device.IpcHandle(conn)
-	}
-}
-
-// Down closes device and user space api socket.
-func (a *WgInterface) Down() {
-	if err := a.uapi.Close(); err != nil {
-		log.Printf("could not close uapi socket: %v", err)
-	}
-	a.Device.Close()
-	if err := a.dnsManager.Clean(); err != nil {
-		log.Err(err).Msg("Could not clean DNS")
-	}
-}
-
-func configureNetwork(cfg wgcfg.DeviceConfig, dnsManager dns.Manager) error {
-	if err := netutil.AssignIP(cfg.IfaceName, cfg.Subnet); err != nil {
-		return fmt.Errorf("failed to assign IP address: %w", err)
-	}
-
-	if cfg.Peer.Endpoint != nil {
-		if err := netutil.ExcludeRoute(cfg.Peer.Endpoint.IP); err != nil {
-			return fmt.Errorf("could not exclude route %s: %w", cfg.Peer.Endpoint.IP.String(), err)
-		}
-		if err := netutil.AddDefaultRoute(cfg.IfaceName); err != nil {
-			return fmt.Errorf("could not add default route for %s: %w", cfg.IfaceName, err)
-		}
-	}
-
-	if err := dnsManager.Set(dns.Config{
-		ScriptDir: cfg.DNSScriptDir,
-		IfaceName: cfg.IfaceName,
-		DNS:       cfg.DNS,
-	}); err != nil {
-		return fmt.Errorf("could not set DNS: %w", err)
-	}
-
+func applySocketPermissions(_ string, _ string) error {
 	return nil
-}
-
-// newLogger creates WireGuard logger which uses already configured global zero log instance.
-func newLogger(level int, prepend string) *device.Logger {
-	output := log.Logger
-	logger := new(device.Logger)
-
-	logErr, logInfo, logDebug := func() (io.Writer, io.Writer, io.Writer) {
-		if level >= device.LogLevelDebug {
-			return output, output, output
-		}
-		if level >= device.LogLevelInfo {
-			return output, output, ioutil.Discard
-		}
-		if level >= device.LogLevelError {
-			return output, ioutil.Discard, ioutil.Discard
-		}
-		return ioutil.Discard, ioutil.Discard, ioutil.Discard
-	}()
-
-	logger.Debug = stdlog.New(logDebug,
-		"DEBUG: "+prepend,
-		stdlog.Ldate|stdlog.Ltime,
-	)
-
-	logger.Info = stdlog.New(logInfo,
-		"INFO: "+prepend,
-		stdlog.Ldate|stdlog.Ltime,
-	)
-	logger.Error = stdlog.New(logErr,
-		"ERROR: "+prepend,
-		stdlog.Ldate|stdlog.Ltime,
-	)
-	return logger
 }

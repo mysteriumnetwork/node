@@ -56,4 +56,6 @@ type Manager interface {
 	Status() Status
 	// Disconnect closes established connection, reports error if no connection
 	Disconnect() error
+	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
+	CheckChannel() error
 }

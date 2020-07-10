@@ -288,7 +288,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	settler.currentState[mockID] = settlementState{
 		hermeses: map[common.Address]hermesState{
 			cfg.HermesAddress: {
-				channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: 8900},
 			},
 		},
@@ -310,7 +310,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	settler.currentState[mockID] = settlementState{
 		hermeses: map[common.Address]hermesState{
 			cfg.HermesAddress: {
-				channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(0)},
 				lastPromise: crypto.Promise{Amount: 8900},
 			},
 		},
@@ -379,7 +379,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s := settlementState{
 		hermeses: map[common.Address]hermesState{
 			{}: {
-				channel:     client.ProviderChannel{Balance: big.NewInt(100)},
+				channel:     client.ProviderChannel{Balance: big.NewInt(100), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: 100},
 			},
 		},
@@ -390,7 +390,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s = settlementState{
 		hermeses: map[common.Address]hermesState{
 			{}: {
-				channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: 9000},
 			},
 		},
@@ -407,7 +407,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s = settlementState{
 		hermeses: map[common.Address]hermesState{
 			{}: {
-				channel:     client.ProviderChannel{Balance: big.NewInt(10000)},
+				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: 8999},
 			},
 		},

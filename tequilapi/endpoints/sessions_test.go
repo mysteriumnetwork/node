@@ -36,7 +36,7 @@ import (
 
 var (
 	connectionSessionMock = session.History{
-		SessionID:       node_session.ID("SessionID"),
+		SessionID:       node_session.ID("ID"),
 		ConsumerID:      identity.FromAddress("consumerID"),
 		HermesID:        "0x000000000000000000000000000000000000000C",
 		ProviderID:      identity.FromAddress("providerID"),
@@ -49,10 +49,10 @@ var (
 	}
 )
 
-func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
-	sessionDTO := connectionSessionToDto(connectionSessionMock)
-	assert.Equal(t, "2010-01-01T12:00:00Z", sessionDTO.DateStarted)
-	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.SessionID)
+func Test_SessionsEndpoint_SessionToDto(t *testing.T) {
+	sessionDTO := contract.NewSessionDTO(connectionSessionMock)
+	assert.Equal(t, "2010-01-01T12:00:00Z", sessionDTO.CreatedAt)
+	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.ID)
 	assert.Equal(t, connectionSessionMock.ConsumerID.Address, sessionDTO.ConsumerID)
 	assert.Equal(t, connectionSessionMock.HermesID, sessionDTO.HermesID)
 	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
@@ -64,7 +64,7 @@ func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
 	assert.Equal(t, connectionSessionMock.Status, sessionDTO.Status)
 }
 
-func Test_ConnectionSessionsEndpoint_List(t *testing.T) {
+func Test_SessionsEndpoint_List(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
@@ -72,7 +72,7 @@ func Test_ConnectionSessionsEndpoint_List(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	ssm := &connectionSessionStorageMock{
+	ssm := &sessionStorageMock{
 		errToReturn: nil,
 		sessionsToReturn: []session.History{
 			connectionSessionMock,
@@ -80,16 +80,16 @@ func Test_ConnectionSessionsEndpoint_List(t *testing.T) {
 	}
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewConnectionSessionsEndpoint(ssm).List
+	handlerFunc := NewSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &contract.ListConnectionSessionsResponse{}
+	parsedResponse := &contract.ListSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, connectionSessionToDto(connectionSessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, contract.NewSessionDTO(connectionSessionMock), parsedResponse.Sessions[0])
 }
 
-func Test_ConnectionSessionsEndpoint_ListBubblesError(t *testing.T) {
+func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
@@ -98,13 +98,13 @@ func Test_ConnectionSessionsEndpoint_ListBubblesError(t *testing.T) {
 	assert.Nil(t, err)
 
 	mockErr := errors.New("something exploded")
-	ssm := &connectionSessionStorageMock{
+	ssm := &sessionStorageMock{
 		errToReturn:      mockErr,
 		sessionsToReturn: []session.History{},
 	}
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewConnectionSessionsEndpoint(ssm).List
+	handlerFunc := NewSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
@@ -114,11 +114,11 @@ func Test_ConnectionSessionsEndpoint_ListBubblesError(t *testing.T) {
 	)
 }
 
-type connectionSessionStorageMock struct {
+type sessionStorageMock struct {
 	sessionsToReturn []session.History
 	errToReturn      error
 }
 
-func (ssm *connectionSessionStorageMock) GetAll() ([]session.History, error) {
+func (ssm *sessionStorageMock) GetAll() ([]session.History, error) {
 	return ssm.sessionsToReturn, ssm.errToReturn
 }

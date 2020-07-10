@@ -95,7 +95,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		t,
 		&History{
 			SessionID:       session_node.ID("session1"),
-			Direction:       "Provider",
+			Direction:       "Provided",
 			ConsumerID:      identity.FromAddress("consumer1"),
 			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -124,7 +124,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 		t,
 		&History{
 			SessionID:       session_node.ID("session1"),
-			Direction:       "Provider",
+			Direction:       "Provided",
 			ConsumerID:      identity.FromAddress("consumer1"),
 			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -164,7 +164,7 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 		t,
 		&History{
 			SessionID:       session_node.ID("sessionID"),
-			Direction:       "Consumer",
+			Direction:       "Consumed",
 			ConsumerID:      identity.FromAddress("consumerID"),
 			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -192,7 +192,7 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 		t,
 		&History{
 			SessionID:       session_node.ID("sessionID"),
-			Direction:       "Consumer",
+			Direction:       "Consumed",
 			ConsumerID:      identity.FromAddress("consumerID"),
 			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),
@@ -234,7 +234,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 		t,
 		&History{
 			SessionID:       session_node.ID("sessionID"),
-			Direction:       "Consumer",
+			Direction:       "Consumed",
 			ConsumerID:      identity.FromAddress("consumerID"),
 			HermesID:        "0x00000000000000000000000000000000000000AC",
 			ProviderID:      identity.FromAddress("providerID"),

@@ -487,17 +487,16 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 	err := tc.connManager.Connect(consumerID, hermesID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 
-	waitABit()
-
-	// Check that state event with StateIPNotChanged status was called.
-	history := tc.stubPublisher.GetEventHistory()
-	var ipNotChangedEvent *StubPublisherEvent
-	for _, v := range history {
-		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
-			ipNotChangedEvent = &v
+	assert.Eventually(tc.T(), func() bool {
+		// Check that state event with StateIPNotChanged status was called.
+		history := tc.stubPublisher.GetEventHistory()
+		for _, v := range history {
+			if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
+				return true
+			}
 		}
-	}
-	assert.NotNil(tc.T(), ipNotChangedEvent)
+		return false
+	}, 2*time.Second, 10*time.Millisecond)
 
 	// Check that status sender was called with status code.
 	expectedStatusMsg := connectivity.StatusMessage{

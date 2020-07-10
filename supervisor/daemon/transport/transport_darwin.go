@@ -53,8 +53,8 @@ func Start(handle handlerFunc, options Options) error {
 			log.Err(err).Msg("Error closing listener")
 		}
 	}()
+	log.Info().Msg("Waiting for connections...")
 	for {
-		log.Info().Msg("Waiting for connections...")
 		conn, err := l.Accept()
 		if err != nil {
 			return fmt.Errorf("accept error: %w", err)

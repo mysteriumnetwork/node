@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -v
 
 . /usr/share/debconf/confmodule
 
@@ -69,41 +69,6 @@ printf "Creating directories...\n" \
 printf "Setting required capabilities...\n" \
     && setcap cap_net_admin+ep /usr/bin/myst
 
-# Remove legacy symlink, if it exists
-if [[ -L $OS_DIR_INITD/mysterium-node ]]; then
-    rm -f $OS_DIR_INITD/mysterium-node
-fi
-
-# Distribution-specific logic
-if [[ -f /etc/redhat-release ]]; then
-    # RHEL-variant logic
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-    	install_systemd
-    else
-	    # Assuming sysv
-	    install_initd
-	    install_chkconfig
-    fi
-elif [[ -f /etc/debian_version ]]; then
-    # Debian/Ubuntu logic
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-    	install_systemd
-    else
-	    # Assuming sysv
-    	install_initd
-    	install_update_rcd
-    fi
-elif [[ -f /etc/os-release ]]; then
-    source /etc/os-release
-    if [[ $ID = "amzn" ]]; then
-    	# Amazon Linux logic
-    	install_initd
-    	install_chkconfig
-    fi
-fi
-
 ensure_paths
 
 # Add defaults file, if it doesn't exist
@@ -128,5 +93,40 @@ printf "Cleaning legacy log files...\n" \
 
 printf "\nInstallation successfully finished.\n" \
     && printf "Usage: service mysterium-node restart\n"
+
+# Remove legacy symlink, if it exists
+if [[ -L $OS_DIR_INITD/mysterium-node ]]; then
+    rm -f $OS_DIR_INITD/mysterium-node
+fi
+
+# Distribution-specific logic
+if [[ -f /etc/redhat-release ]]; then
+    # RHEL-variant logic
+    which systemctl &>/dev/null
+    if [[ $? -eq 0 ]]; then
+    	install_systemd || echo "got an error, ignoring - probably systemd-spawn issue"
+    else
+	    # Assuming sysv
+	    install_initd
+	    install_chkconfig
+    fi
+elif [[ -f /etc/debian_version ]]; then
+    # Debian/Ubuntu logic
+    which systemctl &>/dev/null
+    if [[ $? -eq 0 ]]; then
+    	install_systemd || echo "got an error, ignoring - probably systemd-spawn issue"
+    else
+	    # Assuming sysv
+    	install_initd
+    	install_update_rcd
+    fi
+elif [[ -f /etc/os-release ]]; then
+    source /etc/os-release
+    if [[ $ID = "amzn" ]]; then
+    	# Amazon Linux logic
+    	install_initd
+    	install_chkconfig
+    fi
+fi
 
 #DEBHELPER#

@@ -254,20 +254,17 @@ func (c *cliApp) settle(args []string) {
 }
 
 func (c *cliApp) setBeneficiary(actionArgs []string) {
-	const usageSetBeneficiary = "beneficiary <identity> [new beneficiary]"
+	const usageSetBeneficiary = "beneficiary <identity> <new beneficiary>"
 
-	if len(actionArgs) < 1 || len(actionArgs) > 3 {
+	if len(actionArgs) < 2 || len(actionArgs) > 3 {
 		info("Usage: " + usageSetBeneficiary)
 		return
 	}
 
-	var address = actionArgs[0]
-	var beneficiary string
-	if len(actionArgs) >= 1 {
-		beneficiary = actionArgs[1]
-	}
-
+	address := actionArgs[0]
+	beneficiary := actionArgs[1]
 	hermesID := config.GetString(config.FlagHermesID)
+
 	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
 	if err != nil {
 		warn(errors.Wrap(err, "could not set beneficiary"))

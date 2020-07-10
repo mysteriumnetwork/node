@@ -136,7 +136,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       "error": ""
     },
     "service_info": null,
-    "sessions": null,
+    "sessions": [],
     "consumer": {
       "connection": {
         "status": ""
@@ -166,7 +166,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       "error": "cookie prices rise drastically"
     },
     "service_info": null,
-    "sessions": null,
+    "sessions": [],
     "consumer": {
       "connection": {
         "status": ""
@@ -203,7 +203,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       "error": ""
     },
     "service_info": null,
-    "sessions": null,
+    "sessions": [],
     "consumer": {
       "connection": {
         "status": "Connecting"

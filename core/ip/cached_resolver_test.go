@@ -71,21 +71,22 @@ func TestCachedResolverCachesOutboundIP(t *testing.T) {
 	tests := []struct {
 		name              string
 		cacheDuration     time.Duration
-		sleepAfterCall    time.Duration
+		ipCheckInterval   time.Duration
 		expectedIP        string
 		expectedIPFetches int
 	}{
 		{
-			name:              "Test ip is fetch and cache",
-			cacheDuration:     time.Millisecond,
-			sleepAfterCall:    time.Microsecond,
+			name: "Test ip is fetch and cache",
+			// monotonic time resolution is fairly low on some OS'es, such as 15ms on Windows 2008
+			cacheDuration:     50 * time.Millisecond,
+			ipCheckInterval:   time.Microsecond,
 			expectedIP:        "192.168.1.2",
 			expectedIPFetches: 1,
 		},
 		{
 			name:              "Test ip cache update when cache duration has passed",
 			cacheDuration:     time.Microsecond,
-			sleepAfterCall:    time.Millisecond,
+			ipCheckInterval:   time.Millisecond,
 			expectedIP:        "192.168.1.2",
 			expectedIPFetches: 5,
 		},
@@ -101,7 +102,7 @@ func TestCachedResolverCachesOutboundIP(t *testing.T) {
 			for i := 0; i < 5; i++ {
 				actualIP, err = cr.GetOutboundIP()
 				assert.NoError(t, err)
-				time.Sleep(test.sleepAfterCall)
+				time.Sleep(test.ipCheckInterval)
 			}
 
 			assert.Equal(t, test.expectedIP, actualIP)

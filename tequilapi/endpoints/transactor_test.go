@@ -75,7 +75,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "hermesID", fakeSignerFactory, mocks.NewEventBus(), nil)
 	AddRoutesForTransactor(router, tr, &mockSettler{
 		feeToReturn: 11,
-	}, &settlementHistoryProviderMock{})
+	}, &settlementHistoryProviderMock{}, common.Address{})
 
 	req, err := http.NewRequest(
 		http.MethodGet,

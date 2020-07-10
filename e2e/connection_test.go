@@ -319,7 +319,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	log.Info().Msg("Changed consumer IP: " + vpnIP.IP)
 
 	// sessions history should be created after connect
-	sessionsDTO, err := tequilapi.ConnectionSessionsByType(serviceType)
+	sessionsDTO, err := tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
@@ -327,7 +327,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
-	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
+	assert.Equal(t, connectionStatus.SessionID, se.ID)
 	assert.Equal(t, "New", se.Status)
 
 	// Wait some time for session to collect stats.
@@ -343,7 +343,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	// sessions history should be updated after disconnect
-	sessionsDTO, err = tequilapi.ConnectionSessionsByType(serviceType)
+	sessionsDTO, err = tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
@@ -395,20 +395,20 @@ func sessionStatsReceived(tequilapi *tequilapi_client.Client, serviceType string
 	}
 }
 
-type sessionAsserter func(t *testing.T, session contract.ConnectionSessionDTO)
+type sessionAsserter func(t *testing.T, session contract.SessionDTO)
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
-	"openvpn": func(t *testing.T, session contract.ConnectionSessionDTO) {
+	"openvpn": func(t *testing.T, session contract.SessionDTO) {
 		assert.NotZero(t, session.Duration)
 		assert.NotZero(t, session.BytesSent)
 		assert.NotZero(t, session.BytesReceived)
 	},
-	"noop": func(t *testing.T, session contract.ConnectionSessionDTO) {
+	"noop": func(t *testing.T, session contract.SessionDTO) {
 		assert.NotZero(t, session.Duration)
 		assert.Zero(t, session.BytesSent)
 		assert.Zero(t, session.BytesReceived)
 	},
-	"wireguard": func(t *testing.T, session contract.ConnectionSessionDTO) {
+	"wireguard": func(t *testing.T, session contract.SessionDTO) {
 		assert.NotZero(t, session.Duration)
 		assert.NotZero(t, session.BytesSent)
 		assert.NotZero(t, session.BytesReceived)

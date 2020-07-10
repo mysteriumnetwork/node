@@ -57,5 +57,5 @@ SHORT VERSION IN HUMAN LANGUAGE FOR END USER:
 
 We recommend that you read the full versions below to get acquainted 
    with all of the terms and conditions available here:
-      https://github.com/mysteriumnetwork/terms/documents/TERMS_EXIT_NODE.md
-      https://github.com/mysteriumnetwork/terms/documents/TERMS_EXIT_USER.md`
+      https://github.com/mysteriumnetwork/terms/blob/master/documents/TERMS_EXIT_NODE.md
+      https://github.com/mysteriumnetwork/terms/blob/master/documents/TERMS_END_USER.md`

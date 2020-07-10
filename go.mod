@@ -24,7 +24,7 @@ require (
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/protobuf v1.4.2
 	github.com/huin/goupnp v1.0.0
-	github.com/jackpal/gateway v1.0.5
+	github.com/jackpal/gateway v1.0.6
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/joincivil/go-common v0.0.0-20191010210240-88ecdf41b6b6 // indirect
 	github.com/julienschmidt/httprouter v1.2.0

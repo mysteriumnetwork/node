@@ -20,7 +20,6 @@ package pingpong
 import (
 	"encoding/hex"
 	stdErrors "errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -725,19 +724,6 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_InvoiceTracker_RejectsInvalidHermes(t *testing.T) {
-	tracker := session.NewTracker(mbtime.Now)
-	deps := InvoiceTrackerDeps{
-		EventBus:          mocks.NewEventBus(),
-		TimeTracker:       &tracker,
-		ConsumersHermesID: common.HexToAddress("0x1"),
-		ProvidersHermesID: common.HexToAddress("0x0"),
-	}
-	invoiceTracker := NewInvoiceTracker(deps)
-	err := invoiceTracker.Start()
-	assert.EqualError(t, err, fmt.Errorf("consumer wants to work with an unsupported hermes(%q) while provider expects %q", common.HexToAddress("0x1").Hex(), common.HexToAddress("0x0").Hex()).Error())
 }
 
 func TestInvoiceTracker_handleHermesError(t *testing.T) {
