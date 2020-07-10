@@ -40,6 +40,7 @@ import (
 type mockConnectionManager struct {
 	onConnectReturn       error
 	onDisconnectReturn    error
+	onCheckChannelReturn  error
 	onStatusReturn        connection.Status
 	disconnectCount       int
 	requestedConsumerID   identity.Identity
@@ -57,13 +58,16 @@ func (cm *mockConnectionManager) Connect(consumerID identity.Identity, accountan
 }
 
 func (cm *mockConnectionManager) Status() connection.Status {
-
 	return cm.onStatusReturn
 }
 
 func (cm *mockConnectionManager) Disconnect() error {
 	cm.disconnectCount++
 	return cm.onDisconnectReturn
+}
+
+func (cm *mockConnectionManager) CheckChannel() error {
+	return cm.onCheckChannelReturn
 }
 
 func (cm *mockConnectionManager) Wait() error {
