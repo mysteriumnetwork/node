@@ -35,8 +35,7 @@ var (
 	consumerServices      = flag.String("consumer.services", "openvpn,noop,wireguard", "Comma separated list of services to try and use")
 )
 
-func newTequilapiConsumer(serviceType string) *tequilapi_client.Client {
-	host := "myst-consumer-" + serviceType
+func newTequilapiConsumer(host string) *tequilapi_client.Client {
 	return tequilapi_client.NewClient(host, *consumerTequilapiPort)
 }
 

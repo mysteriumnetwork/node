@@ -25,3 +25,16 @@ db.createUser(
         ]
     }
 );
+db = db.getSiblingDB('hermes2');
+db.createUser(
+    {
+        user: "hermes2",
+        pwd: "hermes2",
+        roles: [
+            {
+                role: "readWrite",
+                db: "hermes2"
+            }
+        ]
+    }
+);

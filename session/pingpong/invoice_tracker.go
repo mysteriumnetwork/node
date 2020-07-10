@@ -272,10 +272,6 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	if !bytes.EqualFold(it.deps.ConsumersHermesID.Bytes(), it.deps.ProvidersHermesID.Bytes()) {
-		return fmt.Errorf("consumer wants to work with an unsupported hermes(%q) while provider expects %q", it.deps.ConsumersHermesID.Hex(), it.deps.ProvidersHermesID.Hex())
-	}
-
 	fee, err := it.deps.BlockchainHelper.GetHermesFee(it.deps.ConsumersHermesID)
 	if err != nil {
 		return errors.Wrap(err, "could not get hermess fee")
@@ -574,10 +570,6 @@ func (it *InvoiceTracker) resetHermesFailureCount() {
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
-	if em.HermesID != "" && !strings.EqualFold(em.HermesID, it.deps.ProvidersHermesID.Hex()) {
-		return fmt.Errorf("invalid hermesID sent in exchange message. Expected %v, got %v", it.deps.ProvidersHermesID.Hex(), em.HermesID)
-	}
-
 	peerAddr := common.HexToAddress(it.deps.Peer.Address)
 	if res := em.IsMessageValid(peerAddr); !res {
 		return ErrExchangeValidationFailed

@@ -48,7 +48,7 @@ type Transactor interface {
 type promiseSettler interface {
 	ForceSettle(providerID identity.Identity, hermesID common.Address) error
 	SettleWithBeneficiary(id identity.Identity, beneficiary, hermesID common.Address) error
-	GetHermesFee() (uint16, error)
+	GetHermesFee(common.Address) (uint16, error)
 	SettleIntoStake(providerID identity.Identity, hermesID common.Address) error
 }
 
@@ -60,14 +60,16 @@ type transactorEndpoint struct {
 	transactor                Transactor
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
+	hermesAddress             common.Address
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
-func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider) *transactorEndpoint {
+func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesID common.Address) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
+		hermesAddress:             hermesID,
 	}
 }
 
@@ -109,7 +111,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	hermesFees, err := te.promiseSettler.GetHermesFee()
+	hermesFees, err := te.promiseSettler.GetHermesFee(te.hermesAddress)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -451,8 +453,8 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider) {
-	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider)
+func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
+	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)

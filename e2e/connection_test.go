@@ -20,11 +20,11 @@ package e2e
 import (
 	"fmt"
 	"math"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
@@ -41,6 +41,8 @@ var (
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
 	hermesID           = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
+	hermes2ID          = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
+	mystAddress        = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
 )
 
 const (
@@ -48,11 +50,53 @@ const (
 )
 
 type consumer struct {
-	consumerID   string
-	serviceType  string
-	tequila      *tequilapi_client.Client
-	balanceSpent uint64
-	proposal     contract.ProposalDTO
+	consumerID     string
+	serviceType    string
+	tequila        func() *tequilapi_client.Client
+	balanceSpent   uint64
+	proposal       contract.ProposalDTO
+	composeService string
+	hermesID       common.Address
+	hermesURL      string
+}
+
+var consumersToTest = []*consumer{
+	{
+		serviceType:    "noop",
+		hermesID:       common.HexToAddress(hermesID),
+		composeService: "myst-consumer-noop",
+		hermesURL:      "http://hermes:8889/api/v2",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-noop")
+		},
+	},
+	{
+		hermesID:       common.HexToAddress(hermesID),
+		serviceType:    "wireguard",
+		hermesURL:      "http://hermes:8889/api/v2",
+		composeService: "myst-consumer-wireguard",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-wireguard")
+		},
+	},
+	{
+		hermesID:       common.HexToAddress(hermesID),
+		hermesURL:      "http://hermes:8889/api/v2",
+		serviceType:    "openvpn",
+		composeService: "myst-consumer-openvpn",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-openvpn")
+		},
+	},
+	{
+		hermesURL:      "http://hermes2:8889/api/v2",
+		hermesID:       common.HexToAddress(hermes2ID),
+		serviceType:    "wireguard",
+		composeService: "myst-consumer-hermes2",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-hermes2")
+		},
+	},
 }
 
 func TestConsumerConnectsToProvider(t *testing.T) {
@@ -61,50 +105,42 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
 	})
 
-	servicesInFlag := strings.Split(*consumerServices, ",")
-	consumers := make(map[string]consumer)
 	t.Run("Consumer Creates And Registers Identity", func(t *testing.T) {
 		wg := sync.WaitGroup{}
-		wg.Add(len(servicesInFlag))
+		wg.Add(len(consumersToTest))
 
-		for _, serviceType := range servicesInFlag {
-			go func(serviceType string) {
+		for _, c := range consumersToTest {
+			go func(c *consumer) {
 				defer wg.Done()
-				tequilapiConsumer := newTequilapiConsumer(serviceType)
+				tequilapiConsumer := c.tequila()
 				consumerID := identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
 				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
-				consumers[serviceType] = consumer{
-					consumerID:  consumerID,
-					serviceType: serviceType,
-					tequila:     tequilapiConsumer,
-				}
-			}(serviceType)
+				c.consumerID = consumerID
+			}(c)
 		}
-
 		wg.Wait()
 	})
 
 	t.Run("Consumers Connect to provider", func(t *testing.T) {
 		wg := sync.WaitGroup{}
-		for _, v := range consumers {
+		for _, c := range consumersToTest {
 			wg.Add(1)
-			go func(c consumer) {
+			go func(c *consumer) {
 				defer wg.Done()
-				proposal := consumerPicksProposal(t, c.tequila, c.serviceType)
-				balanceSpent := consumerConnectFlow(t, c.tequila, c.consumerID, hermesID, c.serviceType, proposal)
-				copied := consumers[c.consumerID]
-				copied.balanceSpent = balanceSpent
-				copied.proposal = proposal
-				consumers[c.consumerID] = copied
-				recheckBalancesWithHermes(t, c.consumerID, balanceSpent, proposal.ServiceType)
-			}(v)
+				proposal := consumerPicksProposal(t, c.tequila(), c.serviceType)
+				balanceSpent := consumerConnectFlow(t, c.tequila(), c.consumerID, c.hermesID.Hex(), c.serviceType, proposal)
+				c.balanceSpent = balanceSpent
+				c.proposal = proposal
+				recheckBalancesWithHermes(t, c.consumerID, balanceSpent, c.serviceType, c.hermesURL)
+			}(c)
 		}
+
 		wg.Wait()
 	})
 
 	t.Run("Validate provider earnings", func(t *testing.T) {
 		var sum uint64
-		for _, v := range consumers {
+		for _, v := range consumersToTest {
 			sum += v.balanceSpent
 		}
 		providerEarnedTokens(t, tequilapiProvider, providerID, sum)
@@ -115,7 +151,12 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, initialBalance, providerStatus.Balance)
 
+		// settle hermes 1
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
+		assert.NoError(t, err)
+
+		// settle hermes 2
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermes2ID), true)
 		assert.NoError(t, err)
 
 		providerStatus, err = tequilapiProvider.Identity(providerID)
@@ -124,12 +165,19 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		hermesFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
-		hermesFeeUint := uint64(math.Trunc(hermesFee))
-
-		earnings := float64(providerStatus.EarningsTotal - fees.Settlement - hermesFeeUint)
-		expected := initialBalance + uint64(earnings)
-
+		earningsByHermes := make(map[common.Address]uint64)
+		for _, c := range consumersToTest {
+			copy := earningsByHermes[c.hermesID]
+			copy += c.balanceSpent
+			earningsByHermes[c.hermesID] = copy
+		}
+		hermesOneEarnings := earningsByHermes[common.HexToAddress(hermesID)]
+		hermesTwoEarnings := earningsByHermes[common.HexToAddress(hermes2ID)]
+		totalEarnings := hermesOneEarnings + hermesTwoEarnings
+		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
+		
+		hermesFee := uint64(math.Round(0.04 * float64(hermesOneEarnings)))
+		expected := initialBalance + uint64(hermesOneEarnings) - fees.Settlement - hermesFee
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
 		assert.InDelta(t, expected, providerStatus.Balance, 2)
 	})
@@ -157,16 +205,16 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 }
 
-func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
+func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending uint64, serviceType, hermesURL string) {
 	var lastHermes uint64
 	assert.Eventually(t, func() bool {
-		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://hermes:8889/api/v2")
+		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
 		hermesData, err := hermesCaller.GetConsumerData(consumerID)
 		assert.NoError(t, err)
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised
 		return promised == consumerSpending
-	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v", consumerSpending, lastHermes, serviceType))
+	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v", consumerSpending, lastHermes, serviceType, hermesURL))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {

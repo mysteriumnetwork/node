@@ -79,7 +79,7 @@ type HermesPromiseSettler interface {
 	ForceSettle(providerID identity.Identity, hermesID common.Address) error
 	SettleWithBeneficiary(providerID identity.Identity, beneficiary, hermesID common.Address) error
 	SettleIntoStake(providerID identity.Identity, hermesID common.Address) error
-	GetHermesFee() (uint16, error)
+	GetHermesFee(common.Address) (uint16, error)
 	Subscribe() error
 }
 
@@ -128,8 +128,8 @@ func NewHermesPromiseSettler(eventBus eventbus.EventBus, transactor transactor, 
 }
 
 // GetHermesFee fetches the hermes fee.
-func (aps *hermesPromiseSettler) GetHermesFee() (uint16, error) {
-	return aps.bc.GetHermesFee(aps.config.HermesAddress)
+func (aps *hermesPromiseSettler) GetHermesFee(hermesID common.Address) (uint16, error) {
+	return aps.bc.GetHermesFee(hermesID)
 }
 
 // loadInitialState loads the initial state for the given identity. Inteded to be called on service start.
@@ -331,6 +331,7 @@ func (aps *hermesPromiseSettler) initiateSettling(providerID identity.Identity, 
 	promise.Promise.R = hexR
 
 	aps.settleQueue <- receivedPromise{
+		hermesID: hermesID,
 		provider: providerID,
 		promise:  promise.Promise,
 	}
@@ -498,15 +499,15 @@ func (aps *hermesPromiseSettler) settle(p receivedPromise, beneficiary *common.A
 	}()
 
 	var settleFunc = func() error {
-		return aps.transactor.SettleAndRebalance(aps.config.HermesAddress.Hex(), p.provider.Address, p.promise)
+		return aps.transactor.SettleAndRebalance(p.hermesID.Hex(), p.provider.Address, p.promise)
 	}
 	if isStakeIncrease {
 		settleFunc = func() error {
-			return aps.transactor.SettleIntoStake(aps.config.HermesAddress.Hex(), p.provider.Address, p.promise)
+			return aps.transactor.SettleIntoStake(p.hermesID.Hex(), p.provider.Address, p.promise)
 		}
 	} else if beneficiary != nil {
 		settleFunc = func() error {
-			return aps.transactor.SettleWithBeneficiary(p.provider.Address, beneficiary.Hex(), aps.config.HermesAddress.Hex(), p.promise)
+			return aps.transactor.SettleWithBeneficiary(p.provider.Address, beneficiary.Hex(), p.hermesID.Hex(), p.promise)
 		}
 	}
 
@@ -616,6 +617,13 @@ func (ss settlementState) needsSettling(threshold float64, hermesID common.Addre
 	hermes, ok := ss.hermeses[hermesID]
 	if !ok {
 		return false
+	}
+
+	if hermes.channel.Stake.Uint64() == 0 {
+		// if starting with zero stake, only settle one myst or more.
+		if hermes.unsettledBalance() < 100000000 {
+			return false
+		}
 	}
 
 	calculatedThreshold := threshold * float64(hermes.availableBalance())

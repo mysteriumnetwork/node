@@ -53,6 +53,6 @@ func (n *NoopHermesPromiseSettler) SettleWithBeneficiary(_ identity.Identity, _,
 }
 
 // GetHermesFee does absolutely nothing.
-func (n *NoopHermesPromiseSettler) GetHermesFee() (uint16, error) {
+func (n *NoopHermesPromiseSettler) GetHermesFee(_ common.Address) (uint16, error) {
 	return 0, nil
 }

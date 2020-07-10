@@ -218,7 +218,10 @@ func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toProm
 	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
 	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.HermesAddress)
 	if err != nil {
-		return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
+		if err != ErrNotFound {
+			return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
+		}
+		log.Debug().Msg("No previous promised total, assuming 0")
 	}
 
 	// This is a new agreement, we need to take in the agreement total and just add it to total promised
