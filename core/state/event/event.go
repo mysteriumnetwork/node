@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -37,7 +38,7 @@ const AppTopicState = "State change"
 type State struct {
 	NATStatus  contract.NATStatusDTO
 	Services   []contract.ServiceInfoDTO
-	Sessions   []contract.ServiceSessionDTO
+	Sessions   []session.History
 	Connection Connection
 	Identities []Identity
 }

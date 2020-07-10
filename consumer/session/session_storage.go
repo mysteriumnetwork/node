@@ -106,7 +106,7 @@ func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession)
 		repo.mu.Lock()
 		repo.sessionsActive[sessionID] = History{
 			SessionID:       sessionID,
-			Direction:       DirectionProvider,
+			Direction:       DirectionProvided,
 			ConsumerID:      e.Session.ConsumerID,
 			AccountantID:    e.Session.AccountantID.Hex(),
 			ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
@@ -162,7 +162,7 @@ func (repo *Storage) consumeConnectionSessionEvent(e connection.AppEventConnecti
 		repo.mu.Lock()
 		repo.sessionsActive[sessionID] = History{
 			SessionID:       sessionID,
-			Direction:       DirectionConsumer,
+			Direction:       DirectionConsumed,
 			ConsumerID:      e.SessionInfo.ConsumerID,
 			AccountantID:    e.SessionInfo.AccountantID.Hex(),
 			ProviderID:      identity.FromAddress(e.SessionInfo.Proposal.ProviderID),

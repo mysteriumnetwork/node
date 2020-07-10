@@ -19,46 +19,58 @@ package contract
 
 import (
 	"time"
+
+	"github.com/mysteriumnetwork/node/consumer/session"
 )
 
-// ListServiceSessionsResponse defines session list representable as json
-// swagger:model ListServiceSessionsResponse
-type ListServiceSessionsResponse struct {
-	Sessions []ServiceSessionDTO `json:"sessions"`
+// NewSessionListResponse maps to API session list.
+func NewSessionListResponse(sessions []session.History) ListSessionsResponse {
+	return ListSessionsResponse{
+		Sessions: mapSessions(sessions, NewSessionDTO),
+	}
 }
 
-// ServiceSessionDTO represents the session object
-// swagger:model ServiceSessionDTO
-type ServiceSessionDTO struct {
+// ListSessionsResponse defines session list representable as json
+// swagger:model ListSessionsResponse
+type ListSessionsResponse struct {
+	Sessions []SessionDTO `json:"sessions"`
+}
+
+func mapSessions(sessions []session.History, f func(session.History) SessionDTO) []SessionDTO {
+	dtoArray := make([]SessionDTO, len(sessions))
+	for i, se := range sessions {
+		dtoArray[i] = f(se)
+	}
+	return dtoArray
+}
+
+// NewSessionDTO maps to API session.
+func NewSessionDTO(se session.History) SessionDTO {
+	return SessionDTO{
+		ID:              string(se.SessionID),
+		Direction:       se.Direction,
+		ConsumerID:      se.ConsumerID.Address,
+		AccountantID:    se.AccountantID,
+		ProviderID:      se.ProviderID.Address,
+		ServiceType:     se.ServiceType,
+		ProviderCountry: se.ProviderCountry,
+		CreatedAt:       se.Started.Format(time.RFC3339),
+		BytesReceived:   se.DataReceived,
+		BytesSent:       se.DataSent,
+		Duration:        uint64(se.GetDuration().Seconds()),
+		Tokens:          se.Tokens,
+		Status:          se.Status,
+	}
+}
+
+// SessionDTO represents the session object
+// swagger:model SessionDTO
+type SessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	ID string `json:"id"`
-	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumer_id"`
-	// example: 2019-06-06T11:04:43.910035Z
-	CreatedAt time.Time `json:"created_at"`
-	// example: 12345
-	BytesOut uint64 `json:"bytes_out"`
-	// example: 23451
-	BytesIn uint64 `json:"bytes_in"`
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	ServiceID string `json:"service_id"`
-	// example: wireguard
-	ServiceType string `json:"service_type"`
-	// example: 500000
-	TokensEarned uint64 `json:"tokens_earned"`
-}
 
-// ListConnectionSessionsResponse defines session list representable as json
-// swagger:model ListConnectionSessionsResponse
-type ListConnectionSessionsResponse struct {
-	Sessions []ConnectionSessionDTO `json:"sessions"`
-}
-
-// ConnectionSessionDTO represents the session object
-// swagger:model ConnectionSessionDTO
-type ConnectionSessionDTO struct {
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	SessionID string `json:"session_id"`
+	// example: Consumer
+	Direction string `json:"direction"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ConsumerID string `json:"consumer_id"`
@@ -75,21 +87,21 @@ type ConnectionSessionDTO struct {
 	// example: NL
 	ProviderCountry string `json:"provider_country"`
 
-	// example: 2018-10-29 16:22:05
-	DateStarted string `json:"date_started"`
-
-	// example: 1024
-	BytesSent uint64 `json:"bytes_sent"`
-
-	// example: 1024
-	BytesReceived uint64 `json:"bytes_received"`
+	// example: 2019-06-06T11:04:43.910035Z
+	CreatedAt string `json:"created_at"`
 
 	// duration in seconds
 	// example: 120
 	Duration uint64 `json:"duration"`
 
+	// example: 1024
+	BytesReceived uint64 `json:"bytes_received"`
+
+	// example: 1024
+	BytesSent uint64 `json:"bytes_sent"`
+
 	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
+	Tokens uint64 `json:"tokens"`
 
 	// example: Completed
 	Status string `json:"status"`

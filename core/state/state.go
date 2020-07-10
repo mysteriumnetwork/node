@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -33,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
+	nodeSession "github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -110,7 +112,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 			NATStatus: contract.NATStatusDTO{
 				Status: "not_finished",
 			},
-			Sessions: make([]contract.ServiceSessionDTO, 0),
+			Sessions: make([]session.History, 0),
 			Connection: stateEvent.Connection{
 				Session: connection.Status{
 					State: connection.NotConnected,
@@ -298,19 +300,23 @@ func (k *Keeper) consumeServiceSessionEvent(e sevent.AppEventSession) {
 }
 
 func (k *Keeper) addSession(e sevent.AppEventSession) {
-	k.state.Sessions = append(k.state.Sessions, contract.ServiceSessionDTO{
-		ID:          e.Session.ID,
-		ConsumerID:  e.Session.ConsumerID.Address,
-		CreatedAt:   e.Session.StartedAt,
-		ServiceID:   e.Service.ID,
-		ServiceType: e.Session.Proposal.ServiceType,
+	k.state.Sessions = append(k.state.Sessions, session.History{
+		SessionID:       nodeSession.ID(e.Session.ID),
+		Direction:       session.DirectionProvided,
+		ConsumerID:      e.Session.ConsumerID,
+		AccountantID:    e.Session.AccountantID.Hex(),
+		ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
+		ServiceType:     e.Session.Proposal.ServiceType,
+		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
+		Started:         e.Session.StartedAt,
+		Status:          session.StatusNew,
 	})
 }
 
 func (k *Keeper) removeSession(e sevent.AppEventSession) {
 	found := false
 	for i := range k.state.Sessions {
-		if k.state.Sessions[i].ID == e.Session.ID {
+		if string(k.state.Sessions[i].SessionID) == e.Session.ID {
 			k.state.Sessions = append(k.state.Sessions[:i], k.state.Sessions[i+1:]...)
 			found = true
 			break
@@ -332,9 +338,9 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 		return
 	}
 
-	var session *contract.ServiceSessionDTO
+	var session *session.History
 	for i := range k.state.Sessions {
-		if k.state.Sessions[i].ID == evt.ID {
+		if string(k.state.Sessions[i].SessionID) == evt.ID {
 			session = &k.state.Sessions[i]
 		}
 	}
@@ -346,8 +352,8 @@ func (k *Keeper) updateSessionStats(e interface{}) {
 	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
 	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
 	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
-	session.BytesIn = evt.Up
-	session.BytesOut = evt.Down
+	session.DataReceived = evt.Up
+	session.DataSent = evt.Down
 	go k.announceStateChanges(nil)
 }
 
@@ -362,9 +368,9 @@ func (k *Keeper) updateSessionEarnings(e interface{}) {
 		return
 	}
 
-	var session *contract.ServiceSessionDTO
+	var session *session.History
 	for i := range k.state.Sessions {
-		if k.state.Sessions[i].ID == evt.SessionID {
+		if string(k.state.Sessions[i].SessionID) == evt.SessionID {
 			session = &k.state.Sessions[i]
 		}
 	}
@@ -373,7 +379,7 @@ func (k *Keeper) updateSessionEarnings(e interface{}) {
 		return
 	}
 
-	session.TokensEarned = evt.Total
+	session.Tokens = evt.Total
 	go k.announceStateChanges(nil)
 }
 

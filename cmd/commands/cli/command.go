@@ -288,7 +288,7 @@ func (c *cliApp) serviceList() {
 }
 
 func (c *cliApp) serviceSessions() {
-	sessions, err := c.tequilapi.ServiceSessions()
+	sessions, err := c.tequilapi.Sessions()
 	if err != nil {
 		info("Failed to get a list of sessions: ", err)
 		return
@@ -296,7 +296,12 @@ func (c *cliApp) serviceSessions() {
 
 	status("Current sessions", len(sessions.Sessions))
 	for _, session := range sessions.Sessions {
-		status("ID: "+session.ID, "ConsumerID: "+session.ConsumerID)
+		status(
+			"ID: "+session.ID,
+			"ConsumerID: "+session.ConsumerID,
+			fmt.Sprintf("Data: %s/%s", datasize.FromBytes(session.BytesReceived).String(), datasize.FromBytes(session.BytesSent).String()),
+			fmt.Sprintf("Tokens: %s", money.NewMoney(session.Tokens, money.CurrencyMyst)),
+		)
 	}
 }
 
