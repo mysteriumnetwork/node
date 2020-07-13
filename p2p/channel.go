@@ -260,14 +260,12 @@ func (c *channel) remoteReadLoop() {
 			close(c.remoteAlive)
 		})
 
-		// Check if peer port changed.
+		// Check if peer address changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
-			if addr.IP.Equal(latestPeerAddr.IP) {
-				if addr.Port != latestPeerAddr.Port {
-					log.Debug().Msgf("Peer port changed from %d to %d", latestPeerAddr.Port, addr.Port)
-					c.peer.updateAddr(addr)
-					latestPeerAddr = addr
-				}
+			if !addr.IP.Equal(latestPeerAddr.IP) || addr.Port != latestPeerAddr.Port {
+				log.Debug().Msgf("Peer address changed from %v to %v", latestPeerAddr, addr)
+				c.peer.updateAddr(addr)
+				latestPeerAddr = addr
 			}
 		}
 
