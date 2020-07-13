@@ -1,4 +1,4 @@
-#!/bin/bash -v
+#!/bin/bash
 
 . /usr/share/debconf/confmodule
 
