@@ -34,7 +34,7 @@ func TestCachedResolverCachesPublicIP(t *testing.T) {
 	}{
 		{
 			name:              "Test ip is fetch and cache",
-			cacheDuration:     time.Millisecond,
+			cacheDuration:     50 * time.Millisecond,
 			sleepAfterCall:    time.Microsecond,
 			expectedIP:        "1.1.1.1",
 			expectedIPFetches: 1,
