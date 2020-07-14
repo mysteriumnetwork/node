@@ -18,10 +18,17 @@
 package mmn
 
 import (
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/rs/zerolog/log"
 )
+
+// NodeInformationDto contains node information to be sent to MMN
+type NodeClaimDto struct {
+	Identity string `json:"identity"`
+	ApiKey   string `json:"api_key"`
+}
 
 // NodeInformationDto contains node information to be sent to MMN
 type NodeInformationDto struct {
@@ -69,19 +76,14 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 	return m.httpClient.DoRequest(req)
 }
 
-func (m *client) UpdateNodeType(info *NodeInformationDto) error {
-	log.Debug().Msgf("Updating node type: %+v", *info)
-	id := identity.FromAddress(info.Identity)
-	nodeType := NodeTypeDto{
-		IsProvider: info.IsProvider,
-		IsClient:   info.IsClient,
-		Identity:   info.Identity,
-	}
+func (m *client) ClaimNode(claimInfo *NodeClaimDto) error {
+	log.Debug().Msgf("Claiming node in MMN: %s", claimInfo.Identity)
+	id := identity.FromAddress(claimInfo.Identity)
 
 	req, err := requests.NewSignedPostRequest(
 		m.mmnAddress,
-		"node/type",
-		nodeType,
+		"node/claim",
+		claimInfo,
 		m.signer(id),
 	)
 	if err != nil {

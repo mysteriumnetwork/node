@@ -19,13 +19,15 @@ package client
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
 )
 
 // NewClient returns a new instance of Client
@@ -513,4 +515,42 @@ func (client *Client) Beneficiary(address string) (res contract.IdentityBenefici
 
 	err = parseResponseJSON(response, &res)
 	return res, err
+}
+
+// Payout registers payout address for identity
+func (client *Client) SetConfig(data interface{}) (string, error) {
+	path := "config/user"
+
+	response, err := client.http.Post(path, data)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	responseJSON, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(responseJSON), nil
+}
+
+// Payout registers payout address for identity
+func (client *Client) Claim(identity, apiKey string) error {
+	path := fmt.Sprintf("identities/%s/claim", identity)
+	payload := struct {
+		Identity string `json:"identity"`
+		ApiKey string `json:"apiKey"`
+	}{
+		identity,
+		apiKey,
+	}
+
+	response, err := client.http.Put(path, payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
 }

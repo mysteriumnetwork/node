@@ -65,8 +65,6 @@ func (c *Collector) CollectEnvironmentInformation() error {
 		MACAddress:  hashMACAddress(mac),
 		LocalIP:     outboundIp,
 		VendorID:    config.GetString(config.FlagVendorID),
-		IsProvider:  false,
-		IsClient:    false,
 	}
 
 	c.node = node
@@ -77,26 +75,6 @@ func (c *Collector) CollectEnvironmentInformation() error {
 // SetIdentity sets node's identity
 func (c *Collector) SetIdentity(identity string) {
 	c.node.Identity = identity
-}
-
-// SetIsProvider marks node as a provider node
-func (c *Collector) SetIsProvider(isProvider bool) {
-	c.node.IsProvider = isProvider
-}
-
-// SetIsClient marks node as a client node
-func (c *Collector) SetIsClient(isClient bool) {
-	c.node.IsClient = isClient
-}
-
-// IsClient returns if the node is a client node
-func (c *Collector) IsClient() bool {
-	return c.node.IsClient
-}
-
-// IsProvider returns if the node is a provider node
-func (c *Collector) IsProvider() bool {
-	return c.node.IsProvider
 }
 
 // GetCollectedInformation returns collected information

@@ -544,6 +544,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.AccountantPromiseSettler, di.SettlementHistoryStorage)
 	tequilapi_endpoints.AddRoutesForConfig(router)
+	tequilapi_endpoints.AddRoutesForMMN(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {

@@ -18,26 +18,21 @@
 package mmn
 
 import (
-	"sync"
+	"github.com/rs/zerolog/log"
 
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-
-	"github.com/rs/zerolog/log"
 )
 
 // MMN struct
 type MMN struct {
 	collector *Collector
 	client    *client
-	lock      sync.Mutex
 }
 
 // NewMMN creates new instance of MMN
 func NewMMN(collector *Collector, client *client) *MMN {
-	return &MMN{collector, client, sync.Mutex{}}
+	return &MMN{collector, client}
 }
 
 // Subscribe subscribes to node events and reports them to MMN
@@ -45,22 +40,6 @@ func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	err := eventBus.SubscribeAsync(
 		identity.AppTopicIdentityUnlock,
 		m.handleRegistration,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = eventBus.SubscribeAsync(
-		servicestate.AppTopicServiceStatus,
-		m.handleProvider,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = eventBus.SubscribeAsync(
-		connection.AppTopicConnectionSession,
-		m.handleClient,
 	)
 	if err != nil {
 		return err
@@ -75,44 +54,8 @@ func (m *MMN) handleRegistration(identity string) {
 	}
 }
 
-func (m *MMN) handleClient(_ interface{}) {
-	if err := m.markClient(); err != nil {
-		log.Error().Msgf("Failed to register to MMN as client: %v", err)
-	}
-}
-
-func (m *MMN) handleProvider(_ interface{}) {
-	if err := m.markProvider(); err != nil {
-		log.Error().Msgf("Failed to register to MMN as provider: %v", err)
-	}
-}
-
 func (m *MMN) register(identity string) error {
 	m.collector.SetIdentity(identity)
 
 	return m.client.RegisterNode(m.collector.GetCollectedInformation())
-}
-
-func (m *MMN) markClient() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	// don't resend
-	if m.collector.IsClient() {
-		return nil
-	}
-	m.collector.SetIsClient(true)
-
-	return m.client.UpdateNodeType(m.collector.GetCollectedInformation())
-}
-
-func (m *MMN) markProvider() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	// don't resend
-	if m.collector.IsProvider() {
-		return nil
-	}
-	m.collector.SetIsProvider(true)
-
-	return m.client.UpdateNodeType(m.collector.GetCollectedInformation())
 }

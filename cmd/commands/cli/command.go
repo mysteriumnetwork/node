@@ -27,6 +27,9 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
@@ -39,8 +42,6 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
 )
 
 const cliCommandName = "cli"
@@ -176,6 +177,7 @@ func (c *cliApp) handleActions(line string) {
 		{"license", c.license},
 		{"proposals", c.proposals},
 		{"service", c.service},
+		{"mmn", c.linkMMNProfile},
 	}
 
 	for _, cmd := range staticCmds {
@@ -420,6 +422,47 @@ func (c *cliApp) payout(argsString string) {
 		fmt.Println(usage)
 		return
 	}
+}
+
+func (c *cliApp) linkMMNProfile(argsString string) {
+	args := strings.Fields(argsString)
+
+	const profileUrl = "https://my.mysterium.network/user/profile"
+	const usage = "MMN account link command:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
+
+	if len(args) == 0 {
+		info(usage)
+		return
+	}
+
+	apiKey := args[0]
+
+	type MMNConfig struct {
+		ApiKey string `json:"api_key"`
+	}
+
+	type cfg struct {
+		MMN MMNConfig `json:"mmn"`
+	}
+
+	var mmnConfig = map[string]interface{}{}
+	mmnConfig["data"] = cfg{
+		MMN: MMNConfig{
+			ApiKey: apiKey,
+		},
+	}
+
+	res, err := c.tequilapi.SetConfig(map[string]interface{}{
+
+	})
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	success(res)
+
+	success(fmt.Sprint("MMN Account linked."))
 }
 
 func (c *cliApp) disconnect() {
