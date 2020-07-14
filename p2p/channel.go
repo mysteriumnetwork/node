@@ -399,6 +399,7 @@ func (c *channel) handleRequest(msg *transportMsg) {
 	if err != nil {
 		log.Err(err).Msgf("Handler %q internal error", msg.topic)
 		resMsg.statusCode = statusCodeInternalErr
+		resMsg.msg = err.Error()
 	} else if ctx.publicError != nil {
 		log.Err(ctx.publicError).Msgf("Handler %q public error", msg.topic)
 		resMsg.statusCode = statusCodePublicErr
@@ -487,7 +488,7 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 			if res.statusCode == statusCodeHandlerNotFoundErr {
 				return nil, fmt.Errorf("%s: %w", string(res.data), ErrHandlerNotFound)
 			}
-			return nil, errors.New("internal peer error")
+			return nil, fmt.Errorf("peer error: %w", errors.New(res.msg))
 		}
 		return &Message{Data: res.data}, nil
 	}
