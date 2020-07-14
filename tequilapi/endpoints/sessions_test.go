@@ -90,7 +90,21 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	parsedResponse := contract.ListSessionsResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, contract.NewSessionListResponse(sessionsMock, sessionStatsMock), parsedResponse)
+	assert.EqualValues(
+		t,
+		contract.ListSessionsResponse{
+			Sessions: []contract.SessionDTO{
+				contract.NewSessionDTO(connectionSessionMock),
+			},
+			Stats: contract.NewSessionStatsDTO(sessionStatsMock),
+			Paging: contract.PagingDTO{
+				TotalItems:  1,
+				TotalPages:  1,
+				CurrentPage: 1,
+			},
+		},
+		parsedResponse,
+	)
 }
 
 func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
