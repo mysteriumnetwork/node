@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -36,7 +37,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal) {
+func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal, policyRules *policy.Repository) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var sessionID string
 
@@ -65,6 +66,10 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
+		if !policyRules.IsIdentityAllowed(consumerID) {
+			return fmt.Errorf("consumer identity is not allowed: %s", consumerID.Address)
+		}
+
 		consumerConfig := sr.GetConfig()
 		accountantID := common.HexToAddress(sr.GetConsumer().GetAccountantID())
 		sessionInstance, err := mng.Start(consumerID, accountantID, int(sr.GetProposalID()))
