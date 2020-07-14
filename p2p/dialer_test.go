@@ -85,7 +85,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 
 			// Provider starts listening.
 			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper)
-			err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
+			_, err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 				ch.Handle("test", func(c Context) error {
 					return c.OkWithReply(&Message{Data: []byte("pong")})
 				})
