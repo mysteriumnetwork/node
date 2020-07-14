@@ -153,7 +153,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 			instance.closeP2PChannel(ch)
 		})
 	}
-	if err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers); err != nil {
+	stopP2PListener, err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
+	if err != nil {
 		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
 	}
 
@@ -166,6 +167,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		if serveErr != nil {
 			log.Error().Err(serveErr).Msg("Service serve failed")
 		}
+
+		stopP2PListener()
 
 		stopErr := manager.servicePool.Stop(id)
 		if stopErr != nil {
