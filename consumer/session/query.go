@@ -65,16 +65,6 @@ func (qr *Query) FilterDirection(direction string) *Query {
 
 // FetchSessions fetches list of sessions to Query.Sessions.
 func (qr *Query) FetchSessions() *Query {
-	qr.Sessions = make([]History, 0)
-
-	qr.fetch = append(
-		qr.fetch,
-		matcher(func(session History) bool {
-			qr.Sessions = append(qr.Sessions, session)
-			return true
-		}),
-	)
-
 	return qr
 }
 
@@ -107,11 +97,21 @@ func (qr *Query) FetchStats() *Query {
 	return qr
 }
 
-func (qr *Query) toQuery(node storm.Node) storm.Query {
-	return node.Select(
-		q.And(qr.where...),
-		q.And(qr.fetch...),
-	)
+func (qr *Query) run(node storm.Node) error {
+	sq := node.
+		Select(
+			q.And(qr.where...),
+			q.And(qr.fetch...),
+		).
+		OrderBy("Started").
+		Reverse()
+
+	err := sq.Find(&qr.Sessions)
+	if err == storm.ErrNotFound {
+		qr.Sessions = []History{}
+		return nil
+	}
+	return err
 }
 
 type matcher func(History) bool

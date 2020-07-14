@@ -75,11 +75,8 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // Query executes given query.
-func (repo *Storage) Query(query *Query) error {
-	sq := query.toQuery(repo.storage.DB().From(sessionStorageBucketName))
-	return sq.Each(&History{}, func(interface{}) error {
-		return nil
-	})
+func (repo *Storage) Query(query *Query) (err error) {
+	return query.run(repo.storage.DB().From(sessionStorageBucketName))
 }
 
 // GetAll returns array of all sessions.

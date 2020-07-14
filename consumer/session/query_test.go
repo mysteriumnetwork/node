@@ -28,10 +28,15 @@ import (
 
 func TestSessionQuery_FetchSessions(t *testing.T) {
 	// given
-	sessionExpected := History{
+	session1Expected := History{
 		SessionID: session_node.ID("session1"),
+		Started:   time.Date(2020, 6, 17, 0, 0, 1, 0, time.UTC),
 	}
-	storage, storageCleanup := newStorageWithSessions(sessionExpected)
+	session2Expected := History{
+		SessionID: session_node.ID("session2"),
+		Started:   time.Date(2020, 6, 17, 0, 0, 2, 0, time.UTC),
+	}
+	storage, storageCleanup := newStorageWithSessions(session1Expected, session2Expected)
 	defer storageCleanup()
 
 	// when
@@ -39,7 +44,7 @@ func TestSessionQuery_FetchSessions(t *testing.T) {
 	err := storage.Query(query)
 	// then
 	assert.Nil(t, err)
-	assert.Equal(t, []History{sessionExpected}, query.Sessions)
+	assert.Equal(t, []History{session2Expected, session1Expected}, query.Sessions)
 }
 
 func TestSessionQuery_FilterDirection(t *testing.T) {
