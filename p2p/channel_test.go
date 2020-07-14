@@ -166,7 +166,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		})
 
 		_, err := consumer.Send(context.Background(), "get-error", &Message{Data: []byte("hello")})
-		assert.EqualError(t, err, "internal peer error")
+		assert.EqualError(t, err, "peer error: I don't like you")
 	})
 
 	t.Run("Test peer returns handler not found error", func(t *testing.T) {
