@@ -70,9 +70,11 @@ type Query struct {
 	Stats      Stats
 	StatsByDay map[time.Time]Stats
 
-	filterFrom      *time.Time
-	filterTo        *time.Time
-	filterDirection *string
+	filterFrom        *time.Time
+	filterTo          *time.Time
+	filterDirection   *string
+	filterServiceType *string
+	filterStatus      *string
 
 	fetch []q.Matcher
 }
@@ -94,6 +96,18 @@ func (qr *Query) FilterTo(to time.Time) *Query {
 // FilterDirection filters fetched sessions by direction.
 func (qr *Query) FilterDirection(direction string) *Query {
 	qr.filterDirection = &direction
+	return qr
+}
+
+// FilterServiceType filters fetched sessions by service type.
+func (qr *Query) FilterServiceType(serviceType string) *Query {
+	qr.filterServiceType = &serviceType
+	return qr
+}
+
+// FilterStatus filters fetched sessions by status.
+func (qr *Query) FilterStatus(status string) *Query {
+	qr.filterStatus = &status
 	return qr
 }
 
@@ -154,6 +168,12 @@ func (qr *Query) run(node storm.Node) error {
 	}
 	if qr.filterDirection != nil {
 		where = append(where, q.Eq("Direction", qr.filterDirection))
+	}
+	if qr.filterServiceType != nil {
+		where = append(where, q.Eq("ServiceType", qr.filterServiceType))
+	}
+	if qr.filterStatus != nil {
+		where = append(where, q.Eq("Status", qr.filterStatus))
 	}
 
 	sq := node.
