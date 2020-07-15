@@ -79,6 +79,7 @@ const (
 	headerFieldRequestID = "Request-ID"
 	headerFieldTopic     = "Topic"
 	headerStatusCode     = "Status-Code"
+	headerMsg            = "Message"
 
 	statusCodeOK                 = 1
 	statusCodePublicErr          = 2
@@ -92,6 +93,7 @@ type transportMsg struct {
 	id         uint64
 	statusCode uint64
 	topic      string
+	msg        string
 
 	// Data field.
 	data []byte
@@ -114,6 +116,7 @@ func (m *transportMsg) readFrom(conn *textproto.Reader) error {
 	}
 	m.statusCode = statusCode
 	m.topic = header.Get(headerFieldTopic)
+	m.msg = header.Get(headerMsg)
 
 	// Read data.
 	data, err := conn.ReadDotBytes()
@@ -132,6 +135,7 @@ func (m *transportMsg) writeTo(conn *textproto.Writer) error {
 	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerFieldRequestID, m.id))
 	header.WriteString(fmt.Sprintf("%s:%s\r\n", headerFieldTopic, m.topic))
 	header.WriteString(fmt.Sprintf("%s:%d\r\n", headerStatusCode, m.statusCode))
+	header.WriteString(fmt.Sprintf("%s:%s\r\n", headerMsg, m.msg))
 	header.WriteByte('\n')
 	w.Write(header.Bytes())
 	w.Write(m.data)
