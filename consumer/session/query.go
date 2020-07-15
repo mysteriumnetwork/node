@@ -22,40 +22,7 @@ import (
 
 	"github.com/asdine/storm/v3"
 	"github.com/asdine/storm/v3/q"
-	"github.com/mysteriumnetwork/node/identity"
 )
-
-// NewStats initiates zero Stats instance.
-func NewStats() Stats {
-	return Stats{
-		ConsumerCounts: make(map[identity.Identity]int),
-	}
-}
-
-// Stats holds structure of aggregate session statistics.
-type Stats struct {
-	Count           int
-	ConsumerCounts  map[identity.Identity]int
-	SumDataSent     uint64
-	SumDataReceived uint64
-	SumDuration     time.Duration
-	SumTokens       uint64
-}
-
-func (s *Stats) add(session History) {
-	s.Count++
-
-	if _, found := s.ConsumerCounts[session.ConsumerID]; !found {
-		s.ConsumerCounts[session.ConsumerID] = 1
-	} else {
-		s.ConsumerCounts[session.ConsumerID]++
-	}
-
-	s.SumDataReceived += session.DataReceived
-	s.SumDataSent += session.DataSent
-	s.SumDuration += session.GetDuration()
-	s.SumTokens += session.Tokens
-}
 
 // NewQuery creates instance of new query.
 func NewQuery() *Query {
@@ -123,7 +90,7 @@ func (qr *Query) FetchStats() *Query {
 	qr.fetch = append(
 		qr.fetch,
 		matcher(func(session History) bool {
-			qr.Stats.add(session)
+			qr.Stats.Add(session)
 			return true
 		}),
 	)
@@ -149,7 +116,7 @@ func (qr *Query) FetchStatsByDay() *Query {
 			i := session.Started.Truncate(stepDay)
 
 			stats := qr.StatsByDay[i]
-			stats.add(session)
+			stats.Add(session)
 			qr.StatsByDay[i] = stats
 			return true
 		}),
