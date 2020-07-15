@@ -18,28 +18,62 @@
 package mmn
 
 import (
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
 // MMN struct
 type MMN struct {
-	collector *Collector
-	client    *client
+	client     *Client
+	ipResolver ip.Resolver
+	node       *NodeInformationDto
 }
 
 // NewMMN creates new instance of MMN
-func NewMMN(collector *Collector, client *client) *MMN {
-	return &MMN{collector, client}
+func NewMMN(resolver ip.Resolver, client *Client) *MMN {
+	return &MMN{client: client, ipResolver: resolver}
 }
 
-// Subscribe subscribes to node events and reports them to MMN
-func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
+// CollectEnvironmentInformation sends node information to MMN on identity unlock
+func (m *MMN) CollectEnvironmentInformation() error {
+	node := &NodeInformationDto{
+		VendorID: config.GetString(config.FlagVendorID),
+	}
+	m.node = node
+
+	outboundIp, err := m.ipResolver.GetOutboundIP()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get Outbound IP")
+	}
+
+	m.node.LocalIP = outboundIp
+
+	return nil
+}
+
+// SubscribeToIdentityUnlockRegisterToMMN subscribes to identity unlock, registers identity in MMN if the API key is set
+func (m *MMN) SubscribeToIdentityUnlockRegisterToMMN(eventBus eventbus.EventBus, isRegistrationEnabled func() bool) error {
 	err := eventBus.SubscribeAsync(
 		identity.AppTopicIdentityUnlock,
-		m.handleRegistration,
+		func(identity string) {
+			m.node.Identity = identity
+
+			if !isRegistrationEnabled() {
+				log.Debug().Msg("Identity unlocked, " +
+					"registration to MMN disabled because the API key missing in config.")
+
+				return
+			}
+
+			if err := m.Register(); err != nil {
+				log.Error().Msgf("Failed to register identity to MMN: %v", err)
+			}
+		},
 	)
 	if err != nil {
 		return err
@@ -48,14 +82,10 @@ func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
 	return nil
 }
 
-func (m *MMN) handleRegistration(identity string) {
-	if err := m.register(identity); err != nil {
-		log.Error().Msgf("Failed to register to MMN: %v", err)
-	}
+func (m *MMN) SetAPIKey(apiKey string) {
+	m.node.APIKey = apiKey
 }
 
-func (m *MMN) register(identity string) error {
-	m.collector.SetIdentity(identity)
-
-	return m.client.RegisterNode(m.collector.GetCollectedInformation())
+func (m *MMN) Register() error {
+	return m.client.RegisterNode(m.node)
 }

@@ -25,67 +25,33 @@ import (
 )
 
 // NodeInformationDto contains node information to be sent to MMN
-type NodeClaimDto struct {
-	Identity string `json:"identity"`
-	ApiKey   string `json:"api_key"`
-}
-
-// NodeInformationDto contains node information to be sent to MMN
 type NodeInformationDto struct {
-	MACAddress  string `json:"mac_address"` // SHA256 hash
-	LocalIP     string `json:"local_ip"`
-	OS          string `json:"os"`
-	Arch        string `json:"arch"`
-	NodeVersion string `json:"node_version"`
-	Identity    string `json:"identity"`
-	VendorID    string `json:"vendor_id"`
-	IsProvider  bool   `json:"is_provider"`
-	IsClient    bool   `json:"is_client"`
+	// local IP is used to give quick access to WebUI from MMN
+	LocalIP  string `json:"local_ip"`
+	Identity string `json:"identity"`
+	APIKey   string `json:"api_key"`
+	VendorID string `json:"vendor_id"`
 }
 
-// NodeTypeDto contains node type information to be sent to MMN
-type NodeTypeDto struct {
-	IsProvider bool   `json:"is_provider"`
-	IsClient   bool   `json:"is_client"`
-	Identity   string `json:"identity"`
-}
-
-// NewClient returns MMN API client
-func NewClient(httpClient *requests.HTTPClient, mmnAddress string, signer identity.SignerFactory) *client {
-	return &client{
+// NewClient returns MMN API Client
+func NewClient(httpClient *requests.HTTPClient, mmnAddress string, signer identity.SignerFactory) *Client {
+	return &Client{
 		httpClient: httpClient,
 		mmnAddress: mmnAddress,
 		signer:     signer,
 	}
 }
 
-type client struct {
+type Client struct {
 	httpClient *requests.HTTPClient
 	mmnAddress string
 	signer     identity.SignerFactory
 }
 
-func (m *client) RegisterNode(info *NodeInformationDto) error {
+func (m *Client) RegisterNode(info *NodeInformationDto) error {
 	log.Debug().Msgf("Registering node to MMN: %+v", *info)
 	id := identity.FromAddress(info.Identity)
 	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))
-	if err != nil {
-		return err
-	}
-
-	return m.httpClient.DoRequest(req)
-}
-
-func (m *client) ClaimNode(claimInfo *NodeClaimDto) error {
-	log.Debug().Msgf("Claiming node in MMN: %s", claimInfo.Identity)
-	id := identity.FromAddress(claimInfo.Identity)
-
-	req, err := requests.NewSignedPostRequest(
-		m.mmnAddress,
-		"node/claim",
-		claimInfo,
-		m.signer(id),
-	)
 	if err != nil {
 		return err
 	}

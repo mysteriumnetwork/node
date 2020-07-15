@@ -20,5 +20,4 @@ package node
 // OptionsMMN describes possible parameters of my.mysterium.network configuration
 type OptionsMMN struct {
 	Address string
-	Enabled bool
 }

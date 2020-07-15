@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -47,6 +48,7 @@ import (
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
@@ -303,20 +305,21 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 }
 
 func (di *Dependencies) bootstrapMMN(options node.Options) {
-	if !options.MMN.Enabled {
-		return
-	}
-
-	collector := mmn.NewCollector(di.IPResolver)
-	if err := collector.CollectEnvironmentInformation(); err != nil {
-		log.Error().Msgf("Failed to collect environment information for MMN: %v", err)
-		return
-	}
-
 	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
-	m := mmn.NewMMN(collector, client)
+	m := mmn.NewMMN(di.IPResolver, client)
 
-	if err := m.Subscribe(di.EventBus); err != nil {
+	if err := m.CollectEnvironmentInformation(); err != nil {
+		log.Error().Msgf("Failed to collect environment information for MMN: %v", err)
+	}
+
+	apiKey := config.Current.GetString("mmn.api-key")
+	isRegistrationEnabled := func () bool {
+		return len(config.Current.GetString("mmn.api-key")) != 0
+	}
+	if err := m.SubscribeToIdentityUnlockRegisterToMMN(di.EventBus, isRegistrationEnabled); err != nil {
 		log.Error().Msgf("Failed to subscribe to events for MMN: %v", err)
 	}
+
+	m.SetAPIKey(apiKey)
+	di.MMN = m
 }
