@@ -152,6 +152,6 @@ func (m mockP2PListener) GetContact() market.Contact {
 	return market.Contact{}
 }
 
-func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) error {
-	return nil
+func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) (func(), error) {
+	return func() {}, nil
 }

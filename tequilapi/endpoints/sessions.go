@@ -19,15 +19,18 @@ package endpoints
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/vcraescu/go-paginator"
+	"github.com/vcraescu/go-paginator/adapter"
 )
 
 type sessionStorage interface {
-	GetAll() ([]session.History, error)
+	Query(*session.Query) error
 }
 
 type sessionsEndpoint struct {
@@ -45,23 +48,66 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 // ---
 // summary: Returns sessions history
 // description: Returns list of sessions history
+// parameters:
+//   - in: query
+//     name: direction
+//     description: Direction to filter the sessions by. Possible values are "Provider", "Consumed"
+//     type: string
+//   - in: query
+//     name: page
+//     description: Page to filter the sessions by.
+//     type: string
 // responses:
 //   200:
 //     description: List of sessions
 //     schema:
 //       "$ref": "#/definitions/ListSessionsResponse"
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions, err := endpoint.sessionStorage.GetAll()
-	if err != nil {
+func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	query := session.NewQuery().FetchSessions().FetchStats()
+	if direction := request.URL.Query().Get("direction"); direction != "" {
+		query.FilterDirection(direction)
+	}
+
+	page := 1
+	if pageStr := request.URL.Query().Get("page"); pageStr != "" {
+		var err error
+		if page, err = strconv.Atoi(pageStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+
+	pageSize := 50
+	if pageSizeStr := request.URL.Query().Get("page_size"); pageSizeStr != "" {
+		var err error
+		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+
+	if err := endpoint.sessionStorage.Query(query); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions)
+	var sessions []session.History
+	p := paginator.New(adapter.NewSliceAdapter(query.Sessions), pageSize)
+	p.SetPage(page)
+	if err := p.Results(&sessions); err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	sessionsDTO := contract.NewSessionListResponse(sessions, query.Stats, &p)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 

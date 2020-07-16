@@ -21,27 +21,52 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/vcraescu/go-paginator"
 )
 
 // NewSessionListResponse maps to API session list.
-func NewSessionListResponse(sessions []session.History) ListSessionsResponse {
-	return ListSessionsResponse{
-		Sessions: mapSessions(sessions, NewSessionDTO),
-	}
-}
-
-// ListSessionsResponse defines session list representable as json
-// swagger:model ListSessionsResponse
-type ListSessionsResponse struct {
-	Sessions []SessionDTO `json:"sessions"`
-}
-
-func mapSessions(sessions []session.History, f func(session.History) SessionDTO) []SessionDTO {
+func NewSessionListResponse(sessions []session.History, stats session.Stats, paginator *paginator.Paginator) ListSessionsResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
-		dtoArray[i] = f(se)
+		dtoArray[i] = NewSessionDTO(se)
 	}
-	return dtoArray
+
+	return ListSessionsResponse{
+		Sessions: dtoArray,
+		Stats:    NewSessionStatsDTO(stats),
+		Paging:   NewPagingDTO(paginator),
+	}
+}
+
+// ListSessionsResponse defines session list representable as json.
+// swagger:model ListSessionsResponse
+type ListSessionsResponse struct {
+	Sessions []SessionDTO    `json:"sessions"`
+	Stats    SessionStatsDTO `json:"stats"`
+	Paging   PagingDTO       `json:"paging"`
+}
+
+// NewSessionStatsDTO maps to API session stats.
+func NewSessionStatsDTO(stats session.Stats) SessionStatsDTO {
+	return SessionStatsDTO{
+		Count:            stats.Count,
+		CountConsumers:   len(stats.ConsumerCounts),
+		SumBytesReceived: stats.SumDataReceived,
+		SumBytesSent:     stats.SumDataSent,
+		SumDuration:      uint64(stats.SumDuration.Seconds()),
+		SumTokens:        stats.SumTokens,
+	}
+}
+
+// SessionStatsDTO represents the session aggregated statistics.
+// swagger:model ListSessionsResponse
+type SessionStatsDTO struct {
+	Count            int    `json:"count"`
+	CountConsumers   int    `json:"count_consumers"`
+	SumBytesReceived uint64 `json:"sum_bytes_received"`
+	SumBytesSent     uint64 `json:"sum_bytes_sent"`
+	SumDuration      uint64 `json:"sum_duration"`
+	SumTokens        uint64 `json:"sum_tokens"`
 }
 
 // NewSessionDTO maps to API session.
@@ -63,7 +88,7 @@ func NewSessionDTO(se session.History) SessionDTO {
 	}
 }
 
-// SessionDTO represents the session object
+// SessionDTO represents the session object.
 // swagger:model SessionDTO
 type SessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918

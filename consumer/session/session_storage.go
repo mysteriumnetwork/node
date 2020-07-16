@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	session_node "github.com/mysteriumnetwork/node/session"
@@ -32,31 +33,19 @@ import (
 
 const sessionStorageBucketName = "session-history"
 
-// StatsRetriever can fetch current session stats
-type StatsRetriever interface {
-	GetDataStats() connection.Statistics
-}
-
-// Storer allows us to get all sessions, save and update them
-type Storer interface {
-	Store(bucket string, object interface{}) error
-	Update(bucket string, object interface{}) error
-	GetAllFrom(bucket string, array interface{}) error
-}
-
 type timeGetter func() time.Time
 
-// Storage contains functions for storing, getting session objects
+// Storage contains functions for storing, getting session objects.
 type Storage struct {
-	storage    Storer
+	storage    *boltdb.Bolt
 	timeGetter timeGetter
 
 	mu             sync.RWMutex
 	sessionsActive map[session_node.ID]History
 }
 
-// NewSessionStorage creates session repository with given dependencies
-func NewSessionStorage(storage Storer) *Storage {
+// NewSessionStorage creates session repository with given dependencies.
+func NewSessionStorage(storage *boltdb.Bolt) *Storage {
 	return &Storage{
 		storage:    storage,
 		timeGetter: time.Now,
@@ -85,17 +74,18 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	return bus.Subscribe(pingpong_event.AppTopicInvoicePaid, repo.consumeConnectionSpendingEvent)
 }
 
-// GetAll returns array of all sessions
-func (repo *Storage) GetAll() ([]History, error) {
-	var sessions []History
-	err := repo.storage.GetAllFrom(sessionStorageBucketName, &sessions)
-	if err != nil {
-		return nil, err
-	}
-	return sessions, nil
+// Query executes given query.
+func (repo *Storage) Query(query *Query) (err error) {
+	return query.run(repo.storage.DB().From(sessionStorageBucketName))
 }
 
-// consumeServiceSessionEvent consumes the provided sessions
+// GetAll returns array of all sessions.
+func (repo *Storage) GetAll() ([]History, error) {
+	query := NewQuery().FetchSessions()
+	return query.Sessions, repo.Query(query)
+}
+
+// consumeServiceSessionEvent consumes the provided sessions.
 func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession) {
 	sessionID := session_node.ID(e.Session.ID)
 
