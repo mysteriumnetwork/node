@@ -28,7 +28,7 @@ import (
 // NewStats initiates zero Stats instance.
 func NewStats() Stats {
 	return Stats{
-		ConsumerCounts: make(map[identity.Identity]int, 0),
+		ConsumerCounts: make(map[identity.Identity]int),
 	}
 }
 
@@ -122,9 +122,9 @@ const stepDay = 24 * time.Hour
 // FetchStatsByDay fetches aggregated statistics grouped by day to Query.StatsByDay.
 func (qr *Query) FetchStatsByDay() *Query {
 	// fill the period with zeros
-	qr.StatsByDay = make(map[time.Time]Stats, 0)
+	qr.StatsByDay = make(map[time.Time]Stats)
 	if qr.filterFrom != nil && qr.filterTo != nil {
-		for i := (*qr.filterFrom).Truncate(stepDay); !i.After(*qr.filterTo); i = i.Add(stepDay) {
+		for i := qr.filterFrom.Truncate(stepDay); !i.After(*qr.filterTo); i = i.Add(stepDay) {
 			qr.StatsByDay[i] = NewStats()
 		}
 	}
