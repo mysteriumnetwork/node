@@ -25,6 +25,13 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
+// NewStats initiates zero Stats instance.
+func NewStats() Stats {
+	return Stats{
+		ConsumerCounts: make(map[identity.Identity]int),
+	}
+}
+
 // Stats holds structure of aggregate session statistics.
 type Stats struct {
 	Count           int
@@ -35,31 +42,58 @@ type Stats struct {
 	SumTokens       uint64
 }
 
+func (s *Stats) add(session History) {
+	s.Count++
+
+	if _, found := s.ConsumerCounts[session.ConsumerID]; !found {
+		s.ConsumerCounts[session.ConsumerID] = 1
+	} else {
+		s.ConsumerCounts[session.ConsumerID]++
+	}
+
+	s.SumDataReceived += session.DataReceived
+	s.SumDataSent += session.DataSent
+	s.SumDuration += session.GetDuration()
+	s.SumTokens += session.Tokens
+}
+
 // NewQuery creates instance of new query.
 func NewQuery() *Query {
 	return &Query{
-		where: make([]q.Matcher, 0),
 		fetch: make([]q.Matcher, 0),
 	}
 }
 
 // Query defines all flags for session filtering in session storage.
 type Query struct {
-	Sessions []History
-	Stats    Stats
+	Sessions   []History
+	Stats      Stats
+	StatsByDay map[time.Time]Stats
 
-	where []q.Matcher
+	filterFrom      *time.Time
+	filterTo        *time.Time
+	filterDirection *string
+
 	fetch []q.Matcher
+}
+
+// FilterFrom filters fetched sessions from given time.
+func (qr *Query) FilterFrom(from time.Time) *Query {
+	from = from.UTC()
+	qr.filterFrom = &from
+	return qr
+}
+
+// FilterTo filters fetched sessions to given time.
+func (qr *Query) FilterTo(to time.Time) *Query {
+	to = to.UTC()
+	qr.filterTo = &to
+	return qr
 }
 
 // FilterDirection filters fetched sessions by direction.
 func (qr *Query) FilterDirection(direction string) *Query {
-	qr.where = append(
-		qr.where,
-		matcher(func(session History) bool {
-			return session.Direction == direction
-		}),
-	)
+	qr.filterDirection = &direction
 	return qr
 }
 
@@ -68,28 +102,41 @@ func (qr *Query) FetchSessions() *Query {
 	return qr
 }
 
-// FetchStats fetches sessions statistics to Query.Stats.
+// FetchStats fetches aggregated statistics to Query.Stats.
 func (qr *Query) FetchStats() *Query {
-	qr.Stats = Stats{
-		ConsumerCounts: make(map[identity.Identity]int, 0),
+	qr.Stats = NewStats()
+
+	qr.fetch = append(
+		qr.fetch,
+		matcher(func(session History) bool {
+			qr.Stats.add(session)
+			return true
+		}),
+	)
+
+	return qr
+}
+
+const stepDay = 24 * time.Hour
+
+// FetchStatsByDay fetches aggregated statistics grouped by day to Query.StatsByDay.
+func (qr *Query) FetchStatsByDay() *Query {
+	// fill the period with zeros
+	qr.StatsByDay = make(map[time.Time]Stats)
+	if qr.filterFrom != nil && qr.filterTo != nil {
+		for i := qr.filterFrom.Truncate(stepDay); !i.After(*qr.filterTo); i = i.Add(stepDay) {
+			qr.StatsByDay[i] = NewStats()
+		}
 	}
 
 	qr.fetch = append(
 		qr.fetch,
 		matcher(func(session History) bool {
-			qr.Stats.Count++
+			i := session.Started.Truncate(stepDay)
 
-			if _, found := qr.Stats.ConsumerCounts[session.ConsumerID]; !found {
-				qr.Stats.ConsumerCounts[session.ConsumerID] = 1
-			} else {
-				qr.Stats.ConsumerCounts[session.ConsumerID]++
-			}
-
-			qr.Stats.SumDataReceived += session.DataReceived
-			qr.Stats.SumDataSent += session.DataSent
-			qr.Stats.SumDuration += session.GetDuration()
-			qr.Stats.SumTokens += session.Tokens
-
+			stats := qr.StatsByDay[i]
+			stats.add(session)
+			qr.StatsByDay[i] = stats
 			return true
 		}),
 	)
@@ -98,9 +145,20 @@ func (qr *Query) FetchStats() *Query {
 }
 
 func (qr *Query) run(node storm.Node) error {
+	where := make([]q.Matcher, 0)
+	if qr.filterFrom != nil {
+		where = append(where, q.Gte("Started", qr.filterFrom))
+	}
+	if qr.filterTo != nil {
+		where = append(where, q.Lte("Started", qr.filterTo))
+	}
+	if qr.filterDirection != nil {
+		where = append(where, q.Eq("Direction", qr.filterDirection))
+	}
+
 	sq := node.
 		Select(
-			q.And(qr.where...),
+			q.And(where...),
 			q.And(qr.fetch...),
 		).
 		OrderBy("Started").

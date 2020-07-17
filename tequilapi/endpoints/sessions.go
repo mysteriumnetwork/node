@@ -20,6 +20,7 @@ package endpoints
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -50,8 +51,16 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 // description: Returns list of sessions history
 // parameters:
 //   - in: query
+//     name: create_from
+//     description: Created date to filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+//     type: string
+//   - in: query
+//     name: create_to
+//     description: Created date to filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+//     type: string
+//   - in: query
 //     name: direction
-//     description: Direction to filter the sessions by. Possible values are "Provider", "Consumed"
+//     description: Direction to filter the sessions by. Possible values are "Provider", "Consumed".
 //     type: string
 //   - in: query
 //     name: page
@@ -71,7 +80,28 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	query := session.NewQuery().FetchSessions().FetchStats()
+	query := session.NewQuery()
+
+	from := time.Now().AddDate(0, 0, -30)
+	if fromStr := request.URL.Query().Get("create_from"); fromStr != "" {
+		var err error
+		if from, err = time.Parse(time.RFC3339, fromStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+	query.FilterFrom(from)
+
+	to := time.Now()
+	if toStr := request.URL.Query().Get("created_to"); toStr != "" {
+		var err error
+		if to, err = time.Parse(time.RFC3339, toStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+	query.FilterTo(to)
+
 	if direction := request.URL.Query().Get("direction"); direction != "" {
 		query.FilterDirection(direction)
 	}
@@ -94,7 +124,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		}
 	}
 
-	if err := endpoint.sessionStorage.Query(query); err != nil {
+	if err := endpoint.sessionStorage.Query(query.FetchSessions().FetchStats().FetchStatsByDay()); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
@@ -107,7 +137,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions, query.Stats, &p)
+	sessionsDTO := contract.NewSessionListResponse(sessions, &p, query.Stats, query.StatsByDay)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 

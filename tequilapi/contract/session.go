@@ -25,25 +25,32 @@ import (
 )
 
 // NewSessionListResponse maps to API session list.
-func NewSessionListResponse(sessions []session.History, stats session.Stats, paginator *paginator.Paginator) ListSessionsResponse {
+func NewSessionListResponse(
+	sessions []session.History,
+	paginator *paginator.Paginator,
+	stats session.Stats,
+	statsDaily map[time.Time]session.Stats,
+) ListSessionsResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = NewSessionDTO(se)
 	}
 
 	return ListSessionsResponse{
-		Sessions: dtoArray,
-		Stats:    NewSessionStatsDTO(stats),
-		Paging:   NewPagingDTO(paginator),
+		Sessions:   dtoArray,
+		Paging:     NewPagingDTO(paginator),
+		Stats:      NewSessionStatsDTO(stats),
+		StatsDaily: NewSessionStatsDailyDTO(statsDaily),
 	}
 }
 
 // ListSessionsResponse defines session list representable as json.
 // swagger:model ListSessionsResponse
 type ListSessionsResponse struct {
-	Sessions []SessionDTO    `json:"sessions"`
-	Stats    SessionStatsDTO `json:"stats"`
-	Paging   PagingDTO       `json:"paging"`
+	Sessions   []SessionDTO               `json:"sessions"`
+	Paging     PagingDTO                  `json:"paging"`
+	Stats      SessionStatsDTO            `json:"stats"`
+	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
 }
 
 // NewSessionStatsDTO maps to API session stats.
@@ -67,6 +74,15 @@ type SessionStatsDTO struct {
 	SumBytesSent     uint64 `json:"sum_bytes_sent"`
 	SumDuration      uint64 `json:"sum_duration"`
 	SumTokens        uint64 `json:"sum_tokens"`
+}
+
+// NewSessionStatsDailyDTO maps to API session stats grouped by day.
+func NewSessionStatsDailyDTO(statsGrouped map[time.Time]session.Stats) map[string]SessionStatsDTO {
+	dto := make(map[string]SessionStatsDTO, len(statsGrouped))
+	for date, stats := range statsGrouped {
+		dto[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
+	}
+	return dto
 }
 
 // NewSessionDTO maps to API session.
