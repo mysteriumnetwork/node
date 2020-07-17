@@ -56,10 +56,10 @@ var (
 		Value: time.Minute * 3,
 	}
 	// FlagTransactorProviderRegistrationStake determines the stake size for registration of provider
-	FlagTransactorProviderRegistrationStake = cli.Uint64Flag{
+	FlagTransactorProviderRegistrationStake = cli.StringFlag{
 		Name:  "transactor.provider.registration-stake",
 		Usage: "the stake we'll use when registering provider",
-		Value: 6200000000,
+		Value: "62000000000000000000",
 	}
 )
 
@@ -83,5 +83,5 @@ func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorRegistryAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
-	Current.ParseUInt64Flag(ctx, FlagTransactorProviderRegistrationStake)
+	Current.ParseStringFlag(ctx, FlagTransactorProviderRegistrationStake)
 }

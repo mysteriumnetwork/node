@@ -35,6 +35,7 @@ import (
 )
 
 var hermes2Address = common.HexToAddress("0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3")
+var mystToMint, _ = big.NewInt(0).SetString("1250000000000000000000", 10)
 
 func main() {
 	keyStoreDir := flag.String("keystore.directory", "", "Directory of keystore")
@@ -73,13 +74,26 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	time.Sleep(time.Second * 3)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mathSafeLibAddress, tx, _, err := bindings.DeploySafeMathLib(transactor, client)
-	checkError("Deploy migrations", err)
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	checkError("get gasPrice", err)
+	gasLimit := uint64(21000) // in units
+	chainID, err := client.NetworkID(context.Background())
+	checkError("lookup chainid", err)
+
+	tx := types.NewTransaction(transactor.Nonce.Uint64(), bindings.ERC1820Sender, big.NewInt(100000000000000000), gasLimit, gasPrice, nil)
+	signedTx, err := transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
+	checkError("sign tx", err)
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	checkError("send tx", err)
+	checkTxStatus(client, signedTx)
+
+	tx, err = bindings.DeployERC1820(client)
+	checkError("DeployERC1820", err)
 	checkTxStatus(client, tx)
-	fmt.Println("v2 mathSafeLib address:", mathSafeLibAddress.Hex())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mystTokenAddress, tx, _, err := bindings.DeployLinkedMystToken(transactor, client, map[string]common.Address{"SafeMathLib": mathSafeLibAddress})
+	mystTokenAddress, tx, _, err := bindings.DeployTestMystToken(transactor, client)
 	checkError("Deploy token v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 token address: ", mystTokenAddress.String())
@@ -122,30 +136,32 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println("v2 registry address: ", registryAddress.String())
 	checkTxStatus(client, tx)
 
-	ts, err := bindings.NewMystTokenTransactor(mystTokenAddress, client)
+	ts, err := bindings.NewTestMystTokenTransactor(mystTokenAddress, client)
 	checkError("myst transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Mint(transactor, transactor.From, big.NewInt(125000000000000000))
+	tx, err = ts.Mint(transactor, transactor.From, mystToMint)
 	checkError("mint myst", err)
 	checkTxStatus(client, tx)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Approve(transactor, registryAddress, big.NewInt(100000000000000))
+	tx, err = ts.Approve(transactor, registryAddress, mystToMint)
 	checkError("allow myst", err)
 	checkTxStatus(client, tx)
 
 	rt, err := bindings.NewRegistryTransactor(registryAddress, client)
 	checkError("registry transactor", err)
 
+	maxStake, _ := big.NewInt(0).SetString("62000000000000000000", 10)
+	stake, _ := big.NewInt(0).SetString("100000000000000000000", 10)
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	tx, err = rt.RegisterHermes(
 		transactor,
 		transactor.From,
-		big.NewInt(100000000000000),
+		stake,
 		400,
 		big.NewInt(1000),
-		big.NewInt(125000000000),
+		maxStake,
 		[]byte("http://hermes:8889"),
 	)
 	checkError("register hermes", err)
@@ -162,24 +178,24 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println("registered hermes", accs.Hex())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Mint(transactor, accs, big.NewInt(125000000000000000))
+	tx, err = ts.Mint(transactor, accs, mystToMint)
 	checkError("mint myst for hermes", err)
 	checkTxStatus(client, tx)
 
 	// transfer eth to hermes2operator
 	value := big.NewInt(0).SetUint64(10000000000000000000)
-	gasLimit := uint64(21000)
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	gasLimit = uint64(21000)
+	gasPrice, err = client.SuggestGasPrice(context.Background())
 	checkError("suggest gas price", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 
 	var data []byte
 	tx = types.NewTransaction(transactor.Nonce.Uint64(), hermes2Address, value, gasLimit, gasPrice, data)
-	chainID, err := client.NetworkID(context.Background())
+	chainID, err = client.NetworkID(context.Background())
 	checkError("get chain id", err)
 
-	signedTx, err := transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
+	signedTx, err = transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
 	checkError("sign tx", err)
 
 	err = client.SendTransaction(context.Background(), signedTx)
@@ -188,7 +204,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 
 	// mint myst to hermes2operator
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err = ts.Mint(transactor, hermes2Address, big.NewInt(1250000000000000000))
+	tx, err = ts.Mint(transactor, hermes2Address, mystToMint)
 	checkError("mint myst for hermes2", err)
 	checkTxStatus(client, tx)
 
@@ -197,13 +213,13 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 
 	// mint myst to registered hermes 2
-	tx, err = ts.Mint(transactor, accs, big.NewInt(1250000000000000000))
+	tx, err = ts.Mint(transactor, accs, mystToMint)
 	checkError("mint myst for hermes2", err)
 	checkTxStatus(client, tx)
 
 	// print some state from hermes2
 	caller, err := bindings.NewHermesImplementationCaller(accs, client)
-	stake, err := caller.AvailableBalance(&bind.CallOpts{})
+	stake, err = caller.AvailableBalance(&bind.CallOpts{})
 	fmt.Println("balance available hermes", stake.Uint64())
 
 	fee, err := caller.CalculateHermesFee(&bind.CallOpts{}, big.NewInt(15931))
@@ -247,22 +263,26 @@ func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAd
 
 	// allow myst to registry
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	tx, err := ts.Approve(transactor, registryAddress, big.NewInt(3000000000000000000))
+	tx, err := ts.Approve(transactor, registryAddress, mystToMint)
 	checkError("allow myst", err)
 	checkTxStatus(client, tx)
 
 	rt, err := bindings.NewRegistryTransactor(registryAddress, client)
 	checkError("registry transactor", err)
 
+	minStake, _ := big.NewInt(0).SetString("1000000000000000000", 10)
+	maxStake, _ := big.NewInt(0).SetString("62000000000000000000", 10)
+	stake, _ := big.NewInt(0).SetString("100000000000000000000", 10)
+
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	// register hermes
 	tx, err = rt.RegisterHermes(
 		transactor,
 		transactor.From,
-		big.NewInt(100000000000000),
+		stake,
 		400,
-		big.NewInt(100000000),
-		big.NewInt(125000000000),
+		minStake,
+		maxStake,
 		[]byte("http://hermes2:8889"),
 	)
 	checkError("register hermes 2", err)

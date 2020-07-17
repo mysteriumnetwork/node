@@ -18,6 +18,8 @@
 package contract
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -86,13 +88,17 @@ type ConnectionDTO struct {
 
 // NewConnectionStatisticsDTO maps to API connection stats.
 func NewConnectionStatisticsDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+	agreementTotal := new(big.Int)
+	if invoice.AgreementTotal != nil {
+		agreementTotal = invoice.AgreementTotal
+	}
 	return ConnectionStatisticsDTO{
 		Duration:           int(session.Duration().Seconds()),
 		BytesSent:          statistics.BytesSent,
 		BytesReceived:      statistics.BytesReceived,
 		ThroughputSent:     datasize.BitSize(throughput.Up).Bits(),
 		ThroughputReceived: datasize.BitSize(throughput.Down).Bits(),
-		TokensSpent:        invoice.AgreementTotal,
+		TokensSpent:        agreementTotal,
 	}
 }
 
@@ -118,7 +124,7 @@ type ConnectionStatisticsDTO struct {
 	Duration int `json:"duration"`
 
 	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
+	TokensSpent *big.Int `json:"tokens_spent"`
 }
 
 // ConnectionCreateRequest request used to start a connection.

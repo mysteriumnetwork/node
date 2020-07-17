@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 
@@ -32,17 +33,17 @@ var identityOne = identity.FromAddress("0xf3d7B9597F8c4137Fa9F73e1Db533CEDC61e84
 var identityTwo = identity.FromAddress("0x3D32e7D08BE7E5c3870679b3A7Ef60e9422196Ab")
 
 var invoiceOne = crypto.Invoice{
-	AgreementID:    1,
-	AgreementTotal: 1,
-	TransactorFee:  1,
+	AgreementID:    big.NewInt(1),
+	AgreementTotal: big.NewInt(1),
+	TransactorFee:  big.NewInt(1),
 	Hashlock:       "hashlock1",
 	Provider:       identityOne.Address,
 }
 
 var invoiceTwo = crypto.Invoice{
-	AgreementID:    2,
-	AgreementTotal: 2,
-	TransactorFee:  2,
+	AgreementID:    big.NewInt(2),
+	AgreementTotal: big.NewInt(2),
+	TransactorFee:  big.NewInt(2),
 	Hashlock:       "hashlock2",
 	Provider:       identityTwo.Address,
 }
@@ -108,12 +109,12 @@ func TestProviderInvoiceStorage(t *testing.T) {
 	assert.Equal(t, ErrNotFound, err)
 
 	// test R storage
-	var agreementID1 uint64 = 1
+	var agreementID1 = big.NewInt(1)
 	r1 := "my r"
 	err = providerStorage.StoreR(providerID, agreementID1, r1)
 	assert.NoError(t, err)
 
-	var agreementID2 uint64 = 1222
+	var agreementID2 = big.NewInt(1222)
 	r2 := "my other r"
 	err = providerStorage.StoreR(providerID, agreementID2, r2)
 	assert.NoError(t, err)

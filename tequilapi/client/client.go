@@ -19,6 +19,7 @@ package client
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/url"
 
@@ -126,7 +127,7 @@ func (client *Client) GetTransactorFees() (Fees, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
+func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int) error {
 	payload := registry.IdentityRegistrationRequestDTO{
 		Stake:       stake,
 		Fee:         fee,
@@ -291,7 +292,7 @@ func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error
 }
 
 // ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]contract.ProposalDTO, error) {
+func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB *big.Int) ([]contract.ProposalDTO, error) {
 	values := url.Values{}
 	values.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTime))
 	values.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTime))
@@ -508,7 +509,7 @@ func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, wa
 }
 
 // DecreaseStake requests the decrease of stake via the transactor.
-func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee uint64) error {
+func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
 	decreaseRequest := DecreaseStakeRequest{
 		ID:            ID.Address,
 		Amount:        amount,

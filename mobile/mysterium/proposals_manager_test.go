@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -79,10 +80,10 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		Refresh:             false,
-		UpperTimePriceBound: 50000,
-		LowerTimePriceBound: 0,
-		UpperGBPriceBound:   7000000,
-		LowerGBPriceBound:   0,
+		UpperTimePriceBound: big.NewInt(50000),
+		LowerTimePriceBound: big.NewInt(0),
+		UpperGBPriceBound:   big.NewInt(7000000),
+		LowerGBPriceBound:   big.NewInt(0),
 	})
 
 	assert.NoError(s.T(), err)
@@ -167,7 +168,7 @@ func (m mockPayment) GetType() string {
 
 func (m mockPayment) GetPrice() money.Money {
 	return money.Money{
-		Amount:   10,
+		Amount:   big.NewInt(10),
 		Currency: "MYSTT",
 	}
 }

@@ -18,6 +18,7 @@
 package contract
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -61,12 +62,12 @@ func NewSessionStatsDTO(stats session.Stats) SessionStatsDTO {
 // SessionStatsDTO represents the session aggregated statistics.
 // swagger:model ListSessionsResponse
 type SessionStatsDTO struct {
-	Count            int    `json:"count"`
-	CountConsumers   int    `json:"count_consumers"`
-	SumBytesReceived uint64 `json:"sum_bytes_received"`
-	SumBytesSent     uint64 `json:"sum_bytes_sent"`
-	SumDuration      uint64 `json:"sum_duration"`
-	SumTokens        uint64 `json:"sum_tokens"`
+	Count            int      `json:"count"`
+	CountConsumers   int      `json:"count_consumers"`
+	SumBytesReceived uint64   `json:"sum_bytes_received"`
+	SumBytesSent     uint64   `json:"sum_bytes_sent"`
+	SumDuration      uint64   `json:"sum_duration"`
+	SumTokens        *big.Int `json:"sum_tokens"`
 }
 
 // NewSessionDTO maps to API session.
@@ -126,7 +127,7 @@ type SessionDTO struct {
 	BytesSent uint64 `json:"bytes_sent"`
 
 	// example: 500000
-	Tokens uint64 `json:"tokens"`
+	Tokens *big.Int `json:"tokens"`
 
 	// example: Completed
 	Status string `json:"status"`

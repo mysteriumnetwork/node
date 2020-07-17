@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -59,7 +60,7 @@ type queuedEvent struct {
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
 	MaxRetries          int
-	Stake               uint64
+	Stake               *big.Int
 	DelayBetweenRetries time.Duration
 	HermesAddress       common.Address
 	RegistryAddress     common.Address

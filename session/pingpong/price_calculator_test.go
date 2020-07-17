@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "not free if only time payment is set",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 			want: false,
@@ -42,7 +43,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "not free if only byte payment is set",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 1},
 			},
 			want: false,
@@ -50,7 +51,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "not free if time + byte payment is set",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 1, PerTime: time.Minute},
 			},
 			want: false,
@@ -63,7 +64,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "free if both zero",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 0, PerTime: 0},
 			},
 			want: true,
@@ -71,7 +72,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "free if price zero",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(0, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(0), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 1, PerTime: 2},
 			},
 			want: true,
@@ -95,7 +96,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want uint64
+		want *big.Int
 	}{
 		{
 			name: "returns zero on free service",
@@ -105,11 +106,11 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(0, money.CurrencyMyst),
+					price: money.NewMoney(big.NewInt(0), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 1, PerTime: 2},
 				},
 			},
-			want: 0,
+			want: big.NewInt(0),
 		},
 		{
 			name: "calculates time only",
@@ -119,11 +120,11 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(50000, money.CurrencyMyst),
+					price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Minute},
 				},
 			},
-			want: 60 * 50000,
+			want: big.NewInt(60 * 50000),
 		},
 		{
 			name: "calculates time only with seconds",
@@ -133,11 +134,11 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(50000, money.CurrencyMyst),
+					price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Second},
 				},
 			},
-			want: 60 * 60 * 50000,
+			want: big.NewInt(60 * 60 * 50000),
 		},
 		{
 			name: "calculates bytes only",
@@ -147,11 +148,11 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 1000000000 / 2, Down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(7000000, money.CurrencyMyst),
+					price: money.NewMoney(big.NewInt(7000000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 1000000000, PerTime: 0},
 				},
 			},
-			want: 7000000,
+			want: big.NewInt(7000000),
 		},
 		{
 			name: "calculates both",
@@ -161,18 +162,18 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 1000000000 / 2, Down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(50000, money.CurrencyMyst),
+					price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 7142857, PerTime: time.Minute},
 				},
 			},
 			// 7000000 is the price per gigabyte
 			// 50000 is the price per minute, 60 is the number of minutes
-			want: 7000000 + 60*50000,
+			want: big.NewInt(7000000 + 60*50000),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CalculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, tt.args.method); got != tt.want {
+			if got := CalculatePaymentAmount(tt.args.timePassed, tt.args.bytesTransferred, tt.args.method); got.Cmp(tt.want) != 0 {
 				t.Errorf("CalculatePaymentAmount() = %v, want %v", got, tt.want)
 			}
 		})

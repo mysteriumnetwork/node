@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -76,10 +77,10 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler,
 // Fees represents the transactor fees
 // swagger:model Fees
 type Fees struct {
-	Registration  uint64 `json:"registration"`
-	Settlement    uint64 `json:"settlement"`
-	Hermes        uint16 `json:"hermes"`
-	DecreaseStake uint64 `json:"decreaseStake"`
+	Registration  *big.Int `json:"registration"`
+	Settlement    *big.Int `json:"settlement"`
+	Hermes        uint16   `json:"hermes"`
+	DecreaseStake *big.Int `json:"decreaseStake"`
 }
 
 // swagger:operation GET /transactor/fees Fees

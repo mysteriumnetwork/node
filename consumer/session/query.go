@@ -18,6 +18,7 @@
 package session
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/asdine/storm/v3"
@@ -32,7 +33,7 @@ type Stats struct {
 	SumDataSent     uint64
 	SumDataReceived uint64
 	SumDuration     time.Duration
-	SumTokens       uint64
+	SumTokens       *big.Int
 }
 
 // NewQuery creates instance of new query.
@@ -72,6 +73,7 @@ func (qr *Query) FetchSessions() *Query {
 func (qr *Query) FetchStats() *Query {
 	qr.Stats = Stats{
 		ConsumerCounts: make(map[identity.Identity]int, 0),
+		SumTokens:      new(big.Int),
 	}
 
 	qr.fetch = append(
@@ -88,7 +90,11 @@ func (qr *Query) FetchStats() *Query {
 			qr.Stats.SumDataReceived += session.DataReceived
 			qr.Stats.SumDataSent += session.DataSent
 			qr.Stats.SumDuration += session.GetDuration()
-			qr.Stats.SumTokens += session.Tokens
+			sessionTokens := new(big.Int)
+			if session.Tokens != nil {
+				sessionTokens = session.Tokens
+			}
+			qr.Stats.SumTokens = new(big.Int).Add(qr.Stats.SumTokens, sessionTokens)
 
 			return true
 		}),

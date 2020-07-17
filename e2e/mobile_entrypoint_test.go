@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -69,7 +70,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		err = node.RegisterIdentity(&mysterium.RegisterIdentityRequest{
 			IdentityAddress: identity.IdentityAddress,
-			Fee:             10000000,
+			Fee:             registrationFee,
 		})
 		require.NoError(t, err)
 
@@ -86,7 +87,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
 		require.NoError(t, err)
-		require.Equal(t, int64(690000000), balance.Balance)
+		require.Equal(t, big.NewInt(0).Sub(topUpAmount, registrationFee), balance.Balance)
 	})
 
 	t.Run("Test shutdown", func(t *testing.T) {

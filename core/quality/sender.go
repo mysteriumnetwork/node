@@ -19,6 +19,7 @@ package quality
 
 import (
 	"fmt"
+	"math/big"
 	"runtime"
 	"sync"
 	"time"
@@ -107,7 +108,7 @@ type sessionDataContext struct {
 }
 
 type sessionTokensContext struct {
-	Tokens uint64
+	Tokens *big.Int
 	sessionContext
 }
 

@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -359,7 +360,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	fakeState := &mockStateProvider{}
 	fakeState.stateToReturn.Connection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
 	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
-	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: 10001}
+	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: big.NewInt(10001)}
 
 	manager := mockConnectionManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance)

@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -41,8 +42,8 @@ type genericInvoiceStorage interface {
 
 type providerSpecificInvoiceStorage interface {
 	genericInvoiceStorage
-	StoreR(providerID identity.Identity, agreementID uint64, r string) error
-	GetR(providerID identity.Identity, agreementID uint64) (string, error)
+	StoreR(providerID identity.Identity, agreementID *big.Int, r string) error
+	GetR(providerID identity.Identity, agreementID *big.Int) (string, error)
 }
 
 // ProviderInvoiceStorage allows the provider to store sent invoices.
@@ -68,12 +69,12 @@ func (pis *ProviderInvoiceStorage) Get(providerIdentity, consumerIdentity identi
 }
 
 // StoreR stores the given R.
-func (pis *ProviderInvoiceStorage) StoreR(providerID identity.Identity, agreementID uint64, r string) error {
+func (pis *ProviderInvoiceStorage) StoreR(providerID identity.Identity, agreementID *big.Int, r string) error {
 	return pis.gis.StoreR(providerID, agreementID, r)
 }
 
 // GetR gets the R for agreement.
-func (pis *ProviderInvoiceStorage) GetR(providerID identity.Identity, agreementID uint64) (string, error) {
+func (pis *ProviderInvoiceStorage) GetR(providerID identity.Identity, agreementID *big.Int) (string, error) {
 	return pis.gis.GetR(providerID, agreementID)
 }
 
@@ -104,12 +105,12 @@ func (is *InvoiceStorage) StoreInvoice(bucket string, key string, invoice crypto
 	return errors.Wrap(is.bolt.SetValue(bucket, key, invoice), "could not save invoice")
 }
 
-func (is *InvoiceStorage) getRKey(providerID identity.Identity, agreementID uint64) string {
+func (is *InvoiceStorage) getRKey(providerID identity.Identity, agreementID *big.Int) string {
 	return fmt.Sprintf("%v_%v", providerID.Address, agreementID)
 }
 
 // StoreR stores the given R.
-func (is *InvoiceStorage) StoreR(providerID identity.Identity, agreementID uint64, r string) error {
+func (is *InvoiceStorage) StoreR(providerID identity.Identity, agreementID *big.Int, r string) error {
 	is.lock.Lock()
 	defer is.lock.Unlock()
 	err := is.bolt.SetValue(string(agreementRBucket), is.getRKey(providerID, agreementID), r)
@@ -117,7 +118,7 @@ func (is *InvoiceStorage) StoreR(providerID identity.Identity, agreementID uint6
 }
 
 // GetR returns the saved R.
-func (is *InvoiceStorage) GetR(providerID identity.Identity, agreementID uint64) (string, error) {
+func (is *InvoiceStorage) GetR(providerID identity.Identity, agreementID *big.Int) (string, error) {
 	is.lock.Lock()
 	defer is.lock.Unlock()
 	var r string

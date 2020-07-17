@@ -19,6 +19,7 @@ package session
 
 import (
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ var (
 		},
 	}
 	connectionStatsMock   = connection.Statistics{BytesReceived: 100000, BytesSent: 50000}
-	connectionInvoiceMock = crypto.Invoice{AgreementID: 10, AgreementTotal: 1000, TransactorFee: 10}
+	connectionInvoiceMock = crypto.Invoice{AgreementID: big.NewInt(10), AgreementTotal: big.NewInt(1000), TransactorFee: big.NewInt(10)}
 )
 
 func TestSessionStorageGetAll(t *testing.T) {
@@ -68,7 +69,7 @@ func TestSessionStorageGetAll(t *testing.T) {
 		SessionID:       session_node.ID("session1"),
 		Direction:       "Provided",
 		ConsumerID:      identity.FromAddress("consumer1"),
-		AccountantID:    "0x00000000000000000000000000000000000000AC",
+		HermesID:        "0x00000000000000000000000000000000000000AC",
 		ProviderID:      identity.FromAddress("providerID"),
 		ServiceType:     "serviceType",
 		ProviderCountry: "MU",
@@ -108,8 +109,8 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 				SessionID:       session_node.ID("session1"),
 				Direction:       "Provided",
 				ConsumerID:      identity.FromAddress("consumer1"),
-				AccountantID:    "0x00000000000000000000000000000000000000AC",
-				HermesID:        identity.FromAddress("providerID"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
 				ServiceType:     "serviceType",
 				ProviderCountry: "MU",
 				Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
@@ -127,7 +128,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 	})
 	storage.consumeServiceSessionEarningsEvent(session_event.AppEventTokensEarned{
 		SessionID: serviceSessionMock.ID,
-		Total:     12,
+		Total:     big.NewInt(12),
 	})
 	storage.consumeServiceSessionEvent(session_event.AppEventSession{
 		Status:  session_event.RemovedStatus,
@@ -152,7 +153,7 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 				Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
 				DataSent:        1234,
 				DataReceived:    123,
-				Tokens:          12,
+				Tokens:          big.NewInt(12),
 			},
 		},
 		sessions,
@@ -268,7 +269,7 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 				SessionID:       session_node.ID("sessionID"),
 				Direction:       "Consumed",
 				ConsumerID:      identity.FromAddress("consumerID"),
-				AccountantID:    "0x00000000000000000000000000000000000000AC",
+				HermesID:        "0x00000000000000000000000000000000000000AC",
 				ProviderID:      identity.FromAddress("providerID"),
 				ServiceType:     "serviceType",
 				ProviderCountry: "MU",

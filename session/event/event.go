@@ -18,6 +18,7 @@
 package event
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -44,7 +45,7 @@ type AppEventDataTransferred struct {
 type AppEventTokensEarned struct {
 	ProviderID identity.Identity
 	SessionID  string
-	Total      uint64
+	Total      *big.Int
 }
 
 // Status represents the different actions that might happen on a session

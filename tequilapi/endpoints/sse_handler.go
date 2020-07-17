@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"sync"
 
@@ -226,6 +227,7 @@ func mapState(event stateEvent.State) stateRes {
 			Balance:            identity.Balance,
 			Earnings:           identity.Earnings,
 			EarningsTotal:      identity.EarningsTotal,
+			Stake:              new(big.Int),
 		}
 	}
 

@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"math/big"
 	"path/filepath"
 	"time"
 
@@ -177,7 +178,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ChannelImplementation:           options.TransactorChannelImplementation,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
-			ProviderRegistrationStake:       6200000000,
+			ProviderRegistrationStake:       big.NewInt(6200000000),
 		},
 		Hermes: node.OptionsHermes{
 			HermesID: options.HermesID,
@@ -188,10 +189,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			HermesPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:              time.Hour * 2,
 			MystSCAddress:                  options.MystSCAddress,
-			ConsumerLowerMinutePriceBound:  0,
-			ConsumerUpperMinutePriceBound:  50000,
-			ConsumerLowerGBPriceBound:      0,
-			ConsumerUpperGBPriceBound:      11000000,
+			ConsumerLowerMinutePriceBound:  big.NewInt(0),
+			ConsumerUpperMinutePriceBound:  big.NewInt(50000),
+			ConsumerLowerGBPriceBound:      big.NewInt(0),
+			ConsumerUpperGBPriceBound:      big.NewInt(11000000),
 		},
 		Consumer: true,
 		P2PPorts: port.UnspecifiedRange(),
@@ -280,7 +281,7 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 
 // StatisticsChangeCallback represents statistics callback.
 type StatisticsChangeCallback interface {
-	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent int64)
+	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent *big.Int)
 }
 
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
@@ -288,7 +289,7 @@ type StatisticsChangeCallback interface {
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
 		tokensSpent := mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal
-		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), int64(tokensSpent))
+		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), tokensSpent)
 	})
 }
 
@@ -307,13 +308,13 @@ func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatus
 
 // BalanceChangeCallback represents balance change callback.
 type BalanceChangeCallback interface {
-	OnChange(identityAddress string, balance int64)
+	OnChange(identityAddress string, balance *big.Int)
 }
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(event.AppTopicBalanceChanged, func(e event.AppEventBalanceChanged) {
-		cb.OnChange(e.Identity.Address, int64(e.Current))
+		cb.OnChange(e.Identity.Address, e.Current)
 	})
 }
 
@@ -451,7 +452,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 
 // GetIdentityRegistrationFeesResponse represents identity registration fees result.
 type GetIdentityRegistrationFeesResponse struct {
-	Fee int64
+	Fee *big.Int
 }
 
 // GetIdentityRegistrationFees returns identity registration fees.
@@ -460,21 +461,21 @@ func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFee
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get registration fees")
 	}
-	return &GetIdentityRegistrationFeesResponse{Fee: int64(fees.Fee)}, nil
+	return &GetIdentityRegistrationFeesResponse{Fee: fees.Fee}, nil
 }
 
 // RegisterIdentityRequest represents identity registration request.
 type RegisterIdentityRequest struct {
 	IdentityAddress string
-	Fee             int64
+	Fee             *big.Int
 }
 
 // RegisterIdentity starts identity registration in background.
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	err := mb.transactor.RegisterIdentity(req.IdentityAddress, &registry.IdentityRegistrationRequestDTO{
-		Stake:       0,
+		Stake:       big.NewInt(0),
 		Beneficiary: "",
-		Fee:         uint64(req.Fee),
+		Fee:         req.Fee,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
@@ -503,13 +504,13 @@ type GetBalanceRequest struct {
 
 // GetBalanceResponse represents balance response.
 type GetBalanceResponse struct {
-	Balance int64
+	Balance *big.Int
 }
 
 // GetBalance returns current balance.
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	balance := mb.consumerBalanceTracker.GetBalance(identity.FromAddress(req.IdentityAddress))
-	return &GetBalanceResponse{Balance: int64(balance)}, nil
+	return &GetBalanceResponse{Balance: balance}, nil
 }
 
 // SendFeedbackRequest represents user feedback request.

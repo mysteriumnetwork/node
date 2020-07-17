@@ -18,6 +18,8 @@
 package event
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -52,8 +54,8 @@ type AppEventHermesPromise struct {
 // AppEventBalanceChanged represents a balance change event
 type AppEventBalanceChanged struct {
 	Identity identity.Identity
-	Previous uint64
-	Current  uint64
+	Previous *big.Int
+	Current  *big.Int
 }
 
 // AppEventEarningsChanged represents a balance change event
@@ -65,8 +67,8 @@ type AppEventEarningsChanged struct {
 
 // Earnings represents current identity earnings
 type Earnings struct {
-	LifetimeBalance  uint64
-	UnsettledBalance uint64
+	LifetimeBalance  *big.Int
+	UnsettledBalance *big.Int
 }
 
 // AppEventInvoicePaid is an update on paid invoices during current session
@@ -81,7 +83,7 @@ const AppTopicGrandTotalChanged = "consumer_grand_total_change"
 
 // AppEventGrandTotalChanged represents the grand total changed event.
 type AppEventGrandTotalChanged struct {
-	Current    uint64
+	Current    *big.Int
 	HermesID   common.Address
 	ConsumerID identity.Identity
 }

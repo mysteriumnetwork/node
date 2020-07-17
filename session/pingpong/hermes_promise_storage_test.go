@@ -20,6 +20,7 @@ package pingpong
 import (
 	"errors"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 
@@ -49,21 +50,21 @@ func TestHermesPromiseStorage(t *testing.T) {
 
 	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
 	firstHermes := acc.Address
-	fp, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
+	fp, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", big.NewInt(1), big.NewInt(1), "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
 	assert.NoError(t, err)
 
 	firstPromise := HermesPromise{
 		Promise:     *fp,
 		R:           "some r",
-		AgreementID: 123,
+		AgreementID: big.NewInt(123),
 	}
 
-	sp, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", 2, 2, "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
+	sp, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", big.NewInt(2), big.NewInt(2), "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
 	assert.NoError(t, err)
 	secondPromise := HermesPromise{
 		Promise:     *sp,
 		R:           "some other r",
-		AgreementID: 1234,
+		AgreementID: big.NewInt(1234),
 	}
 
 	// check if errors are wrapped correctly
@@ -109,9 +110,9 @@ func TestHermesPromiseStorage(t *testing.T) {
 	overwritingPromise := HermesPromise{
 		Promise:     *fp,
 		R:           "some r",
-		AgreementID: 123,
+		AgreementID: big.NewInt(123),
 	}
-	overwritingPromise.Promise.Amount = 0
+	overwritingPromise.Promise.Amount = big.NewInt(0)
 	err = hermesStorage.Store(id, secondHermes, overwritingPromise)
 	assert.True(t, errors.Is(err, ErrAttemptToOverwrite))
 }

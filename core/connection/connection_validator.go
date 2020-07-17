@@ -18,12 +18,14 @@
 package connection
 
 import (
+	"math/big"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
 
 type consumerBalanceGetter interface {
-	GetBalance(ID identity.Identity) uint64
+	GetBalance(ID identity.Identity) *big.Int
 }
 
 type unlockChecker interface {
@@ -52,7 +54,7 @@ func (v *Validator) validateBalance(consumerID identity.Identity, proposal marke
 
 	proposalPrice := proposal.PaymentMethod.GetPrice()
 	balance := v.consumerBalanceGetter.GetBalance(consumerID)
-	return balance >= proposalPrice.Amount
+	return balance.Cmp(proposalPrice.Amount) >= 0
 }
 
 // isUnlocked checks if the identity is unlocked or not.

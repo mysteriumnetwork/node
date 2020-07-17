@@ -19,7 +19,7 @@ package cli
 
 import (
 	"fmt"
-	"strconv"
+	"math/big"
 	"strings"
 	"time"
 
@@ -166,11 +166,11 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	var address = actionArgs[0]
-	var stake uint64
+	var stake *big.Int
 	if len(actionArgs) >= 2 {
-		s, err := strconv.ParseUint(actionArgs[1], 10, 64)
-		if err != nil {
-			warn(errors.Wrap(err, "could not parse stake"))
+		s, ok := new(big.Int).SetString(actionArgs[1], 10)
+		if !ok {
+			warn("could not parse stake")
 		}
 		stake = s
 	}
@@ -220,8 +220,10 @@ func (c *cliApp) settle(args []string) {
 		if err != nil {
 			warn("could not get transactor fee: ", err)
 		}
-		info(fmt.Sprintf("Transactor fee: %.5fMYST", float64(fees.Settlement)/money.MystSize))
-		info(fmt.Sprintf("Hermes fee: %.5fMYST", float64(fees.Hermes)/money.MystSize))
+		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
+		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
+		info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
+		info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
 		return
 	}
 	hermesID := config.GetString(config.FlagHermesID)

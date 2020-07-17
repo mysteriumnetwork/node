@@ -82,6 +82,8 @@ services:
       - redis
     command: >
       -settlemntFee 1000
+      -topUpAmount 7000000000000000000
+      -stakeAmount 62000000000000000000
       -stakeDecreaseFee 1
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545
