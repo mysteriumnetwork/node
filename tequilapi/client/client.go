@@ -19,7 +19,6 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // NewClient returns a new instance of Client
@@ -517,40 +517,30 @@ func (client *Client) Beneficiary(address string) (res contract.IdentityBenefici
 	return res, err
 }
 
-// Payout registers payout address for identity
-func (client *Client) SetConfig(data interface{}) (string, error) {
-	path := "config/user"
+// SetMMNApiKey sets MMN's API key in config and registers node to MMN
+func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
+	response, err := client.http.Post("mmn/api-key", data)
 
-	response, err := client.http.Post(path, data)
-	if err != nil {
-		return "", err
-	}
 	defer response.Body.Close()
 
-	responseJSON, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", err
+	if response.StatusCode == 200 {
+		return nil
 	}
 
-	return string(responseJSON), nil
-}
-
-// Payout registers payout address for identity
-func (client *Client) Claim(identity, apiKey string) error {
-	path := fmt.Sprintf("identities/%s/claim", identity)
-	payload := struct {
-		Identity string `json:"identity"`
-		ApiKey string `json:"apiKey"`
-	}{
-		identity,
-		apiKey,
+	// TODO this should probably be wrapped and moved into the validation package
+	type validationResponse struct {
+		Message string                              `json:"message"`
+		Errors  map[string][]*validation.FieldError `json:"errors"`
 	}
-
-	response, err := client.http.Put(path, payload)
+	res := validationResponse{}
+	err = parseResponseJSON(response, &res)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+
+	if res.Errors != nil && res.Errors["api_key"] != nil && res.Errors["api_key"][0] != nil {
+		return errors.New((res.Errors["api_key"][0]).Message)
+	}
 
 	return nil
 }

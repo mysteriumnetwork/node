@@ -20,8 +20,10 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/mmn"
@@ -164,14 +166,30 @@ func (api *mmnAPI) validateApiKeyRequestAndRegister(sr contract.MMNApiKeyRequest
 		return errors
 	}
 
+	if len(sr.ApiKey) < 40 {
+		errors.ForField("api_key").AddError("required", "Invalid API key")
+		return errors
+	}
+
 	err := api.mmn.Register()
 
 	if err != nil {
-		switch err.Error() {
-		case "authentication needed: password or unlock":
+		log.Error().Msgf("validation error: %s", err.Error())
+
+		if strings.Contains(err.Error(), "authentication needed: password or unlock") {
 			errors.ForField("api_key").AddError("identity", "Identity is locked")
-			break
-		default:
+			return errors
+		}
+
+		if strings.Contains(err.Error(), "already owned") {
+			errors.ForField("api_key").AddError(
+				"already_owned",
+				"This node has already been claimed. Please visit https://my.mysterium.network/ and unclaim it first.",
+			)
+			return errors
+		}
+
+		if strings.Contains(err.Error(), "invalid api key") {
 			errors.ForField("api_key").AddError("not_found", "Invalid API key")
 		}
 	}

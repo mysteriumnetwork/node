@@ -177,7 +177,7 @@ func (c *cliApp) handleActions(line string) {
 		{"license", c.license},
 		{"proposals", c.proposals},
 		{"service", c.service},
-		{"mmn", c.linkMMNProfile},
+		{"mmn", c.mmnApiKey},
 	}
 
 	for _, cmd := range staticCmds {
@@ -424,11 +424,11 @@ func (c *cliApp) payout(argsString string) {
 	}
 }
 
-func (c *cliApp) linkMMNProfile(argsString string) {
+func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
 	const profileUrl = "https://my.mysterium.network/user/profile"
-	const usage = "MMN account link command:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
+	const usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
 		info(usage)
@@ -437,32 +437,16 @@ func (c *cliApp) linkMMNProfile(argsString string) {
 
 	apiKey := args[0]
 
-	type MMNConfig struct {
-		ApiKey string `json:"api_key"`
-	}
-
-	type cfg struct {
-		MMN MMNConfig `json:"mmn"`
-	}
-
-	var mmnConfig = map[string]interface{}{}
-	mmnConfig["data"] = cfg{
-		MMN: MMNConfig{
-			ApiKey: apiKey,
-		},
-	}
-
-	res, err := c.tequilapi.SetConfig(map[string]interface{}{
-
+	err := c.tequilapi.SetMMNApiKey(contract.MMNApiKeyRequest{
+		ApiKey: apiKey,
 	})
+
 	if err != nil {
 		warn(err)
 		return
 	}
 
-	success(res)
-
-	success(fmt.Sprint("MMN Account linked."))
+	success(fmt.Sprint("MMN API key configured."))
 }
 
 func (c *cliApp) disconnect() {
@@ -707,6 +691,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 		readline.PcItem("proposals"),
 		readline.PcItem("location"),
 		readline.PcItem("disconnect"),
+		readline.PcItem("mmn"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
 		readline.PcItem("stop"),

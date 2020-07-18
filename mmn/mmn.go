@@ -18,6 +18,13 @@
 package mmn
 
 import (
+	"bufio"
+	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -25,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 // MMN struct
@@ -42,7 +50,10 @@ func NewMMN(resolver ip.Resolver, client *Client) *MMN {
 // CollectEnvironmentInformation sends node information to MMN on identity unlock
 func (m *MMN) CollectEnvironmentInformation() error {
 	node := &NodeInformationDto{
-		VendorID: config.GetString(config.FlagVendorID),
+		VendorID:    config.GetString(config.FlagVendorID),
+		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
+		OS:          getOS(),
+		NodeVersion: metadata.VersionAsString(),
 	}
 	m.node = node
 
@@ -88,4 +99,69 @@ func (m *MMN) SetAPIKey(apiKey string) {
 
 func (m *MMN) Register() error {
 	return m.client.RegisterNode(m.node)
+}
+
+func getOS() string {
+	switch runtime.GOOS {
+	case "darwin":
+		output, err := exec.Command("sw_vers", "-productVersion").Output()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return "macOS (unknown)"
+		}
+		return "macOS " + strings.TrimSpace(string(output))
+	case "linux":
+		distro, err := parseLinuxOS()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return "linux (unknown)"
+		}
+		return distro
+	case "windows":
+		output, err := exec.Command("wmic", "os", "get", "Caption", "/value").Output()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return "windows (unknown)"
+		}
+		return strings.TrimSpace(strings.TrimPrefix(string(output), "Caption="))
+	}
+	return runtime.GOOS
+}
+
+func parseLinuxOS() (string, error) {
+	output, err := exec.Command("lsb_release", "-d").Output()
+	if err == nil {
+		return strings.TrimSpace(strings.TrimPrefix(string(output), "Description:")), nil
+	}
+
+	const etcOsRelease = "/etc/os-release"
+	const altOsRelease = "/usr/lib/os-release"
+	osReleaseFile, err := os.Open(etcOsRelease)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("error opening %s: %w", etcOsRelease, err)
+		}
+		osReleaseFile, err = os.Open(altOsRelease)
+		if err != nil {
+			return "", fmt.Errorf("error opening %s: %w", altOsRelease, err)
+		}
+	}
+	defer osReleaseFile.Close()
+
+	var prettyName string
+	scanner := bufio.NewScanner(osReleaseFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "PRETTY_NAME") {
+			tokens := strings.SplitN(line, "=", 2)
+			if len(tokens) == 2 {
+				prettyName = strings.Trim(tokens[1], "\"")
+			}
+		}
+	}
+	if prettyName != "" {
+		return prettyName, nil
+	}
+
+	return "linux (unknown)", nil
 }

@@ -27,10 +27,13 @@ import (
 // NodeInformationDto contains node information to be sent to MMN
 type NodeInformationDto struct {
 	// local IP is used to give quick access to WebUI from MMN
-	LocalIP  string `json:"local_ip"`
-	Identity string `json:"identity"`
-	APIKey   string `json:"api_key"`
-	VendorID string `json:"vendor_id"`
+	LocalIP     string `json:"local_ip"`
+	Identity    string `json:"identity"`
+	APIKey      string `json:"api_key"`
+	VendorID    string `json:"vendor_id"`
+	OS          string `json:"os"`
+	Arch        string `json:"arch"`
+	NodeVersion string `json:"node_version"`
 }
 
 // NewClient returns MMN API Client
@@ -50,6 +53,7 @@ type Client struct {
 
 func (m *Client) RegisterNode(info *NodeInformationDto) error {
 	log.Debug().Msgf("Registering node to MMN: %+v", *info)
+
 	id := identity.FromAddress(info.Identity)
 	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))
 	if err != nil {
