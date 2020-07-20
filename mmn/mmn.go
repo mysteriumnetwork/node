@@ -37,13 +37,13 @@ import (
 
 // MMN struct
 type MMN struct {
-	client     *Client
+	client     *client
 	ipResolver ip.Resolver
 	node       *NodeInformationDto
 }
 
 // NewMMN creates new instance of MMN
-func NewMMN(resolver ip.Resolver, client *Client) *MMN {
+func NewMMN(resolver ip.Resolver, client *client) *MMN {
 	return &MMN{client: client, ipResolver: resolver}
 }
 
@@ -93,14 +93,17 @@ func (m *MMN) SubscribeToIdentityUnlockRegisterToMMN(eventBus eventbus.EventBus,
 	return nil
 }
 
+// SetAPIKey sets MMN's API key
 func (m *MMN) SetAPIKey(apiKey string) {
 	m.node.APIKey = apiKey
 }
 
+// Register registers node to MMN
 func (m *MMN) Register() error {
 	return m.client.RegisterNode(m.node)
 }
 
+// GetReport fetches node report from MMN
 func (m *MMN) GetReport() (string, error) {
 	return m.client.GetReport(m.node.Identity)
 }

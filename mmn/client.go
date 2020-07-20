@@ -38,22 +38,23 @@ type NodeInformationDto struct {
 	NodeVersion string `json:"node_version"`
 }
 
-// NewClient returns MMN API Client
-func NewClient(httpClient *requests.HTTPClient, mmnAddress string, signer identity.SignerFactory) *Client {
-	return &Client{
+// NewClient returns MMN API client
+func NewClient(httpClient *requests.HTTPClient, mmnAddress string, signer identity.SignerFactory) *client {
+	return &client{
 		httpClient: httpClient,
 		mmnAddress: mmnAddress,
 		signer:     signer,
 	}
 }
 
-type Client struct {
+type client struct {
 	httpClient *requests.HTTPClient
 	mmnAddress string
 	signer     identity.SignerFactory
 }
 
-func (m *Client) RegisterNode(info *NodeInformationDto) error {
+// RegisterNode does an HTTP call to MMN and registers node
+func (m *client) RegisterNode(info *NodeInformationDto) error {
 	log.Debug().Msgf("Registering node to MMN: %+v", *info)
 
 	id := identity.FromAddress(info.Identity)
@@ -65,7 +66,8 @@ func (m *Client) RegisterNode(info *NodeInformationDto) error {
 	return m.httpClient.DoRequest(req)
 }
 
-func (m *Client) GetReport(identityStr string) (string, error) {
+// GetReport does an HTTP call to MMN and fetches node report
+func (m *client) GetReport(identityStr string) (string, error) {
 	id := identity.FromAddress(identityStr)
 	req, err := requests.NewSignedGetRequest(m.mmnAddress, "node/report?identity=" + identityStr, m.signer(id))
 	if err != nil {
