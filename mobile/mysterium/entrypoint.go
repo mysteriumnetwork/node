@@ -22,14 +22,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
+
+	"github.com/rs/zerolog"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -44,7 +47,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/rs/zerolog"
 )
 
 // MobileNode represents node object tuned for mobile devices
@@ -153,7 +155,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		UI: node.OptionsUI{
 			UIEnabled: false,
 		},
-		MMN: node.OptionsMMN{},
+		MMN:            node.OptionsMMN{},
 		FeedbackURL:    options.FeedbackURL,
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{

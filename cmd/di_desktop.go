@@ -313,7 +313,7 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 	}
 
 	apiKey := config.Current.GetString("mmn.api-key")
-	isRegistrationEnabled := func () bool {
+	isRegistrationEnabled := func() bool {
 		return len(config.Current.GetString("mmn.api-key")) != 0
 	}
 	if err := m.SubscribeToIdentityUnlockRegisterToMMN(di.EventBus, isRegistrationEnabled); err != nil {

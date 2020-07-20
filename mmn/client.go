@@ -69,7 +69,7 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 // GetReport does an HTTP call to MMN and fetches node report
 func (m *client) GetReport(identityStr string) (string, error) {
 	id := identity.FromAddress(identityStr)
-	req, err := requests.NewSignedGetRequest(m.mmnAddress, "node/report?identity=" + identityStr, m.signer(id))
+	req, err := requests.NewSignedGetRequest(m.mmnAddress, "node/report?identity="+identityStr, m.signer(id))
 	if err != nil {
 		return "", err
 	}
