@@ -18,6 +18,8 @@
 package mmn
 
 import (
+	"io/ioutil"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -61,4 +63,21 @@ func (m *Client) RegisterNode(info *NodeInformationDto) error {
 	}
 
 	return m.httpClient.DoRequest(req)
+}
+
+func (m *Client) GetReport(identityStr string) (string, error) {
+	id := identity.FromAddress(identityStr)
+	req, err := requests.NewSignedGetRequest(m.mmnAddress, "node/report?identity=" + identityStr, m.signer(id))
+	if err != nil {
+		return "", err
+	}
+
+	res, err := m.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+
+	return string(body), nil
 }

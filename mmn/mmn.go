@@ -101,6 +101,10 @@ func (m *MMN) Register() error {
 	return m.client.RegisterNode(m.node)
 }
 
+func (m *MMN) GetReport() (string, error) {
+	return m.client.GetReport(m.node.Identity)
+}
+
 func getOS() string {
 	switch runtime.GOOS {
 	case "darwin":

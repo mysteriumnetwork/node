@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -61,8 +62,14 @@ func newMMNAPI(config mmnProvider, client *mmn.MMN) *mmnAPI {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) GetNodeReport(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
-	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString("mmn.api-key")}
-	utils.WriteAsJSON(res, writer)
+	report, err := api.mmn.GetReport()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-type", "application/json; charset=utf-8")
+	fmt.Fprint(writer, report)
 }
 
 // GetApiKey returns MMN's API key
@@ -202,7 +209,7 @@ func AddRoutesForMMN(
 	mmn *mmn.MMN,
 ) {
 	api := newMMNAPI(config.Current, mmn)
-	router.GET("/mmn/node-report", api.GetNodeReport)
+	router.GET("/mmn/report", api.GetNodeReport)
 	router.GET("/mmn/api-key", api.GetApiKey)
 	router.POST("/mmn/api-key", api.SetApiKey)
 	router.DELETE("/mmn/api-key", api.ClearApiKey)

@@ -521,6 +521,10 @@ func (client *Client) Beneficiary(address string) (res contract.IdentityBenefici
 func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
 	response, err := client.http.Post("mmn/api-key", data)
 
+	if response == nil {
+		return err
+	}
+
 	defer response.Body.Close()
 
 	if response.StatusCode == 200 {
