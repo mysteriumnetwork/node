@@ -521,7 +521,9 @@ func (client *Client) Beneficiary(address string) (res contract.IdentityBenefici
 func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
 	response, err := client.http.Post("mmn/api-key", data)
 
-	if response == nil {
+	// non 200 status codes return a generic error and we can't use it, instead
+	// the response contains validation JSON which we can use to extract the error
+	if err != nil && response == nil {
 		return err
 	}
 

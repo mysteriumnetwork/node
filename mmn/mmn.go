@@ -69,7 +69,7 @@ func (m *MMN) CollectEnvironmentInformation() error {
 
 // SubscribeToIdentityUnlockRegisterToMMN subscribes to identity unlock, registers identity in MMN if the API key is set
 func (m *MMN) SubscribeToIdentityUnlockRegisterToMMN(eventBus eventbus.EventBus, isRegistrationEnabled func() bool) error {
-	err := eventBus.SubscribeAsync(
+	return eventBus.SubscribeAsync(
 		identity.AppTopicIdentityUnlock,
 		func(identity string) {
 			m.node.Identity = identity
@@ -86,11 +86,6 @@ func (m *MMN) SubscribeToIdentityUnlockRegisterToMMN(eventBus eventbus.EventBus,
 			}
 		},
 	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // SetAPIKey sets MMN's API key
