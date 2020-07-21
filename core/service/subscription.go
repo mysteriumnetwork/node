@@ -23,21 +23,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal, policyRules *policy.Repository) {
+func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, policyRules *policy.Repository) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var sessionID string
 
@@ -48,14 +44,6 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 			tracer.EndStage(sessionCreateTrace)
 			traceResult := tracer.Finish(eventPublisher, string(sessionID))
 			log.Debug().Msgf("Provider connection trace: %s", traceResult)
-
-			eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
-				Status: connection.SessionEndedStatus,
-				SessionInfo: connection.Status{
-					SessionID: session.ID(sessionID),
-					Proposal:  proposal,
-				},
-			})
 		}()
 
 		sessionStartTrace := tracer.StartStage("Provider session start")
@@ -80,16 +68,6 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 		sessionID = string(sessionInstance.ID)
 
 		tracer.EndStage(sessionStartTrace)
-
-		eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
-			Status: connection.SessionCreatedStatus,
-			SessionInfo: connection.Status{
-				ConsumerID:   consumerID,
-				AccountantID: accountantID,
-				SessionID:    sessionInstance.ID,
-				Proposal:     sessionInstance.Proposal,
-			},
-		})
 
 		provideConfigTrace := tracer.StartStage("Provider config")
 		config, err := service.ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
