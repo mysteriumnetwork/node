@@ -18,101 +18,152 @@
 package mmn
 
 import (
-	"sync"
+	"bufio"
+	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
 
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-
-	"github.com/rs/zerolog/log"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 // MMN struct
 type MMN struct {
-	collector *Collector
-	client    *client
-	lock      sync.Mutex
+	client     *client
+	ipResolver ip.Resolver
+	node       *NodeInformationDto
 }
 
 // NewMMN creates new instance of MMN
-func NewMMN(collector *Collector, client *client) *MMN {
-	return &MMN{collector, client, sync.Mutex{}}
+func NewMMN(resolver ip.Resolver, client *client) *MMN {
+	return &MMN{client: client, ipResolver: resolver}
 }
 
-// Subscribe subscribes to node events and reports them to MMN
-func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
-	err := eventBus.SubscribeAsync(
-		identity.AppTopicIdentityUnlock,
-		m.handleRegistration,
-	)
+// CollectEnvironmentInformation sends node information to MMN on identity unlock
+func (m *MMN) CollectEnvironmentInformation() error {
+	node := &NodeInformationDto{
+		VendorID:    config.GetString(config.FlagVendorID),
+		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
+		OS:          getOS(),
+		NodeVersion: metadata.VersionAsString(),
+	}
+	m.node = node
+
+	outboundIp, err := m.ipResolver.GetOutboundIP()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to get Outbound IP")
 	}
 
-	err = eventBus.SubscribeAsync(
-		servicestate.AppTopicServiceStatus,
-		m.handleProvider,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = eventBus.SubscribeAsync(
-		connection.AppTopicConnectionSession,
-		m.handleClient,
-	)
-	if err != nil {
-		return err
-	}
+	m.node.LocalIP = outboundIp
 
 	return nil
 }
 
-func (m *MMN) handleRegistration(identity string) {
-	if err := m.register(identity); err != nil {
-		log.Error().Msgf("Failed to register to MMN: %v", err)
-	}
+// SubscribeToIdentityUnlockRegisterToMMN subscribes to identity unlock, registers identity in MMN if the API key is set
+func (m *MMN) SubscribeToIdentityUnlockRegisterToMMN(eventBus eventbus.EventBus, isRegistrationEnabled func() bool) error {
+	return eventBus.SubscribeAsync(
+		identity.AppTopicIdentityUnlock,
+		func(identity string) {
+			m.node.Identity = identity
+
+			if !isRegistrationEnabled() {
+				log.Debug().Msg("Identity unlocked, " +
+					"registration to MMN disabled because the API key missing in config.")
+
+				return
+			}
+
+			if err := m.Register(); err != nil {
+				log.Error().Msgf("Failed to register identity to MMN: %v", err)
+			}
+		},
+	)
 }
 
-func (m *MMN) handleClient(_ interface{}) {
-	if err := m.markClient(); err != nil {
-		log.Error().Msgf("Failed to register to MMN as client: %v", err)
-	}
+// SetAPIKey sets MMN's API key
+func (m *MMN) SetAPIKey(apiKey string) {
+	m.node.APIKey = apiKey
 }
 
-func (m *MMN) handleProvider(_ interface{}) {
-	if err := m.markProvider(); err != nil {
-		log.Error().Msgf("Failed to register to MMN as provider: %v", err)
-	}
+// Register registers node to MMN
+func (m *MMN) Register() error {
+	return m.client.RegisterNode(m.node)
 }
 
-func (m *MMN) register(identity string) error {
-	m.collector.SetIdentity(identity)
-
-	return m.client.RegisterNode(m.collector.GetCollectedInformation())
+// GetReport fetches node report from MMN
+func (m *MMN) GetReport() (string, error) {
+	return m.client.GetReport(m.node.Identity)
 }
 
-func (m *MMN) markClient() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	// don't resend
-	if m.collector.IsClient() {
-		return nil
+func getOS() string {
+	switch runtime.GOOS {
+	case "darwin":
+		output, err := exec.Command("sw_vers", "-productVersion").Output()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return "macOS (unknown)"
+		}
+		return "macOS " + strings.TrimSpace(string(output))
+	case "linux":
+		distro, err := parseLinuxOS()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return "linux (unknown)"
+		}
+		return distro
+	case "windows":
+		output, err := exec.Command("wmic", "os", "get", "Caption", "/value").Output()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get OS information")
+			return "windows (unknown)"
+		}
+		return strings.TrimSpace(strings.TrimPrefix(string(output), "Caption="))
 	}
-	m.collector.SetIsClient(true)
-
-	return m.client.UpdateNodeType(m.collector.GetCollectedInformation())
+	return runtime.GOOS
 }
 
-func (m *MMN) markProvider() error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	// don't resend
-	if m.collector.IsProvider() {
-		return nil
+func parseLinuxOS() (string, error) {
+	output, err := exec.Command("lsb_release", "-d").Output()
+	if err == nil {
+		return strings.TrimSpace(strings.TrimPrefix(string(output), "Description:")), nil
 	}
-	m.collector.SetIsProvider(true)
 
-	return m.client.UpdateNodeType(m.collector.GetCollectedInformation())
+	const etcOsRelease = "/etc/os-release"
+	const altOsRelease = "/usr/lib/os-release"
+	osReleaseFile, err := os.Open(etcOsRelease)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("error opening %s: %w", etcOsRelease, err)
+		}
+		osReleaseFile, err = os.Open(altOsRelease)
+		if err != nil {
+			return "", fmt.Errorf("error opening %s: %w", altOsRelease, err)
+		}
+	}
+	defer osReleaseFile.Close()
+
+	var prettyName string
+	scanner := bufio.NewScanner(osReleaseFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "PRETTY_NAME") {
+			tokens := strings.SplitN(line, "=", 2)
+			if len(tokens) == 2 {
+				prettyName = strings.Trim(tokens[1], "\"")
+			}
+		}
+	}
+	if prettyName != "" {
+		return prettyName, nil
+	}
+
+	return "linux (unknown)", nil
 }
