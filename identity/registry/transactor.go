@@ -73,7 +73,7 @@ func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAdd
 
 // FeesResponse represents fees applied by Transactor
 type FeesResponse struct {
-	Fee        uint64    `json:"fee"`
+	Fee        *big.Int  `json:"fee"`
 	ValidUntil time.Time `json:"valid_until"`
 }
 
@@ -86,11 +86,11 @@ func (fr FeesResponse) IsValid() bool {
 // swagger:model IdentityRegistrationRequestDTO
 type IdentityRegistrationRequestDTO struct {
 	// Stake is used by Provider, default 0
-	Stake uint64 `json:"stake,omitempty"`
+	Stake *big.Int `json:"stake,omitempty"`
 	// Cache out address for Provider
 	Beneficiary string `json:"beneficiary,omitempty"`
 	// Fee: negotiated fee with transactor
-	Fee uint64 `json:"fee,omitempty"`
+	Fee *big.Int `json:"fee,omitempty"`
 }
 
 // TopUpRequest represents the myst top up request
@@ -105,9 +105,9 @@ type IdentityRegistrationRequest struct {
 	RegistryAddress string `json:"registryAddress"`
 	HermesID        string `json:"hermesID"`
 	// Stake is used by Provider, default 0
-	Stake uint64 `json:"stake"`
+	Stake *big.Int `json:"stake"`
 	// Fee: negotiated fee with transactor
-	Fee uint64 `json:"fee"`
+	Fee *big.Int `json:"fee"`
 	// Beneficiary: Provider channelID by default, optionally set during Identity registration.
 	// Can be updated later through transactor. We can check it's value directly from SC.
 	// Its a cache out address
@@ -119,13 +119,13 @@ type IdentityRegistrationRequest struct {
 
 // PromiseSettlementRequest represents the settlement request body
 type PromiseSettlementRequest struct {
-	HermesID      string `json:"hermesID"`
-	ChannelID     string `json:"channelID"`
-	Amount        uint64 `json:"amount"`
-	TransactorFee uint64 `json:"fee"`
-	Preimage      string `json:"preimage"`
-	Signature     string `json:"signature"`
-	ProviderID    string `json:"providerID"`
+	HermesID      string   `json:"hermesID"`
+	ChannelID     string   `json:"channelID"`
+	Amount        *big.Int `json:"amount"`
+	TransactorFee *big.Int `json:"fee"`
+	Preimage      string   `json:"preimage"`
+	Signature     string   `json:"signature"`
+	ProviderID    string   `json:"providerID"`
 }
 
 // FetchRegistrationFees fetches current transactor registration fees
@@ -301,10 +301,10 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 // SettleWithBeneficiaryRequest represent the request for setting new beneficiary address.
 type SettleWithBeneficiaryRequest struct {
 	Promise     PromiseSettlementRequest
-	Beneficiary string `json:"beneficiary"`
-	Nonce       uint64 `json:"nonce"`
-	Signature   string `json:"signature"`
-	ProviderID  string `json:"providerID"`
+	Beneficiary string   `json:"beneficiary"`
+	Nonce       *big.Int `json:"nonce"`
+	Signature   string   `json:"signature"`
+	ProviderID  string   `json:"providerID"`
 }
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
@@ -351,7 +351,7 @@ func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (pc.SetBe
 	regReq := pc.SetBeneficiaryRequest{
 		Beneficiary: strings.ToLower(beneficiary),
 		ChannelID:   strings.ToLower(addr),
-		Nonce:       ch.LastUsedNonce.Uint64() + 1,
+		Nonce:       new(big.Int).Add(ch.LastUsedNonce, big.NewInt(1)),
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
@@ -404,7 +404,7 @@ type TransactorStatusResponse struct {
 	TxHash       string                            `json:"tx_hash"`
 	CreatedAt    time.Time                         `json:"created_at"`
 	UpdatedAt    time.Time                         `json:"updated_at"`
-	BountyAmount uint64                            `json:"bounty_amount"`
+	BountyAmount *big.Int                          `json:"bounty_amount"`
 }
 
 // FetchRegistrationStatus fetches current transactor registration status for given identity.

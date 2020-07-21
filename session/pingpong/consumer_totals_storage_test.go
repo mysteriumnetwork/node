@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 
@@ -42,7 +43,7 @@ func TestConsumerTotalStorage(t *testing.T) {
 
 	channelAddress := identity.FromAddress("someAddress")
 	hermesAddress := common.HexToAddress("someOtherAddress")
-	var amount uint64 = 12
+	var amount = big.NewInt(12)
 
 	// check if errors are wrapped correctly
 	_, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
@@ -56,7 +57,7 @@ func TestConsumerTotalStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, amount, a)
 
-	var newAmount uint64 = 123
+	var newAmount = big.NewInt(123)
 	// overwrite the amount, check if it is overwritten
 	err = consumerTotalsStorage.Store(channelAddress, hermesAddress, newAmount)
 	assert.NoError(t, err)

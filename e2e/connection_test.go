@@ -19,7 +19,7 @@ package e2e
 
 import (
 	"fmt"
-	"math"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -45,15 +45,17 @@ var (
 	mystAddress        = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
 )
 
-const (
-	initialBalance uint64 = 690000000
+var (
+	providerStake, _   = big.NewInt(0).SetString("62000000000000000000", 10)
+	topUpAmount, _     = big.NewInt(0).SetString("7000000000000000000", 10)
+	registrationFee, _ = big.NewInt(0).SetString("100000000000000000", 10)
 )
 
 type consumer struct {
 	consumerID     string
 	serviceType    string
 	tequila        func() *tequilapi_client.Client
-	balanceSpent   uint64
+	balanceSpent   *big.Int
 	proposal       contract.ProposalDTO
 	composeService string
 	hermesID       common.Address
@@ -139,9 +141,13 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("Validate provider earnings", func(t *testing.T) {
-		var sum uint64
+		var sum = new(big.Int)
 		for _, v := range consumersToTest {
-			sum += v.balanceSpent
+			if v.balanceSpent == nil {
+				t.Log("CONSUMER", v)
+			} else {
+				sum = new(big.Int).Add(sum, v.balanceSpent)
+			}
 		}
 		providerEarnedTokens(t, tequilapiProvider, providerID, sum)
 	})
@@ -149,7 +155,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	t.Run("Provider settlement flow", func(t *testing.T) {
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
-		assert.Equal(t, initialBalance, providerStatus.Balance)
+		assert.Equal(t, new(big.Int).Sub(topUpAmount, registrationFee), providerStatus.Balance)
 
 		// settle hermes 1
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
@@ -165,55 +171,63 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		earningsByHermes := make(map[common.Address]uint64)
+		earningsByHermes := make(map[common.Address]*big.Int)
 		for _, c := range consumersToTest {
 			copy := earningsByHermes[c.hermesID]
-			copy += c.balanceSpent
+
+			if copy == nil {
+				copy = new(big.Int)
+			}
+
+			copy = new(big.Int).Add(copy, c.balanceSpent)
 			earningsByHermes[c.hermesID] = copy
 		}
 		hermesOneEarnings := earningsByHermes[common.HexToAddress(hermesID)]
 		hermesTwoEarnings := earningsByHermes[common.HexToAddress(hermes2ID)]
-		totalEarnings := hermesOneEarnings + hermesTwoEarnings
+		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
 		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
-		
-		hermesFee := uint64(math.Round(0.04 * float64(hermesOneEarnings)))
-		expected := initialBalance + uint64(hermesOneEarnings) - fees.Settlement - hermesFee
-		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
-		assert.InDelta(t, expected, providerStatus.Balance, 2)
+
+		hermesFee, _ := new(big.Float).Mul(big.NewFloat(0.04), new(big.Float).SetInt(hermesOneEarnings)).Int(nil)
+		feeSum := big.NewInt(0).Add(fees.Settlement, hermesFee)
+		tokenSum := new(big.Int).Add(new(big.Int).Sub(topUpAmount, registrationFee), hermesOneEarnings)
+		expected := new(big.Int).Sub(tokenSum, feeSum)
+		diff := new(big.Int).Sub(expected, providerStatus.Balance)
+		diff.Abs(diff)
+		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
 	})
 
 	t.Run("Provider decreases stake", func(t *testing.T) {
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(6200000000), providerStatus.Stake)
+		assert.Equal(t, providerStake, providerStatus.Stake)
 		initialStake := providerStatus.Stake
 
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), 100, fees.DecreaseStake)
+		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), big.NewInt(100), fees.DecreaseStake)
 		assert.NoError(t, err)
 
-		expected := initialStake - 100
-		var lastStatus uint64
+		expected := new(big.Int).Sub(initialStake, big.NewInt(100))
+		var lastStatus *big.Int
 		assert.Eventually(t, func() bool {
 			providerStatus, err := tequilapiProvider.Identity(providerID)
 			assert.NoError(t, err)
 			lastStatus = providerStatus.Stake
-			return expected == providerStatus.Stake
+			return expected.Cmp(providerStatus.Stake) == 0
 		}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Incorrect stake. Expected %v, got %v", expected, lastStatus))
 	})
 }
 
-func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending uint64, serviceType, hermesURL string) {
-	var lastHermes uint64
+func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending *big.Int, serviceType, hermesURL string) {
+	var lastHermes *big.Int
 	assert.Eventually(t, func() bool {
 		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
 		hermesData, err := hermesCaller.GetConsumerData(consumerID)
 		assert.NoError(t, err)
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised
-		return promised == consumerSpending
+		return promised.Cmp(consumerSpending) == 0
 	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v", consumerSpending, lastHermes, serviceType, hermesURL))
 }
 
@@ -239,9 +253,10 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
-	assert.Equal(t, initialBalance, idStatus.Balance)
-	assert.Zero(t, idStatus.Earnings)
-	assert.Zero(t, idStatus.EarningsTotal)
+	assert.Equal(t, new(big.Int).Sub(topUpAmount, registrationFee), idStatus.Balance)
+	assert.Equal(t, providerStake, idStatus.Stake)
+	assert.Zero(t, idStatus.Earnings.Uint64())
+	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
 
 func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
@@ -251,7 +266,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	fees, err := tequilapi.GetTransactorFees()
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, id, 0, fees.Registration)
+	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), fees.Registration)
 	assert.NoError(t, err)
 
 	// now we check identity again
@@ -264,9 +279,9 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	assert.Equal(t, initialBalance, idStatus.Balance)
-	assert.Zero(t, idStatus.Earnings)
-	assert.Zero(t, idStatus.EarningsTotal)
+	assert.Equal(t, new(big.Int).Sub(topUpAmount, registrationFee), idStatus.Balance)
+	assert.Zero(t, idStatus.Earnings.Uint64())
+	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
 
 // expect exactly one proposal
@@ -287,7 +302,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, hermesID, serviceType string, proposal contract.ProposalDTO) uint64 {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, hermesID, serviceType string, proposal contract.ProposalDTO) *big.Int {
 	connectionStatus, err := tequilapi.ConnectionStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
@@ -355,22 +370,22 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	consumerStatus, err := tequilapi.Identity(consumerID)
 	assert.NoError(t, err)
-	assert.True(t, consumerStatus.Balance > uint64(0), "consumer balance should not be empty")
-	assert.True(t, consumerStatus.Balance < uint64(690000000), "balance should decrease but is %sd", consumerStatus.Balance)
-	assert.Zero(t, consumerStatus.Earnings)
-	assert.Zero(t, consumerStatus.EarningsTotal)
+	assert.True(t, consumerStatus.Balance.Cmp(big.NewInt(0)) == 1, "consumer balance should not be empty")
+	assert.True(t, consumerStatus.Balance.Cmp(new(big.Int).Sub(topUpAmount, registrationFee)) == -1, "balance should decrease but is %sd", consumerStatus.Balance)
+	assert.Zero(t, consumerStatus.Earnings.Uint64())
+	assert.Zero(t, consumerStatus.EarningsTotal.Uint64())
 
-	return uint64(690000000) - consumerStatus.Balance
+	return new(big.Int).Sub(new(big.Int).Sub(topUpAmount, registrationFee), consumerStatus.Balance)
 }
 
-func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) uint64 {
+func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected *big.Int) *big.Int {
 	// Before settlement
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(690000000), providerStatus.Balance)
+	assert.True(t, providerStatus.Balance.Cmp(new(big.Int).Sub(topUpAmount, registrationFee)) == 0)
 	assert.Equal(t, earningsExpected, providerStatus.Earnings, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
 	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
-	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
+	assert.True(t, providerStatus.Earnings.Cmp(big.NewInt(500)) == 1, "earnings should be at least 500 but is %d", providerStatus.Earnings)
 	return providerStatus.Earnings
 }
 

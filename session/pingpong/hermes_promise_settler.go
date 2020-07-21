@@ -20,6 +20,7 @@ package pingpong
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -573,36 +574,48 @@ type settlementState struct {
 }
 
 // lifetimeBalance returns earnings of all history.
-func (hs hermesState) lifetimeBalance() uint64 {
+func (hs hermesState) lifetimeBalance() *big.Int {
+	if hs.lastPromise.Amount == nil {
+		return new(big.Int)
+	}
 	return hs.lastPromise.Amount
 }
 
 // unsettledBalance returns current unsettled earnings.
-func (hs hermesState) unsettledBalance() uint64 {
-	settled := uint64(0)
+func (hs hermesState) unsettledBalance() *big.Int {
+	settled := new(big.Int)
 	if hs.channel.Settled != nil {
-		settled = hs.channel.Settled.Uint64()
+		settled = hs.channel.Settled
 	}
 
-	return safeSub(hs.lastPromise.Amount, settled)
+	lastPromise := new(big.Int)
+	if hs.lastPromise.Amount != nil {
+		lastPromise = hs.lastPromise.Amount
+	}
+
+	return safeSub(lastPromise, settled)
 }
 
-func (hs hermesState) availableBalance() uint64 {
-	balance := uint64(0)
+func (hs hermesState) availableBalance() *big.Int {
+	balance := new(big.Int)
 	if hs.channel.Balance != nil {
-		balance = hs.channel.Balance.Uint64()
+		balance = hs.channel.Balance
 	}
 
-	settled := uint64(0)
+	settled := new(big.Int)
 	if hs.channel.Settled != nil {
-		settled = hs.channel.Settled.Uint64()
+		settled = hs.channel.Settled
 	}
 
-	return balance + settled
+	return new(big.Int).Add(balance, settled)
 }
 
-func (hs hermesState) balance() uint64 {
-	return safeSub(hs.availableBalance(), hs.lastPromise.Amount)
+func (hs hermesState) balance() *big.Int {
+	promised := new(big.Int)
+	if hs.lastPromise.Amount != nil {
+		promised = hs.lastPromise.Amount
+	}
+	return safeSub(hs.availableBalance(), promised)
 }
 
 func (ss settlementState) needsSettling(threshold float64, hermesID common.Address) bool {
@@ -619,20 +632,22 @@ func (ss settlementState) needsSettling(threshold float64, hermesID common.Addre
 		return false
 	}
 
-	if hermes.channel.Stake.Uint64() == 0 {
+	if hermes.channel.Stake.Cmp(big.NewInt(0)) == 0 {
 		// if starting with zero stake, only settle one myst or more.
-		if hermes.unsettledBalance() < 100000000 {
+		if hermes.unsettledBalance().Cmp(big.NewInt(0).SetUint64(crypto.Myst)) == -1 {
 			return false
 		}
 	}
 
-	calculatedThreshold := threshold * float64(hermes.availableBalance())
-	possibleEarnings := float64(hermes.unsettledBalance())
-	if possibleEarnings < calculatedThreshold {
+	floated := new(big.Float).SetInt(hermes.availableBalance())
+	calculatedThreshold := new(big.Float).Mul(big.NewFloat(threshold), floated)
+	possibleEarnings := hermes.unsettledBalance()
+	i, _ := calculatedThreshold.Int(nil)
+	if possibleEarnings.Cmp(i) == -1 {
 		return false
 	}
 
-	if float64(hermes.balance()) <= calculatedThreshold {
+	if hermes.balance().Cmp(i) <= 0 {
 		return true
 	}
 
@@ -640,11 +655,11 @@ func (ss settlementState) needsSettling(threshold float64, hermesID common.Addre
 }
 
 func (ss settlementState) Earnings() event.Earnings {
-	var lifetimeBalance uint64
-	var unsettledBalance uint64
+	var lifetimeBalance = new(big.Int)
+	var unsettledBalance = new(big.Int)
 	for _, v := range ss.hermeses {
-		lifetimeBalance += v.lifetimeBalance()
-		unsettledBalance += v.unsettledBalance()
+		lifetimeBalance = new(big.Int).Add(lifetimeBalance, v.lifetimeBalance())
+		unsettledBalance = new(big.Int).Add(unsettledBalance, v.unsettledBalance())
 	}
 	return event.Earnings{
 		LifetimeBalance:  lifetimeBalance,

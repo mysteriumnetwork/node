@@ -18,6 +18,7 @@
 package mocks
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/market"
@@ -54,7 +55,7 @@ func DefaultPaymentMethod() *PaymentMethod {
 			PerByte: 7669584,
 		},
 		PaymentType: "BYTES_TRANSFERRED_WITH_TIME",
-		Price:       money.Money{Amount: 50000, Currency: money.CurrencyMyst},
+		Price:       money.Money{Amount: big.NewInt(50000), Currency: money.CurrencyMyst},
 	}
 }
 

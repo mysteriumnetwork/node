@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -45,7 +46,7 @@ func NewConsumerTotalsStorage(bolt persistentStorage, bus eventbus.Publisher) *C
 }
 
 // Store stores the given amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount uint64) error {
+func (cts *ConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount *big.Int) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 
@@ -64,10 +65,10 @@ func (cts *ConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Ad
 }
 
 // Get fetches the amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (uint64, error) {
+func (cts *ConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
-	var res uint64
+	var res = new(big.Int)
 	err := cts.bolt.GetValue(consumerTotalStorageBucketName, id.Address+hermesID.Hex(), &res)
 	if err != nil {
 		// wrap the error to an error we can check for

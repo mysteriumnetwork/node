@@ -20,6 +20,7 @@ package pingpong
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/p2p"
@@ -27,6 +28,8 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
+
+const bigIntBase int = 10
 
 // ExchangeRequest structure represents message from service consumer to send a an exchange message.
 type ExchangeRequest struct {
@@ -50,14 +53,14 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	pMessage := &pb.ExchangeMessage{
 		Promise: &pb.Promise{
 			ChannelID: em.Promise.ChannelID,
-			Amount:    em.Promise.Amount,
-			Fee:       em.Promise.Fee,
+			Amount:    em.Promise.Amount.Text(bigIntBase),
+			Fee:       em.Promise.Fee.Text(bigIntBase),
 			Hashlock:  em.Promise.Hashlock,
 			R:         em.Promise.R,
 			Signature: em.Promise.Signature,
 		},
-		AgreementID:    em.AgreementID,
-		AgreementTotal: em.AgreementTotal,
+		AgreementID:    em.AgreementID.Text(bigIntBase),
+		AgreementTotal: em.AgreementTotal.Text(bigIntBase),
 		Provider:       em.Provider,
 		Signature:      em.Signature,
 		HermesID:       em.HermesID,
@@ -80,17 +83,37 @@ func exchangeMessageReceiver(channel p2p.ChannelHandler) (chan crypto.ExchangeMe
 		}
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
 
+		amount, ok := new(big.Int).SetString(msg.GetPromise().GetAmount(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field amount of value %v", amount)
+		}
+
+		fee, ok := new(big.Int).SetString(msg.GetPromise().GetFee(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field fee of value %v", fee)
+		}
+
+		agreementID, ok := new(big.Int).SetString(msg.GetAgreementID(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementID of value %v", agreementID)
+		}
+
+		agreementTotal, ok := new(big.Int).SetString(msg.GetAgreementTotal(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
+		}
+
 		exchangeChan <- crypto.ExchangeMessage{
 			Promise: crypto.Promise{
 				ChannelID: msg.GetPromise().GetChannelID(),
-				Amount:    msg.GetPromise().GetAmount(),
-				Fee:       msg.GetPromise().GetFee(),
+				Amount:    amount,
+				Fee:       fee,
 				Hashlock:  msg.GetPromise().GetHashlock(),
 				R:         msg.GetPromise().GetR(),
 				Signature: msg.GetPromise().GetSignature(),
 			},
-			AgreementID:    msg.GetAgreementID(),
-			AgreementTotal: msg.GetAgreementTotal(),
+			AgreementID:    agreementID,
+			AgreementTotal: agreementTotal,
 			Provider:       msg.GetProvider(),
 			Signature:      msg.GetSignature(),
 			HermesID:       msg.GetHermesID(),

@@ -534,10 +534,10 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		warn(err)

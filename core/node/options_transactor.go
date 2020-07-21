@@ -17,7 +17,10 @@
 
 package node
 
-import "time"
+import (
+	"math/big"
+	"time"
+)
 
 // OptionsTransactor describes possible parameters for interaction with transactor
 type OptionsTransactor struct {
@@ -26,5 +29,5 @@ type OptionsTransactor struct {
 	ChannelImplementation           string
 	ProviderMaxRegistrationAttempts int
 	ProviderRegistrationRetryDelay  time.Duration
-	ProviderRegistrationStake       uint64
+	ProviderRegistrationStake       *big.Int
 }

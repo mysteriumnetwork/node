@@ -18,12 +18,15 @@
 package session
 
 import (
-	"errors"
+	"io/ioutil"
+	"math/big"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	session_node "github.com/mysteriumnetwork/node/session"
@@ -57,56 +60,67 @@ var (
 		},
 	}
 	connectionStatsMock   = connection.Statistics{BytesReceived: 100000, BytesSent: 50000}
-	connectionInvoiceMock = crypto.Invoice{AgreementID: 10, AgreementTotal: 1000, TransactorFee: 10}
+	connectionInvoiceMock = crypto.Invoice{AgreementID: big.NewInt(10), AgreementTotal: big.NewInt(1000), TransactorFee: big.NewInt(10)}
 )
 
 func TestSessionStorageGetAll(t *testing.T) {
-	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer)
-	sessions, err := storage.GetAll()
-	assert.Nil(t, err)
-	assert.True(t, storer.GetAllCalled)
-	assert.Len(t, sessions, 0)
-}
-
-func TestSessionStorageGetAllReturnsError(t *testing.T) {
-	storer := &StubSessionStorer{
-		GetAllError: errors.New("error"),
+	// given
+	sessionExpected := History{
+		SessionID:       session_node.ID("session1"),
+		Direction:       "Provided",
+		ConsumerID:      identity.FromAddress("consumer1"),
+		HermesID:        "0x00000000000000000000000000000000000000AC",
+		ProviderID:      identity.FromAddress("providerID"),
+		ServiceType:     "serviceType",
+		ProviderCountry: "MU",
+		Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+		Status:          "New",
 	}
-	storage := NewSessionStorage(storer)
+	storage, storageCleanup := newStorageWithSessions(sessionExpected)
+	defer storageCleanup()
+
+	// when
 	sessions, err := storage.GetAll()
-	assert.NotNil(t, err)
-	assert.True(t, storer.GetAllCalled)
-	assert.Nil(t, sessions)
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, []History{sessionExpected}, sessions)
 }
 
 func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
-	storer := &StubSessionStorer{}
-
-	storage := NewSessionStorage(storer)
+	// given
+	storage, storageCleanup := newStorage()
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
+	defer storageCleanup()
+
+	// when
 	storage.consumeServiceSessionEvent(session_event.AppEventSession{
 		Status:  session_event.CreatedStatus,
 		Session: serviceSessionMock,
 	})
+	// then
+	sessions, err := storage.GetAll()
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		&History{
-			SessionID:       session_node.ID("session1"),
-			Direction:       "Provided",
-			ConsumerID:      identity.FromAddress("consumer1"),
-			HermesID:        "0x00000000000000000000000000000000000000AC",
-			ProviderID:      identity.FromAddress("providerID"),
-			ServiceType:     "serviceType",
-			ProviderCountry: "MU",
-			Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
-			Status:          "New",
+		[]History{
+			{
+				SessionID:       session_node.ID("session1"),
+				Direction:       "Provided",
+				ConsumerID:      identity.FromAddress("consumer1"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
+				ServiceType:     "serviceType",
+				ProviderCountry: "MU",
+				Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+				Status:          "New",
+			},
 		},
-		storer.SavedObject,
+		sessions,
 	)
 
+	// when
 	storage.consumeServiceSessionStatisticsEvent(session_event.AppEventDataTransferred{
 		ID:   serviceSessionMock.ID,
 		Up:   123,
@@ -114,40 +128,47 @@ func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {
 	})
 	storage.consumeServiceSessionEarningsEvent(session_event.AppEventTokensEarned{
 		SessionID: serviceSessionMock.ID,
-		Total:     12,
+		Total:     big.NewInt(12),
 	})
 	storage.consumeServiceSessionEvent(session_event.AppEventSession{
 		Status:  session_event.RemovedStatus,
 		Session: serviceSessionMock,
 	})
+	// then
+	sessions, err = storage.GetAll()
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		&History{
-			SessionID:       session_node.ID("session1"),
-			Direction:       "Provided",
-			ConsumerID:      identity.FromAddress("consumer1"),
-			HermesID:        "0x00000000000000000000000000000000000000AC",
-			ProviderID:      identity.FromAddress("providerID"),
-			ServiceType:     "serviceType",
-			ProviderCountry: "MU",
-			Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
-			Status:          "Completed",
-			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			DataSent:        1234,
-			DataReceived:    123,
-			Tokens:          12,
+		[]History{
+			{
+				SessionID:       session_node.ID("session1"),
+				Direction:       "Provided",
+				ConsumerID:      identity.FromAddress("consumer1"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
+				ServiceType:     "serviceType",
+				ProviderCountry: "MU",
+				Started:         time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+				Status:          "Completed",
+				Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
+				DataSent:        1234,
+				DataReceived:    123,
+				Tokens:          big.NewInt(12),
+			},
 		},
-		storer.UpdatedObject,
+		sessions,
 	)
 }
 
 func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
-	storer := &StubSessionStorer{}
-
-	storage := NewSessionStorage(storer)
+	// given
+	storage, storageCleanup := newStorage()
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
+	defer storageCleanup()
+
+	// when
 	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
 		Status:      connection.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
@@ -160,118 +181,169 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 		Status:      connection.SessionEndedStatus,
 		SessionInfo: connectionSessionMock,
 	})
+
+	// then
+	sessions, err := storage.GetAll()
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		&History{
-			SessionID:       session_node.ID("sessionID"),
-			Direction:       "Consumed",
-			ConsumerID:      identity.FromAddress("consumerID"),
-			HermesID:        "0x00000000000000000000000000000000000000AC",
-			ProviderID:      identity.FromAddress("providerID"),
-			ServiceType:     "serviceType",
-			ProviderCountry: "MU",
-			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
-			Status:          "Completed",
-			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			DataSent:        connectionStatsMock.BytesSent,
-			DataReceived:    connectionStatsMock.BytesReceived,
+		[]History{
+			{
+				SessionID:       session_node.ID("sessionID"),
+				Direction:       "Consumed",
+				ConsumerID:      identity.FromAddress("consumerID"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
+				ServiceType:     "serviceType",
+				ProviderCountry: "MU",
+				Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+				Status:          "Completed",
+				Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
+				DataSent:        connectionStatsMock.BytesSent,
+				DataReceived:    connectionStatsMock.BytesReceived,
+			},
 		},
-		storer.UpdatedObject,
+		sessions,
 	)
 }
 
 func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
-	storer := &StubSessionStorer{}
+	// given
+	storage, storageCleanup := newStorage()
+	defer storageCleanup()
 
-	storage := NewSessionStorage(storer)
+	// when
 	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
 		Status:      connection.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
 	})
+
+	// then
+	sessions, err := storage.GetAll()
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		&History{
-			SessionID:       session_node.ID("sessionID"),
-			Direction:       "Consumed",
-			ConsumerID:      identity.FromAddress("consumerID"),
-			HermesID:        "0x00000000000000000000000000000000000000AC",
-			ProviderID:      identity.FromAddress("providerID"),
-			ServiceType:     "serviceType",
-			ProviderCountry: "MU",
-			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
-			Status:          "New",
-			Updated:         time.Time{},
+		[]History{
+			{
+				SessionID:       session_node.ID("sessionID"),
+				Direction:       "Consumed",
+				ConsumerID:      identity.FromAddress("consumerID"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
+				ServiceType:     "serviceType",
+				ProviderCountry: "MU",
+				Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+				Status:          "New",
+				Updated:         time.Time{},
+			},
 		},
-		storer.SavedObject,
+		sessions,
 	)
 }
 
 func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
-	storer := &StubSessionStorer{}
-
-	storage := NewSessionStorage(storer)
+	// given
+	storage, storageCleanup := newStorage()
 	storage.timeGetter = func() time.Time {
 		return time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC)
 	}
+	defer storageCleanup()
+
+	// when
 	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
 		Status:      connection.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
 	})
-
 	storage.consumeConnectionSpendingEvent(event.AppEventInvoicePaid{
 		ConsumerID: identity.FromAddress("me"),
 		SessionID:  "unknown",
 		Invoice:    connectionInvoiceMock,
 	})
-	assert.Nil(t, storer.UpdatedObject)
+	// then
+	sessions, err := storage.GetAll()
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		[]History{
+			{
+				SessionID:       session_node.ID("sessionID"),
+				Direction:       "Consumed",
+				ConsumerID:      identity.FromAddress("consumerID"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
+				ServiceType:     "serviceType",
+				ProviderCountry: "MU",
+				Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+				Status:          "New",
+				Updated:         time.Time{},
+			},
+		},
+		sessions,
+	)
 
+	// when
 	storage.consumeConnectionSpendingEvent(event.AppEventInvoicePaid{
 		ConsumerID: identity.FromAddress("me"),
 		SessionID:  "sessionID",
 		Invoice:    connectionInvoiceMock,
 	})
+	// then
+	sessions, err = storage.GetAll()
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		&History{
-			SessionID:       session_node.ID("sessionID"),
-			Direction:       "Consumed",
-			ConsumerID:      identity.FromAddress("consumerID"),
-			HermesID:        "0x00000000000000000000000000000000000000AC",
-			ProviderID:      identity.FromAddress("providerID"),
-			ServiceType:     "serviceType",
-			ProviderCountry: "MU",
-			Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
-			Status:          "New",
-			Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
-			Tokens:          connectionInvoiceMock.AgreementTotal,
+		[]History{
+			{
+				SessionID:       session_node.ID("sessionID"),
+				Direction:       "Consumed",
+				ConsumerID:      identity.FromAddress("consumerID"),
+				HermesID:        "0x00000000000000000000000000000000000000AC",
+				ProviderID:      identity.FromAddress("providerID"),
+				ServiceType:     "serviceType",
+				ProviderCountry: "MU",
+				Started:         time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
+				Status:          "New",
+				Updated:         time.Date(2020, 4, 1, 12, 0, 0, 0, time.UTC),
+				Tokens:          connectionInvoiceMock.AgreementTotal,
+			},
 		},
-		storer.UpdatedObject,
+		sessions,
 	)
 }
 
-// StubSessionStorer allows us to get all sessions, save and update them
-type StubSessionStorer struct {
-	SaveError     error
-	SavedObject   interface{}
-	UpdateError   error
-	UpdatedObject interface{}
-	GetAllCalled  bool
-	GetAllError   error
+func newStorage() (*Storage, func()) {
+	dir, err := ioutil.TempDir("", "sessionStorageTest")
+	if err != nil {
+		panic(err)
+	}
+
+	db, err := boltdb.NewStorage(dir)
+	if err != nil {
+		panic(err)
+	}
+
+	return NewSessionStorage(db), func() {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+
+		err = os.RemoveAll(dir)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
-func (sss *StubSessionStorer) Store(from string, object interface{}) error {
-	sss.SavedObject = object
-	return sss.SaveError
-}
-
-func (sss *StubSessionStorer) Update(from string, object interface{}) error {
-	sss.UpdatedObject = object
-	return sss.UpdateError
-}
-
-func (sss *StubSessionStorer) GetAllFrom(from string, array interface{}) error {
-	sss.GetAllCalled = true
-	return sss.GetAllError
+func newStorageWithSessions(sessions ...History) (*Storage, func()) {
+	storage, storageCleanup := newStorage()
+	for _, session := range sessions {
+		err := storage.storage.Store(sessionStorageBucketName, &session)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return storage, storageCleanup
 }
 
 type StubServiceDefinition struct{}

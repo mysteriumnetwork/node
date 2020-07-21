@@ -17,6 +17,8 @@
 
 package contract
 
+import "math/big"
+
 // ServiceStartRequest request used to start a service.
 // swagger:model ServiceStartRequestDTO
 type ServiceStartRequest struct {
@@ -47,8 +49,8 @@ type ServiceStartRequest struct {
 // ServicePaymentMethod payment parameters for service start.
 // swagger:model ServicePaymentMethod
 type ServicePaymentMethod struct {
-	PriceGB     uint64 `json:"price_gb"`
-	PriceMinute uint64 `json:"price_minute"`
+	PriceGB     *big.Int `json:"price_gb"`
+	PriceMinute *big.Int `json:"price_minute"`
 }
 
 // ServiceAccessPolicies represents the access controls for service start

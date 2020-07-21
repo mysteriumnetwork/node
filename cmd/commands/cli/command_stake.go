@@ -19,7 +19,7 @@ package cli
 
 import (
 	"fmt"
-	"strconv"
+	"math/big"
 	"strings"
 	"time"
 
@@ -64,9 +64,9 @@ func (c *cliApp) decreaseStake(args []string) {
 		return
 	}
 
-	res, err := strconv.Atoi(args[1])
-	if err != nil {
-		warn("could not parse amount: ", err)
+	res, ok := new(big.Int).SetString(args[1], 10)
+	if !ok {
+		warn("could not parse amount")
 		return
 	}
 
@@ -76,7 +76,7 @@ func (c *cliApp) decreaseStake(args []string) {
 		return
 	}
 
-	err = c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), uint64(res), fees.DecreaseStake)
+	err = c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), res, fees.DecreaseStake)
 	if err != nil {
 		warn("could not decrease stake: ", err)
 		return

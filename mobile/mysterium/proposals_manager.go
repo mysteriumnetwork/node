@@ -20,6 +20,7 @@ package mysterium
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -48,10 +49,10 @@ type GetProposalsRequest struct {
 	ServiceType         string
 	Refresh             bool
 	IncludeFailed       bool
-	UpperTimePriceBound int64
-	LowerTimePriceBound int64
-	UpperGBPriceBound   int64
-	LowerGBPriceBound   int64
+	UpperTimePriceBound *big.Int
+	LowerTimePriceBound *big.Int
+	UpperGBPriceBound   *big.Int
+	LowerGBPriceBound   *big.Int
 }
 
 // GetProposalRequest represents proposal request.
@@ -78,8 +79,8 @@ type proposalPaymentMethod struct {
 }
 
 type proposalPaymentPrice struct {
-	Amount   int64  `json:"amount"`
-	Currency string `json:"currency"`
+	Amount   *big.Int `json:"amount"`
+	Currency string   `json:"currency"`
 }
 
 type proposalPaymentRate struct {
@@ -132,17 +133,17 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 	}
 
 	// Get proposals from remote discovery api and store in cache.
-	upperTimePriceBound := uint64(req.UpperTimePriceBound)
-	lowerTimePriceBound := uint64(req.LowerTimePriceBound)
-	upperGBPriceBound := uint64(req.UpperGBPriceBound)
-	lowerGBPriceBound := uint64(req.LowerGBPriceBound)
+	upperTimePriceBound := req.UpperTimePriceBound
+	lowerTimePriceBound := req.LowerTimePriceBound
+	upperGBPriceBound := req.UpperGBPriceBound
+	lowerGBPriceBound := req.LowerGBPriceBound
 
 	filter := &proposal.Filter{
 		ServiceType:         req.ServiceType,
-		UpperTimePriceBound: &upperTimePriceBound,
-		LowerTimePriceBound: &lowerTimePriceBound,
-		UpperGBPriceBound:   &upperGBPriceBound,
-		LowerGBPriceBound:   &lowerGBPriceBound,
+		UpperTimePriceBound: upperTimePriceBound,
+		LowerTimePriceBound: lowerTimePriceBound,
+		UpperGBPriceBound:   upperGBPriceBound,
+		LowerGBPriceBound:   lowerGBPriceBound,
 		ExcludeUnsupported:  true,
 		IncludeFailed:       req.IncludeFailed,
 	}
@@ -219,7 +220,7 @@ func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map
 		prop.Payment = &proposalPaymentMethod{
 			Type: payment.GetType(),
 			Price: &proposalPaymentPrice{
-				Amount:   int64(payment.GetPrice().Amount),
+				Amount:   payment.GetPrice().Amount,
 				Currency: string(payment.GetPrice().Currency),
 			},
 			Rate: &proposalPaymentRate{

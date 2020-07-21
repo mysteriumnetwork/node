@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,8 +35,8 @@ import (
 func TestHermesCaller_RequestPromise_OK(t *testing.T) {
 	promise := crypto.Promise{
 		ChannelID: []byte("ChannelID"),
-		Amount:    1,
-		Fee:       1,
+		Amount:    big.NewInt(1),
+		Fee:       big.NewInt(1),
 		Hashlock:  []byte("lock"),
 		R:         []byte("R"),
 		Signature: []byte("Signature"),
@@ -77,7 +78,7 @@ func TestHermesCaller_RevealR_Error(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	err := caller.RevealR("r", "provider", 1)
+	err := caller.RevealR("r", "provider", big.NewInt(1))
 	assert.NotNil(t, err)
 }
 
@@ -93,7 +94,7 @@ func TestHermesCaller_RevealR_OK(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	err := caller.RevealR("r", "provider", 1)
+	err := caller.RevealR("r", "provider", big.NewInt(1))
 	assert.Nil(t, err)
 }
 
@@ -123,7 +124,7 @@ func TestHermesCaller_UnmarshalsErrors(t *testing.T) {
 
 		c := requests.NewHTTPClient("0.0.0.0", time.Second)
 		caller := NewHermesCaller(c, server.URL)
-		err := caller.RevealR("r", "provider", 1)
+		err := caller.RevealR("r", "provider", big.NewInt(1))
 		assert.EqualError(t, errors.Unwrap(err), v.Error())
 		server.Close()
 	}
@@ -171,8 +172,8 @@ var mockConsumerData = `
 func TestLatestPromise_isValid(t *testing.T) {
 	type fields struct {
 		ChannelID string
-		Amount    uint64
-		Fee       uint64
+		Amount    *big.Int
+		Fee       *big.Int
 		Hashlock  string
 		R         interface{}
 		Signature string
@@ -189,8 +190,8 @@ func TestLatestPromise_isValid(t *testing.T) {
 			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
 			fields: fields{
 				ChannelID: "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
-				Amount:    461730032,
-				Fee:       0,
+				Amount:    big.NewInt(461730032),
+				Fee:       new(big.Int),
 				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
 				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
 			},
@@ -201,8 +202,8 @@ func TestLatestPromise_isValid(t *testing.T) {
 			id:      "75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
 			fields: fields{
 				ChannelID: "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
-				Amount:    461730032,
-				Fee:       0,
+				Amount:    big.NewInt(461730032),
+				Fee:       new(big.Int),
 				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
 				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
 			},
@@ -213,8 +214,8 @@ func TestLatestPromise_isValid(t *testing.T) {
 			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
 			fields: fields{
 				ChannelID: "0x3295502615e5ddfd1fc7bd22ea5b78d65751a835",
-				Amount:    461730032,
-				Fee:       0,
+				Amount:    big.NewInt(461730032),
+				Fee:       new(big.Int),
 				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
 				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
 			},
@@ -225,8 +226,8 @@ func TestLatestPromise_isValid(t *testing.T) {
 			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
 			fields: fields{
 				ChannelID: "0x3295502615e5ddfd1fc7bd22ea5b78d65751a835",
-				Amount:    461730032,
-				Fee:       0,
+				Amount:    big.NewInt(461730032),
+				Fee:       new(big.Int),
 				Hashlock:  "0x0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
 				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
 			},

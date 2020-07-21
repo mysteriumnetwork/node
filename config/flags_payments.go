@@ -61,28 +61,28 @@ var (
 		Usage: "Determines how often the provider sends invoices.",
 	}
 	// FlagPaymentsConsumerPricePerMinuteUpperBound sets the upper price bound per minute to a set value.
-	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.Uint64Flag{
+	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-max",
 		Usage: "Sets the maximum price of the service per minute. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: 50000,
+		Value: "500000000000000",
 	}
 	// FlagPaymentsConsumerPricePerMinuteLowerBound sets the lower price bound per minute to a set value.
-	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.Uint64Flag{
+	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-min",
 		Usage: "Sets the minimum price of the service per minute. All proposals with a below above this bound will be filtered out and not visible.",
-		Value: 0,
+		Value: "0",
 	}
 	// FlagPaymentsConsumerPricePerGBUpperBound sets the upper price bound per GiB to a set value.
-	FlagPaymentsConsumerPricePerGBUpperBound = cli.Uint64Flag{
+	FlagPaymentsConsumerPricePerGBUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-pergib-max",
 		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: 11000000,
+		Value: "110000000000000000",
 	}
 	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
-	FlagPaymentsConsumerPricePerGBLowerBound = cli.Uint64Flag{
+	FlagPaymentsConsumerPricePerGBLowerBound = cli.StringFlag{
 		Name:  "payments.consumer.price-pergib-min",
 		Usage: "Sets the minimum price of the service per gb. All proposals with a below above this bound will be filtered out and not visible.",
-		Value: 0,
+		Value: "0",
 	}
 	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
@@ -91,10 +91,10 @@ var (
 		Value: 20,
 	}
 	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
-	FlagPaymentsMaxUnpaidInvoiceValue = cli.Uint64Flag{
+	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
 		Name:  "payments.provider.max-unpaid-invoice-value",
 		Usage: "sets the upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
-		Value: 3000000,
+		Value: "30000000000000000",
 	}
 )
 
@@ -125,10 +125,10 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
 	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
 	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
-	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
-	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
-	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)
-	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
+	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
+	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
+	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBUpperBound)
+	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
-	Current.ParseUInt64Flag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
+	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
 }

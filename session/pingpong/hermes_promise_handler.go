@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	stdErr "errors"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -48,7 +49,7 @@ type feeProvider interface {
 
 type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
-	RevealR(r string, provider string, agreementID uint64) error
+	RevealR(r string, provider string, agreementID *big.Int) error
 }
 
 type encryption interface {

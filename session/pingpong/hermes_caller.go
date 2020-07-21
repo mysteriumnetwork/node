@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -110,7 +111,7 @@ func NewHermesCaller(transport *requests.HTTPClient, hermesBaseURI string) *Herm
 // RequestPromise represents the request for a new hermes promise
 type RequestPromise struct {
 	ExchangeMessage crypto.ExchangeMessage `json:"exchange_message"`
-	TransactorFee   uint64                 `json:"transactor_fee"`
+	TransactorFee   *big.Int               `json:"transactor_fee"`
 	RRecoveryData   string                 `json:"r_recovery_data"`
 }
 
@@ -148,11 +149,11 @@ func (ac *HermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error
 type RevealObject struct {
 	R           string
 	Provider    string
-	AgreementID uint64
+	AgreementID *big.Int
 }
 
 // RevealR reveals hashlock key 'r' from 'provider' to the hermes for the agreement identified by 'agreementID'.
-func (ac *HermesCaller) RevealR(r, provider string, agreementID uint64) error {
+func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error {
 	req, err := requests.NewPostRequest(ac.hermesBaseURI, "reveal_r", RevealObject{
 		R:           r,
 		Provider:    provider,
@@ -237,10 +238,10 @@ type ConsumerData struct {
 	Identity         string        `json:"Identity"`
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
-	Balance          uint64        `json:"Balance"`
-	Promised         uint64        `json:"Promised"`
-	Settled          uint64        `json:"Settled"`
-	Stake            uint64        `json:"Stake"`
+	Balance          *big.Int      `json:"Balance"`
+	Promised         *big.Int      `json:"Promised"`
+	Settled          *big.Int      `json:"Settled"`
+	Stake            *big.Int      `json:"Stake"`
 	LatestPromise    LatestPromise `json:"LatestPromise"`
 	LatestSettlement time.Time     `json:"LatestSettlement"`
 }
@@ -248,8 +249,8 @@ type ConsumerData struct {
 // LatestPromise represents the latest promise
 type LatestPromise struct {
 	ChannelID string      `json:"ChannelID"`
-	Amount    uint64      `json:"Amount"`
-	Fee       uint64      `json:"Fee"`
+	Amount    *big.Int    `json:"Amount"`
+	Fee       *big.Int    `json:"Fee"`
 	Hashlock  string      `json:"Hashlock"`
 	R         interface{} `json:"R"`
 	Signature string      `json:"Signature"`
@@ -259,7 +260,7 @@ type LatestPromise struct {
 func (lp LatestPromise) isValid(id string) error {
 	// if we've not promised anything, that's fine for us.
 	// handles the case when we've just registered the identity.
-	if lp.Amount == 0 {
+	if lp.Amount == nil || lp.Amount.Cmp(new(big.Int)) == 0 {
 		return nil
 	}
 
@@ -273,7 +274,7 @@ func (lp LatestPromise) isValid(id string) error {
 	}
 	decodedSignature, err := hex.DecodeString(strings.TrimPrefix(lp.Signature, "0x"))
 	if err != nil {
-		return fmt.Errorf("could not decode hashlock: %w", err)
+		return fmt.Errorf("could not decode signature: %w", err)
 	}
 
 	p := crypto.Promise{
@@ -356,6 +357,6 @@ var hermesCauseToError = map[string]error{
 }
 
 type rRecoveryDetails struct {
-	R           string `json:"r"`
-	AgreementID uint64 `json:"agreement_id"`
+	R           string   `json:"r"`
+	AgreementID *big.Int `json:"agreement_id"`
 }

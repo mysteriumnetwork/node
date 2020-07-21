@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,7 +38,7 @@ import (
 )
 
 type balanceProvider interface {
-	ForceBalanceUpdate(id identity.Identity) uint64
+	ForceBalanceUpdate(id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
@@ -279,14 +280,14 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	var stake uint64
+	var stake = new(big.Int)
 	if regStatus == registry.Registered {
 		data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return
 		}
-		stake = data.Stake.Uint64()
+		stake = data.Stake
 	}
 
 	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)

@@ -18,6 +18,7 @@
 package state
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -66,7 +67,7 @@ type channelAddressCalculator interface {
 }
 
 type balanceProvider interface {
-	GetBalance(id identity.Identity) uint64
+	GetBalance(id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {

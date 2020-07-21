@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -49,7 +50,7 @@ func TestValidator_Validate(t *testing.T) {
 					toReturn: true,
 				},
 				consumerBalanceGetter: &mockConsumerBalanceGetter{
-					toReturn: 99,
+					toReturn: big.NewInt(99),
 				},
 			},
 			args: args{
@@ -60,7 +61,7 @@ func TestValidator_Validate(t *testing.T) {
 					ServiceType:       activeServiceType,
 					ServiceDefinition: &fakeServiceDefinition{},
 					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   100,
+						Amount:   big.NewInt(100),
 						Currency: "MYSTT",
 					}},
 					PaymentMethodType: "PER_MINUTE",
@@ -87,7 +88,7 @@ func TestValidator_Validate(t *testing.T) {
 					toReturn: true,
 				},
 				consumerBalanceGetter: &mockConsumerBalanceGetter{
-					toReturn: 101,
+					toReturn: big.NewInt(101),
 				},
 			},
 			args: args{
@@ -98,7 +99,7 @@ func TestValidator_Validate(t *testing.T) {
 					ServiceType:       activeServiceType,
 					ServiceDefinition: &fakeServiceDefinition{},
 					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   100,
+						Amount:   big.NewInt(100),
 						Currency: "MYSTT",
 					}},
 					PaymentMethodType: "PER_MINUTE",
@@ -131,9 +132,9 @@ func (muc *mockUnlockChecker) IsUnlocked(id string) bool {
 }
 
 type mockConsumerBalanceGetter struct {
-	toReturn uint64
+	toReturn *big.Int
 }
 
-func (mcbg *mockConsumerBalanceGetter) GetBalance(id identity.Identity) uint64 {
+func (mcbg *mockConsumerBalanceGetter) GetBalance(id identity.Identity) *big.Int {
 	return mcbg.toReturn
 }

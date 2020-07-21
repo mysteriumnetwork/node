@@ -42,7 +42,7 @@ import (
 type Listener interface {
 	// Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 	// to channelHandlers
-	Listen(providerID identity.Identity, serviceType string, channelHandler func(ch Channel)) error
+	Listen(providerID identity.Identity, serviceType string, channelHandler func(ch Channel)) (func(), error)
 
 	// GetContact returns contract which is later can be added to proposal contacts definition so consumer can
 	// know how to connect to this p2p listener.
@@ -104,21 +104,24 @@ func (m *listener) GetContact() market.Contact {
 }
 
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
-// to channelHandlers
-func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) error {
+// to channelHandlers.
+func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) (func(), error) {
 	outboundIP, err := m.ipResolver.GetOutboundIP()
 	if err != nil {
-		return fmt.Errorf("could not get outbound IP: %w", err)
+		return func() {}, fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	_, err = m.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+	configSub, err := m.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
 		if err := m.providerStartConfigExchange(providerID, msg, outboundIP); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
 	})
+	if err != nil {
+		return func() {}, fmt.Errorf("could not get subscribe to config exchange topic: %w", err)
+	}
 
-	_, err = m.brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+	ackSub, err := m.brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
 		config, err := m.providerAckConfigExchange(msg)
 		if err != nil {
 			log.Err(err).Msg("Could not handle exchange ack")
@@ -184,7 +187,21 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		}
 	})
 
-	return err
+	if err != nil {
+		if err := configSub.Unsubscribe(); err != nil {
+			log.Err(err).Msg("Failed to unsubscribe from config exchange topic")
+		}
+		return func() {}, fmt.Errorf("could not get subscribe to config exchange acknowledge topic: %w", err)
+	}
+
+	return func() {
+		if err := configSub.Unsubscribe(); err != nil {
+			log.Err(err).Msg("Failed to unsubscribe from config exchange topic")
+		}
+		if err := ackSub.Unsubscribe(); err != nil {
+			log.Err(err).Msg("Failed to unsubscribe from config exchange acknowledge topic")
+		}
+	}, nil
 }
 
 func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {

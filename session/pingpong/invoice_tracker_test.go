@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	stdErrors "errors"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -64,7 +65,7 @@ func (mac *mockHermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, 
 	return crypto.Promise{}, mac.errToReturn
 }
 
-func (mac *mockHermesCaller) RevealR(r string, provider string, agreementID uint64) error {
+func (mac *mockHermesCaller) RevealR(r string, provider string, agreementID *big.Int) error {
 	return mac.errToReturn
 }
 
@@ -91,7 +92,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -146,7 +147,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -201,7 +202,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -254,7 +255,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -316,7 +317,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -344,7 +345,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.True(t, invoice.AgreementTotal > 0)
+	assert.True(t, invoice.AgreementTotal.Cmp(new(big.Int)) > 0)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 
@@ -374,7 +375,7 @@ func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -430,7 +431,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -458,7 +459,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.Equal(t, uint64(providerFirstInvoiceValue), invoice.AgreementTotal)
+	assert.Equal(t, providerFirstInvoiceValue, invoice.AgreementTotal)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 
@@ -510,7 +511,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.Equal(t, uint64(0), invoice.AgreementTotal)
+	assert.Equal(t, big.NewInt(0), invoice.AgreementTotal)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 
@@ -526,14 +527,14 @@ func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate: market.PaymentRate{
 					PerTime: time.Minute,
 					PerByte: 1,
 				},
 			},
 		},
-		MaxNotPaidInvoice: 100,
+		MaxNotPaidInvoice: big.NewInt(100),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	invoiceTracker.dataTransferred = DataTransferred{
@@ -557,14 +558,14 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate: market.PaymentRate{
 					PerTime: time.Minute,
 					PerByte: 1,
 				},
 			},
 		},
-		MaxNotPaidInvoice: 100,
+		MaxNotPaidInvoice: big.NewInt(100),
 		ChargePeriod:      time.Millisecond,
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -590,7 +591,7 @@ func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
 	assert.Equal(t, uint64(360), res)
 }
 
-func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice, channel string) (crypto.ExchangeMessage, string) {
+func generateExchangeMessage(t *testing.T, amount *big.Int, invoice crypto.Invoice, channel string) (crypto.ExchangeMessage, string) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -625,9 +626,9 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	msg1, addr1 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
-	msg2, addr2 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
-	msg3, addr3 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "")
+	msg1, addr1 := generateExchangeMessage(t, big.NewInt(10), crypto.Invoice{AgreementTotal: big.NewInt(10), AgreementID: new(big.Int), TransactorFee: new(big.Int)}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
+	msg2, addr2 := generateExchangeMessage(t, big.NewInt(10), crypto.Invoice{AgreementTotal: big.NewInt(10), AgreementID: new(big.Int), TransactorFee: new(big.Int), Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
+	msg3, addr3 := generateExchangeMessage(t, big.NewInt(10), crypto.Invoice{AgreementTotal: big.NewInt(10), AgreementID: new(big.Int), TransactorFee: new(big.Int), Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "")
 	type fields struct {
 		peer                       identity.Identity
 		exchangeMessageChan        chan crypto.ExchangeMessage
@@ -635,7 +636,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		hermesFailureCount         uint64
 		hermesPromiseStorage       hermesPromiseStorage
 		hermesID                   common.Address
-		AgreementID                uint64
+		AgreementID                *big.Int
 		lastExchangeMessage        crypto.ExchangeMessage
 		invoicesSent               map[string]sentInvoice
 		channelImplementation      string
@@ -654,6 +655,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				peer:                       identity.FromAddress(addr1),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 			},
 			em: &crypto.ExchangeMessage{},
 		},
@@ -664,6 +673,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				peer:                       identity.FromAddress(addr1),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 			},
 			em: &msg1,
 		},
@@ -674,6 +691,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				peer:                       identity.FromAddress(addr2),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 			},
 			em: &msg2,
 		},
@@ -688,6 +713,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				registryAddress:            mockRegistryAddress,
 				channelImplementation:      mockChannelImplementation,
 				hermesID:                   common.HexToAddress(mockHermesAddress),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 				invoicesSent: map[string]sentInvoice{
 					hex.EncodeToString(msg3.Promise.Hashlock): sentInvoice{
 						invoice: crypto.Invoice{

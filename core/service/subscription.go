@@ -24,9 +24,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
@@ -35,23 +37,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher) {
+func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal, policyRules *policy.Repository) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
-		var sessionInstance *session.Session
+		var sessionID string
 
 		tracer := trace.NewTracer()
 		sessionCreateTrace := tracer.StartStage("Provider whole session create")
 
 		defer func() {
 			tracer.EndStage(sessionCreateTrace)
-			traceResult := tracer.Finish(eventPublisher, string(sessionInstance.ID))
+			traceResult := tracer.Finish(eventPublisher, string(sessionID))
 			log.Debug().Msgf("Provider connection trace: %s", traceResult)
 
 			eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
 				Status: connection.SessionEndedStatus,
 				SessionInfo: connection.Status{
-					SessionID: sessionInstance.ID,
-					Proposal:  sessionInstance.Proposal,
+					SessionID: session.ID(sessionID),
+					Proposal:  proposal,
 				},
 			})
 		}()
@@ -64,12 +66,19 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
+		if !policyRules.IsIdentityAllowed(consumerID) {
+			return fmt.Errorf("consumer identity is not allowed: %s", consumerID.Address)
+		}
+
 		consumerConfig := sr.GetConfig()
 		hermesID := common.HexToAddress(sr.GetConsumer().GetHermesID())
 		sessionInstance, err := mng.Start(consumerID, hermesID, int(sr.GetProposalID()))
 		if err != nil {
 			return fmt.Errorf("cannot start session %s: %w", string(sessionInstance.ID), err)
 		}
+
+		sessionID = string(sessionInstance.ID)
+
 		tracer.EndStage(sessionStartTrace)
 
 		eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{

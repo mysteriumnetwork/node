@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -49,7 +50,7 @@ type HermesPromise struct {
 	Promise     crypto.Promise
 	R           string
 	Revealed    bool
-	AgreementID uint64
+	AgreementID *big.Int
 }
 
 // Store stores the given promise for the given hermes.
@@ -62,7 +63,7 @@ func (aps *HermesPromiseStorage) Store(id identity.Identity, hermesID common.Add
 		return err
 	}
 
-	if previousPromise.Promise.Amount >= promise.Promise.Amount {
+	if previousPromise.Promise.Amount != nil && previousPromise.Promise.Amount.Cmp(promise.Promise.Amount) >= 0 {
 		return ErrAttemptToOverwrite
 	}
 

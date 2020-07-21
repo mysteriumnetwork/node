@@ -18,7 +18,7 @@
 package pingpong
 
 import (
-	"math"
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/market"
@@ -30,7 +30,7 @@ func isServiceFree(method market.PaymentMethod) bool {
 		return true
 	}
 
-	if method.GetPrice().Amount == 0 {
+	if method.GetPrice().Amount.Cmp(big.NewInt(0)) == 0 {
 		return true
 	}
 
@@ -42,9 +42,9 @@ func isServiceFree(method market.PaymentMethod) bool {
 }
 
 // CalculatePaymentAmount calculates the required payment amount.
-func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, method market.PaymentMethod) uint64 {
+func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTransferred, method market.PaymentMethod) *big.Int {
 	if isServiceFree(method) {
-		return 0
+		return new(big.Int)
 	}
 
 	var ticksPassed float64
@@ -55,15 +55,20 @@ func CalculatePaymentAmount(timePassed time.Duration, bytesTransferred DataTrans
 		ticksPassed = float64(timePassed) / float64(method.GetRate().PerTime)
 	}
 
-	timeComponent := uint64(math.Round(ticksPassed * float64(price)))
+	ticks := big.NewFloat(ticksPassed)
+	timeComponent := new(big.Float).Mul(ticks, new(big.Float).SetInt(price))
 
 	var chunksTransferred float64
 	if method.GetRate().PerByte > 0 {
 		chunksTransferred = float64(bytesTransferred.sum()) / float64(method.GetRate().PerByte)
 	}
 
-	byteComponent := uint64(math.Round(chunksTransferred * float64(price)))
-	total := timeComponent + byteComponent
+	chunks := big.NewFloat(chunksTransferred)
+	byteComponent := new(big.Float).Mul(chunks, new(big.Float).SetInt(price))
+	tc, _ := timeComponent.Int(nil)
+	bc, _ := byteComponent.Int(nil)
+
+	total := new(big.Int).Add(tc, bc)
 	log.Debug().Msgf("Calculated price %v. Time component: %v, data component: %v ", total, timeComponent, byteComponent)
 	return total
 }

@@ -18,6 +18,7 @@
 package session
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -49,7 +50,7 @@ type History struct {
 	ProviderCountry string
 	DataSent        uint64
 	DataReceived    uint64
-	Tokens          uint64
+	Tokens          *big.Int
 
 	Status  string
 	Started time.Time

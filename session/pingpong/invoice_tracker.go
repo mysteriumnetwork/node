@@ -24,6 +24,7 @@ import (
 	stdErr "errors"
 	"fmt"
 	"math"
+	"math/big"
 	"math/rand"
 	"strings"
 	"sync"
@@ -65,7 +66,7 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
-const providerFirstInvoiceValue = 1
+var providerFirstInvoiceValue = big.NewInt(1)
 
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
@@ -79,8 +80,8 @@ type bcHelper interface {
 type providerInvoiceStorage interface {
 	Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error)
 	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
-	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
-	GetR(providerID identity.Identity, agreementID uint64) (string, error)
+	StoreR(providerIdentity identity.Identity, agreementID *big.Int, r string) error
+	GetR(providerID identity.Identity, agreementID *big.Int) (string, error)
 }
 
 type promiseHandler interface {
@@ -118,7 +119,7 @@ type InvoiceTracker struct {
 	maxNotSentExchangeMessages     uint64
 	once                           sync.Once
 	rnd                            *rand.Rand
-	agreementID                    uint64
+	agreementID                    *big.Int
 	firstInvoicePaid               bool
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
@@ -159,13 +160,21 @@ type InvoiceTrackerDeps struct {
 	ChannelAddressCalculator   channelAddressCalculator
 	SessionID                  string
 	PromiseHandler             promiseHandler
-	MaxNotPaidInvoice          uint64
+	MaxNotPaidInvoice          *big.Int
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
 func NewInvoiceTracker(
 	itd InvoiceTrackerDeps) *InvoiceTracker {
 	return &InvoiceTracker{
+		lastExchangeMessage: crypto.ExchangeMessage{
+			Promise: crypto.Promise{
+				Amount: new(big.Int),
+				Fee:    new(big.Int),
+			},
+			AgreementID:    new(big.Int),
+			AgreementTotal: new(big.Int),
+		},
 		stop:                           make(chan struct{}),
 		deps:                           itd,
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
@@ -228,7 +237,9 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 
 func (it *InvoiceTracker) generateAgreementID() {
 	it.rnd.Seed(time.Now().UnixNano())
-	it.agreementID = it.rnd.Uint64()
+	agreementID := make([]byte, 32)
+	it.rnd.Read(agreementID)
+	it.agreementID = new(big.Int).SetBytes(agreementID)
 }
 
 func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error {
@@ -335,7 +346,7 @@ func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
 			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 			lastEM := it.getLastExchangeMessage()
 			diff := safeSub(shouldBe, lastEM.AgreementTotal)
-			if diff >= it.deps.MaxNotPaidInvoice && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
+			if diff.Cmp(it.deps.MaxNotPaidInvoice) >= 0 && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
 				it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
 				it.invoiceChannel <- true
 			} else if currentlyElapsed-it.lastInvoiceSent > it.deps.ChargePeriod {
@@ -439,14 +450,14 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 
 	lastEm := it.getLastExchangeMessage()
-	if lastEm.AgreementTotal == 0 && shouldBe > 0 {
+	if lastEm.AgreementTotal.Cmp(big.NewInt(0)) == 0 && shouldBe.Cmp(big.NewInt(0)) == 1 {
 		// The first invoice should have minimal static value.
 		shouldBe = providerFirstInvoiceValue
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
 	r := it.generateR()
-	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, 0, r)
+	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r)
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
@@ -585,7 +596,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	lastEm := it.getLastExchangeMessage()
-	if em.Promise.Amount < lastEm.Promise.Amount {
+	if em.Promise.Amount.Cmp(lastEm.Promise.Amount) == -1 {
 		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", lastEm.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}

@@ -260,14 +260,12 @@ func (c *channel) remoteReadLoop() {
 			close(c.remoteAlive)
 		})
 
-		// Check if peer port changed.
+		// Check if peer address changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
-			if addr.IP.Equal(latestPeerAddr.IP) {
-				if addr.Port != latestPeerAddr.Port {
-					log.Debug().Msgf("Peer port changed from %d to %d", latestPeerAddr.Port, addr.Port)
-					c.peer.updateAddr(addr)
-					latestPeerAddr = addr
-				}
+			if !addr.IP.Equal(latestPeerAddr.IP) || addr.Port != latestPeerAddr.Port {
+				log.Debug().Msgf("Peer address changed from %v to %v", latestPeerAddr, addr)
+				c.peer.updateAddr(addr)
+				latestPeerAddr = addr
 			}
 		}
 
@@ -401,6 +399,7 @@ func (c *channel) handleRequest(msg *transportMsg) {
 	if err != nil {
 		log.Err(err).Msgf("Handler %q internal error", msg.topic)
 		resMsg.statusCode = statusCodeInternalErr
+		resMsg.msg = err.Error()
 	} else if ctx.publicError != nil {
 		log.Err(ctx.publicError).Msgf("Handler %q public error", msg.topic)
 		resMsg.statusCode = statusCodePublicErr
@@ -489,7 +488,7 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 			if res.statusCode == statusCodeHandlerNotFoundErr {
 				return nil, fmt.Errorf("%s: %w", string(res.data), ErrHandlerNotFound)
 			}
-			return nil, errors.New("internal peer error")
+			return nil, fmt.Errorf("peer error: %w", errors.New(res.msg))
 		}
 		return &Message{Data: res.data}, nil
 	}
