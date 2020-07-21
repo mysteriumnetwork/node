@@ -63,6 +63,14 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     description: Direction to filter the sessions by. Possible values are "Provider", "Consumed".
 //     type: string
 //   - in: query
+//     name: service_type
+//     description: Service type to filter the sessions by.
+//     type: string
+//   - in: query
+//     name: status
+//     description: Status to filter the sessions by. Possible values are "New", "Completed".
+//     type: string
+//   - in: query
 //     name: page
 //     description: Page to filter the sessions by.
 //     type: string
@@ -104,6 +112,12 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 
 	if direction := request.URL.Query().Get("direction"); direction != "" {
 		query.FilterDirection(direction)
+	}
+	if serviceType := request.URL.Query().Get("service_type"); serviceType != "" {
+		query.FilterServiceType(serviceType)
+	}
+	if status := request.URL.Query().Get("status"); status != "" {
+		query.FilterStatus(status)
 	}
 
 	page := 1

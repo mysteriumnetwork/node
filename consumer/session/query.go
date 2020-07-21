@@ -22,40 +22,7 @@ import (
 
 	"github.com/asdine/storm/v3"
 	"github.com/asdine/storm/v3/q"
-	"github.com/mysteriumnetwork/node/identity"
 )
-
-// NewStats initiates zero Stats instance.
-func NewStats() Stats {
-	return Stats{
-		ConsumerCounts: make(map[identity.Identity]int),
-	}
-}
-
-// Stats holds structure of aggregate session statistics.
-type Stats struct {
-	Count           int
-	ConsumerCounts  map[identity.Identity]int
-	SumDataSent     uint64
-	SumDataReceived uint64
-	SumDuration     time.Duration
-	SumTokens       uint64
-}
-
-func (s *Stats) add(session History) {
-	s.Count++
-
-	if _, found := s.ConsumerCounts[session.ConsumerID]; !found {
-		s.ConsumerCounts[session.ConsumerID] = 1
-	} else {
-		s.ConsumerCounts[session.ConsumerID]++
-	}
-
-	s.SumDataReceived += session.DataReceived
-	s.SumDataSent += session.DataSent
-	s.SumDuration += session.GetDuration()
-	s.SumTokens += session.Tokens
-}
 
 // NewQuery creates instance of new query.
 func NewQuery() *Query {
@@ -70,9 +37,11 @@ type Query struct {
 	Stats      Stats
 	StatsByDay map[time.Time]Stats
 
-	filterFrom      *time.Time
-	filterTo        *time.Time
-	filterDirection *string
+	filterFrom        *time.Time
+	filterTo          *time.Time
+	filterDirection   *string
+	filterServiceType *string
+	filterStatus      *string
 
 	fetch []q.Matcher
 }
@@ -97,6 +66,18 @@ func (qr *Query) FilterDirection(direction string) *Query {
 	return qr
 }
 
+// FilterServiceType filters fetched sessions by service type.
+func (qr *Query) FilterServiceType(serviceType string) *Query {
+	qr.filterServiceType = &serviceType
+	return qr
+}
+
+// FilterStatus filters fetched sessions by status.
+func (qr *Query) FilterStatus(status string) *Query {
+	qr.filterStatus = &status
+	return qr
+}
+
 // FetchSessions fetches list of sessions to Query.Sessions.
 func (qr *Query) FetchSessions() *Query {
 	return qr
@@ -109,7 +90,7 @@ func (qr *Query) FetchStats() *Query {
 	qr.fetch = append(
 		qr.fetch,
 		matcher(func(session History) bool {
-			qr.Stats.add(session)
+			qr.Stats.Add(session)
 			return true
 		}),
 	)
@@ -135,7 +116,7 @@ func (qr *Query) FetchStatsByDay() *Query {
 			i := session.Started.Truncate(stepDay)
 
 			stats := qr.StatsByDay[i]
-			stats.add(session)
+			stats.Add(session)
 			qr.StatsByDay[i] = stats
 			return true
 		}),
@@ -154,6 +135,12 @@ func (qr *Query) run(node storm.Node) error {
 	}
 	if qr.filterDirection != nil {
 		where = append(where, q.Eq("Direction", qr.filterDirection))
+	}
+	if qr.filterServiceType != nil {
+		where = append(where, q.Eq("ServiceType", qr.filterServiceType))
+	}
+	if qr.filterStatus != nil {
+		where = append(where, q.Eq("Status", qr.filterStatus))
 	}
 
 	sq := node.

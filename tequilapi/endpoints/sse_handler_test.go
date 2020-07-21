@@ -137,6 +137,14 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     },
     "service_info": null,
     "sessions": [],
+    "sessions_stats": {
+      "count": 0,
+      "count_consumers": 0,
+      "sum_bytes_received": 0,
+      "sum_bytes_sent": 0,
+      "sum_duration": 0,
+      "sum_tokens": 0
+	},
     "consumer": {
       "connection": {
         "status": ""
@@ -167,6 +175,14 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     },
     "service_info": null,
     "sessions": [],
+    "sessions_stats": {
+      "count": 0,
+      "count_consumers": 0,
+      "sum_bytes_received": 0,
+      "sum_bytes_sent": 0,
+      "sum_duration": 0,
+      "sum_tokens": 0
+	},
     "consumer": {
       "connection": {
         "status": ""
@@ -204,6 +220,14 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     },
     "service_info": null,
     "sessions": [],
+    "sessions_stats": {
+      "count": 0,
+      "count_consumers": 0,
+      "sum_bytes_received": 0,
+      "sum_bytes_sent": 0,
+      "sum_duration": 0,
+      "sum_tokens": 0
+	},
     "consumer": {
       "connection": {
         "status": "Connecting"
