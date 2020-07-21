@@ -174,10 +174,13 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			log.Err(err).Msg("Could not create channel")
 			return
 		}
+
 		channel.setServiceConn(conn2)
 		channel.setUpnpPortsRelease(config.upnpPortsRelease)
 
 		channelHandlers(channel)
+
+		channel.launchReadSendLoops()
 
 		// Send handlers ready to consumer.
 		if err := m.providerChannelHandlersReady(providerID, serviceType); err != nil {
