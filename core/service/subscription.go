@@ -112,7 +112,7 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
 			ID:          string(sessionInstance.ID),
-			PaymentInfo: string(session.PaymentVersionV3),
+			PaymentInfo: "v3",
 			Config:      data,
 		})
 		return c.OkWithReply(pc)

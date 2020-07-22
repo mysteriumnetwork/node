@@ -71,7 +71,6 @@ var (
 		ServiceDefinition: &fakeServiceDefinition{},
 	}
 	establishedSessionID = session.ID("session-100")
-	paymentInfo          session.PaymentInfo
 )
 
 func (tc *testContext) SetupTest() {
@@ -127,7 +126,6 @@ func (tc *testContext) SetupTest() {
 		func(channel p2p.Channel,
 			consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
-				initialState:      session.PaymentInfo{},
 				paymentDefinition: market.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
@@ -409,13 +407,6 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	assert.True(tc.T(), found)
 }
 
-func (tc *testContext) Test_ManagerSetsPaymentInfo() {
-	paymentInfo := session.PaymentInfo{}
-	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
-	assert.Nil(tc.T(), err)
-	assert.Exactly(tc.T(), paymentInfo, tc.MockPaymentIssuer.initialState)
-}
-
 func (tc *testContext) Test_ManagerPublishesEvents() {
 	tc.stubPublisher.Clear()
 
@@ -557,7 +548,6 @@ type fakeServiceDefinition struct{}
 func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
 
 type MockPaymentIssuer struct {
-	initialState      session.PaymentInfo
 	paymentDefinition market.PaymentRate
 	startCalled       bool
 	stopCalled        bool
@@ -653,8 +643,7 @@ func (m *mockP2PChannel) Send(_ context.Context, topic string, msg *p2p.Message)
 	switch topic {
 	case p2p.TopicSessionCreate:
 		res := &pb.SessionResponse{
-			ID:          string(establishedSessionID),
-			PaymentInfo: string(paymentInfo.Supports),
+			ID: string(establishedSessionID),
 		}
 		return p2p.ProtoMessage(res), nil
 	case p2p.TopicSessionStatus:
