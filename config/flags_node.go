@@ -113,12 +113,6 @@ var (
 		Usage: "URL of my.mysterium.network API",
 		Value: metadata.DefaultNetwork.MMNAddress,
 	}
-	// FlagMMNEnabled registers node to my.mysterium.network.
-	FlagMMNEnabled = cli.BoolFlag{
-		Name:  "mymysterium.enabled",
-		Usage: "Enables my.mysterium.network integration",
-		Value: true,
-	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
 	FlagOpenvpnBinary = cli.StringFlag{
 		Name:  "openvpn.binary",
@@ -229,7 +223,6 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagLogHTTP,
 		&FlagLogLevel,
 		&FlagMMNAddress,
-		&FlagMMNEnabled,
 		&FlagOpenvpnBinary,
 		&FlagQualityType,
 		&FlagQualityAddress,
@@ -271,7 +264,6 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
 	Current.ParseStringFlag(ctx, FlagMMNAddress)
-	Current.ParseBoolFlag(ctx, FlagMMNEnabled)
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
 	Current.ParseStringFlag(ctx, FlagQualityType)

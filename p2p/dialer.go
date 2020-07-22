@@ -128,6 +128,8 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 		return nil, fmt.Errorf("could not create p2p channel: %w", err)
 	}
 	channel.setServiceConn(conn2)
+	channel.launchReadSendLoops()
+
 	return channel, nil
 }
 

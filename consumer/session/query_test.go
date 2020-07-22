@@ -113,16 +113,83 @@ func TestSessionQuery_FetchStats(t *testing.T) {
 	err = storage.Query(query)
 	// then
 	assert.Nil(t, err)
+	assert.Equal(t, NewStats(), query.Stats)
+}
+
+func TestSessionQuery_FetchStatsByDay(t *testing.T) {
+	// given
+	sessionExpected := History{
+		SessionID:    session_node.ID("session1"),
+		Direction:    "Provided",
+		ConsumerID:   identity.FromAddress("consumer1"),
+		DataSent:     1234,
+		DataReceived: 123,
+		Tokens:       big.NewInt(12),
+		Started:      time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+		Updated:      time.Date(2020, 6, 17, 10, 11, 32, 0, time.UTC),
+		Status:       "New",
+	}
+	storage, storageCleanup := newStorageWithSessions(sessionExpected)
+	defer storageCleanup()
+
+	// when
+	query := NewQuery().
+		FilterFrom(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
+		FilterTo(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
+		FetchStatsByDay()
+	err := storage.Query(query)
+	// then
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		Stats{
-			Count:           0,
-			ConsumerCounts:  map[identity.Identity]int{},
-			SumDataSent:     0,
-			SumDataReceived: 0,
-			SumTokens:       big.NewInt(0),
-			SumDuration:     0 * time.Second,
+		map[time.Time]Stats{
+			time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC): NewStats(),
 		},
-		query.Stats,
+		query.StatsByDay,
 	)
+
+	// when
+	query = NewQuery().
+		FilterFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
+		FilterTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
+		FetchStatsByDay()
+	err = storage.Query(query)
+	// then
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		map[time.Time]Stats{
+			time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC): {
+				Count: 1,
+				ConsumerCounts: map[identity.Identity]int{
+					identity.FromAddress("consumer1"): 1,
+				},
+				SumDataSent:     1234,
+				SumDataReceived: 123,
+				SumTokens:       big.NewInt(12),
+				SumDuration:     20 * time.Second,
+			},
+			time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC): NewStats(),
+		},
+		query.StatsByDay,
+	)
+
+	// when
+	query = NewQuery().
+		FilterFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
+		FilterTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
+		FilterDirection(DirectionConsumed).
+		FetchStatsByDay()
+	err = storage.Query(query)
+	// then
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		map[time.Time]Stats{
+			time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC): NewStats(),
+			time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC): NewStats(),
+		},
+		query.StatsByDay,
+	)
+	return
 }

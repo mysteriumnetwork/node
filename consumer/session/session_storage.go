@@ -18,6 +18,7 @@
 package session
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -103,6 +104,7 @@ func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession)
 			ServiceType:     e.Session.Proposal.ServiceType,
 			ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 			Started:         e.Session.StartedAt.UTC(),
+			Tokens:          new(big.Int),
 		}
 		repo.mu.Unlock()
 
@@ -159,6 +161,7 @@ func (repo *Storage) consumeConnectionSessionEvent(e connection.AppEventConnecti
 			ServiceType:     e.SessionInfo.Proposal.ServiceType,
 			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
 			Started:         e.SessionInfo.StartedAt.UTC(),
+			Tokens:          new(big.Int),
 		}
 		repo.mu.Unlock()
 

@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -206,11 +207,12 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NATStatus  contract.NATStatusDTO     `json:"nat_status"`
-	Services   []contract.ServiceInfoDTO `json:"service_info"`
-	Sessions   []contract.SessionDTO     `json:"sessions"`
-	Consumer   consumerStateRes          `json:"consumer"`
-	Identities []contract.IdentityDTO    `json:"identities"`
+	NATStatus     contract.NATStatusDTO     `json:"nat_status"`
+	Services      []contract.ServiceInfoDTO `json:"service_info"`
+	Sessions      []contract.SessionDTO     `json:"sessions"`
+	SessionsStats contract.SessionStatsDTO  `json:"sessions_stats"`
+	Consumer      consumerStateRes          `json:"consumer"`
+	Identities    []contract.IdentityDTO    `json:"identities"`
 }
 
 type consumerStateRes struct {
@@ -232,14 +234,17 @@ func mapState(event stateEvent.State) stateRes {
 	}
 
 	sessionsRes := make([]contract.SessionDTO, len(event.Sessions))
+	sessionsStats := session.NewStats()
 	for idx, se := range event.Sessions {
 		sessionsRes[idx] = contract.NewSessionDTO(se)
+		sessionsStats.Add(se)
 	}
 
 	res := stateRes{
-		NATStatus: event.NATStatus,
-		Services:  event.Services,
-		Sessions:  sessionsRes,
+		NATStatus:     event.NATStatus,
+		Services:      event.Services,
+		Sessions:      sessionsRes,
+		SessionsStats: contract.NewSessionStatsDTO(sessionsStats),
 		Consumer: consumerStateRes{
 			Connection: contract.NewConnectionDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice),
 		},

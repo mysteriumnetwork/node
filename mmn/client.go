@@ -18,29 +18,24 @@
 package mmn
 
 import (
+	"io/ioutil"
+
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/rs/zerolog/log"
 )
 
 // NodeInformationDto contains node information to be sent to MMN
 type NodeInformationDto struct {
-	MACAddress  string `json:"mac_address"` // SHA256 hash
+	// local IP is used to give quick access to WebUI from MMN
 	LocalIP     string `json:"local_ip"`
+	Identity    string `json:"identity"`
+	APIKey      string `json:"api_key"`
+	VendorID    string `json:"vendor_id"`
 	OS          string `json:"os"`
 	Arch        string `json:"arch"`
 	NodeVersion string `json:"node_version"`
-	Identity    string `json:"identity"`
-	VendorID    string `json:"vendor_id"`
-	IsProvider  bool   `json:"is_provider"`
-	IsClient    bool   `json:"is_client"`
-}
-
-// NodeTypeDto contains node type information to be sent to MMN
-type NodeTypeDto struct {
-	IsProvider bool   `json:"is_provider"`
-	IsClient   bool   `json:"is_client"`
-	Identity   string `json:"identity"`
 }
 
 // NewClient returns MMN API client
@@ -58,8 +53,10 @@ type client struct {
 	signer     identity.SignerFactory
 }
 
+// RegisterNode does an HTTP call to MMN and registers node
 func (m *client) RegisterNode(info *NodeInformationDto) error {
 	log.Debug().Msgf("Registering node to MMN: %+v", *info)
+
 	id := identity.FromAddress(info.Identity)
 	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", info, m.signer(id))
 	if err != nil {
@@ -69,24 +66,20 @@ func (m *client) RegisterNode(info *NodeInformationDto) error {
 	return m.httpClient.DoRequest(req)
 }
 
-func (m *client) UpdateNodeType(info *NodeInformationDto) error {
-	log.Debug().Msgf("Updating node type: %+v", *info)
-	id := identity.FromAddress(info.Identity)
-	nodeType := NodeTypeDto{
-		IsProvider: info.IsProvider,
-		IsClient:   info.IsClient,
-		Identity:   info.Identity,
-	}
-
-	req, err := requests.NewSignedPostRequest(
-		m.mmnAddress,
-		"node/type",
-		nodeType,
-		m.signer(id),
-	)
+// GetReport does an HTTP call to MMN and fetches node report
+func (m *client) GetReport(identityStr string) (string, error) {
+	id := identity.FromAddress(identityStr)
+	req, err := requests.NewSignedGetRequest(m.mmnAddress, "node/report?identity="+identityStr, m.signer(id))
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return m.httpClient.DoRequest(req)
+	res, err := m.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+
+	return string(body), nil
 }

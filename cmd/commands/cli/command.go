@@ -27,6 +27,9 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
@@ -39,8 +42,6 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
 )
 
 const cliCommandName = "cli"
@@ -177,6 +178,7 @@ func (c *cliApp) handleActions(line string) {
 		{"proposals", c.proposals},
 		{"service", c.service},
 		{"stake", c.stake},
+		{"mmn", c.mmnApiKey},
 	}
 
 	for _, cmd := range staticCmds {
@@ -421,6 +423,31 @@ func (c *cliApp) payout(argsString string) {
 		fmt.Println(usage)
 		return
 	}
+}
+
+func (c *cliApp) mmnApiKey(argsString string) {
+	args := strings.Fields(argsString)
+
+	const profileUrl = "https://my.mysterium.network/user/profile"
+	const usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
+
+	if len(args) == 0 {
+		info(usage)
+		return
+	}
+
+	apiKey := args[0]
+
+	err := c.tequilapi.SetMMNApiKey(contract.MMNApiKeyRequest{
+		ApiKey: apiKey,
+	})
+
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	success(fmt.Sprint("MMN API key configured."))
 }
 
 func (c *cliApp) disconnect() {
@@ -670,6 +697,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 		readline.PcItem("proposals"),
 		readline.PcItem("location"),
 		readline.PcItem("disconnect"),
+		readline.PcItem("mmn"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
 		readline.PcItem("stop"),

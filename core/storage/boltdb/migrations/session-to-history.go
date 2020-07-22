@@ -18,6 +18,7 @@
 package migrations
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/asdine/storm/v3"
@@ -62,6 +63,7 @@ func (s Session) ToSessionHistory() consumer_session.History {
 		Updated:         s.Updated,
 		DataSent:        s.DataStats.BytesSent,
 		DataReceived:    s.DataStats.BytesReceived,
+		Tokens:          new(big.Int),
 	}
 }
 

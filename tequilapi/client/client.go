@@ -23,10 +23,12 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // NewClient returns a new instance of Client
@@ -562,4 +564,38 @@ func (client *Client) Beneficiary(address string) (res contract.IdentityBenefici
 
 	err = parseResponseJSON(response, &res)
 	return res, err
+}
+
+// SetMMNApiKey sets MMN's API key in config and registers node to MMN
+func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
+	response, err := client.http.Post("mmn/api-key", data)
+
+	// non 200 status codes return a generic error and we can't use it, instead
+	// the response contains validation JSON which we can use to extract the error
+	if err != nil && response == nil {
+		return err
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode == 200 {
+		return nil
+	}
+
+	// TODO this should probably be wrapped and moved into the validation package
+	type validationResponse struct {
+		Message string                              `json:"message"`
+		Errors  map[string][]*validation.FieldError `json:"errors"`
+	}
+	res := validationResponse{}
+	err = parseResponseJSON(response, &res)
+	if err != nil {
+		return err
+	}
+
+	if res.Errors != nil && res.Errors["api_key"] != nil && res.Errors["api_key"][0] != nil {
+		return errors.New((res.Errors["api_key"][0]).Message)
+	}
+
+	return nil
 }

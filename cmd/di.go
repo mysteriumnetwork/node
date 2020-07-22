@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
 	appconfig "github.com/mysteriumnetwork/node/config"
@@ -57,6 +58,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
@@ -74,6 +76,7 @@ import (
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/netutil"
+
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -161,6 +164,8 @@ type Dependencies struct {
 	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
+
+	MMN *mmn.MMN
 }
 
 // Bootstrap initiates all container dependencies
@@ -552,6 +557,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, common.HexToAddress(nodeOptions.Hermes.HermesID))
 	tequilapi_endpoints.AddRoutesForConfig(router)
+	tequilapi_endpoints.AddRoutesForMMN(router, di.MMN)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {

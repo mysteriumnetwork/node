@@ -311,6 +311,7 @@ func (k *Keeper) addSession(e sevent.AppEventSession) {
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 		Started:         e.Session.StartedAt,
 		Status:          session.StatusNew,
+		Tokens:          big.NewInt(0),
 	})
 }
 

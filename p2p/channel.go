@@ -225,12 +225,14 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		remoteAlive:      make(chan struct{}, 1),
 	}
 
+	return &c, nil
+}
+
+func (c *channel) launchReadSendLoops() {
 	go c.remoteReadLoop()
 	go c.remoteSendLoop()
 	go c.localReadLoop()
 	go c.localSendLoop()
-
-	return &c, nil
 }
 
 // remoteReadLoop reads from remote conn and writes to local KCP UDP conn.

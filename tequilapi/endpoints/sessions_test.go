@@ -53,6 +53,9 @@ var (
 	sessionStatsMock = session.Stats{
 		Count: 1,
 	}
+	sessionStatsByDayMock = map[time.Time]session.Stats{
+		connectionSessionMock.Started: sessionStatsMock,
+	}
 )
 
 func Test_SessionsEndpoint_SessionToDto(t *testing.T) {
@@ -79,8 +82,9 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	assert.Nil(t, err)
 
 	ssm := &sessionStorageMock{
-		sessionsToReturn: sessionsMock,
-		statsToReturn:    sessionStatsMock,
+		sessionsToReturn:   sessionsMock,
+		statsToReturn:      sessionStatsMock,
+		statsByDayToReturn: sessionStatsByDayMock,
 	}
 
 	resp := httptest.NewRecorder()
@@ -96,12 +100,13 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 			Sessions: []contract.SessionDTO{
 				contract.NewSessionDTO(connectionSessionMock),
 			},
-			Stats: contract.NewSessionStatsDTO(sessionStatsMock),
 			Paging: contract.PagingDTO{
 				TotalItems:  1,
 				TotalPages:  1,
 				CurrentPage: 1,
 			},
+			Stats:      contract.NewSessionStatsDTO(sessionStatsMock),
+			StatsDaily: contract.NewSessionStatsDailyDTO(sessionStatsByDayMock),
 		},
 		parsedResponse,
 	)
@@ -132,13 +137,15 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 }
 
 type sessionStorageMock struct {
-	sessionsToReturn []session.History
-	statsToReturn    session.Stats
-	errToReturn      error
+	sessionsToReturn   []session.History
+	statsToReturn      session.Stats
+	statsByDayToReturn map[time.Time]session.Stats
+	errToReturn        error
 }
 
 func (ssm *sessionStorageMock) Query(query *session.Query) error {
 	query.Sessions = ssm.sessionsToReturn
 	query.Stats = ssm.statsToReturn
+	query.StatsByDay = ssm.statsByDayToReturn
 	return ssm.errToReturn
 }

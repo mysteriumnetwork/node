@@ -112,7 +112,6 @@ func GetOptions() *Options {
 		Discovery: *GetDiscoveryOptions(),
 		MMN: OptionsMMN{
 			Address: config.GetString(config.FlagMMNAddress),
-			Enabled: config.GetBool(config.FlagMMNEnabled),
 		},
 		Quality: OptionsQuality{
 			Type:    QualityType(config.GetString(config.FlagQualityType)),

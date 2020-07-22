@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package contract
 
-// OptionsMMN describes possible parameters of my.mysterium.network configuration
-type OptionsMMN struct {
-	Address string
+// MMNApiKeyRequest request used to manage MMN's API key.
+// swagger:model MMNApiKeyRequest
+type MMNApiKeyRequest struct {
+	ApiKey string `json:"api_key"`
 }
