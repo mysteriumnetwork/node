@@ -187,12 +187,13 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 	log.Info().Msg("Using new payments")
 	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
 	if err != nil {
+		session.Close()
 		return session, err
 	}
 
 	// stop the balance tracker once the session is finished
 	go func() {
-		<-session.done
+		<-session.Done()
 		engine.Stop()
 	}()
 
@@ -200,13 +201,13 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 		err := engine.Start()
 		if err != nil {
 			log.Error().Err(err).Msg("Payment engine error")
-			manager.destroySession(*session)
+			session.Close()
 		}
 	}()
 
 	log.Info().Msg("Waiting for a first invoice to be paid")
 	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
-		manager.destroySession(*session)
+		session.Close()
 		return session, fmt.Errorf("first invoice was not paid: %w", err)
 	}
 
@@ -221,17 +222,14 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 	session, found := manager.sessionStorage.Find(session.ID(sessionID))
-
 	if !found {
 		return ErrorSessionNotExists
 	}
-
 	if session.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
 	}
 
 	manager.publisher.Publish(sevent.AppTopicSession, session.toEvent(sevent.AcknowledgedStatus))
-
 	return nil
 }
 
@@ -244,7 +242,7 @@ func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, s
 	})
 	if ok {
 		log.Info().Msgf("Cleaning stale session %s for %s consumer", session.ID, consumerID.Address)
-		go manager.destroySession(session)
+		go session.Close()
 	}
 }
 
@@ -254,31 +252,15 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 	if !found {
 		return ErrorSessionNotExists
 	}
-
 	if session.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
 	}
-	manager.channel.Close()
-	manager.destroySession(session)
 
+	session.Close()
 	return nil
 }
 
-func (manager *SessionManager) destroySession(session Session) {
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
-
-	manager.sessionStorage.Remove(session.ID)
-
-	close(session.done)
-}
-
 func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel) {
-	// TODO: Remove this check once all provider migrates to p2p.
-	if channel == nil {
-		return
-	}
-
 	// Register handler for handling p2p keep alive pings from consumer.
 	channel.Handle(p2p.TopicKeepAlive, func(c p2p.Context) error {
 		var ping pb.P2PKeepAlivePing
@@ -294,7 +276,10 @@ func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel)
 	var errCount int
 	for {
 		select {
-		case <-sess.done:
+		case <-sess.Done():
+			// Give some time for channel to finish sending last message.
+			time.Sleep(10 * time.Second)
+			channel.Close()
 			return
 		case <-time.After(manager.config.KeepAlive.SendInterval):
 			if err := manager.sendKeepAlivePing(channel, sess.ID); err != nil {

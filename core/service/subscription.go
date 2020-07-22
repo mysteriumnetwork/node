@@ -94,6 +94,7 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 		provideConfigTrace := tracer.StartStage("Provider config")
 		config, err := service.ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
+			sessionInstance.Close()
 			return fmt.Errorf("cannot get provider config for session %s: %w", string(sessionInstance.ID), err)
 		}
 		tracer.EndStage(provideConfigTrace)
@@ -119,7 +120,7 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 	})
 }
 
-func subscribeSessionStatus(mng *SessionManager, ch p2p.ChannelHandler, statusStorage connectivity.StatusStorage) {
+func subscribeSessionStatus(ch p2p.ChannelHandler, statusStorage connectivity.StatusStorage) {
 	ch.Handle(p2p.TopicSessionStatus, func(c p2p.Context) error {
 		var ss pb.SessionStatus
 		if err := c.Request().UnmarshalProto(&ss); err != nil {
@@ -140,7 +141,7 @@ func subscribeSessionStatus(mng *SessionManager, ch p2p.ChannelHandler, statusSt
 	})
 }
 
-func subscribeSessionDestroy(mng *SessionManager, ch p2p.ChannelHandler, done func()) {
+func subscribeSessionDestroy(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicSessionDestroy, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
@@ -156,8 +157,6 @@ func subscribeSessionDestroy(mng *SessionManager, ch p2p.ChannelHandler, done fu
 			if err != nil {
 				log.Err(err).Msgf("Could not destroy session %s: %v", sessionID, err)
 			}
-
-			done()
 		}()
 
 		return c.OK()

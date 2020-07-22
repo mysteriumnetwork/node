@@ -39,6 +39,11 @@ type Session struct {
 	done         chan struct{}
 }
 
+// Close ends session.
+func (s *Session) Close() {
+	close(s.done)
+}
+
 // Done returns readonly done channel.
 func (s *Session) Done() <-chan struct{} {
 	return s.done

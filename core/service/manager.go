@@ -19,7 +19,6 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -144,13 +143,9 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		instance.addP2PChannel(ch)
 		mng := manager.sessionManager(proposal, string(id), ch)
 		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, proposal, policyRules)
-		subscribeSessionStatus(mng, ch, manager.statusStorage)
+		subscribeSessionStatus(ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
-		subscribeSessionDestroy(mng, ch, func() {
-			// Give some time for channel to finish sending last message.
-			time.Sleep(10 * time.Second)
-			instance.closeP2PChannel(ch)
-		})
+		subscribeSessionDestroy(mng, ch)
 	}
 	stopP2PListener, err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
 	if err != nil {

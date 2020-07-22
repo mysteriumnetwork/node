@@ -18,6 +18,8 @@
 package service
 
 import (
+	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat/event"
+	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
@@ -65,6 +68,21 @@ func (m mockBalanceTracker) WaitFirstInvoice(time.Duration) error {
 func mockPaymentEngineFactory(providerID, consumerID identity.Identity, accountant common.Address, sessionID string) (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
+
+type mockP2PChannel struct{}
+
+func (m *mockP2PChannel) Send(_ context.Context, _ string, _ *p2p.Message) (*p2p.Message, error) {
+	return nil, nil
+}
+
+func (m *mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
+}
+
+func (m *mockP2PChannel) ServiceConn() *net.UDPConn { return nil }
+
+func (m *mockP2PChannel) Conn() *net.UDPConn { return nil }
+
+func (m *mockP2PChannel) Close() error { return nil }
 
 func TestManager_Start_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
@@ -166,5 +184,5 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 }
 
 func newManager(proposal market.ServiceProposal, sessions *SessionPool) *SessionManager {
-	return NewSessionManager(proposal, sessions, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
+	return NewSessionManager(proposal, sessions, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), &mockP2PChannel{}, DefaultConfig())
 }
