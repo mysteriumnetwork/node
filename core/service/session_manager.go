@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -156,7 +155,6 @@ type SessionManager struct {
 	natEventGetter       NATEventGetter
 	serviceId            string
 	publisher            publisher
-	creationLock         sync.Mutex
 	channel              p2p.Channel
 	config               Config
 }
@@ -164,9 +162,6 @@ type SessionManager struct {
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
-
 	if manager.currentProposal.ID != proposalID {
 		return &Session{}, ErrorInvalidProposal
 	}
@@ -226,8 +221,6 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 
 // Acknowledge marks the session as successfully established as far as the consumer is concerned.
 func (manager *SessionManager) Acknowledge(consumerID identity.Identity, sessionID string) error {
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
 	session, found := manager.sessionStorage.Find(session.ID(sessionID))
 	if !found {
 		return ErrorSessionNotExists
