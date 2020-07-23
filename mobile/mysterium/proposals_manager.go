@@ -132,20 +132,10 @@ func (m *proposalsManager) getProposals(req *GetProposalsRequest) ([]byte, error
 		}
 	}
 
-	// Get proposals from remote discovery api and store in cache.
-	upperTimePriceBound := req.UpperTimePriceBound
-	lowerTimePriceBound := req.LowerTimePriceBound
-	upperGBPriceBound := req.UpperGBPriceBound
-	lowerGBPriceBound := req.LowerGBPriceBound
-
 	filter := &proposal.Filter{
-		ServiceType:         req.ServiceType,
-		UpperTimePriceBound: upperTimePriceBound,
-		LowerTimePriceBound: lowerTimePriceBound,
-		UpperGBPriceBound:   upperGBPriceBound,
-		LowerGBPriceBound:   lowerGBPriceBound,
-		ExcludeUnsupported:  true,
-		IncludeFailed:       req.IncludeFailed,
+		ServiceType:        req.ServiceType,
+		ExcludeUnsupported: true,
+		IncludeFailed:      req.IncludeFailed,
 	}
 	apiProposals, err := m.getFromRepository(filter)
 	if err != nil {
@@ -167,7 +157,7 @@ func (m *proposalsManager) getFromRepository(filter *proposal.Filter) ([]market.
 	}
 
 	// Ideally api should allow to pass multiple service types to skip noop
-	// proposals, but for now jus filter in memory.
+	// proposals, but for now just filter in memory.
 	var res []market.ServiceProposal
 	for _, p := range allProposals {
 		if p.ServiceType == openvpn.ServiceType || p.ServiceType == wireguard.ServiceType {
