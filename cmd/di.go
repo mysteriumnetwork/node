@@ -129,10 +129,10 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 
-	ServicesManager       *service.Manager
-	ServiceRegistry       *service.Registry
-	ServiceSessionStorage *session.StorageMemory
-	ServiceFirewall       firewall.IncomingTrafficFirewall
+	ServicesManager *service.Manager
+	ServiceRegistry *service.Registry
+	ServiceSessions *session.SessionPool
+	ServiceFirewall firewall.IncomingTrafficFirewall
 
 	NATPinger  traversal.NATPinger
 	NATTracker *event.Tracker

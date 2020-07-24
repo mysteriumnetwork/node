@@ -135,7 +135,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			transportOptions,
 			loc.Country,
 			di.IPResolver,
-			di.ServiceSessionStorage,
+			di.ServiceSessions,
 			di.NATService,
 			di.NATTracker,
 			portPool,
@@ -210,7 +210,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 	di.ServiceRegistry = service.NewRegistry()
 
-	di.ServiceSessionStorage = session.NewStorageMemory(di.EventBus)
+	di.ServiceSessions = session.NewSessionPool(di.EventBus)
 
 	di.PolicyOracle = policy.NewOracle(
 		di.HTTPClient,
@@ -236,7 +236,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		)
 		return session.NewSessionManager(
 			proposal,
-			di.ServiceSessionStorage,
+			di.ServiceSessions,
 			paymentEngineFactory,
 			di.NATTracker,
 			serviceID,
@@ -256,7 +256,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		di.SessionConnectivityStatusStorage,
 	)
 
-	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
+	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessions}
 	if err := di.EventBus.Subscribe(servicestate.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
 		log.Error().Msg("Failed to subscribe service cleaner")
 	}
