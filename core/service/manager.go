@@ -70,7 +70,7 @@ func NewManager(
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
 	p2pListener p2p.Listener,
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager,
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.SessionManager,
 	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
@@ -95,7 +95,7 @@ type Manager struct {
 	policyOracle     *policy.Oracle
 
 	p2pListener    p2p.Listener
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.SessionManager
 	statusStorage  connectivity.StatusStorage
 }
 

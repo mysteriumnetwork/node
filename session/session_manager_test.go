@@ -164,6 +164,6 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.AcknowledgedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *Manager {
-	return NewManager(proposal, sessionStore, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
+func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *SessionManager {
+	return NewSessionManager(proposal, sessionStore, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
 }

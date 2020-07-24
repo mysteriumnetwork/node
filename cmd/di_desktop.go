@@ -219,7 +219,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
-	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
+	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.SessionManager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
@@ -234,7 +234,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.AccountantPromiseHandler,
 			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
-		return session.NewManager(
+		return session.NewSessionManager(
 			proposal,
 			di.ServiceSessionStorage,
 			paymentEngineFactory,
