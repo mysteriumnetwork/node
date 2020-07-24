@@ -54,6 +54,10 @@ type ConfigParams struct {
 	SessionDestroyCallback DestroyCallback
 }
 
+// ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
+// should be serializable to json format.
+type ServiceConfiguration interface{}
+
 type publisher interface {
 	Publish(topic string, data interface{})
 }
@@ -107,6 +111,13 @@ type Storage interface {
 
 // PaymentEngineFactory creates a new instance of payment engine
 type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
+
+// PaymentEngine is responsible for interacting with the consumer in regard to payments.
+type PaymentEngine interface {
+	Start() error
+	WaitFirstInvoice(time.Duration) error
+	Stop()
+}
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
