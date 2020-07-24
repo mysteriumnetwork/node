@@ -20,13 +20,14 @@ package service
 import (
 	"sync"
 
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 // SessionMap defines map of current sessions
 type SessionMap interface {
-	Add(session.Session)
-	Find(session.ID) (session.Session, bool)
+	Add(service.Session)
+	Find(session.ID) (service.Session, bool)
 	Remove(session.ID)
 }
 
@@ -63,7 +64,7 @@ func (cm *clientMap) Remove(clientID int) {
 }
 
 // GetSession returns ongoing session instance by given session id.
-func (cm *clientMap) GetSession(id session.ID) (session.Session, bool) {
+func (cm *clientMap) GetSession(id session.ID) (service.Session, bool) {
 	return cm.sessions.Find(id)
 }
 

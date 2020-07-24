@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"time"
@@ -24,12 +24,13 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
 )
 
 // Session structure holds all required information about current session between service consumer and provider.
 type Session struct {
-	ID           ID
+	ID           session.ID
 	ConsumerID   identity.Identity
 	AccountantID common.Address
 	Proposal     market.ServiceProposal
@@ -65,5 +66,5 @@ func NewSession() (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{ID: ID(uid.String())}, nil
+	return &Session{ID: session.ID(uid.String())}, nil
 }

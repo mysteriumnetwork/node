@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -46,7 +47,7 @@ var (
 )
 
 // IDGenerator defines method for session id generation
-type IDGenerator func() (ID, error)
+type IDGenerator func() (session.ID, error)
 
 // ConfigParams session configuration parameters
 type ConfigParams struct {
@@ -104,9 +105,9 @@ type PromiseProcessor interface {
 // Storage interface to session storage
 type Storage interface {
 	Add(sessionInstance Session)
-	Find(id ID) (Session, bool)
+	Find(id session.ID) (Session, bool)
 	FindBy(opts FindOpts) (Session, bool)
-	Remove(id ID)
+	Remove(id session.ID)
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
@@ -219,7 +220,7 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 func (manager *SessionManager) Acknowledge(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
-	session, found := manager.sessionStorage.Find(ID(sessionID))
+	session, found := manager.sessionStorage.Find(session.ID(sessionID))
 
 	if !found {
 		return ErrorSessionNotExists
@@ -249,7 +250,7 @@ func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, s
 
 // Destroy destroys session by given sessionID
 func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID string) error {
-	session, found := manager.sessionStorage.Find(ID(sessionID))
+	session, found := manager.sessionStorage.Find(session.ID(sessionID))
 	if !found {
 		return ErrorSessionNotExists
 	}
@@ -311,7 +312,7 @@ func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel)
 	}
 }
 
-func (manager *SessionManager) sendKeepAlivePing(channel p2p.Channel, sessionID ID) error {
+func (manager *SessionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
 	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
 	defer cancel()
 	msg := &pb.P2PKeepAlivePing{

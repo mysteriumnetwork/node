@@ -43,7 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
@@ -210,7 +209,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 	di.ServiceRegistry = service.NewRegistry()
 
-	di.ServiceSessions = session.NewSessionPool(di.EventBus)
+	di.ServiceSessions = service.NewSessionPool(di.EventBus)
 
 	di.PolicyOracle = policy.NewOracle(
 		di.HTTPClient,
@@ -219,7 +218,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
-	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.SessionManager {
+	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *service.SessionManager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
@@ -234,7 +233,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.AccountantPromiseHandler,
 			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
-		return session.NewSessionManager(
+		return service.NewSessionManager(
 			proposal,
 			di.ServiceSessions,
 			paymentEngineFactory,
@@ -242,7 +241,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			serviceID,
 			di.EventBus,
 			channel,
-			session.DefaultConfig(),
+			service.DefaultConfig(),
 		)
 	}
 

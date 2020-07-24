@@ -15,19 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
 )
 
 // NewSessionPool initiates new session storage
 func NewSessionPool(publisher publisher) *SessionPool {
 	sm := &SessionPool{
-		sessions:  make(map[ID]Session),
+		sessions:  make(map[session.ID]Session),
 		lock:      sync.Mutex{},
 		publisher: publisher,
 	}
@@ -36,7 +37,7 @@ func NewSessionPool(publisher publisher) *SessionPool {
 
 // SessionPool maintains all current sessions in memory
 type SessionPool struct {
-	sessions  map[ID]Session
+	sessions  map[session.ID]Session
 	lock      sync.Mutex
 	publisher publisher
 }
@@ -69,7 +70,7 @@ func (sp *SessionPool) GetAll() []Session {
 }
 
 // Find returns underlying session instance
-func (sp *SessionPool) Find(id ID) (Session, bool) {
+func (sp *SessionPool) Find(id session.ID) (Session, bool) {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 
@@ -101,7 +102,7 @@ func (sp *SessionPool) FindBy(opts FindOpts) (Session, bool) {
 }
 
 // Remove removes given session from underlying storage
-func (sp *SessionPool) Remove(id ID) {
+func (sp *SessionPool) Remove(id session.ID) {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"fmt"
@@ -24,13 +24,14 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	sessionExisting = Session{
-		ID:         ID("mocked-id"),
+		ID:         session.ID("mocked-id"),
 		ConsumerID: identity.FromAddress("deadbeef"),
 		ServiceID:  "1",
 	}
@@ -48,7 +49,7 @@ func TestSessionPool_FindSession_Existing(t *testing.T) {
 func TestSessionPool_FindSession_Unknown(t *testing.T) {
 	storage := mockPool(mocks.NewEventBus(), sessionExisting)
 
-	sessionInstance, found := storage.Find(ID("unknown-id"))
+	sessionInstance, found := storage.Find(session.ID("unknown-id"))
 	assert.False(t, found)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
@@ -56,13 +57,13 @@ func TestSessionPool_FindSession_Unknown(t *testing.T) {
 func TestSessionPool_Add(t *testing.T) {
 	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 	sessionNew := Session{
-		ID: ID("new-id"),
+		ID: session.ID("new-id"),
 	}
 
 	pool.Add(sessionNew)
 	assert.Exactly(
 		t,
-		map[ID]Session{sessionExisting.ID: sessionExisting, sessionNew.ID: sessionNew},
+		map[session.ID]Session{sessionExisting.ID: sessionExisting, sessionNew.ID: sessionNew},
 		pool.sessions,
 	)
 }
@@ -70,7 +71,7 @@ func TestSessionPool_Add(t *testing.T) {
 func TestSessionPool_Add_PublishesEvents(t *testing.T) {
 	// given
 	session := Session{
-		ID: ID("new-id"),
+		ID: session.ID("new-id"),
 	}
 	mp := mocks.NewEventBus()
 	pool := NewSessionPool(mp)
@@ -91,15 +92,15 @@ func TestSessionPool_FindByPeer(t *testing.T) {
 
 func TestSessionPool_GetAll(t *testing.T) {
 	sessionFirst := Session{
-		ID: ID("id1"),
+		ID: session.ID("id1"),
 	}
 	sessionSecond := Session{
-		ID:        ID("id2"),
+		ID:        session.ID("id2"),
 		CreatedAt: time.Now(),
 	}
 
 	pool := &SessionPool{
-		sessions: map[ID]Session{
+		sessions: map[session.ID]Session{
 			sessionFirst.ID:  sessionFirst,
 			sessionSecond.ID: sessionSecond,
 		},
@@ -119,7 +120,7 @@ func TestSessionPool_Remove(t *testing.T) {
 
 func TestSessionPool_RemoveNonExisting(t *testing.T) {
 	pool := &SessionPool{
-		sessions:  map[ID]Session{},
+		sessions:  map[session.ID]Session{},
 		publisher: mocks.NewEventBus(),
 	}
 	pool.Remove(sessionExisting.ID)
@@ -127,14 +128,14 @@ func TestSessionPool_RemoveNonExisting(t *testing.T) {
 }
 
 func TestSessionPool_Remove_Does_Not_Panic(t *testing.T) {
-	id4 := ID("id4")
+	id4 := session.ID("id4")
 	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 	sessionFirst := Session{ID: id4}
-	sessionSecond := Session{ID: ID("id3")}
+	sessionSecond := Session{ID: session.ID("id3")}
 	pool.Add(sessionFirst)
 	pool.Add(sessionSecond)
 	pool.Remove(id4)
-	pool.Remove(ID("id3"))
+	pool.Remove(session.ID("id3"))
 	assert.Len(t, pool.sessions, 1)
 }
 
@@ -164,12 +165,12 @@ func TestSessionPool_RemoveForService_PublishesEvents(t *testing.T) {
 
 func mockPool(publisher publisher, sessionInstance Session) *SessionPool {
 	return &SessionPool{
-		sessions:  map[ID]Session{sessionInstance.ID: sessionInstance},
+		sessions:  map[session.ID]Session{sessionInstance.ID: sessionInstance},
 		publisher: publisher,
 	}
 }
 
-func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Status) func() bool {
+func lastEventMatches(mp *mocks.EventBus, id session.ID, action sessionEvent.Status) func() bool {
 	return func() bool {
 		last := mp.Pop()
 		evt, ok := last.(sessionEvent.AppEventSession)
@@ -188,7 +189,7 @@ func Benchmark_SessionPool_GetAll(b *testing.B) {
 	pool := NewSessionPool(mocks.NewEventBus())
 	sessionsToStore := 100000
 	for i := 0; i < sessionsToStore; i++ {
-		pool.Add(Session{ID: ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})
+		pool.Add(Session{ID: session.ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})
 	}
 
 	var r int

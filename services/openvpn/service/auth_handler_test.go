@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ const (
 
 var (
 	identityExisting = identity.FromAddress("deadbeef")
-	sessionExisting  = session.Session{
+	sessionExisting  = service.Session{
 		ID:         session.ID(sessionExistingString),
 		ConsumerID: identityExisting,
 	}

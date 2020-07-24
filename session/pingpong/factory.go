@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -107,8 +108,8 @@ func InvoiceFactoryCreator(
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
 	providersAccountant common.Address,
-) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
+) func(identity.Identity, identity.Identity, common.Address, string) (service.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (service.PaymentEngine, error) {
 		exchangeChan, err := exchangeMessageReceiver(channel)
 		if err != nil {
 			return nil, err
