@@ -126,20 +126,18 @@ type NATEventGetter interface {
 
 // NewSessionManager returns new session SessionManager
 func NewSessionManager(
-	currentProposal market.ServiceProposal,
+	service *Instance,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
 	natEventGetter NATEventGetter,
-	serviceId string,
 	publisher publisher,
 	channel p2p.Channel,
 	config Config,
 ) *SessionManager {
 	return &SessionManager{
-		currentProposal:      currentProposal,
+		service:              service,
 		sessionStorage:       sessionStorage,
 		natEventGetter:       natEventGetter,
-		serviceId:            serviceId,
 		publisher:            publisher,
 		paymentEngineFactory: paymentEngineFactory,
 		channel:              channel,
@@ -149,11 +147,10 @@ func NewSessionManager(
 
 // SessionManager knows how to start and provision session
 type SessionManager struct {
-	currentProposal      market.ServiceProposal
+	service              *Instance
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
 	natEventGetter       NATEventGetter
-	serviceId            string
 	publisher            publisher
 	channel              p2p.Channel
 	config               Config
@@ -162,20 +159,21 @@ type SessionManager struct {
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
-	if manager.currentProposal.ID != proposalID {
+	currentProposal := manager.service.Proposal()
+	if currentProposal.ID != proposalID {
 		return &Session{}, ErrorInvalidProposal
 	}
 
-	manager.clearStaleSession(consumerID, manager.currentProposal.ServiceType)
+	manager.clearStaleSession(consumerID, currentProposal.ServiceType)
 
 	session, err := NewSession()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create new session")
 	}
-	session.ServiceID = manager.serviceId
+	session.ServiceID = string(manager.service.ID())
 	session.ConsumerID = consumerID
 	session.AccountantID = accountantID
-	session.Proposal = manager.currentProposal
+	session.Proposal = currentProposal
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -190,7 +188,7 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 	}()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
+	engine, err := manager.paymentEngineFactory(identity.FromAddress(currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
 	if err != nil {
 		return session, err
 	}

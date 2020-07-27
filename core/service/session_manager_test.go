@@ -39,6 +39,10 @@ var (
 	currentProposal   = market.ServiceProposal{
 		ID: currentProposalID,
 	}
+	currentService = &Instance{
+		id:       "test service id",
+		proposal: currentProposal,
+	}
 	consumerID   = identity.FromAddress("deadbeef")
 	accountantID = common.HexToAddress("0x1")
 
@@ -89,7 +93,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
-	manager := newManager(currentProposal, sessionStore)
+	manager := newManager(currentService, sessionStore)
 
 	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
@@ -105,7 +109,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
-	manager := newManager(currentProposal, sessionStore)
+	manager := newManager(currentService, sessionStore)
 
 	session1, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.NoError(t, err)
@@ -133,7 +137,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
-	manager := newManager(currentProposal, sessionStore)
+	manager := newManager(currentService, sessionStore)
 
 	session, err := manager.Start(consumerID, accountantID, 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
@@ -150,7 +154,7 @@ func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
-	manager := newManager(currentProposal, sessionStore)
+	manager := newManager(currentService, sessionStore)
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
 }
@@ -158,7 +162,7 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
-	manager := newManager(currentProposal, sessionStore)
+	manager := newManager(currentService, sessionStore)
 
 	session, err := manager.Start(consumerID, accountantID, currentProposalID)
 	assert.Nil(t, err)
@@ -171,7 +175,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	mp := mocks.NewEventBus()
-	manager := newManager(currentProposal, sessionStore)
+	manager := newManager(currentService, sessionStore)
 	manager.publisher = mp
 
 	session, err := manager.Start(consumerID, accountantID, currentProposalID)
@@ -183,6 +187,6 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.AcknowledgedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func newManager(proposal market.ServiceProposal, sessions *SessionPool) *SessionManager {
-	return NewSessionManager(proposal, sessions, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), &mockP2PChannel{}, DefaultConfig())
+func newManager(service *Instance, sessions *SessionPool) *SessionManager {
+	return NewSessionManager(service, sessions, mockPaymentEngineFactory, &MockNatEventTracker{}, mocks.NewEventBus(), &mockP2PChannel{}, DefaultConfig())
 }

@@ -155,6 +155,11 @@ type Instance struct {
 	p2pChannels     []p2p.Channel
 }
 
+// ID returns unique identifier of the running service instance.
+func (i *Instance) ID() ID {
+	return i.id
+}
+
 // Options returns options used to start service
 func (i *Instance) Options() Options {
 	return i.options

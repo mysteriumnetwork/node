@@ -218,7 +218,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
-	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *service.SessionManager {
+	newP2PSessionHandler := func(serviceInstance *service.Instance, channel p2p.Channel) *service.SessionManager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
@@ -229,16 +229,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.BCHelper,
 			di.EventBus,
-			proposal,
+			serviceInstance.Proposal(),
 			di.AccountantPromiseHandler,
 			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
 		return service.NewSessionManager(
-			proposal,
+			serviceInstance,
 			di.ServiceSessions,
 			paymentEngineFactory,
 			di.NATTracker,
-			serviceID,
 			di.EventBus,
 			channel,
 			service.DefaultConfig(),
