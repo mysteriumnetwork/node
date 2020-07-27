@@ -204,6 +204,19 @@ func PackageDockerAlpine() error {
 	return env.IfRelease(storage.UploadDockerImages)
 }
 
+// PackageDockerAlpineDevnet builds and stores docker alpine devnet image.
+func PackageDockerAlpineDevnet() error {
+	logconfig.Bootstrap()
+	if err := sh.RunV("bin/package_docker"); err != nil {
+		return err
+	}
+	if err := saveDockerImage("myst:alpine", "build/docker-images/myst_devnet.tgz"); err != nil {
+		return err
+	}
+
+	return storage.UploadDockerImages()
+}
+
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
 	logconfig.Bootstrap()
