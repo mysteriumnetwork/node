@@ -39,6 +39,11 @@ type Session struct {
 	done         chan struct{}
 }
 
+// Close ends session.
+func (s *Session) Close() {
+	close(s.done)
+}
+
 // Done returns readonly done channel.
 func (s *Session) Done() <-chan struct{} {
 	return s.done
@@ -66,5 +71,10 @@ func NewSession() (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{ID: session.ID(uid.String())}, nil
+
+	return &Session{
+		ID:        session.ID(uid.String()),
+		CreatedAt: time.Now().UTC(),
+		done:      make(chan struct{}),
+	}, nil
 }
