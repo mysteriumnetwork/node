@@ -129,11 +129,13 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery.Start(providerID, proposal)
 
 	instance := &Instance{
-		id:             id,
+		ID:             id,
+		ProviderID:     providerID,
+		Type:           serviceType,
 		state:          servicestate.Starting,
-		options:        options,
+		Options:        options,
 		service:        service,
-		proposal:       proposal,
+		Proposal:       proposal,
 		policies:       policyRules,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,

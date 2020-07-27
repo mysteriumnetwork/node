@@ -159,21 +159,20 @@ type SessionManager struct {
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
-	currentProposal := manager.service.Proposal()
-	if currentProposal.ID != proposalID {
+	if manager.service.Proposal.ID != proposalID {
 		return &Session{}, ErrorInvalidProposal
 	}
 
-	manager.clearStaleSession(consumerID, currentProposal.ServiceType)
+	manager.clearStaleSession(consumerID, manager.service.Type)
 
 	session, err := NewSession()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create new session")
 	}
-	session.ServiceID = string(manager.service.ID())
+	session.ServiceID = string(manager.service.ID)
 	session.ConsumerID = consumerID
 	session.AccountantID = accountantID
-	session.Proposal = currentProposal
+	session.Proposal = manager.service.Proposal
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -188,7 +187,7 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 	}()
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, consumerID, accountantID, string(session.ID))
 	if err != nil {
 		return session, err
 	}

@@ -230,18 +230,16 @@ func (k *Keeper) updateServices() {
 
 	i := 0
 	for key, v := range services {
-		proposal := v.Proposal()
-
 		// merge in the connection statistics
 		match, _ := k.getServiceByID(string(key))
 
 		result[i] = contract.ServiceInfoDTO{
 			ID:                   string(key),
-			ProviderID:           proposal.ProviderID,
-			Type:                 proposal.ServiceType,
-			Options:              v.Options(),
+			ProviderID:           v.ProviderID.Address,
+			Type:                 v.Type,
+			Options:              v.Options,
 			Status:               string(v.State()),
-			Proposal:             contract.NewProposalDTO(proposal),
+			Proposal:             contract.NewProposalDTO(v.Proposal),
 			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++

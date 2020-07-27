@@ -229,7 +229,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.BCHelper,
 			di.EventBus,
-			serviceInstance.Proposal(),
+			serviceInstance.Proposal,
 			di.AccountantPromiseHandler,
 			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)

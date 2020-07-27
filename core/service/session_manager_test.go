@@ -40,8 +40,8 @@ var (
 		ID: currentProposalID,
 	}
 	currentService = &Instance{
-		id:       "test service id",
-		proposal: currentProposal,
+		ID:       "test service id",
+		Proposal: currentProposal,
 	}
 	consumerID   = identity.FromAddress("deadbeef")
 	accountantID = common.HexToAddress("0x1")

@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/utils"
@@ -62,7 +63,7 @@ func (p *Pool) Add(instance *Instance) {
 	p.Lock()
 	defer p.Unlock()
 
-	p.instances[instance.id] = instance
+	p.instances[instance.ID] = instance
 }
 
 // Del removes a service from running instances pool
@@ -123,51 +124,42 @@ func (p *Pool) Instance(id ID) *Instance {
 
 // NewInstance creates new instance of the service.
 func NewInstance(
+	providerID identity.Identity,
+	serviceType string,
 	options Options,
+	proposal market.ServiceProposal,
 	state servicestate.State,
 	service RunnableService,
-	proposal market.ServiceProposal,
 	policies *policy.Repository,
 	discovery Discovery,
 ) *Instance {
 	return &Instance{
-		options:   options,
-		state:     state,
-		service:   service,
-		proposal:  proposal,
-		policies:  policies,
-		discovery: discovery,
+		ProviderID: providerID,
+		Type:       serviceType,
+		Options:    options,
+		Proposal:   proposal,
+		state:      state,
+		service:    service,
+		policies:   policies,
+		discovery:  discovery,
 	}
 }
 
 // Instance represents a run service
 type Instance struct {
-	id              ID
+	ID              ID
 	state           servicestate.State
 	stateLock       sync.RWMutex
-	options         Options
+	ProviderID      identity.Identity
+	Type            string
+	Options         Options
 	service         RunnableService
-	proposal        market.ServiceProposal
+	Proposal        market.ServiceProposal
 	policies        *policy.Repository
 	discovery       Discovery
 	eventPublisher  Publisher
 	p2pChannelsLock sync.Mutex
 	p2pChannels     []p2p.Channel
-}
-
-// ID returns unique identifier of the running service instance.
-func (i *Instance) ID() ID {
-	return i.id
-}
-
-// Options returns options used to start service
-func (i *Instance) Options() Options {
-	return i.options
-}
-
-// Proposal returns service proposal of the running service instance.
-func (i *Instance) Proposal() market.ServiceProposal {
-	return i.proposal
 }
 
 // Policies returns service policies of the running service instance.
@@ -235,9 +227,9 @@ func (i *Instance) stop() error {
 // toEvent returns an event representation of the instance
 func (i *Instance) toEvent() servicestate.AppEventServiceStatus {
 	return servicestate.AppEventServiceStatus{
-		ID:         string(i.id),
-		ProviderID: i.proposal.ProviderID,
-		Type:       i.proposal.ServiceType,
+		ID:         string(i.ID),
+		ProviderID: i.Proposal.ProviderID,
+		Type:       i.Proposal.ServiceType,
 		Status:     string(i.state),
 	}
 }
