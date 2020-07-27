@@ -140,7 +140,7 @@ package:docker-alpine-devnet:
   tags: [go]
   script: go run mage.go -v PackageDockerAlpineDevnet
   only:
-    - v3-devnet
+    - v3
 
 package:swagger-redoc-docker:
   stage: build
@@ -162,7 +162,7 @@ release-snapshot:docker-devnet:
   tags: [go]
   script: go run mage.go -v ReleaseDockerDevnet
   only:
-    - v3-devnet
+    - v3
 
 release-snapshot:debian-ppa:
   stage: release-snapshot
@@ -176,7 +176,7 @@ release-snapshot:debian-ppa-devnet:
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPADevnet
   only:
-    - v3-devnet
+    - v3
 
 release-snapshot:goreport:
   stage: release-snapshot
