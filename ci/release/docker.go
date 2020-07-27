@@ -135,6 +135,30 @@ func ReleaseDockerSnapshot() error {
 	})
 }
 
+// ReleaseDockerDevnet uploads docker devnet images to myst repository in docker hub.
+func ReleaseDockerDevnet() error {
+	logconfig.Bootstrap()
+
+	err := env.EnsureEnvVars(
+		env.DockerHubPassword,
+		env.DockerHubUsername,
+	)
+	if err != nil {
+		return err
+	}
+
+	releasables := []dockerReleasable{
+		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{
+			"devnet",
+		}},
+	}
+	return releaseDockerHub(&releaseDockerHubOpts{
+		username:    env.Str(env.DockerHubUsername),
+		password:    env.Str(env.DockerHubPassword),
+		releasables: releasables,
+	})
+}
+
 // ReleaseDockerTag uploads docker tag release images to docker hub
 func ReleaseDockerTag() error {
 	logconfig.Bootstrap()
