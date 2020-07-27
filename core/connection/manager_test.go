@@ -20,6 +20,7 @@ package connection
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -37,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/protobuf/proto"
 )
 
 type testContext struct {
@@ -48,7 +50,6 @@ type testContext struct {
 	mockStatistics        Statistics
 	fakeResolver          ip.Resolver
 	config                Config
-	statusSender          *mockStatusSender
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
 	mockTime              time.Time
@@ -71,7 +72,6 @@ var (
 		ServiceDefinition: &fakeServiceDefinition{},
 	}
 	establishedSessionID = session.ID("session-100")
-	paymentInfo          session.PaymentInfo
 )
 
 func (tc *testContext) SetupTest() {
@@ -113,7 +113,6 @@ func (tc *testContext) SetupTest() {
 			MaxSendErrCount: 5,
 		},
 	}
-	tc.statusSender = &mockStatusSender{}
 	tc.fakeResolver = ip.NewResolverMock("ip")
 	tc.statsReportInterval = 1 * time.Millisecond
 
@@ -127,7 +126,6 @@ func (tc *testContext) SetupTest() {
 		func(channel p2p.Channel,
 			consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
 			tc.MockPaymentIssuer = &MockPaymentIssuer{
-				initialState:      session.PaymentInfo{},
 				paymentDefinition: market.PaymentRate{},
 				stopChan:          make(chan struct{}),
 			}
@@ -409,13 +407,6 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	assert.True(tc.T(), found)
 }
 
-func (tc *testContext) Test_ManagerSetsPaymentInfo() {
-	paymentInfo := session.PaymentInfo{}
-	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
-	assert.Nil(tc.T(), err)
-	assert.Exactly(tc.T(), paymentInfo, tc.MockPaymentIssuer.initialState)
-}
-
 func (tc *testContext) Test_ManagerPublishesEvents() {
 	tc.stubPublisher.Clear()
 
@@ -499,12 +490,17 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 	}, 2*time.Second, 10*time.Millisecond)
 
 	// Check that status sender was called with status code.
-	expectedStatusMsg := connectivity.StatusMessage{
+	expectedStatusMsg := &pb.SessionStatus{
+		ConsumerID: consumerID.Address,
 		SessionID:  string(establishedSessionID),
-		StatusCode: connectivity.StatusSessionIPNotChanged,
+		Code:       uint32(connectivity.StatusSessionIPNotChanged),
 		Message:    "",
 	}
-	assert.Equal(tc.T(), expectedStatusMsg, tc.mockP2P.ch.getSentMsg())
+	assert.True(
+		tc.T(),
+		proto.Equal(expectedStatusMsg, tc.mockP2P.ch.getSentMsg()),
+		fmt.Sprintf("Session status are not equal:\nexpected: %v\nactual:  %v", expectedStatusMsg, tc.mockP2P.ch.getSentMsg()),
+	)
 }
 
 func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
@@ -533,13 +529,17 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 	assert.Nil(tc.T(), ipNotChangedEvent)
 
 	// Check that status sender was called with status code.
-	expectedStatusMsg := connectivity.StatusMessage{
+	expectedStatusMsg := &pb.SessionStatus{
+		ConsumerID: consumerID.Address,
 		SessionID:  string(establishedSessionID),
-		StatusCode: connectivity.StatusConnectionOk,
+		Code:       uint32(connectivity.StatusConnectionOk),
 		Message:    "",
 	}
-
-	assert.Equal(tc.T(), expectedStatusMsg, tc.mockP2P.ch.getSentMsg())
+	assert.True(
+		tc.T(),
+		proto.Equal(expectedStatusMsg, tc.mockP2P.ch.getSentMsg()),
+		fmt.Sprintf("Session status are not equal:\nexpected: %v\nactual:  %v", expectedStatusMsg, tc.mockP2P.ch.getSentMsg()),
+	)
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -557,7 +557,6 @@ type fakeServiceDefinition struct{}
 func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
 
 type MockPaymentIssuer struct {
-	initialState      session.PaymentInfo
 	paymentDefinition market.PaymentRate
 	startCalled       bool
 	stopCalled        bool
@@ -596,18 +595,6 @@ func (mpm *MockPaymentIssuer) Stop() {
 func (mpm *MockPaymentIssuer) SetSessionID(string) {
 }
 
-type mockStatusSender struct {
-	sentMsg *connectivity.StatusMessage
-	sync.Mutex
-}
-
-func (s *mockStatusSender) Send(msg *connectivity.StatusMessage) error {
-	s.Lock()
-	defer s.Unlock()
-	s.sentMsg = msg
-	return nil
-}
-
 type mockPaymentMethod struct {
 	rate        market.PaymentRate
 	paymentType string
@@ -635,7 +622,7 @@ func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, p
 }
 
 type mockP2PChannel struct {
-	status connectivity.StatusMessage
+	status proto.Message
 	lock   sync.Mutex
 }
 
@@ -643,7 +630,7 @@ func (m *mockP2PChannel) Conn() *net.UDPConn {
 	return &net.UDPConn{}
 }
 
-func (m *mockP2PChannel) getSentMsg() connectivity.StatusMessage {
+func (m *mockP2PChannel) getSentMsg() proto.Message {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.status
@@ -653,23 +640,16 @@ func (m *mockP2PChannel) Send(_ context.Context, topic string, msg *p2p.Message)
 	switch topic {
 	case p2p.TopicSessionCreate:
 		res := &pb.SessionResponse{
-			ID:          string(establishedSessionID),
-			PaymentInfo: string(paymentInfo.Supports),
+			ID: string(establishedSessionID),
 		}
 		return p2p.ProtoMessage(res), nil
 	case p2p.TopicSessionStatus:
-		var res pb.SessionStatus
-		msg.UnmarshalProto(&res)
-
 		m.lock.Lock()
-		m.status = connectivity.StatusMessage{
-			SessionID:  res.GetSessionID(),
-			StatusCode: connectivity.StatusCode(res.GetCode()),
-			Message:    res.GetMessage(),
-		}
+		m.status = &pb.SessionStatus{}
+		msg.UnmarshalProto(m.status)
 		m.lock.Unlock()
 
-		return p2p.ProtoMessage(&res), nil
+		return nil, nil
 	case p2p.TopicSessionAcknowledge:
 		return nil, nil
 	}
