@@ -154,6 +154,15 @@ release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPASnapshot
+  only:
+    - master
+
+release-snapshot:debian-ppa-devnet:
+  stage: release-snapshot
+  tags: [go]
+  script: go run mage.go -v ReleaseDebianPPADevnet
+  only:
+    - v3-devnet
 
 release-snapshot:goreport:
   stage: release-snapshot

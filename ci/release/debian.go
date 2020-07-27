@@ -97,3 +97,19 @@ func ReleaseDebianPPAPreRelease() error {
 		buildNumber: env.Str(env.BuildNumber),
 	})
 }
+
+// ReleaseDebianPPADevnet releases to node-devnet PPA.
+func ReleaseDebianPPADevnet() error {
+	err := env.EnsureEnvVars(
+		env.BuildNumber,
+	)
+	if err != nil {
+		return err
+	}
+
+	return releaseDebianPPA(&releaseDebianOpts{
+		repository:  "node-devnet",
+		version:     ppaVersion("0.0.0"),
+		buildNumber: env.Str(env.BuildNumber),
+	})
+}
