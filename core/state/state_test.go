@@ -207,6 +207,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 				ProviderCountry: "MU",
 				Started:         expected.StartedAt,
 				Status:          session.StatusNew,
+				Tokens:          new(big.Int),
 			},
 		},
 		keeper.GetState().Sessions,
