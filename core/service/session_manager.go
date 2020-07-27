@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -46,13 +47,17 @@ var (
 )
 
 // IDGenerator defines method for session id generation
-type IDGenerator func() (ID, error)
+type IDGenerator func() (session.ID, error)
 
 // ConfigParams session configuration parameters
 type ConfigParams struct {
 	SessionServiceConfig   ServiceConfiguration
 	SessionDestroyCallback DestroyCallback
 }
+
+// ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
+// should be serializable to json format.
+type ServiceConfiguration interface{}
 
 type publisher interface {
 	Publish(topic string, data interface{})
@@ -100,21 +105,28 @@ type PromiseProcessor interface {
 // Storage interface to session storage
 type Storage interface {
 	Add(sessionInstance Session)
-	Find(id ID) (Session, bool)
+	Find(id session.ID) (Session, bool)
 	FindBy(opts FindOpts) (Session, bool)
-	Remove(id ID)
+	Remove(id session.ID)
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
 type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
+
+// PaymentEngine is responsible for interacting with the consumer in regard to payments.
+type PaymentEngine interface {
+	Start() error
+	WaitFirstInvoice(time.Duration) error
+	Stop()
+}
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
 	LastEvent() *event.Event
 }
 
-// NewManager returns new session Manager
-func NewManager(
+// NewSessionManager returns new session SessionManager
+func NewSessionManager(
 	currentProposal market.ServiceProposal,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
@@ -123,8 +135,8 @@ func NewManager(
 	publisher publisher,
 	channel p2p.Channel,
 	config Config,
-) *Manager {
-	return &Manager{
+) *SessionManager {
+	return &SessionManager{
 		currentProposal:      currentProposal,
 		sessionStorage:       sessionStorage,
 		natEventGetter:       natEventGetter,
@@ -136,8 +148,8 @@ func NewManager(
 	}
 }
 
-// Manager knows how to start and provision session
-type Manager struct {
+// SessionManager knows how to start and provision session
+type SessionManager struct {
 	currentProposal      market.ServiceProposal
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
@@ -151,7 +163,7 @@ type Manager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
+func (manager *SessionManager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -205,10 +217,10 @@ func (manager *Manager) Start(consumerID identity.Identity, accountantID common.
 }
 
 // Acknowledge marks the session as successfully established as far as the consumer is concerned.
-func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID string) error {
+func (manager *SessionManager) Acknowledge(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
-	session, found := manager.sessionStorage.Find(ID(sessionID))
+	session, found := manager.sessionStorage.Find(session.ID(sessionID))
 
 	if !found {
 		return ErrorSessionNotExists
@@ -223,7 +235,7 @@ func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID stri
 	return nil
 }
 
-func (manager *Manager) clearStaleSession(consumerID identity.Identity, serviceType string) {
+func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, serviceType string) {
 	// Reading stale session before starting the clean up in goroutine.
 	// This is required to make sure we are not cleaning the newly created session.
 	session, ok := manager.sessionStorage.FindBy(FindOpts{
@@ -237,8 +249,8 @@ func (manager *Manager) clearStaleSession(consumerID identity.Identity, serviceT
 }
 
 // Destroy destroys session by given sessionID
-func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) error {
-	session, found := manager.sessionStorage.Find(ID(sessionID))
+func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID string) error {
+	session, found := manager.sessionStorage.Find(session.ID(sessionID))
 	if !found {
 		return ErrorSessionNotExists
 	}
@@ -252,7 +264,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	return nil
 }
 
-func (manager *Manager) destroySession(session Session) {
+func (manager *SessionManager) destroySession(session Session) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -261,7 +273,7 @@ func (manager *Manager) destroySession(session Session) {
 	close(session.done)
 }
 
-func (manager *Manager) keepAliveLoop(sess *Session, channel p2p.Channel) {
+func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel) {
 	// TODO: Remove this check once all provider migrates to p2p.
 	if channel == nil {
 		return
@@ -300,7 +312,7 @@ func (manager *Manager) keepAliveLoop(sess *Session, channel p2p.Channel) {
 	}
 }
 
-func (manager *Manager) sendKeepAlivePing(channel p2p.Channel, sessionID ID) error {
+func (manager *SessionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
 	ctx, cancel := context.WithTimeout(context.Background(), manager.config.KeepAlive.SendTimeout)
 	defer cancel()
 	msg := &pb.P2PKeepAlivePing{

@@ -43,7 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
@@ -135,7 +134,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			transportOptions,
 			loc.Country,
 			di.IPResolver,
-			di.ServiceSessionStorage,
+			di.ServiceSessions,
 			di.NATService,
 			di.NATTracker,
 			portPool,
@@ -210,7 +209,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 	di.ServiceRegistry = service.NewRegistry()
 
-	di.ServiceSessionStorage = session.NewStorageMemory(di.EventBus)
+	di.ServiceSessions = service.NewSessionPool(di.EventBus)
 
 	di.PolicyOracle = policy.NewOracle(
 		di.HTTPClient,
@@ -219,7 +218,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
-	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
+	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *service.SessionManager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
@@ -234,15 +233,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.AccountantPromiseHandler,
 			common.HexToAddress(nodeOptions.Accountant.AccountantID),
 		)
-		return session.NewManager(
+		return service.NewSessionManager(
 			proposal,
-			di.ServiceSessionStorage,
+			di.ServiceSessions,
 			paymentEngineFactory,
 			di.NATTracker,
 			serviceID,
 			di.EventBus,
 			channel,
-			session.DefaultConfig(),
+			service.DefaultConfig(),
 		)
 	}
 
@@ -256,7 +255,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		di.SessionConnectivityStatusStorage,
 	)
 
-	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
+	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessions}
 	if err := di.EventBus.Subscribe(servicestate.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
 		log.Error().Msg("Failed to subscribe service cleaner")
 	}

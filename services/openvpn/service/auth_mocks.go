@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -28,13 +29,13 @@ func createAuthHandler(identityToExtract identity.Identity) *authHandler {
 		nil,
 	}
 	mockSessions := &mockSessions{
-		session.Session{},
+		service.Session{},
 		false,
 	}
 	return newAuthHandler(NewClientMap(mockSessions), mockExtractor)
 }
 
-func createAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *authHandler {
+func createAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance service.Session) *authHandler {
 	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,
@@ -58,18 +59,18 @@ func (extractor *mockIdentityExtractor) Extract(message []byte, signature identi
 }
 
 type mockSessions struct {
-	OnFindReturnSession session.Session
+	OnFindReturnSession service.Session
 	OnFindReturnSuccess bool
 }
 
-func (sessions *mockSessions) Add(sessionInstance session.Session) {
+func (sessions *mockSessions) Add(sessionInstance service.Session) {
 }
 
-func (sessions *mockSessions) Find(session.ID) (session.Session, bool) {
+func (sessions *mockSessions) Find(session.ID) (service.Session, bool) {
 	return sessions.OnFindReturnSession, sessions.OnFindReturnSuccess
 }
 
 func (sessions *mockSessions) Remove(session.ID) {
-	sessions.OnFindReturnSession = session.Session{}
+	sessions.OnFindReturnSession = service.Session{}
 	sessions.OnFindReturnSuccess = false
 }

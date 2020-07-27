@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"fmt"
@@ -24,152 +24,153 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	sessionExisting = Session{
-		ID:         ID("mocked-id"),
+		ID:         session.ID("mocked-id"),
 		ConsumerID: identity.FromAddress("deadbeef"),
 		ServiceID:  "1",
 	}
 )
 
-func TestStorage_FindSession_Existing(t *testing.T) {
-	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
+func TestSessionPool_FindSession_Existing(t *testing.T) {
+	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 
-	sessionInstance, found := storage.Find(sessionExisting.ID)
+	sessionInstance, found := pool.Find(sessionExisting.ID)
 
 	assert.True(t, found)
 	assert.Exactly(t, sessionExisting, sessionInstance)
 }
 
-func TestStorage_FindSession_Unknown(t *testing.T) {
-	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
+func TestSessionPool_FindSession_Unknown(t *testing.T) {
+	storage := mockPool(mocks.NewEventBus(), sessionExisting)
 
-	sessionInstance, found := storage.Find(ID("unknown-id"))
+	sessionInstance, found := storage.Find(session.ID("unknown-id"))
 	assert.False(t, found)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
 
-func TestStorage_Add(t *testing.T) {
-	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
+func TestSessionPool_Add(t *testing.T) {
+	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 	sessionNew := Session{
-		ID: ID("new-id"),
+		ID: session.ID("new-id"),
 	}
 
-	storage.Add(sessionNew)
+	pool.Add(sessionNew)
 	assert.Exactly(
 		t,
-		map[ID]Session{sessionExisting.ID: sessionExisting, sessionNew.ID: sessionNew},
-		storage.sessions,
+		map[session.ID]Session{sessionExisting.ID: sessionExisting, sessionNew.ID: sessionNew},
+		pool.sessions,
 	)
 }
 
-func TestStorage_Add_PublishesEvents(t *testing.T) {
+func TestSessionPool_Add_PublishesEvents(t *testing.T) {
 	// given
 	session := Session{
-		ID: ID("new-id"),
+		ID: session.ID("new-id"),
 	}
 	mp := mocks.NewEventBus()
-	storage := NewStorageMemory(mp)
+	pool := NewSessionPool(mp)
 
 	// when
-	storage.Add(session)
+	pool.Add(session)
 
 	// then
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.CreatedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func TestStorageMemory_FindByPeer(t *testing.T) {
-	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
-	session, ok := storage.FindBy(FindOpts{&sessionExisting.ConsumerID, ""})
+func TestSessionPool_FindByPeer(t *testing.T) {
+	pool := mockPool(mocks.NewEventBus(), sessionExisting)
+	session, ok := pool.FindBy(FindOpts{&sessionExisting.ConsumerID, ""})
 	assert.True(t, ok)
 	assert.Equal(t, sessionExisting.ID, session.ID)
 }
 
-func TestStorage_GetAll(t *testing.T) {
+func TestSessionPool_GetAll(t *testing.T) {
 	sessionFirst := Session{
-		ID: ID("id1"),
+		ID: session.ID("id1"),
 	}
 	sessionSecond := Session{
-		ID:        ID("id2"),
+		ID:        session.ID("id2"),
 		CreatedAt: time.Now(),
 	}
 
-	storage := &StorageMemory{
-		sessions: map[ID]Session{
+	pool := &SessionPool{
+		sessions: map[session.ID]Session{
 			sessionFirst.ID:  sessionFirst,
 			sessionSecond.ID: sessionSecond,
 		},
 	}
 
-	sessions := storage.GetAll()
+	sessions := pool.GetAll()
 	assert.Contains(t, sessions, sessionFirst)
 	assert.Contains(t, sessions, sessionSecond)
 }
 
-func TestStorage_Remove(t *testing.T) {
-	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
+func TestSessionPool_Remove(t *testing.T) {
+	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 
-	storage.Remove(sessionExisting.ID)
-	assert.Len(t, storage.sessions, 0)
+	pool.Remove(sessionExisting.ID)
+	assert.Len(t, pool.sessions, 0)
 }
 
-func TestStorage_RemoveNonExisting(t *testing.T) {
-	storage := &StorageMemory{
-		sessions:  map[ID]Session{},
+func TestSessionPool_RemoveNonExisting(t *testing.T) {
+	pool := &SessionPool{
+		sessions:  map[session.ID]Session{},
 		publisher: mocks.NewEventBus(),
 	}
-	storage.Remove(sessionExisting.ID)
-	assert.Len(t, storage.sessions, 0)
+	pool.Remove(sessionExisting.ID)
+	assert.Len(t, pool.sessions, 0)
 }
 
-func TestStorage_Remove_Does_Not_Panic(t *testing.T) {
-	id4 := ID("id4")
-	storage := mockStorage(mocks.NewEventBus(), sessionExisting)
+func TestSessionPool_Remove_Does_Not_Panic(t *testing.T) {
+	id4 := session.ID("id4")
+	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 	sessionFirst := Session{ID: id4}
-	sessionSecond := Session{ID: ID("id3")}
-	storage.Add(sessionFirst)
-	storage.Add(sessionSecond)
-	storage.Remove(id4)
-	storage.Remove(ID("id3"))
-	assert.Len(t, storage.sessions, 1)
+	sessionSecond := Session{ID: session.ID("id3")}
+	pool.Add(sessionFirst)
+	pool.Add(sessionSecond)
+	pool.Remove(id4)
+	pool.Remove(session.ID("id3"))
+	assert.Len(t, pool.sessions, 1)
 }
 
-func TestStorage_Remove_PublishesEvents(t *testing.T) {
+func TestSessionPool_Remove_PublishesEvents(t *testing.T) {
 	// given
 	mp := mocks.NewEventBus()
-	storage := mockStorage(mp, sessionExisting)
+	pool := mockPool(mp, sessionExisting)
 
 	// when
-	storage.Remove(sessionExisting.ID)
+	pool.Remove(sessionExisting.ID)
 
 	// then
 	assert.Eventually(t, lastEventMatches(mp, sessionExisting.ID, sessionEvent.RemovedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func TestStorage_RemoveForService_PublishesEvents(t *testing.T) {
+func TestSessionPool_RemoveForService_PublishesEvents(t *testing.T) {
 	// given
 	mp := mocks.NewEventBus()
-	storage := mockStorage(mp, sessionExisting)
+	pool := mockPool(mp, sessionExisting)
 
 	// when
-	storage.RemoveForService(sessionExisting.ServiceID)
+	pool.RemoveForService(sessionExisting.ServiceID)
 
 	// then
 	assert.Eventually(t, lastEventMatches(mp, sessionExisting.ID, sessionEvent.RemovedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func mockStorage(publisher publisher, sessionInstance Session) *StorageMemory {
-	return &StorageMemory{
-		sessions:  map[ID]Session{sessionInstance.ID: sessionInstance},
+func mockPool(publisher publisher, sessionInstance Session) *SessionPool {
+	return &SessionPool{
+		sessions:  map[session.ID]Session{sessionInstance.ID: sessionInstance},
 		publisher: publisher,
 	}
 }
 
-func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Status) func() bool {
+func lastEventMatches(mp *mocks.EventBus, id session.ID, action sessionEvent.Status) func() bool {
 	return func() bool {
 		last := mp.Pop()
 		evt, ok := last.(sessionEvent.AppEventSession)
@@ -181,20 +182,20 @@ func lastEventMatches(mp *mocks.EventBus, id ID, action sessionEvent.Status) fun
 }
 
 // to avoid compiler optimizing away our bench
-var benchmarkStorageGetAllResult int
+var benchmarkSessionPoolGetAllResult int
 
-func Benchmark_Storage_GetAll(b *testing.B) {
+func Benchmark_SessionPool_GetAll(b *testing.B) {
 	// Findings are as follows - with 100k sessions, we should be fine with a performance of 0.04s on my mac
-	storage := NewStorageMemory(mocks.NewEventBus())
+	pool := NewSessionPool(mocks.NewEventBus())
 	sessionsToStore := 100000
 	for i := 0; i < sessionsToStore; i++ {
-		storage.Add(Session{ID: ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})
+		pool.Add(Session{ID: session.ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})
 	}
 
 	var r int
 	for n := 0; n < b.N; n++ {
-		storedValues := storage.GetAll()
+		storedValues := pool.GetAll()
 		r += len(storedValues)
 	}
-	benchmarkStorageGetAllResult = r
+	benchmarkSessionPoolGetAllResult = r
 }

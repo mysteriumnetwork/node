@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 var _ Service = &serviceFake{}
@@ -53,8 +52,8 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
-	return &session.ConfigParams{}, nil
+func (service *serviceFake) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*ConfigParams, error) {
+	return &ConfigParams{}, nil
 }
 
 type mockDiscovery struct {

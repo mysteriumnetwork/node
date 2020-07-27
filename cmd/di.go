@@ -69,7 +69,6 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -129,10 +128,10 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 
-	ServicesManager       *service.Manager
-	ServiceRegistry       *service.Registry
-	ServiceSessionStorage *session.StorageMemory
-	ServiceFirewall       firewall.IncomingTrafficFirewall
+	ServicesManager *service.Manager
+	ServiceRegistry *service.Registry
+	ServiceSessions *service.SessionPool
+	ServiceFirewall firewall.IncomingTrafficFirewall
 
 	NATPinger  traversal.NATPinger
 	NATTracker *event.Tracker

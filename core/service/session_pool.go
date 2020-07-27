@@ -15,53 +15,54 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
 )
 
-// NewStorageMemory initiates new session storage
-func NewStorageMemory(publisher publisher) *StorageMemory {
-	sm := &StorageMemory{
-		sessions:  make(map[ID]Session),
+// NewSessionPool initiates new session storage
+func NewSessionPool(publisher publisher) *SessionPool {
+	sm := &SessionPool{
+		sessions:  make(map[session.ID]Session),
 		lock:      sync.Mutex{},
 		publisher: publisher,
 	}
 	return sm
 }
 
-// StorageMemory maintains all current sessions in memory
-type StorageMemory struct {
-	sessions  map[ID]Session
+// SessionPool maintains all current sessions in memory
+type SessionPool struct {
+	sessions  map[session.ID]Session
 	lock      sync.Mutex
 	publisher publisher
 }
 
 // Add puts given session to storage and publishes a creation event.
 // Multiple sessions per peerID is possible in case different services are used
-func (storage *StorageMemory) Add(instance Session) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
+func (sp *SessionPool) Add(instance Session) {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
 
-	storage.sessions[instance.ID] = instance
-	go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.CreatedStatus))
+	sp.sessions[instance.ID] = instance
+	go sp.publisher.Publish(event.AppTopicSession, instance.toEvent(event.CreatedStatus))
 }
 
 // GetAll returns all sessions in storage
-func (storage *StorageMemory) GetAll() []Session {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
+func (sp *SessionPool) GetAll() []Session {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
 
 	// we're never gonna have more than 100000 sessions ongoing on a single node - performance here should not be an issue.
 	// see Benchmark_Storage_GetAll
-	sessions := make([]Session, len(storage.sessions))
+	sessions := make([]Session, len(sp.sessions))
 
 	i := 0
-	for _, value := range storage.sessions {
+	for _, value := range sp.sessions {
 		sessions[i] = value
 		i++
 	}
@@ -69,11 +70,11 @@ func (storage *StorageMemory) GetAll() []Session {
 }
 
 // Find returns underlying session instance
-func (storage *StorageMemory) Find(id ID) (Session, bool) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
+func (sp *SessionPool) Find(id session.ID) (Session, bool) {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
 
-	instance, found := storage.sessions[id]
+	instance, found := sp.sessions[id]
 	return instance, found
 }
 
@@ -84,11 +85,11 @@ type FindOpts struct {
 }
 
 // FindBy returns a session by find options.
-func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
+func (sp *SessionPool) FindBy(opts FindOpts) (Session, bool) {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
 
-	for _, session := range storage.sessions {
+	for _, session := range sp.sessions {
 		if opts.Peer != nil && *opts.Peer != session.ConsumerID {
 			continue
 		}
@@ -101,22 +102,22 @@ func (storage *StorageMemory) FindBy(opts FindOpts) (Session, bool) {
 }
 
 // Remove removes given session from underlying storage
-func (storage *StorageMemory) Remove(id ID) {
-	storage.lock.Lock()
-	defer storage.lock.Unlock()
+func (sp *SessionPool) Remove(id session.ID) {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
 
-	if instance, found := storage.sessions[id]; found {
-		delete(storage.sessions, id)
-		go storage.publisher.Publish(event.AppTopicSession, instance.toEvent(event.RemovedStatus))
+	if instance, found := sp.sessions[id]; found {
+		delete(sp.sessions, id)
+		go sp.publisher.Publish(event.AppTopicSession, instance.toEvent(event.RemovedStatus))
 	}
 }
 
 // RemoveForService removes all sessions which belong to given service
-func (storage *StorageMemory) RemoveForService(serviceID string) {
-	sessions := storage.GetAll()
+func (sp *SessionPool) RemoveForService(serviceID string) {
+	sessions := sp.GetAll()
 	for _, session := range sessions {
 		if session.ServiceID == serviceID {
-			storage.Remove(session.ID)
+			sp.Remove(session.ID)
 		}
 	}
 }

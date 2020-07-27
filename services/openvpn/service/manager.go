@@ -180,7 +180,7 @@ func (m *Manager) Stop() error {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*service.ConfigParams, error) {
 	if m.vpnServerPort == 0 {
 		return nil, errors.New("service port not initialized")
 	}
@@ -217,7 +217,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		}
 	}
 
-	return &session.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy}, nil
+	return &service.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy}, nil
 }
 
 func (m *Manager) startServer() error {

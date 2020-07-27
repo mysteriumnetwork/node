@@ -40,7 +40,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -110,7 +109,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer and handles new WireGuard connection.
-func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, remoteConn *net.UDPConn) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, remoteConn *net.UDPConn) (*service.ConfigParams, error) {
 	log.Info().Msg("Accepting new WireGuard connection")
 	consumerConfig := wg.ConsumerConfig{}
 	err := json.Unmarshal(sessionConfig, &consumerConfig)
@@ -210,7 +209,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	m.sessionCleanup[sessionID] = destroy
 	m.sessionCleanupMu.Unlock()
 
-	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy}, nil
+	return &service.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy}, nil
 }
 
 func (m *Manager) createProviderConfig(listenPort int, peerPublicKey string) (wgcfg.DeviceConfig, error) {
