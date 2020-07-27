@@ -186,31 +186,9 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 		manager.sessionStorage.Remove(session.ID)
 	}()
 
-	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, consumerID, accountantID, string(session.ID))
-	if err != nil {
+	if err = manager.paymentLoop(session); err != nil {
 		return session, err
 	}
-
-	// stop the balance tracker once the session is finished
-	go func() {
-		<-session.Done()
-		engine.Stop()
-	}()
-
-	go func() {
-		err := engine.Start()
-		if err != nil {
-			log.Error().Err(err).Msg("Payment engine error")
-			session.Close()
-		}
-	}()
-
-	log.Info().Msg("Waiting for a first invoice to be paid")
-	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
-		return session, fmt.Errorf("first invoice was not paid: %w", err)
-	}
-
 	go manager.keepAliveLoop(session, manager.channel)
 
 	return session, nil
@@ -254,6 +232,35 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 	}
 
 	session.Close()
+	return nil
+}
+
+func (manager *SessionManager) paymentLoop(session *Session) error {
+	log.Info().Msg("Using new payments")
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.AccountantID, string(session.ID))
+	if err != nil {
+		return err
+	}
+
+	// stop the balance tracker once the session is finished
+	go func() {
+		<-session.Done()
+		engine.Stop()
+	}()
+
+	go func() {
+		err := engine.Start()
+		if err != nil {
+			log.Error().Err(err).Msg("Payment engine error")
+			session.Close()
+		}
+	}()
+
+	log.Info().Msg("Waiting for a first invoice to be paid")
+	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
+		return fmt.Errorf("first invoice was not paid: %w", err)
+	}
+
 	return nil
 }
 
