@@ -71,5 +71,10 @@ func NewSession() (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{ID: session.ID(uid.String())}, nil
+
+	return &Session{
+		ID:        session.ID(uid.String()),
+		CreatedAt: time.Now().UTC(),
+		done:      make(chan struct{}),
+	}, nil
 }

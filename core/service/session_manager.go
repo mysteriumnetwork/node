@@ -175,19 +175,28 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 
 	session, err := NewSession()
 	if err != nil {
-		return &Session{}, errors.Wrap(err, "cannot create new session")
+		return nil, errors.Wrap(err, "cannot create new session")
 	}
 	session.ServiceID = manager.serviceId
 	session.ConsumerID = consumerID
 	session.AccountantID = accountantID
 	session.Proposal = manager.currentProposal
-	session.done = make(chan struct{})
-	session.CreatedAt = time.Now().UTC()
+	defer func() {
+		if err != nil {
+			log.Err(err).Msg("Connect failed, disconnecting")
+			session.Close()
+		}
+	}()
+
+	manager.sessionStorage.Add(*session)
+	go func() {
+		<-session.Done()
+		manager.sessionStorage.Remove(session.ID)
+	}()
 
 	log.Info().Msg("Using new payments")
 	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
 	if err != nil {
-		session.Close()
 		return session, err
 	}
 
@@ -207,12 +216,10 @@ func (manager *SessionManager) Start(consumerID identity.Identity, accountantID 
 
 	log.Info().Msg("Waiting for a first invoice to be paid")
 	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
-		session.Close()
 		return session, fmt.Errorf("first invoice was not paid: %w", err)
 	}
 
 	go manager.keepAliveLoop(session, manager.channel)
-	manager.sessionStorage.Add(*session)
 
 	return session, nil
 }
