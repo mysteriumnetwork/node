@@ -24,11 +24,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/policy"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
@@ -37,12 +40,19 @@ import (
 var (
 	currentProposalID = 68
 	currentProposal   = market.ServiceProposal{
-		ID: currentProposalID,
+		ServiceType: "mockservice",
+		ID:          currentProposalID,
 	}
-	currentService = &Instance{
-		ID:       "test service id",
-		Proposal: currentProposal,
-	}
+	currentService = NewInstance(
+		identity.FromAddress(currentProposal.ProviderID),
+		currentProposal.ServiceType,
+		struct{}{},
+		currentProposal,
+		servicestate.Running,
+		&mockService{},
+		policy.NewRepository(),
+		&mockDiscovery{},
+	)
 	consumerID   = identity.FromAddress("deadbeef")
 	accountantID = common.HexToAddress("0x1")
 
@@ -95,13 +105,18 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	manager := newManager(currentService, sessionStore)
 
-	session, err := manager.Start(consumerID, accountantID, currentProposalID)
+	session, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(currentProposalID),
+	})
 	assert.NoError(t, err)
 	expectedResult.done = session.done
 
 	assert.Equal(t, expectedResult.done, session.done)
 	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
-	assert.False(t, session.CreatedAt.IsZero())
 }
 
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
@@ -111,23 +126,33 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 
 	manager := newManager(currentService, sessionStore)
 
-	session1, err := manager.Start(consumerID, accountantID, currentProposalID)
+	session1, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(currentProposalID),
+	})
 	assert.NoError(t, err)
 	expectedResult.done = session1.done
 	_, found := sessionStore.Find(session1.ID)
 
 	assert.Equal(t, expectedResult.done, session1.done)
 	assert.Equal(t, expectedResult.ConsumerID, session1.ConsumerID)
-	assert.False(t, session1.CreatedAt.IsZero())
 	assert.True(t, found)
 
-	session2, err := manager.Start(consumerID, accountantID, currentProposalID)
+	session2, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(currentProposalID),
+	})
 	assert.NoError(t, err)
 	expectedResult.done = session2.done
 
 	assert.Equal(t, expectedResult.done, session2.done)
 	assert.Equal(t, expectedResult.ConsumerID, session2.ConsumerID)
-	assert.False(t, session2.CreatedAt.IsZero())
 	assert.Eventuallyf(t, func() bool {
 		_, found = sessionStore.Find(session1.ID)
 		return !found
@@ -139,9 +164,14 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 
 	manager := newManager(currentService, sessionStore)
 
-	session, err := manager.Start(consumerID, accountantID, 69)
+	_, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(69),
+	})
 	assert.Exactly(t, err, ErrorInvalidProposal)
-	assert.Empty(t, session.CreatedAt)
 }
 
 type MockNatEventTracker struct {
@@ -164,7 +194,13 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 	manager := newManager(currentService, sessionStore)
 
-	session, err := manager.Start(consumerID, accountantID, currentProposalID)
+	session, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(currentProposalID),
+	})
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(identity.FromAddress("some other id"), string(session.ID))
@@ -178,7 +214,13 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	manager := newManager(currentService, sessionStore)
 	manager.publisher = mp
 
-	session, err := manager.Start(consumerID, accountantID, currentProposalID)
+	session, err := manager.Start(&pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(currentProposalID),
+	})
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(consumerID, string(session.ID))

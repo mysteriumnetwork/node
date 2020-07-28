@@ -158,27 +158,21 @@ type SessionManager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *SessionManager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
-	if manager.service.Proposal.ID != proposalID {
-		return &Session{}, ErrorInvalidProposal
+func (manager *SessionManager) Start(request *pb.SessionRequest) (session *Session, err error) {
+	if session, err = NewSession(manager.service, request); err != nil {
+		return session, errors.Wrap(err, "cannot create new session")
 	}
-
-	manager.clearStaleSession(consumerID, manager.service.Type)
-
-	session, err := NewSession()
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot create new session")
-	}
-	session.ServiceID = string(manager.service.ID)
-	session.ConsumerID = consumerID
-	session.AccountantID = accountantID
-	session.Proposal = manager.service.Proposal
 	defer func() {
 		if err != nil {
-			log.Err(err).Msg("Connect failed, disconnecting")
+			log.Err(err).Msg("Session failed, disconnecting")
 			session.Close()
 		}
 	}()
+
+	if err = manager.validateSession(session); err != nil {
+		return session, err
+	}
+	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
 
 	manager.sessionStorage.Add(*session)
 	go func() {
@@ -205,6 +199,18 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 	}
 
 	manager.publisher.Publish(sevent.AppTopicSession, session.toEvent(sevent.AcknowledgedStatus))
+	return nil
+}
+
+func (manager *SessionManager) validateSession(session *Session) error {
+	if manager.service.Proposal.ID != int(session.request.GetProposalID()) {
+		return ErrorInvalidProposal
+	}
+
+	if !manager.service.Policies().IsIdentityAllowed(session.ConsumerID) {
+		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
+	}
+
 	return nil
 }
 

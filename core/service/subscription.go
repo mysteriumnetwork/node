@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
@@ -51,14 +50,8 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel) {
 		}
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
 
-		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
-		if !mng.service.Policies().IsIdentityAllowed(consumerID) {
-			return fmt.Errorf("consumer identity is not allowed: %s", consumerID.Address)
-		}
-
 		consumerConfig := sr.GetConfig()
-		accountantID := common.HexToAddress(sr.GetConsumer().GetAccountantID())
-		sessionInstance, err := mng.Start(consumerID, accountantID, int(sr.GetProposalID()))
+		sessionInstance, err := mng.Start(&sr)
 		if err != nil {
 			return fmt.Errorf("cannot start session %s: %w", string(sessionInstance.ID), err)
 		}
