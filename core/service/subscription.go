@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
@@ -33,7 +31,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, policyRules *policy.Repository) {
+func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var sessionID string
 
@@ -42,7 +40,7 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 
 		defer func() {
 			tracer.EndStage(sessionCreateTrace)
-			traceResult := tracer.Finish(eventPublisher, string(sessionID))
+			traceResult := tracer.Finish(mng.publisher, string(sessionID))
 			log.Debug().Msgf("Provider connection trace: %s", traceResult)
 		}()
 
@@ -54,7 +52,7 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
 
 		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
-		if !policyRules.IsIdentityAllowed(consumerID) {
+		if !mng.service.Policies().IsIdentityAllowed(consumerID) {
 			return fmt.Errorf("consumer identity is not allowed: %s", consumerID.Address)
 		}
 
@@ -70,7 +68,7 @@ func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service
 		tracer.EndStage(sessionStartTrace)
 
 		provideConfigTrace := tracer.StartStage("Provider config")
-		config, err := service.ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
+		config, err := mng.service.Service().ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
 			sessionInstance.Close()
 			return fmt.Errorf("cannot get provider config for session %s: %w", string(sessionInstance.ID), err)

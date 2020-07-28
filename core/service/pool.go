@@ -33,11 +33,6 @@ import (
 // ID represent unique identifier of the running service.
 type ID string
 
-// RunnableService represents a runnable service
-type RunnableService interface {
-	Stop() error
-}
-
 // Pool is responsible for supervising running instances
 type Pool struct {
 	eventPublisher Publisher
@@ -129,7 +124,7 @@ func NewInstance(
 	options Options,
 	proposal market.ServiceProposal,
 	state servicestate.State,
-	service RunnableService,
+	service Service,
 	policies *policy.Repository,
 	discovery Discovery,
 ) *Instance {
@@ -153,13 +148,18 @@ type Instance struct {
 	ProviderID      identity.Identity
 	Type            string
 	Options         Options
-	service         RunnableService
+	service         Service
 	Proposal        market.ServiceProposal
 	policies        *policy.Repository
 	discovery       Discovery
 	eventPublisher  Publisher
 	p2pChannelsLock sync.Mutex
 	p2pChannels     []p2p.Channel
+}
+
+// Service returns the running service implementation.
+func (i *Instance) Service() Service {
+	return i.service
 }
 
 // Policies returns service policies of the running service instance.
