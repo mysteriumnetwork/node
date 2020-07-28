@@ -142,7 +142,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	channelHandlers := func(ch p2p.Channel) {
 		instance.addP2PChannel(ch)
 		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, proposal, policyRules)
+		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, policyRules)
 		subscribeSessionStatus(ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch)

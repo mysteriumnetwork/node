@@ -26,10 +26,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
@@ -135,7 +135,7 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(servicestate.AppTopicServiceSession, sender.sendServiceSessionEvent); err != nil {
+	if err := bus.SubscribeAsync(sessionEvent.AppTopicSession, sender.sendServiceSessionEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
@@ -192,17 +192,26 @@ func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
 	})
 }
 
-func (sender *Sender) sendServiceSessionEvent(e connection.AppEventConnectionSession) {
-	if e.SessionInfo.SessionID == "" {
+func (sender *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
+	if e.Session.ID == "" {
 		return
 	}
 
-	sessionContext := sender.toSessionContext(e.SessionInfo)
+	sessionContext := sessionContext{
+		ID:              e.Session.ID,
+		Consumer:        e.Session.ConsumerID.Address,
+		Provider:        e.Session.Proposal.ProviderID,
+		ServiceType:     e.Session.Proposal.ServiceType,
+		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
+		// TODO Consumer country is unkonwn for provider sessions
+		ConsumerCountry: "",
+		AccountantID:    e.Session.AccountantID.Hex(),
+	}
 
 	switch e.Status {
-	case connection.SessionCreatedStatus:
+	case sessionEvent.CreatedStatus:
 		sender.rememberSessionContext(sessionContext)
-	case connection.SessionEndedStatus:
+	case sessionEvent.RemovedStatus:
 		sender.forgetSessionContext(sessionContext)
 	}
 }
