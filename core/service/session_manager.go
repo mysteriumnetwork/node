@@ -158,9 +158,10 @@ type SessionManager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *SessionManager) Start(request *pb.SessionRequest) (session *Session, err error) {
-	if session, err = NewSession(manager.service, request); err != nil {
-		return session, errors.Wrap(err, "cannot create new session")
+func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
+	session, err := NewSession(manager.service, request)
+	if err != nil {
+		return pb.SessionResponse{}, errors.Wrap(err, "cannot create new session")
 	}
 	defer func() {
 		if err != nil {
@@ -169,23 +170,23 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (session *Sessi
 		}
 	}()
 
-	if err = manager.validateSession(session); err != nil {
-		return session, err
-	}
-	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
-
-	manager.sessionStorage.Add(*session)
-	go func() {
-		<-session.Done()
-		manager.sessionStorage.Remove(session.ID)
+	sessionCreateTrace := session.tracer.StartStage("Provider whole session create")
+	defer func() {
+		session.tracer.EndStage(sessionCreateTrace)
+		traceResult := session.tracer.Finish(manager.publisher, string(session.ID))
+		log.Debug().Msgf("Provider connection trace: %s", traceResult)
 	}()
 
-	if err = manager.paymentLoop(session); err != nil {
-		return session, err
+	sessionStartTrace := session.tracer.StartStage("Provider session start")
+	if err = manager.startSession(session); err != nil {
+		return pb.SessionResponse{}, err
 	}
-	go manager.keepAliveLoop(session, manager.channel)
+	if err = manager.paymentLoop(session); err != nil {
+		return pb.SessionResponse{}, err
+	}
+	session.tracer.EndStage(sessionStartTrace)
 
-	return session, nil
+	return manager.providerService(session, manager.channel)
 }
 
 // Acknowledge marks the session as successfully established as far as the consumer is concerned.
@@ -199,6 +200,24 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 	}
 
 	manager.publisher.Publish(sevent.AppTopicSession, session.toEvent(sevent.AcknowledgedStatus))
+	return nil
+}
+
+func (manager *SessionManager) startSession(session *Session) error {
+	if err := manager.validateSession(session); err != nil {
+		return err
+	}
+
+	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
+
+	manager.sessionStorage.Add(*session)
+	go func() {
+		<-session.Done()
+		manager.sessionStorage.Remove(session.ID)
+	}()
+
+	go manager.keepAliveLoop(session, manager.channel)
+
 	return nil
 }
 
@@ -268,6 +287,34 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 	}
 
 	return nil
+}
+
+func (manager *SessionManager) providerService(session *Session, channel p2p.Channel) (pb.SessionResponse, error) {
+	trace := session.tracer.StartStage("Provider config")
+	defer session.tracer.EndStage(trace)
+
+	config, err := manager.service.Service().ProvideConfig(string(session.ID), session.request.GetConfig(), channel.ServiceConn())
+	if err != nil {
+		return pb.SessionResponse{}, fmt.Errorf("cannot get provider config for session %s: %w", string(session.ID), err)
+	}
+
+	if config.SessionDestroyCallback != nil {
+		go func() {
+			<-session.Done()
+			config.SessionDestroyCallback()
+		}()
+	}
+
+	data, err := json.Marshal(config.SessionServiceConfig)
+	if err != nil {
+		return pb.SessionResponse{}, fmt.Errorf("cannot pack session %s service config: %w", string(session.ID), err)
+	}
+
+	return pb.SessionResponse{
+		ID:          string(session.ID),
+		PaymentInfo: "v3",
+		Config:      data,
+	}, nil
 }
 
 func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel) {

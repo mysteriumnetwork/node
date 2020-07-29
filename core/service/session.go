@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/trace"
 )
 
 // Session structure holds all required information about current session between service consumer and provider.
@@ -39,6 +40,7 @@ type Session struct {
 	CreatedAt    time.Time
 	request      *pb.SessionRequest
 	done         chan struct{}
+	tracer       *trace.Tracer
 }
 
 // Close ends session.
@@ -83,5 +85,6 @@ func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error)
 		CreatedAt:    time.Now().UTC(),
 		request:      request,
 		done:         make(chan struct{}),
+		tracer:       trace.NewTracer(),
 	}, nil
 }

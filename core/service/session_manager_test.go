@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
-	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
@@ -55,12 +54,6 @@ var (
 	)
 	consumerID   = identity.FromAddress("deadbeef")
 	accountantID = common.HexToAddress("0x1")
-
-	expectedID      = session.ID("mocked-id")
-	expectedSession = Session{
-		ID:         expectedID,
-		ConsumerID: consumerID,
-	}
 )
 
 type mockBalanceTracker struct {
@@ -99,13 +92,11 @@ func (m *mockP2PChannel) Conn() *net.UDPConn { return nil }
 func (m *mockP2PChannel) Close() error { return nil }
 
 func TestManager_Start_StoresSession(t *testing.T) {
-	expectedResult := expectedSession
-
 	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	manager := newManager(currentService, sessionStore)
 
-	session, err := manager.Start(&pb.SessionRequest{
+	_, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:           consumerID.Address,
 			AccountantID: accountantID.String(),
@@ -113,48 +104,35 @@ func TestManager_Start_StoresSession(t *testing.T) {
 		ProposalID: int64(currentProposalID),
 	})
 	assert.NoError(t, err)
-	expectedResult.done = session.done
 
-	assert.Equal(t, expectedResult.done, session.done)
-	assert.Equal(t, expectedResult.ConsumerID, session.ConsumerID)
+	session := sessionStore.GetAll()[0]
+	assert.Equal(t, consumerID, session.ConsumerID)
 }
 
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
-	expectedResult := expectedSession
+	sessionRequest := &pb.SessionRequest{
+		Consumer: &pb.ConsumerInfo{
+			Id:           consumerID.Address,
+			AccountantID: accountantID.String(),
+		},
+		ProposalID: int64(currentProposalID),
+	}
 
 	sessionStore := NewSessionPool(mocks.NewEventBus())
-
 	manager := newManager(currentService, sessionStore)
 
-	session1, err := manager.Start(&pb.SessionRequest{
-		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
-		},
-		ProposalID: int64(currentProposalID),
-	})
+	_, err := manager.Start(sessionRequest)
 	assert.NoError(t, err)
-	expectedResult.done = session1.done
-	_, found := sessionStore.Find(session1.ID)
 
-	assert.Equal(t, expectedResult.done, session1.done)
-	assert.Equal(t, expectedResult.ConsumerID, session1.ConsumerID)
-	assert.True(t, found)
+	sessionOld := sessionStore.GetAll()[0]
+	assert.Equal(t, consumerID, sessionOld.ConsumerID)
 
-	session2, err := manager.Start(&pb.SessionRequest{
-		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
-		},
-		ProposalID: int64(currentProposalID),
-	})
+	_, err = manager.Start(sessionRequest)
 	assert.NoError(t, err)
-	expectedResult.done = session2.done
 
-	assert.Equal(t, expectedResult.done, session2.done)
-	assert.Equal(t, expectedResult.ConsumerID, session2.ConsumerID)
+	assert.NoError(t, err)
 	assert.Eventuallyf(t, func() bool {
-		_, found = sessionStore.Find(session1.ID)
+		_, found := sessionStore.Find(sessionOld.ID)
 		return !found
 	}, time.Second, 10*time.Millisecond, "Waiting for session destroy")
 }
@@ -172,6 +150,7 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 		ProposalID: int64(69),
 	})
 	assert.Exactly(t, err, ErrorInvalidProposal)
+	assert.Len(t, sessionStore.GetAll(), 0)
 }
 
 type MockNatEventTracker struct {
@@ -209,21 +188,14 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	sessionStore := NewSessionPool(mocks.NewEventBus())
+	session := Session{ID: "1", ConsumerID: consumerID}
+	sessionStore.Add(session)
 
 	mp := mocks.NewEventBus()
 	manager := newManager(currentService, sessionStore)
 	manager.publisher = mp
 
-	session, err := manager.Start(&pb.SessionRequest{
-		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
-		},
-		ProposalID: int64(currentProposalID),
-	})
-	assert.Nil(t, err)
-
-	err = manager.Acknowledge(consumerID, string(session.ID))
+	err := manager.Acknowledge(consumerID, string(session.ID))
 	assert.Nil(t, err)
 
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.AcknowledgedStatus), 2*time.Second, 10*time.Millisecond)
