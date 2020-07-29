@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/trace"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -118,7 +119,7 @@ type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
 	newConnection        Creator
-	eventPublisher       eventbus.Publisher
+	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
 	config               Config
 	statsReportInterval  time.Duration
@@ -134,18 +135,20 @@ type connectionManager struct {
 	cleanupLock            sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
+	cleanupFinished        chan struct{}
 	acknowledge            func()
 	cancel                 func()
 	channel                p2p.Channel
 
-	discoLock sync.Mutex
+	discoLock      sync.Mutex
+	connectOptions ConnectOptions
 }
 
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
-	eventPublisher eventbus.Publisher,
+	eventBus eventbus.EventBus,
 	ipResolver ip.Resolver,
 	config Config,
 	statsReportInterval time.Duration,
@@ -155,9 +158,10 @@ func NewManager(
 	return &connectionManager{
 		newConnection:        connectionCreator,
 		status:               Status{State: NotConnected},
-		eventPublisher:       eventPublisher,
+		eventBus:             eventBus,
 		paymentEngineFactory: paymentEngineFactory,
 		cleanup:              make([]func() error, 0),
+		cleanupFinished:      make(chan struct{}, 1),
 		ipResolver:           ipResolver,
 		config:               config,
 		statsReportInterval:  statsReportInterval,
@@ -175,7 +179,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 
 	defer func() {
 		tracer.EndStage(connectTrace)
-		traceResult := tracer.Finish(m.eventPublisher, string(sessionID))
+		traceResult := tracer.Finish(m.eventBus, string(sessionID))
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
@@ -250,16 +254,18 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	connectionTrace := tracer.StartStage("Consumer start connection")
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
-	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
+	m.connectOptions = ConnectOptions{
 		SessionID:       sessionID,
 		SessionConfig:   sessionDTO.GetConfig(),
-		DNS:             params.DNS,
+		Params:          params,
 		ConsumerID:      consumerID,
 		ProviderID:      providerID,
 		Proposal:        proposal,
 		ProviderNATConn: channel.ServiceConn(),
 		ChannelConn:     channel.Conn(),
-	})
+		AccountantID:    accountantID,
+	}
+	err = m.startConnection(m.currentCtx(), connection, m.connectOptions)
 	tracer.EndStage(connectionTrace)
 
 	if err != nil {
@@ -497,7 +503,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 }
 
 func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
-	m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
+	m.eventBus.Publish(AppTopicConnectionSession, AppEventConnectionSession{
 		Status:      SessionCreatedStatus,
 		SessionInfo: m.Status(),
 	})
@@ -505,7 +511,7 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
+		m.eventBus.Publish(AppTopicConnectionSession, AppEventConnectionSession{
 			Status:      SessionEndedStatus,
 			SessionInfo: m.Status(),
 		})
@@ -513,7 +519,7 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 	})
 }
 
-func (m *connectionManager) startConnection(ctx context.Context, conn Connection, disableKillSwitch bool, connectOptions ConnectOptions) (err error) {
+func (m *connectionManager) startConnection(ctx context.Context, conn Connection, connectOptions ConnectOptions) (err error) {
 	if err = conn.Start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -524,7 +530,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return nil
 	})
 
-	err = m.setupTrafficBlock(disableKillSwitch)
+	err = m.setupTrafficBlock(connectOptions.Params.DisableKillSwitch)
 	if err != nil {
 		return err
 	}
@@ -534,7 +540,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return err
 	}
 
-	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
+	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
 	go statsPublisher.start(m, conn)
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
@@ -638,6 +644,7 @@ func (m *connectionManager) CheckChannel() error {
 func (m *connectionManager) disconnect() {
 	m.discoLock.Lock()
 	defer m.discoLock.Unlock()
+	m.cleanupFinished = make(chan struct{})
 
 	m.ctxLock.Lock()
 	m.cancel()
@@ -647,6 +654,7 @@ func (m *connectionManager) disconnect() {
 	m.statusNotConnected()
 
 	m.cleanAfterDisconnect()
+	close(m.cleanupFinished)
 }
 
 func (m *connectionManager) payForService(payments PaymentIssuer) {
@@ -687,12 +695,45 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) err
 					go m.acknowledge()
 				}
 				m.onStateChanged(state)
+				m.eventBus.SubscribeAsync(sleep.AppTopicSleepNotification, m.handleSleepEvent)
 				return nil
 			default:
 				m.onStateChanged(state)
 			}
 		case <-m.currentCtx().Done():
 			return m.currentCtx().Err()
+		}
+	}
+}
+
+func (m *connectionManager) handleSleepEvent(e sleep.Event) {
+	switch e {
+	case sleep.EventSleep:
+		log.Info().Msg("Got sleep notification during live vpn session")
+	case sleep.EventWakeup:
+		log.Info().Msg("Got wake-up from sleep notification - checking if need to reconnect")
+
+		chAlive := make(chan struct{})
+		chDead := make(chan struct{})
+
+		go func() {
+			if m.CheckChannel() != nil {
+				close(chDead)
+			} else {
+				close(chAlive)
+			}
+		}()
+
+		select {
+		case <-chAlive:
+			log.Info().Msg("Channel still alive - no need to reconnect")
+			return
+		case <-chDead:
+			log.Info().Msg("Channel dead - reconnecting")
+			m.reconnect()
+		case <-time.After(200 * time.Millisecond):
+			log.Info().Msg("CheckChannel timeout - reconnecting")
+			m.reconnect()
 		}
 	}
 }
@@ -742,7 +783,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 }
 
 func (m *connectionManager) publishStateEvent(state State) {
-	go m.eventPublisher.Publish(AppTopicConnectionState, AppEventConnectionState{
+	go m.eventBus.Publish(AppTopicConnectionState, AppEventConnectionState{
 		State:       state,
 		SessionInfo: m.Status(),
 	})
@@ -803,6 +844,19 @@ func (m *connectionManager) currentCtx() context.Context {
 	defer m.ctxLock.RUnlock()
 
 	return m.ctx
+}
+
+func (m *connectionManager) reconnect() {
+	err := m.Disconnect()
+	if err != nil {
+		log.Error().Msgf("Failed to disconnect stale session: %w", err)
+	}
+	log.Info().Msg("Waiting for previous session to cleanup")
+	<-m.cleanupFinished
+	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.AccountantID, m.connectOptions.Proposal, m.connectOptions.Params)
+	if err != nil {
+		log.Error().Msgf("Failed to reconnect: %w", err)
+	}
 }
 
 func logDisconnectError(err error) {

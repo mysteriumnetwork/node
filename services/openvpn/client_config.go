@@ -91,7 +91,7 @@ func NewClientConfigFromSession(vpnConfig VPNConfig, scriptDir string, runtimeDi
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, scriptDir)
-	dnsIPs, err := options.DNS.ResolveIPs(vpnConfig.DNSIPs)
+	dnsIPs, err := options.Params.DNS.ResolveIPs(vpnConfig.DNSIPs)
 	if err != nil {
 		return nil, err
 	}
