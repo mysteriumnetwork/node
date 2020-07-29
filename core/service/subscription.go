@@ -23,21 +23,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, proposal market.ServiceProposal, policyRules *policy.Repository) {
+func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, policyRules *policy.Repository) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
 		var sessionID string
 
@@ -48,14 +44,6 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 			tracer.EndStage(sessionCreateTrace)
 			traceResult := tracer.Finish(eventPublisher, string(sessionID))
 			log.Debug().Msgf("Provider connection trace: %s", traceResult)
-
-			eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
-				Status: connection.SessionEndedStatus,
-				SessionInfo: connection.Status{
-					SessionID: session.ID(sessionID),
-					Proposal:  proposal,
-				},
-			})
 		}()
 
 		sessionStartTrace := tracer.StartStage("Provider session start")
@@ -81,19 +69,10 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		tracer.EndStage(sessionStartTrace)
 
-		eventPublisher.Publish(servicestate.AppTopicServiceSession, connection.AppEventConnectionSession{
-			Status: connection.SessionCreatedStatus,
-			SessionInfo: connection.Status{
-				ConsumerID: consumerID,
-				HermesID:   hermesID,
-				SessionID:  sessionInstance.ID,
-				Proposal:   sessionInstance.Proposal,
-			},
-		})
-
 		provideConfigTrace := tracer.StartStage("Provider config")
 		config, err := service.ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
 		if err != nil {
+			sessionInstance.Close()
 			return fmt.Errorf("cannot get provider config for session %s: %w", string(sessionInstance.ID), err)
 		}
 		tracer.EndStage(provideConfigTrace)
@@ -112,14 +91,14 @@ func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Servic
 
 		pc := p2p.ProtoMessage(&pb.SessionResponse{
 			ID:          string(sessionInstance.ID),
-			PaymentInfo: string(session.PaymentVersionV3),
+			PaymentInfo: "v3",
 			Config:      data,
 		})
 		return c.OkWithReply(pc)
 	})
 }
 
-func subscribeSessionStatus(mng *session.Manager, ch p2p.ChannelHandler, statusStorage connectivity.StatusStorage) {
+func subscribeSessionStatus(ch p2p.ChannelHandler, statusStorage connectivity.StatusStorage) {
 	ch.Handle(p2p.TopicSessionStatus, func(c p2p.Context) error {
 		var ss pb.SessionStatus
 		if err := c.Request().UnmarshalProto(&ss); err != nil {
@@ -140,7 +119,7 @@ func subscribeSessionStatus(mng *session.Manager, ch p2p.ChannelHandler, statusS
 	})
 }
 
-func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done func()) {
+func subscribeSessionDestroy(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicSessionDestroy, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
@@ -156,15 +135,13 @@ func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done f
 			if err != nil {
 				log.Err(err).Msgf("Could not destroy session %s: %v", sessionID, err)
 			}
-
-			done()
 		}()
 
 		return c.OK()
 	})
 }
 
-func subscribeSessionAcknowledge(mng *session.Manager, ch p2p.ChannelHandler) {
+func subscribeSessionAcknowledge(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicSessionAcknowledge, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {

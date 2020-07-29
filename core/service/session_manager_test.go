@@ -15,9 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package session
+package service
 
 import (
+	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -26,6 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat/event"
+	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,7 +42,7 @@ var (
 	consumerID   = identity.FromAddress("deadbeef")
 	accountantID = common.HexToAddress("0x1")
 
-	expectedID      = ID("mocked-id")
+	expectedID      = session.ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
 		ConsumerID: consumerID,
@@ -65,10 +69,25 @@ func mockPaymentEngineFactory(providerID, consumerID identity.Identity, hermes c
 	return &mockBalanceTracker{}, nil
 }
 
+type mockP2PChannel struct{}
+
+func (m *mockP2PChannel) Send(_ context.Context, _ string, _ *p2p.Message) (*p2p.Message, error) {
+	return nil, nil
+}
+
+func (m *mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
+}
+
+func (m *mockP2PChannel) ServiceConn() *net.UDPConn { return nil }
+
+func (m *mockP2PChannel) Conn() *net.UDPConn { return nil }
+
+func (m *mockP2PChannel) Close() error { return nil }
+
 func TestManager_Start_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory(mocks.NewEventBus())
+	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -84,7 +103,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory(mocks.NewEventBus())
+	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -112,7 +131,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 }
 
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
-	sessionStore := NewStorageMemory(mocks.NewEventBus())
+	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -129,7 +148,7 @@ func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 }
 
 func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
-	sessionStore := NewStorageMemory(mocks.NewEventBus())
+	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 	err := manager.Acknowledge(consumerID, "")
@@ -137,7 +156,7 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 }
 
 func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
-	sessionStore := NewStorageMemory(mocks.NewEventBus())
+	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	manager := newManager(currentProposal, sessionStore)
 
@@ -149,7 +168,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 }
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
-	sessionStore := NewStorageMemory(mocks.NewEventBus())
+	sessionStore := NewSessionPool(mocks.NewEventBus())
 
 	mp := mocks.NewEventBus()
 	manager := newManager(currentProposal, sessionStore)
@@ -164,6 +183,6 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	assert.Eventually(t, lastEventMatches(mp, session.ID, sessionEvent.AcknowledgedStatus), 2*time.Second, 10*time.Millisecond)
 }
 
-func newManager(proposal market.ServiceProposal, sessionStore *StorageMemory) *Manager {
-	return NewManager(proposal, sessionStore, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), nil, DefaultConfig())
+func newManager(proposal market.ServiceProposal, sessions *SessionPool) *SessionManager {
+	return NewSessionManager(proposal, sessions, mockPaymentEngineFactory, &MockNatEventTracker{}, "test service id", mocks.NewEventBus(), &mockP2PChannel{}, DefaultConfig())
 }

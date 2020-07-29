@@ -19,7 +19,6 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -27,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
@@ -47,7 +45,7 @@ var (
 type Service interface {
 	Serve(instance *Instance) error
 	Stop() error
-	session.ConfigProvider
+	ConfigProvider
 }
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
@@ -70,7 +68,7 @@ func NewManager(
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
 	p2pListener p2p.Listener,
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager,
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *SessionManager,
 	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
@@ -95,7 +93,7 @@ type Manager struct {
 	policyOracle     *policy.Oracle
 
 	p2pListener    p2p.Listener
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
+	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *SessionManager
 	statusStorage  connectivity.StatusStorage
 }
 
@@ -144,14 +142,10 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	channelHandlers := func(ch p2p.Channel) {
 		instance.addP2PChannel(ch)
 		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, proposal, policyRules)
-		subscribeSessionStatus(mng, ch, manager.statusStorage)
+		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, policyRules)
+		subscribeSessionStatus(ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
-		subscribeSessionDestroy(mng, ch, func() {
-			// Give some time for channel to finish sending last message.
-			time.Sleep(10 * time.Second)
-			instance.closeP2PChannel(ch)
-		})
+		subscribeSessionDestroy(mng, ch)
 	}
 	stopP2PListener, err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
 	if err != nil {
