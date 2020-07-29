@@ -21,22 +21,36 @@ import (
 	"sync"
 )
 
+// EventBusEntry represents the entry in publisher's history
+type EventBusEntry struct {
+	Topic string
+	Event interface{}
+}
+
 // EventBus is a fake event bus.
 type EventBus struct {
-	published interface{}
-	lock      sync.Mutex
+	publishLast    interface{}
+	publishHistory []EventBusEntry
+	lock           sync.Mutex
 }
 
 // NewEventBus creates a new fake event bus.
 func NewEventBus() *EventBus {
-	return &EventBus{}
+	return &EventBus{
+		publishHistory: make([]EventBusEntry, 0),
+	}
 }
 
 // Publish fakes publish.
 func (mp *EventBus) Publish(topic string, event interface{}) {
 	mp.lock.Lock()
 	defer mp.lock.Unlock()
-	mp.published = event
+
+	mp.publishHistory = append(mp.publishHistory, EventBusEntry{
+		Topic: topic,
+		Event: event,
+	})
+	mp.publishLast = event
 }
 
 // SubscribeAsync fakes async subsribe.
@@ -58,7 +72,21 @@ func (mp *EventBus) Unsubscribe(topic string, fn interface{}) error {
 func (mp *EventBus) Pop() interface{} {
 	mp.lock.Lock()
 	defer mp.lock.Unlock()
-	result := mp.published
-	mp.published = nil
+	result := mp.publishLast
+	mp.publishLast = nil
 	return result
+}
+
+// Clear clears the event history
+func (mp *EventBus) Clear() {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+	mp.publishHistory = make([]EventBusEntry, 0)
+}
+
+// GetEventHistory fetches the event history
+func (mp *EventBus) GetEventHistory() []EventBusEntry {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+	return mp.publishHistory
 }
