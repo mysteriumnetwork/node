@@ -217,7 +217,7 @@ func estimateInvoiceTolerance(elapsed time.Duration, transferred DataTransferred
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
 	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
 	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
-	if err != nil {
+	if err != nil && err != ErrNotFound {
 		return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
 	}
 
