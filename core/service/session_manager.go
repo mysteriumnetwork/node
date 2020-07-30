@@ -170,21 +170,19 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 		}
 	}()
 
-	sessionCreateTrace := session.tracer.StartStage("Provider whole session create")
+	trace := session.tracer.StartStage("Provider whole session create")
 	defer func() {
-		session.tracer.EndStage(sessionCreateTrace)
+		session.tracer.EndStage(trace)
 		traceResult := session.tracer.Finish(manager.publisher, string(session.ID))
 		log.Debug().Msgf("Provider connection trace: %s", traceResult)
 	}()
 
-	sessionStartTrace := session.tracer.StartStage("Provider session start")
 	if err = manager.startSession(session); err != nil {
 		return pb.SessionResponse{}, err
 	}
 	if err = manager.paymentLoop(session); err != nil {
 		return pb.SessionResponse{}, err
 	}
-	session.tracer.EndStage(sessionStartTrace)
 
 	return manager.providerService(session, manager.channel)
 }
@@ -204,6 +202,9 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 }
 
 func (manager *SessionManager) startSession(session *Session) error {
+	trace := session.tracer.StartStage("Provider session start")
+	defer session.tracer.EndStage(trace)
+
 	if err := manager.validateSession(session); err != nil {
 		return err
 	}
@@ -261,6 +262,9 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 }
 
 func (manager *SessionManager) paymentLoop(session *Session) error {
+	trace := session.tracer.StartStage("Provider payments")
+	defer session.tracer.EndStage(trace)
+
 	log.Info().Msg("Using new payments")
 	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.AccountantID, string(session.ID))
 	if err != nil {
