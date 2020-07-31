@@ -288,7 +288,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	sessionsDTO, err := tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(sessionsDTO.Sessions))
+	assert.True(t, len(sessionsDTO.Sessions) >= 1)
 	se := sessionsDTO.Sessions[0]
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
@@ -312,7 +312,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	sessionsDTO, err = tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(sessionsDTO.Sessions))
+	assert.True(t, len(sessionsDTO.Sessions) >= 1)
 	se = sessionsDTO.Sessions[0]
 	assert.Equal(t, "Completed", se.Status)
 
