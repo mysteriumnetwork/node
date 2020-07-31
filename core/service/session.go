@@ -18,6 +18,7 @@
 package service
 
 import (
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/trace"
+	"github.com/rs/zerolog/log"
 )
 
 // Session structure holds all required information about current session between service consumer and provider.
@@ -40,17 +42,38 @@ type Session struct {
 	CreatedAt    time.Time
 	request      *pb.SessionRequest
 	done         chan struct{}
+	cleanupLock  sync.Mutex
+	cleanup      []func() error
 	tracer       *trace.Tracer
 }
 
 // Close ends session.
 func (s *Session) Close() {
 	close(s.done)
+
+	s.cleanupLock.Lock()
+	defer s.cleanupLock.Unlock()
+
+	for i := len(s.cleanup) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Session cleaning up: (%v/%v)", i+1, len(s.cleanup))
+		err := s.cleanup[i]()
+		if err != nil {
+			log.Warn().Err(err).Msg("Cleanup error")
+		}
+	}
+	s.cleanup = nil
 }
 
 // Done returns readonly done channel.
 func (s *Session) Done() <-chan struct{} {
 	return s.done
+}
+
+func (s *Session) addCleanup(fn func() error) {
+	s.cleanupLock.Lock()
+	defer s.cleanupLock.Unlock()
+
+	s.cleanup = append(s.cleanup, fn)
 }
 
 func (s *Session) toEvent(status event.Status) event.AppEventSession {
@@ -85,6 +108,7 @@ func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error)
 		CreatedAt:    time.Now().UTC(),
 		request:      request,
 		done:         make(chan struct{}),
+		cleanup:      make([]func() error, 0),
 		tracer:       trace.NewTracer(),
 	}, nil
 }

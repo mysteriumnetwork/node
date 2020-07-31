@@ -204,10 +204,10 @@ func (manager *SessionManager) startSession(session *Session) error {
 	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
 
 	manager.sessionStorage.Add(session)
-	go func() {
-		<-session.Done()
+	session.addCleanup(func() error {
 		manager.sessionStorage.Remove(session.ID)
-	}()
+		return nil
+	})
 
 	go manager.keepAliveLoop(session, manager.channel)
 
@@ -266,10 +266,10 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 	}
 
 	// stop the balance tracker once the session is finished
-	go func() {
-		<-session.Done()
+	session.addCleanup(func() error {
 		engine.Stop()
-	}()
+		return nil
+	})
 
 	go func() {
 		err := engine.Start()
@@ -297,10 +297,10 @@ func (manager *SessionManager) providerService(session *Session, channel p2p.Cha
 	}
 
 	if config.SessionDestroyCallback != nil {
-		go func() {
-			<-session.Done()
+		session.addCleanup(func() error {
 			config.SessionDestroyCallback()
-		}()
+			return nil
+		})
 	}
 
 	data, err := json.Marshal(config.SessionServiceConfig)
