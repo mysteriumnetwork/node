@@ -102,7 +102,6 @@ services:
 
   redis:
     image: bitnami/redis:5.0.8
-    container_name: 'accountant_redis'
     expose:
       - 6379
     environment:
