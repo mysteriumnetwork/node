@@ -131,6 +131,44 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
 		assert.InDelta(t, expected, providerStatus.Balance, 2)
 	})
+
+	t.Run("Provider stops services", func(t *testing.T) {
+		services, err := tequilapiProvider.Services()
+		assert.NoError(t, err)
+
+		for _, service := range services {
+			err := tequilapiProvider.ServiceStop(service.ID)
+			assert.NoError(t, err)
+		}
+	})
+
+	t.Run("Provider starts whitelisted noop services", func(t *testing.T) {
+		req := contract.ServiceStartRequest{
+			ProviderID: providerID,
+			Type:       "noop",
+			PaymentMethod: contract.ServicePaymentMethod{
+				PriceGB:     1000000,
+				PriceMinute: 1000000,
+			},
+			AccessPolicies: contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
+		}
+
+		_, err := tequilapiProvider.ServiceStart(req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Whitelisted consumer connects to the whitelisted noop service", func(t *testing.T) {
+		tequilapiConsumer := newTequilapiConsumer("noop")
+		consumerRegistrationFlow(t, tequilapiConsumer, "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", "")
+		proposal := consumerPicksProposal(t, tequilapiConsumer, "noop")
+		consumerConnectFlow(t, tequilapiConsumer, "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", accountantID, "noop", proposal)
+	})
+
+	t.Run("Consumers rejected by whitelisted service", func(t *testing.T) {
+		c := consumers["noop"]
+		proposal := consumerPicksProposal(t, c.tequila, c.serviceType)
+		consumerRejectWhitelistedFlow(t, c.tequila, c.consumerID, accountantID, c.serviceType, proposal)
+	})
 }
 
 func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
@@ -289,6 +327,26 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Zero(t, consumerStatus.EarningsTotal)
 
 	return uint64(690000000) - consumerStatus.Balance
+}
+
+func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) {
+	connectionStatus, err := tequilapi.ConnectionStatus()
+	assert.NoError(t, err)
+	assert.Equal(t, "NotConnected", connectionStatus.Status)
+
+	nonVpnIP, err := tequilapi.ConnectionIP()
+	assert.NoError(t, err)
+	log.Info().Msg("Original consumer IP: " + nonVpnIP.IP)
+
+	err = waitForCondition(func() (bool, error) {
+		status, err := tequilapi.ConnectionStatus()
+		return status.Status == "NotConnected", err
+	})
+	assert.NoError(t, err)
+
+	_, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, contract.ConnectOptions{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "consumer identity is not allowed")
 }
 
 func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) uint64 {
