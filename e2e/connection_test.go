@@ -46,7 +46,7 @@ var (
 )
 
 var (
-	providerStake, _   = big.NewInt(0).SetString("62000000000000000000", 10)
+	providerStake, _   = big.NewInt(0).SetString("12000000000000000000", 10)
 	topUpAmount, _     = big.NewInt(0).SetString("7000000000000000000", 10)
 	registrationFee, _ = big.NewInt(0).SetString("100000000000000000", 10)
 )
