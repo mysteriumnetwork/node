@@ -215,8 +215,6 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -252,8 +250,6 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -289,8 +285,6 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
