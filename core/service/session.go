@@ -24,8 +24,10 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/trace"
 )
 
 // Session structure holds all required information about current session between service consumer and provider.
@@ -36,7 +38,9 @@ type Session struct {
 	Proposal     market.ServiceProposal
 	ServiceID    string
 	CreatedAt    time.Time
+	request      *pb.SessionRequest
 	done         chan struct{}
+	tracer       *trace.Tracer
 }
 
 // Close ends session.
@@ -66,15 +70,21 @@ func (s Session) toEvent(status event.Status) event.AppEventSession {
 }
 
 // NewSession creates a blank new session with an ID.
-func NewSession() (*Session, error) {
+func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error) {
 	uid, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Session{
-		ID:        session.ID(uid.String()),
-		CreatedAt: time.Now().UTC(),
-		done:      make(chan struct{}),
+		ID:           session.ID(uid.String()),
+		ConsumerID:   identity.FromAddress(request.GetConsumer().GetId()),
+		AccountantID: common.HexToAddress(request.GetConsumer().GetAccountantID()),
+		Proposal:     service.Proposal,
+		ServiceID:    string(service.ID),
+		CreatedAt:    time.Now().UTC(),
+		request:      request,
+		done:         make(chan struct{}),
+		tracer:       trace.NewTracer(),
 	}, nil
 }

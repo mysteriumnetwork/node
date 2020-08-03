@@ -124,7 +124,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	m.tlsPrimitives, err = primitiveFactory(m.country, instance.Proposal().ProviderID)
+	m.tlsPrimitives, err = primitiveFactory(m.country, instance.ProviderID.Address)
 	if err != nil {
 		return
 	}

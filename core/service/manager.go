@@ -68,7 +68,7 @@ func NewManager(
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
 	p2pListener p2p.Listener,
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *SessionManager,
+	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager,
 	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
@@ -93,7 +93,7 @@ type Manager struct {
 	policyOracle     *policy.Oracle
 
 	p2pListener    p2p.Listener
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *SessionManager
+	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager
 	statusStorage  connectivity.StatusStorage
 }
 
@@ -129,11 +129,13 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery.Start(providerID, proposal)
 
 	instance := &Instance{
-		id:             id,
+		ID:             id,
+		ProviderID:     providerID,
+		Type:           serviceType,
 		state:          servicestate.Starting,
-		options:        options,
+		Options:        options,
 		service:        service,
-		proposal:       proposal,
+		Proposal:       proposal,
 		policies:       policyRules,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
@@ -141,8 +143,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	channelHandlers := func(ch p2p.Channel) {
 		instance.addP2PChannel(ch)
-		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service, manager.eventPublisher, policyRules)
+		mng := manager.sessionManager(instance, ch)
+		subscribeSessionCreate(mng, ch)
 		subscribeSessionStatus(ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch)

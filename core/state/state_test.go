@@ -358,11 +358,11 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 	actual := keeper.GetState().Services[0]
 	assert.Equal(t, string(id), actual.ID)
-	assert.Equal(t, expected.Proposal().ServiceType, actual.Type)
-	assert.Equal(t, expected.Proposal().ProviderID, actual.ProviderID)
-	assert.Equal(t, expected.Options(), actual.Options)
+	assert.Equal(t, expected.Type, actual.Type)
+	assert.Equal(t, expected.ProviderID.Address, actual.ProviderID)
+	assert.Equal(t, expected.Options, actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
-	assert.EqualValues(t, contract.NewProposalDTO(expected.Proposal()), actual.Proposal)
+	assert.EqualValues(t, contract.NewProposalDTO(expected.Proposal), actual.Proposal)
 }
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {

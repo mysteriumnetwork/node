@@ -126,20 +126,18 @@ type NATEventGetter interface {
 
 // NewSessionManager returns new session SessionManager
 func NewSessionManager(
-	currentProposal market.ServiceProposal,
+	service *Instance,
 	sessionStorage Storage,
 	paymentEngineFactory PaymentEngineFactory,
 	natEventGetter NATEventGetter,
-	serviceId string,
 	publisher publisher,
 	channel p2p.Channel,
 	config Config,
 ) *SessionManager {
 	return &SessionManager{
-		currentProposal:      currentProposal,
+		service:              service,
 		sessionStorage:       sessionStorage,
 		natEventGetter:       natEventGetter,
-		serviceId:            serviceId,
 		publisher:            publisher,
 		paymentEngineFactory: paymentEngineFactory,
 		channel:              channel,
@@ -149,11 +147,10 @@ func NewSessionManager(
 
 // SessionManager knows how to start and provision session
 type SessionManager struct {
-	currentProposal      market.ServiceProposal
+	service              *Instance
 	sessionStorage       Storage
 	paymentEngineFactory PaymentEngineFactory
 	natEventGetter       NATEventGetter
-	serviceId            string
 	publisher            publisher
 	channel              p2p.Channel
 	config               Config
@@ -161,62 +158,33 @@ type SessionManager struct {
 
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
-func (manager *SessionManager) Start(consumerID identity.Identity, accountantID common.Address, proposalID int) (*Session, error) {
-	if manager.currentProposal.ID != proposalID {
-		return &Session{}, ErrorInvalidProposal
-	}
-
-	manager.clearStaleSession(consumerID, manager.currentProposal.ServiceType)
-
-	session, err := NewSession()
+func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
+	session, err := NewSession(manager.service, request)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create new session")
+		return pb.SessionResponse{}, errors.Wrap(err, "cannot create new session")
 	}
-	session.ServiceID = manager.serviceId
-	session.ConsumerID = consumerID
-	session.AccountantID = accountantID
-	session.Proposal = manager.currentProposal
 	defer func() {
 		if err != nil {
-			log.Err(err).Msg("Connect failed, disconnecting")
+			log.Err(err).Msg("Session failed, disconnecting")
 			session.Close()
 		}
 	}()
 
-	manager.sessionStorage.Add(*session)
-	go func() {
-		<-session.Done()
-		manager.sessionStorage.Remove(session.ID)
+	trace := session.tracer.StartStage("Provider whole session create")
+	defer func() {
+		session.tracer.EndStage(trace)
+		traceResult := session.tracer.Finish(manager.publisher, string(session.ID))
+		log.Debug().Msgf("Provider connection trace: %s", traceResult)
 	}()
 
-	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerID, accountantID, string(session.ID))
-	if err != nil {
-		return session, err
+	if err = manager.startSession(session); err != nil {
+		return pb.SessionResponse{}, err
+	}
+	if err = manager.paymentLoop(session); err != nil {
+		return pb.SessionResponse{}, err
 	}
 
-	// stop the balance tracker once the session is finished
-	go func() {
-		<-session.Done()
-		engine.Stop()
-	}()
-
-	go func() {
-		err := engine.Start()
-		if err != nil {
-			log.Error().Err(err).Msg("Payment engine error")
-			session.Close()
-		}
-	}()
-
-	log.Info().Msg("Waiting for a first invoice to be paid")
-	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
-		return session, fmt.Errorf("first invoice was not paid: %w", err)
-	}
-
-	go manager.keepAliveLoop(session, manager.channel)
-
-	return session, nil
+	return manager.providerService(session, manager.channel)
 }
 
 // Acknowledge marks the session as successfully established as far as the consumer is concerned.
@@ -230,6 +198,39 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 	}
 
 	manager.publisher.Publish(sevent.AppTopicSession, session.toEvent(sevent.AcknowledgedStatus))
+	return nil
+}
+
+func (manager *SessionManager) startSession(session *Session) error {
+	trace := session.tracer.StartStage("Provider session start")
+	defer session.tracer.EndStage(trace)
+
+	if err := manager.validateSession(session); err != nil {
+		return err
+	}
+
+	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
+
+	manager.sessionStorage.Add(*session)
+	go func() {
+		<-session.Done()
+		manager.sessionStorage.Remove(session.ID)
+	}()
+
+	go manager.keepAliveLoop(session, manager.channel)
+
+	return nil
+}
+
+func (manager *SessionManager) validateSession(session *Session) error {
+	if manager.service.Proposal.ID != int(session.request.GetProposalID()) {
+		return ErrorInvalidProposal
+	}
+
+	if !manager.service.Policies().IsIdentityAllowed(session.ConsumerID) {
+		return fmt.Errorf("consumer identity is not allowed: %s", session.ConsumerID.Address)
+	}
+
 	return nil
 }
 
@@ -258,6 +259,66 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 
 	session.Close()
 	return nil
+}
+
+func (manager *SessionManager) paymentLoop(session *Session) error {
+	trace := session.tracer.StartStage("Provider payments")
+	defer session.tracer.EndStage(trace)
+
+	log.Info().Msg("Using new payments")
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.AccountantID, string(session.ID))
+	if err != nil {
+		return err
+	}
+
+	// stop the balance tracker once the session is finished
+	go func() {
+		<-session.Done()
+		engine.Stop()
+	}()
+
+	go func() {
+		err := engine.Start()
+		if err != nil {
+			log.Error().Err(err).Msg("Payment engine error")
+			session.Close()
+		}
+	}()
+
+	log.Info().Msg("Waiting for a first invoice to be paid")
+	if err := engine.WaitFirstInvoice(30 * time.Second); err != nil {
+		return fmt.Errorf("first invoice was not paid: %w", err)
+	}
+
+	return nil
+}
+
+func (manager *SessionManager) providerService(session *Session, channel p2p.Channel) (pb.SessionResponse, error) {
+	trace := session.tracer.StartStage("Provider config")
+	defer session.tracer.EndStage(trace)
+
+	config, err := manager.service.Service().ProvideConfig(string(session.ID), session.request.GetConfig(), channel.ServiceConn())
+	if err != nil {
+		return pb.SessionResponse{}, fmt.Errorf("cannot get provider config for session %s: %w", string(session.ID), err)
+	}
+
+	if config.SessionDestroyCallback != nil {
+		go func() {
+			<-session.Done()
+			config.SessionDestroyCallback()
+		}()
+	}
+
+	data, err := json.Marshal(config.SessionServiceConfig)
+	if err != nil {
+		return pb.SessionResponse{}, fmt.Errorf("cannot pack session %s service config: %w", string(session.ID), err)
+	}
+
+	return pb.SessionResponse{
+		ID:          string(session.ID),
+		PaymentInfo: "v3",
+		Config:      data,
+	}, nil
 }
 
 func (manager *SessionManager) keepAliveLoop(sess *Session, channel p2p.Channel) {

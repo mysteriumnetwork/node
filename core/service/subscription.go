@@ -18,83 +18,30 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/policy"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel, service Service, eventPublisher eventbus.Publisher, policyRules *policy.Repository) {
+func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
-		var sessionID string
-
-		tracer := trace.NewTracer()
-		sessionCreateTrace := tracer.StartStage("Provider whole session create")
-
-		defer func() {
-			tracer.EndStage(sessionCreateTrace)
-			traceResult := tracer.Finish(eventPublisher, string(sessionID))
-			log.Debug().Msgf("Provider connection trace: %s", traceResult)
-		}()
-
-		sessionStartTrace := tracer.StartStage("Provider session start")
-		var sr pb.SessionRequest
-		if err := c.Request().UnmarshalProto(&sr); err != nil {
+		var request pb.SessionRequest
+		if err := c.Request().UnmarshalProto(&request); err != nil {
 			return err
 		}
-		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
+		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, request.String())
 
-		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
-		if !policyRules.IsIdentityAllowed(consumerID) {
-			return fmt.Errorf("consumer identity is not allowed: %s", consumerID.Address)
-		}
-
-		consumerConfig := sr.GetConfig()
-		accountantID := common.HexToAddress(sr.GetConsumer().GetAccountantID())
-		sessionInstance, err := mng.Start(consumerID, accountantID, int(sr.GetProposalID()))
+		response, err := mng.Start(&request)
 		if err != nil {
-			return fmt.Errorf("cannot start session %s: %w", string(sessionInstance.ID), err)
+			return fmt.Errorf("cannot start session: %s: %w", response.ID, err)
 		}
 
-		sessionID = string(sessionInstance.ID)
-
-		tracer.EndStage(sessionStartTrace)
-
-		provideConfigTrace := tracer.StartStage("Provider config")
-		config, err := service.ProvideConfig(string(sessionInstance.ID), consumerConfig, ch.ServiceConn())
-		if err != nil {
-			sessionInstance.Close()
-			return fmt.Errorf("cannot get provider config for session %s: %w", string(sessionInstance.ID), err)
-		}
-		tracer.EndStage(provideConfigTrace)
-
-		if config.SessionDestroyCallback != nil {
-			go func() {
-				<-sessionInstance.Done()
-				config.SessionDestroyCallback()
-			}()
-		}
-
-		data, err := json.Marshal(config.SessionServiceConfig)
-		if err != nil {
-			return fmt.Errorf("cannot pack session %s service config: %w", string(sessionInstance.ID), err)
-		}
-
-		pc := p2p.ProtoMessage(&pb.SessionResponse{
-			ID:          string(sessionInstance.ID),
-			PaymentInfo: "v3",
-			Config:      data,
-		})
-		return c.OkWithReply(pc)
+		return c.OkWithReply(p2p.ProtoMessage(&response))
 	})
 }
 

@@ -18,7 +18,9 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"net"
 	"sync"
 	"testing"
 
@@ -43,8 +45,16 @@ func (mockPublisher *mockPublisher) Publish(topic string, data interface{}) {
 	mockPublisher.publishedData = append(mockPublisher.publishedData, data)
 }
 
+func (mr *mockService) Serve(_ *Instance) error {
+	return nil
+}
+
 func (mr *mockService) Stop() error {
 	return mr.killErr
+}
+
+func (mr *mockService) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*ConfigParams, error) {
+	return &ConfigParams{}, nil
 }
 
 func Test_Pool_NewPool(t *testing.T) {
@@ -76,7 +86,7 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 
 func Test_Pool_StopDoesNotStop(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service, eventPublisher: mocks.NewEventBus()}
+	instance := &Instance{ID: "test id", service: service, eventPublisher: mocks.NewEventBus()}
 
 	pool := NewPool(mocks.NewEventBus())
 	pool.Add(instance)
@@ -93,7 +103,7 @@ func Test_Pool_StopReturnsErrIfInstanceDoesNotExist(t *testing.T) {
 
 func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service, eventPublisher: mocks.NewEventBus()}
+	instance := &Instance{ID: "test id", service: service, eventPublisher: mocks.NewEventBus()}
 
 	pool := NewPool(mocks.NewEventBus())
 	pool.Add(instance)
