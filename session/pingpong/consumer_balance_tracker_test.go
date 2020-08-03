@@ -254,7 +254,7 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	accountantID := common.HexToAddress("0x000000acc")
-	var grandTotalPromised uint64 = 100
+	var grandTotalPromised uint64 = 0
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{
 		res: grandTotalPromised,
