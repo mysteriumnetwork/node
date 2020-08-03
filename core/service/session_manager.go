@@ -101,14 +101,6 @@ type PromiseProcessor interface {
 	Stop() error
 }
 
-// Storage interface to session storage
-type Storage interface {
-	Add(sessionInstance Session)
-	GetAll() []Session
-	Find(id session.ID) (Session, bool)
-	Remove(id session.ID)
-}
-
 // PaymentEngineFactory creates a new instance of payment engine
 type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
 
@@ -127,7 +119,7 @@ type NATEventGetter interface {
 // NewSessionManager returns new session SessionManager
 func NewSessionManager(
 	service *Instance,
-	sessionStorage Storage,
+	sessionStorage *SessionPool,
 	paymentEngineFactory PaymentEngineFactory,
 	natEventGetter NATEventGetter,
 	publisher publisher,
@@ -148,7 +140,7 @@ func NewSessionManager(
 // SessionManager knows how to start and provision session
 type SessionManager struct {
 	service              *Instance
-	sessionStorage       Storage
+	sessionStorage       *SessionPool
 	paymentEngineFactory PaymentEngineFactory
 	natEventGetter       NATEventGetter
 	publisher            publisher
@@ -211,7 +203,7 @@ func (manager *SessionManager) startSession(session *Session) error {
 
 	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
 
-	manager.sessionStorage.Add(*session)
+	manager.sessionStorage.Add(session)
 	go func() {
 		<-session.Done()
 		manager.sessionStorage.Remove(session.ID)

@@ -33,7 +33,7 @@ const (
 
 var (
 	identityExisting = identity.FromAddress("deadbeef")
-	sessionExisting  = service.Session{
+	sessionExisting  = &service.Session{
 		ID:         session.ID(sessionExistingString),
 		ConsumerID: identityExisting,
 	}

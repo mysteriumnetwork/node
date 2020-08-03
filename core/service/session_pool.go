@@ -28,7 +28,7 @@ import (
 // NewSessionPool initiates new session storage
 func NewSessionPool(publisher publisher) *SessionPool {
 	sm := &SessionPool{
-		sessions:  make(map[session.ID]Session),
+		sessions:  make(map[session.ID]*Session),
 		lock:      sync.Mutex{},
 		publisher: publisher,
 	}
@@ -37,14 +37,14 @@ func NewSessionPool(publisher publisher) *SessionPool {
 
 // SessionPool maintains all current sessions in memory
 type SessionPool struct {
-	sessions  map[session.ID]Session
+	sessions  map[session.ID]*Session
 	lock      sync.Mutex
 	publisher publisher
 }
 
 // Add puts given session to storage and publishes a creation event.
 // Multiple sessions per peerID is possible in case different services are used
-func (sp *SessionPool) Add(instance Session) {
+func (sp *SessionPool) Add(instance *Session) {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 
@@ -53,13 +53,13 @@ func (sp *SessionPool) Add(instance Session) {
 }
 
 // GetAll returns all sessions in storage
-func (sp *SessionPool) GetAll() []Session {
+func (sp *SessionPool) GetAll() []*Session {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 
 	// we're never gonna have more than 100000 sessions ongoing on a single node - performance here should not be an issue.
 	// see Benchmark_Storage_GetAll
-	sessions := make([]Session, len(sp.sessions))
+	sessions := make([]*Session, len(sp.sessions))
 
 	i := 0
 	for _, value := range sp.sessions {
@@ -70,7 +70,7 @@ func (sp *SessionPool) GetAll() []Session {
 }
 
 // Find returns underlying session instance
-func (sp *SessionPool) Find(id session.ID) (Session, bool) {
+func (sp *SessionPool) Find(id session.ID) (*Session, bool) {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 
@@ -85,7 +85,7 @@ type FindOpts struct {
 }
 
 // FindBy returns a session by find options.
-func (sp *SessionPool) FindBy(opts FindOpts) (Session, bool) {
+func (sp *SessionPool) FindBy(opts FindOpts) (*Session, bool) {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 
@@ -98,7 +98,7 @@ func (sp *SessionPool) FindBy(opts FindOpts) (Session, bool) {
 		}
 		return session, true
 	}
-	return Session{}, false
+	return nil, false
 }
 
 // Remove removes given session from underlying storage

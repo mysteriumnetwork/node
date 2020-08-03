@@ -188,7 +188,7 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	sessionStore := NewSessionPool(mocks.NewEventBus())
-	session := Session{ID: "1", ConsumerID: consumerID}
+	session := &Session{ID: "1", ConsumerID: consumerID}
 	sessionStore.Add(session)
 
 	mp := mocks.NewEventBus()

@@ -53,7 +53,7 @@ func (s *Session) Done() <-chan struct{} {
 	return s.done
 }
 
-func (s Session) toEvent(status event.Status) event.AppEventSession {
+func (s *Session) toEvent(status event.Status) event.AppEventSession {
 	return event.AppEventSession{
 		Status: status,
 		Service: event.ServiceContext{
