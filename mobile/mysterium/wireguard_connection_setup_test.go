@@ -38,7 +38,7 @@ func TestConnectionStartStop(t *testing.T) {
 	// Start connection.
 	sessionConfig, _ := json.Marshal(newServiceConfig())
 	err := conn.Start(context.Background(), connection.ConnectOptions{
-		DNS:           "1.2.3.4",
+		Params:        connection.ConnectParams{DNS: "1.2.3.4"},
 		SessionConfig: sessionConfig,
 	})
 

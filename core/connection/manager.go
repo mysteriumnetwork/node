@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -36,8 +39,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/trace"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -136,6 +137,7 @@ type connectionManager struct {
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
 	cleanupFinished        chan struct{}
+	cleanupFinishedLock    sync.Mutex
 	acknowledge            func()
 	cancel                 func()
 	channel                p2p.Channel
@@ -644,7 +646,11 @@ func (m *connectionManager) CheckChannel() error {
 func (m *connectionManager) disconnect() {
 	m.discoLock.Lock()
 	defer m.discoLock.Unlock()
+
+	m.cleanupFinishedLock.Lock()
+	defer m.cleanupFinishedLock.Unlock()
 	m.cleanupFinished = make(chan struct{})
+	defer close(m.cleanupFinished)
 
 	m.ctxLock.Lock()
 	m.cancel()
@@ -654,7 +660,6 @@ func (m *connectionManager) disconnect() {
 	m.statusNotConnected()
 
 	m.cleanAfterDisconnect()
-	close(m.cleanupFinished)
 }
 
 func (m *connectionManager) payForService(payments PaymentIssuer) {
@@ -852,6 +857,9 @@ func (m *connectionManager) reconnect() {
 		log.Error().Msgf("Failed to disconnect stale session: %w", err)
 	}
 	log.Info().Msg("Waiting for previous session to cleanup")
+
+	m.cleanupFinishedLock.Lock()
+	defer m.cleanupFinishedLock.Unlock()
 	<-m.cleanupFinished
 	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.AccountantID, m.connectOptions.Proposal, m.connectOptions.Params)
 	if err != nil {

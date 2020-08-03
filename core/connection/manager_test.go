@@ -205,37 +205,25 @@ func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
 		tc.connManager.Status(),
 	)
 
-	connecting := State("not defined")
-	connected := State("not defined")
+	stateCh := make(chan State, 2)
 	tc.connManager.eventBus.SubscribeAsync(AppTopicConnectionState, func(e AppEventConnectionState) {
 		fmt.Println("got state: ", e)
 
 		if e.State == Connecting {
 			fmt.Println("got connecting state")
-			connecting = Connecting
+			stateCh <- Connecting
 		}
 		if e.State == Connected {
 			fmt.Println("got connected state")
-			connected = Connected
+			stateCh <- Connected
 		}
 	})
 
 	fmt.Println("sending wakeup event")
 	tc.connManager.eventBus.Publish(sleep.AppTopicSleepNotification, sleep.EventWakeup)
 
-	assert.Eventually(tc.T(), func() bool {
-		if connecting == Connecting {
-			return true
-		}
-		return false
-	}, 200*time.Second, 10*time.Millisecond)
-
-	assert.Eventually(tc.T(), func() bool {
-		if connected == Connected {
-			return true
-		}
-		return false
-	}, 200*time.Second, 10*time.Millisecond)
+	assert.Equal(tc.T(), <-stateCh, Connecting)
+	assert.Equal(tc.T(), <-stateCh, Connected)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
