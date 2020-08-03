@@ -104,8 +104,8 @@ type PromiseProcessor interface {
 // Storage interface to session storage
 type Storage interface {
 	Add(sessionInstance Session)
+	GetAll() []Session
 	Find(id session.ID) (Session, bool)
-	FindBy(opts FindOpts) (Session, bool)
 	Remove(id session.ID)
 }
 
@@ -237,11 +237,13 @@ func (manager *SessionManager) validateSession(session *Session) error {
 func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, serviceType string) {
 	// Reading stale session before starting the clean up in goroutine.
 	// This is required to make sure we are not cleaning the newly created session.
-	session, ok := manager.sessionStorage.FindBy(FindOpts{
-		Peer:        &consumerID,
-		ServiceType: serviceType,
-	})
-	if ok {
+	for _, session := range manager.sessionStorage.GetAll() {
+		if consumerID != session.ConsumerID {
+			continue
+		}
+		if serviceType != session.Proposal.ServiceType {
+			continue
+		}
 		log.Info().Msgf("Cleaning stale session %s for %s consumer", session.ID, consumerID.Address)
 		go session.Close()
 	}
