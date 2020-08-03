@@ -93,7 +93,7 @@ func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 func (c *ConnectionWrap) Open() (err error) {
 	c.Conn, err = c.connectOptions().Connect()
 	if err != nil {
-		return errors.Wrapf(err, `failed to connect to NATS servers "%v"`, c.servers)
+		return fmt.Errorf("failed to connect to NATS servers %v: %w", c.connectOptions().Servers, err)
 	}
 
 	return nil

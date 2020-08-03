@@ -636,9 +636,9 @@ func (m *connectionManager) Disconnect() error {
 	return nil
 }
 
-func (m *connectionManager) CheckChannel() error {
-	if err := m.sendKeepAlivePing(m.channel, m.Status().SessionID); err != nil {
-		return fmt.Errorf("keep alive call failed after wake up - proceeding to reconnect: %w", err)
+func (m *connectionManager) CheckChannel(ctx context.Context) error {
+	if err := m.sendKeepAlivePing(ctx, m.channel, m.Status().SessionID); err != nil {
+		return fmt.Errorf("keep alive ping failed: %w", err)
 	}
 	return nil
 }
@@ -718,27 +718,13 @@ func (m *connectionManager) handleSleepEvent(e sleep.Event) {
 	case sleep.EventWakeup:
 		log.Info().Msg("Got wake-up from sleep notification - checking if need to reconnect")
 
-		chAlive := make(chan struct{})
-		chDead := make(chan struct{})
-
-		go func() {
-			if m.CheckChannel() != nil {
-				close(chDead)
-			} else {
-				close(chAlive)
-			}
-		}()
-
-		select {
-		case <-chAlive:
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		if err := m.CheckChannel(ctx); err != nil {
+			log.Info().Msgf("Channel dead - reconnecting: %s", err)
+			m.reconnect()
+		} else {
 			log.Info().Msg("Channel still alive - no need to reconnect")
-			return
-		case <-chDead:
-			log.Info().Msg("Channel dead - reconnecting")
-			m.reconnect()
-		case <-time.After(200 * time.Millisecond):
-			log.Info().Msg("CheckChannel timeout - reconnecting")
-			m.reconnect()
 		}
 	}
 }
@@ -819,24 +805,25 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 			log.Debug().Msgf("Stopping p2p keepalive: %v", m.currentCtx().Err())
 			return
 		case <-time.After(m.config.KeepAlive.SendInterval):
-			if err := m.sendKeepAlivePing(channel, sessionID); err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
+			if err := m.sendKeepAlivePing(ctx, channel, sessionID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
 				if errCount == m.config.KeepAlive.MaxSendErrCount {
 					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
 					m.Disconnect()
+					cancel()
 					return
 				}
 			} else {
 				errCount = 0
 			}
+			cancel()
 		}
 	}
 }
 
-func (m *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
-	defer cancel()
+func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.Channel, sessionID session.ID) error {
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
