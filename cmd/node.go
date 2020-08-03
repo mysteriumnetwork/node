@@ -35,7 +35,7 @@ type Publisher interface {
 	Publish(topic string, data interface{})
 }
 
-// NATPinger allows to send nat pings as well as stop it
+// SleepNotifier notifies node about pending sleep events
 type SleepNotifier interface {
 	Start()
 	Stop()
