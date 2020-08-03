@@ -74,7 +74,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		KeepAlive: KeepAliveConfig{
-			SendInterval:    3 * time.Minute,
+			SendInterval:    14 * time.Second,
 			SendTimeout:     5 * time.Second,
 			MaxSendErrCount: 5,
 		},
