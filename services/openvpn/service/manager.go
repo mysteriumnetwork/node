@@ -190,7 +190,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		return nil, fmt.Errorf("could not get public IP: %w", err)
 	}
 
-	serverIP := vpnServerIP(m.serviceOptions.Port, m.outboundIP, publicIP, m.nodeOptions.OptionsNetwork.Localnet)
+	serverIP := vpnServerIP(m.outboundIP, publicIP, m.nodeOptions.OptionsNetwork.Localnet)
 	vpnConfig := &openvpn_service.VPNConfig{
 		RemoteIP:        serverIP,
 		RemotePort:      m.vpnServerPort,
