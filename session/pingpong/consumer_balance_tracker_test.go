@@ -57,7 +57,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}
 	calc := mockChannelAddressCalculator{}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -118,7 +118,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 				Status:       registry.TransactorRegistrationEntryStatusCreated,
 				BountyAmount: ba,
 			},
-		})
+		}, &mockRegistrationStatusProvider{})
 
 		err := cbt.Subscribe(bus)
 		assert.NoError(t, err)
@@ -152,7 +152,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 				Status:       registry.TransactorRegistrationEntryStatusCreated,
 				BountyAmount: 0,
 			},
-		})
+		}, &mockRegistrationStatusProvider{})
 
 		err := cbt.Subscribe(bus)
 		assert.NoError(t, err)
@@ -184,7 +184,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 		},
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -231,7 +231,7 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 		ch: make(chan *bindings.MystTokenTransfer),
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -248,6 +248,44 @@ func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1) == initialBalance-grandTotalPromised+topUpAmount
+	}, defaultWaitTime, defaultWaitInterval)
+}
+
+func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	accountantID := common.HexToAddress("0x000000acc")
+	var grandTotalPromised uint64 = 100
+	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
+		bus: bus,
+	}
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(initialBalance),
+			Settled: big.NewInt(0),
+		},
+		ch: make(chan *bindings.MystTokenTransfer),
+	}
+	calc := mockChannelAddressCalculator{}
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
+		statusToReturn: registry.TransactorStatusResponse{
+			Status:       registry.TransactorRegistrationEntryStatusCreated,
+			BountyAmount: 100,
+		},
+	}, &mockRegistrationStatusProvider{
+		map[identity.Identity]mockRegistrationStatus{
+			id1: {
+				status: registry.InProgress,
+			},
+		},
+	})
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1) == 100
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
@@ -306,7 +344,7 @@ func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) 
 	}
 	calc := mockChannelAddressCalculator{}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	// Make sure we are not dead locked here. https://github.com/mysteriumnetwork/node/issues/2181
 	cbt.increaseBCBalance(identity.FromAddress("0x0000"), 1)
