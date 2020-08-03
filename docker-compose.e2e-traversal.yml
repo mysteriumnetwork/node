@@ -148,6 +148,18 @@ services:
       public1:
         ipv4_address: 172.31.0.202
 
+  trust:
+    image: mysteriumnetwork/trust-oracle:latest
+    command: >
+      -swaggerHost=trust
+      -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
+    dns: 172.30.0.254
+    networks:
+      public0:
+        ipv4_address: 172.30.0.207
+      public1:
+        ipv4_address: 172.31.0.207
+
   transactor:
     image: mysteriumnetwork/transactor:0.3.0
     environment:
@@ -224,7 +236,6 @@ services:
 
   redis:
     image: bitnami/redis:5.0.8
-    container_name: 'accountant_redis'
     expose:
       - 6379
     environment:
@@ -274,8 +285,6 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -320,8 +329,6 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -353,6 +360,8 @@ services:
     build:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
+    volumes:
+      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/keystore
     depends_on:
       - broker
       - mysterium-api
@@ -364,8 +373,6 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -405,6 +412,7 @@ services:
       - transactor
       - accountant
       - morqa
+      - trust
     cap_add:
       - NET_ADMIN
     expose:
@@ -433,11 +441,13 @@ services:
       --log-level=debug
       --quality.address=http://morqa:8085/api/v1
       --payments.provider.invoice-frequency=1s
+      --access-policy.address=http://trust:8080/api/v1/access-policies/
+      --access-policy.fetch=1s
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
       --identity.passphrase=localprovider
-      openvpn,wireguard
+      openvpn,wireguard,noop
     dns: 172.31.0.254
     networks:
       priv0:
