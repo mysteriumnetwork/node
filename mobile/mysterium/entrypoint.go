@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"context"
 	"path/filepath"
 	"time"
 
@@ -390,10 +391,15 @@ func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
 	if req.ForceReconnect {
 		log.Info().Msg("Forcing immediate reconnect")
 		return reconnect()
-	} else if err := mb.connectionManager.CheckChannel(); err != nil {
-		log.Info().Msg("Forcing reconnect after failed channel")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	if err := mb.connectionManager.CheckChannel(ctx); err != nil {
+		log.Info().Msgf("Forcing reconnect after failed channel: %s", err)
 		return reconnect()
 	}
+
 	log.Info().Msg("Reconnect is not needed - p2p channel is alive")
 	return &ConnectResponse{}
 }

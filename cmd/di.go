@@ -71,6 +71,7 @@ import (
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -230,6 +231,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	} else {
 		di.PortMapper = mapping.NewNoopPortMapper(di.EventBus)
 	}
+
 	di.bootstrapP2P(nodeOptions.P2PPorts)
 	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
@@ -526,7 +528,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer)
+	sleepNotifier := sleep.NewNotifier(di.EventBus)
+
+	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer, sleepNotifier)
 	return nil
 }
 

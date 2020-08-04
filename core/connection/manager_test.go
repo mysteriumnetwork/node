@@ -27,8 +27,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -36,8 +41,8 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
+	"github.com/mysteriumnetwork/node/sleep"
+
 	"google.golang.org/protobuf/proto"
 )
 
@@ -180,6 +185,45 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 		},
 		tc.connManager.Status(),
 	)
+}
+
+func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
+	tc.connManager.eventBus = eventbus.New()
+
+	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
+	assert.NoError(tc.T(), err)
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:    tc.mockTime,
+			ConsumerID:   consumerID,
+			AccountantID: accountantID,
+			State:        Connected,
+			SessionID:    establishedSessionID,
+			Proposal:     activeProposal,
+		},
+		tc.connManager.Status(),
+	)
+
+	stateCh := make(chan State, 2)
+	tc.connManager.eventBus.SubscribeAsync(AppTopicConnectionState, func(e AppEventConnectionState) {
+		fmt.Println("got state: ", e)
+
+		if e.State == Connecting {
+			fmt.Println("got connecting state")
+			stateCh <- Connecting
+		}
+		if e.State == Connected {
+			fmt.Println("got connected state")
+			stateCh <- Connected
+		}
+	})
+
+	fmt.Println("sending wakeup event")
+	tc.connManager.eventBus.Publish(sleep.AppTopicSleepNotification, sleep.EventWakeup)
+
+	assert.Equal(tc.T(), <-stateCh, Connecting)
+	assert.Equal(tc.T(), <-stateCh, Connected)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {

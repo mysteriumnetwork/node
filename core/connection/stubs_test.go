@@ -19,6 +19,7 @@ package connection
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
 
@@ -32,6 +33,18 @@ type StubPublisherEvent struct {
 type StubPublisher struct {
 	publishHistory []StubPublisherEvent
 	lock           sync.Mutex
+}
+
+func (sp *StubPublisher) Subscribe(topic string, fn interface{}) error {
+	return errors.New("subscribe not implemented")
+}
+
+func (sp *StubPublisher) SubscribeAsync(topic string, fn interface{}) error {
+	return errors.New("subscribe async not implemented")
+}
+
+func (sp *StubPublisher) Unsubscribe(topic string, fn interface{}) error {
+	return errors.New("unsubscribe not implemented")
 }
 
 // NewStubPublisher returns a stub publisher
