@@ -19,65 +19,8 @@ package connection
 
 import (
 	"context"
-	"errors"
 	"sync"
 )
-
-// StubPublisherEvent represents the event in publishers history
-type StubPublisherEvent struct {
-	calledWithTopic string
-	calledWithData  interface{}
-}
-
-// StubPublisher acts as a publisher
-type StubPublisher struct {
-	publishHistory []StubPublisherEvent
-	lock           sync.Mutex
-}
-
-func (sp *StubPublisher) Subscribe(topic string, fn interface{}) error {
-	return errors.New("subscribe not implemented")
-}
-
-func (sp *StubPublisher) SubscribeAsync(topic string, fn interface{}) error {
-	return errors.New("subscribe async not implemented")
-}
-
-func (sp *StubPublisher) Unsubscribe(topic string, fn interface{}) error {
-	return errors.New("unsubscribe not implemented")
-}
-
-// NewStubPublisher returns a stub publisher
-func NewStubPublisher() *StubPublisher {
-	return &StubPublisher{
-		publishHistory: make([]StubPublisherEvent, 0),
-	}
-}
-
-// Publish adds the given event to the publish history
-func (sp *StubPublisher) Publish(topic string, data interface{}) {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-	event := StubPublisherEvent{
-		calledWithTopic: topic,
-		calledWithData:  data,
-	}
-	sp.publishHistory = append(sp.publishHistory, event)
-}
-
-// Clear clears the event history
-func (sp *StubPublisher) Clear() {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-	sp.publishHistory = make([]StubPublisherEvent, 0)
-}
-
-// GetEventHistory fetches the event history
-func (sp *StubPublisher) GetEventHistory() []StubPublisherEvent {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-	return sp.publishHistory
-}
 
 type fakeState string
 

@@ -101,14 +101,6 @@ type PromiseProcessor interface {
 	Stop() error
 }
 
-// Storage interface to session storage
-type Storage interface {
-	Add(sessionInstance Session)
-	Find(id session.ID) (Session, bool)
-	FindBy(opts FindOpts) (Session, bool)
-	Remove(id session.ID)
-}
-
 // PaymentEngineFactory creates a new instance of payment engine
 type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (PaymentEngine, error)
 
@@ -127,7 +119,7 @@ type NATEventGetter interface {
 // NewSessionManager returns new session SessionManager
 func NewSessionManager(
 	service *Instance,
-	sessionStorage Storage,
+	sessionStorage *SessionPool,
 	paymentEngineFactory PaymentEngineFactory,
 	natEventGetter NATEventGetter,
 	publisher publisher,
@@ -148,7 +140,7 @@ func NewSessionManager(
 // SessionManager knows how to start and provision session
 type SessionManager struct {
 	service              *Instance
-	sessionStorage       Storage
+	sessionStorage       *SessionPool
 	paymentEngineFactory PaymentEngineFactory
 	natEventGetter       NATEventGetter
 	publisher            publisher
@@ -211,11 +203,11 @@ func (manager *SessionManager) startSession(session *Session) error {
 
 	manager.clearStaleSession(session.ConsumerID, manager.service.Type)
 
-	manager.sessionStorage.Add(*session)
-	go func() {
-		<-session.Done()
+	manager.sessionStorage.Add(session)
+	session.addCleanup(func() error {
 		manager.sessionStorage.Remove(session.ID)
-	}()
+		return nil
+	})
 
 	go manager.keepAliveLoop(session, manager.channel)
 
@@ -237,11 +229,13 @@ func (manager *SessionManager) validateSession(session *Session) error {
 func (manager *SessionManager) clearStaleSession(consumerID identity.Identity, serviceType string) {
 	// Reading stale session before starting the clean up in goroutine.
 	// This is required to make sure we are not cleaning the newly created session.
-	session, ok := manager.sessionStorage.FindBy(FindOpts{
-		Peer:        &consumerID,
-		ServiceType: serviceType,
-	})
-	if ok {
+	for _, session := range manager.sessionStorage.GetAll() {
+		if consumerID != session.ConsumerID {
+			continue
+		}
+		if serviceType != session.Proposal.ServiceType {
+			continue
+		}
 		log.Info().Msgf("Cleaning stale session %s for %s consumer", session.ID, consumerID.Address)
 		go session.Close()
 	}
@@ -272,10 +266,10 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 	}
 
 	// stop the balance tracker once the session is finished
-	go func() {
-		<-session.Done()
+	session.addCleanup(func() error {
 		engine.Stop()
-	}()
+		return nil
+	})
 
 	go func() {
 		err := engine.Start()
@@ -303,10 +297,10 @@ func (manager *SessionManager) providerService(session *Session, channel p2p.Cha
 	}
 
 	if config.SessionDestroyCallback != nil {
-		go func() {
-			<-session.Done()
+		session.addCleanup(func() error {
 			config.SessionDestroyCallback()
-		}()
+			return nil
+		})
 	}
 
 	data, err := json.Marshal(config.SessionServiceConfig)
