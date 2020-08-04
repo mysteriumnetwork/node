@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -123,6 +124,7 @@ type connectionManager struct {
 	newConnection        Creator
 	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
+	locationResolver     location.OriginResolver
 	config               Config
 	statsReportInterval  time.Duration
 	validator            validator
@@ -153,6 +155,7 @@ func NewManager(
 	connectionCreator Creator,
 	eventBus eventbus.EventBus,
 	ipResolver ip.Resolver,
+	locationResolver location.OriginResolver,
 	config Config,
 	statsReportInterval time.Duration,
 	validator validator,
@@ -166,6 +169,7 @@ func NewManager(
 		cleanup:              make([]func() error, 0),
 		cleanupFinished:      make(chan struct{}, 1),
 		ipResolver:           ipResolver,
+		locationResolver:     locationResolver,
 		config:               config,
 		statsReportInterval:  statsReportInterval,
 		validator:            validator,
@@ -450,6 +454,9 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 			Id:             consumerID.Address,
 			AccountantID:   accountantID.Hex(),
 			PaymentVersion: "v3",
+			Location: &pb.LocationInfo{
+				Country: m.Status().ConsumerLocation.Country,
+			},
 		},
 		ProposalID: int64(proposal.ID),
 		Config:     config,
@@ -582,11 +589,12 @@ func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)
 func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
 	m.setStatus(func(status *connectionstate.Status) {
 		*status = connectionstate.Status{
-			StartedAt:    m.timeGetter(),
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			Proposal:     proposal,
-			State:        connectionstate.Connecting,
+			StartedAt:        m.timeGetter(),
+			ConsumerID:       consumerID,
+			ConsumerLocation: m.locationResolver.GetOrigin(),
+			AccountantID:     accountantID,
+			Proposal:         proposal,
+			State:            connectionstate.Connecting,
 		}
 	})
 }

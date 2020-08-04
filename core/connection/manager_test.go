@@ -28,6 +28,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -55,7 +57,8 @@ type testContext struct {
 	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *mocks.EventBus
 	mockStatistics        connectionstate.Statistics
-	fakeResolver          ip.Resolver
+	fakeIPResolver        ip.Resolver
+	fakeLocationResolver  location.OriginResolver
 	config                Config
 	statsReportInterval   time.Duration
 	mockP2P               *mockP2PDialer
@@ -65,6 +68,7 @@ type testContext struct {
 
 var (
 	consumerID            = identity.FromAddress("identity-1")
+	consumerLocation      = locationstate.Location{Country: "CH"}
 	activeProviderID      = identity.FromAddress("fake-node-1")
 	accountantID          = common.HexToAddress("accountant")
 	activeProviderContact = market.Contact{
@@ -120,7 +124,8 @@ func (tc *testContext) SetupTest() {
 			MaxSendErrCount: 5,
 		},
 	}
-	tc.fakeResolver = ip.NewResolverMock("ip")
+	tc.fakeIPResolver = ip.NewResolverMock("ip")
+	tc.fakeLocationResolver = &mockLocationResolver{}
 	tc.statsReportInterval = 1 * time.Millisecond
 
 	brokerConn := nats.StartConnectionMock()
@@ -140,7 +145,8 @@ func (tc *testContext) SetupTest() {
 		},
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
-		tc.fakeResolver,
+		tc.fakeIPResolver,
+		tc.fakeLocationResolver,
 		tc.config,
 		tc.statsReportInterval,
 		&mockValidator{},
@@ -162,11 +168,12 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.NotConnected,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.NotConnected,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -178,12 +185,13 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.Connected,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.Connected,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -197,12 +205,13 @@ func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.Connected,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.Connected,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -240,12 +249,13 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.Connecting,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.Connecting,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -271,12 +281,13 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.Disconnecting,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.Disconnecting,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -290,12 +301,13 @@ func (tc *testContext) TestStatusReportsNotConnected() {
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.NotConnected,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.NotConnected,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -317,12 +329,13 @@ func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconn
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.Reconnecting,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.Reconnecting,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -361,12 +374,13 @@ func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutErro
 	assert.Equal(
 		tc.T(),
 		connectionstate.Status{
-			StartedAt:    tc.mockTime,
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			State:        connectionstate.Connected,
-			SessionID:    establishedSessionID,
-			Proposal:     activeProposal,
+			StartedAt:        tc.mockTime,
+			ConsumerID:       consumerID,
+			ConsumerLocation: consumerLocation,
+			AccountantID:     accountantID,
+			State:            connectionstate.Connected,
+			SessionID:        establishedSessionID,
+			Proposal:         activeProposal,
 		},
 		tc.connManager.Status(),
 	)
@@ -722,4 +736,10 @@ type mockValidator struct {
 
 func (mv *mockValidator) Validate(consumerID identity.Identity, proposal market.ServiceProposal) error {
 	return mv.errorToReturn
+}
+
+type mockLocationResolver struct{}
+
+func (mlr *mockLocationResolver) GetOrigin() locationstate.Location {
+	return consumerLocation
 }

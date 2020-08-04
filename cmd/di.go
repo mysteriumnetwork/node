@@ -506,6 +506,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		di.IPResolver,
+		di.LocationResolver,
 		connection.DefaultConfig(),
 		connection.DefaultStatsReportInterval,
 		connection.NewValidator(
