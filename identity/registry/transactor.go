@@ -241,6 +241,14 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 		Beneficiary:     regReqDTO.Beneficiary,
 	}
 
+	if regReq.Stake == nil {
+		regReq.Stake = big.NewInt(0)
+	}
+
+	if regReq.Fee == nil {
+		regReq.Fee = big.NewInt(0)
+	}
+
 	if regReq.Beneficiary == "" {
 		channelAddress, err := pc.GenerateChannelAddress(id, t.hermesID, t.registryAddress, t.channelImplementation)
 		if err != nil {
