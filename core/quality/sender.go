@@ -333,16 +333,7 @@ func (sender *Sender) toSessionContext(session connection.Status) sessionContext
 		Provider:        session.Proposal.ProviderID,
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
-		ConsumerCountry: sender.originCountry(),
+		ConsumerCountry: sender.location.GetOrigin().Country,
 		AccountantID:    session.AccountantID.Hex(),
 	}
-}
-
-func (sender *Sender) originCountry() string {
-	origin, err := sender.location.GetOrigin()
-	if err != nil {
-		log.Warn().Msg("Failed to get consumer origin country")
-		return ""
-	}
-	return origin.Country
 }

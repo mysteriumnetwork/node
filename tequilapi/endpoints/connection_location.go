@@ -130,11 +130,7 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	originLocation, err := le.locationOriginResolver.GetOrigin()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
-		return
-	}
+	originLocation := le.locationOriginResolver.GetOrigin()
 
 	utils.WriteAsJSON(locationToRes(originLocation), writer)
 }

@@ -60,10 +60,10 @@ func (c *Cache) fetchAndSave() (Location, error) {
 }
 
 // GetOrigin returns the origin for the user - a location that's not modified by starting services.
-func (c *Cache) GetOrigin() (Location, error) {
+func (c *Cache) GetOrigin() Location {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.origin, nil
+	return c.origin
 }
 
 // DetectLocation returns location from cache, or fetches it if needed

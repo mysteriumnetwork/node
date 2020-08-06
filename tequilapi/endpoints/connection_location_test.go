@@ -49,8 +49,8 @@ func (r *locationResolverMock) DetectLocation() (location.Location, error) {
 	return loc, nil
 }
 
-func (r *locationResolverMock) GetOrigin() (location.Location, error) {
-	loc := location.Location{
+func (r *locationResolverMock) GetOrigin() location.Location {
+	return location.Location{
 		ASN:       62179,
 		City:      "Vilnius",
 		Continent: "EU",
@@ -59,8 +59,6 @@ func (r *locationResolverMock) GetOrigin() (location.Location, error) {
 		ISP:       "Telia Lietuva, AB",
 		NodeType:  "residential",
 	}
-
-	return loc, nil
 }
 
 func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {

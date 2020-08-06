@@ -24,5 +24,5 @@ type Resolver interface {
 
 // OriginResolver fetches the original country
 type OriginResolver interface {
-	GetOrigin() (Location, error)
+	GetOrigin() Location
 }

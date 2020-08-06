@@ -92,10 +92,7 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 	}
 
 	signer := sr.signerFactory(consumerID)
-	loc, err := sr.locationDetector.GetOrigin()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to resolve location")
-	}
+	loc := sr.locationDetector.GetOrigin()
 
 	sr.done = make(chan struct{})
 

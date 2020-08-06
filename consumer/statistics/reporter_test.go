@@ -48,10 +48,10 @@ func mockSignerFactory(_ identity.Identity) identity.Signer {
 
 type mockLocationDetector struct{}
 
-func (mld *mockLocationDetector) GetOrigin() (location.Location, error) {
+func (mld *mockLocationDetector) GetOrigin() location.Location {
 	return location.Location{
 		Country: "KG",
-	}, nil
+	}
 }
 
 func TestStatisticsReporterStartsAndStops(t *testing.T) {
