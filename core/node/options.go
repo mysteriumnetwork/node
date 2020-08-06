@@ -104,6 +104,7 @@ func GetOptions() *Options {
 		OptionsNetwork: OptionsNetwork{
 			Testnet:               config.GetBool(config.FlagTestnet),
 			Localnet:              config.GetBool(config.FlagLocalnet),
+			Betanet:              config.GetBool(config.FlagLocalnet),
 			ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
 			MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 			BrokerAddress:         config.GetString(config.FlagBrokerAddress),

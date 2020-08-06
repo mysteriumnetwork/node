@@ -577,6 +577,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	network := metadata.DefaultNetwork
 
 	switch {
+	case optionsNetwork.Betanet:
+		network = metadata.BetanetDefinition
 	case optionsNetwork.Testnet:
 		network = metadata.TestnetDefinition
 	case optionsNetwork.Localnet:

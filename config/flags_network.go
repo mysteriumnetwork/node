@@ -33,6 +33,11 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
+	// FlagBetanet uses betanet network.
+	FlagBetanet = cli.BoolFlag{
+		Name:  "betanet",
+		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
+	}
 	// FlagAPIAddress Mysterium API URL
 	FlagAPIAddress = cli.StringFlag{
 		Name:  "api.address",
@@ -90,6 +95,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagEtherRPC,
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
+		&FlagBetanet,
 	)
 }
 
@@ -97,6 +103,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagTestnet)
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
+	Current.ParseBoolFlag(ctx, FlagBetanet)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
 	Current.ParseStringFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)

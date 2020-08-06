@@ -71,7 +71,7 @@ services:
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   transactor:
-    image: mysteriumnetwork/transactor:v3-rc2
+    image: mysteriumnetwork/transactor:v3-dev
     environment:
       PORT: 8888
     expose:
@@ -96,7 +96,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   hermes:
-    image: mysteriumnetwork/hermes:v3-r1
+    image: mysteriumnetwork/hermes:v3-dev
     environment:
       PORT: 8889
     expose:

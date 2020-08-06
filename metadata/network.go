@@ -43,6 +43,19 @@ var TestnetDefinition = NetworkDefinition{
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }
 
+// BetanetDefinition defines parameters for Betanet network (currently default network)
+var BetanetDefinition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://betanet-api.mysterium.network/v1",
+	AccessPolicyOracleAddress: "https://betanet-trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddress:             "nats://betanet-broker.mysterium.network",
+	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
+	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
+	RegistryAddress:           "0x2FD2AbE2fF222b84db9B3fF8D37532A9417f244A",
+	ChannelImplAddress:        "0x430fb4a8325adC064EF8AB95B09fDA258fF186C8",
+	HermesID:                  "0xF20e4068Aecb427481Dd35B36506d8AAcD5763E9",
+	MMNAddress:                "https://my.mysterium.network/api/v1",
+}
+
 // LocalnetDefinition defines parameters for local network
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
@@ -54,4 +67,4 @@ var LocalnetDefinition = NetworkDefinition{
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given
-var DefaultNetwork = TestnetDefinition
+var DefaultNetwork = BetanetDefinition

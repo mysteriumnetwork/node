@@ -51,7 +51,7 @@ var (
 	// FlagPaymentsMystSCAddress represents the myst smart contract address
 	FlagPaymentsMystSCAddress = cli.StringFlag{
 		Name:  "payments.mystscaddress",
-		Value: "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+		Value: "0x8EA3F639e98da04708520C63b34AfBAa1594bC82",
 		Usage: "The address of myst token smart contract",
 	}
 	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.

@@ -21,6 +21,7 @@ package node
 type OptionsNetwork struct {
 	Testnet  bool
 	Localnet bool
+	Betanet  bool
 
 	ExperimentNATPunching bool
 
