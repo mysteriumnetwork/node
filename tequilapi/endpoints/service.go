@@ -206,8 +206,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
 	for _, instance := range se.serviceManager.List() {
-		proposal := instance.Proposal()
-		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.Type {
+		if instance.ProviderID.Address == sr.ProviderID && instance.Type == sr.Type {
 			return true
 		}
 	}
@@ -288,14 +287,13 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func toServiceInfoResponse(id service.ID, instance *service.Instance) contract.ServiceInfoDTO {
-	proposal := instance.Proposal()
 	return contract.ServiceInfoDTO{
 		ID:         string(id),
-		ProviderID: proposal.ProviderID,
-		Type:       proposal.ServiceType,
-		Options:    instance.Options(),
+		ProviderID: instance.ProviderID.Address,
+		Type:       instance.Type,
+		Options:    instance.Options,
 		Status:     string(instance.State()),
-		Proposal:   contract.NewProposalDTO(instance.Proposal()),
+		Proposal:   contract.NewProposalDTO(instance.Proposal),
 	}
 }
 

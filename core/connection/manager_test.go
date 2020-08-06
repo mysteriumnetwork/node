@@ -27,17 +27,23 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
+	"github.com/mysteriumnetwork/node/sleep"
+
 	"google.golang.org/protobuf/proto"
 )
 
@@ -46,7 +52,7 @@ type testContext struct {
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
 	MockPaymentIssuer     *MockPaymentIssuer
-	stubPublisher         *StubPublisher
+	stubPublisher         *mocks.EventBus
 	mockStatistics        Statistics
 	fakeResolver          ip.Resolver
 	config                Config
@@ -78,7 +84,7 @@ func (tc *testContext) SetupTest() {
 	tc.Lock()
 	defer tc.Unlock()
 
-	tc.stubPublisher = NewStubPublisher()
+	tc.stubPublisher = mocks.NewEventBus()
 	tc.mockStatistics = Statistics{
 		BytesReceived: 10,
 		BytesSent:     20,
@@ -180,6 +186,45 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 		},
 		tc.connManager.Status(),
 	)
+}
+
+func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
+	tc.connManager.eventBus = eventbus.New()
+
+	err := tc.connManager.Connect(consumerID, hermesID, activeProposal, ConnectParams{})
+	assert.NoError(tc.T(), err)
+	assert.Equal(
+		tc.T(),
+		Status{
+			StartedAt:  tc.mockTime,
+			ConsumerID: consumerID,
+			HermesID:   hermesID,
+			State:      Connected,
+			SessionID:  establishedSessionID,
+			Proposal:   activeProposal,
+		},
+		tc.connManager.Status(),
+	)
+
+	stateCh := make(chan State, 2)
+	tc.connManager.eventBus.SubscribeAsync(AppTopicConnectionState, func(e AppEventConnectionState) {
+		fmt.Println("got state: ", e)
+
+		if e.State == Connecting {
+			fmt.Println("got connecting state")
+			stateCh <- Connecting
+		}
+		if e.State == Connected {
+			fmt.Println("got connected state")
+			stateCh <- Connected
+		}
+	})
+
+	fmt.Println("sending wakeup event")
+	tc.connManager.eventBus.Publish(sleep.AppTopicSleepNotification, sleep.EventWakeup)
+
+	assert.Equal(tc.T(), <-stateCh, Connecting)
+	assert.Equal(tc.T(), <-stateCh, Connected)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -390,8 +435,8 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	found := false
 
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConnectionSession {
-			event := v.calledWithData.(AppEventConnectionSession)
+		if v.Topic == AppTopicConnectionSession {
+			event := v.Event.(AppEventConnectionSession)
 			if event.Status == SessionEndedStatus {
 				found = true
 
@@ -427,7 +472,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	for _, v := range expectedTopics {
 		var published bool
 		for _, h := range history {
-			if v == h.calledWithTopic {
+			if v == h.Topic {
 				published = true
 			}
 		}
@@ -436,29 +481,29 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	// Check received events data.
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConnectionStatistics {
-			event := v.calledWithData.(AppEventConnectionStatistics)
+		if v.Topic == AppTopicConnectionStatistics {
+			event := v.Event.(AppEventConnectionStatistics)
 			assert.True(tc.T(), event.Stats.BytesReceived == tc.mockStatistics.BytesReceived)
 			assert.True(tc.T(), event.Stats.BytesSent == tc.mockStatistics.BytesSent)
 		}
-		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == Connected {
-			event := v.calledWithData.(AppEventConnectionState)
+		if v.Topic == AppTopicConnectionState && v.Event.(AppEventConnectionState).State == Connected {
+			event := v.Event.(AppEventConnectionState)
 			assert.Equal(tc.T(), Connected, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
-			event := v.calledWithData.(AppEventConnectionState)
+		if v.Topic == AppTopicConnectionState && v.Event.(AppEventConnectionState).State == StateIPNotChanged {
+			event := v.Event.(AppEventConnectionState)
 			assert.Equal(tc.T(), StateIPNotChanged, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == AppTopicConnectionSession {
-			event := v.calledWithData.(AppEventConnectionSession)
+		if v.Topic == AppTopicConnectionSession {
+			event := v.Event.(AppEventConnectionSession)
 			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
@@ -482,7 +527,7 @@ func (tc *testContext) Test_ManagerNotifiesAboutSessionIPNotChanged() {
 		// Check that state event with StateIPNotChanged status was called.
 		history := tc.stubPublisher.GetEventHistory()
 		for _, v := range history {
-			if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
+			if v.Topic == AppTopicConnectionState && v.Event.(AppEventConnectionState).State == StateIPNotChanged {
 				return true
 			}
 		}
@@ -520,9 +565,9 @@ func (tc *testContext) Test_ManagerNotifiesAboutSuccessfulConnection() {
 
 	// Check that state event with StateIPNotChanged status was not called.
 	history := tc.stubPublisher.GetEventHistory()
-	var ipNotChangedEvent *StubPublisherEvent
+	var ipNotChangedEvent *mocks.EventBusEntry
 	for _, v := range history {
-		if v.calledWithTopic == AppTopicConnectionState && v.calledWithData.(AppEventConnectionState).State == StateIPNotChanged {
+		if v.Topic == AppTopicConnectionState && v.Event.(AppEventConnectionState).State == StateIPNotChanged {
 			ipNotChangedEvent = &v
 		}
 	}

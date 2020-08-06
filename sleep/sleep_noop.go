@@ -1,3 +1,5 @@
+// +build !darwin
+
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -15,16 +17,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package sleep
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/rs/zerolog/log"
 )
 
-func TestSessionIdLength(t *testing.T) {
-	session, err := NewSession()
-	assert.Nil(t, err)
-	assert.Len(t, session.ID, 36)
+// Start noop function
+func (n Notifier) Start() {
+	log.Debug().Msg("Register for noop sleep events")
+}
+
+// Stop noop function
+func (n Notifier) Stop() {
+	log.Debug().Msg("Unregister noop sleep events")
 }

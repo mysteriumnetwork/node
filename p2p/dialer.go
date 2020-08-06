@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	nats_lib "github.com/nats-io/nats.go"
 
@@ -36,6 +37,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
+
+const maxBrokerConnectAttempts = 15
 
 // Dialer knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
 type Dialer interface {
@@ -69,10 +72,23 @@ type dialer struct {
 // Dial exchanges p2p configuration via broker, performs NAT pinging if needed
 // and create p2p channel which is ready for communication.
 func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef ContactDefinition) (Channel, error) {
-	brokerConn, err := m.broker.Connect(contactDef.BrokerAddresses...)
+	var brokerConn nats.Connection
+	var err error
+
+	// broker connect might fail due to reconfiguration of network routes in progress
+	for i := 0; i < maxBrokerConnectAttempts; i++ {
+		brokerConn, err = m.broker.Connect(contactDef.BrokerAddresses...)
+		if err != nil {
+			log.Warn().Msgf("broker connect failed - attempting again in 1sec: %s", err)
+			time.Sleep(time.Second)
+			continue
+		}
+		break
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not open broker conn: %w", err)
 	}
+
 	defer brokerConn.Close()
 
 	peerReady := make(chan struct{})

@@ -41,13 +41,6 @@ type Connection interface {
 // StateChannel is the channel we receive state change events on
 type StateChannel chan State
 
-// PromiseIssuer issues promises from consumer to provider.
-// Consumer signs those promises.
-type PromiseIssuer interface {
-	Start(proposal market.ServiceProposal) error
-	Stop() error
-}
-
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
@@ -57,5 +50,5 @@ type Manager interface {
 	// Disconnect closes established connection, reports error if no connection
 	Disconnect() error
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
-	CheckChannel() error
+	CheckChannel(context.Context) error
 }

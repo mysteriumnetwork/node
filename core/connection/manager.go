@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -34,9 +37,8 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/trace"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -118,7 +120,7 @@ type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
 	newConnection        Creator
-	eventPublisher       eventbus.Publisher
+	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
 	config               Config
 	statsReportInterval  time.Duration
@@ -134,18 +136,21 @@ type connectionManager struct {
 	cleanupLock            sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
+	cleanupFinished        chan struct{}
+	cleanupFinishedLock    sync.Mutex
 	acknowledge            func()
 	cancel                 func()
 	channel                p2p.Channel
 
-	discoLock sync.Mutex
+	discoLock      sync.Mutex
+	connectOptions ConnectOptions
 }
 
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
-	eventPublisher eventbus.Publisher,
+	eventBus eventbus.EventBus,
 	ipResolver ip.Resolver,
 	config Config,
 	statsReportInterval time.Duration,
@@ -155,9 +160,10 @@ func NewManager(
 	return &connectionManager{
 		newConnection:        connectionCreator,
 		status:               Status{State: NotConnected},
-		eventPublisher:       eventPublisher,
+		eventBus:             eventBus,
 		paymentEngineFactory: paymentEngineFactory,
 		cleanup:              make([]func() error, 0),
+		cleanupFinished:      make(chan struct{}, 1),
 		ipResolver:           ipResolver,
 		config:               config,
 		statsReportInterval:  statsReportInterval,
@@ -175,7 +181,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	defer func() {
 		tracer.EndStage(connectTrace)
-		traceResult := tracer.Finish(m.eventPublisher, string(sessionID))
+		traceResult := tracer.Finish(m.eventBus, string(sessionID))
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
@@ -250,16 +256,18 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 	connectionTrace := tracer.StartStage("Consumer start connection")
 	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
-	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
+	m.connectOptions = ConnectOptions{
 		SessionID:       sessionID,
 		SessionConfig:   sessionDTO.GetConfig(),
-		DNS:             params.DNS,
+		Params:          params,
 		ConsumerID:      consumerID,
 		ProviderID:      providerID,
 		Proposal:        proposal,
 		ProviderNATConn: channel.ServiceConn(),
 		ChannelConn:     channel.Conn(),
-	})
+		HermesID:        hermesID,
+	}
+	err = m.startConnection(m.currentCtx(), connection, m.connectOptions)
 	tracer.EndStage(connectionTrace)
 
 	if err != nil {
@@ -439,7 +447,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	sessionRequest := &pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:             consumerID.Address,
-HermesID:   hermesID.Hex(),
+			HermesID:       hermesID.Hex(),
 			PaymentVersion: "v3",
 		},
 		ProposalID: int64(proposal.ID),
@@ -497,7 +505,7 @@ HermesID:   hermesID.Hex(),
 }
 
 func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
-	m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
+	m.eventBus.Publish(AppTopicConnectionSession, AppEventConnectionSession{
 		Status:      SessionCreatedStatus,
 		SessionInfo: m.Status(),
 	})
@@ -505,7 +513,7 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
+		m.eventBus.Publish(AppTopicConnectionSession, AppEventConnectionSession{
 			Status:      SessionEndedStatus,
 			SessionInfo: m.Status(),
 		})
@@ -513,7 +521,7 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 	})
 }
 
-func (m *connectionManager) startConnection(ctx context.Context, conn Connection, disableKillSwitch bool, connectOptions ConnectOptions) (err error) {
+func (m *connectionManager) startConnection(ctx context.Context, conn Connection, connectOptions ConnectOptions) (err error) {
 	if err = conn.Start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -524,7 +532,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return nil
 	})
 
-	err = m.setupTrafficBlock(disableKillSwitch)
+	err = m.setupTrafficBlock(connectOptions.Params.DisableKillSwitch)
 	if err != nil {
 		return err
 	}
@@ -534,7 +542,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return err
 	}
 
-	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
+	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
 	go statsPublisher.start(m, conn)
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
@@ -628,9 +636,9 @@ func (m *connectionManager) Disconnect() error {
 	return nil
 }
 
-func (m *connectionManager) CheckChannel() error {
-	if err := m.sendKeepAlivePing(m.channel, m.Status().SessionID); err != nil {
-		return fmt.Errorf("keep alive call failed after wake up - proceeding to reconnect: %w", err)
+func (m *connectionManager) CheckChannel(ctx context.Context) error {
+	if err := m.sendKeepAlivePing(ctx, m.channel, m.Status().SessionID); err != nil {
+		return fmt.Errorf("keep alive ping failed: %w", err)
 	}
 	return nil
 }
@@ -638,6 +646,11 @@ func (m *connectionManager) CheckChannel() error {
 func (m *connectionManager) disconnect() {
 	m.discoLock.Lock()
 	defer m.discoLock.Unlock()
+
+	m.cleanupFinishedLock.Lock()
+	defer m.cleanupFinishedLock.Unlock()
+	m.cleanupFinished = make(chan struct{})
+	defer close(m.cleanupFinished)
 
 	m.ctxLock.Lock()
 	m.cancel()
@@ -687,12 +700,31 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) err
 					go m.acknowledge()
 				}
 				m.onStateChanged(state)
+				m.eventBus.SubscribeAsync(sleep.AppTopicSleepNotification, m.handleSleepEvent)
 				return nil
 			default:
 				m.onStateChanged(state)
 			}
 		case <-m.currentCtx().Done():
 			return m.currentCtx().Err()
+		}
+	}
+}
+
+func (m *connectionManager) handleSleepEvent(e sleep.Event) {
+	switch e {
+	case sleep.EventSleep:
+		log.Info().Msg("Got sleep notification during live vpn session")
+	case sleep.EventWakeup:
+		log.Info().Msg("Got wake-up from sleep notification - checking if need to reconnect")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		if err := m.CheckChannel(ctx); err != nil {
+			log.Info().Msgf("Channel dead - reconnecting: %s", err)
+			m.reconnect()
+		} else {
+			log.Info().Msg("Channel still alive - no need to reconnect")
 		}
 	}
 }
@@ -742,7 +774,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 }
 
 func (m *connectionManager) publishStateEvent(state State) {
-	go m.eventPublisher.Publish(AppTopicConnectionState, AppEventConnectionState{
+	go m.eventBus.Publish(AppTopicConnectionState, AppEventConnectionState{
 		State:       state,
 		SessionInfo: m.Status(),
 	})
@@ -773,24 +805,25 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 			log.Debug().Msgf("Stopping p2p keepalive: %v", m.currentCtx().Err())
 			return
 		case <-time.After(m.config.KeepAlive.SendInterval):
-			if err := m.sendKeepAlivePing(channel, sessionID); err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
+			if err := m.sendKeepAlivePing(ctx, channel, sessionID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
 				if errCount == m.config.KeepAlive.MaxSendErrCount {
 					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
 					m.Disconnect()
+					cancel()
 					return
 				}
 			} else {
 				errCount = 0
 			}
+			cancel()
 		}
 	}
 }
 
-func (m *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
-	defer cancel()
+func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.Channel, sessionID session.ID) error {
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
@@ -803,6 +836,22 @@ func (m *connectionManager) currentCtx() context.Context {
 	defer m.ctxLock.RUnlock()
 
 	return m.ctx
+}
+
+func (m *connectionManager) reconnect() {
+	err := m.Disconnect()
+	if err != nil {
+		log.Error().Msgf("Failed to disconnect stale session: %w", err)
+	}
+	log.Info().Msg("Waiting for previous session to cleanup")
+
+	m.cleanupFinishedLock.Lock()
+	defer m.cleanupFinishedLock.Unlock()
+	<-m.cleanupFinished
+	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.Proposal, m.connectOptions.Params)
+	if err != nil {
+		log.Error().Msgf("Failed to reconnect: %w", err)
+	}
 }
 
 func logDisconnectError(err error) {

@@ -122,7 +122,7 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
 	}
 
-	dnsIPs, err := options.DNS.ResolveIPs(config.Consumer.DNSIPs)
+	dnsIPs, err := options.Params.DNS.ResolveIPs(config.Consumer.DNSIPs)
 	if err != nil {
 		return errors.Wrap(err, "could not resolve DNS IPs")
 	}

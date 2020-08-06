@@ -28,14 +28,11 @@ func createAuthHandler(identityToExtract identity.Identity) *authHandler {
 		identityToExtract,
 		nil,
 	}
-	mockSessions := &mockSessions{
-		service.Session{},
-		false,
-	}
+	mockSessions := &mockSessions{}
 	return newAuthHandler(NewClientMap(mockSessions), mockExtractor)
 }
 
-func createAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance service.Session) *authHandler {
+func createAuthHandlerWithSession(identityToExtract identity.Identity, sessionInstance *service.Session) *authHandler {
 	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,
@@ -54,23 +51,23 @@ type mockIdentityExtractor struct {
 }
 
 // Extract returns mocked identity
-func (extractor *mockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
+func (extractor *mockIdentityExtractor) Extract(_ []byte, _ identity.Signature) (identity.Identity, error) {
 	return extractor.OnExtractReturnIdentity, extractor.OnExtractReturnError
 }
 
 type mockSessions struct {
-	OnFindReturnSession service.Session
+	OnFindReturnSession *service.Session
 	OnFindReturnSuccess bool
 }
 
-func (sessions *mockSessions) Add(sessionInstance service.Session) {
+func (sessions *mockSessions) Add(_ *service.Session) {
 }
 
-func (sessions *mockSessions) Find(session.ID) (service.Session, bool) {
+func (sessions *mockSessions) Find(_ session.ID) (*service.Session, bool) {
 	return sessions.OnFindReturnSession, sessions.OnFindReturnSuccess
 }
 
 func (sessions *mockSessions) Remove(session.ID) {
-	sessions.OnFindReturnSession = service.Session{}
+	sessions.OnFindReturnSession = nil
 	sessions.OnFindReturnSuccess = false
 }

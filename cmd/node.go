@@ -18,10 +18,11 @@
 package cmd
 
 import (
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/tequilapi"
-	"github.com/rs/zerolog/log"
 )
 
 // NATPinger allows to send nat pings as well as stop it
@@ -34,20 +35,21 @@ type Publisher interface {
 	Publish(topic string, data interface{})
 }
 
+// SleepNotifier notifies node about pending sleep events
+type SleepNotifier interface {
+	Start()
+	Stop()
+}
+
 // NewNode function creates new Mysterium node by given options
-func NewNode(
-	connectionManager connection.Manager,
-	tequilapiServer tequilapi.APIServer,
-	publisher Publisher,
-	natPinger NATPinger,
-	uiServer UIServer,
-) *Node {
+func NewNode(connectionManager connection.Manager, tequilapiServer tequilapi.APIServer, publisher Publisher, natPinger NATPinger, uiServer UIServer, notifier SleepNotifier) *Node {
 	return &Node{
 		connectionManager: connectionManager,
 		httpAPIServer:     tequilapiServer,
 		publisher:         publisher,
 		natPinger:         natPinger,
 		uiServer:          uiServer,
+		sleepNotifier:     notifier,
 	}
 }
 
@@ -58,10 +60,12 @@ type Node struct {
 	publisher         Publisher
 	natPinger         NATPinger
 	uiServer          UIServer
+	sleepNotifier     SleepNotifier
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
+	go node.sleepNotifier.Start()
 	node.httpAPIServer.StartServing()
 
 	go func() {
@@ -104,6 +108,9 @@ func (node *Node) Kill() error {
 
 	node.natPinger.Stop()
 	log.Info().Msg("NAT pinger stopped")
+
+	node.sleepNotifier.Stop()
+	log.Info().Msg("Sleep notifier stopped")
 
 	return nil
 }

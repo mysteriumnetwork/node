@@ -57,8 +57,7 @@ func NewManager(nodeOptions node.Options,
 	}
 }
 
-func vpnServerIP(port int, outboundIP, publicIP string, isLocalnet bool) string {
-	//TODO public ip could be overridden by arg nodeOptions if needed
+func vpnServerIP(outboundIP, publicIP string, isLocalnet bool) string {
 	if publicIP == outboundIP {
 		return publicIP
 	}
@@ -72,16 +71,6 @@ Since it's localnet, will use %v for openvpn service`, publicIP,
 		return outboundIP
 	}
 
-	log.Warn().Msgf(
-		`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
-You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
-		publicIP,
-		outboundIP,
-		publicIP,
-		port,
-		outboundIP,
-		port,
-	)
 	return publicIP
 }
 

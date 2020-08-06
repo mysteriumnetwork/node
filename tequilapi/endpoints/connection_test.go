@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"math/big"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -67,7 +68,7 @@ func (cm *mockConnectionManager) Disconnect() error {
 	return cm.onDisconnectReturn
 }
 
-func (cm *mockConnectionManager) CheckChannel() error {
+func (cm *mockConnectionManager) CheckChannel(context.Context) error {
 	return cm.onCheckChannelReturn
 }
 

@@ -70,6 +70,12 @@ services:
     command: >
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
+  trust:
+    image: mysteriumnetwork/trust-oracle:latest
+    command: >
+      -swaggerHost=trust
+      -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
+
   transactor:
     image: mysteriumnetwork/transactor:v3-dev
     environment:
@@ -192,6 +198,7 @@ services:
       - hermes
       - hermes2
       - morqa
+      - trust
     cap_add:
       - NET_ADMIN
     expose:
@@ -219,6 +226,8 @@ services:
       --log-level=debug
       --quality.address=http://morqa:8085/api/v1
       --payments.provider.invoice-frequency=1s
+      --access-policy.address=http://trust:8080/api/v1/access-policies/
+      --access-policy.fetch=1s
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -230,6 +239,8 @@ services:
     build:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
+    volumes:
+      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/keystore
     depends_on:
       - broker
       - mysterium-api
@@ -276,8 +287,6 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -312,8 +321,6 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -348,8 +355,6 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
-    expose:
-      - 4050
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s

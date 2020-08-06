@@ -26,9 +26,7 @@ import (
 
 // SessionMap defines map of current sessions
 type SessionMap interface {
-	Add(service.Session)
-	Find(session.ID) (service.Session, bool)
-	Remove(session.ID)
+	Find(session.ID) (*service.Session, bool)
 }
 
 // clientMap extends current sessions with client id metadata from Openvpn.
@@ -64,7 +62,7 @@ func (cm *clientMap) Remove(clientID int) {
 }
 
 // GetSession returns ongoing session instance by given session id.
-func (cm *clientMap) GetSession(id session.ID) (service.Session, bool) {
+func (cm *clientMap) GetSession(id session.ID) (*service.Session, bool) {
 	return cm.sessions.Find(id)
 }
 

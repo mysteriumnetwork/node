@@ -43,6 +43,7 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[identity.Identity]ConsumerBalance
 
+	registry                             registrationStatusProvider
 	hermesAddress                        common.Address
 	mystSCAddress                        common.Address
 	consumerBalanceChecker               consumerBalanceChecker
@@ -69,6 +70,7 @@ func NewConsumerBalanceTracker(
 	consumerGrandTotalsStorage consumerTotalsStorage,
 	consumerInfoGetter consumerInfoGetter,
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider,
+	registry registrationStatusProvider,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
 		balances:                             make(map[identity.Identity]ConsumerBalance),
@@ -80,8 +82,8 @@ func NewConsumerBalanceTracker(
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
 		consumerInfoGetter:                   consumerInfoGetter,
 		transactorRegistrationStatusProvider: transactorRegistrationStatusProvider,
-
-		stop: make(chan struct{}),
+		registry:                             registry,
+		stop:                                 make(chan struct{}),
 	}
 }
 
@@ -142,7 +144,18 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 	}
-	cbt.ForceBalanceUpdate(identity)
+
+	status, err := cbt.registry.GetRegistrationStatus(identity)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not recover get registration status")
+	}
+
+	switch status {
+	case registry.InProgress:
+		cbt.alignWithTransactor(identity)
+	default:
+		cbt.ForceBalanceUpdate(identity)
+	}
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {

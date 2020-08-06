@@ -18,30 +18,50 @@
 package service
 
 import (
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/trace"
+	"github.com/rs/zerolog/log"
 )
 
 // Session structure holds all required information about current session between service consumer and provider.
 type Session struct {
-	ID         session.ID
-	ConsumerID identity.Identity
-	HermesID   common.Address
-	Proposal   market.ServiceProposal
-	ServiceID  string
-	CreatedAt  time.Time
-	done       chan struct{}
+	ID          session.ID
+	ConsumerID  identity.Identity
+	HermesID    common.Address
+	Proposal    market.ServiceProposal
+	ServiceID   string
+	CreatedAt   time.Time
+	request     *pb.SessionRequest
+	done        chan struct{}
+	cleanupLock sync.Mutex
+	cleanup     []func() error
+	tracer      *trace.Tracer
 }
 
 // Close ends session.
 func (s *Session) Close() {
 	close(s.done)
+
+	s.cleanupLock.Lock()
+	defer s.cleanupLock.Unlock()
+
+	for i := len(s.cleanup) - 1; i >= 0; i-- {
+		log.Trace().Msgf("Session cleaning up: (%v/%v)", i+1, len(s.cleanup))
+		err := s.cleanup[i]()
+		if err != nil {
+			log.Warn().Err(err).Msg("Cleanup error")
+		}
+	}
+	s.cleanup = nil
 }
 
 // Done returns readonly done channel.
@@ -49,7 +69,14 @@ func (s *Session) Done() <-chan struct{} {
 	return s.done
 }
 
-func (s Session) toEvent(status event.Status) event.AppEventSession {
+func (s *Session) addCleanup(fn func() error) {
+	s.cleanupLock.Lock()
+	defer s.cleanupLock.Unlock()
+
+	s.cleanup = append(s.cleanup, fn)
+}
+
+func (s *Session) toEvent(status event.Status) event.AppEventSession {
 	return event.AppEventSession{
 		Status: status,
 		Service: event.ServiceContext{
@@ -66,15 +93,22 @@ func (s Session) toEvent(status event.Status) event.AppEventSession {
 }
 
 // NewSession creates a blank new session with an ID.
-func NewSession() (*Session, error) {
+func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error) {
 	uid, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Session{
-		ID:        session.ID(uid.String()),
-		CreatedAt: time.Now().UTC(),
-		done:      make(chan struct{}),
+		ID:         session.ID(uid.String()),
+		ConsumerID: identity.FromAddress(request.GetConsumer().GetId()),
+		HermesID:   common.HexToAddress(request.GetConsumer().GetHermesID()),
+		Proposal:   service.Proposal,
+		ServiceID:  string(service.ID),
+		CreatedAt:  time.Now().UTC(),
+		request:    request,
+		done:       make(chan struct{}),
+		cleanup:    make([]func() error, 0),
+		tracer:     trace.NewTracer(),
 	}, nil
 }

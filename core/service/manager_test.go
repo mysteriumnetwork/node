@@ -117,7 +117,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 
 	var serviceID ID
 	for k := range services {
-		serviceID = services[k].id
+		serviceID = services[k].ID
 	}
 
 	err = manager.Stop(id)
