@@ -173,6 +173,7 @@ services:
       - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
+      - redis
       - mongodb
     command: >
       -settlemntFee 1000
@@ -189,6 +190,7 @@ services:
       -MongoPass transactor
       -MongoHost mongodb:27017
       -MongoReplSet ""
+      -redisAddress "redis:6379"
     volumes:
       - ./e2e/blockchain/keystore:/keystore
     dns: 172.30.0.254
@@ -339,9 +341,9 @@ services:
     dns: 172.30.0.254
     networks:
       public0:
-        ipv4_address: 172.30.0.207
+        ipv4_address: 172.30.0.208
       public1:
-        ipv4_address: 172.31.0.207
+        ipv4_address: 172.31.0.208
   
   myst-consumer-wireguard:
     build:
