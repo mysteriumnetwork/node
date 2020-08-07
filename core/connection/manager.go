@@ -841,7 +841,7 @@ func (m *connectionManager) currentCtx() context.Context {
 func (m *connectionManager) reconnect() {
 	err := m.Disconnect()
 	if err != nil {
-		log.Error().Msgf("Failed to disconnect stale session: %w", err)
+		log.Error().Msgf("Failed to disconnect stale session: %v", err)
 	}
 	log.Info().Msg("Waiting for previous session to cleanup")
 
@@ -850,7 +850,7 @@ func (m *connectionManager) reconnect() {
 	<-m.cleanupFinished
 	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.Proposal, m.connectOptions.Params)
 	if err != nil {
-		log.Error().Msgf("Failed to reconnect: %w", err)
+		log.Error().Msgf("Failed to reconnect: %v", err)
 	}
 }
 

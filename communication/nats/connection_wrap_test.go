@@ -39,8 +39,8 @@ func TestParseServerURI(t *testing.T) {
 		{"nats://127.0.0.1:4333", &url.URL{Scheme: "nats", Host: "127.0.0.1:4333"}, nil},
 		{"nats://example.com:4333", &url.URL{Scheme: "nats", Host: "example.com:4333"}, nil},
 
-		{"nats:// example.com", nil, errors.New(`failed to parse NATS server URI "nats:// example.com": parse nats:// example.com: invalid character " " in host name`)},
-		{"nats://example.com:a", nil, errors.New(`failed to parse NATS server URI "nats://example.com:a": parse nats://example.com:a: invalid port ":a" after host`)},
+		{"nats:// example.com", nil, errors.New(`failed to parse NATS server URI "nats:// example.com": parse "nats:// example.com": invalid character " " in host name`)},
+		{"nats://example.com:a", nil, errors.New(`failed to parse NATS server URI "nats://example.com:a": parse "nats://example.com:a": invalid port ":a" after host`)},
 	}
 
 	for _, tc := range tests {
