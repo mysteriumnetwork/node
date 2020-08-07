@@ -358,6 +358,8 @@ type DecreaseStakeRequest struct {
 // ---
 // summary: Decreases stake
 // description: Decreases stake on eth blockchain via the mysterium transactor.
+// parameters:
+// - in: body
 //   name: body
 //   description: decrease stake request
 //   schema:
