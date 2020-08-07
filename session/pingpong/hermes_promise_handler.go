@@ -47,6 +47,7 @@ type feeProvider interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 }
 
+// HermesHTTPRequester represents HTTP requests to Hermes.
 type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
@@ -57,6 +58,7 @@ type encryption interface {
 	Encrypt(addr common.Address, plaintext []byte) ([]byte, error)
 }
 
+// HermesCallerFactory represents Hermes caller factory.
 type HermesCallerFactory func(url string) HermesHTTPRequester
 
 // HermesPromiseHandlerDeps represents the HermesPromiseHandler dependencies.

@@ -18,8 +18,8 @@
 package endpoints
 
 import (
-	"math/big"
 	"context"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"

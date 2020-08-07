@@ -33,8 +33,6 @@ type HermesURLGetter struct {
 	loaddedAddressesLock sync.Mutex
 }
 
-
-
 // NewHermesURLGetter creates a new instance of hermes url getter.
 func NewHermesURLGetter(
 	bc bc,
