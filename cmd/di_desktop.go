@@ -304,22 +304,9 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 	return nil
 }
 
-func (di *Dependencies) bootstrapMMN(options node.Options) {
+func (di *Dependencies) bootstrapMMN(options node.Options) error {
 	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
-	m := mmn.NewMMN(di.IPResolver, client)
 
-	if err := m.CollectEnvironmentInformation(); err != nil {
-		log.Error().Msgf("Failed to collect environment information for MMN: %v", err)
-	}
-
-	apiKey := config.Current.GetString("mmn.api-key")
-	isRegistrationEnabled := func() bool {
-		return len(config.Current.GetString("mmn.api-key")) != 0
-	}
-	if err := m.SubscribeToIdentityUnlockRegisterToMMN(di.EventBus, isRegistrationEnabled); err != nil {
-		log.Error().Msgf("Failed to subscribe to events for MMN: %v", err)
-	}
-
-	m.SetAPIKey(apiKey)
-	di.MMN = m
+	di.MMN = mmn.NewMMN(di.IPResolver, client)
+	return di.MMN.Subscribe(di.EventBus)
 }

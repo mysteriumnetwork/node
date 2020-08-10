@@ -219,7 +219,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapUIServer(nodeOptions)
-	di.bootstrapMMN(nodeOptions)
+	if err := di.bootstrapMMN(nodeOptions); err != nil {
+		return err
+	}
 	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
 		return err
 	}
