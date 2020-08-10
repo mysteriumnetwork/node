@@ -154,6 +154,11 @@ services:
       -swaggerHost=trust
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
     dns: 172.30.0.254
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     networks:
       public0:
         ipv4_address: 172.30.0.207
@@ -206,6 +211,11 @@ services:
       PORT: 8889
     expose:
       - 8889
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
       - redis
@@ -312,6 +322,11 @@ services:
 
   hermes2:
     image: mysteriumnetwork/hermes:v3-dev
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     environment:
       PORT: 8889
     expose:
@@ -485,6 +500,7 @@ services:
       - ipify
       - transactor
       - hermes
+      - hermes2
       - morqa
       - trust
     cap_add:
