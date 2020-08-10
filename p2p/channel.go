@@ -443,6 +443,14 @@ func (c *channel) Close() error {
 		if err := c.tr.session.Close(); err != nil {
 			closeErr = fmt.Errorf("could not close p2p transport session: %w", err)
 		}
+
+		if c.serviceConn != nil {
+			if err := c.serviceConn.Close(); err != nil {
+				if errors.Is(err, errors.New("use of closed network connection")) { // Have to check this error as a string match https://github.com/golang/go/issues/4373
+					closeErr = fmt.Errorf("could not close p2p service connection: %w", err)
+				}
+			}
+		}
 	})
 
 	return closeErr
@@ -555,21 +563,25 @@ func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
 func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey PublicKey) (sess *kcp.UDPSession, localAddr *net.UDPAddr, err error) {
 	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
-		err = fmt.Errorf("could not create block crypt: %w", err)
-		return
+		return nil, nil, fmt.Errorf("could not create block crypt: %w", err)
 	}
+
 	localConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1")})
 	if err != nil {
-		err = fmt.Errorf("could not create UDP conn: %w", err)
-		return
+		return nil, nil, fmt.Errorf("could not create UDP conn: %w", err)
 	}
+
 	localAddr = localConn.LocalAddr().(*net.UDPAddr)
+
 	sess, err = kcp.NewConn3(1, proxyAddr, blockCrypt, 10, 3, localConn)
 	if err != nil {
-		err = fmt.Errorf("could not create UDP session: %w", err)
+		localConn.Close()
+		return nil, nil, fmt.Errorf("could not create UDP session: %w", err)
 	}
+
 	sess.SetMtu(kcpMTUSize)
-	return
+
+	return sess, localAddr, err
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {
