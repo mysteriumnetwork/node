@@ -74,7 +74,6 @@ func (m *MMN) handleNodeStart(e nodevent.Payload) {
 	}
 }
 
-// handleIdentityUnlock does auto-register to MMN, but only if API key is configured.
 func (m *MMN) handleIdentityUnlock(identity string) {
 	m.lastIdentity = identity
 }
@@ -85,11 +84,12 @@ func (m *MMN) handleServiceStart(e servicestate.AppEventServiceStatus) {
 		return
 	}
 
-	isRegistrationEnabled := len(config.Current.GetString("mmn.api-key")) != 0
-	if !isRegistrationEnabled {
-		log.Debug().Msg("Identity unlocked, registration to MMN disabled because the API key missing in config.")
-		return
-	}
+	// TODO Turn off auto-register then WEB UI will have possibility to configure API key
+	// isRegistrationEnabled := len(config.Current.GetString("mmn.api-key")) != 0
+	// if !isRegistrationEnabled {
+	// 	log.Debug().Msg("Identity unlocked, registration to MMN disabled because the API key missing in config.")
+	// 	return
+	// }
 
 	if err := m.register(); err != nil {
 		log.Error().Msgf("Failed to register identity to MMN: %v", err)
