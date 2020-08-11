@@ -291,7 +291,10 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	publisher := mocks.NewEventBus()
 
 	sessionStore := NewSessionPool(publisher)
-	session := &Session{ID: "1", ConsumerID: consumerID}
+	session, _ := NewSession(
+		currentService,
+		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: consumerID.Address}},
+	)
 	sessionStore.Add(session)
 
 	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
