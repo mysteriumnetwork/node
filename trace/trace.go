@@ -19,7 +19,6 @@ package trace
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -36,7 +35,7 @@ const (
 // NewTracer returns new tracer instance.
 func NewTracer() *Tracer {
 	return &Tracer{
-		stages: make(map[string]*stage),
+		stages: make([]*stage, 0),
 	}
 }
 
@@ -44,7 +43,7 @@ func NewTracer() *Tracer {
 // to record stages times for tracing how long it took time.
 type Tracer struct {
 	mu       sync.Mutex
-	stages   map[string]*stage
+	stages   []*stage
 	finished bool
 }
 
@@ -57,16 +56,15 @@ func (t *Tracer) StartStage(key string) string {
 		log.Error().Msg("Tracer is already finished")
 		return ""
 	}
-
-	if _, ok := t.stages[key]; ok {
+	if _, ok := t.findStage(key); ok {
 		log.Error().Msgf("Stage %s was already started", key)
 		return ""
 	}
 
-	t.stages[key] = &stage{
+	t.stages = append(t.stages, &stage{
 		key:   key,
 		start: time.Now(),
-	}
+	})
 	return key
 }
 
@@ -79,12 +77,12 @@ func (t *Tracer) EndStage(key string) {
 		log.Error().Msg("Tracer is already finished")
 		return
 	}
-
-	if s, ok := t.stages[key]; ok {
-		s.end = time.Now()
-	} else {
+	s, ok := t.findStage(key)
+	if !ok {
 		log.Error().Msgf("Stage %s was not started", key)
 	}
+
+	s.end = time.Now()
 }
 
 // Finish finishes tracing and returns formatted string with stages durations.
@@ -93,17 +91,8 @@ func (t *Tracer) Finish(eventPublisher eventbus.Publisher, id string) string {
 	defer t.mu.Unlock()
 	t.finished = true
 
-	// Sort stages by start time.
-	var stages []*stage
-	for _, v := range t.stages {
-		stages = append(stages, v)
-	}
-	sort.Slice(stages, func(i, j int) bool {
-		return stages[i].start.Before(stages[j].start)
-	})
-
 	var strs []string
-	for _, s := range stages {
+	for _, s := range t.stages {
 		if s.end.After(time.Time{}) {
 			t.publishStageEvent(eventPublisher, id, *s)
 			strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
@@ -113,6 +102,15 @@ func (t *Tracer) Finish(eventPublisher eventbus.Publisher, id string) string {
 	}
 
 	return strings.Join(strs, ", ")
+}
+
+func (t *Tracer) findStage(key string) (*stage, bool) {
+	for _, s := range t.stages {
+		if s.key == key {
+			return s, true
+		}
+	}
+	return nil, false
 }
 
 func (t *Tracer) publishStageEvent(eventPublisher eventbus.Publisher, id string, stage stage) {
