@@ -695,7 +695,7 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	}
 
 	// Quality metrics
-	qualitySender := quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+	qualitySender := quality.NewSender(transport, metadata.VersionAsString())
 	if err := qualitySender.Subscribe(di.EventBus); err != nil {
 		return err
 	}
