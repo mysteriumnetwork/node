@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -47,7 +47,7 @@ var (
 			ProviderID:        "providerID",
 		},
 	}
-	connectionSessionMock = connection.Status{
+	connectionSessionMock = connectionstate.Status{
 		StartedAt:    time.Date(2020, 4, 1, 10, 11, 12, 0, time.UTC),
 		SessionID:    session_node.ID("sessionID"),
 		ConsumerID:   identity.FromAddress("consumerID"),
@@ -58,7 +58,7 @@ var (
 			ProviderID:        "providerID",
 		},
 	}
-	connectionStatsMock   = connection.Statistics{BytesReceived: 100000, BytesSent: 50000}
+	connectionStatsMock   = connectionstate.Statistics{BytesReceived: 100000, BytesSent: 50000}
 	connectionInvoiceMock = crypto.Invoice{AgreementID: 10, AgreementTotal: 1000, TransactorFee: 10}
 )
 
@@ -168,16 +168,16 @@ func TestSessionStorage_consumeEventEndedOK(t *testing.T) {
 	defer storageCleanup()
 
 	// when
-	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
-		Status:      connection.SessionCreatedStatus,
+	storage.consumeConnectionSessionEvent(connectionstate.AppEventConnectionSession{
+		Status:      connectionstate.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
 	})
-	storage.consumeConnectionStatisticsEvent(connection.AppEventConnectionStatistics{
+	storage.consumeConnectionStatisticsEvent(connectionstate.AppEventConnectionStatistics{
 		Stats:       connectionStatsMock,
 		SessionInfo: connectionSessionMock,
 	})
-	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
-		Status:      connection.SessionEndedStatus,
+	storage.consumeConnectionSessionEvent(connectionstate.AppEventConnectionSession{
+		Status:      connectionstate.SessionEndedStatus,
 		SessionInfo: connectionSessionMock,
 	})
 
@@ -212,8 +212,8 @@ func TestSessionStorage_consumeEventConnectedOK(t *testing.T) {
 	defer storageCleanup()
 
 	// when
-	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
-		Status:      connection.SessionCreatedStatus,
+	storage.consumeConnectionSessionEvent(connectionstate.AppEventConnectionSession{
+		Status:      connectionstate.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
 	})
 
@@ -249,8 +249,8 @@ func TestSessionStorage_consumeSessionSpendingEvent(t *testing.T) {
 	defer storageCleanup()
 
 	// when
-	storage.consumeConnectionSessionEvent(connection.AppEventConnectionSession{
-		Status:      connection.SessionCreatedStatus,
+	storage.consumeConnectionSessionEvent(connectionstate.AppEventConnectionSession{
+		Status:      connectionstate.SessionCreatedStatus,
 		SessionInfo: connectionSessionMock,
 	})
 	storage.consumeConnectionSpendingEvent(event.AppEventInvoicePaid{

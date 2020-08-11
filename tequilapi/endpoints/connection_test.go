@@ -29,6 +29,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -42,7 +43,7 @@ type mockConnectionManager struct {
 	onConnectReturn       error
 	onDisconnectReturn    error
 	onCheckChannelReturn  error
-	onStatusReturn        connection.Status
+	onStatusReturn        connectionstate.Status
 	disconnectCount       int
 	requestedConsumerID   identity.Identity
 	requestedProvider     identity.Identity
@@ -58,7 +59,7 @@ func (cm *mockConnectionManager) Connect(consumerID identity.Identity, accountan
 	return cm.onConnectReturn
 }
 
-func (cm *mockConnectionManager) Status() connection.Status {
+func (cm *mockConnectionManager) Status() connectionstate.Status {
 	return cm.onStatusReturn
 }
 
@@ -90,13 +91,13 @@ func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRep
 
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	state := connection.Status{State: connection.NotConnected}
+	state := connectionstate.Status{State: connectionstate.NotConnected}
 	fakeManager := &mockConnectionManager{
 		onStatusReturn: state,
 	}
 	fakeState := &mockStateProvider{}
 	fakeState.stateToReturn.Connection.Session = state
-	fakeState.stateToReturn.Connection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
 
 	mockedProposalProvider := mockRepositoryWithProposal("node1", "noop")
 	AddRoutesForConnection(router, fakeManager, fakeState, mockedProposalProvider, mockIdentityRegistryInstance)
@@ -148,11 +149,11 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 
 func TestStateIsReturnedFromStore(t *testing.T) {
 	manager := &mockConnectionManager{
-		onStatusReturn: connection.Status{
+		onStatusReturn: connectionstate.Status{
 			StartedAt:    time.Time{},
 			ConsumerID:   identity.Identity{},
 			AccountantID: common.Address{},
-			State:        connection.Disconnecting,
+			State:        connectionstate.Disconnecting,
 			SessionID:    "1",
 			Proposal:     market.ServiceProposal{},
 		},
@@ -218,8 +219,8 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 }
 
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
-	state := connection.Status{
-		State:     connection.Connected,
+	state := connectionstate.Status{
+		State:     connectionstate.Connected,
 		SessionID: "1",
 	}
 	fakeManager := mockConnectionManager{onStatusReturn: state}
@@ -358,7 +359,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	fakeState := &mockStateProvider{}
-	fakeState.stateToReturn.Connection.Statistics = connection.Statistics{BytesSent: 1, BytesReceived: 2}
+	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
 	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
 	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: 10001}
 

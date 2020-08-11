@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -34,19 +35,19 @@ type Connection interface {
 	Wait() error
 	Stop()
 	GetConfig() (ConsumerConfig, error)
-	State() <-chan State
-	Statistics() (Statistics, error)
+	State() <-chan connectionstate.State
+	Statistics() (connectionstate.Statistics, error)
 }
 
 // StateChannel is the channel we receive state change events on
-type StateChannel chan State
+type StateChannel chan connectionstate.State
 
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
 	Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) error
 	// Status queries current status of connection
-	Status() Status
+	Status() connectionstate.Status
 	// Disconnect closes established connection, reports error if no connection
 	Disconnect() error
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping

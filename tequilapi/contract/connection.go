@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -29,7 +30,7 @@ import (
 var emptyAddress = common.Address{}
 
 // NewConnectionStatusDTO maps to API connection status.
-func NewConnectionStatusDTO(session connection.Status) ConnectionStatusDTO {
+func NewConnectionStatusDTO(session connectionstate.Status) ConnectionStatusDTO {
 	response := ConnectionStatusDTO{
 		Status:     string(session.State),
 		ConsumerID: session.ConsumerID.Address,
@@ -66,7 +67,7 @@ type ConnectionStatusDTO struct {
 }
 
 // NewConnectionDTO maps to API connection.
-func NewConnectionDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
+func NewConnectionDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
 	dto := ConnectionDTO{
 		ConnectionStatusDTO: NewConnectionStatusDTO(session),
 	}
@@ -85,7 +86,7 @@ type ConnectionDTO struct {
 }
 
 // NewConnectionStatisticsDTO maps to API connection stats.
-func NewConnectionStatisticsDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+func NewConnectionStatisticsDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
 	return ConnectionStatisticsDTO{
 		Duration:           int(session.Duration().Seconds()),
 		BytesSent:          statistics.BytesSent,

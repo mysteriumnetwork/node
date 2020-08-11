@@ -22,11 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 func Test_ThroughputStringOutput(t *testing.T) {
@@ -36,14 +35,14 @@ func Test_ThroughputStringOutput(t *testing.T) {
 func Test_ConsumeSessionEvent_ResetsOnConnect(t *testing.T) {
 	tracker := Tracker{
 		publisher: mocks.NewEventBus(),
-		previous: connection.Statistics{
+		previous: connectionstate.Statistics{
 			At:            time.Now(),
 			BytesReceived: 1,
 			BytesSent:     1,
 		},
 	}
-	tracker.consumeSessionEvent(connection.AppEventConnectionSession{
-		Status: connection.SessionCreatedStatus,
+	tracker.consumeSessionEvent(connectionstate.AppEventConnectionSession{
+		Status: connectionstate.SessionCreatedStatus,
 	})
 
 	assert.True(t, tracker.previous.At.IsZero())
@@ -54,14 +53,14 @@ func Test_ConsumeSessionEvent_ResetsOnConnect(t *testing.T) {
 func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 	tracker := Tracker{
 		publisher: mocks.NewEventBus(),
-		previous: connection.Statistics{
+		previous: connectionstate.Statistics{
 			At:            time.Now(),
 			BytesReceived: 1,
 			BytesSent:     1,
 		},
 	}
-	tracker.consumeSessionEvent(connection.AppEventConnectionSession{
-		Status: connection.SessionEndedStatus,
+	tracker.consumeSessionEvent(connectionstate.AppEventConnectionSession{
+		Status: connectionstate.SessionEndedStatus,
 	})
 
 	assert.True(t, tracker.previous.At.IsZero())
@@ -72,8 +71,8 @@ func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	publisher := mocks.NewEventBus()
 	tracker := Tracker{publisher: publisher}
-	e := connection.AppEventConnectionStatistics{
-		Stats: connection.Statistics{
+	e := connectionstate.AppEventConnectionStatistics{
+		Stats: connectionstate.Statistics{
 			At:            time.Now(),
 			BytesReceived: 1,
 			BytesSent:     2,
@@ -89,15 +88,15 @@ func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T) {
 	publisher := mocks.NewEventBus()
 	tracker := Tracker{publisher: publisher}
-	tracker.consumeStatisticsEvent(connection.AppEventConnectionStatistics{
-		Stats: connection.Statistics{
+	tracker.consumeStatisticsEvent(connectionstate.AppEventConnectionStatistics{
+		Stats: connectionstate.Statistics{
 			At:            time.Now(),
 			BytesSent:     0,
 			BytesReceived: 0,
 		},
 	})
-	tracker.consumeStatisticsEvent(connection.AppEventConnectionStatistics{
-		Stats: connection.Statistics{
+	tracker.consumeStatisticsEvent(connectionstate.AppEventConnectionStatistics{
+		Stats: connectionstate.Statistics{
 			At:            time.Now(),
 			BytesSent:     2048,
 			BytesReceived: 2048,
@@ -106,8 +105,8 @@ func Test_ConsumeStatisticsEvent_Regression_1674_InsaneSpeedReports(t *testing.T
 	assert.Nil(t, publisher.Pop())
 
 	time.Sleep(time.Second)
-	tracker.consumeStatisticsEvent(connection.AppEventConnectionStatistics{
-		Stats: connection.Statistics{
+	tracker.consumeStatisticsEvent(connectionstate.AppEventConnectionStatistics{
+		Stats: connectionstate.Statistics{
 			At:            time.Now(),
 			BytesSent:     4096,
 			BytesReceived: 4096,

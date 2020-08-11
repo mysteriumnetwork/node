@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -31,9 +31,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockSessionEvent = connection.AppEventConnectionSession{
-	Status: connection.SessionCreatedStatus,
-	SessionInfo: connection.Status{
+var mockSessionEvent = connectionstate.AppEventConnectionSession{
+	Status: connectionstate.SessionCreatedStatus,
+	SessionInfo: connectionstate.Status{
 		ConsumerID: identity.FromAddress("0x000"),
 		SessionID:  session.ID("test"),
 		Proposal: market.ServiceProposal{
@@ -86,7 +86,7 @@ func TestStatisticsReporterConsumeSessionEvent(t *testing.T) {
 	<-mockSender.called
 	assert.True(t, reporter.started)
 	copy := mockSessionEvent
-	copy.Status = connection.SessionEndedStatus
+	copy.Status = connectionstate.SessionEndedStatus
 	reporter.consumeSessionEvent(copy)
 	assert.False(t, reporter.started)
 }

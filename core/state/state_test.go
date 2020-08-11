@@ -25,7 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/datasize"
@@ -367,7 +367,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	// given
-	expected := connection.Status{State: connection.Connected, SessionID: "1"}
+	expected := connectionstate.Status{State: connectionstate.Connected, SessionID: "1"}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
 		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
@@ -378,24 +378,24 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connection.NotConnected, keeper.GetState().Connection.Session.State)
+	assert.Equal(t, connectionstate.NotConnected, keeper.GetState().Connection.Session.State)
 
 	// when
-	eventBus.Publish(connection.AppTopicConnectionState, connection.AppEventConnectionState{
+	eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
 		State:       expected.State,
 		SessionInfo: expected,
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Connection.Session.State == connection.Connected
+		return keeper.GetState().Connection.Session.State == connectionstate.Connected
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(t, expected, keeper.GetState().Connection.Session)
 }
 
 func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	// given
-	expected := connection.Statistics{
+	expected := connectionstate.Statistics{
 		At:            time.Now(),
 		BytesReceived: 10 * datasize.MiB.Bytes(),
 		BytesSent:     500 * datasize.KiB.Bytes(),
@@ -413,7 +413,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
 
 	// when
-	eventBus.Publish(connection.AppTopicConnectionStatistics, connection.AppEventConnectionStatistics{
+	eventBus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
 		Stats: expected,
 	})
 

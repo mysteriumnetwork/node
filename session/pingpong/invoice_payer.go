@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -126,7 +126,7 @@ func (ip *InvoicePayer) Start() error {
 
 	ip.deps.TimeTracker.StartTracking()
 
-	err = ip.deps.EventBus.Subscribe(connection.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
+	err = ip.deps.EventBus.Subscribe(connectionstate.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe to data transfer events")
 	}
@@ -263,12 +263,12 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 func (ip *InvoicePayer) Stop() {
 	ip.once.Do(func() {
 		log.Debug().Msg("Stopping...")
-		_ = ip.deps.EventBus.Unsubscribe(connection.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
+		_ = ip.deps.EventBus.Unsubscribe(connectionstate.AppTopicConnectionStatistics, ip.consumeDataTransferredEvent)
 		close(ip.stop)
 	})
 }
 
-func (ip *InvoicePayer) consumeDataTransferredEvent(e connection.AppEventConnectionStatistics) {
+func (ip *InvoicePayer) consumeDataTransferredEvent(e connectionstate.AppEventConnectionStatistics) {
 	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
 	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
 	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.

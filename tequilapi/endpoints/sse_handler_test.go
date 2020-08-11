@@ -29,7 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -195,7 +195,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState = msp.GetState()
-	changedState.Connection.Session.State = connection.Connecting
+	changedState.Connection.Session.State = connectionstate.Connecting
 	changedState.Identities = []stateEvent.Identity{
 		{
 			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",

@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -36,7 +36,7 @@ var ErrSessionNotStarted = errors.New("session not started")
 
 // StatsTracker allows for retrieval and resetting of statistics
 type StatsTracker interface {
-	GetDataStats() connection.Statistics
+	GetDataStats() connectionstate.Statistics
 }
 
 // Reporter defines method for sending stats outside
@@ -51,7 +51,7 @@ type SessionStatisticsReporter struct {
 	locationDetector location.OriginResolver
 
 	signerFactory  identity.SignerFactory
-	statistics     connection.Statistics
+	statistics     connectionstate.Statistics
 	statisticsMu   sync.RWMutex
 	remoteReporter Reporter
 
@@ -76,10 +76,10 @@ func NewSessionStatisticsReporter(remoteReporter Reporter, signerFactory identit
 
 // Subscribe subscribes to relevant events of event bus.
 func (sr *SessionStatisticsReporter) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.Subscribe(connection.AppTopicConnectionSession, sr.consumeSessionEvent); err != nil {
+	if err := bus.Subscribe(connectionstate.AppTopicConnectionSession, sr.consumeSessionEvent); err != nil {
 		return err
 	}
-	return bus.Subscribe(connection.AppTopicConnectionStatistics, sr.consumeSessionStatisticsEvent)
+	return bus.Subscribe(connectionstate.AppTopicConnectionStatistics, sr.consumeSessionStatisticsEvent)
 }
 
 // start starts sending of stats
@@ -153,12 +153,12 @@ func (sr *SessionStatisticsReporter) send(serviceType, providerID, country strin
 }
 
 // consumeSessionEvent handles the session state changes
-func (sr *SessionStatisticsReporter) consumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
+func (sr *SessionStatisticsReporter) consumeSessionEvent(sessionEvent connectionstate.AppEventConnectionSession) {
 	switch sessionEvent.Status {
-	case connection.SessionEndedStatus:
+	case connectionstate.SessionEndedStatus:
 		sr.stop()
-	case connection.SessionCreatedStatus:
-		sr.statistics = connection.Statistics{}
+	case connectionstate.SessionCreatedStatus:
+		sr.statistics = connectionstate.Statistics{}
 		sr.start(
 			sessionEvent.SessionInfo.ConsumerID,
 			sessionEvent.SessionInfo.Proposal.ServiceType,
@@ -168,7 +168,7 @@ func (sr *SessionStatisticsReporter) consumeSessionEvent(sessionEvent connection
 	}
 }
 
-func (sr *SessionStatisticsReporter) consumeSessionStatisticsEvent(e connection.AppEventConnectionStatistics) {
+func (sr *SessionStatisticsReporter) consumeSessionStatisticsEvent(e connectionstate.AppEventConnectionStatistics) {
 	sr.statisticsMu.Lock()
 	sr.statistics = e.Stats
 	sr.statisticsMu.Unlock()

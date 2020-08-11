@@ -21,9 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 func TestCache_needsRefresh(t *testing.T) {
@@ -87,7 +86,7 @@ func TestCacheHandlesConnection_Connected(t *testing.T) {
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
-	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.Connected})
+	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.Connected})
 	assert.True(t, r.called)
 }
 
@@ -97,7 +96,7 @@ func TestCacheHandlesConnection_NotConnected(t *testing.T) {
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
-	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.NotConnected})
+	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.NotConnected})
 	assert.True(t, r.called)
 }
 
@@ -107,6 +106,6 @@ func TestCacheIgnoresOther(t *testing.T) {
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
-	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.Reconnecting})
+	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.Reconnecting})
 	assert.False(t, r.called)
 }

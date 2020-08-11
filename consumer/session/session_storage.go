@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -65,10 +65,10 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(session_event.AppTopicTokensEarned, repo.consumeServiceSessionEarningsEvent); err != nil {
 		return err
 	}
-	if err := bus.Subscribe(connection.AppTopicConnectionSession, repo.consumeConnectionSessionEvent); err != nil {
+	if err := bus.Subscribe(connectionstate.AppTopicConnectionSession, repo.consumeConnectionSessionEvent); err != nil {
 		return err
 	}
-	if err := bus.Subscribe(connection.AppTopicConnectionStatistics, repo.consumeConnectionStatisticsEvent); err != nil {
+	if err := bus.Subscribe(connectionstate.AppTopicConnectionStatistics, repo.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
 	return bus.Subscribe(pingpong_event.AppTopicInvoicePaid, repo.consumeConnectionSpendingEvent)
@@ -142,13 +142,13 @@ func (repo *Storage) consumeServiceSessionEarningsEvent(e session_event.AppEvent
 }
 
 // consumeConnectionSessionEvent consumes the session state change events
-func (repo *Storage) consumeConnectionSessionEvent(e connection.AppEventConnectionSession) {
+func (repo *Storage) consumeConnectionSessionEvent(e connectionstate.AppEventConnectionSession) {
 	sessionID := e.SessionInfo.SessionID
 
 	switch e.Status {
-	case connection.SessionEndedStatus:
+	case connectionstate.SessionEndedStatus:
 		repo.handleEndedEvent(sessionID)
-	case connection.SessionCreatedStatus:
+	case connectionstate.SessionCreatedStatus:
 		repo.mu.Lock()
 		repo.sessionsActive[sessionID] = History{
 			SessionID:       sessionID,
@@ -166,7 +166,7 @@ func (repo *Storage) consumeConnectionSessionEvent(e connection.AppEventConnecti
 	}
 }
 
-func (repo *Storage) consumeConnectionStatisticsEvent(e connection.AppEventConnectionStatistics) {
+func (repo *Storage) consumeConnectionStatisticsEvent(e connectionstate.AppEventConnectionStatistics) {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 

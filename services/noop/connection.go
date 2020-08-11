@@ -23,12 +23,13 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 )
 
 // NewConnection creates a new noop connnection
 func NewConnection() (connection.Connection, error) {
 	return &Connection{
-		stateCh: make(chan connection.State, 100),
+		stateCh: make(chan connectionstate.State, 100),
 	}, nil
 }
 
@@ -36,19 +37,19 @@ func NewConnection() (connection.Connection, error) {
 type Connection struct {
 	isRunning      bool
 	noopConnection sync.WaitGroup
-	stateCh        chan connection.State
+	stateCh        chan connectionstate.State
 }
 
 var _ connection.Connection = &Connection{}
 
 // State returns connection state channel.
-func (c *Connection) State() <-chan connection.State {
+func (c *Connection) State() <-chan connectionstate.State {
 	return c.stateCh
 }
 
 // Statistics returns connection statistics channel.
-func (c *Connection) Statistics() (connection.Statistics, error) {
-	return connection.Statistics{At: time.Now()}, nil
+func (c *Connection) Statistics() (connectionstate.Statistics, error) {
+	return connectionstate.Statistics{At: time.Now()}, nil
 }
 
 // Start implements the connection.Connection interface
@@ -56,10 +57,10 @@ func (c *Connection) Start(ctx context.Context, params connection.ConnectOptions
 	c.noopConnection.Add(1)
 	c.isRunning = true
 
-	c.stateCh <- connection.Connecting
+	c.stateCh <- connectionstate.Connecting
 
 	time.Sleep(5 * time.Second)
-	c.stateCh <- connection.Connected
+	c.stateCh <- connectionstate.Connected
 	return nil
 }
 
@@ -78,9 +79,9 @@ func (c *Connection) Stop() {
 	}
 
 	c.isRunning = false
-	c.stateCh <- connection.Disconnecting
+	c.stateCh <- connectionstate.Disconnecting
 	time.Sleep(2 * time.Second)
-	c.stateCh <- connection.NotConnected
+	c.stateCh <- connectionstate.NotConnected
 	c.noopConnection.Done()
 	close(c.stateCh)
 }

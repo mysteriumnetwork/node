@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -285,7 +286,7 @@ type StatisticsChangeCallback interface {
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
+	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, func(e connectionstate.AppEventConnectionStatistics) {
 		tokensSpent := mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal
 		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), int64(tokensSpent))
 	})
@@ -299,7 +300,7 @@ type ConnectionStatusChangeCallback interface {
 // RegisterConnectionStatusChangeCallback registers callback which is called on active connection
 // status change.
 func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatusChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
+	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
 		cb.OnChange(string(e.State))
 	})
 }
