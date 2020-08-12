@@ -101,6 +101,7 @@ func (repo *Storage) consumeServiceSessionEvent(e session_event.AppEventSession)
 			AccountantID:    e.Session.AccountantID.Hex(),
 			ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
 			ServiceType:     e.Session.Proposal.ServiceType,
+			ConsumerCountry: e.Session.ConsumerLocation.Country,
 			ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 			Started:         e.Session.StartedAt.UTC(),
 		}
@@ -157,6 +158,7 @@ func (repo *Storage) consumeConnectionSessionEvent(e connectionstate.AppEventCon
 			AccountantID:    e.SessionInfo.AccountantID.Hex(),
 			ProviderID:      identity.FromAddress(e.SessionInfo.Proposal.ProviderID),
 			ServiceType:     e.SessionInfo.Proposal.ServiceType,
+			ConsumerCountry: e.SessionInfo.ConsumerLocation.Country,
 			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
 			Started:         e.SessionInfo.StartedAt.UTC(),
 		}

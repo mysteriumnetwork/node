@@ -305,6 +305,7 @@ func (k *Keeper) addSession(e sevent.AppEventSession) {
 		AccountantID:    e.Session.AccountantID.Hex(),
 		ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
 		ServiceType:     e.Session.Proposal.ServiceType,
+		ConsumerCountry: e.Session.ConsumerLocation.Country,
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 		Started:         e.Session.StartedAt,
 		Status:          session.StatusNew,
