@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -46,21 +45,13 @@ func mockSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 
-type mockLocationDetector struct{}
-
-func (mld *mockLocationDetector) GetOrigin() locationstate.Location {
-	return locationstate.Location{
-		Country: "KG",
-	}
-}
-
 func TestStatisticsReporterStartsAndStops(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Minute)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, time.Minute)
 
 	reporter.consumeSessionEvent(mockSessionEvent)
 
-	reporter.start(mockSessionEvent.SessionInfo.ConsumerID, mockSessionEvent.SessionInfo.Proposal.ServiceType, mockSessionEvent.SessionInfo.Proposal.ProviderID, mockSessionEvent.SessionInfo.SessionID)
+	reporter.start(mockSessionEvent.SessionInfo)
 	reporter.stop()
 
 	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
@@ -69,11 +60,11 @@ func TestStatisticsReporterStartsAndStops(t *testing.T) {
 
 func TestStatisticsReporterInterval(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, time.Nanosecond)
 
 	reporter.consumeSessionEvent(mockSessionEvent)
 
-	reporter.start(mockSessionEvent.SessionInfo.ConsumerID, mockSessionEvent.SessionInfo.Proposal.ServiceType, mockSessionEvent.SessionInfo.Proposal.ProviderID, mockSessionEvent.SessionInfo.SessionID)
+	reporter.start(mockSessionEvent.SessionInfo)
 	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
 
 	reporter.stop()
@@ -81,7 +72,7 @@ func TestStatisticsReporterInterval(t *testing.T) {
 
 func TestStatisticsReporterConsumeSessionEvent(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, time.Nanosecond)
 	reporter.consumeSessionEvent(mockSessionEvent)
 	<-mockSender.called
 	assert.True(t, reporter.started)

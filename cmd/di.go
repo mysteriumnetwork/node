@@ -426,12 +426,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 
 	// Consumer session history (API storage)
-	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
-		di.MysteriumAPI,
-		di.SignerFactory,
-		di.LocationResolver,
-		time.Minute,
-	)
+	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(di.MysteriumAPI, di.SignerFactory, time.Minute)
 	if err := di.StatisticsReporter.Subscribe(di.EventBus); err != nil {
 		return err
 	}
