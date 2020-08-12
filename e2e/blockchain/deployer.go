@@ -235,8 +235,8 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	fmt.Println(" min max hermes ", min.Uint64(), " ", max.Uint64())
 
 	tc, _ := bindings.NewMystTokenCaller(mystTokenAddress, client)
-	tokenBlaanmce, _ := tc.BalanceOf(&bind.CallOpts{}, accs)
-	fmt.Println(" tokenBlaanmce ", tokenBlaanmce.Uint64())
+	tokenBalance, _ := tc.BalanceOf(&bind.CallOpts{}, accs)
+	fmt.Println(" tokenBalance ", tokenBalance.Uint64())
 }
 
 func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAddress, mystTokenAddress common.Address) common.Address {

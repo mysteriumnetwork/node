@@ -53,7 +53,7 @@ const (
 )
 
 var gb = big.NewInt(1024 * 1024 * 1024)
-var accuracy = big.NewInt(50000)
+var accuracy = big.NewInt(500000000000000)
 
 // NewPaymentMethod returns the the default payment method of time + bytes.
 func NewPaymentMethod(pricePerGB, pricePerMinute *big.Int) PaymentMethod {

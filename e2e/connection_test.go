@@ -229,8 +229,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			ProviderID: providerID,
 			Type:       "noop",
 			PaymentMethod: contract.ServicePaymentMethod{
-				PriceGB:     big.NewInt(1000000),
-				PriceMinute: big.NewInt(1000000),
+				PriceGB:     big.NewInt(10000000000000000),
+				PriceMinute: big.NewInt(10000000000000000),
 			},
 			AccessPolicies: contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
 		}
