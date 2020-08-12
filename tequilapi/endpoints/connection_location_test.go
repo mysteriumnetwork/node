@@ -25,7 +25,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,8 +35,8 @@ type locationResolverMock struct {
 	ipOrigin string
 }
 
-func (r *locationResolverMock) DetectLocation() (location.Location, error) {
-	loc := location.Location{
+func (r *locationResolverMock) DetectLocation() (locationstate.Location, error) {
+	loc := locationstate.Location{
 		ASN:       62179,
 		City:      "Vilnius",
 		Continent: "EU",
@@ -49,8 +49,8 @@ func (r *locationResolverMock) DetectLocation() (location.Location, error) {
 	return loc, nil
 }
 
-func (r *locationResolverMock) GetOrigin() location.Location {
-	return location.Location{
+func (r *locationResolverMock) GetOrigin() locationstate.Location {
+	return locationstate.Location{
 		ASN:       62179,
 		City:      "Vilnius",
 		Continent: "EU",

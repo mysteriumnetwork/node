@@ -23,11 +23,12 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-func locationToRes(l location.Location) contract.LocationDTO {
+func locationToRes(l locationstate.Location) contract.LocationDTO {
 	return contract.LocationDTO{
 		IP:        l.IP,
 		ASN:       l.ASN,

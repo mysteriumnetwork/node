@@ -22,7 +22,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
@@ -63,7 +63,7 @@ func (manager *Manager) Stop() error {
 }
 
 // GetProposal returns the proposal for NOOP service for given country
-func GetProposal(location location.Location) market.ServiceProposal {
+func GetProposal(location locationstate.Location) market.ServiceProposal {
 	return market.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{

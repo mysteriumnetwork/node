@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,9 +76,9 @@ type mockResolver struct {
 	errToReturn error
 }
 
-func (mr *mockResolver) DetectLocation() (Location, error) {
+func (mr *mockResolver) DetectLocation() (locationstate.Location, error) {
 	mr.called = true
-	return Location{}, mr.errToReturn
+	return locationstate.Location{}, mr.errToReturn
 }
 
 func TestCacheHandlesConnection_Connected(t *testing.T) {

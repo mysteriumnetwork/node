@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/rs/zerolog/log"
 )
@@ -30,8 +31,8 @@ import (
 type Cache struct {
 	lastFetched      time.Time
 	locationDetector Resolver
-	location         Location
-	origin           Location
+	location         locationstate.Location
+	origin           locationstate.Location
 	expiry           time.Duration
 	lock             sync.Mutex
 }
@@ -48,7 +49,7 @@ func (c *Cache) needsRefresh() bool {
 	return c.lastFetched.IsZero() || c.lastFetched.After(time.Now().Add(-c.expiry))
 }
 
-func (c *Cache) fetchAndSave() (Location, error) {
+func (c *Cache) fetchAndSave() (locationstate.Location, error) {
 	loc, err := c.locationDetector.DetectLocation()
 
 	// on successful fetch save the values for further use
@@ -60,14 +61,14 @@ func (c *Cache) fetchAndSave() (Location, error) {
 }
 
 // GetOrigin returns the origin for the user - a location that's not modified by starting services.
-func (c *Cache) GetOrigin() Location {
+func (c *Cache) GetOrigin() locationstate.Location {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.origin
 }
 
 // DetectLocation returns location from cache, or fetches it if needed
-func (c *Cache) DetectLocation() (Location, error) {
+func (c *Cache) DetectLocation() (locationstate.Location, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

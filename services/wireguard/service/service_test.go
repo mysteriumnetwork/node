@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -54,7 +54,7 @@ func Test_GetProposal(t *testing.T) {
 				LocationOriginate: market.Location{Country: country},
 			},
 		},
-		GetProposal(location.Location{Country: country}),
+		GetProposal(locationstate.Location{Country: country}),
 	)
 }
 

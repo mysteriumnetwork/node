@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -48,8 +48,8 @@ func mockSignerFactory(_ identity.Identity) identity.Signer {
 
 type mockLocationDetector struct{}
 
-func (mld *mockLocationDetector) GetOrigin() location.Location {
-	return location.Location{
+func (mld *mockLocationDetector) GetOrigin() locationstate.Location {
+	return locationstate.Location{
 		Country: "KG",
 	}
 }
