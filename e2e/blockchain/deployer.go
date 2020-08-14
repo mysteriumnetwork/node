@@ -80,20 +80,12 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	chainID, err := client.NetworkID(context.Background())
 	checkError("lookup chainid", err)
 
-	tx := types.NewTransaction(transactor.Nonce.Uint64(), bindings.ERC1820Sender, big.NewInt(100000000000000000), gasLimit, gasPrice, nil)
-	signedTx, err := transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
-	checkError("sign tx", err)
-
-	err = client.SendTransaction(context.Background(), signedTx)
-	checkError("send tx", err)
-	checkTxStatus(client, signedTx)
-
-	tx, err = bindings.DeployERC1820(client)
-	checkError("DeployERC1820", err)
+	oldToken, tx, _, err := bindings.DeployOldMystToken(transactor, client)
+	checkError("Deploy old token v2", err)
 	checkTxStatus(client, tx)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mystTokenAddress, tx, _, err := bindings.DeployTestMystToken(transactor, client)
+	mystTokenAddress, tx, _, err := bindings.DeployMystToken(transactor, client, oldToken)
 	checkError("Deploy token v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 token address: ", mystTokenAddress.String())
@@ -119,14 +111,12 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	registrationFee := big.NewInt(0)
 	minimalStake := big.NewInt(0)
 	registryAddress, tx, _, err := bindings.DeployRegistry(
 		transactor,
 		client,
 		mystTokenAddress,
 		mystDexAddress,
-		registrationFee,
 		minimalStake,
 		channelImplAddress,
 		hermesImplAddress,
@@ -195,7 +185,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	chainID, err = client.NetworkID(context.Background())
 	checkError("get chain id", err)
 
-	signedTx, err = transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
+	signedTx, err := transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
 	checkError("sign tx", err)
 
 	err = client.SendTransaction(context.Background(), signedTx)
