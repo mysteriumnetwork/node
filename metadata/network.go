@@ -50,9 +50,9 @@ var BetanetDefinition = NetworkDefinition{
 	BrokerAddress:             "nats://betanet-broker.mysterium.network",
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
-	RegistryAddress:           "0x2FD2AbE2fF222b84db9B3fF8D37532A9417f244A",
-	ChannelImplAddress:        "0x430fb4a8325adC064EF8AB95B09fDA258fF186C8",
-	HermesID:                  "0xF20e4068Aecb427481Dd35B36506d8AAcD5763E9",
+	RegistryAddress:           "0xc82Cc5B0bAe95F443e33FF053aAa70F1Eb7d312A",
+	ChannelImplAddress:        "0x29a615aA7E03D8c04B24cc91B2949447D3A10bD6",
+	HermesID:                  "0x42a537D649d6853C0a866470f2d084DA0f73b5E4",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }
 
