@@ -39,7 +39,7 @@ import (
 )
 
 type settlementHistoryStorage interface {
-	Store(provider identity.Identity, accountant common.Address, she SettlementHistoryEntry) error
+	Store(she SettlementHistoryEntry) error
 }
 
 type providerChannelStatusProvider interface {
@@ -361,7 +361,6 @@ func (aps *accountantPromiseSettler) ForceSettle(providerID identity.Identity, a
 // ForceSettle forces the settlement for a provider
 func (aps *accountantPromiseSettler) SettleWithBeneficiary(providerID identity.Identity, beneficiary, accountantID common.Address) error {
 	promise, err := aps.promiseStorage.Get(providerID, accountantID)
-	fmt.Println(promise, err)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
 	}
@@ -413,19 +412,28 @@ func (aps *accountantPromiseSettler) settle(p receivedPromise, beneficiary *comm
 
 			log.Info().Msgf("Settling complete for provider %v", p.provider)
 
+			channelID, err := crypto.GenerateProviderChannelID(p.provider.Address, aps.config.AccountantAddress.Hex())
+			if err != nil {
+				log.Error().Err(err).Msg("could not generate provider channel address")
+			}
+
 			she := SettlementHistoryEntry{
-				TxHash:       info.Raw.TxHash,
-				Promise:      p.promise,
-				Amount:       info.Amount,
-				TotalSettled: info.TotalSettled,
+				TxHash:         info.Raw.TxHash,
+				ProviderID:     p.provider,
+				AccountantID:   aps.config.AccountantAddress,
+				ChannelAddress: common.HexToAddress(channelID),
+				Time:           time.Now().UTC(),
+				Promise:        p.promise,
+				Amount:         info.Amount,
+				TotalSettled:   info.TotalSettled,
 			}
 			if beneficiary != nil {
 				she.Beneficiary = *beneficiary
 			}
 
-			err := aps.settlementHistoryStorage.Store(p.provider, aps.config.AccountantAddress, she)
+			err = aps.settlementHistoryStorage.Store(she)
 			if err != nil {
-				log.Error().Err(err).Msgf("could not store settlement history")
+				log.Error().Err(err).Msg("could not store settlement history")
 			}
 
 			err = aps.resyncState(p.provider)
