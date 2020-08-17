@@ -21,9 +21,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -50,7 +52,7 @@ type promiseSettler interface {
 }
 
 type settlementHistoryProvider interface {
-	Get(provider identity.Identity, accountant common.Address) ([]pingpong.SettlementHistoryEntry, error)
+	Query(*pingpong.SettlementHistoryQuery) error
 }
 
 type transactorEndpoint struct {
@@ -305,32 +307,73 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 // ---
 // summary: Returns settlement history
 // description: Returns settlement history
+// parameters:
+//   - in: query
+//     name: at_from
+//     description: To filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+//     type: string
+//   - in: query
+//     name: at_to
+//     description: To filter the settlements until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+//     type: string
+//   - in: query
+//     name: provider_id
+//     description: Provider ID to filter the settlements by.
+//     type: string
+//   - in: query
+//     name: accountant_id
+//     description: Accountant ID to filter the sessions by.
+//     type: string
 // responses:
 //   200:
 //     description: Returns settlement history
+//     schema:
+//       "$ref": "#/definitions/ListSettlementsResponse"
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	providerID := req.URL.Query().Get("providerID")
-	if providerID == "" {
-		utils.SendError(resp, errors.New("providerID is required"), http.StatusBadRequest)
-		return
+	query := pingpong.NewSettlementHistoryQuery()
+
+	from := time.Now().AddDate(0, 0, -30)
+	if fromStr := req.URL.Query().Get("at_from"); fromStr != "" {
+		var err error
+		if from, err = time.Parse(time.RFC3339, fromStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
 	}
-	accountantID := req.URL.Query().Get("accountantID")
-	if accountantID == "" {
-		utils.SendError(resp, errors.New("accountantID is required"), http.StatusBadRequest)
-		return
+	query.FilterFrom(from)
+
+	to := time.Now()
+	if toStr := req.URL.Query().Get("at_to"); toStr != "" {
+		var err error
+		if to, err = time.Parse(time.RFC3339, toStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+	query.FilterTo(to)
+
+	if providerID := req.URL.Query().Get("provider_id"); providerID != "" {
+		query.FilterProviderID(identity.FromAddress(providerID))
+	}
+	if accountantID := req.URL.Query().Get("accountant_id"); accountantID != "" {
+		query.FilterAccountantID(common.HexToAddress(accountantID))
 	}
 
-	history, err := te.settlementHistoryProvider.Get(identity.FromAddress(providerID), common.HexToAddress(accountantID))
-	if err != nil {
+	if err := te.settlementHistoryProvider.Query(query.FetchEntries()); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	utils.WriteAsJSON(history, resp)
+	response := contract.NewSettlementListResponse(query.Entries)
+	utils.WriteAsJSON(response, resp)
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router

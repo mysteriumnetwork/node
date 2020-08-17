@@ -65,10 +65,12 @@ func TestSettlementHistoryStorage(t *testing.T) {
 		TotalSettled: big.NewInt(654),
 	}
 
-	t.Run("Returns not found if no results exist", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
-		assert.EqualError(t, err, errBoltNotFound)
-		assert.Len(t, entries, 0)
+	t.Run("Returns empty list if no results exist", func(t *testing.T) {
+		query := NewSettlementHistoryQuery().FetchEntries()
+
+		err := storage.Query(query)
+		assert.NoError(t, err)
+		assert.Len(t, query.Entries, 0)
 	})
 
 	t.Run("Inserts a history entry successfully", func(t *testing.T) {
@@ -77,19 +79,21 @@ func TestSettlementHistoryStorage(t *testing.T) {
 	})
 
 	t.Run("Fetches the inserted entry", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
+		query := NewSettlementHistoryQuery().FetchEntries()
+		err := storage.Query(query)
 		assert.NoError(t, err)
-		assert.Len(t, entries, 1)
-		assert.EqualValues(t, []SettlementHistoryEntry{entry1}, entries)
+		assert.Len(t, query.Entries, 1)
+		assert.EqualValues(t, []SettlementHistoryEntry{entry1}, query.Entries)
 	})
 
 	t.Run("Returns sorted results", func(t *testing.T) {
 		err := storage.Store(entry2)
 		assert.NoError(t, err)
 
-		entries, err := storage.Get(providerID, accountantID)
+		query := NewSettlementHistoryQuery().FetchEntries()
+		err = storage.Query(query)
 		assert.NoError(t, err)
-		assert.Len(t, entries, 2)
-		assert.EqualValues(t, []SettlementHistoryEntry{entry2, entry1}, entries)
+		assert.Len(t, query.Entries, 2)
+		assert.EqualValues(t, []SettlementHistoryEntry{entry2, entry1}, query.Entries)
 	})
 }
