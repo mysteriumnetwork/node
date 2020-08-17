@@ -21,10 +21,14 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/vcraescu/go-paginator"
 )
 
 // NewSettlementListResponse maps to API settlement list.
-func NewSettlementListResponse(settlements []pingpong.SettlementHistoryEntry) ListSettlementsResponse {
+func NewSettlementListResponse(
+	settlements []pingpong.SettlementHistoryEntry,
+	paginator *paginator.Paginator,
+) ListSettlementsResponse {
 	dtoArray := make([]SettlementDTO, len(settlements))
 	for i, settlement := range settlements {
 		dtoArray[i] = NewSettlementDTO(settlement)
@@ -32,6 +36,7 @@ func NewSettlementListResponse(settlements []pingpong.SettlementHistoryEntry) Li
 
 	return ListSettlementsResponse{
 		Settlements: dtoArray,
+		Paging:      NewPagingDTO(paginator),
 	}
 }
 
@@ -39,6 +44,7 @@ func NewSettlementListResponse(settlements []pingpong.SettlementHistoryEntry) Li
 // swagger:model ListSettlementsResponse
 type ListSettlementsResponse struct {
 	Settlements []SettlementDTO `json:"settlements"`
+	Paging      PagingDTO       `json:"paging"`
 }
 
 // NewSettlementDTO maps to API settlement.

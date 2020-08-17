@@ -319,7 +319,14 @@ func Test_SettleHistory(t *testing.T) {
 						"amount": 456,
 						"at": "2020-06-07T08:09:10Z"
 					}
-				]
+				],
+				"paging": {
+					"total_items": 2,
+					"total_pages": 1,
+					"current_page": 1,
+					"previous_page": null,
+					"next_page": null
+				}
 			}`,
 			resp.Body.String(),
 		)

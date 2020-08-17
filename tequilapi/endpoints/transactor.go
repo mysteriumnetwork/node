@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,6 +29,8 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"github.com/vcraescu/go-paginator"
+	"github.com/vcraescu/go-paginator/adapter"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -367,12 +370,38 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 		query.FilterAccountantID(common.HexToAddress(accountantID))
 	}
 
+	page := 1
+	if pageStr := req.URL.Query().Get("page"); pageStr != "" {
+		var err error
+		if page, err = strconv.Atoi(pageStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+
+	pageSize := 50
+	if pageSizeStr := req.URL.Query().Get("page_size"); pageSizeStr != "" {
+		var err error
+		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+
 	if err := te.settlementHistoryProvider.Query(query.FetchEntries()); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	response := contract.NewSettlementListResponse(query.Entries)
+	var settlements []pingpong.SettlementHistoryEntry
+	p := paginator.New(adapter.NewSliceAdapter(query.Entries), pageSize)
+	p.SetPage(page)
+	if err := p.Results(&settlements); err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	response := contract.NewSettlementListResponse(settlements, &p)
 	utils.WriteAsJSON(response, resp)
 }
 
