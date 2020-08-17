@@ -23,11 +23,12 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-func locationToRes(l location.Location) contract.LocationDTO {
+func locationToRes(l locationstate.Location) contract.LocationDTO {
 	return contract.LocationDTO{
 		IP:        l.IP,
 		ASN:       l.ASN,
@@ -130,11 +131,7 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	originLocation, err := le.locationOriginResolver.GetOrigin()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
-		return
-	}
+	originLocation := le.locationOriginResolver.GetOrigin()
 
 	utils.WriteAsJSON(locationToRes(originLocation), writer)
 }

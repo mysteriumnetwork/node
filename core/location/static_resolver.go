@@ -19,6 +19,7 @@ package location
 
 import (
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -54,13 +55,13 @@ func NewFailingResolver(err error) *StaticResolver {
 }
 
 // DetectLocation detects current IP-address provides location information for the IP.
-func (d *StaticResolver) DetectLocation() (Location, error) {
+func (d *StaticResolver) DetectLocation() (locationstate.Location, error) {
 	log.Debug().Msg("Detecting with static resolver")
 	pubIP, err := d.ipResolver.GetPublicIP()
 	if err != nil {
-		return Location{}, errors.Wrap(err, "failed to get public IP")
+		return locationstate.Location{}, errors.Wrap(err, "failed to get public IP")
 	}
-	return Location{
+	return locationstate.Location{
 		Country:  d.country,
 		City:     d.city,
 		NodeType: d.nodeType,

@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
@@ -425,12 +426,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	}
 
 	// Consumer session history (API storage)
-	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
-		di.MysteriumAPI,
-		di.SignerFactory,
-		di.LocationResolver,
-		time.Minute,
-	)
+	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(di.MysteriumAPI, di.SignerFactory, time.Minute)
 	if err := di.StatisticsReporter.Subscribe(di.EventBus); err != nil {
 		return err
 	}
@@ -505,6 +501,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		di.IPResolver,
+		di.LocationResolver,
 		connection.DefaultConfig(),
 		connection.DefaultStatsReportInterval,
 		connection.NewValidator(
@@ -698,7 +695,7 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	}
 
 	// Quality metrics
-	qualitySender := quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+	qualitySender := quality.NewSender(transport, metadata.VersionAsString())
 	if err := qualitySender.Subscribe(di.EventBus); err != nil {
 		return err
 	}
@@ -749,7 +746,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 
-	err = di.EventBus.SubscribeAsync(connection.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
+	err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
 	if err != nil {
 		return err
 	}
@@ -821,15 +818,15 @@ func (di *Dependencies) handleConnStateChange() error {
 		return errors.New("HTTPClient is not initialized")
 	}
 
-	latestState := connection.NotConnected
-	return di.EventBus.SubscribeAsync(connection.AppTopicConnectionState, func(e connection.AppEventConnectionState) {
+	latestState := connectionstate.NotConnected
+	return di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
 		// Here we care only about connected and disconnected events.
-		if e.State != connection.Connected && e.State != connection.NotConnected {
+		if e.State != connectionstate.Connected && e.State != connectionstate.NotConnected {
 			return
 		}
 
-		isDisconnected := latestState == connection.Connected && e.State == connection.NotConnected
-		isConnected := latestState == connection.NotConnected && e.State == connection.Connected
+		isDisconnected := latestState == connectionstate.Connected && e.State == connectionstate.NotConnected
+		isConnected := latestState == connectionstate.NotConnected && e.State == connectionstate.Connected
 		if isDisconnected || isConnected {
 			netutil.LogNetworkStats()
 

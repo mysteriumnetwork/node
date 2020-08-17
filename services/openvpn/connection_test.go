@@ -21,25 +21,25 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 func TestGetStateCallbackReturnsCorrectState(t *testing.T) {
-	channel := make(chan connection.State, 1)
+	channel := make(chan connectionstate.State, 1)
 	callback := getStateCallback(channel)
 	callback(openvpn.ConnectedState)
-	assert.Equal(t, connection.Connected, <-channel)
+	assert.Equal(t, connectionstate.Connected, <-channel)
 }
 
 func TestGetStateCallbackClosesChannelOnProcessExit(t *testing.T) {
-	channel := make(chan connection.State, 1)
+	channel := make(chan connectionstate.State, 1)
 	callback := getStateCallback(channel)
 	callback(openvpn.ExitingState)
 	res, ok := <-channel
-	assert.Equal(t, connection.Disconnecting, res)
+	assert.Equal(t, connectionstate.Disconnecting, res)
 	assert.True(t, ok)
 }
 
@@ -50,35 +50,35 @@ func TestOpenVpnStateCallbackToConnectionState(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want connection.State
+		want connectionstate.State
 	}{
 		{
 			name: "Maps openvpn.connectedState to connection.Connected",
 			args: args{
 				input: openvpn.ConnectedState,
 			},
-			want: connection.Connected,
+			want: connectionstate.Connected,
 		},
 		{
 			name: "Maps openvpn.exitingState to connection.Disconnecting",
 			args: args{
 				input: openvpn.ExitingState,
 			},
-			want: connection.Disconnecting,
+			want: connectionstate.Disconnecting,
 		},
 		{
 			name: "Maps openvpn.reconnectingState to connection.Reconnecting",
 			args: args{
 				input: openvpn.ReconnectingState,
 			},
-			want: connection.Reconnecting,
+			want: connectionstate.Reconnecting,
 		},
 		{
 			name: "Maps openvpn.getConfigState to connection.Unknown",
 			args: args{
 				input: openvpn.GetConfigState,
 			},
-			want: connection.Unknown,
+			want: connectionstate.Unknown,
 		},
 	}
 	for _, tt := range tests {

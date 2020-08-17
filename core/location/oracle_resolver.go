@@ -18,6 +18,7 @@
 package location
 
 import (
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -37,12 +38,12 @@ func NewOracleResolver(httpClient *requests.HTTPClient, address string) *oracleR
 }
 
 // DetectLocation detects current IP-address provides location information for the IP.
-func (o *oracleResolver) DetectLocation() (location Location, err error) {
+func (o *oracleResolver) DetectLocation() (location locationstate.Location, err error) {
 	log.Debug().Msg("Detecting with oracle resolver")
 	request, err := requests.NewGetRequest(o.address, "", nil)
 	if err != nil {
 		log.Error().Err(err).Msg("")
-		return Location{}, errors.Wrap(err, "failed to create request")
+		return locationstate.Location{}, errors.Wrap(err, "failed to create request")
 	}
 
 	err = o.httpClient.DoRequestAndParseResponse(request, &location)

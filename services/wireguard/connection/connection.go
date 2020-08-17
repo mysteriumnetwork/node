@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -50,7 +51,7 @@ func NewConnection(opts Options, ipResolver ip.Resolver, endpointFactory wg.Endp
 
 	return &Connection{
 		done:                make(chan struct{}),
-		stateCh:             make(chan connection.State, 100),
+		stateCh:             make(chan connectionstate.State, 100),
 		privateKey:          privateKey,
 		opts:                opts,
 		ipResolver:          ipResolver,
@@ -63,7 +64,7 @@ func NewConnection(opts Options, ipResolver ip.Resolver, endpointFactory wg.Endp
 type Connection struct {
 	stopOnce sync.Once
 	done     chan struct{}
-	stateCh  chan connection.State
+	stateCh  chan connectionstate.State
 
 	ports               []int
 	privateKey          string
@@ -78,17 +79,17 @@ type Connection struct {
 var _ connection.Connection = &Connection{}
 
 // State returns connection state channel.
-func (c *Connection) State() <-chan connection.State {
+func (c *Connection) State() <-chan connectionstate.State {
 	return c.stateCh
 }
 
 // Statistics returns connection statistics channel.
-func (c *Connection) Statistics() (connection.Statistics, error) {
+func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 	stats, err := c.connectionEndpoint.PeerStats()
 	if err != nil {
-		return connection.Statistics{}, err
+		return connectionstate.Statistics{}, err
 	}
-	return connection.Statistics{
+	return connectionstate.Statistics{
 		At:            time.Now(),
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
@@ -114,7 +115,7 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		}
 	}()
 
-	c.stateCh <- connection.Connecting
+	c.stateCh <- connectionstate.Connecting
 
 	if options.ProviderNATConn != nil {
 		options.ProviderNATConn.Close()
@@ -154,7 +155,7 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 		return errors.Wrap(err, "failed while waiting for a peer handshake")
 	}
 
-	c.stateCh <- connection.Connected
+	c.stateCh <- connectionstate.Connected
 	return nil
 }
 
@@ -195,7 +196,7 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 func (c *Connection) Stop() {
 	c.stopOnce.Do(func() {
 		log.Info().Msg("Stopping WireGuard connection")
-		c.stateCh <- connection.Disconnecting
+		c.stateCh <- connectionstate.Disconnecting
 
 		if c.removeAllowedIPRule != nil {
 			c.removeAllowedIPRule()
@@ -207,7 +208,7 @@ func (c *Connection) Stop() {
 			}
 		}
 
-		c.stateCh <- connection.NotConnected
+		c.stateCh <- connectionstate.NotConnected
 
 		close(c.stateCh)
 		close(c.done)

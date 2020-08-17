@@ -41,6 +41,7 @@ var (
 		AccountantID:    "0x000000000000000000000000000000000000000C",
 		ProviderID:      identity.FromAddress("providerID"),
 		ServiceType:     "serviceType",
+		ConsumerCountry: "ConsumerCountry",
 		ProviderCountry: "ProviderCountry",
 		Started:         time.Date(2010, time.January, 1, 12, 00, 0, 700000000, time.UTC),
 		Updated:         time.Date(2010, time.January, 1, 12, 00, 55, 800000000, time.UTC),
@@ -66,6 +67,7 @@ func Test_SessionsEndpoint_SessionToDto(t *testing.T) {
 	assert.Equal(t, connectionSessionMock.AccountantID, sessionDTO.AccountantID)
 	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
 	assert.Equal(t, connectionSessionMock.ServiceType, sessionDTO.ServiceType)
+	assert.Equal(t, connectionSessionMock.ConsumerCountry, sessionDTO.ConsumerCountry)
 	assert.Equal(t, connectionSessionMock.ProviderCountry, sessionDTO.ProviderCountry)
 	assert.Equal(t, connectionSessionMock.DataReceived, sessionDTO.BytesReceived)
 	assert.Equal(t, connectionSessionMock.DataSent, sessionDTO.BytesSent)

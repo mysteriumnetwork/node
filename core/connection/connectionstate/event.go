@@ -15,12 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package connectionstate
 
 import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
@@ -68,12 +69,13 @@ const (
 
 // Status holds connection state, session id and proposal of the connection
 type Status struct {
-	StartedAt    time.Time
-	ConsumerID   identity.Identity
-	AccountantID common.Address
-	State        State
-	SessionID    session.ID
-	Proposal     market.ServiceProposal
+	StartedAt        time.Time
+	ConsumerID       identity.Identity
+	ConsumerLocation locationstate.Location
+	AccountantID     common.Address
+	State            State
+	SessionID        session.ID
+	Proposal         market.ServiceProposal
 }
 
 // Duration returns elapsed time from marked session start

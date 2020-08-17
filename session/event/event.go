@@ -73,9 +73,10 @@ type ServiceContext struct {
 
 // SessionContext holds session context metadata
 type SessionContext struct {
-	ID           string
-	StartedAt    time.Time
-	ConsumerID   identity.Identity
-	AccountantID common.Address
-	Proposal     market.ServiceProposal
+	ID               string
+	StartedAt        time.Time
+	ConsumerID       identity.Identity
+	ConsumerLocation market.Location
+	AccountantID     common.Address
+	Proposal         market.ServiceProposal
 }

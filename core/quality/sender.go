@@ -23,9 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -52,12 +51,10 @@ type Transport interface {
 }
 
 // NewSender creates metrics sender with appropriate transport
-func NewSender(transport Transport, appVersion string, manager connection.Manager, locationResolver location.OriginResolver) *Sender {
+func NewSender(transport Transport, appVersion string) *Sender {
 	return &Sender{
 		Transport:  transport,
 		AppVersion: appVersion,
-		connection: manager,
-		location:   locationResolver,
 
 		sessionsActive: make(map[string]sessionContext),
 	}
@@ -67,8 +64,6 @@ func NewSender(transport Transport, appVersion string, manager connection.Manage
 type Sender struct {
 	Transport  Transport
 	AppVersion string
-	connection connection.Manager
-	location   location.OriginResolver
 
 	sessionsMu     sync.RWMutex
 	sessionsActive map[string]sessionContext
@@ -129,16 +124,16 @@ type sessionContext struct {
 
 // Subscribe subscribes to relevant events of event bus.
 func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionState, sender.sendConnStateEvent); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, sender.sendConnStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(sessionEvent.AppTopicSession, sender.sendServiceSessionEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(pingpongEvent.AppTopicInvoicePaid, sender.sendSessionEarning); err != nil {
@@ -155,7 +150,7 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // sendSessionData sends transferred information about session.
-func (sender *Sender) sendSessionData(e connection.AppEventConnectionStatistics) {
+func (sender *Sender) sendSessionData(e connectionstate.AppEventConnectionStatistics) {
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
@@ -181,7 +176,7 @@ func (sender *Sender) sendSessionEarning(e pingpongEvent.AppEventInvoicePaid) {
 }
 
 // sendConnStateEvent sends session update events.
-func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
+func (sender *Sender) sendConnStateEvent(e connectionstate.AppEventConnectionState) {
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
@@ -203,8 +198,7 @@ func (sender *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
 		Provider:        e.Session.Proposal.ProviderID,
 		ServiceType:     e.Session.Proposal.ServiceType,
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
-		// TODO Consumer country is unkonwn for provider sessions
-		ConsumerCountry: "",
+		ConsumerCountry: e.Session.ConsumerLocation.Country,
 		AccountantID:    e.Session.AccountantID.Hex(),
 	}
 
@@ -217,20 +211,20 @@ func (sender *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
 }
 
 // sendSessionEvent sends session update events.
-func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
+func (sender *Sender) sendSessionEvent(e connectionstate.AppEventConnectionSession) {
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
 	sessionContext := sender.toSessionContext(e.SessionInfo)
 
 	switch e.Status {
-	case connection.SessionCreatedStatus:
+	case connectionstate.SessionCreatedStatus:
 		sender.rememberSessionContext(sessionContext)
 		sender.sendEvent(sessionEventName, sessionEventContext{
 			Event:          e.Status,
 			sessionContext: sessionContext,
 		})
-	case connection.SessionEndedStatus:
+	case connectionstate.SessionEndedStatus:
 		sender.sendEvent(sessionEventName, sessionEventContext{
 			Event:          e.Status,
 			sessionContext: sessionContext,
@@ -326,23 +320,14 @@ func (sender *Sender) recoverSessionContext(sessionID string) (sessionContext, e
 	return context, nil
 }
 
-func (sender *Sender) toSessionContext(session connection.Status) sessionContext {
+func (sender *Sender) toSessionContext(session connectionstate.Status) sessionContext {
 	return sessionContext{
 		ID:              string(session.SessionID),
 		Consumer:        session.ConsumerID.Address,
 		Provider:        session.Proposal.ProviderID,
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
-		ConsumerCountry: sender.originCountry(),
+		ConsumerCountry: session.ConsumerLocation.Country,
 		AccountantID:    session.AccountantID.Hex(),
 	}
-}
-
-func (sender *Sender) originCountry() string {
-	origin, err := sender.location.GetOrigin()
-	if err != nil {
-		log.Warn().Msg("Failed to get consumer origin country")
-		return ""
-	}
-	return origin.Country
 }

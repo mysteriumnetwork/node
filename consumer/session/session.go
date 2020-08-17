@@ -46,6 +46,7 @@ type History struct {
 	AccountantID    string
 	ProviderID      identity.Identity
 	ServiceType     string
+	ConsumerCountry string
 	ProviderCountry string
 	DataSent        uint64
 	DataReceived    uint64

@@ -18,7 +18,7 @@
 package discovery
 
 import (
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -27,7 +27,7 @@ import (
 
 // NewServiceProposalWithLocation creates service proposal description for openvpn service
 func NewServiceProposalWithLocation(
-	loc location.Location,
+	loc locationstate.Location,
 	protocol string,
 ) market.ServiceProposal {
 	serviceLocation := market.Location{
