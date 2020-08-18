@@ -26,7 +26,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (n Notifier) Start() {
+//Start starts events notifier
+func (n *Notifier) Start() {
 	log.Debug().Msg("Register for sleep events")
 	go C.registerNotifications()
 	go func() {
@@ -38,8 +39,11 @@ func (n Notifier) Start() {
 	<-n.stop
 }
 
-func (n Notifier) Stop() {
-	log.Debug().Msg("Unregister sleep events")
-	C.unregisterNotifications()
-	close(n.stop)
+//Stop stops events notifier
+func (n *Notifier) Stop() {
+	n.stopOnce.Do(func() {
+		log.Debug().Msg("Unregister sleep events")
+		C.unregisterNotifications()
+		close(n.stop)
+	})
 }

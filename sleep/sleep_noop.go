@@ -24,11 +24,11 @@ import (
 )
 
 // Start noop function
-func (n Notifier) Start() {
+func (n *Notifier) Start() {
 	log.Debug().Msg("Register for noop sleep events")
 }
 
 // Stop noop function
-func (n Notifier) Stop() {
+func (n *Notifier) Stop() {
 	log.Debug().Msg("Unregister noop sleep events")
 }
