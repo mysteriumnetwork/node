@@ -38,7 +38,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const maxBrokerConnectAttempts = 15
+const maxBrokerConnectAttempts = 25
 
 // Dialer knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
 type Dialer interface {
