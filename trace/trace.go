@@ -118,7 +118,7 @@ func (t *Tracer) publishStageEvent(eventPublisher eventbus.Publisher, id string,
 		return
 	}
 
-	go eventPublisher.Publish(AppTopicTraceEvent,
+	eventPublisher.Publish(AppTopicTraceEvent,
 		Event{
 			ID:       id,
 			Key:      stage.key,

@@ -49,7 +49,7 @@ func (sp *SessionPool) Add(instance *Session) {
 	defer sp.lock.Unlock()
 
 	sp.sessions[instance.ID] = instance
-	go sp.publisher.Publish(event.AppTopicSession, instance.toEvent(event.CreatedStatus))
+	sp.publisher.Publish(event.AppTopicSession, instance.toEvent(event.CreatedStatus))
 }
 
 // GetAll returns all sessions in storage
