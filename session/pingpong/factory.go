@@ -108,12 +108,8 @@ func InvoiceFactoryCreator(
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
 	providersAccountant common.Address,
-) func(identity.Identity, identity.Identity, common.Address, string) (service.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (service.PaymentEngine, error) {
-		exchangeChan, err := exchangeMessageReceiver(channel)
-		if err != nil {
-			return nil, err
-		}
+) func(identity.Identity, identity.Identity, common.Address, string, chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
