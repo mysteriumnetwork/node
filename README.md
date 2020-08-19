@@ -80,7 +80,7 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 ## Built With
 
 * [go](https://golang.org/) - The Go Programming Language
-* [travis](https://travis-ci.com/) - Travis continuous integration tool
+* [gitlab](https://docs.gitlab.com/ce/ci/) - GitLab CI/CD
 * [docker](https://www.docker.com/what-docker) - Containerize applications
 * [openvpn](https://openvpn.net) - Solid VPN solution
 * [wireguard](https://www.wireguard.com/) - Extremely simple yet fast and modern VPN
