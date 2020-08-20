@@ -436,7 +436,7 @@ func (aps *accountantPromiseSettler) settle(
 
 			channelID, err := crypto.GenerateProviderChannelID(provider.Address, aps.config.AccountantAddress.Hex())
 			if err != nil {
-				log.Error().Err(err).Msg("could not generate provider channel address")
+				log.Error().Err(err).Msg("Could not generate provider channel address")
 			}
 
 			she := SettlementHistoryEntry{
@@ -453,7 +453,7 @@ func (aps *accountantPromiseSettler) settle(
 
 			err = aps.settlementHistoryStorage.Store(she)
 			if err != nil {
-				log.Error().Err(err).Msg("could not store settlement history")
+				log.Error().Err(err).Msg("Could not store settlement history")
 			}
 
 			err = aps.resyncState(provider)
