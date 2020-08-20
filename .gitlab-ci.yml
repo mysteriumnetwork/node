@@ -192,6 +192,13 @@ release-snapshot:android-sdk:
   only:
     - master
 
+release-snapshot:android-sdk-betanet:
+  stage: release-snapshot
+  tags: [go]
+  script: go run mage.go -v ReleaseAndroidSDKBetanet
+  only:
+    - v3
+
 release-tag:release:
   stage: release-tag
   tags: [go]

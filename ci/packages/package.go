@@ -147,10 +147,12 @@ func PackageIOS() error {
 
 // PackageAndroid builds and stores Android package
 func PackageAndroid() error {
+	branch, _ := os.LookupEnv("BUILD_BRANCH")
+	v3Branch := branch == "v3"
 	job.Precondition(func() bool {
 		pr, _ := env.IsPR()
 		fullBuild, _ := env.IsFullBuild()
-		return !pr || fullBuild
+		return !pr || fullBuild || v3Branch
 	})
 	logconfig.Bootstrap()
 
@@ -175,6 +177,14 @@ func PackageAndroid() error {
 	if err != nil {
 		return err
 	}
+
+	buildVersion := env.Str(env.BuildVersion)
+	if v3Branch {
+		buildVersion = "0.0.0-1betanet-" + env.Str(env.BuildNumber)
+	}
+
+	log.Info().Msgf("Package Android SDK version: %s from %s", buildVersion, branch)
+
 	pomFileOut, err := os.Create("build/package/mvn.pom")
 	if err != nil {
 		return err
@@ -184,11 +194,18 @@ func PackageAndroid() error {
 	err = pomTemplate.Execute(pomFileOut, struct {
 		BuildVersion string
 	}{
-		BuildVersion: env.Str(env.BuildVersion),
+		BuildVersion: buildVersion,
 	})
 	if err != nil {
 		return err
 	}
+
+	if v3Branch {
+		if err := storage.UploadArtifacts(); err != nil {
+			return err
+		}
+	}
+
 	return env.IfRelease(storage.UploadArtifacts)
 }
 

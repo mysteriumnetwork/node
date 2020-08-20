@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/mobile/mysterium"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -86,7 +87,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
 		require.NoError(t, err)
-		require.Equal(t, big.NewInt(0).Sub(topUpAmount, registrationFee), balance.Balance)
+		require.Equal(t, crypto.BigMystToFloat(big.NewInt(0).Sub(topUpAmount, registrationFee)), balance.Balance)
 	})
 
 	t.Run("Test shutdown", func(t *testing.T) {
