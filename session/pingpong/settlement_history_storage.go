@@ -61,81 +61,40 @@ func (shs *SettlementHistoryStorage) Store(she SettlementHistoryEntry) error {
 	return shs.bolt.DB().From(settlementHistoryBucket).Save(&she)
 }
 
-// Query executes given query.
-func (shs *SettlementHistoryStorage) Query(query *SettlementHistoryQuery) (err error) {
-	return query.run(shs.bolt.DB().From(settlementHistoryBucket))
+// SettlementHistoryFilter defines all flags for filtering in settlement history storage.
+type SettlementHistoryFilter struct {
+	TimeFrom     *time.Time
+	TimeTo       *time.Time
+	ProviderID   *identity.Identity
+	AccountantID *common.Address
 }
 
-// NewSettlementHistoryQuery creates instance of query.
-func NewSettlementHistoryQuery() *SettlementHistoryQuery {
-	return &SettlementHistoryQuery{}
-}
-
-// SettlementHistoryQuery defines all flags for filtering in settlement history storage.
-type SettlementHistoryQuery struct {
-	Entries []SettlementHistoryEntry
-
-	filterFrom       *time.Time
-	filterTo         *time.Time
-	filterProvider   *identity.Identity
-	filterAccountant *common.Address
-}
-
-// FilterFrom filters fetched sessions from given time.
-func (qr *SettlementHistoryQuery) FilterFrom(from time.Time) *SettlementHistoryQuery {
-	from = from.UTC()
-	qr.filterFrom = &from
-	return qr
-}
-
-// FilterTo filters fetched sessions to given time.
-func (qr *SettlementHistoryQuery) FilterTo(to time.Time) *SettlementHistoryQuery {
-	to = to.UTC()
-	qr.filterTo = &to
-	return qr
-}
-
-// FilterProviderID filters fetched entries by provider ID.
-func (qr *SettlementHistoryQuery) FilterProviderID(providerID identity.Identity) *SettlementHistoryQuery {
-	qr.filterProvider = &providerID
-	return qr
-}
-
-// FilterAccountantID filters fetched entries by accountant ID.
-func (qr *SettlementHistoryQuery) FilterAccountantID(accountantID common.Address) *SettlementHistoryQuery {
-	qr.filterAccountant = &accountantID
-	return qr
-}
-
-// FetchEntries fetches list of sessions to Query.Entries.
-func (qr *SettlementHistoryQuery) FetchEntries() *SettlementHistoryQuery {
-	return qr
-}
-
-func (qr *SettlementHistoryQuery) run(node storm.Node) error {
+// List retrieves stored entries.
+func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (result []SettlementHistoryEntry, err error) {
 	where := make([]q.Matcher, 0)
-	if qr.filterFrom != nil {
-		where = append(where, q.Gte("Time", qr.filterFrom))
+	if filter.TimeFrom != nil {
+		where = append(where, q.Gte("Time", filter.TimeFrom.UTC()))
 	}
-	if qr.filterTo != nil {
-		where = append(where, q.Lte("Time", qr.filterTo))
+	if filter.TimeTo != nil {
+		where = append(where, q.Lte("Time", filter.TimeTo.UTC()))
 	}
-	if qr.filterProvider != nil {
-		where = append(where, q.Eq("ProviderID", qr.filterProvider))
+	if filter.ProviderID != nil {
+		where = append(where, q.Eq("ProviderID", filter.ProviderID))
 	}
-	if qr.filterAccountant != nil {
-		where = append(where, q.Eq("AccountantID", qr.filterAccountant))
+	if filter.AccountantID != nil {
+		where = append(where, q.Eq("AccountantID", filter.AccountantID))
 	}
 
-	sq := node.
+	sq := shs.bolt.DB().
+		From(settlementHistoryBucket).
 		Select(q.And(where...)).
 		OrderBy("Time").
 		Reverse()
 
-	err := sq.Find(&qr.Entries)
+	err = sq.Find(&result)
 	if err == storm.ErrNotFound {
-		qr.Entries = []SettlementHistoryEntry{}
-		return nil
+		return []SettlementHistoryEntry{}, nil
 	}
-	return err
+
+	return result, err
 }

@@ -55,7 +55,7 @@ type promiseSettler interface {
 }
 
 type settlementHistoryProvider interface {
-	Query(*pingpong.SettlementHistoryQuery) error
+	List(pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error)
 }
 
 type transactorEndpoint struct {
@@ -341,7 +341,7 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	query := pingpong.NewSettlementHistoryQuery()
+	filter := pingpong.SettlementHistoryFilter{}
 
 	dateFrom := time.Now().AddDate(0, 0, -30)
 	if fromStr := req.URL.Query().Get("settled_at_from"); fromStr != "" {
@@ -351,7 +351,7 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 			return
 		}
 	}
-	query.FilterFrom(dateFrom)
+	filter.TimeFrom = &dateFrom
 
 	dateTo := time.Now()
 	if toStr := req.URL.Query().Get("settled_at_to"); toStr != "" {
@@ -361,13 +361,15 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 			return
 		}
 	}
-	query.FilterTo(dateTo)
+	filter.TimeFrom = &dateTo
 
-	if providerID := req.URL.Query().Get("provider_id"); providerID != "" {
-		query.FilterProviderID(identity.FromAddress(providerID))
+	if param := req.URL.Query().Get("provider_id"); param != "" {
+		providerID := identity.FromAddress(param)
+		filter.ProviderID = &providerID
 	}
-	if accountantID := req.URL.Query().Get("accountant_id"); accountantID != "" {
-		query.FilterAccountantID(common.HexToAddress(accountantID))
+	if param := req.URL.Query().Get("accountant_id"); param != "" {
+		accountantID := common.HexToAddress(param)
+		filter.AccountantID = &accountantID
 	}
 
 	page := 1
@@ -388,13 +390,14 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 		}
 	}
 
-	if err := te.settlementHistoryProvider.Query(query.FetchEntries()); err != nil {
+	settlementsAll, err := te.settlementHistoryProvider.List(filter)
+	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	var settlements []pingpong.SettlementHistoryEntry
-	p := paginator.New(adapter.NewSliceAdapter(query.Entries), pageSize)
+	p := paginator.New(adapter.NewSliceAdapter(settlementsAll), pageSize)
 	p.SetPage(page)
 	if err := p.Results(&settlements); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)

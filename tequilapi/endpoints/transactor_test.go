@@ -386,7 +386,6 @@ type settlementHistoryProviderMock struct {
 	errToReturn               error
 }
 
-func (shpm *settlementHistoryProviderMock) Query(query *pingpong.SettlementHistoryQuery) error {
-	query.Entries = shpm.settlementHistoryToReturn
-	return shpm.errToReturn
+func (shpm *settlementHistoryProviderMock) List(_ pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error) {
+	return shpm.settlementHistoryToReturn, shpm.errToReturn
 }
