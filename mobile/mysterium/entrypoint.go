@@ -33,6 +33,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/rs/zerolog"
 
@@ -77,7 +78,7 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Testnet                         bool
+	Betanet                         bool
 	Localnet                        bool
 	ExperimentNATPunching           bool
 	MysteriumAPIAddress             string
@@ -98,20 +99,20 @@ type MobileNodeOptions struct {
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Testnet:                         true,
+		Betanet:                         true,
 		ExperimentNATPunching:           true,
 		MysteriumAPIAddress:             metadata.BetanetDefinition.MysteriumAPIAddress,
 		BrokerAddress:                   metadata.BetanetDefinition.BrokerAddress,
 		EtherClientRPC:                  metadata.BetanetDefinition.EtherClientRPC,
 		FeedbackURL:                     "https://feedback.mysterium.network",
-		QualityOracleURL:                "https://quality.mysterium.network/api/v1",
+		QualityOracleURL:                "https://betanet-quality.mysterium.network/api/v1",
 		IPDetectorURL:                   "https://api.ipify.org/?format=json",
-		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
+		LocationDetectorURL:             "https://betanet-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:       metadata.BetanetDefinition.TransactorAddress,
 		TransactorRegistryAddress:       metadata.BetanetDefinition.RegistryAddress,
 		TransactorChannelImplementation: metadata.BetanetDefinition.ChannelImplAddress,
 		HermesID:                        metadata.BetanetDefinition.HermesID,
-		MystSCAddress:                   "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
 	}
 }
 
@@ -126,7 +127,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	currentDir := appPath
 
 	network := node.OptionsNetwork{
-		Testnet:               options.Testnet,
+		Betanet:               options.Betanet,
 		Localnet:              options.Localnet,
 		ExperimentNATPunching: options.ExperimentNATPunching,
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
@@ -278,14 +279,14 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 
 // StatisticsChangeCallback represents statistics callback.
 type StatisticsChangeCallback interface {
-	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent *big.Int)
+	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent float64)
 }
 
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connection.AppTopicConnectionStatistics, func(e connection.AppEventConnectionStatistics) {
-		tokensSpent := mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal
+		tokensSpent := crypto.BigMystToFloat(mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal)
 		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), tokensSpent)
 	})
 }
@@ -305,13 +306,14 @@ func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatus
 
 // BalanceChangeCallback represents balance change callback.
 type BalanceChangeCallback interface {
-	OnChange(identityAddress string, balance *big.Int)
+	OnChange(identityAddress string, balance float64)
 }
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(event.AppTopicBalanceChanged, func(e event.AppEventBalanceChanged) {
-		cb.OnChange(e.Identity.Address, e.Current)
+		balance := crypto.BigMystToFloat(e.Current)
+		cb.OnChange(e.Identity.Address, balance)
 	})
 }
 
@@ -454,7 +456,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 
 // GetIdentityRegistrationFeesResponse represents identity registration fees result.
 type GetIdentityRegistrationFeesResponse struct {
-	Fee *big.Int
+	Fee float64
 }
 
 // GetIdentityRegistrationFees returns identity registration fees.
@@ -463,21 +465,28 @@ func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFee
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get registration fees")
 	}
-	return &GetIdentityRegistrationFeesResponse{Fee: fees.Fee}, nil
+
+	fee := crypto.BigMystToFloat(fees.Fee)
+
+	return &GetIdentityRegistrationFeesResponse{Fee: fee}, nil
 }
 
 // RegisterIdentityRequest represents identity registration request.
 type RegisterIdentityRequest struct {
 	IdentityAddress string
-	Fee             *big.Int
 }
 
 // RegisterIdentity starts identity registration in background.
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
-	err := mb.transactor.RegisterIdentity(req.IdentityAddress, &registry.IdentityRegistrationRequestDTO{
+	fees, err := mb.transactor.FetchRegistrationFees()
+	if err != nil {
+		return errors.Wrap(err, "could not get registration fees")
+	}
+
+	err = mb.transactor.RegisterIdentity(req.IdentityAddress, &registry.IdentityRegistrationRequestDTO{
 		Stake:       big.NewInt(0),
 		Beneficiary: "",
-		Fee:         req.Fee,
+		Fee:         fees.Fee,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
@@ -506,13 +515,14 @@ type GetBalanceRequest struct {
 
 // GetBalanceResponse represents balance response.
 type GetBalanceResponse struct {
-	Balance *big.Int
+	Balance float64
 }
 
 // GetBalance returns current balance.
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	balance := mb.consumerBalanceTracker.GetBalance(identity.FromAddress(req.IdentityAddress))
-	return &GetBalanceResponse{Balance: balance}, nil
+	b := crypto.BigMystToFloat(balance)
+	return &GetBalanceResponse{Balance: b}, nil
 }
 
 // SendFeedbackRequest represents user feedback request.

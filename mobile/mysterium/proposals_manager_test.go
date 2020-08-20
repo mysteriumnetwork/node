@@ -80,14 +80,14 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		Refresh:             false,
-		UpperTimePriceBound: big.NewInt(50000),
-		LowerTimePriceBound: big.NewInt(0),
-		UpperGBPriceBound:   big.NewInt(7000000),
-		LowerGBPriceBound:   big.NewInt(0),
+		UpperTimePriceBound: 0.005,
+		LowerTimePriceBound: 0,
+		UpperGBPriceBound:   0.7,
+		LowerGBPriceBound:   0,
 	})
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"openvpn\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":3,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":10,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
+	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"openvpn\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":3,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() {
@@ -105,7 +105,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 	})
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"wireguard\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":0,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":10,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
+	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"wireguard\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":0,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
 }
 
 func TestProposalManagerSuite(t *testing.T) {

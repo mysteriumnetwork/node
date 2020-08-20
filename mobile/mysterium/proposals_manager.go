@@ -20,7 +20,6 @@ package mysterium
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -28,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 const (
@@ -49,10 +49,10 @@ type GetProposalsRequest struct {
 	ServiceType         string
 	Refresh             bool
 	IncludeFailed       bool
-	UpperTimePriceBound *big.Int
-	LowerTimePriceBound *big.Int
-	UpperGBPriceBound   *big.Int
-	LowerGBPriceBound   *big.Int
+	UpperTimePriceBound float64
+	LowerTimePriceBound float64
+	UpperGBPriceBound   float64
+	LowerGBPriceBound   float64
 }
 
 // GetProposalRequest represents proposal request.
@@ -79,8 +79,8 @@ type proposalPaymentMethod struct {
 }
 
 type proposalPaymentPrice struct {
-	Amount   *big.Int `json:"amount"`
-	Currency string   `json:"currency"`
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
 }
 
 type proposalPaymentRate struct {
@@ -210,7 +210,7 @@ func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map
 		prop.Payment = &proposalPaymentMethod{
 			Type: payment.GetType(),
 			Price: &proposalPaymentPrice{
-				Amount:   payment.GetPrice().Amount,
+				Amount:   crypto.BigMystToFloat(payment.GetPrice().Amount),
 				Currency: string(payment.GetPrice().Currency),
 			},
 			Rate: &proposalPaymentRate{

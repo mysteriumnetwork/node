@@ -34,7 +34,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &mysterium.MobileNodeOptions{
-		Testnet:                         true,
+		Betanet:                         true,
 		ExperimentNATPunching:           true,
 		MysteriumAPIAddress:             "http://mysterium-api:8001/v1",
 		BrokerAddress:                   "broker",
@@ -70,7 +70,6 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		err = node.RegisterIdentity(&mysterium.RegisterIdentityRequest{
 			IdentityAddress: identity.IdentityAddress,
-			Fee:             registrationFee,
 		})
 		require.NoError(t, err)
 
