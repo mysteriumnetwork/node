@@ -439,6 +439,8 @@ github.com/mattn/go-isatty v0.0.7/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hd
 github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
 github.com/mattn/go-isatty v0.0.9 h1:d5US/mDsogSGW37IV293h//ZFaeajb69h+EHFsv2xGg=
 github.com/mattn/go-isatty v0.0.9/go.mod h1:YNRxwqDuOph6SZLI9vUUz6OYw3QyUt7WiY2yME+cCiQ=
+github.com/mattn/go-pointer v0.0.1 h1:n+XhsuGeVO6MEAp7xyEukFINEa+Quek5psIR/ylA6o0=
+github.com/mattn/go-pointer v0.0.1/go.mod h1:2zXcozF6qYGgmsG+SeTZz3oAbFLdD3OWqnUbNvJZAlc=
 github.com/mattn/go-runewidth v0.0.4 h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=
 github.com/mattn/go-runewidth v0.0.4/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
 github.com/mattn/go-sqlite3 v1.10.0 h1:jbhqpg7tQe4SupckyijYiy0mJJ/pRyHvXf7JdWK860o=
@@ -504,6 +506,8 @@ github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/
 github.com/mysteriumnetwork/go-openvpn v0.0.23/go.mod h1:YDjnxC/3sGNecq/f6GM0BGz7nnGPTPIGtQjHaoLf8UE=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N1RaVBCEBLi1VhmIrI=
 github.com/mysteriumnetwork/go-wondershaper v1.0.1/go.mod h1:pWWNkO73g3vPSVb+6O+GzjG8lqv4ByNHR6thSG7WmtY=
+github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e h1:r8M+wZRiCNEX9KX2GugOiAzomEYcoOhq+F/dEgqc/Jo=
+github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e/go.mod h1:izNxG4qVO/POwdPoBfECCvgl4YHRrL6VKopeqj3gNew=
 github.com/mysteriumnetwork/metrics v0.0.4 h1:xHA9JJpfR5oMEeyJ/eFl4TolksZzS3vwfAgtN+hXOoY=
 github.com/mysteriumnetwork/metrics v0.0.4/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v0.0.14-0.20200603103214-337588427715 h1:DTOhrSaVx6oFOP6XRzlsAb5E34O9DMZ6Uw9cRnq2Pv0=

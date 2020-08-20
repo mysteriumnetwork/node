@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	p2pDialTimeout = 30 * time.Second
+	p2pDialTimeout = 60 * time.Second
 )
 
 var (
