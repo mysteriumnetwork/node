@@ -308,7 +308,7 @@ func Test_SettleHistory(t *testing.T) {
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
 						"amount": 123,
-						"at": "2020-01-02T03:04:05Z"
+						"settled_at": "2020-01-02T03:04:05Z"
 					},
 					{
 						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
@@ -317,7 +317,7 @@ func Test_SettleHistory(t *testing.T) {
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary": "0x0000000000000000000000000000000000000000",
 						"amount": 456,
-						"at": "2020-06-07T08:09:10Z"
+						"settled_at": "2020-06-07T08:09:10Z"
 					}
 				],
 				"paging": {

@@ -312,11 +312,11 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 // description: Returns settlement history
 // parameters:
 //   - in: query
-//     name: at_from
+//     name: date_from
 //     description: To filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
 //     type: string
 //   - in: query
-//     name: at_to
+//     name: date_to
 //     description: To filter the settlements until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
 //     type: string
 //   - in: query
@@ -343,25 +343,25 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	query := pingpong.NewSettlementHistoryQuery()
 
-	from := time.Now().AddDate(0, 0, -30)
-	if fromStr := req.URL.Query().Get("at_from"); fromStr != "" {
+	dateFrom := time.Now().AddDate(0, 0, -30)
+	if fromStr := req.URL.Query().Get("settled_at_from"); fromStr != "" {
 		var err error
-		if from, err = time.Parse(time.RFC3339, fromStr); err != nil {
+		if dateFrom, err = time.Parse(time.RFC3339, fromStr); err != nil {
 			utils.SendError(resp, err, http.StatusBadRequest)
 			return
 		}
 	}
-	query.FilterFrom(from)
+	query.FilterFrom(dateFrom)
 
-	to := time.Now()
-	if toStr := req.URL.Query().Get("at_to"); toStr != "" {
+	dateTo := time.Now()
+	if toStr := req.URL.Query().Get("settled_at_to"); toStr != "" {
 		var err error
-		if to, err = time.Parse(time.RFC3339, toStr); err != nil {
+		if dateTo, err = time.Parse(time.RFC3339, toStr); err != nil {
 			utils.SendError(resp, err, http.StatusBadRequest)
 			return
 		}
 	}
-	query.FilterTo(to)
+	query.FilterTo(dateTo)
 
 	if providerID := req.URL.Query().Get("provider_id"); providerID != "" {
 		query.FilterProviderID(identity.FromAddress(providerID))

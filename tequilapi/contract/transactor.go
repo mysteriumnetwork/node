@@ -56,7 +56,7 @@ func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO 
 		ChannelAddress: settlement.ChannelAddress.Hex(),
 		Beneficiary:    settlement.Beneficiary.Hex(),
 		Amount:         settlement.Amount.Uint64(),
-		At:             settlement.Time.Format(time.RFC3339),
+		SettledAt:      settlement.Time.Format(time.RFC3339),
 	}
 }
 
@@ -82,5 +82,5 @@ type SettlementDTO struct {
 	Amount uint64 `json:"amount"`
 
 	// example: 2019-06-06T11:04:43.910035Z
-	At string `json:"at"`
+	SettledAt string `json:"settled_at"`
 }
