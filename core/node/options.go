@@ -85,8 +85,17 @@ type Options struct {
 
 // GetOptions retrieves node options from the app configuration.
 func GetOptions() *Options {
+	network := OptionsNetwork{
+		Testnet:               config.GetBool(config.FlagTestnet),
+		Localnet:              config.GetBool(config.FlagLocalnet),
+		Betanet:               config.GetBool(config.FlagBetanet),
+		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
+		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
+		BrokerAddress:         config.GetString(config.FlagBrokerAddress),
+		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
+	}
 	return &Options{
-		Directories:      *GetOptionsDirectory(),
+		Directories:      *GetOptionsDirectory(&network),
 		TequilapiAddress: config.GetString(config.FlagTequilapiAddress),
 		TequilapiPort:    config.GetInt(config.FlagTequilapiPort),
 		TequilapiEnabled: true,
@@ -100,17 +109,9 @@ func GetOptions() *Options {
 		Keystore: OptionsKeystore{
 			UseLightweight: config.GetBool(config.FlagKeystoreLightweight),
 		},
-		LogOptions: *GetLogOptions(),
-		OptionsNetwork: OptionsNetwork{
-			Testnet:               config.GetBool(config.FlagTestnet),
-			Localnet:              config.GetBool(config.FlagLocalnet),
-			Betanet:               config.GetBool(config.FlagLocalnet),
-			ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
-			MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
-			BrokerAddress:         config.GetString(config.FlagBrokerAddress),
-			EtherClientRPC:        config.GetString(config.FlagEtherRPC),
-		},
-		Discovery: *GetDiscoveryOptions(),
+		LogOptions:     *GetLogOptions(),
+		OptionsNetwork: network,
+		Discovery:      *GetDiscoveryOptions(),
 		MMN: OptionsMMN{
 			Address: config.GetString(config.FlagMMNAddress),
 		},
