@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session/connectivity"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -104,5 +105,33 @@ func subscribeSessionAcknowledge(mng *SessionManager, ch p2p.ChannelHandler) {
 		}
 
 		return c.OK()
+	})
+}
+
+func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
+	ch.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
+		var msg pb.ExchangeMessage
+		if err := c.Request().UnmarshalProto(&msg); err != nil {
+			return fmt.Errorf("could not unmarshal exchange message proto: %w", err)
+		}
+		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
+
+		mng.paymentEngineChan <- crypto.ExchangeMessage{
+			Promise: crypto.Promise{
+				ChannelID: msg.GetPromise().GetChannelID(),
+				Amount:    msg.GetPromise().GetAmount(),
+				Fee:       msg.GetPromise().GetFee(),
+				Hashlock:  msg.GetPromise().GetHashlock(),
+				R:         msg.GetPromise().GetR(),
+				Signature: msg.GetPromise().GetSignature(),
+			},
+			AgreementID:    msg.GetAgreementID(),
+			AgreementTotal: msg.GetAgreementTotal(),
+			Provider:       msg.GetProvider(),
+			Signature:      msg.GetSignature(),
+			HermesID:       msg.GetHermesID(),
+		}
+
+		return nil
 	})
 }

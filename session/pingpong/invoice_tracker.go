@@ -56,9 +56,6 @@ var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 // ErrInvoiceSendMaxFailCountReached indicates that we did not sent an exchange message in time.
 var ErrInvoiceSendMaxFailCountReached = errors.New("did not sent a new exchange message")
 
-// ErrFirstInvoiceSendTimeout indicates that first invoice was not sent.
-var ErrFirstInvoiceSendTimeout = errors.New("did not sent first invoice")
-
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
@@ -146,8 +143,6 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
-	FirstInvoiceSendDuration   time.Duration
-	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
 	ConsumersAccountantID      common.Address
 	ProvidersAccountantID      common.Address
@@ -293,7 +288,7 @@ func (it *InvoiceTracker) Start() error {
 		emErrors <- it.listenForExchangeMessages()
 	}()
 
-	err = it.sendFirstInvoice()
+	err = it.sendInvoice(true)
 	if err != nil {
 		return fmt.Errorf("could not send first invoice: %w", err)
 	}
@@ -472,25 +467,6 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 
 	err = it.deps.InvoiceStorage.Store(it.deps.ProviderID, it.deps.Peer, invoice)
 	return errors.Wrap(err, "could not store invoice")
-}
-
-func (it *InvoiceTracker) sendFirstInvoice() error {
-	timeout := time.After(it.deps.FirstInvoiceSendTimeout)
-	for {
-		select {
-		case <-it.stop:
-			return nil
-		case <-timeout:
-			return ErrFirstInvoiceSendTimeout
-		case <-time.After(it.deps.FirstInvoiceSendDuration):
-			err := it.sendInvoice(true)
-			if err != nil {
-				log.Warn().Err(err).Msg("Failed to send first invoice")
-				continue
-			}
-			return nil
-		}
-	}
 }
 
 func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
