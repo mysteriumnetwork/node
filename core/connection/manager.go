@@ -783,7 +783,7 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 }
 
 func (m *connectionManager) publishStateEvent(state connectionstate.State) {
-	go m.eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
+	m.eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
 		State:       state,
 		SessionInfo: m.Status(),
 	})

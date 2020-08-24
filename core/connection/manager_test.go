@@ -217,7 +217,7 @@ func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
 	)
 
 	stateCh := make(chan connectionstate.State, 2)
-	tc.connManager.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
+	tc.connManager.eventBus.Subscribe(connectionstate.AppTopicConnectionState, func(e connectionstate.AppEventConnectionState) {
 		fmt.Println("got state: ", e)
 
 		if e.State == connectionstate.Connecting {
