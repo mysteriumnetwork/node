@@ -214,7 +214,9 @@ func (m *dialer) exchangeConfig(ctx context.Context, brokerConn nats.Connection,
 	if err != nil {
 		return nil, fmt.Errorf("could not pack signed message: %v", err)
 	}
-	_, err = m.sendSignedMsg(ctx, configExchangeACKSubject(providerID, serviceType), packedMsg, brokerConn)
+
+	err = brokerConn.Publish(configExchangeACKSubject(providerID, serviceType), packedMsg)
+
 	if err != nil {
 		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}
