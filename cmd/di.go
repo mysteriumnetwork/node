@@ -414,7 +414,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage, di.EventBus)
 	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage)
-	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage, pingpong.DefaultMaxEntriesPerChannel)
+	di.SettlementHistoryStorage = pingpong.NewSettlementHistoryStorage(di.Storage)
 	return di.SessionStorage.Subscribe(di.EventBus)
 }
 

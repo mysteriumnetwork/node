@@ -31,4 +31,10 @@ var Sequence = []migrations.Migration{
 			2018, 12, 04, 12, 00, 00, 0, time.UTC),
 		Migrate: migrations.MigrateSessionToHistory,
 	},
+	{
+		Name: "settlements-to-rows",
+		Date: time.Date(
+			2020, 8, 17, 14, 27, 00, 0, time.UTC),
+		Migrate: migrations.SettlementValuesToRows,
+	},
 }

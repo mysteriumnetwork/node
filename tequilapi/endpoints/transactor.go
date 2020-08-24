@@ -21,11 +21,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"github.com/vcraescu/go-paginator"
+	"github.com/vcraescu/go-paginator/adapter"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -50,7 +55,7 @@ type promiseSettler interface {
 }
 
 type settlementHistoryProvider interface {
-	Get(provider identity.Identity, accountant common.Address) ([]pingpong.SettlementHistoryEntry, error)
+	List(pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error)
 }
 
 type transactorEndpoint struct {
@@ -305,32 +310,102 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 // ---
 // summary: Returns settlement history
 // description: Returns settlement history
+// parameters:
+//   - in: query
+//     name: date_from
+//     description: To filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+//     type: string
+//   - in: query
+//     name: date_to
+//     description: To filter the settlements until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+//     type: string
+//   - in: query
+//     name: provider_id
+//     description: Provider ID to filter the settlements by.
+//     type: string
+//   - in: query
+//     name: accountant_id
+//     description: Accountant ID to filter the sessions by.
+//     type: string
 // responses:
 //   200:
 //     description: Returns settlement history
+//     schema:
+//       "$ref": "#/definitions/ListSettlementsResponse"
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	providerID := req.URL.Query().Get("providerID")
-	if providerID == "" {
-		utils.SendError(resp, errors.New("providerID is required"), http.StatusBadRequest)
-		return
+	filter := pingpong.SettlementHistoryFilter{}
+
+	dateFrom := time.Now().AddDate(0, 0, -30)
+	if fromStr := req.URL.Query().Get("settled_at_from"); fromStr != "" {
+		var err error
+		if dateFrom, err = time.Parse(time.RFC3339, fromStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
 	}
-	accountantID := req.URL.Query().Get("accountantID")
-	if accountantID == "" {
-		utils.SendError(resp, errors.New("accountantID is required"), http.StatusBadRequest)
-		return
+	filter.TimeFrom = &dateFrom
+
+	dateTo := time.Now()
+	if toStr := req.URL.Query().Get("settled_at_to"); toStr != "" {
+		var err error
+		if dateTo, err = time.Parse(time.RFC3339, toStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+	filter.TimeFrom = &dateTo
+
+	if param := req.URL.Query().Get("provider_id"); param != "" {
+		providerID := identity.FromAddress(param)
+		filter.ProviderID = &providerID
+	}
+	if param := req.URL.Query().Get("accountant_id"); param != "" {
+		accountantID := common.HexToAddress(param)
+		filter.AccountantID = &accountantID
 	}
 
-	history, err := te.settlementHistoryProvider.Get(identity.FromAddress(providerID), common.HexToAddress(accountantID))
+	page := 1
+	if pageStr := req.URL.Query().Get("page"); pageStr != "" {
+		var err error
+		if page, err = strconv.Atoi(pageStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+
+	pageSize := 50
+	if pageSizeStr := req.URL.Query().Get("page_size"); pageSizeStr != "" {
+		var err error
+		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
+			utils.SendError(resp, err, http.StatusBadRequest)
+			return
+		}
+	}
+
+	settlementsAll, err := te.settlementHistoryProvider.List(filter)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	utils.WriteAsJSON(history, resp)
+	var settlements []pingpong.SettlementHistoryEntry
+	p := paginator.New(adapter.NewSliceAdapter(settlementsAll), pageSize)
+	p.SetPage(page)
+	if err := p.Results(&settlements); err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	response := contract.NewSettlementListResponse(settlements, &p)
+	utils.WriteAsJSON(response, resp)
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
