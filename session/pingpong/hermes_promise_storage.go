@@ -63,6 +63,10 @@ func (aps *HermesPromiseStorage) Store(id identity.Identity, hermesID common.Add
 		return err
 	}
 
+	if promise.Promise.Amount == nil {
+		promise.Promise.Amount = big.NewInt(0)
+	}
+
 	if previousPromise.Promise.Amount != nil && previousPromise.Promise.Amount.Cmp(promise.Promise.Amount) >= 0 {
 		return ErrAttemptToOverwrite
 	}
