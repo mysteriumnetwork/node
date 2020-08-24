@@ -85,6 +85,10 @@ func (m *mockP2PChannel) Send(_ context.Context, _ string, _ *p2p.Message) (*p2p
 func (m *mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
 }
 
+func (c *mockP2PChannel) Tracer() *trace.Tracer {
+	return trace.NewTracer()
+}
+
 func (m *mockP2PChannel) ServiceConn() *net.UDPConn { return nil }
 
 func (m *mockP2PChannel) Conn() *net.UDPConn { return nil }
@@ -123,19 +127,19 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
 		traceEvent1 := history[1].Event.(trace.Event)
-		assert.Equal(t, "Provider whole session create", traceEvent1.Key)
+		assert.Equal(t, "Provider session create", traceEvent1.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[2].Topic)
 		traceEvent2 := history[2].Event.(trace.Event)
-		assert.Equal(t, "Provider session start", traceEvent2.Key)
+		assert.Equal(t, "Provider session create (start)", traceEvent2.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[3].Topic)
 		traceEvent3 := history[3].Event.(trace.Event)
-		assert.Equal(t, "Provider payments", traceEvent3.Key)
+		assert.Equal(t, "Provider session create (payment)", traceEvent3.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[4].Topic)
 		traceEvent4 := history[4].Event.(trace.Event)
-		assert.Equal(t, "Provider config", traceEvent4.Key)
+		assert.Equal(t, "Provider session create (configure)", traceEvent4.Key)
 
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
@@ -171,15 +175,15 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
 		traceEvent1 := history[1].Event.(trace.Event)
-		assert.Equal(t, "Provider whole session create", traceEvent1.Key)
+		assert.Equal(t, "Provider session create", traceEvent1.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[2].Topic)
 		traceEvent2 := history[2].Event.(trace.Event)
-		assert.Equal(t, "Provider session start", traceEvent2.Key)
+		assert.Equal(t, "Provider session create (start)", traceEvent2.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[3].Topic)
 		traceEvent3 := history[3].Event.(trace.Event)
-		assert.Equal(t, "Provider payments", traceEvent3.Key)
+		assert.Equal(t, "Provider session create (payment)", traceEvent3.Key)
 
 		assert.Equal(t, sessionEvent.AppTopicSession, history[4].Topic)
 		closeEvent := history[4].Event.(sessionEvent.AppEventSession)
@@ -244,11 +248,11 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[0].Topic)
 		traceEvent1 := history[0].Event.(trace.Event)
-		assert.Equal(t, "Provider whole session create", traceEvent1.Key)
+		assert.Equal(t, "Provider session create", traceEvent1.Key)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
 		traceEvent2 := history[1].Event.(trace.Event)
-		assert.Equal(t, "Provider session start", traceEvent2.Key)
+		assert.Equal(t, "Provider session create (start)", traceEvent2.Key)
 
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
@@ -295,6 +299,7 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	session, _ := NewSession(
 		currentService,
 		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: consumerID.Address}},
+		trace.NewTracer(),
 	)
 	sessionStore.Add(session)
 

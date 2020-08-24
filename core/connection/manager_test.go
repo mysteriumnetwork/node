@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
+	"github.com/mysteriumnetwork/node/trace"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -677,7 +678,7 @@ type mockP2PDialer struct {
 	ch *mockP2PChannel
 }
 
-func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
+func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition, tracer *trace.Tracer) (p2p.Channel, error) {
 	return m.ch, nil
 }
 
@@ -718,6 +719,10 @@ func (m *mockP2PChannel) Send(_ context.Context, topic string, msg *p2p.Message)
 }
 
 func (m *mockP2PChannel) Handle(topic string, handler p2p.HandlerFunc) {
+}
+
+func (m *mockP2PChannel) Tracer() *trace.Tracer {
+	return nil
 }
 
 func (m *mockP2PChannel) ServiceConn() *net.UDPConn {

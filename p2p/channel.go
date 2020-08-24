@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
@@ -67,6 +68,9 @@ type ChannelHandler interface {
 type Channel interface {
 	ChannelSender
 	ChannelHandler
+
+	// Tracer returns tracer which tracks channel establishment
+	Tracer() *trace.Tracer
 
 	// ServiceConn returns UDP connection which can be used for services.
 	ServiceConn() *net.UDPConn
@@ -135,6 +139,8 @@ type channel struct {
 
 	// tr is transport containing network related connections for p2p to work.
 	tr *transport
+
+	tracer *trace.Tracer
 
 	// serviceConn is separate connection which is created outside of p2p channel when
 	// performing initial NAT hole punching or manual conn. It is here just because it's more easy
@@ -415,6 +421,11 @@ func (c *channel) handleRequest(msg *transportMsg) {
 	c.sendQueue <- &resMsg
 }
 
+// Tracer returns tracer which tracks channel establishment
+func (c *channel) Tracer() *trace.Tracer {
+	return c.tracer
+}
+
 // ServiceConn returns UDP connection which can be used for services.
 func (c *channel) ServiceConn() *net.UDPConn {
 	return c.serviceConn
@@ -519,6 +530,13 @@ func (c *channel) deleteStream(id uint64) {
 	defer c.mu.Unlock()
 
 	delete(c.streams, id)
+}
+
+func (c *channel) setTracer(tracer *trace.Tracer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.tracer = tracer
 }
 
 func (c *channel) setServiceConn(conn *net.UDPConn) {
