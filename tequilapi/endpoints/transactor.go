@@ -337,8 +337,8 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 //     description: Provider ID to filter the settlements by.
 //     type: string
 //   - in: query
-//     name: accountant_id
-//     description: Accountant ID to filter the sessions by.
+//     name: hermes_id
+//     description: Hermes ID to filter the sessions by.
 //     type: string
 // responses:
 //   200:
@@ -380,9 +380,9 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 		providerID := identity.FromAddress(param)
 		filter.ProviderID = &providerID
 	}
-	if param := req.URL.Query().Get("accountant_id"); param != "" {
-		accountantID := common.HexToAddress(param)
-		filter.AccountantID = &accountantID
+	if param := req.URL.Query().Get("hermes_id"); param != "" {
+		hermesID := common.HexToAddress(param)
+		filter.HermesID = &hermesID
 	}
 
 	page := 1
@@ -470,8 +470,8 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
 // ---
-// summary: forces the settlement with stake increase of promises for the given provider and accountant.
-// description: Forces a settlement with stake increase for the accountant promises and blocks until the settlement is complete.
+// summary: forces the settlement with stake increase of promises for the given provider and hermes.
+// description: Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.
 // parameters:
 // - in: body
 //   name: body
@@ -497,8 +497,8 @@ func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, requ
 
 // swagger:operation POST /transactor/stake/increase/async StakeIncreaseAsync
 // ---
-// summary: forces the settlement with stake increase of promises for the given provider and accountant.
-// description: Forces a settlement with stake increase for the accountant promises and does not block.
+// summary: forces the settlement with stake increase of promises for the given provider and hermes.
+// description: Forces a settlement with stake increase for the hermes promises and does not block.
 // parameters:
 // - in: body
 //   name: body
@@ -513,9 +513,9 @@ func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, requ
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, func(provider identity.Identity, accountant common.Address) error {
+	err := te.settle(request, func(provider identity.Identity, hermes common.Address) error {
 		go func() {
-			err := te.promiseSettler.SettleIntoStake(provider, accountant)
+			err := te.promiseSettler.SettleIntoStake(provider, hermes)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not settle into stake provider(%q) promises", provider.Address)
 			}

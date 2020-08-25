@@ -304,7 +304,7 @@ func Test_SettleHistory(t *testing.T) {
 					{
 						"tx_hash": "0x88af51047ff2da1e3626722fe239f70c3ddd668f067b2ac8d67b280d2eff39f7",
 						"provider_id": "",
-						"accountant_id": "0x0000000000000000000000000000000000000000",
+						"hermes_id": "0x0000000000000000000000000000000000000000",
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
 						"amount": 123,
@@ -313,7 +313,7 @@ func Test_SettleHistory(t *testing.T) {
 					{
 						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
 						"provider_id": "",
-						"accountant_id": "0x0000000000000000000000000000000000000000",
+						"hermes_id": "0x0000000000000000000000000000000000000000",
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary": "0x0000000000000000000000000000000000000000",
 						"amount": 456,

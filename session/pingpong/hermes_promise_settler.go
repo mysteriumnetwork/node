@@ -501,7 +501,7 @@ func (aps *hermesPromiseSettler) settle(
 			she := SettlementHistoryEntry{
 				TxHash:         info.Raw.TxHash,
 				ProviderID:     provider,
-				AccountantID:   hermesID,
+				HermesID:       hermesID,
 				ChannelAddress: common.HexToAddress(channelID),
 				Time:           time.Now().UTC(),
 				Promise:        promise,
