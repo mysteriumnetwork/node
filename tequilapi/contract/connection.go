@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -31,14 +32,14 @@ import (
 var emptyAddress = common.Address{}
 
 // NewConnectionStatusDTO maps to API connection status.
-func NewConnectionStatusDTO(session connection.Status) ConnectionStatusDTO {
+func NewConnectionStatusDTO(session connectionstate.Status) ConnectionStatusDTO {
 	response := ConnectionStatusDTO{
 		Status:     string(session.State),
 		ConsumerID: session.ConsumerID.Address,
 		SessionID:  string(session.SessionID),
 	}
 	if session.HermesID != emptyAddress {
-		response.HermesAddress = session.HermesID.Hex()
+		response.HermesID = session.HermesID.Hex()
 	}
 	// None exists, for not started connection
 	if session.Proposal.ProviderID != "" {
@@ -58,7 +59,7 @@ type ConnectionStatusDTO struct {
 	ConsumerID string `json:"consumer_id,omitempty"`
 
 	// example: 0x00
-	HermesAddress string `json:"hermes_address,omitempty"`
+	HermesID string `json:"hermes_id,omitempty"`
 
 	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
 	Proposal *ProposalDTO `json:"proposal,omitempty"`
@@ -68,7 +69,7 @@ type ConnectionStatusDTO struct {
 }
 
 // NewConnectionDTO maps to API connection.
-func NewConnectionDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
+func NewConnectionDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
 	dto := ConnectionDTO{
 		ConnectionStatusDTO: NewConnectionStatusDTO(session),
 	}
@@ -87,7 +88,7 @@ type ConnectionDTO struct {
 }
 
 // NewConnectionStatisticsDTO maps to API connection stats.
-func NewConnectionStatisticsDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+func NewConnectionStatisticsDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
 	agreementTotal := new(big.Int)
 	if invoice.AgreementTotal != nil {
 		agreementTotal = invoice.AgreementTotal

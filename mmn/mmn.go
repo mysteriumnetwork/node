@@ -25,7 +25,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/pkg/errors"
+	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -39,7 +40,9 @@ import (
 type MMN struct {
 	client     *client
 	ipResolver ip.Resolver
-	node       *NodeInformationDto
+
+	lastIP       string
+	lastIdentity string
 }
 
 // NewMMN creates new instance of MMN
@@ -47,60 +50,72 @@ func NewMMN(resolver ip.Resolver, client *client) *MMN {
 	return &MMN{client: client, ipResolver: resolver}
 }
 
-// CollectEnvironmentInformation sends node information to MMN on identity unlock
-func (m *MMN) CollectEnvironmentInformation() error {
-	node := &NodeInformationDto{
+// Subscribe subscribes to node events and reports them to MMN
+func (m *MMN) Subscribe(eventBus eventbus.EventBus) error {
+	if err := eventBus.SubscribeAsync(nodevent.AppTopicNode, m.handleNodeStart); err != nil {
+		return err
+	}
+	if err := eventBus.SubscribeAsync(identity.AppTopicIdentityUnlock, m.handleIdentityUnlock); err != nil {
+		return err
+	}
+	return eventBus.SubscribeAsync(servicestate.AppTopicServiceStatus, m.handleServiceStart)
+}
+
+// handleNodeStart handles node state change and fetches the IP accordingly.
+func (m *MMN) handleNodeStart(e nodevent.Payload) {
+	if e.Status != nodevent.StatusStarted {
+		return
+	}
+
+	var err error
+	m.lastIP, err = m.ipResolver.GetOutboundIP()
+	if err != nil {
+		log.Error().Msgf("Failed to get get Outbound IP for MMN: %v", err)
+	}
+}
+
+func (m *MMN) handleIdentityUnlock(identity string) {
+	m.lastIdentity = identity
+}
+
+// handleServiceStart does auto-register to MMN, but only for providers.
+func (m *MMN) handleServiceStart(e servicestate.AppEventServiceStatus) {
+	if e.Status != string(servicestate.Running) {
+		return
+	}
+
+	// TODO Turn off auto-register then WEB UI will have possibility to configure API key
+	// isRegistrationEnabled := len(config.Current.GetString("mmn.api-key")) != 0
+	// if !isRegistrationEnabled {
+	// 	log.Debug().Msg("Identity unlocked, registration to MMN disabled because the API key missing in config.")
+	// 	return
+	// }
+
+	if err := m.register(); err != nil {
+		log.Error().Msgf("Failed to register identity to MMN: %v", err)
+	}
+}
+
+func (m *MMN) register() error {
+	return m.client.RegisterNode(&NodeInformationDto{
+		LocalIP:     m.lastIP,
+		Identity:    m.lastIdentity,
+		APIKey:      config.Current.GetString("mmn.api-key"),
 		VendorID:    config.GetString(config.FlagVendorID),
 		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
-	}
-	m.node = node
-
-	outboundIp, err := m.ipResolver.GetOutboundIP()
-	if err != nil {
-		return errors.Wrap(err, "Failed to get Outbound IP")
-	}
-
-	m.node.LocalIP = outboundIp
-
-	return nil
-}
-
-// SubscribeToIdentityUnlockRegisterToMMN subscribes to identity unlock, registers identity in MMN if the API key is set
-func (m *MMN) SubscribeToIdentityUnlockRegisterToMMN(eventBus eventbus.EventBus, isRegistrationEnabled func() bool) error {
-	return eventBus.SubscribeAsync(
-		identity.AppTopicIdentityUnlock,
-		func(identity string) {
-			m.node.Identity = identity
-
-			if !isRegistrationEnabled() {
-				log.Debug().Msg("Identity unlocked, " +
-					"registration to MMN disabled because the API key missing in config.")
-
-				return
-			}
-
-			if err := m.Register(); err != nil {
-				log.Error().Msgf("Failed to register identity to MMN: %v", err)
-			}
-		},
-	)
-}
-
-// SetAPIKey sets MMN's API key
-func (m *MMN) SetAPIKey(apiKey string) {
-	m.node.APIKey = apiKey
+	})
 }
 
 // Register registers node to MMN
 func (m *MMN) Register() error {
-	return m.client.RegisterNode(m.node)
+	return m.register()
 }
 
 // GetReport fetches node report from MMN
 func (m *MMN) GetReport() (string, error) {
-	return m.client.GetReport(m.node.Identity)
+	return m.client.GetReport(m.lastIdentity)
 }
 
 func getOS() string {

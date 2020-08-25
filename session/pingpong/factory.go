@@ -119,12 +119,8 @@ func InvoiceFactoryCreator(
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
 	providersHermes common.Address,
-) func(identity.Identity, identity.Identity, common.Address, string) (service.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string) (service.PaymentEngine, error) {
-		exchangeChan, err := exchangeMessageReceiver(channel)
-		if err != nil {
-			return nil, err
-		}
+) func(identity.Identity, identity.Identity, common.Address, string, chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
@@ -136,8 +132,6 @@ func InvoiceFactoryCreator(
 			ChargePeriodLeeway:         2 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
-			FirstInvoiceSendTimeout:    10 * time.Second,
-			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
 			ConsumersHermesID:          hermesID,
 			ProvidersHermesID:          providersHermes,

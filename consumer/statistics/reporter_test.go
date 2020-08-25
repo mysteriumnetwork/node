@@ -22,8 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -31,9 +30,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockSessionEvent = connection.AppEventConnectionSession{
-	Status: connection.SessionCreatedStatus,
-	SessionInfo: connection.Status{
+var mockSessionEvent = connectionstate.AppEventConnectionSession{
+	Status: connectionstate.SessionCreatedStatus,
+	SessionInfo: connectionstate.Status{
 		ConsumerID: identity.FromAddress("0x000"),
 		SessionID:  session.ID("test"),
 		Proposal: market.ServiceProposal{
@@ -46,21 +45,13 @@ func mockSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 
-type mockLocationDetector struct{}
-
-func (mld *mockLocationDetector) GetOrigin() (location.Location, error) {
-	return location.Location{
-		Country: "KG",
-	}, nil
-}
-
 func TestStatisticsReporterStartsAndStops(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Minute)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, time.Minute)
 
 	reporter.consumeSessionEvent(mockSessionEvent)
 
-	reporter.start(mockSessionEvent.SessionInfo.ConsumerID, mockSessionEvent.SessionInfo.Proposal.ServiceType, mockSessionEvent.SessionInfo.Proposal.ProviderID, mockSessionEvent.SessionInfo.SessionID)
+	reporter.start(mockSessionEvent.SessionInfo)
 	reporter.stop()
 
 	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
@@ -69,11 +60,11 @@ func TestStatisticsReporterStartsAndStops(t *testing.T) {
 
 func TestStatisticsReporterInterval(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, time.Nanosecond)
 
 	reporter.consumeSessionEvent(mockSessionEvent)
 
-	reporter.start(mockSessionEvent.SessionInfo.ConsumerID, mockSessionEvent.SessionInfo.Proposal.ServiceType, mockSessionEvent.SessionInfo.Proposal.ProviderID, mockSessionEvent.SessionInfo.SessionID)
+	reporter.start(mockSessionEvent.SessionInfo)
 	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
 
 	reporter.stop()
@@ -81,12 +72,12 @@ func TestStatisticsReporterInterval(t *testing.T) {
 
 func TestStatisticsReporterConsumeSessionEvent(t *testing.T) {
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(mockSender, mockSignerFactory, time.Nanosecond)
 	reporter.consumeSessionEvent(mockSessionEvent)
 	<-mockSender.called
 	assert.True(t, reporter.started)
 	copy := mockSessionEvent
-	copy.Status = connection.SessionEndedStatus
+	copy.Status = connectionstate.SessionEndedStatus
 	reporter.consumeSessionEvent(copy)
 	assert.False(t, reporter.started)
 }

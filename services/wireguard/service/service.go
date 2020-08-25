@@ -18,13 +18,13 @@
 package service
 
 import (
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/market"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 // GetProposal returns the proposal for wireguard service
-func GetProposal(location location.Location) market.ServiceProposal {
+func GetProposal(location locationstate.Location) market.ServiceProposal {
 	marketLocation := market.Location{
 		Continent: location.Continent,
 		Country:   location.Country,

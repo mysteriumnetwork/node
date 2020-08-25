@@ -22,19 +22,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	sessionExisting = &Session{
-		ID:         session.ID("mocked-id"),
-		ConsumerID: identity.FromAddress("deadbeef"),
-		ServiceID:  "1",
-	}
+	sessionExisting, _ = NewSession(
+		&Instance{ID: "1"},
+		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: "deadbeef"}},
+	)
 )
 
 func TestSessionPool_FindSession_Existing(t *testing.T) {
@@ -56,9 +55,7 @@ func TestSessionPool_FindSession_Unknown(t *testing.T) {
 
 func TestSessionPool_Add(t *testing.T) {
 	pool := mockPool(mocks.NewEventBus(), sessionExisting)
-	sessionNew := &Session{
-		ID: session.ID("new-id"),
-	}
+	sessionNew, _ := NewSession(&Instance{}, &pb.SessionRequest{})
 
 	pool.Add(sessionNew)
 	assert.Exactly(
@@ -70,9 +67,7 @@ func TestSessionPool_Add(t *testing.T) {
 
 func TestSessionPool_Add_PublishesEvents(t *testing.T) {
 	// given
-	session := &Session{
-		ID: session.ID("new-id"),
-	}
+	session, _ := NewSession(&Instance{}, &pb.SessionRequest{})
 	mp := mocks.NewEventBus()
 	pool := NewSessionPool(mp)
 
@@ -91,13 +86,8 @@ func TestSessionPool_FindByPeer(t *testing.T) {
 }
 
 func TestSessionPool_GetAll(t *testing.T) {
-	sessionFirst := &Session{
-		ID: session.ID("id1"),
-	}
-	sessionSecond := &Session{
-		ID:        session.ID("id2"),
-		CreatedAt: time.Now(),
-	}
+	sessionFirst, _ := NewSession(&Instance{}, &pb.SessionRequest{})
+	sessionSecond, _ := NewSession(&Instance{}, &pb.SessionRequest{})
 
 	pool := &SessionPool{
 		sessions: map[session.ID]*Session{
@@ -128,14 +118,16 @@ func TestSessionPool_RemoveNonExisting(t *testing.T) {
 }
 
 func TestSessionPool_Remove_Does_Not_Panic(t *testing.T) {
-	id4 := session.ID("id4")
 	pool := mockPool(mocks.NewEventBus(), sessionExisting)
-	sessionFirst := &Session{ID: id4}
-	sessionSecond := &Session{ID: session.ID("id3")}
+
+	sessionFirst, _ := NewSession(&Instance{}, &pb.SessionRequest{})
 	pool.Add(sessionFirst)
+
+	sessionSecond, _ := NewSession(&Instance{}, &pb.SessionRequest{})
 	pool.Add(sessionSecond)
-	pool.Remove(id4)
-	pool.Remove(session.ID("id3"))
+
+	pool.Remove(sessionFirst.ID)
+	pool.Remove(sessionSecond.ID)
 	assert.Len(t, pool.sessions, 1)
 }
 

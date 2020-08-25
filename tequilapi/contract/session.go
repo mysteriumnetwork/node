@@ -95,6 +95,7 @@ func NewSessionDTO(se session.History) SessionDTO {
 		HermesID:        se.HermesID,
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
+		ConsumerCountry: se.ConsumerCountry,
 		ProviderCountry: se.ProviderCountry,
 		CreatedAt:       se.Started.Format(time.RFC3339),
 		BytesReceived:   se.DataReceived,
@@ -127,6 +128,9 @@ type SessionDTO struct {
 	ServiceType string `json:"service_type"`
 
 	// example: NL
+	ConsumerCountry string `json:"consumer_country"`
+
+	// example: US
 	ProviderCountry string `json:"provider_country"`
 
 	// example: 2019-06-06T11:04:43.910035Z

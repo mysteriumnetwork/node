@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/money"
@@ -56,8 +56,8 @@ type Identity struct {
 
 // Connection represents consumer connection state.
 type Connection struct {
-	Session    connection.Status
-	Statistics connection.Statistics
+	Session    connectionstate.Status
+	Statistics connectionstate.Statistics
 	Throughput bandwidth.Throughput
 	Invoice    crypto.Invoice
 }

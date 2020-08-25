@@ -122,7 +122,7 @@ func (c *cliApp) newIdentity(args []string) {
 	}
 	passphrase := identityDefaultPassphrase
 	if len(args) == 1 {
-		passphrase = args[1]
+		passphrase = args[0]
 	}
 
 	id, err := c.tequilapi.NewIdentity(passphrase)

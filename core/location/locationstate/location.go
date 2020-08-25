@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package location
+package locationstate
 
 // Location structure represents location information
 type Location struct {

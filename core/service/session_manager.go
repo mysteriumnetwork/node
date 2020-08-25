@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -102,7 +103,7 @@ type PromiseProcessor interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (PaymentEngine, error)
 
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
 type PaymentEngine interface {
@@ -132,6 +133,7 @@ func NewSessionManager(
 		natEventGetter:       natEventGetter,
 		publisher:            publisher,
 		paymentEngineFactory: paymentEngineFactory,
+		paymentEngineChan:    make(chan crypto.ExchangeMessage, 1),
 		channel:              channel,
 		config:               config,
 	}
@@ -142,6 +144,7 @@ type SessionManager struct {
 	service              *Instance
 	sessionStorage       *SessionPool
 	paymentEngineFactory PaymentEngineFactory
+	paymentEngineChan    chan crypto.ExchangeMessage
 	natEventGetter       NATEventGetter
 	publisher            publisher
 	channel              p2p.Channel
@@ -260,7 +263,7 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 	defer session.tracer.EndStage(trace)
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.HermesID, string(session.ID))
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.HermesID, string(session.ID), manager.paymentEngineChan)
 	if err != nil {
 		return err
 	}

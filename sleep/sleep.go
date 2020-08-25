@@ -17,7 +17,11 @@
 
 package sleep
 
-import "github.com/mysteriumnetwork/node/eventbus"
+import (
+	"sync"
+
+	"github.com/mysteriumnetwork/node/eventbus"
+)
 
 // Event represents sleep event triggered by underlying OS
 type Event int
@@ -38,6 +42,7 @@ var eventChannel chan Event
 type Notifier struct {
 	eventbus eventbus.Publisher
 	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 // NewNotifier create sleep events notifier

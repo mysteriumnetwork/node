@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/trace"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -291,7 +292,10 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	publisher := mocks.NewEventBus()
 
 	sessionStore := NewSessionPool(publisher)
-	session := &Session{ID: "1", ConsumerID: consumerID}
+	session, _ := NewSession(
+		currentService,
+		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: consumerID.Address}},
+	)
 	sessionStore.Add(session)
 
 	manager := newManager(currentService, sessionStore, publisher, &mockBalanceTracker{})
@@ -314,7 +318,7 @@ func newManager(service *Instance, sessions *SessionPool, publisher publisher, p
 	return NewSessionManager(
 		service,
 		sessions,
-		func(_, _ identity.Identity, _ common.Address, _ string) (PaymentEngine, error) {
+		func(_, _ identity.Identity, _ common.Address, _ string, _ chan crypto.ExchangeMessage) (PaymentEngine, error) {
 			return paymentEngine, nil
 		},
 		&MockNatEventTracker{},

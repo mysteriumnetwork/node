@@ -17,8 +17,24 @@
 
 package contract
 
+import (
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
+)
+
 // MMNApiKeyRequest request used to manage MMN's API key.
 // swagger:model MMNApiKeyRequest
 type MMNApiKeyRequest struct {
 	ApiKey string `json:"api_key"`
+}
+
+// Validate validates fields in request
+func (r MMNApiKeyRequest) Validate() *validation.FieldErrorMap {
+	errs := validation.NewErrorMap()
+	if len(r.ApiKey) == 0 {
+		errs.ForField("api_key").AddError("required", "API key is required")
+	}
+	if len(r.ApiKey) < 40 {
+		errs.ForField("api_key").AddError("invalid", "Invalid API key")
+	}
+	return errs
 }

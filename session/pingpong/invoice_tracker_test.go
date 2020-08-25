@@ -19,7 +19,6 @@ package pingpong
 
 import (
 	"encoding/hex"
-	stdErrors "errors"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -33,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -104,8 +102,6 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
@@ -265,8 +261,6 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Millisecond,
 		ChargePeriodLeeway:         15 * time.Minute,
-		FirstInvoiceSendDuration:   time.Millisecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -327,8 +321,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -351,62 +343,6 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 
 	invoiceTracker.Stop()
 	assert.NoError(t, <-errChan)
-}
-
-func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewMockKeystore()
-	acc, err := ks.NewAccount("")
-	assert.Nil(t, err)
-	mockSender := &MockPeerInvoiceSender{
-		mockError: p2p.ErrSendTimeout,
-	}
-
-	exchangeMessageChan := make(chan crypto.ExchangeMessage)
-	bolt, err := boltdb.NewStorage(dir)
-	assert.Nil(t, err)
-	defer bolt.Close()
-
-	tracker := session.NewTracker(mbtime.Now)
-	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(1000000000000), money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
-		Peer:                       identity.FromAddress("some peer"),
-		PeerInvoiceSender:          mockSender,
-		InvoiceStorage:             invoiceStorage,
-		TimeTracker:                &tracker,
-		ChargePeriod:               time.Nanosecond,
-		ChargePeriodLeeway:         5 * time.Nanosecond,
-		FirstInvoiceSendDuration:   time.Millisecond,
-		FirstInvoiceSendTimeout:    time.Nanosecond,
-		ExchangeMessageChan:        exchangeMessageChan,
-		ExchangeMessageWaitTimeout: time.Second,
-		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
-		EventBus:                   mocks.NewEventBus(),
-	}
-	invoiceTracker := NewInvoiceTracker(deps)
-	defer invoiceTracker.Stop()
-
-	errChan := make(chan error)
-	go func() { errChan <- invoiceTracker.Start() }()
-
-	err = <-errChan
-
-	if !stdErrors.Is(err, ErrFirstInvoiceSendTimeout) {
-		t.Fatalf("expected err %v, got: %v", ErrFirstInvoiceSendTimeout, err)
-	}
 }
 
 func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
@@ -441,8 +377,6 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
@@ -493,8 +427,6 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Second,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),

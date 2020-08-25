@@ -20,6 +20,7 @@ package connection
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
@@ -28,7 +29,7 @@ import (
 const DefaultStatsReportInterval = 1 * time.Second
 
 type statsSupplier interface {
-	Statistics() (Statistics, error)
+	Statistics() (connectionstate.Statistics, error)
 }
 
 type statsPublisher struct {
@@ -54,7 +55,7 @@ func (s statsPublisher) start(sessionSupplier *connectionManager, statsSupplier 
 				log.Warn().Err(err).Msg("Could not get connection statistics")
 				continue
 			}
-			s.bus.Publish(AppTopicConnectionStatistics, AppEventConnectionStatistics{
+			s.bus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
 				Stats:       stats,
 				SessionInfo: sessionSupplier.Status(),
 			})
