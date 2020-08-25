@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +39,7 @@ func Test_GetProposal(t *testing.T) {
 				Location: market.Location{Country: country},
 			},
 		},
-		GetProposal(location.Location{Country: country}),
+		GetProposal(locationstate.Location{Country: country}),
 	)
 }
 

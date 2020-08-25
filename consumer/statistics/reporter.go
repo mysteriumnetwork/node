@@ -21,8 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -36,7 +35,7 @@ var ErrSessionNotStarted = errors.New("session not started")
 
 // StatsTracker allows for retrieval and resetting of statistics
 type StatsTracker interface {
-	GetDataStats() connection.Statistics
+	GetDataStats() connectionstate.Statistics
 }
 
 // Reporter defines method for sending stats outside
@@ -48,10 +47,8 @@ type Reporter interface {
 // SessionStatisticsReporter sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type SessionStatisticsReporter struct {
-	locationDetector location.OriginResolver
-
 	signerFactory  identity.SignerFactory
-	statistics     connection.Statistics
+	statistics     connectionstate.Statistics
 	statisticsMu   sync.RWMutex
 	remoteReporter Reporter
 
@@ -63,11 +60,10 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector location.OriginResolver, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(remoteReporter Reporter, signerFactory identity.SignerFactory, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
-		locationDetector: locationDetector,
-		signerFactory:    signerFactory,
-		remoteReporter:   remoteReporter,
+		signerFactory:  signerFactory,
+		remoteReporter: remoteReporter,
 
 		sendInterval: interval,
 		done:         make(chan struct{}),
@@ -76,14 +72,14 @@ func NewSessionStatisticsReporter(remoteReporter Reporter, signerFactory identit
 
 // Subscribe subscribes to relevant events of event bus.
 func (sr *SessionStatisticsReporter) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.Subscribe(connection.AppTopicConnectionSession, sr.consumeSessionEvent); err != nil {
+	if err := bus.Subscribe(connectionstate.AppTopicConnectionSession, sr.consumeSessionEvent); err != nil {
 		return err
 	}
-	return bus.Subscribe(connection.AppTopicConnectionStatistics, sr.consumeSessionStatisticsEvent)
+	return bus.Subscribe(connectionstate.AppTopicConnectionStatistics, sr.consumeSessionStatisticsEvent)
 }
 
 // start starts sending of stats
-func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, serviceType, providerID string, sessionID session.ID) {
+func (sr *SessionStatisticsReporter) start(session connectionstate.Status) {
 	sr.opLock.Lock()
 	defer sr.opLock.Unlock()
 
@@ -91,26 +87,21 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 		return
 	}
 
-	signer := sr.signerFactory(consumerID)
-	loc, err := sr.locationDetector.GetOrigin()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to resolve location")
-	}
+	signer := sr.signerFactory(session.ConsumerID)
 
 	sr.done = make(chan struct{})
-
 	go func() {
 		for {
 			select {
 			case <-sr.done:
-				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
+				if err := sr.send(session, signer); err != nil {
 					log.Error().Err(err).Msg("Failed to send session stats to the remote service")
 				} else {
 					log.Debug().Msg("Final stats sent")
 				}
 				return
 			case <-time.After(sr.sendInterval):
-				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
+				if err := sr.send(session, signer); err != nil {
 					log.Error().Err(err).Msg("Failed to send session stats to the remote service")
 				} else {
 					log.Debug().Msg("Stats sent")
@@ -137,41 +128,36 @@ func (sr *SessionStatisticsReporter) stop() {
 	log.Debug().Msg("Session statistics reporter stopping")
 }
 
-func (sr *SessionStatisticsReporter) send(serviceType, providerID, country string, sessionID session.ID, signer identity.Signer) error {
+func (sr *SessionStatisticsReporter) send(session connectionstate.Status, signer identity.Signer) error {
 	sr.statisticsMu.RLock()
 	dataStats := sr.statistics
 	sr.statisticsMu.RUnlock()
 
 	return sr.remoteReporter.SendSessionStats(
-		sessionID,
+		session.SessionID,
 		mysterium.SessionStats{
-			ServiceType:     serviceType,
+			ServiceType:     session.Proposal.ServiceType,
 			BytesSent:       dataStats.BytesSent,
 			BytesReceived:   dataStats.BytesReceived,
-			ProviderID:      providerID,
-			ConsumerCountry: country,
+			ProviderID:      session.Proposal.ProviderID,
+			ConsumerCountry: session.ConsumerLocation.Country,
 		},
 		signer,
 	)
 }
 
 // consumeSessionEvent handles the session state changes
-func (sr *SessionStatisticsReporter) consumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
+func (sr *SessionStatisticsReporter) consumeSessionEvent(sessionEvent connectionstate.AppEventConnectionSession) {
 	switch sessionEvent.Status {
-	case connection.SessionEndedStatus:
+	case connectionstate.SessionEndedStatus:
 		sr.stop()
-	case connection.SessionCreatedStatus:
-		sr.statistics = connection.Statistics{}
-		sr.start(
-			sessionEvent.SessionInfo.ConsumerID,
-			sessionEvent.SessionInfo.Proposal.ServiceType,
-			sessionEvent.SessionInfo.Proposal.ProviderID,
-			sessionEvent.SessionInfo.SessionID,
-		)
+	case connectionstate.SessionCreatedStatus:
+		sr.statistics = connectionstate.Statistics{}
+		sr.start(sessionEvent.SessionInfo)
 	}
 }
 
-func (sr *SessionStatisticsReporter) consumeSessionStatisticsEvent(e connection.AppEventConnectionStatistics) {
+func (sr *SessionStatisticsReporter) consumeSessionStatisticsEvent(e connectionstate.AppEventConnectionStatistics) {
 	sr.statisticsMu.Lock()
 	sr.statistics = e.Stats
 	sr.statisticsMu.Unlock()

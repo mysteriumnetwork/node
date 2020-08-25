@@ -25,6 +25,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -42,7 +44,7 @@ import (
 )
 
 const (
-	p2pDialTimeout = 30 * time.Second
+	p2pDialTimeout = 60 * time.Second
 )
 
 var (
@@ -122,6 +124,7 @@ type connectionManager struct {
 	newConnection        Creator
 	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
+	locationResolver     location.OriginResolver
 	config               Config
 	statsReportInterval  time.Duration
 	validator            validator
@@ -131,7 +134,7 @@ type connectionManager struct {
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
 	ctxLock                sync.RWMutex
-	status                 Status
+	status                 connectionstate.Status
 	statusLock             sync.RWMutex
 	cleanupLock            sync.Mutex
 	cleanup                []func() error
@@ -152,6 +155,7 @@ func NewManager(
 	connectionCreator Creator,
 	eventBus eventbus.EventBus,
 	ipResolver ip.Resolver,
+	locationResolver location.OriginResolver,
 	config Config,
 	statsReportInterval time.Duration,
 	validator validator,
@@ -159,12 +163,13 @@ func NewManager(
 ) *connectionManager {
 	return &connectionManager{
 		newConnection:        connectionCreator,
-		status:               Status{State: NotConnected},
+		status:               connectionstate.Status{State: connectionstate.NotConnected},
 		eventBus:             eventBus,
 		paymentEngineFactory: paymentEngineFactory,
 		cleanup:              make([]func() error, 0),
 		cleanupFinished:      make(chan struct{}, 1),
 		ipResolver:           ipResolver,
+		locationResolver:     locationResolver,
 		config:               config,
 		statsReportInterval:  statsReportInterval,
 		validator:            validator,
@@ -192,7 +197,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return nil
 	})
 
-	if m.Status().State != NotConnected {
+	if m.Status().State != connectionstate.NotConnected {
 		return ErrAlreadyExists
 	}
 
@@ -246,7 +251,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return err
 	}
 
-	m.setStatus(func(status *Status) {
+	m.setStatus(func(status *connectionstate.Status) {
 		status.SessionID = sessionID
 	})
 	m.publishSessionCreate(sessionID)
@@ -277,7 +282,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		m.addCleanupAfterDisconnect(func() error {
 			return m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusConnectionFailed, err)
 		})
-		m.publishStateEvent(StateConnectionFailed)
+		m.publishStateEvent(connectionstate.StateConnectionFailed)
 
 		log.Info().Err(err).Msg("Cancelling connection initiation: ")
 		m.Cancel()
@@ -303,7 +308,7 @@ func (m *connectionManager) clearIPCache() {
 func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
 	for i := 1; i <= m.config.IPCheck.MaxAttempts; i++ {
 		// Skip check if not connected. This may happen when context was canceled via Disconnect.
-		if m.Status().State != Connected {
+		if m.Status().State != connectionstate.Connected {
 			return
 		}
 
@@ -317,7 +322,7 @@ func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID ident
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
 		if i == m.config.IPCheck.MaxAttempts {
 			m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
-			m.publishStateEvent(StateIPNotChanged)
+			m.publishStateEvent(connectionstate.StateIPNotChanged)
 			return
 		}
 
@@ -449,6 +454,9 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 			Id:             consumerID.Address,
 			HermesID:       hermesID.Hex(),
 			PaymentVersion: "v3",
+			Location: &pb.LocationInfo{
+				Country: m.Status().ConsumerLocation.Country,
+			},
 		},
 		ProposalID: int64(proposal.ID),
 		Config:     config,
@@ -505,16 +513,16 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 }
 
 func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
-	m.eventBus.Publish(AppTopicConnectionSession, AppEventConnectionSession{
-		Status:      SessionCreatedStatus,
+	m.eventBus.Publish(connectionstate.AppTopicConnectionSession, connectionstate.AppEventConnectionSession{
+		Status:      connectionstate.SessionCreatedStatus,
 		SessionInfo: m.Status(),
 	})
 
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		m.eventBus.Publish(AppTopicConnectionSession, AppEventConnectionSession{
-			Status:      SessionEndedStatus,
+		m.eventBus.Publish(connectionstate.AppTopicConnectionSession, connectionstate.AppEventConnectionSession{
+			Status:      connectionstate.SessionEndedStatus,
 			SessionInfo: m.Status(),
 		})
 		return nil
@@ -556,14 +564,14 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	return nil
 }
 
-func (m *connectionManager) Status() Status {
+func (m *connectionManager) Status() connectionstate.Status {
 	m.statusLock.RLock()
 	defer m.statusLock.RUnlock()
 
 	return m.status
 }
 
-func (m *connectionManager) setStatus(delta func(status *Status)) {
+func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)) {
 	m.statusLock.Lock()
 	stateWas := m.status.State
 
@@ -578,45 +586,46 @@ func (m *connectionManager) setStatus(delta func(status *Status)) {
 	}
 }
 
-func (m *connectionManager) statusConnecting(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) {
-	m.setStatus(func(status *Status) {
-		*status = Status{
-			StartedAt:  m.timeGetter(),
-			ConsumerID: consumerID,
-			HermesID:   hermesID,
-			Proposal:   proposal,
-			State:      Connecting,
+func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
+	m.setStatus(func(status *connectionstate.Status) {
+		*status = connectionstate.Status{
+			StartedAt:        m.timeGetter(),
+			ConsumerID:       consumerID,
+			ConsumerLocation: m.locationResolver.GetOrigin(),
+			HermesID:         accountantID,
+			Proposal:         proposal,
+			State:            connectionstate.Connecting,
 		}
 	})
 }
 
 func (m *connectionManager) statusConnected() {
-	m.setStatus(func(status *Status) {
-		status.State = Connected
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Connected
 	})
 }
 
 func (m *connectionManager) statusReconnecting() {
-	m.setStatus(func(status *Status) {
-		status.State = Reconnecting
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Reconnecting
 	})
 }
 
 func (m *connectionManager) statusNotConnected() {
-	m.setStatus(func(status *Status) {
-		status.State = NotConnected
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.NotConnected
 	})
 }
 
 func (m *connectionManager) statusDisconnecting() {
-	m.setStatus(func(status *Status) {
-		status.State = Disconnecting
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Disconnecting
 	})
 }
 
 func (m *connectionManager) statusCanceled() {
-	m.setStatus(func(status *Status) {
-		status.State = Canceled
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Canceled
 	})
 }
 
@@ -626,7 +635,7 @@ func (m *connectionManager) Cancel() {
 }
 
 func (m *connectionManager) Disconnect() error {
-	if m.Status().State == NotConnected {
+	if m.Status().State == connectionstate.NotConnected {
 		return ErrNoConnection
 	}
 
@@ -684,7 +693,7 @@ func (m *connectionManager) connectionWaiter(connection Connection) {
 	logDisconnectError(m.Disconnect())
 }
 
-func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) error {
+func (m *connectionManager) waitForConnectedState(stateChannel <-chan connectionstate.State) error {
 	log.Debug().Msg("waiting for connected state")
 	for {
 		select {
@@ -694,7 +703,7 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) err
 			}
 
 			switch state {
-			case Connected:
+			case connectionstate.Connected:
 				log.Debug().Msg("Connected started event received")
 				if m.acknowledge != nil {
 					go m.acknowledge()
@@ -729,7 +738,7 @@ func (m *connectionManager) handleSleepEvent(e sleep.Event) {
 	}
 }
 
-func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
+func (m *connectionManager) consumeConnectionStates(stateChannel <-chan connectionstate.State) {
 	for state := range stateChannel {
 		m.onStateChanged(state)
 	}
@@ -738,14 +747,14 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
 	logDisconnectError(m.Disconnect())
 }
 
-func (m *connectionManager) onStateChanged(state State) {
+func (m *connectionManager) onStateChanged(state connectionstate.State) {
 	log.Debug().Msgf("Connection state received: %s", state)
 
 	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
 	switch state {
-	case Connected:
+	case connectionstate.Connected:
 		m.statusConnected()
-	case Reconnecting:
+	case connectionstate.Reconnecting:
 		m.statusReconnecting()
 	}
 }
@@ -773,8 +782,8 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 	return nil
 }
 
-func (m *connectionManager) publishStateEvent(state State) {
-	go m.eventBus.Publish(AppTopicConnectionState, AppEventConnectionState{
+func (m *connectionManager) publishStateEvent(state connectionstate.State) {
+	m.eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
 		State:       state,
 		SessionInfo: m.Status(),
 	})

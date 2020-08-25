@@ -21,6 +21,7 @@ import (
 	"net"
 
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -46,11 +47,11 @@ func NewExternalDBResolver(databasePath string, ipResolver ip.Resolver) (*DBReso
 }
 
 // DetectLocation detects current IP-address provides location information for the IP.
-func (r *DBResolver) DetectLocation() (loc Location, err error) {
+func (r *DBResolver) DetectLocation() (loc locationstate.Location, err error) {
 	log.Debug().Msg("Detecting with DB resolver")
 	ipAddress, err := r.ipResolver.GetPublicIP()
 	if err != nil {
-		return Location{}, errors.Wrap(err, "failed to get public IP")
+		return locationstate.Location{}, errors.Wrap(err, "failed to get public IP")
 	}
 
 	ip := net.ParseIP(ipAddress)

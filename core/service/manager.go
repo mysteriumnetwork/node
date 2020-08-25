@@ -148,6 +148,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		subscribeSessionStatus(ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
 		subscribeSessionDestroy(mng, ch)
+		subscribeSessionPayments(mng, ch)
 	}
 	stopP2PListener, err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
 	if err != nil {

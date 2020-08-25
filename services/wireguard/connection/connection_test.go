@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
@@ -43,8 +44,8 @@ func TestConnectionStartStop(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, connection.Connecting, <-conn.State())
-	assert.Equal(t, connection.Connected, <-conn.State())
+	assert.Equal(t, connectionstate.Connecting, <-conn.State())
+	assert.Equal(t, connectionstate.Connected, <-conn.State())
 	stats, err := conn.Statistics()
 	assert.NoError(t, err)
 	assert.EqualValues(t, 10, stats.BytesSent)
@@ -66,9 +67,9 @@ func TestConnectionStopAfterHandshakeError(t *testing.T) {
 
 	err := conn.Start(context.Background(), connection.ConnectOptions{SessionConfig: sessionConfig})
 	assert.Error(t, handshakeTimeoutErr, err)
-	assert.Equal(t, connection.Connecting, <-conn.State())
-	assert.Equal(t, connection.Disconnecting, <-conn.State())
-	assert.Equal(t, connection.NotConnected, <-conn.State())
+	assert.Equal(t, connectionstate.Connecting, <-conn.State())
+	assert.Equal(t, connectionstate.Disconnecting, <-conn.State())
+	assert.Equal(t, connectionstate.NotConnected, <-conn.State())
 }
 
 func TestConnectionStopOnceAfterHandshakeErrorAndStopCall(t *testing.T) {
@@ -87,9 +88,9 @@ func TestConnectionStopOnceAfterHandshakeErrorAndStopCall(t *testing.T) {
 	<-stopCh
 
 	assert.Error(t, handshakeTimeoutErr, err)
-	assert.Equal(t, connection.Connecting, <-conn.State())
-	assert.Equal(t, connection.Disconnecting, <-conn.State())
-	assert.Equal(t, connection.NotConnected, <-conn.State())
+	assert.Equal(t, connectionstate.Connecting, <-conn.State())
+	assert.Equal(t, connectionstate.Disconnecting, <-conn.State())
+	assert.Equal(t, connectionstate.NotConnected, <-conn.State())
 }
 
 func newConn(t *testing.T) *Connection {

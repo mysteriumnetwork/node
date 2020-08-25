@@ -19,12 +19,13 @@ package endpoints
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
@@ -241,50 +242,6 @@ func Test_SettleSync_ReturnsError(t *testing.T) {
 }
 
 func Test_SettleHistory(t *testing.T) {
-	t.Run("returns error on missing providerID", func(t *testing.T) {
-		mockResponse := ""
-		server := newTestTransactorServer(http.StatusAccepted, mockResponse)
-		defer server.Close()
-
-		router := httprouter.New()
-		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-		AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{}, common.Address{})
-
-		req, err := http.NewRequest(
-			http.MethodGet,
-			"/transactor/settle/history",
-			nil,
-		)
-		assert.Nil(t, err)
-
-		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-
-		assert.Equal(t, http.StatusBadRequest, resp.Code)
-		assert.JSONEq(t, `{"message":"providerID is required"}`, resp.Body.String())
-	})
-	t.Run("returns error on missing hermesID", func(t *testing.T) {
-		mockResponse := ""
-		server := newTestTransactorServer(http.StatusAccepted, mockResponse)
-		defer server.Close()
-
-		router := httprouter.New()
-		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-		AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{}, common.Address{})
-
-		req, err := http.NewRequest(
-			http.MethodGet,
-			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
-			nil,
-		)
-		assert.Nil(t, err)
-
-		resp := httptest.NewRecorder()
-		router.ServeHTTP(resp, req)
-
-		assert.Equal(t, http.StatusBadRequest, resp.Code)
-		assert.JSONEq(t, `{"message":"hermesID is required"}`, resp.Body.String())
-	})
 	t.Run("returns error on failed history retrieval", func(t *testing.T) {
 		mockResponse := ""
 		server := newTestTransactorServer(http.StatusAccepted, mockResponse)
@@ -308,17 +265,26 @@ func Test_SettleHistory(t *testing.T) {
 		assert.JSONEq(t, `{"message":"explosions everywhere"}`, resp.Body.String())
 	})
 	t.Run("returns settlement history", func(t *testing.T) {
-		expectedJSON := `[{"time":"2020-05-26T09:12:32.475904Z","tx_hash":"0x88af51047ff2da1e3626722fe239f70c3ddd668f067b2ac8d67b280d2eff39f7","promise":{"ChannelID":"+6pGXXkM8mIuwjZ72JNukxcqE1UkhbC47Ijg4UqurJY=","Amount":30245,"Fee":0,"Hashlock":"6RauIa1dz9pXOca788BIJigdgIzWVbn9k3VXZLvp2gM=","R":"qhLbkT/xKQFxvf7bE66yA/mr4LY5WEnqP/280KnNHi8=","Signature":"pqHSWofpfM7cUZ2KfhKmzd+iyxs6xsbWqXOkO0noCRwEfHHZtAP2S9E+sE72m2bFQmTtPB8mzQ6X0aNrn9h39Rw="},"beneficiary":"0x0000000000000000000000000000000000000000","amount":30091,"total_settled":30245},{"time":"2020-05-26T08:15:58.386698Z","tx_hash":"0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a","promise":{"ChannelID":"+6pGXXkM8mIuwjZ72JNukxcqE1UkhbC47Ijg4UqurJY=","Amount":154,"Fee":0,"Hashlock":"wIAKURZIMqlrlyjXNOX+Y8xIDyPSBZuMFU37bNJrRNQ=","R":"PqnMB6sYiwgM+pPdnk5Q8TOw93E78M7aFz1G2DkBKJE=","Signature":"elsD3ennGajAjUg7Ky4M4+8Olde2V2vNwm2v1c5pqQs/6V0mY7ECPLUzsU8dGKKI5EceFUVGqTnKrcLIUwRY6xs="},"beneficiary":"0x0000000000000000000000000000000000000000","amount":154,"total_settled":154}]`
-		res := []pingpong.SettlementHistoryEntry{}
-		err := json.Unmarshal([]byte(expectedJSON), &res)
-		assert.Nil(t, err)
-		mockResponse := ""
-		server := newTestTransactorServer(http.StatusAccepted, mockResponse)
+		mockStorage := &settlementHistoryProviderMock{settlementHistoryToReturn: []pingpong.SettlementHistoryEntry{
+			{
+				TxHash:      common.HexToHash("0x88af51047ff2da1e3626722fe239f70c3ddd668f067b2ac8d67b280d2eff39f7"),
+				Time:        time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC),
+				Beneficiary: common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),
+				Amount:      big.NewInt(123),
+			},
+			{
+				TxHash: common.HexToHash("0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a"),
+				Time:   time.Date(2020, 6, 7, 8, 9, 10, 0, time.UTC),
+				Amount: big.NewInt(456),
+			},
+		}}
+
+		server := newTestTransactorServer(http.StatusAccepted, "")
 		defer server.Close()
 
 		router := httprouter.New()
 		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-		AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{settlementHistoryToReturn: res}, common.Address{})
+		AddRoutesForTransactor(router, tr, nil, mockStorage, common.Address{})
 
 		req, err := http.NewRequest(
 			http.MethodGet,
@@ -331,7 +297,39 @@ func Test_SettleHistory(t *testing.T) {
 		router.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
-		assert.JSONEq(t, expectedJSON, resp.Body.String())
+		assert.JSONEq(
+			t,
+			`{
+				"settlements": [
+					{
+						"tx_hash": "0x88af51047ff2da1e3626722fe239f70c3ddd668f067b2ac8d67b280d2eff39f7",
+						"provider_id": "",
+						"accountant_id": "0x0000000000000000000000000000000000000000",
+						"channel_address": "0x0000000000000000000000000000000000000000",
+						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
+						"amount": 123,
+						"settled_at": "2020-01-02T03:04:05Z"
+					},
+					{
+						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
+						"provider_id": "",
+						"accountant_id": "0x0000000000000000000000000000000000000000",
+						"channel_address": "0x0000000000000000000000000000000000000000",
+						"beneficiary": "0x0000000000000000000000000000000000000000",
+						"amount": 456,
+						"settled_at": "2020-06-07T08:09:10Z"
+					}
+				],
+				"paging": {
+					"total_items": 2,
+					"total_pages": 1,
+					"current_page": 1,
+					"previous_page": null,
+					"next_page": null
+				}
+			}`,
+			resp.Body.String(),
+		)
 	})
 }
 
@@ -392,6 +390,6 @@ type settlementHistoryProviderMock struct {
 	errToReturn               error
 }
 
-func (shpm *settlementHistoryProviderMock) Get(provider identity.Identity, hermes common.Address) ([]pingpong.SettlementHistoryEntry, error) {
+func (shpm *settlementHistoryProviderMock) List(_ pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error) {
 	return shpm.settlementHistoryToReturn, shpm.errToReturn
 }

@@ -17,12 +17,16 @@
 
 package location
 
+import (
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
+)
+
 // Resolver allows resolving location by ip
 type Resolver interface {
-	DetectLocation() (Location, error)
+	DetectLocation() (locationstate.Location, error)
 }
 
 // OriginResolver fetches the original country
 type OriginResolver interface {
-	GetOrigin() (Location, error)
+	GetOrigin() locationstate.Location
 }

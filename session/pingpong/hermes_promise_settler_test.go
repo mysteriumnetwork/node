@@ -547,6 +547,6 @@ func (mt *mockTransactor) FetchRegistrationStatus(id string) (registry.Transacto
 
 type settlementHistoryStorageMock struct{}
 
-func (shsm *settlementHistoryStorageMock) Store(provider identity.Identity, hermes common.Address, she SettlementHistoryEntry) error {
+func (shsm *settlementHistoryStorageMock) Store(_ SettlementHistoryEntry) error {
 	return nil
 }

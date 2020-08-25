@@ -25,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/core/state/event"
@@ -115,8 +115,8 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 			},
 			Sessions: make([]session.History, 0),
 			Connection: stateEvent.Connection{
-				Session: connection.Status{
-					State: connection.NotConnected,
+				Session: connectionstate.Status{
+					State: connectionstate.NotConnected,
 				},
 			},
 		},
@@ -185,10 +185,10 @@ func (k *Keeper) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(natEvent.AppTopicTraversal, k.consumeNATEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionState, k.consumeConnectionStateEvent); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, k.consumeConnectionStateEvent); err != nil {
 		return err
 	}
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, k.consumeConnectionStatisticsEvent); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, k.consumeConnectionStatisticsEvent); err != nil {
 		return err
 	}
 	if err := bus.SubscribeAsync(bandwidth.AppTopicConnectionThroughput, k.consumeConnectionThroughputEvent); err != nil {
@@ -306,6 +306,7 @@ func (k *Keeper) addSession(e sevent.AppEventSession) {
 		HermesID:        e.Session.HermesID.Hex(),
 		ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
 		ServiceType:     e.Session.Proposal.ServiceType,
+		ConsumerCountry: e.Session.ConsumerLocation.Country,
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 		Started:         e.Session.StartedAt,
 		Status:          session.StatusNew,
@@ -386,13 +387,13 @@ func (k *Keeper) updateSessionEarnings(e interface{}) {
 func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(connection.AppEventConnectionState)
+	evt, ok := e.(connectionstate.AppEventConnectionState)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return
 	}
 
-	if evt.State == connection.NotConnected {
+	if evt.State == connectionstate.NotConnected {
 		k.state.Connection = stateEvent.Connection{}
 	}
 	k.state.Connection.Session = evt.SessionInfo
@@ -404,7 +405,7 @@ func (k *Keeper) consumeConnectionStateEvent(e interface{}) {
 func (k *Keeper) updateConnectionStats(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	evt, ok := e.(connection.AppEventConnectionStatistics)
+	evt, ok := e.(connectionstate.AppEventConnectionStatistics)
 	if !ok {
 		log.Warn().Msg("Received a wrong kind of event for connection state update")
 		return

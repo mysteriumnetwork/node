@@ -19,8 +19,6 @@ package pingpong
 
 import (
 	"context"
-	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/p2p"
@@ -71,56 +69,4 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	defer cancel()
 	_, err := es.ch.Send(ctx, p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
 	return err
-}
-
-func exchangeMessageReceiver(channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
-	exchangeChan := make(chan crypto.ExchangeMessage, 1)
-
-	channel.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
-		var msg pb.ExchangeMessage
-		if err := c.Request().UnmarshalProto(&msg); err != nil {
-			return fmt.Errorf("could not unmarshal exchange message proto: %w", err)
-		}
-		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
-
-		amount, ok := new(big.Int).SetString(msg.GetPromise().GetAmount(), bigIntBase)
-		if !ok {
-			return fmt.Errorf("could not unmarshal field amount of value %v", amount)
-		}
-
-		fee, ok := new(big.Int).SetString(msg.GetPromise().GetFee(), bigIntBase)
-		if !ok {
-			return fmt.Errorf("could not unmarshal field fee of value %v", fee)
-		}
-
-		agreementID, ok := new(big.Int).SetString(msg.GetAgreementID(), bigIntBase)
-		if !ok {
-			return fmt.Errorf("could not unmarshal field agreementID of value %v", agreementID)
-		}
-
-		agreementTotal, ok := new(big.Int).SetString(msg.GetAgreementTotal(), bigIntBase)
-		if !ok {
-			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
-		}
-
-		exchangeChan <- crypto.ExchangeMessage{
-			Promise: crypto.Promise{
-				ChannelID: msg.GetPromise().GetChannelID(),
-				Amount:    amount,
-				Fee:       fee,
-				Hashlock:  msg.GetPromise().GetHashlock(),
-				R:         msg.GetPromise().GetR(),
-				Signature: msg.GetPromise().GetSignature(),
-			},
-			AgreementID:    agreementID,
-			AgreementTotal: agreementTotal,
-			Provider:       msg.GetProvider(),
-			Signature:      msg.GetSignature(),
-			HermesID:       msg.GetHermesID(),
-		}
-
-		return nil
-	})
-
-	return exchangeChan, nil
 }

@@ -122,23 +122,40 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 		return
 	}
 
-	api.mmn.SetAPIKey(req.ApiKey)
-
-	errorMap := api.validateApiKeyRequestAndRegister(req)
-	if errorMap.HasErrors() {
-		api.mmn.SetAPIKey(req.ApiKey)
-
-		utils.SendValidationErrorMessage(writer, errorMap)
+	if errors := req.Validate(); errors.HasErrors() {
+		utils.SendValidationErrorMessage(writer, errors)
 		return
 	}
 
-	mmnCfg := make(map[string]interface{})
-	mmnCfg["api-key"] = req.ApiKey
-	api.config.SetUser("mmn", mmnCfg)
-
-	err = api.config.SaveUserConfig()
-	if err != nil {
+	api.config.SetUser("mmn.api-key", req.ApiKey)
+	if err = api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
+		return
+	}
+
+	err = api.mmn.Register()
+	if err != nil {
+		log.Error().Msgf("MMN registration error: %s", err.Error())
+
+		switch {
+		case strings.Contains(err.Error(), "authentication needed: password or unlock"):
+			errors := validation.NewErrorMap()
+			errors.ForField("api_key").AddError("identity", "Identity is locked")
+			utils.SendValidationErrorMessage(writer, errors)
+		case strings.Contains(err.Error(), "already owned"):
+			errors := validation.NewErrorMap()
+			errors.ForField("api_key").AddError(
+				"already_owned",
+				"This node has already been claimed. Please visit https://my.mysterium.network/ and unclaim it first.",
+			)
+			utils.SendValidationErrorMessage(writer, errors)
+		case strings.Contains(err.Error(), "invalid api key"):
+			errors := validation.NewErrorMap()
+			errors.ForField("api_key").AddError("not_found", "Invalid API key")
+			utils.SendValidationErrorMessage(writer, errors)
+		default:
+			utils.SendError(writer, err, http.StatusInternalServerError)
+		}
 		return
 	}
 }
@@ -156,51 +173,11 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) ClearApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
-	api.mmn.SetAPIKey("")
 	api.config.RemoveUser("mmn")
-
-	err := api.config.SaveUserConfig()
-	if err != nil {
+	if err := api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return
 	}
-}
-
-func (api *mmnAPI) validateApiKeyRequestAndRegister(sr contract.MMNApiKeyRequest) *validation.FieldErrorMap {
-	errors := validation.NewErrorMap()
-	if len(sr.ApiKey) == 0 {
-		errors.ForField("api_key").AddError("required", "API key is required")
-		return errors
-	}
-
-	if len(sr.ApiKey) < 40 {
-		errors.ForField("api_key").AddError("required", "Invalid API key")
-		return errors
-	}
-
-	err := api.mmn.Register()
-
-	if err != nil {
-		log.Error().Msgf("validation error: %s", err.Error())
-
-		if strings.Contains(err.Error(), "authentication needed: password or unlock") {
-			errors.ForField("api_key").AddError("identity", "Identity is locked")
-			return errors
-		}
-
-		if strings.Contains(err.Error(), "already owned") {
-			errors.ForField("api_key").AddError(
-				"already_owned",
-				"This node has already been claimed. Please visit https://my.mysterium.network/ and unclaim it first.",
-			)
-			return errors
-		}
-
-		if strings.Contains(err.Error(), "invalid api key") {
-			errors.ForField("api_key").AddError("not_found", "Invalid API key")
-		}
-	}
-	return errors
 }
 
 // AddRoutesForMMN registers /mmn endpoints in Tequilapi

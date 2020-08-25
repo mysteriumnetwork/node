@@ -51,11 +51,11 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 // description: Returns list of sessions history
 // parameters:
 //   - in: query
-//     name: create_from
+//     name: date_from
 //     description: Created date to filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
 //     type: string
 //   - in: query
-//     name: create_to
+//     name: date_to
 //     description: Created date to filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
 //     type: string
 //   - in: query
@@ -90,25 +90,25 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	query := session.NewQuery()
 
-	from := time.Now().AddDate(0, 0, -30)
-	if fromStr := request.URL.Query().Get("create_from"); fromStr != "" {
+	dateFrom := time.Now().AddDate(0, 0, -30)
+	if fromStr := request.URL.Query().Get("date_from"); fromStr != "" {
 		var err error
-		if from, err = time.Parse(time.RFC3339, fromStr); err != nil {
+		if dateFrom, err = time.Parse(time.RFC3339, fromStr); err != nil {
 			utils.SendError(resp, err, http.StatusBadRequest)
 			return
 		}
 	}
-	query.FilterFrom(from)
+	query.FilterFrom(dateFrom)
 
-	to := time.Now()
-	if toStr := request.URL.Query().Get("created_to"); toStr != "" {
+	dateTo := time.Now()
+	if toStr := request.URL.Query().Get("date_to"); toStr != "" {
 		var err error
-		if to, err = time.Parse(time.RFC3339, toStr); err != nil {
+		if dateTo, err = time.Parse(time.RFC3339, toStr); err != nil {
 			utils.SendError(resp, err, http.StatusBadRequest)
 			return
 		}
 	}
-	query.FilterTo(to)
+	query.FilterTo(dateTo)
 
 	if direction := request.URL.Query().Get("direction"); direction != "" {
 		query.FilterDirection(direction)

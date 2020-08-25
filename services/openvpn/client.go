@@ -29,6 +29,7 @@ import (
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -49,7 +50,7 @@ func NewClient(openvpnBinary, scriptDir, runtimeDir string,
 	ipResolver ip.Resolver,
 ) (connection.Connection, error) {
 
-	stateCh := make(chan connection.State, 100)
+	stateCh := make(chan connectionstate.State, 100)
 	client := &Client{
 		scriptDir:           scriptDir,
 		runtimeDir:          runtimeDir,
@@ -83,8 +84,8 @@ type Client struct {
 	scriptDir           string
 	runtimeDir          string
 	signerFactory       identity.SignerFactory
-	stateCh             chan connection.State
-	stats               connection.Statistics
+	stateCh             chan connectionstate.State
+	stats               connectionstate.Statistics
 	statsMu             sync.RWMutex
 	process             openvpn.Process
 	processFactory      processFactory
@@ -96,12 +97,12 @@ type Client struct {
 var _ connection.Connection = &Client{}
 
 // State returns connection state channel.
-func (c *Client) State() <-chan connection.State {
+func (c *Client) State() <-chan connectionstate.State {
 	return c.stateCh
 }
 
 // Statistics returns connection statistics channel.
-func (c *Client) Statistics() (connection.Statistics, error) {
+func (c *Client) Statistics() (connectionstate.Statistics, error) {
 	c.statsMu.RLock()
 	defer c.statsMu.RUnlock()
 	return c.stats, nil
@@ -196,7 +197,7 @@ func newStateMiddleware(stateChannel connection.StateChannel) management.Middlew
 func getStateCallback(stateChannel connection.StateChannel) func(openvpnState openvpn.State) {
 	return func(openvpnState openvpn.State) {
 		connectionState := openVpnStateCallbackToConnectionState(openvpnState)
-		if connectionState != connection.Unknown {
+		if connectionState != connectionstate.Unknown {
 			stateChannel <- connectionState
 		}
 
@@ -208,16 +209,16 @@ func getStateCallback(stateChannel connection.StateChannel) func(openvpnState op
 }
 
 // openvpnStateMap maps openvpn states to connection state
-var openvpnStateMap = map[openvpn.State]connection.State{
-	openvpn.ConnectedState:    connection.Connected,
-	openvpn.ExitingState:      connection.Disconnecting,
-	openvpn.ReconnectingState: connection.Reconnecting,
+var openvpnStateMap = map[openvpn.State]connectionstate.State{
+	openvpn.ConnectedState:    connectionstate.Connected,
+	openvpn.ExitingState:      connectionstate.Disconnecting,
+	openvpn.ReconnectingState: connectionstate.Reconnecting,
 }
 
 // openVpnStateCallbackToConnectionState maps openvpn.State to connection.State. Returns a pointer to connection.state, or nil
-func openVpnStateCallbackToConnectionState(input openvpn.State) connection.State {
+func openVpnStateCallbackToConnectionState(input openvpn.State) connectionstate.State {
 	if val, ok := openvpnStateMap[input]; ok {
 		return val
 	}
-	return connection.Unknown
+	return connectionstate.Unknown
 }

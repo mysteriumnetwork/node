@@ -18,7 +18,7 @@
 package bandwidth
 
 import (
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 )
 
@@ -28,7 +28,7 @@ const AppTopicConnectionThroughput = "Throughput"
 // AppEventConnectionThroughput represents a session throughput event.
 type AppEventConnectionThroughput struct {
 	Throughput  Throughput
-	SessionInfo connection.Status
+	SessionInfo connectionstate.Status
 }
 
 // Throughput represents the current(moment) download and upload speeds.

@@ -1,5 +1,3 @@
-// +build !darwin,!windows
-
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
@@ -20,15 +18,38 @@
 package sleep
 
 import (
+	winlog "github.com/mysteriumnetwork/gowinlog"
 	"github.com/rs/zerolog/log"
 )
 
-// Start noop function
+//Start starts event log notifier
 func (n *Notifier) Start() {
-	log.Debug().Msg("Register for noop sleep events")
+	log.Debug().Msg("Register for sleep log events")
+
+	watcher, err := winlog.NewWinLogWatcher()
+	if err != nil {
+		log.Error().Msgf("Couldn't create log watcher: %v\n", err)
+		return
+	}
+
+	watcher.SubscribeFromNow("System", "*[System[Provider[@Name='Microsoft-Windows-Power-Troubleshooter'] and EventID=1]]")
+	for {
+		select {
+		case <-watcher.Event():
+			n.eventbus.Publish(AppTopicSleepNotification, EventWakeup)
+		case err := <-watcher.Error():
+			log.Error().Msgf("Log watcher error: %v\n", err)
+		case <-n.stop:
+			break
+		}
+	}
+	watcher.Shutdown()
 }
 
-// Stop noop function
+//Stop stops event log notifier
 func (n *Notifier) Stop() {
-	log.Debug().Msg("Unregister noop sleep events")
+	n.stopOnce.Do(func() {
+		log.Debug().Msg("Unregister sleep log events watcher")
+		close(n.stop)
+	})
 }

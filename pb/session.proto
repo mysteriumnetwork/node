@@ -24,6 +24,11 @@ message ConsumerInfo {
   string id = 1;
   string hermesID = 2;
   string paymentVersion = 3;
+  LocationInfo location = 4;
+}
+
+message LocationInfo {
+  string country = 1;
 }
 
 message SessionStatus {
