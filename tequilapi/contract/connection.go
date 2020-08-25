@@ -39,7 +39,7 @@ func NewConnectionStatusDTO(session connectionstate.Status) ConnectionStatusDTO 
 		SessionID:  string(session.SessionID),
 	}
 	if session.HermesID != emptyAddress {
-		response.HermesAddress = session.HermesID.Hex()
+		response.HermesID = session.HermesID.Hex()
 	}
 	// None exists, for not started connection
 	if session.Proposal.ProviderID != "" {
@@ -59,7 +59,7 @@ type ConnectionStatusDTO struct {
 	ConsumerID string `json:"consumer_id,omitempty"`
 
 	// example: 0x00
-	HermesAddress string `json:"hermes_address,omitempty"`
+	HermesID string `json:"hermes_id,omitempty"`
 
 	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
 	Proposal *ProposalDTO `json:"proposal,omitempty"`
