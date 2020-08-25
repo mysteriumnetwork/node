@@ -136,7 +136,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			// this might be provider / consumer performance dependent
 			// make sleep time dependent on pinger interval and wait for 2 ping iterations
 			// TODO: either reintroduce eventual increase of TTL on consumer or maintain some sane delay
-			dur := traversal.DefaultPingConfig().Interval.Milliseconds() * 2
+			dur := traversal.DefaultPingConfig().Interval.Milliseconds() * int64(len(config.localPorts)) / 2
 			log.Debug().Msgf("Delaying pings from consumer for %v ms", dur)
 			time.Sleep(time.Duration(dur) * time.Millisecond)
 
