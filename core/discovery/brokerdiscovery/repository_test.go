@@ -85,7 +85,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst()}, repo.storage.Proposals())
 }
 
@@ -119,7 +119,7 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	proposalRegister(connection, `{
 		"proposal": {"provider_id": "0x1"}
 	}`)
-	assert.Eventually(t, proposalCountEquals(repo, 0), 2*time.Second, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 0), 2*time.Second, 10*time.Millisecond)
 }
 
 func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
@@ -139,7 +139,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
 	expected := []market.ServiceProposal{proposalFirst()}
 	actual := repo.storage.Proposals()
 	assert.Exactly(t, expected, actual)
@@ -159,7 +159,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 		"proposal": {"provider_id": "0x1", "service_type": "mock_service", "payment_method_type": "mock_payment", "provider_contacts": [{"type":"mock_contact"}]}
 	}`)
 
-	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 1*time.Millisecond)
+	assert.Eventually(t, proposalCountEquals(repo, 1), 2*time.Second, 10*time.Millisecond)
 	assert.Exactly(t, []market.ServiceProposal{proposalSecond()}, repo.storage.Proposals())
 }
 

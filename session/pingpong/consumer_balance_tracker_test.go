@@ -36,8 +36,8 @@ var mockMystSCaddress = common.HexToAddress("0x0")
 
 var initialBalance = big.NewInt(100000000)
 
-var defaultWaitTime = time.Millisecond * 1000
-var defaultWaitInterval = time.Millisecond
+var defaultWaitTime = 2 * time.Second
+var defaultWaitInterval = 10 * time.Millisecond
 
 func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")

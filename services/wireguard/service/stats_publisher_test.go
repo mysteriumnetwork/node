@@ -52,7 +52,7 @@ func Test_statsPublisher_start(t *testing.T) {
 		evt, ok := lastEvt.(event.AppEventDataTransferred)
 		assert.True(t, ok)
 		return evt.ID == "kappa" && evt.Down == 52 && evt.Up == 25
-	}, time.Second, time.Microsecond)
+	}, 2*time.Second, 10*time.Millisecond)
 
 	publisher.stop()
 

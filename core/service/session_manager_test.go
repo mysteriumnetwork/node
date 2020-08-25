@@ -138,7 +138,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 		assert.Equal(t, "Provider config", traceEvent4.Key)
 
 		return true
-	}, time.Second, 10*time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
@@ -189,7 +189,7 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 		assert.Equal(t, currentProposal, closeEvent.Session.Proposal)
 
 		return true
-	}, time.Second, 10*time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
@@ -218,7 +218,7 @@ func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	assert.Eventuallyf(t, func() bool {
 		_, found := sessionStore.Find(sessionOld.ID)
 		return !found
-	}, time.Second, 10*time.Millisecond, "Waiting for session destroy")
+	}, 2*time.Second, 10*time.Millisecond, "Waiting for session destroy")
 }
 
 func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
@@ -251,7 +251,7 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 		assert.Equal(t, "Provider session start", traceEvent2.Key)
 
 		return true
-	}, time.Second, 10*time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 type MockNatEventTracker struct {

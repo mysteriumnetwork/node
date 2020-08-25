@@ -63,7 +63,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		morqa.sendMetrics()
 		return len(events.Events) > 0
-	}, time.Second, time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 
 	assert.Exactly(
 		t,
