@@ -25,11 +25,12 @@ import (
 )
 
 type consumerBalanceGetter interface {
-	GetBalance(ID identity.Identity) *big.Int
+	GetBalance(id identity.Identity) *big.Int
+	ForceBalanceUpdate(id identity.Identity) *big.Int
 }
 
 type unlockChecker interface {
-	IsUnlocked(ID string) bool
+	IsUnlocked(id string) bool
 }
 
 // Validator validates pre connection conditions.
@@ -54,6 +55,11 @@ func (v *Validator) validateBalance(consumerID identity.Identity, proposal marke
 
 	proposalPrice := proposal.PaymentMethod.GetPrice()
 	balance := v.consumerBalanceGetter.GetBalance(consumerID)
+	if balance.Cmp(proposalPrice.Amount) >= 0 {
+		return true
+	}
+
+	balance = v.consumerBalanceGetter.ForceBalanceUpdate(consumerID)
 	return balance.Cmp(proposalPrice.Amount) >= 0
 }
 
