@@ -103,10 +103,6 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(registry.AppTopicTransactorTopUp, cbt.handleTopUpEvent)
-	if err != nil {
-		return err
-	}
 	err = bus.SubscribeAsync(string(nodevent.StatusStopped), cbt.handleStopEvent)
 	if err != nil {
 		return err
@@ -165,36 +161,6 @@ func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGran
 	}
 
 	cbt.updateGrandTotal(ev.ConsumerID, ev.Current)
-}
-
-func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
-	addr, err := cbt.channelAddressCalculator.GetChannelAddress(identity.FromAddress(id))
-	if err != nil {
-		log.Error().Err(err).Msg("Could not calculate channel address")
-		return
-	}
-	sub, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(addr, cbt.mystSCAddress, time.Minute*15)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not subscribe to consumer balance event")
-		return
-	}
-
-	updated := false
-	defer cancel()
-	select {
-	case ev, more := <-sub:
-		if !more {
-			// in case of a timeout, force update
-			if !updated {
-				cbt.ForceBalanceUpdate(identity.FromAddress(id))
-			}
-			return
-		}
-		updated = true
-		cbt.increaseBCBalance(identity.FromAddress(id), ev.Value)
-	case <-cbt.stop:
-		return
-	}
 }
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance

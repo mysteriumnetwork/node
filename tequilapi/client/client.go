@@ -149,25 +149,6 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *
 	return nil
 }
 
-// TopUp tops up identity
-func (client *Client) TopUp(identity string) error {
-	payload := registry.TopUpRequest{
-		Identity: identity,
-	}
-
-	response, err := client.http.Post("transactor/topup", payload)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
-	}
-
-	return nil
-}
-
 // ConnectionCreate initiates a new connection to a host identified by providerID
 func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
 	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{

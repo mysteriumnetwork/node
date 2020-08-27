@@ -44,6 +44,7 @@ func (rs RegistrationStatus) String() string {
 		"Unregistered",
 		"InProgress",
 		"RegistrationError",
+		"RegistrationError",
 	}[rs]
 }
 

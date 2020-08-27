@@ -495,20 +495,6 @@ func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	return nil
 }
 
-// TopUpRequest represents top-up request.
-type TopUpRequest struct {
-	IdentityAddress string
-}
-
-// TopUp adds resets to default balance. This is temporary flow while
-// payments are not production ready.
-func (mb *MobileNode) TopUp(req *TopUpRequest) error {
-	if err := mb.transactor.TopUp(req.IdentityAddress); err != nil {
-		return errors.Wrap(err, "could not top-up balance")
-	}
-	return nil
-}
-
 // GetBalanceRequest represents balance request.
 type GetBalanceRequest struct {
 	IdentityAddress string

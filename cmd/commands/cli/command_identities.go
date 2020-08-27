@@ -38,7 +38,6 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageNewIdentity,
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
-		"  " + usageTopupIdentity,
 		"  " + usageSettle,
 	}, "\n")
 
@@ -64,8 +63,6 @@ func (c *cliApp) identities(argsString string) {
 		c.registerIdentity(actionArgs)
 	case "beneficiary":
 		c.setBeneficiary(actionArgs)
-	case "topup":
-		c.topupIdentity(actionArgs)
 	case "settle":
 		c.settle(actionArgs)
 	default:
@@ -192,23 +189,6 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	info("Registration successful, you can now connect.")
-}
-
-const usageTopupIdentity = "topup <identity>"
-
-func (c *cliApp) topupIdentity(args []string) {
-	if len(args) != 1 {
-		info("Usage: " + usageTopupIdentity)
-		return
-	}
-
-	address := args[0]
-	err := c.tequilapi.TopUp(address)
-	if err != nil {
-		warn(err)
-		return
-	}
-	success("Identity topped up")
 }
 
 const usageSettle = "settle <providerIdentity>"
