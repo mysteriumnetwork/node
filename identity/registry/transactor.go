@@ -38,9 +38,6 @@ import (
 // AppTopicTransactorRegistration represents the registration topic to which events regarding registration attempts on transactor will occur
 const AppTopicTransactorRegistration = "transactor_identity_registration"
 
-// AppTopicTransactorTopUp represents the top up topic to which events regarding top up attempts are sent.
-const AppTopicTransactorTopUp = "transactor_top_up"
-
 type channelProvider interface {
 	GetProviderChannel(hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 }
@@ -91,13 +88,6 @@ type IdentityRegistrationRequestDTO struct {
 	Beneficiary string `json:"beneficiary,omitempty"`
 	// Fee: negotiated fee with transactor
 	Fee *big.Int `json:"fee,omitempty"`
-}
-
-// TopUpRequest represents the myst top up request
-// swagger:model TopUpRequestDTO
-type TopUpRequest struct {
-	// Identity to top up with myst
-	Identity string `json:"identity"`
 }
 
 // IdentityRegistrationRequest represents the identity registration request body
@@ -165,28 +155,6 @@ func (t *Transactor) FetchStakeDecreaseFee() (FeesResponse, error) {
 
 	err = t.httpClient.DoRequestAndParseResponse(req, &f)
 	return f, err
-}
-
-// TopUp requests a myst topup for testing purposes.
-func (t *Transactor) TopUp(id string) error {
-	channelAddress, err := pc.GenerateChannelAddress(id, t.hermesID, t.registryAddress, t.channelImplementation)
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate channel address")
-	}
-
-	payload := TopUpRequest{
-		Identity: channelAddress,
-	}
-
-	req, err := requests.NewPostRequest(t.endpointAddress, "topup", payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to create TopUp request")
-	}
-
-	// This is left as a synchronous call on purpose.
-	t.publisher.Publish(AppTopicTransactorTopUp, id)
-
-	return t.httpClient.DoRequest(req)
 }
 
 // SettleAndRebalance requests the transactor to settle and rebalance the given channel

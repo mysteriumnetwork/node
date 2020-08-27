@@ -20,7 +20,6 @@ package endpoints
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -90,59 +89,6 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(t, `{"registration":1, "settlement":1, "hermes":11, "decreaseStake":1}`, resp.Body.String())
-}
-
-func Test_TopUp_OK(t *testing.T) {
-	mockResponse := ""
-	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
-
-	router := httprouter.New()
-
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{}, common.Address{})
-
-	topUpData := `{"identity": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"/transactor/topup",
-		bytes.NewBufferString(topUpData),
-	)
-	assert.Nil(t, err)
-
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusAccepted, resp.Code)
-	assert.Equal(t, "", resp.Body.String())
-}
-
-func Test_TopUp_BubblesErrors(t *testing.T) {
-	mockResponse := ""
-	mockStatus := http.StatusBadGateway
-	server := newTestTransactorServer(mockStatus, mockResponse)
-
-	router := httprouter.New()
-
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{}, common.Address{})
-
-	topUpData := `{"identity": "0x599d43715DF3070f83355D9D90AE62c159E62A75"}`
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"/transactor/topup",
-		bytes.NewBufferString(topUpData),
-	)
-	assert.Nil(t, err)
-
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.JSONEq(
-		t,
-		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
-		resp.Body.String(),
-	)
 }
 
 func Test_SettleAsync_OK(t *testing.T) {

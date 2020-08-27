@@ -221,45 +221,6 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
-func TestConsumerBalanceTracker_Handles_TopUp(t *testing.T) {
-	id1 := identity.FromAddress("0x000000001")
-	hermesID := common.HexToAddress("0x000000acc")
-	var grandTotalPromised = big.NewInt(100)
-	bus := eventbus.New()
-	mcts := mockConsumerTotalsStorage{
-		res: grandTotalPromised,
-		bus: bus,
-	}
-	bc := mockConsumerBalanceChecker{
-		channelToReturn: client.ConsumerChannel{
-			Balance: initialBalance,
-			Settled: big.NewInt(0),
-		},
-		ch: make(chan *bindings.MystTokenTransfer),
-	}
-	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{})
-
-	err := cbt.Subscribe(bus)
-	assert.NoError(t, err)
-	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
-	assert.Eventually(t, func() bool {
-		return cbt.GetBalance(id1).Cmp(new(big.Int).Sub(initialBalance, grandTotalPromised)) == 0
-	}, defaultWaitTime, defaultWaitInterval)
-
-	bus.Publish(registry.AppTopicTransactorTopUp, id1.Address)
-	var topUpAmount = big.NewInt(123)
-	bc.ch <- &bindings.MystTokenTransfer{
-		Value: topUpAmount,
-	}
-
-	assert.Eventually(t, func() bool {
-		div := new(big.Int).Sub(initialBalance, grandTotalPromised)
-		currentBalance := new(big.Int).Add(div, topUpAmount)
-		return cbt.GetBalance(id1).Cmp(currentBalance) == 0
-	}, defaultWaitTime, defaultWaitInterval)
-}
-
 func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	accountantID := common.HexToAddress("0x000000acc")

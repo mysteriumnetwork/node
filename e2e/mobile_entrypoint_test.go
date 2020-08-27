@@ -87,7 +87,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
 		require.NoError(t, err)
-		require.Equal(t, crypto.BigMystToFloat(big.NewInt(0).Sub(topUpAmount, registrationFee)), balance.Balance)
+		require.Equal(t, crypto.BigMystToFloat(big.NewInt(0).Sub(balanceAfterRegistration, registrationFee)), balance.Balance)
 	})
 
 	t.Run("Test shutdown", func(t *testing.T) {

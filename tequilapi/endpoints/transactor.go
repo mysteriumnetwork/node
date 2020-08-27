@@ -45,7 +45,6 @@ type Transactor interface {
 	FetchRegistrationFees() (registry.FeesResponse, error)
 	FetchSettleFees() (registry.FeesResponse, error)
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
-	TopUp(identity string) error
 	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
 	DecreaseStake(id string, amount, transactorFee uint64) error
 }
@@ -211,45 +210,6 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 	}
 
 	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID)), "settling failed")
-}
-
-// swagger:operation POST /transactor/topup
-// ---
-// summary: tops up myst to the given identity
-// description: tops up myst to the given identity
-// parameters:
-// - in: body
-//   name: body
-//   description: top up request body
-//   schema:
-//     $ref: "#/definitions/TopUpRequestDTO"
-// responses:
-//   202:
-//     description: top up request accepted
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   400:
-//     description: Bad request
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	topUpDTO := registry.TopUpRequest{}
-
-	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
-	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to parse top up request"), http.StatusBadRequest)
-		return
-	}
-
-	err = te.transactor.TopUp(topUpDTO.Identity)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
-	resp.WriteHeader(http.StatusAccepted)
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
@@ -536,7 +496,6 @@ func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, pr
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
-	router.POST("/transactor/topup", te.TopUp)
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)
 	router.GET("/transactor/settle/history", te.SettlementHistory)
