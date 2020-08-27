@@ -76,8 +76,8 @@ func ReleaseDebianPPASnapshot() error {
 	})
 }
 
-// ReleaseDebianPPAPreRelease releases to node-pre PPA (which is then manually promoted to node PPA)
-func ReleaseDebianPPAPreRelease() error {
+// ReleaseDebianPPA releases to node-betanet PPA.
+func ReleaseDebianPPA() error {
 	err := env.EnsureEnvVars(
 		env.TagBuild,
 		env.BuildVersion,
@@ -87,29 +87,13 @@ func ReleaseDebianPPAPreRelease() error {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPAPreRelease action...")
+		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPA action...")
 		return nil
 	}
 
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:  "node-pre",
+		repository:  "node-betanet",
 		version:     ppaVersion(env.Str(env.BuildVersion)),
-		buildNumber: env.Str(env.BuildNumber),
-	})
-}
-
-// ReleaseDebianPPADevnet releases to node-devnet PPA.
-func ReleaseDebianPPADevnet() error {
-	err := env.EnsureEnvVars(
-		env.BuildNumber,
-	)
-	if err != nil {
-		return err
-	}
-
-	return releaseDebianPPA(&releaseDebianOpts{
-		repository:  "node-devnet",
-		version:     ppaVersion("0.0.0"),
 		buildNumber: env.Str(env.BuildNumber),
 	})
 }
