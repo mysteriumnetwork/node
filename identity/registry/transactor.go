@@ -87,7 +87,7 @@ func (fr FeesResponse) IsValid() bool {
 type IdentityRegistrationRequestDTO struct {
 	// Stake is used by Provider, default 0
 	Stake *big.Int `json:"stake,omitempty"`
-	// Cache out address for Provider
+	// Cash out address for Provider
 	Beneficiary string `json:"beneficiary,omitempty"`
 	// Fee: negotiated fee with transactor
 	Fee *big.Int `json:"fee,omitempty"`
@@ -110,7 +110,7 @@ type IdentityRegistrationRequest struct {
 	Fee *big.Int `json:"fee"`
 	// Beneficiary: Provider channelID by default, optionally set during Identity registration.
 	// Can be updated later through transactor. We can check it's value directly from SC.
-	// Its a cache out address
+	// Its a cash out address
 	Beneficiary string `json:"beneficiary"`
 	// Signature from fields above
 	Signature string `json:"signature"`
