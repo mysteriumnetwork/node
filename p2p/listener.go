@@ -220,7 +220,8 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 }
 
 func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
-	tracer := trace.NewTracer()
+	tracer := trace.NewTracer("Provider whole Connect")
+
 	trace := tracer.StartStage("Provider P2P exchange")
 	defer tracer.EndStage(trace)
 

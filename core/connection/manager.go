@@ -181,11 +181,8 @@ func NewManager(
 func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	var sessionID session.ID
 
-	tracer := trace.NewTracer()
-	connectTrace := tracer.StartStage("Consumer whole Connect")
-
+	tracer := trace.NewTracer("Consumer whole Connect")
 	defer func() {
-		tracer.EndStage(connectTrace)
 		traceResult := tracer.Finish(m.eventBus, string(sessionID))
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()

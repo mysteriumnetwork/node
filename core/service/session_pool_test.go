@@ -34,7 +34,7 @@ var (
 	sessionExisting, _ = NewSession(
 		&Instance{ID: "1"},
 		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: "deadbeef"}},
-		trace.NewTracer(),
+		trace.NewTracer(""),
 	)
 )
 
@@ -57,7 +57,7 @@ func TestSessionPool_FindSession_Unknown(t *testing.T) {
 
 func TestSessionPool_Add(t *testing.T) {
 	pool := mockPool(mocks.NewEventBus(), sessionExisting)
-	sessionNew, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer())
+	sessionNew, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer(""))
 
 	pool.Add(sessionNew)
 	assert.Exactly(
@@ -69,7 +69,7 @@ func TestSessionPool_Add(t *testing.T) {
 
 func TestSessionPool_Add_PublishesEvents(t *testing.T) {
 	// given
-	session, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer())
+	session, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer(""))
 	mp := mocks.NewEventBus()
 	pool := NewSessionPool(mp)
 
@@ -88,8 +88,8 @@ func TestSessionPool_FindByPeer(t *testing.T) {
 }
 
 func TestSessionPool_GetAll(t *testing.T) {
-	sessionFirst, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer())
-	sessionSecond, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer())
+	sessionFirst, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer(""))
+	sessionSecond, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer(""))
 
 	pool := &SessionPool{
 		sessions: map[session.ID]*Session{
@@ -122,10 +122,10 @@ func TestSessionPool_RemoveNonExisting(t *testing.T) {
 func TestSessionPool_Remove_Does_Not_Panic(t *testing.T) {
 	pool := mockPool(mocks.NewEventBus(), sessionExisting)
 
-	sessionFirst, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer())
+	sessionFirst, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer(""))
 	pool.Add(sessionFirst)
 
-	sessionSecond, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer())
+	sessionSecond, _ := NewSession(&Instance{}, &pb.SessionRequest{}, trace.NewTracer(""))
 	pool.Add(sessionSecond)
 
 	pool.Remove(sessionFirst.ID)

@@ -97,7 +97,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			channelDialer := NewDialer(mockBroker, signerFactory, verifier, test.ipResolver, test.natConsumerPinger, portPool)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			consumerChannel, err := channelDialer.Dial(ctx, identity.FromAddress("0x2"), providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}}, trace.NewTracer())
+			consumerChannel, err := channelDialer.Dial(ctx, identity.FromAddress("0x2"), providerID, "wireguard", ContactDefinition{BrokerAddresses: []string{"broker"}}, trace.NewTracer("Dial"))
 			assert.NoError(t, err)
 			defer consumerChannel.Close()
 

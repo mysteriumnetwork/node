@@ -33,7 +33,7 @@ var (
 	sessionExisting, _ = service.NewSession(
 		&service.Instance{},
 		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: identityExisting.Address}},
-		trace.NewTracer(),
+		trace.NewTracer(""),
 	)
 	sessionExistingString = string(sessionExisting.ID)
 )
