@@ -135,13 +135,6 @@ package:docker-alpine:
   tags: [go]
   script: go run mage.go -v PackageDockerAlpine
 
-package:docker-alpine-devnet:
-  stage: build
-  tags: [go]
-  script: go run mage.go -v PackageDockerAlpineDevnet
-  only:
-    - v3
-
 package:swagger-redoc-docker:
   stage: build
   tags: [go]
@@ -157,26 +150,12 @@ release-snapshot:docker:
   tags: [go]
   script: go run mage.go -v ReleaseDockerSnapshot
 
-release-snapshot:docker-devnet:
-  stage: release-snapshot
-  tags: [go]
-  script: go run mage.go -v ReleaseDockerDevnet
-  only:
-    - v3
-
 release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPASnapshot
   only:
     - master
-
-release-snapshot:debian-ppa-devnet:
-  stage: release-snapshot
-  tags: [go]
-  script: go run mage.go -v ReleaseDebianPPADevnet
-  only:
-    - v3
 
 release-snapshot:goreport:
   stage: release-snapshot
@@ -192,13 +171,6 @@ release-snapshot:android-sdk:
   only:
     - master
 
-release-snapshot:android-sdk-betanet:
-  stage: release-snapshot
-  tags: [go]
-  script: go run mage.go -v ReleaseAndroidSDKBetanet
-  only:
-    - v3
-
 release-tag:release:
   stage: release-tag
   tags: [go]
@@ -212,7 +184,7 @@ release-tag:docker:
 release-tag:debian-ppa:
   stage: release-tag
   tags: [go]
-  script: go run mage.go -v ReleaseDebianPPAPreRelease
+  script: go run mage.go -v ReleaseDebianPPA
 
 release-tag:android-sdk:
   stage: release-tag
