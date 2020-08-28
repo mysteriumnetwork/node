@@ -55,8 +55,8 @@ var (
 		policy.NewRepository(),
 		&mockDiscovery{},
 	)
-	consumerID   = identity.FromAddress("deadbeef")
-	accountantID = common.HexToAddress("0x1")
+	consumerID = identity.FromAddress("deadbeef")
+	hermesID   = common.HexToAddress("0x1")
 )
 
 type mockBalanceTracker struct {
@@ -98,8 +98,8 @@ func TestManager_Start_StoresSession(t *testing.T) {
 
 	_, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
 		},
 		ProposalID: int64(currentProposalID),
 	})
@@ -118,7 +118,7 @@ func TestManager_Start_StoresSession(t *testing.T) {
 		startEvent := history[0].Event.(sessionEvent.AppEventSession)
 		assert.Equal(t, sessionEvent.CreatedStatus, startEvent.Status)
 		assert.Equal(t, consumerID, startEvent.Session.ConsumerID)
-		assert.Equal(t, accountantID, startEvent.Session.AccountantID)
+		assert.Equal(t, hermesID, startEvent.Session.HermesID)
 		assert.Equal(t, currentProposal, startEvent.Session.Proposal)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
@@ -150,8 +150,8 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 
 	_, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
 		},
 		ProposalID: int64(currentProposalID),
 	})
@@ -166,7 +166,7 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 		startEvent := history[0].Event.(sessionEvent.AppEventSession)
 		assert.Equal(t, sessionEvent.CreatedStatus, startEvent.Status)
 		assert.Equal(t, consumerID, startEvent.Session.ConsumerID)
-		assert.Equal(t, accountantID, startEvent.Session.AccountantID)
+		assert.Equal(t, hermesID, startEvent.Session.HermesID)
 		assert.Equal(t, currentProposal, startEvent.Session.Proposal)
 
 		assert.Equal(t, trace.AppTopicTraceEvent, history[1].Topic)
@@ -185,7 +185,7 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 		closeEvent := history[4].Event.(sessionEvent.AppEventSession)
 		assert.Equal(t, sessionEvent.RemovedStatus, closeEvent.Status)
 		assert.Equal(t, consumerID, closeEvent.Session.ConsumerID)
-		assert.Equal(t, accountantID, closeEvent.Session.AccountantID)
+		assert.Equal(t, hermesID, closeEvent.Session.HermesID)
 		assert.Equal(t, currentProposal, closeEvent.Session.Proposal)
 
 		return true
@@ -195,8 +195,8 @@ func TestManager_Start_DisconnectsOnPaymentError(t *testing.T) {
 func TestManager_Start_Second_Session_Destroy_Stale_Session(t *testing.T) {
 	sessionRequest := &pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
 		},
 		ProposalID: int64(currentProposalID),
 	}
@@ -228,8 +228,8 @@ func TestManager_Start_RejectsUnknownProposal(t *testing.T) {
 
 	_, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
 		},
 		ProposalID: int64(69),
 	})
@@ -277,8 +277,8 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 
 	session, err := manager.Start(&pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
-			Id:           consumerID.Address,
-			AccountantID: accountantID.String(),
+			Id:       consumerID.Address,
+			HermesID: hermesID.String(),
 		},
 		ProposalID: int64(currentProposalID),
 	})

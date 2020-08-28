@@ -44,7 +44,7 @@ type ConsumerBalanceTracker struct {
 	balances     map[identity.Identity]ConsumerBalance
 
 	registry                             registrationStatusProvider
-	accountantAddress                    common.Address
+	hermesAddress                        common.Address
 	mystSCAddress                        common.Address
 	consumerBalanceChecker               consumerBalanceChecker
 	channelAddressCalculator             channelAddressCalculator
@@ -64,7 +64,7 @@ type transactorRegistrationStatusProvider interface {
 func NewConsumerBalanceTracker(
 	publisher eventbus.Publisher,
 	mystSCAddress common.Address,
-	accountantAddress common.Address,
+	hermesAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
 	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,
@@ -76,7 +76,7 @@ func NewConsumerBalanceTracker(
 		balances:                             make(map[identity.Identity]ConsumerBalance),
 		consumerBalanceChecker:               consumerBalanceChecker,
 		mystSCAddress:                        mystSCAddress,
-		accountantAddress:                    accountantAddress,
+		hermesAddress:                        hermesAddress,
 		publisher:                            publisher,
 		channelAddressCalculator:             channelAddressCalculator,
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
@@ -103,10 +103,6 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return err
 	}
-	err = bus.SubscribeAsync(registry.AppTopicTransactorTopUp, cbt.handleTopUpEvent)
-	if err != nil {
-		return err
-	}
 	err = bus.SubscribeAsync(string(nodevent.StatusStopped), cbt.handleStopEvent)
 	if err != nil {
 		return err
@@ -119,14 +115,14 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // GetBalance gets the current balance for given identity
-func (cbt *ConsumerBalanceTracker) GetBalance(id identity.Identity) uint64 {
+func (cbt *ConsumerBalanceTracker) GetBalance(id identity.Identity) *big.Int {
 	if v, ok := cbt.getBalance(id); ok {
 		return v.GetBalance()
 	}
-	return 0
+	return new(big.Int)
 }
 
-func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after uint64) {
+func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, before, after *big.Int) {
 	if before == after {
 		return
 	}
@@ -167,38 +163,8 @@ func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGran
 	cbt.updateGrandTotal(ev.ConsumerID, ev.Current)
 }
 
-func (cbt *ConsumerBalanceTracker) handleTopUpEvent(id string) {
-	addr, err := cbt.channelAddressCalculator.GetChannelAddress(identity.FromAddress(id))
-	if err != nil {
-		log.Error().Err(err).Msg("Could not calculate channel address")
-		return
-	}
-	sub, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(addr, cbt.mystSCAddress, time.Minute*15)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not subscribe to consumer balance event")
-		return
-	}
-
-	updated := false
-	defer cancel()
-	select {
-	case ev, more := <-sub:
-		if !more {
-			// in case of a timeout, force update
-			if !updated {
-				cbt.ForceBalanceUpdate(identity.FromAddress(id))
-			}
-			return
-		}
-		updated = true
-		cbt.increaseBCBalance(identity.FromAddress(id), ev.Value.Uint64())
-	case <-cbt.stop:
-		return
-	}
-}
-
 // ForceBalanceUpdate forces a balance update and returns the updated balance
-func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint64 {
+func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big.Int {
 	fallback := cbt.GetBalance(id)
 
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
@@ -213,26 +179,26 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) uint
 		return fallback
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
+	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
 	if errors.Is(err, ErrNotFound) {
 		if err := cbt.recoverGrandTotalPromised(id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
-		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.accountantAddress)
+		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
 		return fallback
 	}
 
-	var before uint64
+	var before = new(big.Int)
 	if v, ok := cbt.getBalance(id); ok {
 		before = v.GetBalance()
 	}
 
 	cbt.setBalance(id, ConsumerBalance{
-		BCBalance:          cc.Balance.Uint64(),
-		BCSettled:          cc.Settled.Uint64(),
+		BCBalance:          cc.Balance,
+		BCSettled:          cc.Settled,
 		GrandTotalPromised: grandTotal,
 	})
 
@@ -245,7 +211,7 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEve
 	switch event.Status {
 	case registry.InProgress:
 		cbt.alignWithTransactor(event.ID)
-	case registry.RegisteredConsumer, registry.RegisteredProvider:
+	case registry.Registered:
 		cbt.ForceBalanceUpdate(event.ID)
 	}
 }
@@ -258,7 +224,7 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 	}
 
 	// do not override existing balances with transactor data
-	if balance.BCBalance != 0 {
+	if balance.BCBalance.Cmp(big.NewInt(0)) != 0 {
 		return
 	}
 
@@ -297,7 +263,7 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 		return
 	}
 
-	if data.BountyAmount == 0 {
+	if data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
 		// if we've got no bounty, get myst balance from BC and use that as bounty
 		addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
 		if err != nil {
@@ -310,13 +276,13 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 			return
 		}
 
-		data.BountyAmount = balance.Uint64()
+		data.BountyAmount = balance
 	}
 
 	c := ConsumerBalance{
 		BCBalance:          data.BountyAmount,
-		BCSettled:          0,
-		GrandTotalPromised: 0,
+		BCSettled:          new(big.Int),
+		GrandTotalPromised: new(big.Int),
 	}
 	log.Debug().Msgf("Loaded transactor state, current balance: %v MYST", data.BountyAmount)
 	cbt.setBalance(id, c)
@@ -346,7 +312,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 	toRetry := func() error {
 		d, err := cbt.consumerInfoGetter.GetConsumerData(identity.Address)
 		if err != nil {
-			if err != ErrAccountantNotFound {
+			if err != ErrHermesNotFound {
 				return err
 			}
 			log.Debug().Msgf("No previous invoice grand total, assuming zero")
@@ -360,8 +326,12 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 		return err
 	}
 
-	log.Debug().Msgf("Loaded accountant state: already promised: %v", data.LatestPromise.Amount)
-	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.accountantAddress, data.LatestPromise.Amount)
+	if data.LatestPromise.Amount == nil {
+		data.LatestPromise.Amount = new(big.Int)
+	}
+
+	log.Debug().Msgf("Loaded hermes state: already promised: %v", data.LatestPromise.Amount)
+	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.hermesAddress, data.LatestPromise.Amount)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
@@ -370,11 +340,11 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) increaseBCBalance(id identity.Identity, diff uint64) {
+func (cbt *ConsumerBalanceTracker) increaseBCBalance(id identity.Identity, diff *big.Int) {
 	b, ok := cbt.getBalance(id)
 	before := b.BCBalance
 	if ok {
-		b.BCBalance = safeAdd(b.BCBalance, diff)
+		b.BCBalance = new(big.Int).Add(b.BCBalance, diff)
 		cbt.setBalance(id, b)
 	} else {
 		cbt.ForceBalanceUpdate(id)
@@ -392,7 +362,11 @@ func (cbt *ConsumerBalanceTracker) getBalance(id identity.Identity) (ConsumerBal
 		return v, true
 	}
 
-	return ConsumerBalance{}, false
+	return ConsumerBalance{
+		BCBalance:          new(big.Int),
+		BCSettled:          new(big.Int),
+		GrandTotalPromised: new(big.Int),
+	}, false
 }
 
 func (cbt *ConsumerBalanceTracker) setBalance(id identity.Identity, balance ConsumerBalance) {
@@ -402,7 +376,7 @@ func (cbt *ConsumerBalanceTracker) setBalance(id identity.Identity, balance Cons
 	cbt.balances[id] = balance
 }
 
-func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, current uint64) {
+func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, current *big.Int) {
 	b, ok := cbt.getBalance(id)
 	before := b.BCBalance
 	if ok {
@@ -411,35 +385,28 @@ func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, curren
 	} else {
 		cbt.ForceBalanceUpdate(id)
 	}
+
 	after, _ := cbt.getBalance(id)
 
 	go cbt.publishChangeEvent(id, before, after.GetBalance())
 }
 
-func safeSub(a, b uint64) uint64 {
-	if a >= b {
-		return a - b
+func safeSub(a, b *big.Int) *big.Int {
+	if a.Cmp(b) >= 0 {
+		return new(big.Int).Sub(a, b)
 	}
-	return 0
-}
-
-func safeAdd(a, b uint64) uint64 {
-	c := a + b
-	if (c > a) == (b > 0) {
-		return c
-	}
-	return 0
+	return new(big.Int)
 }
 
 // ConsumerBalance represents the consumer balance
 type ConsumerBalance struct {
-	BCBalance          uint64
-	BCSettled          uint64
-	GrandTotalPromised uint64
+	BCBalance          *big.Int
+	BCSettled          *big.Int
+	GrandTotalPromised *big.Int
 }
 
 // GetBalance returns the current balance
-func (cb ConsumerBalance) GetBalance() uint64 {
-	// Balance (to spend) = BCBalance - (accountantPromised - BCSettled)
+func (cb ConsumerBalance) GetBalance() *big.Int {
+	// Balance (to spend) = BCBalance - (hermesPromised - BCSettled)
 	return safeSub(cb.BCBalance, safeSub(cb.GrandTotalPromised, cb.BCSettled))
 }

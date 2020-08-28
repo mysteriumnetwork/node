@@ -19,12 +19,12 @@ package e2e
 
 import (
 	"fmt"
-	"math"
-	"strings"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
@@ -40,19 +40,65 @@ var (
 	consumerPassphrase = "localconsumer"
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
-	accountantID       = "0x7621a5E6EC206309f8E703A653f03F7C8a3097a8"
+	hermesID           = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
+	hermes2ID          = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
+	mystAddress        = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
 )
 
-const (
-	initialBalance uint64 = 690000000
+var (
+	providerStake, _            = big.NewInt(0).SetString("12000000000000000000", 10)
+	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
+	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
 )
 
 type consumer struct {
-	consumerID   string
-	serviceType  string
-	tequila      *tequilapi_client.Client
-	balanceSpent uint64
-	proposal     contract.ProposalDTO
+	consumerID     string
+	serviceType    string
+	tequila        func() *tequilapi_client.Client
+	balanceSpent   *big.Int
+	proposal       contract.ProposalDTO
+	composeService string
+	hermesID       common.Address
+	hermesURL      string
+}
+
+var consumersToTest = []*consumer{
+	{
+		serviceType:    "noop",
+		hermesID:       common.HexToAddress(hermesID),
+		composeService: "myst-consumer-noop",
+		hermesURL:      "http://hermes:8889/api/v2",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-noop")
+		},
+	},
+	{
+		hermesID:       common.HexToAddress(hermesID),
+		serviceType:    "wireguard",
+		hermesURL:      "http://hermes:8889/api/v2",
+		composeService: "myst-consumer-wireguard",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-wireguard")
+		},
+	},
+	{
+		hermesID:       common.HexToAddress(hermesID),
+		hermesURL:      "http://hermes:8889/api/v2",
+		serviceType:    "openvpn",
+		composeService: "myst-consumer-openvpn",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-openvpn")
+		},
+	},
+	{
+		hermesURL:      "http://hermes2:8889/api/v2",
+		hermesID:       common.HexToAddress(hermes2ID),
+		serviceType:    "wireguard",
+		composeService: "myst-consumer-hermes2",
+		tequila: func() *tequilapi_client.Client {
+			return newTequilapiConsumer("myst-consumer-hermes2")
+		},
+	},
 }
 
 func TestConsumerConnectsToProvider(t *testing.T) {
@@ -61,51 +107,43 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
 	})
 
-	servicesInFlag := strings.Split(*consumerServices, ",")
-	consumers := make(map[string]consumer)
 	t.Run("Consumer Creates And Registers Identity", func(t *testing.T) {
 		wg := sync.WaitGroup{}
-		wg.Add(len(servicesInFlag))
+		wg.Add(len(consumersToTest))
 
-		for _, serviceType := range servicesInFlag {
-			go func(serviceType string) {
+		for _, c := range consumersToTest {
+			go func(c *consumer) {
 				defer wg.Done()
-				tequilapiConsumer := newTequilapiConsumer(serviceType)
+				tequilapiConsumer := c.tequila()
 				consumerID := identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
 				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
-				consumers[serviceType] = consumer{
-					consumerID:  consumerID,
-					serviceType: serviceType,
-					tequila:     tequilapiConsumer,
-				}
-			}(serviceType)
+				c.consumerID = consumerID
+			}(c)
 		}
-
 		wg.Wait()
 	})
 
 	t.Run("Consumers Connect to provider", func(t *testing.T) {
 		wg := sync.WaitGroup{}
-		for _, v := range consumers {
+		for _, c := range consumersToTest {
 			wg.Add(1)
-			go func(c consumer) {
+			go func(c *consumer) {
 				defer wg.Done()
-				proposal := consumerPicksProposal(t, c.tequila, c.serviceType)
-				balanceSpent := consumerConnectFlow(t, c.tequila, c.consumerID, accountantID, c.serviceType, proposal)
-				copied := consumers[c.consumerID]
-				copied.balanceSpent = balanceSpent
-				copied.proposal = proposal
-				consumers[c.consumerID] = copied
-				recheckBalancesWithAccountant(t, c.consumerID, balanceSpent, proposal.ServiceType)
-			}(v)
+				proposal := consumerPicksProposal(t, c.tequila(), c.serviceType)
+				balanceSpent := consumerConnectFlow(t, c.tequila(), c.consumerID, c.hermesID.Hex(), c.serviceType, proposal)
+				c.balanceSpent = balanceSpent
+				c.proposal = proposal
+				recheckBalancesWithHermes(t, c.consumerID, balanceSpent, c.serviceType, c.hermesURL)
+			}(c)
 		}
+
 		wg.Wait()
 	})
 
 	t.Run("Validate provider earnings", func(t *testing.T) {
-		var sum uint64
-		for _, v := range consumers {
-			sum += v.balanceSpent
+		var sum = new(big.Int)
+		for _, v := range consumersToTest {
+			sum = new(big.Int).Add(sum, v.balanceSpent)
 		}
 		providerEarnedTokens(t, tequilapiProvider, providerID, sum)
 	})
@@ -113,9 +151,14 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	t.Run("Provider settlement flow", func(t *testing.T) {
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
-		assert.Equal(t, initialBalance, providerStatus.Balance)
+		assert.Equal(t, new(big.Int).Sub(balanceAfterRegistration, registrationFee), providerStatus.Balance)
 
-		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(accountantID), true)
+		// settle hermes 1
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
+		assert.NoError(t, err)
+
+		// settle hermes 2
+		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermes2ID), true)
 		assert.NoError(t, err)
 
 		providerStatus, err = tequilapiProvider.Identity(providerID)
@@ -124,12 +167,51 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		accountantFee := math.Round(0.04 * float64(providerStatus.EarningsTotal))
-		accountantFeeUint := uint64(math.Trunc(accountantFee))
-		expected := initialBalance + providerStatus.EarningsTotal - fees.Settlement - accountantFeeUint
+		earningsByHermes := make(map[common.Address]*big.Int)
+		for _, c := range consumersToTest {
+			copy := earningsByHermes[c.hermesID]
 
-		// To avoid running into rounding errors, assume a delta of 2 micromyst is OK
-		assert.InDelta(t, expected, providerStatus.Balance, 2)
+			if copy == nil {
+				copy = new(big.Int)
+			}
+
+			copy = new(big.Int).Add(copy, c.balanceSpent)
+			earningsByHermes[c.hermesID] = copy
+		}
+		hermesOneEarnings := earningsByHermes[common.HexToAddress(hermesID)]
+		hermesTwoEarnings := earningsByHermes[common.HexToAddress(hermes2ID)]
+		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
+		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
+
+		hermesFee, _ := new(big.Float).Mul(big.NewFloat(0.04), new(big.Float).SetInt(hermesOneEarnings)).Int(nil)
+		feeSum := big.NewInt(0).Add(fees.Settlement, hermesFee)
+		tokenSum := new(big.Int).Add(new(big.Int).Sub(balanceAfterRegistration, registrationFee), hermesOneEarnings)
+		expected := new(big.Int).Sub(tokenSum, feeSum)
+		diff := new(big.Int).Sub(expected, providerStatus.Balance)
+		diff.Abs(diff)
+		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
+	})
+
+	t.Run("Provider decreases stake", func(t *testing.T) {
+		providerStatus, err := tequilapiProvider.Identity(providerID)
+		assert.NoError(t, err)
+		assert.Equal(t, providerStake, providerStatus.Stake)
+		initialStake := providerStatus.Stake
+
+		fees, err := tequilapiProvider.GetTransactorFees()
+		assert.NoError(t, err)
+
+		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), big.NewInt(100), fees.DecreaseStake)
+		assert.NoError(t, err)
+
+		expected := new(big.Int).Sub(initialStake, big.NewInt(100))
+		var lastStatus *big.Int
+		assert.Eventually(t, func() bool {
+			providerStatus, err := tequilapiProvider.Identity(providerID)
+			assert.NoError(t, err)
+			lastStatus = providerStatus.Stake
+			return expected.Cmp(providerStatus.Stake) == 0
+		}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Incorrect stake. Expected %v, got %v", expected, lastStatus))
 	})
 
 	t.Run("Provider stops services", func(t *testing.T) {
@@ -147,8 +229,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			ProviderID: providerID,
 			Type:       "noop",
 			PaymentMethod: contract.ServicePaymentMethod{
-				PriceGB:     1000000,
-				PriceMinute: 1000000,
+				PriceGB:     big.NewInt(10000000000000000),
+				PriceMinute: big.NewInt(10000000000000000),
 			},
 			AccessPolicies: contract.ServiceAccessPolicies{IDs: []string{"mysterium"}},
 		}
@@ -158,29 +240,29 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("Whitelisted consumer connects to the whitelisted noop service", func(t *testing.T) {
-		tequilapiConsumer := newTequilapiConsumer("noop")
-		consumerRegistrationFlow(t, tequilapiConsumer, "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", "")
-		proposal := consumerPicksProposal(t, tequilapiConsumer, "noop")
-		consumerConnectFlow(t, tequilapiConsumer, "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", accountantID, "noop", proposal)
+		c := consumersToTest[0]
+		consumerRegistrationFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", "")
+		proposal := consumerPicksProposal(t, c.tequila(), "noop")
+		consumerConnectFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", hermesID, "noop", proposal)
 	})
 
 	t.Run("Consumers rejected by whitelisted service", func(t *testing.T) {
-		c := consumers["noop"]
-		proposal := consumerPicksProposal(t, c.tequila, c.serviceType)
-		consumerRejectWhitelistedFlow(t, c.tequila, c.consumerID, accountantID, c.serviceType, proposal)
+		c := consumersToTest[0]
+		proposal := consumerPicksProposal(t, c.tequila(), c.serviceType)
+		consumerRejectWhitelistedFlow(t, c.tequila(), c.consumerID, hermesID, c.serviceType, proposal)
 	})
 }
 
-func recheckBalancesWithAccountant(t *testing.T, consumerID string, consumerSpending uint64, serviceType string) {
-	var lastAccountant uint64
+func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending *big.Int, serviceType, hermesURL string) {
+	var lastHermes *big.Int
 	assert.Eventually(t, func() bool {
-		accountantCaller := pingpong.NewAccountantCaller(requests.NewHTTPClient("0.0.0.0", time.Second), "http://accountant:8889/api/v2")
-		accountantData, err := accountantCaller.GetConsumerData(consumerID)
+		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
+		hermesData, err := hermesCaller.GetConsumerData(consumerID)
 		assert.NoError(t, err)
-		promised := accountantData.LatestPromise.Amount
-		lastAccountant = promised
-		return promised == consumerSpending
-	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v  accountant says %v. Service type %v", consumerSpending, lastAccountant, serviceType))
+		promised := hermesData.LatestPromise.Amount
+		lastHermes = promised
+		return promised.Cmp(consumerSpending) == 0
+	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v", consumerSpending, lastHermes, serviceType, hermesURL))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
@@ -197,17 +279,18 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 	assert.Eventually(t, func() bool {
 		idStatus, _ := tequilapi.Identity(id)
-		return "RegisteredProvider" == idStatus.RegistrationStatus
-	}, time.Second*5, time.Millisecond*500)
+		return "Registered" == idStatus.RegistrationStatus
+	}, time.Second*30, time.Millisecond*500)
 
 	// once we're registered, check some other information
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.Equal(t, "RegisteredProvider", idStatus.RegistrationStatus)
-	assert.Equal(t, "0x7F78C316d90713f19aeEeA840cEA47Fc3E8f92F4", idStatus.ChannelAddress)
-	assert.Equal(t, initialBalance, idStatus.Balance)
-	assert.Zero(t, idStatus.Earnings)
-	assert.Zero(t, idStatus.EarningsTotal)
+	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
+	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
+	assert.Equal(t, new(big.Int).Sub(balanceAfterRegistration, registrationFee), idStatus.Balance)
+	assert.Equal(t, providerStake, idStatus.Stake)
+	assert.Zero(t, idStatus.Earnings.Uint64())
+	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
 
 func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
@@ -217,7 +300,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	fees, err := tequilapi.GetTransactorFees()
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, id, 0, fees.Registration)
+	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), fees.Registration)
 	assert.NoError(t, err)
 
 	// now we check identity again
@@ -229,31 +312,30 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.Equal(t, "RegisteredConsumer", idStatus.RegistrationStatus)
-	assert.Equal(t, initialBalance, idStatus.Balance)
-	assert.Zero(t, idStatus.Earnings)
-	assert.Zero(t, idStatus.EarningsTotal)
+	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
+	assert.Equal(t, new(big.Int).Sub(balanceAfterRegistration, registrationFee), idStatus.Balance)
+	assert.Zero(t, idStatus.Earnings.Uint64())
+	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
 
 // expect exactly one proposal
 func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) contract.ProposalDTO {
 	var proposals []contract.ProposalDTO
-	err := waitForConditionFor(
-		30*time.Second,
-		func() (state bool, stateErr error) {
-			proposals, stateErr = tequilapi.ProposalsByType(serviceType)
-			return len(proposals) == 1, stateErr
-		},
-	)
-	if err != nil {
-		assert.FailNowf(t, "Exactly one proposal is expected - something is not right!", "Error was: %v", err)
-	}
+	assert.Eventually(t, func() bool {
+		p, stateErr := tequilapi.ProposalsByType(serviceType)
+		if stateErr != nil {
+			log.Err(stateErr)
+			return false
+		}
+		proposals = p
+		return len(p) == 1
+	}, time.Second*30, time.Millisecond*200)
 
 	log.Info().Msgf("Selected proposal is: %v, serviceType=%v", proposals[0], serviceType)
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) uint64 {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, hermesID, serviceType string, proposal contract.ProposalDTO) *big.Int {
 	connectionStatus, err := tequilapi.ConnectionStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
@@ -268,7 +350,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, contract.ConnectOptions{
+	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, hermesID, serviceType, contract.ConnectOptions{
 		DisableKillSwitch: false,
 	})
 
@@ -321,12 +403,12 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	consumerStatus, err := tequilapi.Identity(consumerID)
 	assert.NoError(t, err)
-	assert.True(t, consumerStatus.Balance > uint64(0), "consumer balance should not be empty")
-	assert.True(t, consumerStatus.Balance < uint64(690000000), "balance should decrease but is %sd", consumerStatus.Balance)
-	assert.Zero(t, consumerStatus.Earnings)
-	assert.Zero(t, consumerStatus.EarningsTotal)
+	assert.True(t, consumerStatus.Balance.Cmp(big.NewInt(0)) == 1, "consumer balance should not be empty")
+	assert.True(t, consumerStatus.Balance.Cmp(new(big.Int).Sub(balanceAfterRegistration, registrationFee)) == -1, "balance should decrease but is %sd", consumerStatus.Balance)
+	assert.Zero(t, consumerStatus.Earnings.Uint64())
+	assert.Zero(t, consumerStatus.EarningsTotal.Uint64())
 
-	return uint64(690000000) - consumerStatus.Balance
+	return new(big.Int).Sub(new(big.Int).Sub(balanceAfterRegistration, registrationFee), consumerStatus.Balance)
 }
 
 func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) {
@@ -349,14 +431,14 @@ func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Cli
 	assert.Contains(t, err.Error(), "consumer identity is not allowed")
 }
 
-func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected uint64) uint64 {
+func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected *big.Int) *big.Int {
 	// Before settlement
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(690000000), providerStatus.Balance)
+	assert.True(t, providerStatus.Balance.Cmp(new(big.Int).Sub(balanceAfterRegistration, registrationFee)) == 0)
 	assert.Equal(t, earningsExpected, providerStatus.Earnings, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
 	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
-	assert.True(t, providerStatus.Earnings > uint64(500), "earnings should be at least 500 but is %d", providerStatus.Earnings)
+	assert.True(t, providerStatus.Earnings.Cmp(big.NewInt(500)) == 1, "earnings should be at least 500 but is %d", providerStatus.Earnings)
 	return providerStatus.Earnings
 }
 

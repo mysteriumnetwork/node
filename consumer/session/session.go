@@ -18,6 +18,7 @@
 package session
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -43,14 +44,14 @@ type History struct {
 	SessionID       node_session.ID `storm:"id"`
 	Direction       string
 	ConsumerID      identity.Identity
-	AccountantID    string
+	HermesID        string
 	ProviderID      identity.Identity
 	ServiceType     string
 	ConsumerCountry string
 	ProviderCountry string
 	DataSent        uint64
 	DataReceived    uint64
-	Tokens          uint64
+	Tokens          *big.Int
 
 	Status  string
 	Started time.Time

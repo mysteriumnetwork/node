@@ -19,6 +19,7 @@ package state
 
 import (
 	"errors"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -168,10 +169,10 @@ func Test_ConsumesNATEvents(t *testing.T) {
 func Test_ConsumesSessionEvents(t *testing.T) {
 	// given
 	expected := sessionEvent.SessionContext{
-		ID:           "1",
-		StartedAt:    time.Now(),
-		ConsumerID:   identity.FromAddress("0x0000000000000000000000000000000000000001"),
-		AccountantID: common.HexToAddress("0x000000000000000000000000000000000000000a"),
+		ID:         "1",
+		StartedAt:  time.Now(),
+		ConsumerID: identity.FromAddress("0x0000000000000000000000000000000000000001"),
+		HermesID:   common.HexToAddress("0x000000000000000000000000000000000000000a"),
 		Proposal: market.ServiceProposal{
 			ServiceDefinition: &StubServiceDefinition{},
 		},
@@ -202,10 +203,11 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 				SessionID:       nodeSession.ID(expected.ID),
 				Direction:       session.DirectionProvided,
 				ConsumerID:      expected.ConsumerID,
-				AccountantID:    expected.AccountantID.Hex(),
+				HermesID:        expected.HermesID.Hex(),
 				ProviderCountry: "MU",
 				Started:         expected.StartedAt,
 				Status:          session.StatusNew,
+				Tokens:          new(big.Int),
 			},
 		},
 		keeper.GetState().Sessions,
@@ -277,17 +279,17 @@ func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
 	// when
 	eventBus.Publish(sessionEvent.AppTopicTokensEarned, sessionEvent.AppEventTokensEarned{
 		SessionID: "1",
-		Total:     500,
+		Total:     big.NewInt(500),
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Sessions[0].Tokens != 0
+		return keeper.GetState().Sessions[0].Tokens.Cmp(big.NewInt(0)) != 0
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(
 		t,
 		[]session.History{
-			{SessionID: nodeSession.ID("1"), Tokens: 500},
+			{SessionID: nodeSession.ID("1"), Tokens: big.NewInt(500)},
 		},
 		keeper.GetState().Sessions,
 	)
@@ -426,9 +428,9 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	// given
 	expected := crypto.Invoice{
-		AgreementID:    1,
-		AgreementTotal: 1001,
-		TransactorFee:  10,
+		AgreementID:    big.NewInt(1),
+		AgreementTotal: big.NewInt(1001),
+		TransactorFee:  big.NewInt(10),
 	}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
@@ -465,26 +467,26 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
-		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Zero(t, keeper.GetState().Identities[0].Balance)
+	assert.Zero(t, keeper.GetState().Identities[0].Balance.Uint64())
 
 	// when
 	eventBus.Publish(pingpongEvent.AppTopicBalanceChanged, pingpongEvent.AppEventBalanceChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Previous: 0,
-		Current:  999,
+		Previous: big.NewInt(0),
+		Current:  big.NewInt(999),
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].Balance == 999
+		return keeper.GetState().Identities[0].Balance.Cmp(big.NewInt(999)) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -500,26 +502,26 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredProvider},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
-		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Zero(t, keeper.GetState().Identities[0].Balance)
+	assert.Zero(t, keeper.GetState().Identities[0].Balance.Uint64())
 
 	// when
 	eventBus.Publish(pingpongEvent.AppTopicEarningsChanged, pingpongEvent.AppEventEarningsChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
 		Previous: pingpongEvent.Earnings{},
-		Current:  pingpongEvent.Earnings{LifetimeBalance: 100, UnsettledBalance: 10},
+		Current:  pingpongEvent.Earnings{LifetimeBalance: big.NewInt(100), UnsettledBalance: big.NewInt(10)},
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].Earnings == 10 && keeper.GetState().Identities[0].EarningsTotal == 100
+		return keeper.GetState().Identities[0].Earnings.Cmp(big.NewInt(10)) == 0 && keeper.GetState().Identities[0].EarningsTotal.Cmp(big.NewInt(100)) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -537,7 +539,7 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 		},
 		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Unregistered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
-		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
@@ -548,12 +550,12 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 	// when
 	eventBus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
 		ID:     identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Status: registry.RegisteredConsumer,
+		Status: registry.Registered,
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].RegistrationStatus == registry.RegisteredConsumer
+		return keeper.GetState().Identities[0].RegistrationStatus == registry.Registered
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -640,11 +642,11 @@ func interacted(c interactionCounter, times int) func() bool {
 }
 
 type mockBalanceProvider struct {
-	Balance uint64
+	Balance *big.Int
 }
 
 // GetBalance returns a pre-defined balance.
-func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) uint64 {
+func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) *big.Int {
 	return mbp.Balance
 }
 

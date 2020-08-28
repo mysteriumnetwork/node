@@ -18,6 +18,7 @@
 package session
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -27,6 +28,7 @@ import (
 func NewStats() Stats {
 	return Stats{
 		ConsumerCounts: make(map[identity.Identity]int),
+		SumTokens:      new(big.Int),
 	}
 }
 
@@ -37,7 +39,7 @@ type Stats struct {
 	SumDataSent     uint64
 	SumDataReceived uint64
 	SumDuration     time.Duration
-	SumTokens       uint64
+	SumTokens       *big.Int
 }
 
 // Add accumulates given session to statistics.
@@ -53,5 +55,5 @@ func (s *Stats) Add(session History) {
 	s.SumDataReceived += session.DataReceived
 	s.SumDataSent += session.DataSent
 	s.SumDuration += session.GetDuration()
-	s.SumTokens += session.Tokens
+	s.SumTokens = new(big.Int).Add(s.SumTokens, session.Tokens)
 }

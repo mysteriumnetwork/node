@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"context"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -40,20 +41,20 @@ import (
 )
 
 type mockConnectionManager struct {
-	onConnectReturn       error
-	onDisconnectReturn    error
-	onCheckChannelReturn  error
-	onStatusReturn        connectionstate.Status
-	disconnectCount       int
-	requestedConsumerID   identity.Identity
-	requestedProvider     identity.Identity
-	requestedAccountantID common.Address
-	requestedServiceType  string
+	onConnectReturn      error
+	onDisconnectReturn   error
+	onCheckChannelReturn error
+	onStatusReturn       connectionstate.Status
+	disconnectCount      int
+	requestedConsumerID  identity.Identity
+	requestedProvider    identity.Identity
+	requestedHermesID    common.Address
+	requestedServiceType string
 }
 
-func (cm *mockConnectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, options connection.ConnectParams) error {
+func (cm *mockConnectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	cm.requestedConsumerID = consumerID
-	cm.requestedAccountantID = accountantID
+	cm.requestedHermesID = hermesID
 	cm.requestedProvider = identity.FromAddress(proposal.ProviderID)
 	cm.requestedServiceType = proposal.ServiceType
 	return cm.onConnectReturn
@@ -114,7 +115,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{"status": "NotConnected"}`,
 		},
 		{
-			http.MethodPut, "/connection", `{"consumer_id": "me", "provider_id": "node1", "accountant_id":"accountant", "service_type": "noop"}`,
+			http.MethodPut, "/connection", `{"consumer_id": "me", "provider_id": "node1", "hermes_id":"hermes", "service_type": "noop"}`,
 			http.StatusCreated, `{"status": "NotConnected"}`,
 		},
 		{
@@ -150,12 +151,12 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 func TestStateIsReturnedFromStore(t *testing.T) {
 	manager := &mockConnectionManager{
 		onStatusReturn: connectionstate.Status{
-			StartedAt:    time.Time{},
-			ConsumerID:   identity.Identity{},
-			AccountantID: common.Address{},
-			State:        connectionstate.Disconnecting,
-			SessionID:    "1",
-			Proposal:     market.ServiceProposal{},
+			StartedAt:  time.Time{},
+			ConsumerID: identity.Identity{},
+			HermesID:   common.Address{},
+			State:      connectionstate.Disconnecting,
+			SessionID:  "1",
+			Proposal:   market.ServiceProposal{},
 		},
 	}
 
@@ -211,7 +212,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
-				"accountant_id" : [ {"code" : "required" , "message" : "Field is required" } ],
+				"hermes_id" : [ {"code" : "required" , "message" : "Field is required" } ],
 				"consumer_id" : [ { "code" : "required" , "message" : "Field is required" } ],
 				"provider_id" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}
@@ -236,14 +237,14 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id" : "accountant"
+				"hermes_id" : "hermes"
 			}`))
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Create(resp, req, httprouter.Params{})
 
 	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumerID)
-	assert.Equal(t, common.HexToAddress("accountant"), fakeManager.requestedAccountantID)
+	assert.Equal(t, common.HexToAddress("hermes"), fakeManager.requestedHermesID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "openvpn", fakeManager.requestedServiceType)
 
@@ -273,7 +274,7 @@ func TestPutUnregisteredIdentityReturnsError(t *testing.T) {
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id" : "accountant"
+				"hermes_id" : "hermes"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -302,7 +303,7 @@ func TestPutFailedRegistrationCheckReturnsError(t *testing.T) {
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id" : "accountant"
+				"hermes_id" : "hermes"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -328,7 +329,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id": "accountant",
+				"hermes_id": "hermes",
 				"service_type": "noop"
 			}`))
 	resp := httptest.NewRecorder()
@@ -338,7 +339,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
-	assert.Equal(t, common.HexToAddress("accountant"), fakeManager.requestedAccountantID)
+	assert.Equal(t, common.HexToAddress("hermes"), fakeManager.requestedHermesID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "noop", fakeManager.requestedServiceType)
 }
@@ -361,7 +362,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	fakeState := &mockStateProvider{}
 	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
 	fakeState.stateToReturn.Connection.Throughput = bandwidth.Throughput{Up: datasize.BitSpeed(1000), Down: datasize.BitSpeed(2000)}
-	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: 10001}
+	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: big.NewInt(10001)}
 
 	manager := mockConnectionManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance)
@@ -396,7 +397,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id" : "accountant"
+				"hermes_id" : "hermes"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -450,7 +451,7 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id" : "accountant"
+				"hermes_id" : "hermes"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -478,7 +479,7 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 			`{
 				"consumer_id" : "my-identity",
 				"provider_id" : "required-node",
-				"accountant_id" : "accountant"
+				"hermes_id" : "hermes"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -494,4 +495,4 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	)
 }
 
-var mockIdentityRegistryInstance = &registry.FakeRegistry{RegistrationStatus: registry.RegisteredConsumer}
+var mockIdentityRegistryInstance = &registry.FakeRegistry{RegistrationStatus: registry.Registered}

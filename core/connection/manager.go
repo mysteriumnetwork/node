@@ -116,7 +116,7 @@ type validator interface {
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
@@ -178,7 +178,7 @@ func NewManager(
 	}
 }
 
-func (m *connectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	var sessionID session.ID
 
 	tracer := trace.NewTracer()
@@ -210,7 +210,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
-	m.statusConnecting(consumerID, accountantID, proposal)
+	m.statusConnecting(consumerID, hermesID, proposal)
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -239,12 +239,12 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		return err
 	}
 
-	paymentSession, err := m.launchPayments(channel, consumerID, providerID, accountantID, proposal)
+	paymentSession, err := m.launchPayments(channel, consumerID, providerID, hermesID, proposal)
 	if err != nil {
 		return err
 	}
 
-	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, channel, consumerID, accountantID, proposal)
+	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, channel, consumerID, hermesID, proposal)
 	sessionID = session.ID(sessionDTO.GetID())
 	if err != nil {
 		m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
@@ -270,7 +270,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 		Proposal:        proposal,
 		ProviderNATConn: channel.ServiceConn(),
 		ChannelConn:     channel.Conn(),
-		AccountantID:    accountantID,
+		HermesID:        hermesID,
 	}
 	err = m.startConnection(m.currentCtx(), connection, m.connectOptions)
 	tracer.EndStage(connectionTrace)
@@ -365,8 +365,8 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
-	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, accountantID, proposal)
+func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
+	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, hermesID, proposal)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +438,7 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (*pb.SessionResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (*pb.SessionResponse, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not get session config: %w", err)
@@ -452,7 +452,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	sessionRequest := &pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:             consumerID.Address,
-			AccountantID:   accountantID.Hex(),
+			HermesID:       hermesID.Hex(),
 			PaymentVersion: "v3",
 			Location: &pb.LocationInfo{
 				Country: m.Status().ConsumerLocation.Country,
@@ -592,7 +592,7 @@ func (m *connectionManager) statusConnecting(consumerID identity.Identity, accou
 			StartedAt:        m.timeGetter(),
 			ConsumerID:       consumerID,
 			ConsumerLocation: m.locationResolver.GetOrigin(),
-			AccountantID:     accountantID,
+			HermesID:         accountantID,
 			Proposal:         proposal,
 			State:            connectionstate.Connecting,
 		}
@@ -850,16 +850,16 @@ func (m *connectionManager) currentCtx() context.Context {
 func (m *connectionManager) reconnect() {
 	err := m.Disconnect()
 	if err != nil {
-		log.Error().Msgf("Failed to disconnect stale session: %w", err)
+		log.Error().Msgf("Failed to disconnect stale session: %v", err)
 	}
 	log.Info().Msg("Waiting for previous session to cleanup")
 
 	m.cleanupFinishedLock.Lock()
 	defer m.cleanupFinishedLock.Unlock()
 	<-m.cleanupFinished
-	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.AccountantID, m.connectOptions.Proposal, m.connectOptions.Params)
+	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.Proposal, m.connectOptions.Params)
 	if err != nil {
-		log.Error().Msgf("Failed to reconnect: %w", err)
+		log.Error().Msgf("Failed to reconnect: %v", err)
 	}
 }
 

@@ -175,6 +175,10 @@ func PackageAndroid() error {
 	if err != nil {
 		return err
 	}
+
+	buildVersion := env.Str(env.BuildVersion)
+	log.Info().Msgf("Package Android SDK version: %s", buildVersion)
+
 	pomFileOut, err := os.Create("build/package/mvn.pom")
 	if err != nil {
 		return err
@@ -184,11 +188,12 @@ func PackageAndroid() error {
 	err = pomTemplate.Execute(pomFileOut, struct {
 		BuildVersion string
 	}{
-		BuildVersion: env.Str(env.BuildVersion),
+		BuildVersion: buildVersion,
 	})
 	if err != nil {
 		return err
 	}
+
 	return env.IfRelease(storage.UploadArtifacts)
 }
 

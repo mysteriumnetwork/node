@@ -39,7 +39,7 @@ func TestRegistrationStatusStorage(t *testing.T) {
 
 	mockIdentity := identity.FromAddress("0x001")
 	mockStatus := StoredRegistrationStatus{
-		RegistrationStatus: RegisteredProvider,
+		RegistrationStatus: Registered,
 		Identity:           mockIdentity,
 	}
 	_, err = consumerTotalsStorage.Get(identity.FromAddress("0x001"))
@@ -70,31 +70,31 @@ func TestRegistrationStatusStorage(t *testing.T) {
 
 	res, err = consumerTotalsStorage.Get(mockIdentity)
 	assert.Nil(t, err)
-	assert.Equal(t, RegisteredProvider, res.RegistrationStatus)
+	assert.Equal(t, Registered, res.RegistrationStatus)
 
 	// should update status
-	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: RegisteredConsumer})
+	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: Registered})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockStatus2.Identity)
 	assert.Nil(t, err)
-	assert.Equal(t, RegisteredConsumer, res.RegistrationStatus)
+	assert.Equal(t, Registered, res.RegistrationStatus)
 
-	// should not override registeredConsumer status
+	// should not override registered status
 	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: RegistrationError})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockStatus2.Identity)
 	assert.Nil(t, err)
-	assert.Equal(t, RegisteredConsumer, res.RegistrationStatus)
+	assert.Equal(t, Registered, res.RegistrationStatus)
 
-	// should override the status with RegisteredProvider
-	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: RegisteredProvider})
+	// should override the status with Registered
+	err = consumerTotalsStorage.Store(StoredRegistrationStatus{Identity: mockStatus2.Identity, RegistrationStatus: Registered})
 	assert.Nil(t, err)
 
 	res, err = consumerTotalsStorage.Get(mockStatus2.Identity)
 	assert.Nil(t, err)
-	assert.Equal(t, RegisteredProvider, res.RegistrationStatus)
+	assert.Equal(t, Registered, res.RegistrationStatus)
 }
 
 func statusesEqual(t *testing.T, a, b StoredRegistrationStatus) {

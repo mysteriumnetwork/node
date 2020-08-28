@@ -18,6 +18,8 @@
 package contract
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -36,8 +38,8 @@ func NewConnectionStatusDTO(session connectionstate.Status) ConnectionStatusDTO 
 		ConsumerID: session.ConsumerID.Address,
 		SessionID:  string(session.SessionID),
 	}
-	if session.AccountantID != emptyAddress {
-		response.AccountantAddress = session.AccountantID.Hex()
+	if session.HermesID != emptyAddress {
+		response.HermesID = session.HermesID.Hex()
 	}
 	// None exists, for not started connection
 	if session.Proposal.ProviderID != "" {
@@ -57,7 +59,7 @@ type ConnectionStatusDTO struct {
 	ConsumerID string `json:"consumer_id,omitempty"`
 
 	// example: 0x00
-	AccountantAddress string `json:"accountant_address,omitempty"`
+	HermesID string `json:"hermes_id,omitempty"`
 
 	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
 	Proposal *ProposalDTO `json:"proposal,omitempty"`
@@ -87,13 +89,17 @@ type ConnectionDTO struct {
 
 // NewConnectionStatisticsDTO maps to API connection stats.
 func NewConnectionStatisticsDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+	agreementTotal := new(big.Int)
+	if invoice.AgreementTotal != nil {
+		agreementTotal = invoice.AgreementTotal
+	}
 	return ConnectionStatisticsDTO{
 		Duration:           int(session.Duration().Seconds()),
 		BytesSent:          statistics.BytesSent,
 		BytesReceived:      statistics.BytesReceived,
 		ThroughputSent:     datasize.BitSize(throughput.Up).Bits(),
 		ThroughputReceived: datasize.BitSize(throughput.Down).Bits(),
-		TokensSpent:        invoice.AgreementTotal,
+		TokensSpent:        agreementTotal,
 	}
 }
 
@@ -119,7 +125,7 @@ type ConnectionStatisticsDTO struct {
 	Duration int `json:"duration"`
 
 	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
+	TokensSpent *big.Int `json:"tokens_spent"`
 }
 
 // ConnectionCreateRequest request used to start a connection.
@@ -135,10 +141,10 @@ type ConnectionCreateRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"provider_id"`
 
-	// accountant identity
+	// hermes identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000003
-	AccountantID string `json:"accountant_id"`
+	HermesID string `json:"hermes_id"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
@@ -160,8 +166,8 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	if len(cr.ProviderID) == 0 {
 		errs.ForField("provider_id").AddError("required", "Field is required")
 	}
-	if len(cr.AccountantID) == 0 {
-		errs.ForField("accountant_id").AddError("required", "Field is required")
+	if len(cr.HermesID) == 0 {
+		errs.ForField("hermes_id").AddError("required", "Field is required")
 	}
 	return errs
 }

@@ -18,6 +18,7 @@
 package session
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -79,7 +80,7 @@ func TestSessionQuery_FetchStats(t *testing.T) {
 		ConsumerID:   identity.FromAddress("consumer1"),
 		DataSent:     1234,
 		DataReceived: 123,
-		Tokens:       12,
+		Tokens:       big.NewInt(12),
 		Started:      time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
 		Updated:      time.Date(2020, 6, 17, 10, 11, 32, 0, time.UTC),
 		Status:       "New",
@@ -101,7 +102,7 @@ func TestSessionQuery_FetchStats(t *testing.T) {
 			},
 			SumDataSent:     1234,
 			SumDataReceived: 123,
-			SumTokens:       12,
+			SumTokens:       big.NewInt(12),
 			SumDuration:     20 * time.Second,
 		},
 		query.Stats,
@@ -123,7 +124,7 @@ func TestSessionQuery_FetchStatsByDay(t *testing.T) {
 		ConsumerID:   identity.FromAddress("consumer1"),
 		DataSent:     1234,
 		DataReceived: 123,
-		Tokens:       12,
+		Tokens:       big.NewInt(12),
 		Started:      time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
 		Updated:      time.Date(2020, 6, 17, 10, 11, 32, 0, time.UTC),
 		Status:       "New",
@@ -165,7 +166,7 @@ func TestSessionQuery_FetchStatsByDay(t *testing.T) {
 				},
 				SumDataSent:     1234,
 				SumDataReceived: 123,
-				SumTokens:       12,
+				SumTokens:       big.NewInt(12),
 				SumDuration:     20 * time.Second,
 			},
 			time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC): NewStats(),

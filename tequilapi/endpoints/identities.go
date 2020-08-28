@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,7 +38,7 @@ import (
 )
 
 type balanceProvider interface {
-	ForceBalanceUpdate(id identity.Identity) uint64
+	ForceBalanceUpdate(id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
@@ -45,7 +46,7 @@ type earningsProvider interface {
 }
 
 type providerChannel interface {
-	GetProviderChannel(accountantAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
+	GetProviderChannel(hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 type identitiesAPI struct {
@@ -279,6 +280,16 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
+	var stake = new(big.Int)
+	if regStatus == registry.Registered {
+		data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
+		if err != nil {
+			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
+			return
+		}
+		stake = data.Stake
+	}
+
 	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
 	settlement := endpoint.earningsProvider.GetEarnings(id)
 	status := contract.IdentityDTO{
@@ -288,6 +299,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		Balance:            balance,
 		Earnings:           settlement.UnsettledBalance,
 		EarningsTotal:      settlement.LifetimeBalance,
+		Stake:              stake,
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -353,7 +365,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address), false)
+	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return

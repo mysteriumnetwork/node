@@ -19,6 +19,7 @@ package client
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/url"
 
@@ -128,7 +129,7 @@ func (client *Client) GetTransactorFees() (Fees, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
+func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int) error {
 	payload := registry.IdentityRegistrationRequestDTO{
 		Stake:       stake,
 		Fee:         fee,
@@ -148,31 +149,12 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee u
 	return nil
 }
 
-// TopUp tops up identity
-func (client *Client) TopUp(identity string) error {
-	payload := registry.TopUpRequest{
-		Identity: identity,
-	}
-
-	response, err := client.http.Post("transactor/topup", payload)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
-	}
-
-	return nil
-}
-
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
 	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
 		ConsumerID:     consumerID,
 		ProviderID:     providerID,
-		AccountantID:   accountantID,
+		HermesID:       hermesID,
 		ServiceType:    serviceType,
 		ConnectOptions: options,
 	})
@@ -293,7 +275,7 @@ func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error
 }
 
 // ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]contract.ProposalDTO, error) {
+func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB *big.Int) ([]contract.ProposalDTO, error) {
 	values := url.Values{}
 	values.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTime))
 	values.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTime))
@@ -457,11 +439,11 @@ func filterSessionsByStatus(status string, sessions contract.ListSessionsRespons
 	return sessions
 }
 
-// Settle requests the settling of accountant promises
-func (client *Client) Settle(providerID, accountantID identity.Identity, waitForBlockchain bool) error {
+// Settle requests the settling of hermes promises
+func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
 	settleRequest := SettleRequest{
-		ProviderID:   providerID.Address,
-		AccountantID: accountantID.Address,
+		ProviderID: providerID.Address,
+		HermesID:   hermesID.Address,
 	}
 
 	path := "transactor/settle/"
@@ -483,12 +465,60 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	return nil
 }
 
+// SettleIntoStake requests the settling of accountant promises into a stake increase
+func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
+	settleRequest := SettleRequest{
+		ProviderID: providerID.Address,
+		HermesID:   hermesID.Address,
+	}
+
+	path := "transactor/stake/increase/"
+	if waitForBlockchain {
+		path += "sync"
+	} else {
+		path += "async"
+	}
+
+	response, err := client.http.Post(path, settleRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not settle promise")
+	}
+	return nil
+}
+
+// DecreaseStake requests the decrease of stake via the transactor.
+func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
+	decreaseRequest := DecreaseStakeRequest{
+		ID:            ID.Address,
+		Amount:        amount,
+		TransactorFee: transactorFee,
+	}
+
+	path := "transactor/stake/decrease"
+
+	response, err := client.http.Post(path, decreaseRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not decrease stake")
+	}
+	return nil
+}
+
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID string) error {
+func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
 	payload := SettleWithBeneficiaryRequest{
 		SettleRequest: SettleRequest{
-			ProviderID:   address,
-			AccountantID: accountantID,
+			ProviderID: address,
+			HermesID:   hermesID,
 		},
 		Beneficiary: beneficiary,
 	}

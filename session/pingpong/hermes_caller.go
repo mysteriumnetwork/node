@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -34,8 +35,8 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// AccountantErrorResponse represents the errors that accountant returns
-type AccountantErrorResponse struct {
+// HermesErrorResponse represents the errors that hermes returns
+type HermesErrorResponse struct {
 	CausedBy     string `json:"cause"`
 	ErrorMessage string `json:"message"`
 	ErrorData    string `json:"data"`
@@ -43,27 +44,27 @@ type AccountantErrorResponse struct {
 }
 
 // Error returns the associated error
-func (aer AccountantErrorResponse) Error() string {
+func (aer HermesErrorResponse) Error() string {
 	return aer.c.Error()
 }
 
 // Cause returns the associated cause
-func (aer AccountantErrorResponse) Cause() error {
+func (aer HermesErrorResponse) Cause() error {
 	return aer.c
 }
 
 // Unwrap unwraps the associated error
-func (aer AccountantErrorResponse) Unwrap() error {
+func (aer HermesErrorResponse) Unwrap() error {
 	return aer.c
 }
 
 // Data returns the associated data
-func (aer AccountantErrorResponse) Data() string {
+func (aer HermesErrorResponse) Data() string {
 	return aer.ErrorData
 }
 
-// UnmarshalJSON unmarshals given data to AccountantErrorResponse
-func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
+// UnmarshalJSON unmarshals given data to HermesErrorResponse
+func (aer *HermesErrorResponse) UnmarshalJSON(data []byte) error {
 	var s struct {
 		CausedBy     string `json:"cause"`
 		ErrorMessage string `json:"message"`
@@ -79,7 +80,7 @@ func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
 	aer.ErrorMessage = s.ErrorMessage
 	aer.ErrorData = s.ErrorData
 
-	if v, ok := accountantCauseToError[s.CausedBy]; ok {
+	if v, ok := hermesCauseToError[s.CausedBy]; ok {
 		aer.c = v
 		return nil
 	}
@@ -87,36 +88,36 @@ func (aer *AccountantErrorResponse) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("received unknown error: %v", s.CausedBy)
 }
 
-type accountantError interface {
+type hermesError interface {
 	Error() string
 	Cause() error
 	Data() string
 }
 
-// AccountantCaller represents the http caller for accountant.
-type AccountantCaller struct {
-	transport         *requests.HTTPClient
-	accountantBaseURI string
+// HermesCaller represents the http caller for hermes.
+type HermesCaller struct {
+	transport     *requests.HTTPClient
+	hermesBaseURI string
 }
 
-// NewAccountantCaller returns a new instance of accountant caller.
-func NewAccountantCaller(transport *requests.HTTPClient, accountantBaseURI string) *AccountantCaller {
-	return &AccountantCaller{
-		transport:         transport,
-		accountantBaseURI: accountantBaseURI,
+// NewHermesCaller returns a new instance of hermes caller.
+func NewHermesCaller(transport *requests.HTTPClient, hermesBaseURI string) *HermesCaller {
+	return &HermesCaller{
+		transport:     transport,
+		hermesBaseURI: hermesBaseURI,
 	}
 }
 
-// RequestPromise represents the request for a new accountant promise
+// RequestPromise represents the request for a new hermes promise
 type RequestPromise struct {
 	ExchangeMessage crypto.ExchangeMessage `json:"exchange_message"`
-	TransactorFee   uint64                 `json:"transactor_fee"`
+	TransactorFee   *big.Int               `json:"transactor_fee"`
 	RRecoveryData   string                 `json:"r_recovery_data"`
 }
 
-// RequestPromise requests a promise from accountant.
-func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
-	req, err := requests.NewPostRequest(ac.accountantBaseURI, "request_promise", rp)
+// RequestPromise requests a promise from hermes.
+func (ac *HermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
+	req, err := requests.NewPostRequest(ac.hermesBaseURI, "request_promise", rp)
 	if err != nil {
 		return crypto.Promise{}, fmt.Errorf("could not form request_promise request: %w", err)
 	}
@@ -148,12 +149,12 @@ func (ac *AccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, e
 type RevealObject struct {
 	R           string
 	Provider    string
-	AgreementID uint64
+	AgreementID *big.Int
 }
 
-// RevealR reveals hashlock key 'r' from 'provider' to the accountant for the agreement identified by 'agreementID'.
-func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) error {
-	req, err := requests.NewPostRequest(ac.accountantBaseURI, "reveal_r", RevealObject{
+// RevealR reveals hashlock key 'r' from 'provider' to the hermes for the agreement identified by 'agreementID'.
+func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error {
+	req, err := requests.NewPostRequest(ac.hermesBaseURI, "reveal_r", RevealObject{
 		R:           r,
 		Provider:    provider,
 		AgreementID: agreementID,
@@ -176,22 +177,22 @@ func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) erro
 			}
 			// otherwise, do not retry anymore and return the error
 			cancel()
-			return fmt.Errorf("could not reveal R for accountant: %w", err)
+			return fmt.Errorf("could not reveal R for hermes: %w", err)
 		}
 		return nil
 	}, boff)
 }
 
-// GetConsumerData gets consumer data from accountant
-func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
-	req, err := requests.NewGetRequest(ac.accountantBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
+// GetConsumerData gets consumer data from hermes
+func (ac *HermesCaller) GetConsumerData(id string) (ConsumerData, error) {
+	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
 	var resp ConsumerData
 	err = ac.doRequest(req, &resp)
 	if err != nil {
-		return ConsumerData{}, fmt.Errorf("could not request consumer data from accountant: %w", err)
+		return ConsumerData{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
 	}
 
 	err = resp.LatestPromise.isValid(id)
@@ -202,7 +203,7 @@ func (ac *AccountantCaller) GetConsumerData(id string) (ConsumerData, error) {
 	return resp, nil
 }
 
-func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
+func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
 	resp, err := ac.transport.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not execute request: %w", err)
@@ -223,13 +224,13 @@ func (ac *AccountantCaller) doRequest(req *http.Request, to interface{}) error {
 	}
 
 	// parse error body
-	accountantError := AccountantErrorResponse{}
-	err = json.Unmarshal(body, &accountantError)
+	hermesError := HermesErrorResponse{}
+	err = json.Unmarshal(body, &hermesError)
 	if err != nil {
 		return fmt.Errorf("could not unmarshal error body: %w", err)
 	}
 
-	return accountantError
+	return hermesError
 }
 
 // ConsumerData represents the consumer data
@@ -237,10 +238,10 @@ type ConsumerData struct {
 	Identity         string        `json:"Identity"`
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
-	Balance          uint64        `json:"Balance"`
-	Promised         uint64        `json:"Promised"`
-	Settled          uint64        `json:"Settled"`
-	Stake            uint64        `json:"Stake"`
+	Balance          *big.Int      `json:"Balance"`
+	Promised         *big.Int      `json:"Promised"`
+	Settled          *big.Int      `json:"Settled"`
+	Stake            *big.Int      `json:"Stake"`
 	LatestPromise    LatestPromise `json:"LatestPromise"`
 	LatestSettlement time.Time     `json:"LatestSettlement"`
 }
@@ -248,8 +249,8 @@ type ConsumerData struct {
 // LatestPromise represents the latest promise
 type LatestPromise struct {
 	ChannelID string      `json:"ChannelID"`
-	Amount    uint64      `json:"Amount"`
-	Fee       uint64      `json:"Fee"`
+	Amount    *big.Int    `json:"Amount"`
+	Fee       *big.Int    `json:"Fee"`
 	Hashlock  string      `json:"Hashlock"`
 	R         interface{} `json:"R"`
 	Signature string      `json:"Signature"`
@@ -259,7 +260,7 @@ type LatestPromise struct {
 func (lp LatestPromise) isValid(id string) error {
 	// if we've not promised anything, that's fine for us.
 	// handles the case when we've just registered the identity.
-	if lp.Amount == 0 {
+	if lp.Amount == nil || lp.Amount.Cmp(new(big.Int)) == 0 {
 		return nil
 	}
 
@@ -273,7 +274,7 @@ func (lp LatestPromise) isValid(id string) error {
 	}
 	decodedSignature, err := hex.DecodeString(strings.TrimPrefix(lp.Signature, "0x"))
 	if err != nil {
-		return fmt.Errorf("could not decode hashlock: %w", err)
+		return fmt.Errorf("could not decode signature: %w", err)
 	}
 
 	p := crypto.Promise{
@@ -291,46 +292,46 @@ func (lp LatestPromise) isValid(id string) error {
 	return nil
 }
 
-// RevealSuccess represents the reveal success response from accountant
+// RevealSuccess represents the reveal success response from hermes
 type RevealSuccess struct {
 	Message string `json:"message"`
 }
 
-// ErrAccountantInvalidSignature indicates that an invalid signature was sent.
-var ErrAccountantInvalidSignature = errors.New("invalid signature")
+// ErrHermesInvalidSignature indicates that an invalid signature was sent.
+var ErrHermesInvalidSignature = errors.New("invalid signature")
 
-// ErrAccountantInternal represents an internal error.
-var ErrAccountantInternal = errors.New("internal error")
+// ErrHermesInternal represents an internal error.
+var ErrHermesInternal = errors.New("internal error")
 
-// ErrAccountantPreviousRNotRevealed represents that a previous R has not been revealed yet. No actions will be possible before the R is revealed.
-var ErrAccountantPreviousRNotRevealed = errors.New("previous R not revealed")
+// ErrHermesPreviousRNotRevealed represents that a previous R has not been revealed yet. No actions will be possible before the R is revealed.
+var ErrHermesPreviousRNotRevealed = errors.New("previous R not revealed")
 
-// ErrAccountantPaymentValueTooLow indicates that the agreement total has decreased as opposed to increasing.
-var ErrAccountantPaymentValueTooLow = errors.New("payment value too low")
+// ErrHermesPaymentValueTooLow indicates that the agreement total has decreased as opposed to increasing.
+var ErrHermesPaymentValueTooLow = errors.New("payment value too low")
 
-// ErrAccountantProviderBalanceExhausted indicates that the provider has run out of stake and a rebalance is needed.
-var ErrAccountantProviderBalanceExhausted = errors.New("provider balance exhausted, please rebalance your channel")
+// ErrHermesProviderBalanceExhausted indicates that the provider has run out of stake and a rebalance is needed.
+var ErrHermesProviderBalanceExhausted = errors.New("provider balance exhausted, please rebalance your channel")
 
-// ErrAccountantPromiseValueTooLow represents an error where the consumer sent a promise with a decreasing total.
-var ErrAccountantPromiseValueTooLow = errors.New("promise value too low")
+// ErrHermesPromiseValueTooLow represents an error where the consumer sent a promise with a decreasing total.
+var ErrHermesPromiseValueTooLow = errors.New("promise value too low")
 
-// ErrAccountantOverspend indicates that the consumer has overspent his balance.
-var ErrAccountantOverspend = errors.New("consumer does not have enough balance and is overspending")
+// ErrHermesOverspend indicates that the consumer has overspent his balance.
+var ErrHermesOverspend = errors.New("consumer does not have enough balance and is overspending")
 
-// ErrAccountantMalformedJSON indicates that the provider has sent an invalid json in the request.
-var ErrAccountantMalformedJSON = errors.New("malformed json")
+// ErrHermesMalformedJSON indicates that the provider has sent an invalid json in the request.
+var ErrHermesMalformedJSON = errors.New("malformed json")
 
 // ErrNeedsRRecovery indicates that we need to recover R.
 var ErrNeedsRRecovery = errors.New("r recovery required")
 
-// ErrAccountantNoPreviousPromise indicates that we have no previous knowledge of a promise for the provider.
-var ErrAccountantNoPreviousPromise = errors.New("no previous promise found")
+// ErrHermesNoPreviousPromise indicates that we have no previous knowledge of a promise for the provider.
+var ErrHermesNoPreviousPromise = errors.New("no previous promise found")
 
-// ErrAccountantHashlockMissmatch occurs when an expected hashlock does not match the one sent by provider.
-var ErrAccountantHashlockMissmatch = errors.New("hashlock missmatch")
+// ErrHermesHashlockMissmatch occurs when an expected hashlock does not match the one sent by provider.
+var ErrHermesHashlockMissmatch = errors.New("hashlock missmatch")
 
-// ErrAccountantNotFound occurs when a requested resource is not found
-var ErrAccountantNotFound = errors.New("resource not found")
+// ErrHermesNotFound occurs when a requested resource is not found
+var ErrHermesNotFound = errors.New("resource not found")
 
 // ErrTooManyRequests occurs when we call the reveal R or request promise errors asynchronously at the same time.
 var ErrTooManyRequests = errors.New("too many simultaneous requests")
@@ -338,24 +339,24 @@ var ErrTooManyRequests = errors.New("too many simultaneous requests")
 // ErrConsumerUnregistered indicates that the consumer is not registered.
 var ErrConsumerUnregistered = errors.New("consumer unregistered")
 
-var accountantCauseToError = map[string]error{
-	ErrAccountantInvalidSignature.Error():         ErrAccountantInvalidSignature,
-	ErrAccountantInternal.Error():                 ErrAccountantInternal,
-	ErrAccountantPreviousRNotRevealed.Error():     ErrAccountantPreviousRNotRevealed,
-	ErrAccountantPaymentValueTooLow.Error():       ErrAccountantPaymentValueTooLow,
-	ErrAccountantProviderBalanceExhausted.Error(): ErrAccountantProviderBalanceExhausted,
-	ErrAccountantPromiseValueTooLow.Error():       ErrAccountantPromiseValueTooLow,
-	ErrAccountantOverspend.Error():                ErrAccountantOverspend,
-	ErrAccountantMalformedJSON.Error():            ErrAccountantMalformedJSON,
-	ErrAccountantNoPreviousPromise.Error():        ErrAccountantNoPreviousPromise,
-	ErrAccountantHashlockMissmatch.Error():        ErrAccountantHashlockMissmatch,
-	ErrAccountantNotFound.Error():                 ErrAccountantNotFound,
-	ErrNeedsRRecovery.Error():                     ErrNeedsRRecovery,
-	ErrTooManyRequests.Error():                    ErrTooManyRequests,
-	ErrConsumerUnregistered.Error():               ErrConsumerUnregistered,
+var hermesCauseToError = map[string]error{
+	ErrHermesInvalidSignature.Error():         ErrHermesInvalidSignature,
+	ErrHermesInternal.Error():                 ErrHermesInternal,
+	ErrHermesPreviousRNotRevealed.Error():     ErrHermesPreviousRNotRevealed,
+	ErrHermesPaymentValueTooLow.Error():       ErrHermesPaymentValueTooLow,
+	ErrHermesProviderBalanceExhausted.Error(): ErrHermesProviderBalanceExhausted,
+	ErrHermesPromiseValueTooLow.Error():       ErrHermesPromiseValueTooLow,
+	ErrHermesOverspend.Error():                ErrHermesOverspend,
+	ErrHermesMalformedJSON.Error():            ErrHermesMalformedJSON,
+	ErrHermesNoPreviousPromise.Error():        ErrHermesNoPreviousPromise,
+	ErrHermesHashlockMissmatch.Error():        ErrHermesHashlockMissmatch,
+	ErrHermesNotFound.Error():                 ErrHermesNotFound,
+	ErrNeedsRRecovery.Error():                 ErrNeedsRRecovery,
+	ErrTooManyRequests.Error():                ErrTooManyRequests,
+	ErrConsumerUnregistered.Error():           ErrConsumerUnregistered,
 }
 
 type rRecoveryDetails struct {
-	R           string `json:"r"`
-	AgreementID uint64 `json:"agreement_id"`
+	R           string   `json:"r"`
+	AgreementID *big.Int `json:"agreement_id"`
 }

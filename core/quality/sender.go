@@ -19,6 +19,7 @@ package quality
 
 import (
 	"fmt"
+	"math/big"
 	"runtime"
 	"sync"
 	"time"
@@ -102,7 +103,7 @@ type sessionDataContext struct {
 }
 
 type sessionTokensContext struct {
-	Tokens uint64
+	Tokens *big.Int
 	sessionContext
 }
 
@@ -199,7 +200,7 @@ func (sender *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
 		ServiceType:     e.Session.Proposal.ServiceType,
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 		ConsumerCountry: e.Session.ConsumerLocation.Country,
-		AccountantID:    e.Session.AccountantID.Hex(),
+		AccountantID:    e.Session.HermesID.Hex(),
 	}
 
 	switch e.Status {
@@ -328,6 +329,6 @@ func (sender *Sender) toSessionContext(session connectionstate.Status) sessionCo
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
 		ConsumerCountry: session.ConsumerLocation.Country,
-		AccountantID:    session.AccountantID.Hex(),
+		AccountantID:    session.HermesID.Hex(),
 	}
 }

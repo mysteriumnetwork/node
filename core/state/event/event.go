@@ -19,6 +19,7 @@ package event
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
@@ -48,9 +49,9 @@ type Identity struct {
 	Address            string
 	RegistrationStatus registry.RegistrationStatus
 	ChannelAddress     common.Address
-	Balance            uint64
-	Earnings           uint64
-	EarningsTotal      uint64
+	Balance            *big.Int
+	Earnings           *big.Int
+	EarningsTotal      *big.Int
 }
 
 // Connection represents consumer connection state.

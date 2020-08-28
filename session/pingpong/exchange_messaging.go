@@ -27,6 +27,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const bigIntBase int = 10
+
 // ExchangeRequest structure represents message from service consumer to send a an exchange message.
 type ExchangeRequest struct {
 	Message crypto.ExchangeMessage `json:"exchangeMessage"`
@@ -49,14 +51,14 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	pMessage := &pb.ExchangeMessage{
 		Promise: &pb.Promise{
 			ChannelID: em.Promise.ChannelID,
-			Amount:    em.Promise.Amount,
-			Fee:       em.Promise.Fee,
+			Amount:    em.Promise.Amount.Text(bigIntBase),
+			Fee:       em.Promise.Fee.Text(bigIntBase),
 			Hashlock:  em.Promise.Hashlock,
 			R:         em.Promise.R,
 			Signature: em.Promise.Signature,
 		},
-		AgreementID:    em.AgreementID,
-		AgreementTotal: em.AgreementTotal,
+		AgreementID:    em.AgreementID.Text(bigIntBase),
+		AgreementTotal: em.AgreementTotal.Text(bigIntBase),
 		Provider:       em.Provider,
 		Signature:      em.Signature,
 		HermesID:       em.HermesID,

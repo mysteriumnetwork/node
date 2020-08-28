@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 const (
@@ -48,10 +49,10 @@ type GetProposalsRequest struct {
 	ServiceType         string
 	Refresh             bool
 	IncludeFailed       bool
-	UpperTimePriceBound int64
-	LowerTimePriceBound int64
-	UpperGBPriceBound   int64
-	LowerGBPriceBound   int64
+	UpperTimePriceBound float64
+	LowerTimePriceBound float64
+	UpperGBPriceBound   float64
+	LowerGBPriceBound   float64
 }
 
 // GetProposalRequest represents proposal request.
@@ -78,8 +79,8 @@ type proposalPaymentMethod struct {
 }
 
 type proposalPaymentPrice struct {
-	Amount   int64  `json:"amount"`
-	Currency string `json:"currency"`
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
 }
 
 type proposalPaymentRate struct {
@@ -209,7 +210,7 @@ func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map
 		prop.Payment = &proposalPaymentMethod{
 			Type: payment.GetType(),
 			Price: &proposalPaymentPrice{
-				Amount:   int64(payment.GetPrice().Amount),
+				Amount:   crypto.BigMystToFloat(payment.GetPrice().Amount),
 				Currency: string(payment.GetPrice().Currency),
 			},
 			Rate: &proposalPaymentRate{

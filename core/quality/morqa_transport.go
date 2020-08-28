@@ -120,7 +120,7 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 		IsProvider: false,
 		Metric: &metrics.Event_SessionTokensPayload{
 			SessionTokensPayload: &metrics.SessionTokensPayload{
-				Tokens: ctx.Tokens,
+				Tokens: ctx.Tokens.Text(10),
 				Session: &metrics.SessionPayload{
 					Id:             ctx.ID,
 					ServiceType:    ctx.ServiceType,

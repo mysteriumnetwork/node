@@ -154,6 +154,8 @@ release-snapshot:debian-ppa:
   stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDebianPPASnapshot
+  only:
+    - master
 
 release-snapshot:goreport:
   stage: release-snapshot
@@ -182,7 +184,7 @@ release-tag:docker:
 release-tag:debian-ppa:
   stage: release-tag
   tags: [go]
-  script: go run mage.go -v ReleaseDebianPPAPreRelease
+  script: go run mage.go -v ReleaseDebianPPA
 
 release-tag:android-sdk:
   stage: release-tag

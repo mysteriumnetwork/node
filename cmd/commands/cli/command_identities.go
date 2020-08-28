@@ -19,7 +19,7 @@ package cli
 
 import (
 	"fmt"
-	"strconv"
+	"math/big"
 	"strings"
 	"time"
 
@@ -38,7 +38,6 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageNewIdentity,
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
-		"  " + usageTopupIdentity,
 		"  " + usageSettle,
 	}, "\n")
 
@@ -64,8 +63,6 @@ func (c *cliApp) identities(argsString string) {
 		c.registerIdentity(actionArgs)
 	case "beneficiary":
 		c.setBeneficiary(actionArgs)
-	case "topup":
-		c.topupIdentity(actionArgs)
 	case "settle":
 		c.settle(actionArgs)
 	default:
@@ -166,11 +163,11 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	var address = actionArgs[0]
-	var stake uint64
+	var stake *big.Int
 	if len(actionArgs) >= 2 {
-		s, err := strconv.ParseUint(actionArgs[1], 10, 64)
-		if err != nil {
-			warn(errors.Wrap(err, "could not parse stake"))
+		s, ok := new(big.Int).SetString(actionArgs[1], 10)
+		if !ok {
+			warn("could not parse stake")
 		}
 		stake = s
 	}
@@ -194,23 +191,6 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	info("Registration successful, you can now connect.")
 }
 
-const usageTopupIdentity = "topup <identity>"
-
-func (c *cliApp) topupIdentity(args []string) {
-	if len(args) != 1 {
-		info("Usage: " + usageTopupIdentity)
-		return
-	}
-
-	address := args[0]
-	err := c.tequilapi.TopUp(address)
-	if err != nil {
-		warn(err)
-		return
-	}
-	success("Identity topped up")
-}
-
 const usageSettle = "settle <providerIdentity>"
 
 func (c *cliApp) settle(args []string) {
@@ -220,16 +200,18 @@ func (c *cliApp) settle(args []string) {
 		if err != nil {
 			warn("could not get transactor fee: ", err)
 		}
-		info(fmt.Sprintf("Transactor fee: %.5fMYST", float64(fees.Settlement)/money.MystSize))
-		info(fmt.Sprintf("Accountant fee: %.5fMYST", float64(fees.Accountant)/money.MystSize))
+		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
+		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
+		info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
+		info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
 		return
 	}
-	accountantID := config.GetString(config.FlagAccountantID)
+	hermesID := config.GetString(config.FlagHermesID)
 	info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), identity.FromAddress(accountantID), true)
+		errChan <- c.tequilapi.Settle(identity.FromAddress(args[0]), identity.FromAddress(hermesID), true)
 	}()
 
 	timeout := time.After(time.Minute * 2)
@@ -263,9 +245,9 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 
 	address := actionArgs[0]
 	beneficiary := actionArgs[1]
-	accountantID := config.GetString(config.FlagAccountantID)
+	hermesID := config.GetString(config.FlagHermesID)
 
-	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, accountantID)
+	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
 	if err != nil {
 		warn(errors.Wrap(err, "could not set beneficiary"))
 		return

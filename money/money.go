@@ -19,26 +19,30 @@ package money
 
 import (
 	"fmt"
+	"math/big"
 )
 
 // Money holds the currency type and amount
 type Money struct {
-	Amount   uint64   `json:"amount,omitempty"`
+	Amount   *big.Int `json:"amount,omitempty"`
 	Currency Currency `json:"currency,omitempty"`
 }
 
 // NewMoney returns a new instance of Money.
 // The money is a representation of myst in a uint64 form, with the decimal part expanded.
 // This means, that one myst is equivalent to 10 0000 000.
-func NewMoney(amount uint64, currency Currency) Money {
+func NewMoney(amount *big.Int, currency Currency) Money {
 	return Money{amount, currency}
 }
 
 // String converts struct to string
 func (value Money) String() string {
+	amount := new(big.Float).SetInt(value.Amount)
+	size := new(big.Float).SetInt(MystSize)
+	val, _ := new(big.Float).Quo(amount, size).Float64()
 	return fmt.Sprintf(
 		"%.6f%s",
-		float64(value.Amount)/MystSize,
+		val,
 		value.Currency,
 	)
 }

@@ -25,15 +25,15 @@ import (
 
 // ChannelAddressCalculator calculates the channel addresses for consumer.
 type ChannelAddressCalculator struct {
-	accountantAddress     string
+	hermesAddress         string
 	channelImplementation string
 	registryAddress       string
 }
 
 // NewChannelAddressCalculator returns a new instance of channel address calculator.
-func NewChannelAddressCalculator(accountantSCAddress, channelImplementation, registryAddress string) *ChannelAddressCalculator {
+func NewChannelAddressCalculator(hermesSCAddress, channelImplementation, registryAddress string) *ChannelAddressCalculator {
 	return &ChannelAddressCalculator{
-		accountantAddress:     accountantSCAddress,
+		hermesAddress:         hermesSCAddress,
 		channelImplementation: channelImplementation,
 		registryAddress:       registryAddress,
 	}
@@ -41,6 +41,6 @@ func NewChannelAddressCalculator(accountantSCAddress, channelImplementation, reg
 
 // GetChannelAddress returns channel id.
 func (cac *ChannelAddressCalculator) GetChannelAddress(id identity.Identity) (common.Address, error) {
-	addr, err := crypto.GenerateChannelAddress(id.Address, cac.accountantAddress, cac.registryAddress, cac.channelImplementation)
+	addr, err := crypto.GenerateChannelAddress(id.Address, cac.hermesAddress, cac.registryAddress, cac.channelImplementation)
 	return common.HexToAddress(addr), err
 }

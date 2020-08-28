@@ -42,12 +42,12 @@ func TestSettlementHistoryStorage(t *testing.T) {
 
 	storage := NewSettlementHistoryStorage(bolt)
 
-	accountantID := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
+	hermesAddress := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
 	providerID := identity.FromAddress("0x79bb2a1c5E0075005F084a66A44D5e930A88eC86")
 	entry1 := SettlementHistoryEntry{
 		TxHash:       common.BigToHash(big.NewInt(1)),
 		ProviderID:   providerID,
-		AccountantID: accountantID,
+		HermesID:     hermesAddress,
 		Time:         time.Date(2020, 1, 1, 1, 0, 0, 0, time.UTC),
 		Promise:      crypto.Promise{},
 		Beneficiary:  common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),
@@ -57,7 +57,7 @@ func TestSettlementHistoryStorage(t *testing.T) {
 	entry2 := SettlementHistoryEntry{
 		TxHash:       common.BigToHash(big.NewInt(2)),
 		ProviderID:   providerID,
-		AccountantID: accountantID,
+		HermesID:     hermesAddress,
 		Time:         time.Date(2020, 1, 1, 2, 0, 0, 0, time.UTC),
 		Promise:      crypto.Promise{},
 		Beneficiary:  common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),

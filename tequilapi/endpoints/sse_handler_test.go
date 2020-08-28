@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -199,11 +200,11 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	changedState.Identities = []stateEvent.Identity{
 		{
 			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
-			RegistrationStatus: registry.RegisteredConsumer,
+			RegistrationStatus: registry.Registered,
 			ChannelAddress:     common.HexToAddress("0x000000000000000000000000000000000000000a"),
-			Balance:            50,
-			Earnings:           1,
-			EarningsTotal:      100,
+			Balance:            big.NewInt(50),
+			Earnings:           big.NewInt(1),
+			EarningsTotal:      big.NewInt(100),
 		},
 	}
 	h.ConsumeStateEvent(changedState)
@@ -236,11 +237,12 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     "identities": [
       {
         "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
-        "registration_status": "RegisteredConsumer",
+        "registration_status": "Registered",
         "channel_address": "0x000000000000000000000000000000000000000A",
         "balance": 50,
         "earnings": 1,
-        "earnings_total": 100
+		"earnings_total": 100,
+		"stake": 0
       }
     ]
   },

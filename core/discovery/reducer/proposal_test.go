@@ -18,6 +18,7 @@
 package reducer
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,7 +88,7 @@ func Test_AccessPolicy_FiltersByIDAndSource(t *testing.T) {
 }
 
 func Test_PriceMinute_FiltersByPrice(t *testing.T) {
-	match := PriceMinute(100, 1000000)
+	match := PriceMinute(big.NewInt(100), big.NewInt(1000000))
 
 	assert.True(t, match(proposalEmpty))
 	assert.False(t, match(proposalTimeExpensive))
@@ -96,12 +97,12 @@ func Test_PriceMinute_FiltersByPrice(t *testing.T) {
 	assert.True(t, match(proposalTimeExactSeconds))
 	assert.False(t, match(proposalTimeExpensiveSeconds))
 
-	match = PriceMinute(0, 1000000)
+	match = PriceMinute(big.NewInt(0), big.NewInt(1000000))
 	assert.True(t, match(proposalTimeCheap))
 }
 
 func Test_PriceGiB_FiltersByPrice(t *testing.T) {
-	match := PriceGiB(100, 7000000)
+	match := PriceGiB(big.NewInt(100), big.NewInt(7000000))
 
 	assert.True(t, match(proposalEmpty))
 	assert.False(t, match(proposalBytesExpensive))
@@ -109,6 +110,6 @@ func Test_PriceGiB_FiltersByPrice(t *testing.T) {
 	assert.True(t, match(proposalBytesExact))
 	assert.True(t, match(proposalBytesExactInParts))
 
-	match = PriceGiB(0, 7000000)
+	match = PriceGiB(big.NewInt(0), big.NewInt(7000000))
 	assert.True(t, match(proposalBytesCheap))
 }

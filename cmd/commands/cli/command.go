@@ -177,6 +177,7 @@ func (c *cliApp) handleActions(line string) {
 		{"license", c.license},
 		{"proposals", c.proposals},
 		{"service", c.service},
+		{"stake", c.stake},
 		{"mmn", c.mmnApiKey},
 	}
 
@@ -372,8 +373,8 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	accountantID := config.GetString(config.FlagAccountantID)
-	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, accountantID, serviceType, connectOptions)
+	hermesID := config.GetString(config.FlagHermesID)
+	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, hermesID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return
@@ -560,10 +561,10 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		warn(err)
@@ -681,11 +682,15 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("new"),
 			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
-			readline.PcItem("topup", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("beneficiary", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("settle", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem("status"),
+		readline.PcItem(
+			"stake",
+			readline.PcItem("increase"),
+			readline.PcItem("decrease"),
+		),
 		readline.PcItem("healthcheck"),
 		readline.PcItem("nat"),
 		readline.PcItem("proposals"),

@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"context"
+	"math/big"
 	"path/filepath"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/rs/zerolog"
 
@@ -64,7 +66,7 @@ type MobileNode struct {
 	eventBus                     eventbus.EventBus
 	connectionRegistry           *connection.Registry
 	proposalsManager             *proposalsManager
-	accountant                   common.Address
+	hermes                       common.Address
 	feedbackReporter             *feedback.Reporter
 	transactor                   *registry.Transactor
 	identityRegistry             registry.IdentityRegistry
@@ -77,7 +79,7 @@ type MobileNode struct {
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Testnet                         bool
+	Betanet                         bool
 	Localnet                        bool
 	ExperimentNATPunching           bool
 	MysteriumAPIAddress             string
@@ -90,29 +92,28 @@ type MobileNodeOptions struct {
 	TransactorEndpointAddress       string
 	TransactorRegistryAddress       string
 	TransactorChannelImplementation string
-	AccountantEndpointAddress       string
-	AccountantID                    string
+	HermesEndpointAddress           string
+	HermesID                        string
 	MystSCAddress                   string
 }
 
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Testnet:                         true,
+		Betanet:                         true,
 		ExperimentNATPunching:           true,
-		MysteriumAPIAddress:             metadata.TestnetDefinition.MysteriumAPIAddress,
-		BrokerAddress:                   metadata.TestnetDefinition.BrokerAddress,
-		EtherClientRPC:                  metadata.TestnetDefinition.EtherClientRPC,
+		MysteriumAPIAddress:             metadata.BetanetDefinition.MysteriumAPIAddress,
+		BrokerAddress:                   metadata.BetanetDefinition.BrokerAddress,
+		EtherClientRPC:                  metadata.BetanetDefinition.EtherClientRPC,
 		FeedbackURL:                     "https://feedback.mysterium.network",
-		QualityOracleURL:                "https://quality.mysterium.network/api/v1",
+		QualityOracleURL:                "https://betanet-quality.mysterium.network/api/v1",
 		IPDetectorURL:                   "https://api.ipify.org/?format=json",
-		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:       metadata.TestnetDefinition.TransactorAddress,
-		TransactorRegistryAddress:       metadata.TestnetDefinition.RegistryAddress,
-		TransactorChannelImplementation: metadata.TestnetDefinition.ChannelImplAddress,
-		AccountantEndpointAddress:       metadata.TestnetDefinition.AccountantAddress,
-		AccountantID:                    metadata.TestnetDefinition.AccountantID,
-		MystSCAddress:                   "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+		LocationDetectorURL:             "https://betanet-location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:       metadata.BetanetDefinition.TransactorAddress,
+		TransactorRegistryAddress:       metadata.BetanetDefinition.RegistryAddress,
+		TransactorChannelImplementation: metadata.BetanetDefinition.ChannelImplAddress,
+		HermesID:                        metadata.BetanetDefinition.HermesID,
+		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
 	}
 }
 
@@ -127,7 +128,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	currentDir := appPath
 
 	network := node.OptionsNetwork{
-		Testnet:               options.Testnet,
+		Betanet:               options.Betanet,
 		Localnet:              options.Localnet,
 		ExperimentNATPunching: options.ExperimentNATPunching,
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
@@ -180,18 +181,17 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			ChannelImplementation:           options.TransactorChannelImplementation,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
-			ProviderRegistrationStake:       6200000000,
+			ProviderRegistrationStake:       big.NewInt(6200000000),
 		},
-		Accountant: node.OptionsAccountant{
-			AccountantEndpointAddress: options.AccountantEndpointAddress,
-			AccountantID:              options.AccountantID,
+		Hermes: node.OptionsHermes{
+			HermesID: options.HermesID,
 		},
 		Payments: node.OptionsPayments{
-			MaxAllowedPaymentPercentile:        1500,
-			BCTimeout:                          time.Second * 30,
-			AccountantPromiseSettlingThreshold: 0.1,
-			SettlementTimeout:                  time.Hour * 2,
-			MystSCAddress:                      options.MystSCAddress,
+			MaxAllowedPaymentPercentile:    1500,
+			BCTimeout:                      time.Second * 30,
+			HermesPromiseSettlingThreshold: 0.1,
+			SettlementTimeout:              time.Hour * 2,
+			MystSCAddress:                  options.MystSCAddress,
 		},
 		Consumer: true,
 		P2PPorts: port.UnspecifiedRange(),
@@ -213,7 +213,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ipResolver:                   di.IPResolver,
 		eventBus:                     di.EventBus,
 		connectionRegistry:           di.ConnectionRegistry,
-		accountant:                   common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		hermes:                       common.HexToAddress(nodeOptions.Hermes.HermesID),
 		feedbackReporter:             di.Reporter,
 		transactor:                   di.Transactor,
 		identityRegistry:             di.IdentityRegistry,
@@ -280,15 +280,15 @@ func (mb *MobileNode) GetStatus() *GetStatusResponse {
 
 // StatisticsChangeCallback represents statistics callback.
 type StatisticsChangeCallback interface {
-	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent int64)
+	OnChange(duration int64, bytesReceived int64, bytesSent int64, tokensSpent float64)
 }
 
 // RegisterStatisticsChangeCallback registers callback which is called on active connection
 // statistics change.
 func (mb *MobileNode) RegisterStatisticsChangeCallback(cb StatisticsChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, func(e connectionstate.AppEventConnectionStatistics) {
-		tokensSpent := mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal
-		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), int64(tokensSpent))
+		tokensSpent := crypto.BigMystToFloat(mb.stateKeeper.GetState().Connection.Invoice.AgreementTotal)
+		cb.OnChange(int64(e.SessionInfo.Duration().Seconds()), int64(e.Stats.BytesReceived), int64(e.Stats.BytesSent), tokensSpent)
 	})
 }
 
@@ -307,13 +307,14 @@ func (mb *MobileNode) RegisterConnectionStatusChangeCallback(cb ConnectionStatus
 
 // BalanceChangeCallback represents balance change callback.
 type BalanceChangeCallback interface {
-	OnChange(identityAddress string, balance int64)
+	OnChange(identityAddress string, balance float64)
 }
 
 // RegisterBalanceChangeCallback registers callback which is called on identity balance change.
 func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
 	_ = mb.eventBus.SubscribeAsync(event.AppTopicBalanceChanged, func(e event.AppEventBalanceChanged) {
-		cb.OnChange(e.Identity.Address, int64(e.Current))
+		balance := crypto.BigMystToFloat(e.Current)
+		cb.OnChange(e.Identity.Address, balance)
 	})
 }
 
@@ -367,7 +368,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		DisableKillSwitch: req.DisableKillSwitch,
 		DNS:               connection.DNSOptionAuto,
 	}
-	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.accountant, *proposal, connectOptions); err != nil {
+	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.hermes, *proposal, connectOptions); err != nil {
 		if err == connection.ErrInsufficientBalance {
 			return &ConnectResponse{
 				ErrorCode: connectErrInsufficientBalance,
@@ -456,7 +457,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 
 // GetIdentityRegistrationFeesResponse represents identity registration fees result.
 type GetIdentityRegistrationFeesResponse struct {
-	Fee int64
+	Fee float64
 }
 
 // GetIdentityRegistrationFees returns identity registration fees.
@@ -465,38 +466,31 @@ func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFee
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get registration fees")
 	}
-	return &GetIdentityRegistrationFeesResponse{Fee: int64(fees.Fee)}, nil
+
+	fee := crypto.BigMystToFloat(fees.Fee)
+
+	return &GetIdentityRegistrationFeesResponse{Fee: fee}, nil
 }
 
 // RegisterIdentityRequest represents identity registration request.
 type RegisterIdentityRequest struct {
 	IdentityAddress string
-	Fee             int64
 }
 
 // RegisterIdentity starts identity registration in background.
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
-	err := mb.transactor.RegisterIdentity(req.IdentityAddress, &registry.IdentityRegistrationRequestDTO{
-		Stake:       0,
+	fees, err := mb.transactor.FetchRegistrationFees()
+	if err != nil {
+		return errors.Wrap(err, "could not get registration fees")
+	}
+
+	err = mb.transactor.RegisterIdentity(req.IdentityAddress, &registry.IdentityRegistrationRequestDTO{
+		Stake:       big.NewInt(0),
 		Beneficiary: "",
-		Fee:         uint64(req.Fee),
+		Fee:         fees.Fee,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
-	}
-	return nil
-}
-
-// TopUpRequest represents top-up request.
-type TopUpRequest struct {
-	IdentityAddress string
-}
-
-// TopUp adds resets to default balance. This is temporary flow while
-// payments are not production ready.
-func (mb *MobileNode) TopUp(req *TopUpRequest) error {
-	if err := mb.transactor.TopUp(req.IdentityAddress); err != nil {
-		return errors.Wrap(err, "could not top-up balance")
 	}
 	return nil
 }
@@ -508,13 +502,14 @@ type GetBalanceRequest struct {
 
 // GetBalanceResponse represents balance response.
 type GetBalanceResponse struct {
-	Balance int64
+	Balance float64
 }
 
 // GetBalance returns current balance.
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	balance := mb.consumerBalanceTracker.GetBalance(identity.FromAddress(req.IdentityAddress))
-	return &GetBalanceResponse{Balance: int64(balance)}, nil
+	b := crypto.BigMystToFloat(balance)
+	return &GetBalanceResponse{Balance: b}, nil
 }
 
 // SendFeedbackRequest represents user feedback request.

@@ -18,6 +18,8 @@
 package contract
 
 import (
+	"math/big"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -37,12 +39,13 @@ type IdentityDTO struct {
 	// identity in Ethereum address format
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
-	Address            string `json:"id"`
-	RegistrationStatus string `json:"registration_status"`
-	ChannelAddress     string `json:"channel_address"`
-	Balance            uint64 `json:"balance"`
-	Earnings           uint64 `json:"earnings"`
-	EarningsTotal      uint64 `json:"earnings_total"`
+	Address            string   `json:"id"`
+	RegistrationStatus string   `json:"registration_status"`
+	ChannelAddress     string   `json:"channel_address"`
+	Balance            *big.Int `json:"balance"`
+	Earnings           *big.Int `json:"earnings"`
+	EarningsTotal      *big.Int `json:"earnings_total"`
+	Stake              *big.Int `json:"stake"`
 }
 
 // NewIdentityDTO maps to API identity.

@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	stdErr "errors"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,18 +38,19 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type accountantPromiseStorage interface {
-	Store(providerID identity.Identity, accountantID common.Address, promise AccountantPromise) error
-	Get(providerID identity.Identity, accountantID common.Address) (AccountantPromise, error)
+type hermesPromiseStorage interface {
+	Store(providerID identity.Identity, hermesID common.Address, promise HermesPromise) error
+	Get(providerID identity.Identity, hermesID common.Address) (HermesPromise, error)
 }
 
 type feeProvider interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 }
 
-type accountantCaller interface {
+// HermesHTTPRequester represents HTTP requests to Hermes.
+type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
-	RevealR(r string, provider string, agreementID uint64) error
+	RevealR(r string, provider string, agreementID *big.Int) error
 }
 
 type encryption interface {
@@ -56,19 +58,22 @@ type encryption interface {
 	Encrypt(addr common.Address, plaintext []byte) ([]byte, error)
 }
 
-// AccountantPromiseHandlerDeps represents the AccountantPromiseHandler dependencies.
-type AccountantPromiseHandlerDeps struct {
-	AccountantPromiseStorage accountantPromiseStorage
-	AccountantCaller         accountantCaller
-	AccountantID             common.Address
-	FeeProvider              feeProvider
-	Encryption               encryption
-	EventBus                 eventbus.Publisher
+// HermesCallerFactory represents Hermes caller factory.
+type HermesCallerFactory func(url string) HermesHTTPRequester
+
+// HermesPromiseHandlerDeps represents the HermesPromiseHandler dependencies.
+type HermesPromiseHandlerDeps struct {
+	HermesPromiseStorage hermesPromiseStorage
+	FeeProvider          feeProvider
+	Encryption           encryption
+	EventBus             eventbus.Publisher
+	HermesURLGetter      hermesURLGetter
+	HermesCallerFactory  HermesCallerFactory
 }
 
-// AccountantPromiseHandler handles the accountant promises for ongoing sessions.
-type AccountantPromiseHandler struct {
-	deps          AccountantPromiseHandlerDeps
+// HermesPromiseHandler handles the hermes promises for ongoing sessions.
+type HermesPromiseHandler struct {
+	deps          HermesPromiseHandlerDeps
 	queue         chan enqueuedRequest
 	stop          chan struct{}
 	stopOnce      sync.Once
@@ -76,9 +81,9 @@ type AccountantPromiseHandler struct {
 	transactorFee registry.FeesResponse
 }
 
-// NewAccountantPromiseHandler returns a new instance of accountant promise handler.
-func NewAccountantPromiseHandler(deps AccountantPromiseHandlerDeps) *AccountantPromiseHandler {
-	return &AccountantPromiseHandler{
+// NewHermesPromiseHandler returns a new instance of hermes promise handler.
+func NewHermesPromiseHandler(deps HermesPromiseHandlerDeps) *HermesPromiseHandler {
+	return &HermesPromiseHandler{
 		deps:  deps,
 		queue: make(chan enqueuedRequest, 100),
 		stop:  make(chan struct{}),
@@ -93,8 +98,12 @@ type enqueuedRequest struct {
 	sessionID  string
 }
 
+type hermesURLGetter interface {
+	GetHermesURL(address common.Address) (string, error)
+}
+
 // RequestPromise adds the request to the queue.
-func (aph *AccountantPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
+func (aph *HermesPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
 	er := enqueuedRequest{
 		r:          r,
 		em:         em,
@@ -106,7 +115,7 @@ func (aph *AccountantPromiseHandler) RequestPromise(r []byte, em crypto.Exchange
 	return er.errChan
 }
 
-func (aph *AccountantPromiseHandler) updateFee() {
+func (aph *HermesPromiseHandler) updateFee() {
 	fees, err := aph.deps.FeeProvider.FetchSettleFees()
 	if err != nil {
 		log.Warn().Err(err).Msg("could not fetch fees, ignoring")
@@ -116,9 +125,9 @@ func (aph *AccountantPromiseHandler) updateFee() {
 	aph.transactorFee = fees
 }
 
-func (aph *AccountantPromiseHandler) handleRequests() {
-	log.Debug().Msgf("accountant promise handler started")
-	defer log.Debug().Msgf("accountant promise handler stopped")
+func (aph *HermesPromiseHandler) handleRequests() {
+	log.Debug().Msgf("hermes promise handler started")
+	defer log.Debug().Msgf("hermes promise handler stopped")
 	for {
 		select {
 		case <-aph.stop:
@@ -129,8 +138,8 @@ func (aph *AccountantPromiseHandler) handleRequests() {
 	}
 }
 
-// Subscribe subscribes AccountantPromiseHandler to relevant events.
-func (aph *AccountantPromiseHandler) Subscribe(bus eventbus.Subscriber) error {
+// Subscribe subscribes HermesPromiseHandler to relevant events.
+func (aph *HermesPromiseHandler) Subscribe(bus eventbus.Subscriber) error {
 	err := bus.SubscribeAsync(event.AppTopicNode, aph.handleNodeStopEvents)
 	if err != nil {
 		return fmt.Errorf("could not subscribe to node events: %w", err)
@@ -143,7 +152,7 @@ func (aph *AccountantPromiseHandler) Subscribe(bus eventbus.Subscriber) error {
 	return nil
 }
 
-func (aph *AccountantPromiseHandler) handleServiceEvent(ev servicestate.AppEventServiceStatus) {
+func (aph *HermesPromiseHandler) handleServiceEvent(ev servicestate.AppEventServiceStatus) {
 	if ev.Status == string(servicestate.Running) {
 		aph.startOnce.Do(
 			func() {
@@ -153,20 +162,20 @@ func (aph *AccountantPromiseHandler) handleServiceEvent(ev servicestate.AppEvent
 	}
 }
 
-func (aph *AccountantPromiseHandler) doStop() {
+func (aph *HermesPromiseHandler) doStop() {
 	aph.stopOnce.Do(func() {
 		close(aph.stop)
 	})
 }
 
-func (aph *AccountantPromiseHandler) handleNodeStopEvents(e event.Payload) {
+func (aph *HermesPromiseHandler) handleNodeStopEvents(e event.Payload) {
 	if e.Status == event.StatusStopped {
 		aph.doStop()
 		return
 	}
 }
 
-func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
+func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	defer func() { close(er.errChan) }()
 
 	if !aph.transactorFee.IsValid() {
@@ -196,30 +205,36 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
-	promise, err := aph.deps.AccountantCaller.RequestPromise(request)
-	err = aph.handleAccountantError(err, er.providerID)
+	hermesID := common.HexToAddress(request.ExchangeMessage.HermesID)
+	hermesCaller, err := aph.getHermesCaller(hermesID)
 	if err != nil {
-		er.errChan <- fmt.Errorf("accountant request promise error: %w", err)
+		er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
+		return
+	}
+	promise, err := hermesCaller.RequestPromise(request)
+	err = aph.handleHermesError(err, er.providerID, hermesID)
+	if err != nil {
+		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 		return
 	}
 
-	ap := AccountantPromise{
+	ap := HermesPromise{
 		Promise:     promise,
 		R:           hex.EncodeToString(er.r),
 		Revealed:    false,
 		AgreementID: er.em.AgreementID,
 	}
 
-	err = aph.deps.AccountantPromiseStorage.Store(er.providerID, aph.deps.AccountantID, ap)
+	err = aph.deps.HermesPromiseStorage.Store(er.providerID, hermesID, ap)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
-		er.errChan <- fmt.Errorf("could not store accountant promise: %w", err)
+		er.errChan <- fmt.Errorf("could not store hermes promise: %w", err)
 		return
 	}
 
-	aph.deps.EventBus.Publish(pinge.AppTopicAccountantPromise, pinge.AppEventAccountantPromise{
-		Promise:      promise,
-		AccountantID: aph.deps.AccountantID,
-		ProviderID:   er.providerID,
+	aph.deps.EventBus.Publish(pinge.AppTopicHermesPromise, pinge.AppEventHermesPromise{
+		Promise:    promise,
+		HermesID:   hermesID,
+		ProviderID: er.providerID,
 	})
 	aph.deps.EventBus.Publish(sessionEvent.AppTopicTokensEarned, sessionEvent.AppEventTokensEarned{
 		ProviderID: er.providerID,
@@ -227,71 +242,84 @@ func (aph *AccountantPromiseHandler) requestPromise(er enqueuedRequest) {
 		Total:      er.em.AgreementTotal,
 	})
 
-	err = aph.revealR(er.providerID)
-	err = aph.handleAccountantError(err, er.providerID)
+	err = aph.revealR(er.providerID, hermesID)
+	err = aph.handleHermesError(err, er.providerID, hermesID)
 	if err != nil {
-		er.errChan <- fmt.Errorf("accountant reveal r error: %w", err)
+		er.errChan <- fmt.Errorf("hermes reveal r error: %w", err)
 		return
 	}
 }
 
-func (aph *AccountantPromiseHandler) revealR(providerID identity.Identity) error {
+func (aph *HermesPromiseHandler) getHermesCaller(hermesID common.Address) (HermesHTTPRequester, error) {
+	addr, err := aph.deps.HermesURLGetter.GetHermesURL(hermesID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get hermes URL: %w", err)
+	}
+	return aph.deps.HermesCallerFactory(addr), nil
+}
+
+func (aph *HermesPromiseHandler) revealR(providerID identity.Identity, hermesID common.Address) error {
 	needsRevealing := false
-	accountantPromise, err := aph.deps.AccountantPromiseStorage.Get(providerID, aph.deps.AccountantID)
+	hermesPromise, err := aph.deps.HermesPromiseStorage.Get(providerID, hermesID)
 	switch err {
 	case nil:
-		needsRevealing = !accountantPromise.Revealed
+		needsRevealing = !hermesPromise.Revealed
 	case ErrNotFound:
 		needsRevealing = false
 	default:
-		return fmt.Errorf("could not get accountant promise: %w", err)
+		return fmt.Errorf("could not get hermes promise: %w", err)
 	}
 
 	if !needsRevealing {
 		return nil
 	}
 
-	err = aph.deps.AccountantCaller.RevealR(accountantPromise.R, providerID.Address, accountantPromise.AgreementID)
-	handledErr := aph.handleAccountantError(err, providerID)
+	hermesCaller, err := aph.getHermesCaller(hermesID)
+	if err != nil {
+		return fmt.Errorf("could not get hermes caller: %w", err)
+	}
+
+	err = hermesCaller.RevealR(hermesPromise.R, providerID.Address, hermesPromise.AgreementID)
+	handledErr := aph.handleHermesError(err, providerID, hermesID)
 	if handledErr != nil {
 		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
-	accountantPromise.Revealed = true
-	err = aph.deps.AccountantPromiseStorage.Store(providerID, aph.deps.AccountantID, accountantPromise)
+	hermesPromise.Revealed = true
+	err = aph.deps.HermesPromiseStorage.Store(providerID, hermesID, hermesPromise)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
-		return fmt.Errorf("could not store accountant promise: %w", err)
+		return fmt.Errorf("could not store hermes promise: %w", err)
 	}
 
 	return nil
 }
 
-func (aph *AccountantPromiseHandler) handleAccountantError(err error, providerID identity.Identity) error {
+func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identity.Identity, hermesID common.Address) error {
 	if err == nil {
 		return nil
 	}
 
 	switch {
 	case stdErr.Is(err, ErrNeedsRRecovery):
-		var aer AccountantErrorResponse
+		var aer HermesErrorResponse
 		ok := stdErr.As(err, &aer)
 		if !ok {
-			return errors.New("could not cast errNeedsRecovery to accountantError")
+			return errors.New("could not cast errNeedsRecovery to hermesError")
 		}
-		recoveryErr := aph.recoverR(aer, providerID)
+		recoveryErr := aph.recoverR(aer, providerID, hermesID)
 		if recoveryErr != nil {
 			return recoveryErr
 		}
 		return nil
-	case stdErr.Is(err, ErrAccountantNoPreviousPromise):
-		log.Info().Msg("no previous promise on accountant, will mark R as revealed")
+	case stdErr.Is(err, ErrHermesNoPreviousPromise):
+		log.Info().Msg("no previous promise on hermes, will mark R as revealed")
 		return nil
 	default:
 		return err
 	}
 }
 
-func (aph *AccountantPromiseHandler) recoverR(aerr accountantError, providerID identity.Identity) error {
+func (aph *HermesPromiseHandler) recoverR(aerr hermesError, providerID identity.Identity, hermesID common.Address) error {
 	log.Info().Msg("Recovering R...")
 	decoded, err := hex.DecodeString(aerr.Data())
 	if err != nil {
@@ -310,7 +338,12 @@ func (aph *AccountantPromiseHandler) recoverR(aerr accountantError, providerID i
 	}
 
 	log.Info().Msg("R recovered, will reveal...")
-	err = aph.deps.AccountantCaller.RevealR(res.R, providerID.Address, res.AgreementID)
+	hermesCaller, err := aph.getHermesCaller(hermesID)
+	if err != nil {
+		return fmt.Errorf("could not get hermes caller: %w", err)
+	}
+
+	err = hermesCaller.RevealR(res.R, providerID.Address, res.AgreementID)
 	if err != nil {
 		return fmt.Errorf("could not reveal R: %w", err)
 	}

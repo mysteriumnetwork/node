@@ -20,7 +20,6 @@ package endpoints
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -51,7 +50,7 @@ func Test_RegisterIdentity(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{})
+	AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{}, common.Address{})
 
 	req, err := http.NewRequest(
 		http.MethodPost,
@@ -73,10 +72,10 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "accountantID", fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "registryAddress", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "hermesID", fakeSignerFactory, mocks.NewEventBus(), nil)
 	AddRoutesForTransactor(router, tr, &mockSettler{
 		feeToReturn: 11,
-	}, &settlementHistoryProviderMock{})
+	}, &settlementHistoryProviderMock{}, common.Address{})
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -89,60 +88,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"registration":1, "settlement":1, "accountant":11}`, resp.Body.String())
-}
-
-func Test_TopUp_OK(t *testing.T) {
-	mockResponse := ""
-	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
-
-	router := httprouter.New()
-
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{})
-
-	topUpData := `{"identity": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"/transactor/topup",
-		bytes.NewBufferString(topUpData),
-	)
-	assert.Nil(t, err)
-
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusAccepted, resp.Code)
-	assert.Equal(t, "", resp.Body.String())
-}
-
-func Test_TopUp_BubblesErrors(t *testing.T) {
-	mockResponse := ""
-	mockStatus := http.StatusBadGateway
-	server := newTestTransactorServer(mockStatus, mockResponse)
-
-	router := httprouter.New()
-
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", "0x599d43715DF3070f83355D9D90AE62c159E62A75", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{})
-
-	topUpData := `{"identity": "0x599d43715DF3070f83355D9D90AE62c159E62A75"}`
-	req, err := http.NewRequest(
-		http.MethodPost,
-		"/transactor/topup",
-		bytes.NewBufferString(topUpData),
-	)
-	assert.Nil(t, err)
-
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.JSONEq(
-		t,
-		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
-		resp.Body.String(),
-	)
+	assert.JSONEq(t, `{"registration":1, "settlement":1, "hermes":11, "decreaseStake":1}`, resp.Body.String())
 }
 
 func Test_SettleAsync_OK(t *testing.T) {
@@ -152,9 +98,9 @@ func Test_SettleAsync_OK(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, &mockSettler{}, &settlementHistoryProviderMock{})
+	AddRoutesForTransactor(router, tr, &mockSettler{}, &settlementHistoryProviderMock{}, common.Address{})
 
-	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	settleRequest := `{"hermes_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/settle/async",
@@ -176,7 +122,7 @@ func Test_SettleAsync_ReturnsError(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{})
+	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{}, common.Address{})
 
 	settleRequest := `asdasdasd`
 	req, err := http.NewRequest(
@@ -200,9 +146,9 @@ func Test_SettleSync_OK(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, &mockSettler{}, &settlementHistoryProviderMock{})
+	AddRoutesForTransactor(router, tr, &mockSettler{}, &settlementHistoryProviderMock{}, common.Address{})
 
-	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	settleRequest := `{"hermes_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/settle/sync",
@@ -224,9 +170,9 @@ func Test_SettleSync_ReturnsError(t *testing.T) {
 	router := httprouter.New()
 
 	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{})
+	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{}, common.Address{})
 
-	settleRequest := `{"accountant_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
+	settleRequest := `{"hermes_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "provider_id": "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/settle/sync",
@@ -249,11 +195,11 @@ func Test_SettleHistory(t *testing.T) {
 
 		router := httprouter.New()
 		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-		AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{errToReturn: errors.New("explosions everywhere")})
+		AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{errToReturn: errors.New("explosions everywhere")}, common.Address{})
 
 		req, err := http.NewRequest(
 			http.MethodGet,
-			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10&accountantID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
+			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10&hermesID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
 			nil,
 		)
 		assert.Nil(t, err)
@@ -284,11 +230,11 @@ func Test_SettleHistory(t *testing.T) {
 
 		router := httprouter.New()
 		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
-		AddRoutesForTransactor(router, tr, nil, mockStorage)
+		AddRoutesForTransactor(router, tr, nil, mockStorage, common.Address{})
 
 		req, err := http.NewRequest(
 			http.MethodGet,
-			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10&accountantID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
+			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10&hermesID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
 			nil,
 		)
 		assert.Nil(t, err)
@@ -304,7 +250,7 @@ func Test_SettleHistory(t *testing.T) {
 					{
 						"tx_hash": "0x88af51047ff2da1e3626722fe239f70c3ddd668f067b2ac8d67b280d2eff39f7",
 						"provider_id": "",
-						"accountant_id": "0x0000000000000000000000000000000000000000",
+						"hermes_id": "0x0000000000000000000000000000000000000000",
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
 						"amount": 123,
@@ -313,7 +259,7 @@ func Test_SettleHistory(t *testing.T) {
 					{
 						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
 						"provider_id": "",
-						"accountant_id": "0x0000000000000000000000000000000000000000",
+						"hermes_id": "0x0000000000000000000000000000000000000000",
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary": "0x0000000000000000000000000000000000000000",
 						"amount": 456,
@@ -377,7 +323,11 @@ func (ms *mockSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Ad
 	return ms.errToReturn
 }
 
-func (ms *mockSettler) GetAccountantFee() (uint16, error) {
+func (ms *mockSettler) SettleIntoStake(providerID identity.Identity, hermesID common.Address) error {
+	return nil
+}
+
+func (ms *mockSettler) GetHermesFee(_ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 

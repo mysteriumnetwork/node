@@ -19,7 +19,7 @@ package pingpong
 
 import (
 	"fmt"
-	"math"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -57,8 +57,8 @@ type PeerExchangeMessageSender interface {
 }
 
 type consumerTotalsStorage interface {
-	Store(id identity.Identity, accountantID common.Address, amount uint64) error
-	Get(id identity.Identity, accountantID common.Address) (uint64, error)
+	Store(id identity.Identity, hermesID common.Address, amount *big.Int) error
+	Get(id identity.Identity, hermesID common.Address) (*big.Int, error)
 }
 
 type timeTracker interface {
@@ -99,16 +99,20 @@ type InvoicePayerDeps struct {
 	SessionID                 string
 	ChannelAddressCalculator  channelAddressCalculator
 	EventBus                  eventbus.EventBus
-	AccountantAddress         common.Address
+	HermesAddress             common.Address
 	DataLeeway                datasize.BitSize
 }
 
 // NewInvoicePayer returns a new instance of exchange message tracker.
 func NewInvoicePayer(ipd InvoicePayerDeps) *InvoicePayer {
 	return &InvoicePayer{
-		stop:        make(chan struct{}),
-		deps:        ipd,
-		lastInvoice: crypto.Invoice{},
+		stop: make(chan struct{}),
+		deps: ipd,
+		lastInvoice: crypto.Invoice{
+			AgreementID:    new(big.Int),
+			AgreementTotal: new(big.Int),
+			TransactorFee:  new(big.Int),
+		},
 	}
 }
 
@@ -152,16 +156,20 @@ func (ip *InvoicePayer) Start() error {
 	}
 }
 
-func (ip *InvoicePayer) incrementGrandTotalPromised(amount uint64) error {
-	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
+func (ip *InvoicePayer) incrementGrandTotalPromised(amount big.Int) error {
+	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.HermesAddress)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
+			res = big.NewInt(0)
 		} else {
 			return errors.Wrap(err, "could not get previous grand total")
 		}
 	}
-	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity, ip.deps.AccountantAddress, res+amount)
+	if res == nil {
+		res = big.NewInt(0)
+	}
+	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity, ip.deps.HermesAddress, new(big.Int).Add(res, &amount))
 }
 
 func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
@@ -175,11 +183,11 @@ func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
 	shouldBe := CalculatePaymentAmount(ip.deps.TimeTracker.Elapsed(), transferred, ip.deps.Proposal.PaymentMethod)
 	estimatedTolerance := estimateInvoiceTolerance(ip.deps.TimeTracker.Elapsed(), transferred)
 
-	upperBound := uint64(math.Trunc(float64(shouldBe) * estimatedTolerance))
+	upperBound, _ := new(big.Float).Mul(new(big.Float).SetInt(shouldBe), big.NewFloat(estimatedTolerance)).Int(nil)
 
 	log.Debug().Msgf("Estimated tolerance %.4v, upper bound %v", estimatedTolerance, upperBound)
 
-	if invoice.AgreementTotal > upperBound {
+	if invoice.AgreementTotal.Cmp(upperBound) == 1 {
 		log.Warn().Msg("Provider trying to overcharge")
 		return ErrProviderOvercharge
 	}
@@ -214,21 +222,25 @@ func estimateInvoiceTolerance(elapsed time.Duration, transferred DataTransferred
 	return durationComponent + avgSpeedComponent + consumerInvoiceBasicTolerance
 }
 
-func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
-	diff = invoice.AgreementTotal - ip.lastInvoice.AgreementTotal
-	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.AccountantAddress)
-	if err != nil && err != ErrNotFound {
-		return 0, 0, fmt.Errorf("could not get previous grand total: %w", err)
+func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise *big.Int, diff *big.Int, err error) {
+	diff = safeSub(invoice.AgreementTotal, ip.lastInvoice.AgreementTotal)
+	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.HermesAddress)
+	if err != nil {
+		if err != ErrNotFound {
+			return new(big.Int), new(big.Int), fmt.Errorf("could not get previous grand total: %w", err)
+		}
+		log.Debug().Msg("No previous promised total, assuming 0")
+		totalPromised = new(big.Int)
 	}
 
 	// This is a new agreement, we need to take in the agreement total and just add it to total promised
-	if ip.lastInvoice.AgreementID != invoice.AgreementID {
+	if ip.lastInvoice.AgreementID.Cmp(invoice.AgreementID) != 0 {
 		diff = invoice.AgreementTotal
 	}
 
 	log.Debug().Msgf("Loaded previous state: already promised: %v", totalPromised)
 	log.Debug().Msgf("Incrementing promised amount by %v", diff)
-	amountToPromise := totalPromised + diff
+	amountToPromise := new(big.Int).Add(totalPromised, diff)
 	return amountToPromise, diff, nil
 }
 
@@ -238,7 +250,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.AccountantAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
+	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.HermesAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
@@ -255,7 +267,7 @@ func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 	})
 
 	// TODO: we'd probably want to check if we have enough balance here
-	err = ip.incrementGrandTotalPromised(diff)
+	err = ip.incrementGrandTotalPromised(*diff)
 	return errors.Wrap(err, "could not increment grand total")
 }
 

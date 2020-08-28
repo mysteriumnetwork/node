@@ -52,7 +52,7 @@ func NewRegistrationStatusStorage(bolt persistentStorage) *RegistrationStatusSto
 	}
 }
 
-// Store stores the given promise for the given accountant.
+// Store stores the given promise for the given hermes.
 func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) error {
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
@@ -65,22 +65,8 @@ func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) err
 	}
 
 	switch s.RegistrationStatus {
-	// can only be overridden by registeredProvider and promotion
-	case RegisteredConsumer:
-		if status.RegistrationStatus == RegisteredProvider || status.RegistrationStatus == Promoting {
-			s.RegistrationStatus = status.RegistrationStatus
-			return rss.store(s)
-		}
-		return nil
 	// can not be overridden
-	case RegisteredProvider:
-		return nil
-	// can only be overridden by registered Provider
-	case Promoting:
-		if status.RegistrationStatus == RegisteredProvider {
-			s.RegistrationStatus = status.RegistrationStatus
-			return rss.store(s)
-		}
+	case Registered:
 		return nil
 	default:
 		s.RegistrationStatus = status.RegistrationStatus
@@ -107,7 +93,7 @@ func (rss *RegistrationStatusStorage) get(identity identity.Identity) (StoredReg
 	return *result, err
 }
 
-// Get fetches the promise for the given accountant.
+// Get fetches the promise for the given hermes.
 func (rss *RegistrationStatusStorage) Get(identity identity.Identity) (StoredRegistrationStatus, error) {
 	rss.lock.Lock()
 	defer rss.lock.Unlock()

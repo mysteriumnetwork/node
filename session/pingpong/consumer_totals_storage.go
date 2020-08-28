@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -45,30 +46,30 @@ func NewConsumerTotalsStorage(bolt persistentStorage, bus eventbus.Publisher) *C
 }
 
 // Store stores the given amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
+func (cts *ConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount *big.Int) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 
-	err := cts.bolt.SetValue(consumerTotalStorageBucketName, id.Address+accountantID.Hex(), amount)
+	err := cts.bolt.SetValue(consumerTotalStorageBucketName, id.Address+hermesID.Hex(), amount)
 	if err != nil {
 		return err
 	}
 
 	go cts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
-		Current:      amount,
-		AccountantID: accountantID,
-		ConsumerID:   id,
+		Current:    amount,
+		HermesID:   hermesID,
+		ConsumerID: id,
 	})
 
 	return nil
 }
 
 // Get fetches the amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Get(id identity.Identity, accountantID common.Address) (uint64, error) {
+func (cts *ConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
-	var res uint64
-	err := cts.bolt.GetValue(consumerTotalStorageBucketName, id.Address+accountantID.Hex(), &res)
+	var res = new(big.Int)
+	err := cts.bolt.GetValue(consumerTotalStorageBucketName, id.Address+hermesID.Hex(), &res)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {

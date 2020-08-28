@@ -24,9 +24,8 @@ type NetworkDefinition struct {
 	BrokerAddress             string
 	EtherClientRPC            string
 	TransactorAddress         string
-	AccountantAddress         string
 	RegistryAddress           string
-	AccountantID              string
+	HermesID                  string
 	ChannelImplAddress        string
 	MMNAddress                string
 }
@@ -40,8 +39,20 @@ var TestnetDefinition = NetworkDefinition{
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
 	ChannelImplAddress:        "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
-	AccountantID:              "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
-	AccountantAddress:         "https://testnet-accountant.mysterium.network/api/v2",
+	HermesID:                  "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
+	MMNAddress:                "https://my.mysterium.network/api/v1",
+}
+
+// BetanetDefinition defines parameters for Betanet network (currently default network)
+var BetanetDefinition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://betanet-api.mysterium.network/v1",
+	AccessPolicyOracleAddress: "https://betanet-trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddress:             "nats://betanet-broker.mysterium.network",
+	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
+	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
+	RegistryAddress:           "0xc82Cc5B0bAe95F443e33FF053aAa70F1Eb7d312A",
+	ChannelImplAddress:        "0x29a615aA7E03D8c04B24cc91B2949447D3A10bD6",
+	HermesID:                  "0x42a537D649d6853C0a866470f2d084DA0f73b5E4",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }
 
@@ -56,4 +67,4 @@ var LocalnetDefinition = NetworkDefinition{
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given
-var DefaultNetwork = TestnetDefinition
+var DefaultNetwork = BetanetDefinition

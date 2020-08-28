@@ -158,25 +158,21 @@ func (s *Storage) GetCacheableFile(bucket string, predicate func(s3.Object) bool
 // MakeBucket creates a bucket in s3 for the build (env.BuildNumber)
 func MakeBucket() error {
 	logconfig.Bootstrap()
-	return env.IfRelease(func() error {
-		url, err := bucketUrlForBuild()
-		if err != nil {
-			return err
-		}
-		return sh.RunV("bin/s3", "mb", url)
-	})
+	url, err := bucketUrlForBuild()
+	if err != nil {
+		return err
+	}
+	return sh.RunV("bin/s3", "mb", url)
 }
 
 // RemoveBucket removes bucket
 func RemoveBucket() error {
 	logconfig.Bootstrap()
-	return env.IfRelease(func() error {
-		url, err := bucketUrlForBuild()
-		if err != nil {
-			return err
-		}
-		return sh.RunV("bin/s3", "rb", "--force", url)
-	})
+	url, err := bucketUrlForBuild()
+	if err != nil {
+		return err
+	}
+	return sh.RunV("bin/s3", "rb", "--force", url)
 }
 
 // UploadArtifacts uploads all artifacts to s3 build bucket

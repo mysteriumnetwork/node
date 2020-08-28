@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -59,9 +60,9 @@ type queuedEvent struct {
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
 	MaxRetries          int
-	Stake               uint64
+	Stake               *big.Int
 	DelayBetweenRetries time.Duration
-	AccountantAddress   common.Address
+	HermesAddress       common.Address
 	RegistryAddress     common.Address
 }
 
@@ -152,7 +153,7 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 	}
 
 	switch registered {
-	case RegisteredProvider:
+	case Registered:
 		log.Info().Msgf("Provider %q already registered on bc, skipping", qe.event.ProviderID)
 		pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 		return nil

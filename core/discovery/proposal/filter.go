@@ -18,6 +18,8 @@
 package proposal
 
 import (
+	"math/big"
+
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -30,10 +32,10 @@ type Filter struct {
 	LocationType        string
 	AccessPolicyID      string
 	AccessPolicySource  string
-	UpperTimePriceBound *uint64
-	LowerTimePriceBound *uint64
-	UpperGBPriceBound   *uint64
-	LowerGBPriceBound   *uint64
+	UpperTimePriceBound *big.Int
+	LowerTimePriceBound *big.Int
+	UpperGBPriceBound   *big.Int
+	LowerGBPriceBound   *big.Int
 	ExcludeUnsupported  bool
 	IncludeFailed       bool
 }
@@ -60,11 +62,11 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 	}
 
 	if filter.UpperTimePriceBound != nil && filter.LowerTimePriceBound != nil {
-		conditions = append(conditions, reducer.PriceMinute(*filter.LowerTimePriceBound, *filter.UpperTimePriceBound))
+		conditions = append(conditions, reducer.PriceMinute(filter.LowerTimePriceBound, filter.UpperTimePriceBound))
 	}
 
 	if filter.UpperGBPriceBound != nil && filter.LowerGBPriceBound != nil {
-		conditions = append(conditions, reducer.PriceGiB(*filter.LowerGBPriceBound, *filter.UpperGBPriceBound))
+		conditions = append(conditions, reducer.PriceGiB(filter.LowerGBPriceBound, filter.UpperGBPriceBound))
 	}
 
 	if len(conditions) > 0 {

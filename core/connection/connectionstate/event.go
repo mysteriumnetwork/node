@@ -72,7 +72,7 @@ type Status struct {
 	StartedAt        time.Time
 	ConsumerID       identity.Identity
 	ConsumerLocation locationstate.Location
-	AccountantID     common.Address
+	HermesID         common.Address
 	State            State
 	SessionID        session.ID
 	Proposal         market.ServiceProposal

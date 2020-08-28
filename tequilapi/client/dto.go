@@ -17,11 +17,14 @@
 
 package client
 
+import "math/big"
+
 // Fees represents the transactor fee
 type Fees struct {
-	Registration uint64 `json:"registration"`
-	Settlement   uint64 `json:"settlement"`
-	Accountant   uint16 `json:"accountant"`
+	Registration  *big.Int `json:"registration"`
+	Settlement    *big.Int `json:"settlement"`
+	Hermes        uint16   `json:"hermes"`
+	DecreaseStake *big.Int `json:"decreaseStake"`
 }
 
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
@@ -32,12 +35,19 @@ type RegistrationDataDTO struct {
 
 // SettleRequest represents the request to settle accountant promises
 type SettleRequest struct {
-	AccountantID string `json:"accountant_id"`
-	ProviderID   string `json:"provider_id"`
+	HermesID   string `json:"hermes_id"`
+	ProviderID string `json:"provider_id"`
 }
 
 // SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
 type SettleWithBeneficiaryRequest struct {
 	SettleRequest
 	Beneficiary string `json:"beneficiary"`
+}
+
+// DecreaseStakeRequest represents the decrease stake request.
+type DecreaseStakeRequest struct {
+	ID            string   `json:"id,omitempty"`
+	Amount        *big.Int `json:"amount,omitempty"`
+	TransactorFee *big.Int `json:"transactor_fee,omitempty"`
 }

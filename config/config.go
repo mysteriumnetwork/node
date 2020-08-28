@@ -19,6 +19,7 @@ package config
 
 import (
 	"io/ioutil"
+	"math/big"
 	"strings"
 	"time"
 
@@ -328,6 +329,12 @@ func GetDuration(flag cli.DurationFlag) time.Duration {
 // GetUInt64 shorthand for getting current configuration value for cli.Uint64Flag.
 func GetUInt64(flag cli.Uint64Flag) uint64 {
 	return Current.GetUInt64(flag.Name)
+}
+
+// GetBigInt shorthand for getting and parsing a configuration value for cli.StringFlag that's a big.Int.
+func GetBigInt(flag cli.StringFlag) *big.Int {
+	b, _ := new(big.Int).SetString(Current.GetString(flag.Name), 10)
+	return b
 }
 
 // GetFloat64 shorthand for getting current configuration value for cli.Uint64Flag.

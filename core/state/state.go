@@ -18,6 +18,7 @@
 package state
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -66,7 +67,7 @@ type channelAddressCalculator interface {
 }
 
 type balanceProvider interface {
-	GetBalance(id identity.Identity) uint64
+	GetBalance(id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
@@ -302,13 +303,14 @@ func (k *Keeper) addSession(e sevent.AppEventSession) {
 		SessionID:       nodeSession.ID(e.Session.ID),
 		Direction:       session.DirectionProvided,
 		ConsumerID:      e.Session.ConsumerID,
-		AccountantID:    e.Session.AccountantID.Hex(),
+		HermesID:        e.Session.HermesID.Hex(),
 		ProviderID:      identity.FromAddress(e.Session.Proposal.ProviderID),
 		ServiceType:     e.Session.Proposal.ServiceType,
 		ConsumerCountry: e.Session.ConsumerLocation.Country,
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 		Started:         e.Session.StartedAt,
 		Status:          session.StatusNew,
+		Tokens:          big.NewInt(0),
 	})
 }
 

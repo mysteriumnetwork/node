@@ -71,7 +71,7 @@ type Options struct {
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
-	Accountant OptionsAccountant
+	Hermes     OptionsHermes
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall
@@ -104,6 +104,7 @@ func GetOptions() *Options {
 		OptionsNetwork: OptionsNetwork{
 			Testnet:               config.GetBool(config.FlagTestnet),
 			Localnet:              config.GetBool(config.FlagLocalnet),
+			Betanet:               config.GetBool(config.FlagLocalnet),
 			ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
 			MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 			BrokerAddress:         config.GetString(config.FlagBrokerAddress),
@@ -131,25 +132,24 @@ func GetOptions() *Options {
 			ChannelImplementation:           config.GetString(config.FlagTransactorChannelImplementation),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
-			ProviderRegistrationStake:       config.GetUInt64(config.FlagTransactorProviderRegistrationStake),
+			ProviderRegistrationStake:       config.GetBigInt(config.FlagTransactorProviderRegistrationStake),
 		},
 		Payments: OptionsPayments{
-			MaxAllowedPaymentPercentile:        config.GetInt(config.FlagPaymentsMaxAccountantFee),
-			BCTimeout:                          config.GetDuration(config.FlagPaymentsBCTimeout),
-			AccountantPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsAccountantPromiseSettleThreshold),
-			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
-			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
-			ConsumerUpperGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound),
-			ConsumerLowerGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound),
-			ConsumerUpperMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
-			ConsumerLowerMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
-			ConsumerDataLeewayMegabytes:        config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
-			ProviderInvoiceFrequency:           config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
-			MaxUnpaidInvoiceValue:              config.GetUInt64(config.FlagPaymentsMaxUnpaidInvoiceValue),
+			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),
+			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
+			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
+			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
+			MystSCAddress:                  config.GetString(config.FlagPaymentsMystSCAddress),
+			ConsumerUpperGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound),
+			ConsumerLowerGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound),
+			ConsumerUpperMinutePriceBound:  config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
+			ConsumerLowerMinutePriceBound:  config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
+			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
+			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
 		},
-		Accountant: OptionsAccountant{
-			AccountantID:              config.GetString(config.FlagAccountantID),
-			AccountantEndpointAddress: config.GetString(config.FlagAccountantAddress),
+		Hermes: OptionsHermes{
+			HermesID: config.GetString(config.FlagHermesID),
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
 			BinaryPath: config.GetString(config.FlagOpenvpnBinary),

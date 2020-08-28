@@ -58,16 +58,16 @@ func (simplifiedBus simplifiedEventBus) SubscribeAsync(topic string, fn interfac
 }
 
 var logLevelsByTopic = map[string]zerolog.Level{
-	"ProposalAdded":               zerolog.Disabled,
-	"ProposalUpdated":             zerolog.Disabled,
-	"ProposalRemoved":             zerolog.Disabled,
-	"proposalEvent":               zerolog.Disabled,
-	"Statistics":                  zerolog.Disabled,
-	"Throughput":                  zerolog.Disabled,
-	"State change":                zerolog.TraceLevel,
-	"Session data transferred":    zerolog.TraceLevel,
-	"Session change":              zerolog.TraceLevel,
-	"accountant_promise_received": zerolog.TraceLevel,
+	"ProposalAdded":            zerolog.Disabled,
+	"ProposalUpdated":          zerolog.Disabled,
+	"ProposalRemoved":          zerolog.Disabled,
+	"proposalEvent":            zerolog.Disabled,
+	"Statistics":               zerolog.Disabled,
+	"Throughput":               zerolog.Disabled,
+	"State change":             zerolog.TraceLevel,
+	"Session data transferred": zerolog.TraceLevel,
+	"Session change":           zerolog.TraceLevel,
+	"hermes_promise_received":  zerolog.TraceLevel,
 }
 
 func levelFor(topic string) zerolog.Level {

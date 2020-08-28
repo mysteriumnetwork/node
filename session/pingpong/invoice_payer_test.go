@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"io/ioutil"
+	"math/big"
 	"os"
 	"sync"
 	"testing"
@@ -83,7 +84,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 		EventBus:                  mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -122,7 +123,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, 10)
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(10))
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -135,7 +136,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -143,9 +144,9 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	InvoicePayer := NewInvoicePayer(deps)
 
 	mockInvoice := crypto.Invoice{
-		AgreementID:    1,
-		AgreementTotal: 0,
-		TransactorFee:  0,
+		AgreementID:    big.NewInt(1),
+		AgreementTotal: big.NewInt(0),
+		TransactorFee:  big.NewInt(0),
 		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 		Provider:       deps.Peer.Address,
 	}
@@ -167,7 +168,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 	addr, err := exchangeMessage.RecoverConsumerIdentity()
 	assert.Nil(t, err)
 	assert.Equal(t, acc.Address.Hex(), addr.Hex())
-	assert.Equal(t, uint64(10), exchangeMessage.Promise.Amount)
+	assert.Equal(t, big.NewInt(10), exchangeMessage.Promise.Amount)
 
 	<-testDone
 }
@@ -195,7 +196,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, 0)
+	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(0))
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -210,9 +211,9 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 	InvoicePayer := NewInvoicePayer(deps)
 
 	mockInvoice := crypto.Invoice{
-		AgreementID:    1,
-		AgreementTotal: 0,
-		TransactorFee:  0,
+		AgreementID:    big.NewInt(1),
+		AgreementTotal: big.NewInt(0),
+		TransactorFee:  big.NewInt(0),
 		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 		Provider:       deps.Peer.Address,
 	}
@@ -270,7 +271,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -317,15 +318,15 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				},
 				proposal: market.ServiceProposal{
 					PaymentMethod: &mockPaymentMethod{
-						price: money.NewMoney(100000, money.CurrencyMyst),
+						price: money.NewMoney(big.NewInt(100000), money.CurrencyMyst),
 						rate:  market.PaymentRate{PerTime: time.Minute},
 					},
 				},
 			},
 			invoice: crypto.Invoice{
-				TransactorFee:  0,
-				AgreementID:    1,
-				AgreementTotal: 150100,
+				TransactorFee:  big.NewInt(0),
+				AgreementID:    big.NewInt(1),
+				AgreementTotal: big.NewInt(150100),
 				Provider:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 			},
 			wantErr: true,
@@ -339,15 +340,15 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				},
 				proposal: market.ServiceProposal{
 					PaymentMethod: &mockPaymentMethod{
-						price: money.NewMoney(100000, money.CurrencyMyst),
+						price: money.NewMoney(big.NewInt(100000), money.CurrencyMyst),
 						rate:  market.PaymentRate{PerTime: time.Minute},
 					},
 				},
 			},
 			invoice: crypto.Invoice{
-				TransactorFee:  0,
-				AgreementID:    1,
-				AgreementTotal: 100000,
+				TransactorFee:  big.NewInt(0),
+				AgreementID:    big.NewInt(1),
+				AgreementTotal: big.NewInt(100000),
 				Provider:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 			},
 			wantErr: false,
@@ -374,14 +375,14 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 		consumerTotalsStorage *mockConsumerTotalsStorage
 	}
 	type args struct {
-		amount uint64
+		amount *big.Int
 	}
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
 		wantErr bool
-		want    uint64
+		want    *big.Int
 	}{
 		{
 			name: "returns the error from storage",
@@ -391,7 +392,11 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 					err: errors.New("some error"),
 				},
 			},
+			args: args{
+				amount: big.NewInt(0),
+			},
 			wantErr: true,
+			want:    new(big.Int),
 		},
 		{
 			name: "adds to zero if not found",
@@ -402,24 +407,24 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 				},
 			},
 			args: args{
-				amount: 11,
+				amount: big.NewInt(11),
 			},
 			wantErr: false,
-			want:    11,
+			want:    big.NewInt(11),
 		},
 		{
 			name: "adds to value if found",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					bus: eventbus.New(),
-					res: 15,
+					res: big.NewInt(15),
 				},
 			},
 			args: args{
-				amount: 11,
+				amount: big.NewInt(11),
 			},
 			wantErr: false,
-			want:    26,
+			want:    big.NewInt(26),
 		},
 	}
 	for _, tt := range tests {
@@ -429,11 +434,11 @@ func TestInvoicePayer_incrementGrandTotalPromised(t *testing.T) {
 					ConsumerTotalsStorage: tt.fields.consumerTotalsStorage,
 				},
 			}
-			if err := emt.incrementGrandTotalPromised(tt.args.amount); (err != nil) != tt.wantErr {
+			if err := emt.incrementGrandTotalPromised(*tt.args.amount); (err != nil) != tt.wantErr {
 				t.Errorf("InvoicePayer.incrementGrandTotalPromised() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			got := tt.fields.consumerTotalsStorage.calledWith
-			if got != tt.want {
+			if got != nil && got.Cmp(tt.want) != 0 {
 				t.Errorf("InvoicePayer.incrementGrandTotalPromised() = %v, want %v", got, tt.want)
 			}
 		})
@@ -450,8 +455,8 @@ func TestInvoicePayer_calculateAmountToPromise(t *testing.T) {
 		name          string
 		fields        fields
 		invoice       crypto.Invoice
-		wantToPromise uint64
-		wantDiff      uint64
+		wantToPromise *big.Int
+		wantDiff      *big.Int
 		wantErr       bool
 	}{
 		{
@@ -460,44 +465,83 @@ func TestInvoicePayer_calculateAmountToPromise(t *testing.T) {
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					err: errors.New("explosions everywhere"),
 				},
+				lastInvoice: crypto.Invoice{
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+					TransactorFee:  new(big.Int),
+				},
 			},
-			invoice: crypto.Invoice{},
-			wantErr: true,
+			invoice: crypto.Invoice{
+				AgreementTotal: big.NewInt(0),
+				AgreementID:    new(big.Int),
+				TransactorFee:  new(big.Int),
+			},
+			wantErr:       true,
+			wantToPromise: big.NewInt(0),
+			wantDiff:      big.NewInt(0),
 		},
 		{
 			name: "assumes zero",
 			fields: fields{
-				consumerTotalsStorage: &mockConsumerTotalsStorage{},
+				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					res: new(big.Int),
+				},
+				lastInvoice: crypto.Invoice{
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+					TransactorFee:  new(big.Int),
+				},
 			},
-			invoice:       crypto.Invoice{AgreementTotal: 10},
+			invoice: crypto.Invoice{
+				AgreementTotal: big.NewInt(10),
+				AgreementID:    new(big.Int),
+				TransactorFee:  new(big.Int),
+			},
 			wantErr:       false,
-			wantDiff:      10,
-			wantToPromise: 10,
+			wantDiff:      big.NewInt(10),
+			wantToPromise: big.NewInt(10),
 		},
 		{
 			name: "calculates correctly with different grand total",
 			fields: fields{
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					res: 100,
+					res: big.NewInt(100),
+				},
+				lastInvoice: crypto.Invoice{
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+					TransactorFee:  new(big.Int),
 				},
 			},
-			invoice:       crypto.Invoice{AgreementTotal: 10},
+			invoice: crypto.Invoice{
+				AgreementTotal: big.NewInt(10),
+				AgreementID:    new(big.Int),
+				TransactorFee:  new(big.Int),
+			},
 			wantErr:       false,
-			wantDiff:      10,
-			wantToPromise: 110,
+			wantDiff:      big.NewInt(10),
+			wantToPromise: big.NewInt(110),
 		},
 		{
 			name: "calculates correctly with previous invoice",
 			fields: fields{
-				lastInvoice: crypto.Invoice{AgreementID: 111, AgreementTotal: 111},
+				lastInvoice: crypto.Invoice{
+					AgreementID:    big.NewInt(111),
+					AgreementTotal: big.NewInt(111),
+					TransactorFee:  big.NewInt(0),
+				},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
-					res: 100,
+					res: big.NewInt(100),
 				},
 			},
-			invoice:       crypto.Invoice{AgreementID: 111, AgreementTotal: 120},
+			invoice: crypto.Invoice{
+				AgreementID:    big.NewInt(111),
+				AgreementTotal: big.NewInt(120),
+				TransactorFee:  big.NewInt(0),
+			},
 			wantErr:       false,
-			wantDiff:      9,
-			wantToPromise: 109,
+			wantDiff:      big.NewInt(9),
+			wantToPromise: big.NewInt(109),
 		},
 	}
 	for _, tt := range tests {
@@ -514,10 +558,10 @@ func TestInvoicePayer_calculateAmountToPromise(t *testing.T) {
 				t.Errorf("InvoicePayer.calculateAmountToPromise() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if gotToPromise != tt.wantToPromise {
+			if gotToPromise.Cmp(tt.wantToPromise) != 0 {
 				t.Errorf("InvoicePayer.calculateAmountToPromise() gotToPromise = %v, want %v", gotToPromise, tt.wantToPromise)
 			}
-			if gotDiff != tt.wantDiff {
+			if gotDiff.Cmp(tt.wantDiff) != 0 {
 				t.Errorf("InvoicePayer.calculateAmountToPromise() gotDiff = %v, want %v", gotDiff, tt.wantDiff)
 			}
 		})
@@ -543,6 +587,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 				chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 			},
 			ConsumerTotalsStorage: &mockConsumerTotalsStorage{
+				res: big.NewInt(0),
 				bus: mp,
 			},
 			Ks:       ks,
@@ -552,11 +597,15 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
-		AgreementTotal: 10,
+		AgreementID:    new(big.Int),
+		AgreementTotal: big.NewInt(10),
+		TransactorFee:  new(big.Int),
 	}
 	err = emt.issueExchangeMessage(crypto.Invoice{
-		AgreementTotal: 15,
+		AgreementTotal: big.NewInt(15),
+		AgreementID:    big.NewInt(0),
 		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
+		TransactorFee:  new(big.Int),
 	})
 	assert.NoError(t, err)
 
@@ -565,7 +614,9 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.EqualValues(t, event.AppEventInvoicePaid{
 		ConsumerID: emt.deps.Identity,
 		Invoice: crypto.Invoice{
-			AgreementTotal: 15,
+			AgreementTotal: big.NewInt(15),
+			AgreementID:    big.NewInt(0),
+			TransactorFee:  new(big.Int),
 			Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 		},
 	}, ev.value)
@@ -574,7 +625,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	assert.Equal(t, event.AppTopicGrandTotalChanged, ev.name)
 	assert.EqualValues(t, event.AppEventGrandTotalChanged{
 		ConsumerID: emt.deps.Identity,
-		Current:    5,
+		Current:    big.NewInt(5),
 	}, ev.value)
 }
 
@@ -616,10 +667,24 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 					chanToWriteTo: make(chan crypto.ExchangeMessage, 10),
 				},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					res: new(big.Int),
 					bus: eventbus.New(),
+				},
+				lastInvoice: crypto.Invoice{
+					AgreementTotal: big.NewInt(0),
+					AgreementID:    big.NewInt(0),
+					TransactorFee:  big.NewInt(0),
 				},
 			},
 			wantErr: true,
+			args: args{
+				invoice: crypto.Invoice{
+					AgreementTotal: big.NewInt(15),
+					AgreementID:    big.NewInt(0),
+					TransactorFee:  big.NewInt(0),
+					Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
+				},
+			},
 		},
 		{
 			name: "ignores sending errors",
@@ -632,10 +697,24 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 					mockError:     errors.New("explosions everywhere"),
 				},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
+					res: new(big.Int),
 					bus: eventbus.New(),
+				},
+				lastInvoice: crypto.Invoice{
+					AgreementTotal: big.NewInt(0),
+					AgreementID:    big.NewInt(0),
+					TransactorFee:  big.NewInt(0),
 				},
 			},
 			wantErr: false,
+			args: args{
+				invoice: crypto.Invoice{
+					AgreementTotal: big.NewInt(15),
+					AgreementID:    big.NewInt(0),
+					TransactorFee:  big.NewInt(0),
+					Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
+				},
+			},
 		},
 		{
 			name: "sends exchange message",
@@ -648,11 +727,19 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 				},
 				consumerTotalsStorage: &mockConsumerTotalsStorage{
 					bus: eventbus.New(),
+					res: new(big.Int),
+				},
+				lastInvoice: crypto.Invoice{
+					AgreementTotal: big.NewInt(0),
+					AgreementID:    big.NewInt(0),
+					TransactorFee:  big.NewInt(0),
 				},
 			},
 			args: args{
 				invoice: crypto.Invoice{
-					AgreementTotal: 15,
+					AgreementTotal: big.NewInt(15),
+					AgreementID:    big.NewInt(0),
+					TransactorFee:  big.NewInt(0),
 					Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 				},
 			},
@@ -690,27 +777,27 @@ func TestInvoicePayer_issueExchangeMessage(t *testing.T) {
 }
 
 type mockConsumerTotalsStorage struct {
-	res     uint64
+	res     *big.Int
 	resLock sync.Mutex
 	bus     eventbus.Publisher
 
 	err        error
-	calledWith uint64
+	calledWith *big.Int
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
+func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount *big.Int) error {
 	mcts.calledWith = amount
 	if mcts.bus != nil {
 		go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
-			Current:      amount,
-			AccountantID: accountantID,
-			ConsumerID:   id,
+			Current:    amount,
+			HermesID:   hermesID,
+			ConsumerID: id,
 		})
 	}
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, accountantID common.Address) (uint64, error) {
+func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err

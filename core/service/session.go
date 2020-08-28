@@ -37,7 +37,7 @@ type Session struct {
 	ID               session.ID
 	ConsumerID       identity.Identity
 	ConsumerLocation market.Location
-	AccountantID     common.Address
+	HermesID         common.Address
 	Proposal         market.ServiceProposal
 	ServiceID        string
 	CreatedAt        time.Time
@@ -88,7 +88,7 @@ func (s *Session) toEvent(status event.Status) event.AppEventSession {
 			StartedAt:        s.CreatedAt,
 			ConsumerID:       s.ConsumerID,
 			ConsumerLocation: s.ConsumerLocation,
-			AccountantID:     s.AccountantID,
+			HermesID:         s.HermesID,
 			Proposal:         s.Proposal,
 		},
 	}
@@ -110,7 +110,7 @@ func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error)
 		ID:               session.ID(uid.String()),
 		ConsumerID:       identity.FromAddress(request.GetConsumer().GetId()),
 		ConsumerLocation: consumerLocation,
-		AccountantID:     common.HexToAddress(request.GetConsumer().GetAccountantID()),
+		HermesID:         common.HexToAddress(request.GetConsumer().GetHermesID()),
 		Proposal:         service.Proposal,
 		ServiceID:        string(service.ID),
 		CreatedAt:        time.Now().UTC(),

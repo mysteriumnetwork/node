@@ -19,6 +19,7 @@ package service
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -108,6 +109,8 @@ func subscribeSessionAcknowledge(mng *SessionManager, ch p2p.ChannelHandler) {
 	})
 }
 
+const bigIntBase int = 10
+
 func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
 		var msg pb.ExchangeMessage
@@ -116,17 +119,37 @@ func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 		}
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
 
+		amount, ok := new(big.Int).SetString(msg.GetPromise().GetAmount(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field amount of value %v", amount)
+		}
+
+		fee, ok := new(big.Int).SetString(msg.GetPromise().GetFee(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field fee of value %v", fee)
+		}
+
+		agreementID, ok := new(big.Int).SetString(msg.GetAgreementID(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementID of value %v", agreementID)
+		}
+
+		agreementTotal, ok := new(big.Int).SetString(msg.GetAgreementTotal(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
+		}
+
 		mng.paymentEngineChan <- crypto.ExchangeMessage{
 			Promise: crypto.Promise{
 				ChannelID: msg.GetPromise().GetChannelID(),
-				Amount:    msg.GetPromise().GetAmount(),
-				Fee:       msg.GetPromise().GetFee(),
+				Amount:    amount,
+				Fee:       fee,
 				Hashlock:  msg.GetPromise().GetHashlock(),
 				R:         msg.GetPromise().GetR(),
 				Signature: msg.GetPromise().GetSignature(),
 			},
-			AgreementID:    msg.GetAgreementID(),
-			AgreementTotal: msg.GetAgreementTotal(),
+			AgreementID:    agreementID,
+			AgreementTotal: agreementTotal,
 			Provider:       msg.GetProvider(),
 			Signature:      msg.GetSignature(),
 			HermesID:       msg.GetHermesID(),

@@ -45,7 +45,7 @@ func NewSettlementHistoryStorage(bolt *boltdb.Bolt) *SettlementHistoryStorage {
 type SettlementHistoryEntry struct {
 	TxHash         common.Hash `storm:"id"`
 	ProviderID     identity.Identity
-	AccountantID   common.Address
+	HermesID       common.Address
 	ChannelAddress common.Address
 	Time           time.Time
 	Promise        crypto.Promise
@@ -63,10 +63,10 @@ func (shs *SettlementHistoryStorage) Store(she SettlementHistoryEntry) error {
 
 // SettlementHistoryFilter defines all flags for filtering in settlement history storage.
 type SettlementHistoryFilter struct {
-	TimeFrom     *time.Time
-	TimeTo       *time.Time
-	ProviderID   *identity.Identity
-	AccountantID *common.Address
+	TimeFrom   *time.Time
+	TimeTo     *time.Time
+	ProviderID *identity.Identity
+	HermesID   *common.Address
 }
 
 // List retrieves stored entries.
@@ -81,8 +81,8 @@ func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (resul
 	if filter.ProviderID != nil {
 		where = append(where, q.Eq("ProviderID", filter.ProviderID))
 	}
-	if filter.AccountantID != nil {
-		where = append(where, q.Eq("AccountantID", filter.AccountantID))
+	if filter.HermesID != nil {
+		where = append(where, q.Eq("HermesID", filter.HermesID))
 	}
 
 	sq := shs.bolt.DB().

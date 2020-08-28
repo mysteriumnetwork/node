@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -43,15 +44,17 @@ import (
 type Transactor interface {
 	FetchRegistrationFees() (registry.FeesResponse, error)
 	FetchSettleFees() (registry.FeesResponse, error)
-	TopUp(identity string) error
+	FetchStakeDecreaseFee() (registry.FeesResponse, error)
 	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
+	DecreaseStake(id string, amount, transactorFee uint64) error
 }
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
-	ForceSettle(providerID identity.Identity, accountantID common.Address) error
-	SettleWithBeneficiary(id identity.Identity, beneficiary, accountantID common.Address) error
-	GetAccountantFee() (uint16, error)
+	ForceSettle(providerID identity.Identity, hermesID common.Address) error
+	SettleWithBeneficiary(id identity.Identity, beneficiary, hermesID common.Address) error
+	GetHermesFee(common.Address) (uint16, error)
+	SettleIntoStake(providerID identity.Identity, hermesID common.Address) error
 }
 
 type settlementHistoryProvider interface {
@@ -62,23 +65,26 @@ type transactorEndpoint struct {
 	transactor                Transactor
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
+	hermesAddress             common.Address
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
-func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider) *transactorEndpoint {
+func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesID common.Address) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
+		hermesAddress:             hermesID,
 	}
 }
 
 // Fees represents the transactor fees
 // swagger:model Fees
 type Fees struct {
-	Registration uint64 `json:"registration"`
-	Settlement   uint64 `json:"settlement"`
-	Accountant   uint16 `json:"accountant"`
+	Registration  *big.Int `json:"registration"`
+	Settlement    *big.Int `json:"settlement"`
+	Hermes        uint16   `json:"hermes"`
+	DecreaseStake *big.Int `json:"decreaseStake"`
 }
 
 // swagger:operation GET /transactor/fees Fees
@@ -105,32 +111,38 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	accountantFees, err := te.promiseSettler.GetAccountantFee()
+	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	hermesFees, err := te.promiseSettler.GetHermesFee(te.hermesAddress)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	f := Fees{
-		Registration: registrationFees.Fee,
-		Settlement:   settlementFees.Fee,
-		Accountant:   accountantFees,
+		Registration:  registrationFees.Fee,
+		Settlement:    settlementFees.Fee,
+		Hermes:        hermesFees,
+		DecreaseStake: decreaseStakeFees.Fee,
 	}
 
 	utils.WriteAsJSON(f, resp)
 }
 
-// SettleRequest represents the request to settle accountant promises
+// SettleRequest represents the request to settle hermes promises
 // swagger:model SettleRequest
 type SettleRequest struct {
-	AccountantID string `json:"accountant_id"`
-	ProviderID   string `json:"provider_id"`
+	HermesID   string `json:"hermes_id"`
+	ProviderID string `json:"provider_id"`
 }
 
 // swagger:operation POST /transactor/settle/sync SettleSync
 // ---
-// summary: forces the settlement of promises for the given provider and accountant
-// description: Forces a settlement for the accountant promises and blocks until the settlement is complete.
+// summary: forces the settlement of promises for the given provider and hermes
+// description: Forces a settlement for the hermes promises and blocks until the settlement is complete.
 // parameters:
 // - in: body
 //   name: body
@@ -156,8 +168,8 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 
 // swagger:operation POST /transactor/settle/async SettleAsync
 // ---
-// summary: forces the settlement of promises for the given provider and accountant
-// description: Forces a settlement for the accountant promises. Does not wait for completion.
+// summary: forces the settlement of promises for the given provider and hermes
+// description: Forces a settlement for the hermes promises. Does not wait for completion.
 // parameters:
 // - in: body
 //   name: body
@@ -172,9 +184,9 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, func(provider identity.Identity, accountant common.Address) error {
+	err := te.settle(request, func(provider identity.Identity, hermes common.Address) error {
 		go func() {
-			err := te.promiseSettler.ForceSettle(provider, accountant)
+			err := te.promiseSettler.ForceSettle(provider, hermes)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not settle provider(%q) promises", provider.Address)
 			}
@@ -197,46 +209,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 		return errors.Wrap(err, "failed to unmarshal settle request")
 	}
 
-	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), common.HexToAddress(req.AccountantID)), "settling failed")
-}
-
-// swagger:operation POST /transactor/topup
-// ---
-// summary: tops up myst to the given identity
-// description: tops up myst to the given identity
-// parameters:
-// - in: body
-//   name: body
-//   description: top up request body
-//   schema:
-//     $ref: "#/definitions/TopUpRequestDTO"
-// responses:
-//   202:
-//     description: top up request accepted
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   400:
-//     description: Bad request
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	topUpDTO := registry.TopUpRequest{}
-
-	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
-	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to parse top up request"), http.StatusBadRequest)
-		return
-	}
-
-	err = te.transactor.TopUp(topUpDTO.Identity)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
-	resp.WriteHeader(http.StatusAccepted)
+	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID)), "settling failed")
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
@@ -296,7 +269,7 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 		return
 	}
 
-	err = te.promiseSettler.SettleWithBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.AccountantID))
+	err = te.promiseSettler.SettleWithBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.HermesID))
 	if err != nil {
 		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
 		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
@@ -324,8 +297,8 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 //     description: Provider ID to filter the settlements by.
 //     type: string
 //   - in: query
-//     name: accountant_id
-//     description: Accountant ID to filter the sessions by.
+//     name: hermes_id
+//     description: Hermes ID to filter the sessions by.
 //     type: string
 // responses:
 //   200:
@@ -367,9 +340,9 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 		providerID := identity.FromAddress(param)
 		filter.ProviderID = &providerID
 	}
-	if param := req.URL.Query().Get("accountant_id"); param != "" {
-		accountantID := common.HexToAddress(param)
-		filter.AccountantID = &accountantID
+	if param := req.URL.Query().Get("hermes_id"); param != "" {
+		hermesID := common.HexToAddress(param)
+		filter.HermesID = &hermesID
 	}
 
 	page := 1
@@ -408,14 +381,125 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 	utils.WriteAsJSON(response, resp)
 }
 
+// DecreaseStakeRequest represents the decrease stake request
+// swagger:model DecreaseStakeRequest
+type DecreaseStakeRequest struct {
+	ID            string `json:"id,omitempty"`
+	Amount        uint64 `json:"amount,omitempty"`
+	TransactorFee uint64 `json:"transactor_fee,omitempty"`
+}
+
+// swagger:operation POST /transactor/stake/decrease Decrease Stake
+// ---
+// summary: Decreases stake
+// description: Decreases stake on eth blockchain via the mysterium transactor.
+// parameters:
+// - in: body
+//   name: body
+//   description: decrease stake request
+//   schema:
+//     $ref: "#/definitions/DecreaseStakeRequest"
+// responses:
+//   200:
+//     description: Payout info registered
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	var body DecreaseStakeRequest
+	err := json.NewDecoder(request.Body).Decode(&body)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to parse decrease stake"), http.StatusBadRequest)
+		return
+	}
+
+	err = te.transactor.DecreaseStake(body.ID, body.Amount, body.TransactorFee)
+	if err != nil {
+		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", body.ID, body)
+		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
+// swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
+// ---
+// summary: forces the settlement with stake increase of promises for the given provider and hermes.
+// description: Forces a settlement with stake increase for the hermes promises and blocks until the settlement is complete.
+// parameters:
+// - in: body
+//   name: body
+//   description: settle request body
+//   schema:
+//     $ref: "#/definitions/SettleRequest"
+// responses:
+//   202:
+//     description: settle request accepted
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	err := te.settle(request, te.promiseSettler.SettleIntoStake)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
+// swagger:operation POST /transactor/stake/increase/async StakeIncreaseAsync
+// ---
+// summary: forces the settlement with stake increase of promises for the given provider and hermes.
+// description: Forces a settlement with stake increase for the hermes promises and does not block.
+// parameters:
+// - in: body
+//   name: body
+//   description: settle request body
+//   schema:
+//     $ref: "#/definitions/SettleRequest"
+// responses:
+//   202:
+//     description: settle request accepted
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	err := te.settle(request, func(provider identity.Identity, hermes common.Address) error {
+		go func() {
+			err := te.promiseSettler.SettleIntoStake(provider, hermes)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not settle into stake provider(%q) promises", provider.Address)
+			}
+		}()
+		return nil
+	})
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider) {
-	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider)
+func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
+	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
-	router.POST("/transactor/topup", te.TopUp)
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)
 	router.GET("/transactor/settle/history", te.SettlementHistory)
+	router.POST("/transactor/stake/increase/sync", te.SettleIntoStakeSync)
+	router.POST("/transactor/stake/increase/async", te.SettleIntoStakeAsync)
+	router.POST("/transactor/stake/decrease", te.DecreaseStake)
 }

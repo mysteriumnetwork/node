@@ -52,7 +52,7 @@ func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO 
 	return SettlementDTO{
 		TxHash:         settlement.TxHash.Hex(),
 		ProviderID:     settlement.ProviderID.Address,
-		AccountantID:   settlement.AccountantID.Hex(),
+		HermesID:       settlement.HermesID.Hex(),
 		ChannelAddress: settlement.ChannelAddress.Hex(),
 		Beneficiary:    settlement.Beneficiary.Hex(),
 		Amount:         settlement.Amount.Uint64(),
@@ -70,7 +70,7 @@ type SettlementDTO struct {
 	ProviderID string `json:"provider_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
-	AccountantID string `json:"accountant_id"`
+	HermesID string `json:"hermes_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ChannelAddress string `json:"channel_address"`

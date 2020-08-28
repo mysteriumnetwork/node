@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -37,10 +38,10 @@ func (service TestServiceDefinition) GetLocation() market.Location {
 	return market.Location{ASN: 123, Country: "Lithuania", City: "Vilnius"}
 }
 
-const upperTimePriceBound uint64 = 50000
-const lowerTimePriceBound uint64 = 0
-const upperGBPriceBound uint64 = 7000000
-const lowerGBPriceBound uint64 = 0
+var upperTimePriceBound = big.NewInt(50000)
+var lowerTimePriceBound = big.NewInt(0)
+var upperGBPriceBound = big.NewInt(7000000)
+var lowerGBPriceBound = big.NewInt(0)
 
 var serviceProposals = []market.ServiceProposal{
 	{
@@ -122,10 +123,10 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 
 	assert.EqualValues(t, &proposal.Filter{
 		ProviderID:          "0xProviderId",
-		UpperTimePriceBound: &upperTime,
-		LowerTimePriceBound: &lowerTime,
-		UpperGBPriceBound:   &upperGB,
-		LowerGBPriceBound:   &lowerGB,
+		UpperTimePriceBound: upperTime,
+		LowerTimePriceBound: lowerTime,
+		UpperGBPriceBound:   upperGB,
+		LowerGBPriceBound:   lowerGB,
 		ExcludeUnsupported:  true,
 	}, repository.recordedFilter)
 }

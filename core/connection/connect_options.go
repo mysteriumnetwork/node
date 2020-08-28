@@ -45,5 +45,5 @@ type ConnectOptions struct {
 	SessionConfig   []byte
 	ProviderNATConn *net.UDPConn
 	ChannelConn     *net.UDPConn
-	AccountantID    common.Address
+	HermesID        common.Address
 }

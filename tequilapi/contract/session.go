@@ -18,6 +18,7 @@
 package contract
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -68,12 +69,12 @@ func NewSessionStatsDTO(stats session.Stats) SessionStatsDTO {
 // SessionStatsDTO represents the session aggregated statistics.
 // swagger:model ListSessionsResponse
 type SessionStatsDTO struct {
-	Count            int    `json:"count"`
-	CountConsumers   int    `json:"count_consumers"`
-	SumBytesReceived uint64 `json:"sum_bytes_received"`
-	SumBytesSent     uint64 `json:"sum_bytes_sent"`
-	SumDuration      uint64 `json:"sum_duration"`
-	SumTokens        uint64 `json:"sum_tokens"`
+	Count            int      `json:"count"`
+	CountConsumers   int      `json:"count_consumers"`
+	SumBytesReceived uint64   `json:"sum_bytes_received"`
+	SumBytesSent     uint64   `json:"sum_bytes_sent"`
+	SumDuration      uint64   `json:"sum_duration"`
+	SumTokens        *big.Int `json:"sum_tokens"`
 }
 
 // NewSessionStatsDailyDTO maps to API session stats grouped by day.
@@ -91,7 +92,7 @@ func NewSessionDTO(se session.History) SessionDTO {
 		ID:              string(se.SessionID),
 		Direction:       se.Direction,
 		ConsumerID:      se.ConsumerID.Address,
-		AccountantID:    se.AccountantID,
+		HermesID:        se.HermesID,
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
 		ConsumerCountry: se.ConsumerCountry,
@@ -118,7 +119,7 @@ type SessionDTO struct {
 	ConsumerID string `json:"consumer_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
-	AccountantID string `json:"accountant_id"`
+	HermesID string `json:"hermes_id"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"provider_id"`
@@ -146,7 +147,7 @@ type SessionDTO struct {
 	BytesSent uint64 `json:"bytes_sent"`
 
 	// example: 500000
-	Tokens uint64 `json:"tokens"`
+	Tokens *big.Int `json:"tokens"`
 
 	// example: Completed
 	Status string `json:"status"`

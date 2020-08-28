@@ -103,7 +103,7 @@ type PromiseProcessor interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (PaymentEngine, error)
 
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
 type PaymentEngine interface {
@@ -263,7 +263,7 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 	defer session.tracer.EndStage(trace)
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.AccountantID, string(session.ID), manager.paymentEngineChan)
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.HermesID, string(session.ID), manager.paymentEngineChan)
 	if err != nil {
 		return err
 	}

@@ -18,14 +18,15 @@
 package endpoints
 
 import (
+	"math/big"
 	"net/http"
-	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/pkg/errors"
 )
 
 // QualityFinder allows to fetch proposal quality data
@@ -149,13 +150,16 @@ func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request
 	utils.WriteAsJSON(mapQualityMetrics(metrics), resp)
 }
 
-func parsePriceBound(req *http.Request, key string) (*uint64, error) {
+func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
 	bound := req.URL.Query().Get(key)
 	if bound == "" {
 		return nil, nil
 	}
-	upperPriceBound, err := strconv.ParseUint(req.URL.Query().Get(key), 10, 64)
-	return &upperPriceBound, err
+	upperPriceBound, ok := new(big.Int).SetString(req.URL.Query().Get(key), 10)
+	if !ok {
+		return upperPriceBound, errors.New("could not parse price bound")
+	}
+	return upperPriceBound, nil
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router

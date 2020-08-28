@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -79,14 +80,14 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 
 	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		Refresh:             false,
-		UpperTimePriceBound: 50000,
+		UpperTimePriceBound: 0.005,
 		LowerTimePriceBound: 0,
-		UpperGBPriceBound:   7000000,
+		UpperGBPriceBound:   0.7,
 		LowerGBPriceBound:   0,
 	})
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"openvpn\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":3,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":10,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
+	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"openvpn\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":3,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
 }
 
 func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() {
@@ -104,7 +105,7 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 	})
 
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"wireguard\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":0,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":10,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
+	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"wireguard\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":0,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
 }
 
 func TestProposalManagerSuite(t *testing.T) {
@@ -167,7 +168,7 @@ func (m mockPayment) GetType() string {
 
 func (m mockPayment) GetPrice() money.Money {
 	return money.Money{
-		Amount:   10,
+		Amount:   big.NewInt(10),
 		Currency: "MYSTT",
 	}
 }
