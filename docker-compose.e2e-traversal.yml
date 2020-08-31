@@ -294,6 +294,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     environment:
       - DEFAULT_ROUTE=10.100.1.2
     command: >
@@ -377,6 +379,8 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -420,6 +424,8 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -451,7 +457,7 @@ services:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     volumes:
-      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/betanet/keystore
     depends_on:
       - broker
       - mysterium-api
@@ -505,11 +511,13 @@ services:
       - trust
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s

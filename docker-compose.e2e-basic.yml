@@ -169,7 +169,7 @@ services:
       -MongoReplSet ""
       -redisAddress "redis:6379"
     volumes:
-      - ./e2e/blockchain/keystore:/keystore      
+      - ./e2e/blockchain/keystore:/keystore
 
   mongodb:
     image: 'mongo:4.2.3'
@@ -201,11 +201,13 @@ services:
       - trust
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -240,7 +242,7 @@ services:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     volumes:
-      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/betanet/keystore
     depends_on:
       - broker
       - mysterium-api
@@ -287,6 +289,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -321,6 +325,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -355,6 +361,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s

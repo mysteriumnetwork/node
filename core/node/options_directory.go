@@ -41,12 +41,21 @@ type OptionsDirectory struct {
 }
 
 // GetOptionsDirectory retrieves directory configuration from app configuration.
-func GetOptionsDirectory() *OptionsDirectory {
+func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
+	networkSubdir := "betanet" // Matches DefaultNetworkDefinition
+	switch {
+	case network.Betanet:
+		networkSubdir = "betanet"
+	case network.Testnet:
+		networkSubdir = "" // Leave testnet files intact before it's merged into master
+	case network.Localnet:
+		networkSubdir = "localnet"
+	}
 	return &OptionsDirectory{
 		Data:     dataDir,
-		Storage:  filepath.Join(dataDir, "db"),
-		Keystore: filepath.Join(dataDir, "keystore"),
+		Storage:  filepath.Join(dataDir, networkSubdir, "db"),
+		Keystore: filepath.Join(dataDir, networkSubdir, "keystore"),
 		Script:   config.GetString(config.FlagScriptDir),
 		Runtime:  config.GetString(config.FlagRuntimeDir),
 	}

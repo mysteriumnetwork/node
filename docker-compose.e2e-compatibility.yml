@@ -152,11 +152,13 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -196,6 +198,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 4050
     command: >
@@ -231,11 +235,13 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -275,6 +281,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 4050
     command: >
