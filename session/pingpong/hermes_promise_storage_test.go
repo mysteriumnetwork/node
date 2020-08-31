@@ -67,6 +67,10 @@ func TestHermesPromiseStorage(t *testing.T) {
 	_, err = hermesStorage.Get("unknown_id")
 	assert.Equal(t, ErrNotFound, err)
 
+	promises, err := hermesStorage.List(HermesPromiseFilter{})
+	assert.Equal(t, []HermesPromise{}, promises)
+	assert.NoError(t, err)
+
 	// store and check that promise is stored correctly
 	err = hermesStorage.Store(firstPromise)
 	assert.NoError(t, err)
@@ -75,6 +79,10 @@ func TestHermesPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
+	promises, err = hermesStorage.List(HermesPromiseFilter{})
+	assert.Equal(t, []HermesPromise{firstPromise}, promises)
+	assert.NoError(t, err)
+
 	// overwrite the promise, check if it is overwritten
 	err = hermesStorage.Store(secondPromise)
 	assert.NoError(t, err)
@@ -82,6 +90,10 @@ func TestHermesPromiseStorage(t *testing.T) {
 	promise, err = hermesStorage.Get(secondPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
+
+	promises, err = hermesStorage.List(HermesPromiseFilter{})
+	assert.Equal(t, []HermesPromise{firstPromise, secondPromise}, promises)
+	assert.NoError(t, err)
 
 	overwritingPromise := firstPromise
 	overwritingPromise.Promise.Amount = big.NewInt(0)

@@ -21,10 +21,13 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/asdine/storm/v3/codec/json"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
+	"go.etcd.io/bbolt"
 )
 
 const hermesPromiseBucketName = "hermes_promises"
@@ -35,11 +38,11 @@ var ErrAttemptToOverwrite = errors.New("attempted to overwrite a promise with an
 // HermesPromiseStorage allows for storing of hermes promises.
 type HermesPromiseStorage struct {
 	lock sync.Mutex
-	bolt persistentStorage
+	bolt *boltdb.Bolt
 }
 
 // NewHermesPromiseStorage returns a new instance of the hermes promise storage.
-func NewHermesPromiseStorage(bolt persistentStorage) *HermesPromiseStorage {
+func NewHermesPromiseStorage(bolt *boltdb.Bolt) *HermesPromiseStorage {
 	return &HermesPromiseStorage{
 		bolt: bolt,
 	}
@@ -95,4 +98,50 @@ func (aps *HermesPromiseStorage) Get(channelID string) (HermesPromise, error) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	return aps.get(channelID)
+}
+
+// HermesPromiseFilter defines all flags for filtering in promises in storage.
+type HermesPromiseFilter struct {
+	Identity *identity.Identity
+	HermesID *common.Address
+}
+
+// List fetches the promise for the given hermes.
+func (aps *HermesPromiseStorage) List(filter HermesPromiseFilter) ([]HermesPromise, error) {
+	aps.lock.Lock()
+	defer aps.lock.Unlock()
+
+	result := make([]HermesPromise, 0)
+	err := aps.bolt.DB().Bolt.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(hermesPromiseBucketName))
+		if bucket == nil {
+			return nil
+		}
+
+		return bucket.ForEach(func(k, v []byte) error {
+			if string(k) == "__storm_metadata" {
+				return nil
+			}
+
+			var entry HermesPromise
+			if err := json.Codec.Unmarshal(v, &entry); err != nil {
+				return err
+			}
+
+			if filter.Identity != nil {
+				if *filter.Identity != entry.Identity {
+					return nil
+				}
+			}
+			if filter.HermesID != nil {
+				if *filter.HermesID != entry.HermesID {
+					return nil
+				}
+			}
+
+			result = append(result, entry)
+			return nil
+		})
+	})
+	return result, err
 }
