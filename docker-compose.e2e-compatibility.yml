@@ -158,7 +158,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -241,7 +241,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
