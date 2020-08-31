@@ -47,18 +47,21 @@ func NewHermesPromiseStorage(bolt persistentStorage) *HermesPromiseStorage {
 
 // HermesPromise represents a promise we store from the hermes
 type HermesPromise struct {
+	ChannelID   string
+	Identity    identity.Identity
+	HermesID    common.Address
 	Promise     crypto.Promise
 	R           string
 	Revealed    bool
 	AgreementID *big.Int
 }
 
-// Store stores the given promise for the given hermes.
-func (aps *HermesPromiseStorage) Store(id identity.Identity, hermesID common.Address, promise HermesPromise) error {
+// Store stores the given promise.
+func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	previousPromise, err := aps.get(id, hermesID)
+	previousPromise, err := aps.get(promise.ChannelID)
 	if err != nil && err != ErrNotFound {
 		return err
 	}
@@ -71,22 +74,12 @@ func (aps *HermesPromiseStorage) Store(id identity.Identity, hermesID common.Add
 		return ErrAttemptToOverwrite
 	}
 
-	channel, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
-	if err != nil {
-		return errors.Wrap(err, "could not generate provider channel address")
-	}
-
-	return errors.Wrap(aps.bolt.SetValue(hermesPromiseBucketName, channel, promise), "could not store hermes promise")
+	return errors.Wrap(aps.bolt.SetValue(hermesPromiseBucketName, promise.ChannelID, promise), "could not store hermes promise")
 }
 
-func (aps *HermesPromiseStorage) get(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
-	channel, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
-	if err != nil {
-		return HermesPromise{}, errors.Wrap(err, "could not generate provider channel address")
-	}
-
+func (aps *HermesPromiseStorage) get(channelID string) (HermesPromise, error) {
 	result := &HermesPromise{}
-	err = aps.bolt.GetValue(hermesPromiseBucketName, channel, result)
+	err := aps.bolt.GetValue(hermesPromiseBucketName, channelID, result)
 	if err != nil {
 		if err.Error() == errBoltNotFound {
 			err = ErrNotFound
@@ -97,9 +90,9 @@ func (aps *HermesPromiseStorage) get(id identity.Identity, hermesID common.Addre
 	return *result, err
 }
 
-// Get fetches the promise for the given hermes.
-func (aps *HermesPromiseStorage) Get(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
+// Get fetches the promise by channel ID identifier.
+func (aps *HermesPromiseStorage) Get(channelID string) (HermesPromise, error) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
-	return aps.get(id, hermesID)
+	return aps.get(channelID)
 }

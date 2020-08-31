@@ -18,12 +18,12 @@
 package pingpong
 
 import (
-	"errors"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -35,13 +35,6 @@ func TestHermesPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	ks := identity.NewMockKeystore()
-	acc, err := ks.NewAccount("")
-	assert.Nil(t, err)
-
-	err = ks.Unlock(acc, "")
-	assert.Nil(t, err)
-
 	bolt, err := boltdb.NewStorage(dir)
 	assert.NoError(t, err)
 	defer bolt.Close()
@@ -49,70 +42,49 @@ func TestHermesPromiseStorage(t *testing.T) {
 	hermesStorage := NewHermesPromiseStorage(bolt)
 
 	id := identity.FromAddress("0x44440954558C5bFA0D4153B0002B1d1E3E3f5Ff5")
-	firstHermes := acc.Address
-	fp, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", big.NewInt(1), big.NewInt(1), "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
-	assert.NoError(t, err)
+	firstHermes := common.HexToAddress("0x000000acc1")
+	secondHermes := common.HexToAddress("0x000000acc2")
 
 	firstPromise := HermesPromise{
-		Promise:     *fp,
+		ChannelID:   "1",
+		Identity:    id,
+		HermesID:    firstHermes,
+		Promise:     crypto.Promise{Amount: big.NewInt(1), Fee: big.NewInt(1)},
 		R:           "some r",
 		AgreementID: big.NewInt(123),
 	}
 
-	sp, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", big.NewInt(2), big.NewInt(2), "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
-	assert.NoError(t, err)
 	secondPromise := HermesPromise{
-		Promise:     *sp,
+		ChannelID:   "2",
+		Identity:    id,
+		HermesID:    secondHermes,
+		Promise:     crypto.Promise{Amount: big.NewInt(2), Fee: big.NewInt(2)},
 		R:           "some other r",
 		AgreementID: big.NewInt(1234),
 	}
 
 	// check if errors are wrapped correctly
-	_, err = hermesStorage.Get(id, firstHermes)
+	_, err = hermesStorage.Get("unknown_id")
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that promise is stored correctly
-	err = hermesStorage.Store(id, firstHermes, firstPromise)
+	err = hermesStorage.Store(firstPromise)
 	assert.NoError(t, err)
 
-	promise, err := hermesStorage.Get(id, firstHermes)
+	promise, err := hermesStorage.Get(firstPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
 	// overwrite the promise, check if it is overwritten
-	err = hermesStorage.Store(id, firstHermes, secondPromise)
+	err = hermesStorage.Store(secondPromise)
 	assert.NoError(t, err)
 
-	promise, err = hermesStorage.Get(id, firstHermes)
-	assert.NoError(t, err)
-	assert.EqualValues(t, secondPromise, promise)
-
-	// store two promises, check if both are gotten correctly
-	account2, err := ks.NewAccount("")
-	assert.Nil(t, err)
-
-	err = ks.Unlock(account2, "")
-	assert.Nil(t, err)
-
-	secondHermes := account2.Address
-
-	err = hermesStorage.Store(id, secondHermes, firstPromise)
-	assert.NoError(t, err)
-
-	promise, err = hermesStorage.Get(id, firstHermes)
+	promise, err = hermesStorage.Get(secondPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
 
-	promise, err = hermesStorage.Get(id, secondHermes)
-	assert.NoError(t, err)
-	assert.EqualValues(t, firstPromise, promise)
-
-	overwritingPromise := HermesPromise{
-		Promise:     *fp,
-		R:           "some r",
-		AgreementID: big.NewInt(123),
-	}
+	overwritingPromise := firstPromise
 	overwritingPromise.Promise.Amount = big.NewInt(0)
-	err = hermesStorage.Store(id, secondHermes, overwritingPromise)
-	assert.True(t, errors.Is(err, ErrAttemptToOverwrite))
+	err = hermesStorage.Store(overwritingPromise)
+	assert.Equal(t, err, ErrAttemptToOverwrite)
 }
