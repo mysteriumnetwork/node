@@ -152,6 +152,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
@@ -196,6 +198,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 4050
     command: >
@@ -231,6 +235,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
@@ -275,6 +281,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 4050
     command: >
