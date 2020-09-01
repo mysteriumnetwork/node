@@ -228,7 +228,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	channel, err := m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal.ServiceType, contact)
 	if err != nil {
-		return fmt.Errorf("could not create p2p channel: %w", err)
+		return fmt.Errorf("could not create p2p channel during connect: %w", err)
 	}
 	m.channel = channel
 	tracer.EndStage(p2pChannelTrace)
@@ -415,7 +415,7 @@ func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, pr
 
 	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, serviceType, contactDef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("p2p dialer failed: %w", err)
 	}
 	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: closing P2P communication channel")

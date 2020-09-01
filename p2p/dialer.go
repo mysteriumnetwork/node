@@ -141,7 +141,7 @@ func (m *dialer) Dial(ctx context.Context, consumerID, providerID identity.Ident
 
 	channel, err := newChannel(conn1, config.privateKey, config.peerPubKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not create p2p channel: %w", err)
+		return nil, fmt.Errorf("could not create p2p channel during dial: %w", err)
 	}
 	channel.setServiceConn(conn2)
 	channel.launchReadSendLoops()
@@ -214,7 +214,13 @@ func (m *dialer) exchangeConfig(ctx context.Context, brokerConn nats.Connection,
 	if err != nil {
 		return nil, fmt.Errorf("could not pack signed message: %v", err)
 	}
+
+	// simple broker Publish will not work here since we have to delay Consumer from pinging Provider
+	//  until provider receives consumer config ( IP, ports ) and starts pinging Consumer first.
+	// This is why we use broker Request method to be sure that Provider processed our given configuration.
+	// To improve speed here investigate options to reduce broker communication round trip.
 	_, err = m.sendSignedMsg(ctx, configExchangeACKSubject(providerID, serviceType), packedMsg, brokerConn)
+
 	if err != nil {
 		return nil, fmt.Errorf("could not send signed msg: %v", err)
 	}

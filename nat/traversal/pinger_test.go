@@ -43,8 +43,8 @@ func TestPinger_Multiple_Stop(t *testing.T) {
 
 func TestPinger_PingPeer_N_Connections(t *testing.T) {
 	pingConfig := &PingConfig{
-		Interval:            50 * time.Millisecond,
-		SendConnACKInterval: 50 * time.Millisecond,
+		Interval:            5 * time.Millisecond,
+		SendConnACKInterval: 5 * time.Millisecond,
 		Timeout:             5 * time.Second,
 	}
 	provider := newPinger(pingConfig)
