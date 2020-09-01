@@ -68,7 +68,7 @@ func DefaultPingConfig() *PingConfig {
 	return &PingConfig{
 		Interval:            5 * time.Millisecond,
 		Timeout:             10 * time.Second,
-		SendConnACKInterval: 20 * time.Millisecond,
+		SendConnACKInterval: 100 * time.Millisecond,
 	}
 }
 
