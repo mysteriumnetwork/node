@@ -76,7 +76,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
@@ -93,7 +93,7 @@ func Test_Subscriber_SkipUnsupportedProposal(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
@@ -111,7 +111,7 @@ func Test_Subscriber_StartSyncsIdleProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
@@ -126,7 +126,7 @@ func Test_Subscriber_StartSyncsHealthyProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
@@ -149,7 +149,7 @@ func Test_Subscriber_StartSyncsStoppedProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
 	repo.storage.AddProposal(proposalFirst(), proposalSecond())
 	err := repo.Start()
 	defer repo.Stop()

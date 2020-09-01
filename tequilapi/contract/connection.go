@@ -142,7 +142,6 @@ type ConnectionCreateRequest struct {
 	ProviderID string `json:"provider_id"`
 
 	// hermes identity
-	// required: true
 	// example: 0x0000000000000000000000000000000000000003
 	HermesID string `json:"hermes_id"`
 
@@ -165,9 +164,6 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	}
 	if len(cr.ProviderID) == 0 {
 		errs.ForField("provider_id").AddError("required", "Field is required")
-	}
-	if len(cr.HermesID) == 0 {
-		errs.ForField("hermes_id").AddError("required", "Field is required")
 	}
 	return errs
 }
