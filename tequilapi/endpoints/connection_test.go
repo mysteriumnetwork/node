@@ -212,7 +212,6 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
-				"hermes_id" : [ {"code" : "required" , "message" : "Field is required" } ],
 				"consumer_id" : [ { "code" : "required" , "message" : "Field is required" } ],
 				"provider_id" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}

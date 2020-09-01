@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/identity"
@@ -253,6 +254,7 @@ func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, 
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,
 		},
+		HermesID: config.GetString(config.FlagHermesID),
 	}
 	err := json.NewDecoder(req.Body).Decode(&connectionRequest)
 	if err != nil {
