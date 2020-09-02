@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,6 +33,7 @@ var (
 	sessionExisting, _ = service.NewSession(
 		&service.Instance{},
 		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: identityExisting.Address}},
+		trace.NewTracer(""),
 	)
 	sessionExistingString = string(sessionExisting.ID)
 )

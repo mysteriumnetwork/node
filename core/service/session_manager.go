@@ -154,7 +154,7 @@ type SessionManager struct {
 // Start starts a session on the provider side for the given consumer.
 // Multiple sessions per peerID is possible in case different services are used
 func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionResponse, err error) {
-	session, err := NewSession(manager.service, request)
+	session, err := NewSession(manager.service, request, manager.channel.Tracer())
 	if err != nil {
 		return pb.SessionResponse{}, errors.Wrap(err, "cannot create new session")
 	}
@@ -165,7 +165,7 @@ func (manager *SessionManager) Start(request *pb.SessionRequest) (_ pb.SessionRe
 		}
 	}()
 
-	trace := session.tracer.StartStage("Provider whole session create")
+	trace := session.tracer.StartStage("Provider session create")
 	defer func() {
 		session.tracer.EndStage(trace)
 		traceResult := session.tracer.Finish(manager.publisher, string(session.ID))
@@ -197,7 +197,7 @@ func (manager *SessionManager) Acknowledge(consumerID identity.Identity, session
 }
 
 func (manager *SessionManager) startSession(session *Session) error {
-	trace := session.tracer.StartStage("Provider session start")
+	trace := session.tracer.StartStage("Provider session create (start)")
 	defer session.tracer.EndStage(trace)
 
 	if err := manager.validateSession(session); err != nil {
@@ -259,7 +259,7 @@ func (manager *SessionManager) Destroy(consumerID identity.Identity, sessionID s
 }
 
 func (manager *SessionManager) paymentLoop(session *Session) error {
-	trace := session.tracer.StartStage("Provider payments")
+	trace := session.tracer.StartStage("Provider session create (payment)")
 	defer session.tracer.EndStage(trace)
 
 	log.Info().Msg("Using new payments")
@@ -291,7 +291,7 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 }
 
 func (manager *SessionManager) providerService(session *Session, channel p2p.Channel) (pb.SessionResponse, error) {
-	trace := session.tracer.StartStage("Provider config")
+	trace := session.tracer.StartStage("Provider session create (configure)")
 	defer session.tracer.EndStage(trace)
 
 	config, err := manager.service.Service().ProvideConfig(string(session.ID), session.request.GetConfig(), channel.ServiceConn())

@@ -155,6 +155,7 @@ func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (stri
 
 func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *metrics.Event) {
 	sender, target, isProvider := ctx.Consumer, ctx.Provider, false
+	// TODO Remove this workaround by generating&signing&publishing `metrics.Event` in same place
 	if strings.HasPrefix(ctx.Stage, "Provider") {
 		sender, target, isProvider = ctx.Provider, ctx.Consumer, true
 	}

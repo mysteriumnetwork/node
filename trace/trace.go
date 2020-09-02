@@ -33,15 +33,18 @@ const (
 )
 
 // NewTracer returns new tracer instance.
-func NewTracer() *Tracer {
-	return &Tracer{
+func NewTracer(name string) *Tracer {
+	tracer := &Tracer{
 		stages: make([]*stage, 0),
 	}
+	tracer.name = tracer.StartStage(name)
+	return tracer
 }
 
 // Tracer represents tracer which records stages durations. It can be used
 // to record stages times for tracing how long it took time.
 type Tracer struct {
+	name     string
 	mu       sync.Mutex
 	stages   []*stage
 	finished bool
@@ -87,6 +90,8 @@ func (t *Tracer) EndStage(key string) {
 
 // Finish finishes tracing and returns formatted string with stages durations.
 func (t *Tracer) Finish(eventPublisher eventbus.Publisher, id string) string {
+	t.EndStage(t.name)
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.finished = true

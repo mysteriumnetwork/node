@@ -181,11 +181,8 @@ func NewManager(
 func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	var sessionID session.ID
 
-	tracer := trace.NewTracer()
-	connectTrace := tracer.StartStage("Consumer whole Connect")
-
+	tracer := trace.NewTracer("Consumer whole Connect")
 	defer func() {
-		tracer.EndStage(connectTrace)
 		traceResult := tracer.Finish(m.eventBus, string(sessionID))
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
@@ -220,46 +217,37 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	p2pChannelTrace := tracer.StartStage("Consumer P2P channel creation")
-	contact, err := p2p.ParseContact(proposal.ProviderContacts)
-	if err != nil {
-		return fmt.Errorf("provider does not support p2p communication: %w", err)
-	}
-
-	channel, err := m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal.ServiceType, contact)
+	err = m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal, tracer)
 	if err != nil {
 		return fmt.Errorf("could not create p2p channel during connect: %w", err)
 	}
-	m.channel = channel
-	tracer.EndStage(p2pChannelTrace)
 
-	sessionCreateTrace := tracer.StartStage("Consumer session creation")
 	connection, err := m.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
 	}
 
-	paymentSession, err := m.launchPayments(channel, consumerID, providerID, hermesID, proposal)
+	paymentSession, err := m.paymentLoop(m.channel, consumerID, providerID, hermesID, proposal)
 	if err != nil {
 		return err
 	}
 
-	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, channel, consumerID, hermesID, proposal)
+	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, m.channel, consumerID, hermesID, proposal, tracer)
 	sessionID = session.ID(sessionDTO.GetID())
 	if err != nil {
-		m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
+		m.sendSessionStatus(m.channel, consumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
+	traceStart := tracer.StartStage("Consumer session creation (start)")
+	go m.keepAliveLoop(m.channel, sessionID)
 	m.setStatus(func(status *connectionstate.Status) {
 		status.SessionID = sessionID
 	})
 	m.publishSessionCreate(sessionID)
 	paymentSession.SetSessionID(string(sessionID))
-	tracer.EndStage(sessionCreateTrace)
+	tracer.EndStage(traceStart)
 
-	connectionTrace := tracer.StartStage("Consumer start connection")
-	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
 	m.connectOptions = ConnectOptions{
 		SessionID:       sessionID,
@@ -268,19 +256,17 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		ConsumerID:      consumerID,
 		ProviderID:      providerID,
 		Proposal:        proposal,
-		ProviderNATConn: channel.ServiceConn(),
-		ChannelConn:     channel.Conn(),
+		ProviderNATConn: m.channel.ServiceConn(),
+		ChannelConn:     m.channel.Conn(),
 		HermesID:        hermesID,
 	}
-	err = m.startConnection(m.currentCtx(), connection, m.connectOptions)
-	tracer.EndStage(connectionTrace)
-
+	err = m.startConnection(m.currentCtx(), connection, m.connectOptions, tracer)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
 		m.addCleanupAfterDisconnect(func() error {
-			return m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusConnectionFailed, err)
+			return m.sendSessionStatus(m.channel, consumerID, sessionID, connectivity.StatusConnectionFailed, err)
 		})
 		m.publishStateEvent(connectionstate.StateConnectionFailed)
 
@@ -288,12 +274,6 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		m.Cancel()
 		return err
 	}
-
-	// Clear IP cache so session IP check can report that IP has really changed.
-	m.clearIPCache()
-
-	go m.keepAliveLoop(channel, sessionID)
-	go m.checkSessionIP(channel, consumerID, sessionID, originalPublicIP)
 
 	return nil
 }
@@ -365,7 +345,7 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
+func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
 	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, hermesID, proposal)
 	if err != nil {
 		return nil, err
@@ -377,7 +357,16 @@ func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, prov
 		return nil
 	})
 
-	go m.payForService(payments)
+	go func() {
+		err := payments.Start()
+		if err != nil {
+			log.Error().Err(err).Msg("Payment error")
+			err = m.Disconnect()
+			if err != nil {
+				log.Error().Err(err).Msg("Could not disconnect gracefully")
+			}
+		}
+	}()
 	return payments, nil
 }
 
@@ -409,13 +398,22 @@ func (m *connectionManager) cleanAfterDisconnect() {
 	m.cleanupAfterDisconnect = nil
 }
 
-func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
+func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, proposal market.ServiceProposal, tracer *trace.Tracer) error {
+	trace := tracer.StartStage("Consumer P2P channel creation")
+	defer tracer.EndStage(trace)
+
+	contactDef, err := p2p.ParseContact(proposal.ProviderContacts)
+	if err != nil {
+		return fmt.Errorf("provider does not support p2p communication: %w", err)
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, p2pDialTimeout)
 	defer cancel()
 
-	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, serviceType, contactDef)
+	// TODO register all handlers before channel read/write loops
+	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, proposal.ServiceType, contactDef, tracer)
 	if err != nil {
-		return nil, fmt.Errorf("p2p dialer failed: %w", err)
+		return fmt.Errorf("p2p dialer failed: %w", err)
 	}
 	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: closing P2P communication channel")
@@ -423,7 +421,9 @@ func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, pr
 
 		return channel.Close()
 	})
-	return channel, nil
+
+	m.channel = channel
+	return nil
 }
 
 func (m *connectionManager) addCleanupAfterDisconnect(fn func() error) {
@@ -438,7 +438,10 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (*pb.SessionResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, tracer *trace.Tracer) (*pb.SessionResponse, error) {
+	trace := tracer.StartStage("Consumer session creation")
+	defer tracer.EndStage(trace)
+
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not get session config: %w", err)
@@ -529,7 +532,12 @@ func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
 	})
 }
 
-func (m *connectionManager) startConnection(ctx context.Context, conn Connection, connectOptions ConnectOptions) (err error) {
+func (m *connectionManager) startConnection(ctx context.Context, conn Connection, connectOptions ConnectOptions, tracer *trace.Tracer) (err error) {
+	trace := tracer.StartStage("Consumer start connection")
+	defer tracer.EndStage(trace)
+
+	originalPublicIP := m.getPublicIP()
+
 	if err = conn.Start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -561,6 +569,12 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 
 	go m.consumeConnectionStates(conn.State())
 	go m.connectionWaiter(conn)
+
+	// Clear IP cache so session IP check can report that IP has really changed.
+	m.clearIPCache()
+
+	go m.checkSessionIP(m.channel, connectOptions.ConsumerID, connectOptions.SessionID, originalPublicIP)
+
 	return nil
 }
 
@@ -669,17 +683,6 @@ func (m *connectionManager) disconnect() {
 	m.statusNotConnected()
 
 	m.cleanAfterDisconnect()
-}
-
-func (m *connectionManager) payForService(payments PaymentIssuer) {
-	err := payments.Start()
-	if err != nil {
-		log.Error().Err(err).Msg("Payment error")
-		err = m.Disconnect()
-		if err != nil {
-			log.Error().Err(err).Msg("Could not disconnect gracefully")
-		}
-	}
 }
 
 func (m *connectionManager) connectionWaiter(connection Connection) {

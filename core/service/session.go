@@ -95,7 +95,7 @@ func (s *Session) toEvent(status event.Status) event.AppEventSession {
 }
 
 // NewSession creates a blank new session with an ID.
-func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error) {
+func NewSession(service *Instance, request *pb.SessionRequest, tracer *trace.Tracer) (*Session, error) {
 	uid, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
@@ -117,6 +117,6 @@ func NewSession(service *Instance, request *pb.SessionRequest) (*Session, error)
 		request:          request,
 		done:             make(chan struct{}),
 		cleanup:          make([]func() error, 0),
-		tracer:           trace.NewTracer(),
+		tracer:           tracer,
 	}, nil
 }
