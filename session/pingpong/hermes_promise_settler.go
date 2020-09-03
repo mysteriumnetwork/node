@@ -168,14 +168,14 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 		return errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	hs := hermesState{
+	hs := HermesChannel{
 		channel:     channel,
 		lastPromise: hermesPromise.Promise,
 	}
 
 	s := aps.currentState[id]
 	if len(s.hermeses) == 0 {
-		s.hermeses = make(map[common.Address]hermesState)
+		s.hermeses = make(map[common.Address]HermesChannel)
 	}
 	s.registered = true
 	s.hermeses[hermesID] = hs
@@ -591,61 +591,11 @@ func (aps *hermesPromiseSettler) handleNodeStop() {
 	})
 }
 
-type hermesState struct {
-	channel     client.ProviderChannel
-	lastPromise crypto.Promise
-}
-
 // settlementState earning calculations model
 type settlementState struct {
 	settleInProgress bool
 	registered       bool
-	hermeses         map[common.Address]hermesState
-}
-
-// lifetimeBalance returns earnings of all history.
-func (hs hermesState) lifetimeBalance() *big.Int {
-	if hs.lastPromise.Amount == nil {
-		return new(big.Int)
-	}
-	return hs.lastPromise.Amount
-}
-
-// unsettledBalance returns current unsettled earnings.
-func (hs hermesState) unsettledBalance() *big.Int {
-	settled := new(big.Int)
-	if hs.channel.Settled != nil {
-		settled = hs.channel.Settled
-	}
-
-	lastPromise := new(big.Int)
-	if hs.lastPromise.Amount != nil {
-		lastPromise = hs.lastPromise.Amount
-	}
-
-	return safeSub(lastPromise, settled)
-}
-
-func (hs hermesState) availableBalance() *big.Int {
-	balance := new(big.Int)
-	if hs.channel.Balance != nil {
-		balance = hs.channel.Balance
-	}
-
-	settled := new(big.Int)
-	if hs.channel.Settled != nil {
-		settled = hs.channel.Settled
-	}
-
-	return new(big.Int).Add(balance, settled)
-}
-
-func (hs hermesState) balance() *big.Int {
-	promised := new(big.Int)
-	if hs.lastPromise.Amount != nil {
-		promised = hs.lastPromise.Amount
-	}
-	return safeSub(hs.availableBalance(), promised)
+	hermeses         map[common.Address]HermesChannel
 }
 
 func (ss settlementState) needsSettling(threshold float64, hermesID common.Address) bool {

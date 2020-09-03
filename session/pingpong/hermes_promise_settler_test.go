@@ -140,7 +140,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	v = settler.currentState[mockID]
 	assert.EqualValues(t, settlementState{
 		registered: true,
-		hermeses: map[common.Address]hermesState{
+		hermeses: map[common.Address]HermesChannel{
 			cfg.HermesAddress: {
 				channel: client.ProviderChannel{
 					Balance: big.NewInt(1000000000000),
@@ -286,7 +286,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 
 	// should receive on registered provider. Should also expect a recalculated balance to be added to the settlementState
 	settler.currentState[mockID] = settlementState{
-		hermeses: map[common.Address]hermesState{
+		hermeses: map[common.Address]HermesChannel{
 			cfg.HermesAddress: {
 				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: big.NewInt(8900)},
@@ -308,7 +308,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 
 	// should not receive here due to balance being large and stake being small
 	settler.currentState[mockID] = settlementState{
-		hermeses: map[common.Address]hermesState{
+		hermeses: map[common.Address]HermesChannel{
 			cfg.HermesAddress: {
 				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(0)},
 				lastPromise: crypto.Promise{Amount: big.NewInt(8900)},
@@ -377,7 +377,7 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 
 func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s := settlementState{
-		hermeses: map[common.Address]hermesState{
+		hermeses: map[common.Address]HermesChannel{
 			{}: {
 				channel:     client.ProviderChannel{Balance: big.NewInt(100), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: big.NewInt(100)},
@@ -388,7 +388,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	}
 	assert.True(t, s.needsSettling(0.1, common.Address{}), "should be true with zero balance left")
 	s = settlementState{
-		hermeses: map[common.Address]hermesState{
+		hermeses: map[common.Address]HermesChannel{
 			{}: {
 				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: big.NewInt(9000)},
@@ -405,7 +405,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	assert.False(t, s.needsSettling(0.1, common.Address{}), "should be false with settle in progress")
 
 	s = settlementState{
-		hermeses: map[common.Address]hermesState{
+		hermeses: map[common.Address]HermesChannel{
 			{}: {
 				channel:     client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
 				lastPromise: crypto.Promise{Amount: big.NewInt(8999)},
@@ -414,42 +414,6 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		registered: true,
 	}
 	assert.False(t, s.needsSettling(0.1, common.Address{}), "should be false with 10.01% missing")
-}
-
-func TestPromiseSettlerState_balance(t *testing.T) {
-	s := settlementState{
-		hermeses: map[common.Address]hermesState{
-			{}: {
-				channel: client.ProviderChannel{
-					Balance: big.NewInt(100),
-					Settled: big.NewInt(10),
-				},
-				lastPromise: crypto.Promise{
-					Amount: big.NewInt(15),
-				},
-			},
-		},
-	}
-	assert.Equal(t, big.NewInt(110), s.hermeses[common.Address{}].availableBalance())
-	assert.Equal(t, big.NewInt(95), s.hermeses[common.Address{}].balance())
-	assert.Equal(t, big.NewInt(5), s.hermeses[common.Address{}].unsettledBalance())
-
-	s = settlementState{
-		hermeses: map[common.Address]hermesState{
-			{}: {
-				channel: client.ProviderChannel{
-					Balance: big.NewInt(100),
-					Settled: big.NewInt(10),
-				},
-				lastPromise: crypto.Promise{
-					Amount: big.NewInt(16),
-				},
-			},
-		},
-	}
-	assert.Equal(t, big.NewInt(110), s.hermeses[common.Address{}].availableBalance())
-	assert.Equal(t, big.NewInt(94), s.hermeses[common.Address{}].balance())
-	assert.Equal(t, big.NewInt(6), s.hermeses[common.Address{}].unsettledBalance())
 }
 
 // mocks start here
