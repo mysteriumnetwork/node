@@ -141,15 +141,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	assert.EqualValues(t, settlementState{
 		registered: true,
 		hermeses: map[common.Address]HermesChannel{
-			cfg.HermesAddress: {
-				Identity: mockID,
-				HermesID: cfg.HermesAddress,
-				channel: client.ProviderChannel{
-					Balance: big.NewInt(1000000000000),
-					Settled: big.NewInt(9000000),
-					Stake:   big.NewInt(12312323),
-				},
-			},
+			cfg.HermesAddress: NewHermesChannel(mockID, cfg.HermesAddress, mockProviderChannel, crypto.Promise{}),
 		},
 	}, v)
 

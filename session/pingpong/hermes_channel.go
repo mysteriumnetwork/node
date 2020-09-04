@@ -26,12 +26,27 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
+// NewHermesChannel creates HermesChannel model.
+func NewHermesChannel(id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise crypto.Promise) HermesChannel {
+	return HermesChannel{
+		Identity:    id,
+		HermesID:    hermesID,
+		channel:     channel,
+		lastPromise: promise,
+	}
+}
+
 // HermesChannel represents opened payment channel between identity and hermes.
 type HermesChannel struct {
 	Identity    identity.Identity
 	HermesID    common.Address
 	channel     client.ProviderChannel
 	lastPromise crypto.Promise
+}
+
+// hasPromise returns flag if channel has something promised at all.
+func (hc HermesChannel) hasPromise() bool {
+	return hc.lastPromise.Amount != nil
 }
 
 // lifetimeBalance returns earnings of all history.

@@ -168,22 +168,17 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 		return errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	hs := HermesChannel{
-		Identity:    id,
-		HermesID:    hermesID,
-		channel:     channel,
-		lastPromise: hermesPromise.Promise,
-	}
+	hc := NewHermesChannel(id, hermesID, channel, hermesPromise.Promise)
 
 	s := aps.currentState[id]
 	if len(s.hermeses) == 0 {
 		s.hermeses = make(map[common.Address]HermesChannel)
 	}
 	s.registered = true
-	s.hermeses[hermesID] = hs
+	s.hermeses[hermesID] = hc
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[id] = s
-	log.Info().Msgf("Loaded state for provider %q, hermesID %q: balance %v, available balance %v, unsettled balance %v", id, hermesID.Hex(), hs.balance(), hs.availableBalance(), hs.unsettledBalance())
+	log.Info().Msgf("Loaded state for provider %q, hermesID %q: balance %v, available balance %v, unsettled balance %v", id, hermesID.Hex(), hc.balance(), hc.availableBalance(), hc.unsettledBalance())
 	return nil
 }
 
@@ -306,7 +301,7 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 		hermes = s.hermeses[apep.HermesID]
 	}
 
-	hermes.lastPromise = apep.Promise
+	hermes = NewHermesChannel(apep.ProviderID, apep.HermesID, hermes.channel, apep.Promise)
 	s.hermeses[apep.HermesID] = hermes
 
 	go aps.publishChangeEvent(id, aps.currentState[id], s)

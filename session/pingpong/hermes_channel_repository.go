@@ -57,12 +57,17 @@ func (hcr *HermesChannelRepository) Get(id identity.Identity, hermesID common.Ad
 		return HermesChannel{}, errors.Wrap(err, "could not generate provider channel address")
 	}
 
-	promise, err := hcr.promises.Get(channelID)
+	channel, err := hcr.fetchChannel(id, hermesID)
 	if err != nil {
 		return HermesChannel{}, err
 	}
 
-	return hcr.toChannel(promise)
+	promise, err := hcr.promises.Get(channelID)
+	if err != nil && err != ErrNotFound {
+		return HermesChannel{}, errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
+	}
+
+	return NewHermesChannel(id, hermesID, channel, promise.Promise), nil
 }
 
 // List retrieves the promise for the given hermes.
@@ -74,24 +79,23 @@ func (hcr *HermesChannelRepository) List(filter HermesPromiseFilter) ([]HermesCh
 
 	result := make([]HermesChannel, len(promises))
 	for i, promise := range promises {
-		result[i], err = hcr.toChannel(promise)
+		channel, err := hcr.fetchChannel(promise.Identity, promise.HermesID)
 		if err != nil {
 			return []HermesChannel{}, err
 		}
+
+		result[i] = NewHermesChannel(promise.Identity, promise.HermesID, channel, promise.Promise)
 	}
 
 	return result, err
 }
 
-func (hcr *HermesChannelRepository) toChannel(promise HermesPromise) (result HermesChannel, err error) {
-	result.Identity = promise.Identity
-	result.HermesID = promise.HermesID
-	result.lastPromise = promise.Promise
+func (hcr *HermesChannelRepository) fetchChannel(id identity.Identity, hermesID common.Address) (client.ProviderChannel, error) {
 	// TODO Should call GetProviderChannelByID() but can't pass pending=false
-	result.channel, err = hcr.channels.GetProviderChannel(promise.HermesID, promise.Identity.ToCommonAddress(), true)
+	channel, err := hcr.channels.GetProviderChannel(hermesID, id.ToCommonAddress(), true)
 	if err != nil {
-		return result, errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", promise.Identity, promise.HermesID.Hex()))
+		return client.ProviderChannel{}, errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	return result, nil
+	return channel, nil
 }
