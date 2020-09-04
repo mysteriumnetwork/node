@@ -142,6 +142,8 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 		registered: true,
 		hermeses: map[common.Address]HermesChannel{
 			cfg.HermesAddress: {
+				Identity: mockID,
+				HermesID: cfg.HermesAddress,
 				channel: client.ProviderChannel{
 					Balance: big.NewInt(1000000000000),
 					Settled: big.NewInt(9000000),

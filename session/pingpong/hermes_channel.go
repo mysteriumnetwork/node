@@ -20,12 +20,16 @@ package pingpong
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // HermesChannel represents opened payment channel between identity and hermes.
 type HermesChannel struct {
+	Identity    identity.Identity
+	HermesID    common.Address
 	channel     client.ProviderChannel
 	lastPromise crypto.Promise
 }

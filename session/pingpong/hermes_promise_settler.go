@@ -169,6 +169,8 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 	}
 
 	hs := HermesChannel{
+		Identity:    id,
+		HermesID:    hermesID,
 		channel:     channel,
 		lastPromise: hermesPromise.Promise,
 	}
