@@ -54,7 +54,7 @@ func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider
 func (hcr *HermesChannelRepository) Get(id identity.Identity, hermesID common.Address) (HermesChannel, error) {
 	channelID, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
 	if err != nil {
-		return HermesChannel{}, errors.Wrap(err, "could not generate provider channel address")
+		return HermesChannel{}, fmt.Errorf("could not generate provider channel address: %w", err)
 	}
 
 	channel, err := hcr.fetchChannel(id, hermesID)
