@@ -639,6 +639,8 @@ func (m *connectionManager) Disconnect() error {
 		return ErrNoConnection
 	}
 
+	m.eventBus.Unsubscribe(sleep.AppTopicSleepNotification, m.handleSleepEvent)
+
 	m.statusDisconnecting()
 	m.disconnect()
 
@@ -750,7 +752,7 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan connecti
 func (m *connectionManager) onStateChanged(state connectionstate.State) {
 	log.Debug().Msgf("Connection state received: %s", state)
 
-	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
+	// React just to certain stains from connection. Because disconnect happens in connectionWaiter
 	switch state {
 	case connectionstate.Connected:
 		m.statusConnected()
