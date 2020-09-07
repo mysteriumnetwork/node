@@ -154,21 +154,22 @@ func (aps *hermesPromiseSettler) loadInitialState(addr identity.Identity) error 
 		return nil
 	}
 
-	return aps.resyncState(addr, aps.config.HermesAddress)
+	_, err = aps.resyncState(addr, aps.config.HermesAddress)
+	return err
 }
 
-func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID common.Address) error {
+func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID common.Address) (HermesChannel, error) {
 	channel, err := aps.bc.GetProviderChannel(hermesID, id.ToCommonAddress(), true)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", id, hermesID.Hex()))
+		return HermesChannel{}, errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", id, hermesID.Hex()))
 	}
 
 	hermesPromise, err := aps.getLastPromise(id, hermesID)
 	if err != nil && err != ErrNotFound {
-		return errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
+		return HermesChannel{}, errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	hc := NewHermesChannel(id, hermesID, channel, hermesPromise.Promise)
+	hc := NewHermesChannel(id, hermesID, channel, hermesPromise)
 
 	s := aps.currentState[id]
 	if len(s.hermeses) == 0 {
@@ -179,7 +180,7 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 	go aps.publishChangeEvent(id, aps.currentState[id], s)
 	aps.currentState[id] = s
 	log.Info().Msgf("Loaded state for provider %q, hermesID %q: balance %v, available balance %v, unsettled balance %v", id, hermesID.Hex(), hc.balance(), hc.availableBalance(), hc.unsettledBalance())
-	return nil
+	return hc, nil
 }
 
 func (aps *hermesPromiseSettler) getLastPromise(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
@@ -266,7 +267,7 @@ func (aps *hermesPromiseSettler) handleRegistrationEvent(payload registry.AppEve
 	}
 	log.Info().Msgf("Identity registration event received for provider %q", payload.ID)
 
-	err := aps.resyncState(payload.ID, aps.config.HermesAddress)
+	_, err := aps.resyncState(payload.ID, aps.config.HermesAddress)
 	if err != nil {
 		log.Error().Err(err).Msgf("Could not resync state for provider %v", payload.ID)
 		return
@@ -291,21 +292,11 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 		return
 	}
 
-	hermes, ok := s.hermeses[apep.HermesID]
-	if !ok {
-		err := aps.resyncState(id, apep.HermesID)
-		if err != nil {
-			log.Error().Err(err).Msgf("could not sync state for provider %v, hermesID %v", apep.ProviderID, apep.HermesID.Hex())
-			return
-		}
-		hermes = s.hermeses[apep.HermesID]
+	hermes, err := aps.resyncState(id, apep.HermesID)
+	if err != nil {
+		log.Error().Err(err).Msgf("could not sync state for provider %v, hermesID %v", apep.ProviderID, apep.HermesID.Hex())
+		return
 	}
-
-	hermes = NewHermesChannel(apep.ProviderID, apep.HermesID, hermes.channel, apep.Promise)
-	s.hermeses[apep.HermesID] = hermes
-
-	go aps.publishChangeEvent(id, aps.currentState[id], s)
-	aps.currentState[apep.ProviderID] = s
 	log.Info().Msgf("Hermes %q promise state updated for provider %q", apep.HermesID.Hex(), id)
 
 	if s.needsSettling(aps.config.Threshold, apep.HermesID) {
@@ -521,7 +512,7 @@ func (aps *hermesPromiseSettler) settle(
 				log.Error().Err(err).Msg("Could not store settlement history")
 			}
 
-			err = aps.resyncState(provider, hermesID)
+			_, err = aps.resyncState(provider, hermesID)
 			if err != nil {
 				// This will get retried so we do not need to explicitly retry
 				// TODO: maybe add a sane limit of retries

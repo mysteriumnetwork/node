@@ -67,7 +67,7 @@ func (hcr *HermesChannelRepository) Get(id identity.Identity, hermesID common.Ad
 		return HermesChannel{}, errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	return NewHermesChannel(id, hermesID, channel, promise.Promise), nil
+	return NewHermesChannel(id, hermesID, channel, promise), nil
 }
 
 // List retrieves the promise for the given hermes.
@@ -84,7 +84,7 @@ func (hcr *HermesChannelRepository) List(filter HermesPromiseFilter) ([]HermesCh
 			return []HermesChannel{}, err
 		}
 
-		result[i] = NewHermesChannel(promise.Identity, promise.HermesID, channel, promise.Promise)
+		result[i] = NewHermesChannel(promise.Identity, promise.HermesID, channel, promise)
 	}
 
 	return result, err

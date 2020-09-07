@@ -32,8 +32,8 @@ func TestHermesChannel_balance(t *testing.T) {
 			Balance: big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
-		lastPromise: crypto.Promise{
-			Amount: big.NewInt(15),
+		lastPromise: HermesPromise{
+			Promise: crypto.Promise{Amount: big.NewInt(15)},
 		},
 	}
 	assert.Equal(t, big.NewInt(110), channel.availableBalance())
@@ -45,8 +45,8 @@ func TestHermesChannel_balance(t *testing.T) {
 			Balance: big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
-		lastPromise: crypto.Promise{
-			Amount: big.NewInt(16),
+		lastPromise: HermesPromise{
+			Promise: crypto.Promise{Amount: big.NewInt(16)},
 		},
 	}
 	assert.Equal(t, big.NewInt(110), channel.availableBalance())

@@ -23,11 +23,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/client"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // NewHermesChannel creates HermesChannel model.
-func NewHermesChannel(id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise crypto.Promise) HermesChannel {
+func NewHermesChannel(id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise HermesPromise) HermesChannel {
 	return HermesChannel{
 		Identity:    id,
 		HermesID:    hermesID,
@@ -41,20 +40,20 @@ type HermesChannel struct {
 	Identity    identity.Identity
 	HermesID    common.Address
 	channel     client.ProviderChannel
-	lastPromise crypto.Promise
+	lastPromise HermesPromise
 }
 
 // hasPromise returns flag if channel has something promised at all.
 func (hc HermesChannel) hasPromise() bool {
-	return hc.lastPromise.Amount != nil
+	return hc.lastPromise.Promise.Amount != nil
 }
 
 // lifetimeBalance returns earnings of all history.
 func (hc HermesChannel) lifetimeBalance() *big.Int {
-	if hc.lastPromise.Amount == nil {
+	if hc.lastPromise.Promise.Amount == nil {
 		return new(big.Int)
 	}
-	return hc.lastPromise.Amount
+	return hc.lastPromise.Promise.Amount
 }
 
 // unsettledBalance returns current unsettled earnings.
@@ -65,8 +64,8 @@ func (hc HermesChannel) unsettledBalance() *big.Int {
 	}
 
 	lastPromise := new(big.Int)
-	if hc.lastPromise.Amount != nil {
-		lastPromise = hc.lastPromise.Amount
+	if hc.lastPromise.Promise.Amount != nil {
+		lastPromise = hc.lastPromise.Promise.Amount
 	}
 
 	return safeSub(lastPromise, settled)
@@ -88,8 +87,8 @@ func (hc HermesChannel) availableBalance() *big.Int {
 
 func (hc HermesChannel) balance() *big.Int {
 	promised := new(big.Int)
-	if hc.lastPromise.Amount != nil {
-		promised = hc.lastPromise.Amount
+	if hc.lastPromise.Promise.Amount != nil {
+		promised = hc.lastPromise.Promise.Amount
 	}
 	return safeSub(hc.availableBalance(), promised)
 }
