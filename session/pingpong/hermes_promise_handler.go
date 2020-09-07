@@ -40,7 +40,6 @@ import (
 
 type hermesPromiseStorage interface {
 	Store(promise HermesPromise) error
-	Get(channelID string) (HermesPromise, error)
 }
 
 type feeProvider interface {

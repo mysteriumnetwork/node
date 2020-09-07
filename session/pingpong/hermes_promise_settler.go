@@ -188,7 +188,7 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 func (aps *hermesPromiseSettler) getLastPromise(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
 	channelID, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
 	if err != nil {
-		return HermesPromise{}, errors.Wrap(err, "could not generate provider channel address")
+		return HermesPromise{}, fmt.Errorf("could not generate provider channel address: %w", err)
 	}
 
 	return aps.promiseStorage.Get(channelID)
