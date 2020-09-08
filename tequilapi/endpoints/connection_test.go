@@ -73,6 +73,10 @@ func (cm *mockConnectionManager) CheckChannel(context.Context) error {
 	return cm.onCheckChannelReturn
 }
 
+func (cm *mockConnectionManager) Reconnect() {
+	return
+}
+
 func (cm *mockConnectionManager) Wait() error {
 	return nil
 }

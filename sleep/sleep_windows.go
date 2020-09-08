@@ -25,7 +25,6 @@ import (
 //Start starts event log notifier
 func (n *Notifier) Start() {
 	log.Debug().Msg("Register for sleep log events")
-
 	watcher, err := winlog.NewWinLogWatcher()
 	if err != nil {
 		log.Error().Msgf("Couldn't create log watcher: %v\n", err)
@@ -36,7 +35,7 @@ func (n *Notifier) Start() {
 	for {
 		select {
 		case <-watcher.Event():
-			n.eventbus.Publish(AppTopicSleepNotification, EventWakeup)
+			n.eventBus.Publish(AppTopicSleepNotification, EventWakeup)
 		case err := <-watcher.Error():
 			log.Error().Msgf("Log watcher error: %v\n", err)
 		case <-n.stop:

@@ -33,7 +33,7 @@ func (n *Notifier) Start() {
 	go func() {
 		for {
 			e := <-eventChannel
-			n.eventbus.Publish(AppTopicSleepNotification, e)
+			n.eventBus.Publish(AppTopicSleepNotification, e)
 		}
 	}()
 	<-n.stop

@@ -25,10 +25,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -39,7 +40,6 @@ import (
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/sleep"
 	"github.com/mysteriumnetwork/node/trace"
 )
 
@@ -712,31 +712,12 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan connection
 					go m.acknowledge()
 				}
 				m.onStateChanged(state)
-				m.eventBus.SubscribeAsync(sleep.AppTopicSleepNotification, m.handleSleepEvent)
 				return nil
 			default:
 				m.onStateChanged(state)
 			}
 		case <-m.currentCtx().Done():
 			return m.currentCtx().Err()
-		}
-	}
-}
-
-func (m *connectionManager) handleSleepEvent(e sleep.Event) {
-	switch e {
-	case sleep.EventSleep:
-		log.Info().Msg("Got sleep notification during live vpn session")
-	case sleep.EventWakeup:
-		log.Info().Msg("Got wake-up from sleep notification - checking if need to reconnect")
-
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-		defer cancel()
-		if err := m.CheckChannel(ctx); err != nil {
-			log.Info().Msgf("Channel dead - reconnecting: %s", err)
-			m.reconnect()
-		} else {
-			log.Info().Msg("Channel still alive - no need to reconnect")
 		}
 	}
 }
@@ -753,7 +734,7 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan connecti
 func (m *connectionManager) onStateChanged(state connectionstate.State) {
 	log.Debug().Msgf("Connection state received: %s", state)
 
-	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
+	// React just to certain stains from connection. Because disconnect happens in connectionWaiter
 	switch state {
 	case connectionstate.Connected:
 		m.statusConnected()
@@ -850,7 +831,7 @@ func (m *connectionManager) currentCtx() context.Context {
 	return m.ctx
 }
 
-func (m *connectionManager) reconnect() {
+func (m *connectionManager) Reconnect() {
 	err := m.Disconnect()
 	if err != nil {
 		log.Error().Msgf("Failed to disconnect stale session: %v", err)
@@ -862,7 +843,7 @@ func (m *connectionManager) reconnect() {
 	<-m.cleanupFinished
 	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.Proposal, m.connectOptions.Params)
 	if err != nil {
-		log.Error().Msgf("Failed to reconnect: %v", err)
+		log.Error().Msgf("Failed to Reconnect: %v", err)
 	}
 }
 
