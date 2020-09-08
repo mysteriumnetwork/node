@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 
@@ -77,7 +78,10 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 		return ErrAttemptToOverwrite
 	}
 
-	return errors.Wrap(aps.bolt.SetValue(hermesPromiseBucketName, promise.ChannelID, promise), "could not store hermes promise")
+	if err := aps.bolt.SetValue(hermesPromiseBucketName, promise.ChannelID, promise); err != nil {
+		return fmt.Errorf("could not store hermes promise: %w", err)
+	}
+	return nil
 }
 
 func (aps *HermesPromiseStorage) get(channelID string) (HermesPromise, error) {
@@ -87,7 +91,7 @@ func (aps *HermesPromiseStorage) get(channelID string) (HermesPromise, error) {
 		if err.Error() == errBoltNotFound {
 			err = ErrNotFound
 		} else {
-			err = errors.Wrap(err, "could not get promise for hermes")
+			err = fmt.Errorf("could not get hermes promise: %w", err)
 		}
 	}
 	return *result, err
@@ -143,5 +147,9 @@ func (aps *HermesPromiseStorage) List(filter HermesPromiseFilter) ([]HermesPromi
 			return nil
 		})
 	})
-	return result, err
+	if err != nil {
+		return nil, fmt.Errorf("could not list hermes promises: %w", err)
+	}
+
+	return result, nil
 }
