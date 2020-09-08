@@ -200,6 +200,9 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 func (tc *testContext) TestSessionDoesFullReconnectOnWakeupEvent() {
 	tc.connManager.eventBus = eventbus.New()
 
+	sleepNotifier := sleep.NewNotifier(tc.connManager, tc.connManager.eventBus)
+	sleepNotifier.Subscribe()
+
 	err := tc.connManager.Connect(consumerID, accountantID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(
