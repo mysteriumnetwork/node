@@ -19,7 +19,13 @@ package sleep
 
 import (
 	"sync"
+	"time"
 
+	"golang.org/x/net/context"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
@@ -40,16 +46,52 @@ var eventChannel chan Event
 
 // Notifier represents sleep event notifier structure
 type Notifier struct {
-	eventbus eventbus.Publisher
-	stop     chan struct{}
-	stopOnce sync.Once
+	eventBus          eventbus.EventBus
+	stop              chan struct{}
+	stopOnce          sync.Once
+	connectionManager connectionManager
+}
+
+type connectionManager interface {
+	// Status queries current status of connection
+	Status() connectionstate.Status
+	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
+	CheckChannel(context.Context) error
+	// Reconnect reconnects current session
+	Reconnect()
 }
 
 // NewNotifier create sleep events notifier
-func NewNotifier(eventbus eventbus.Publisher) *Notifier {
+func NewNotifier(manager connectionManager, eventbus eventbus.EventBus) *Notifier {
 	eventChannel = make(chan Event)
 	return &Notifier{
-		eventbus: eventbus,
-		stop:     make(chan struct{}),
+		connectionManager: manager,
+		eventBus:          eventbus,
+		stop:              make(chan struct{}),
 	}
+}
+
+func (n *Notifier) handleSleepEvent(e Event) {
+	switch e {
+	case EventSleep:
+		log.Info().Msg("Got sleep notification during live vpn session")
+	case EventWakeup:
+		log.Info().Msg("Got wake-up from sleep notification - checking if need to reconnect")
+		if n.connectionManager.Status().State != connectionstate.Connected {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		if err := n.connectionManager.CheckChannel(ctx); err != nil {
+			log.Info().Msgf("Channel dead - reconnecting: %s", err)
+			n.connectionManager.Reconnect()
+		} else {
+			log.Info().Msg("Channel still alive - no need to reconnect")
+		}
+	}
+}
+
+// Subscribe subscribes to sleep notifications
+func (n *Notifier) Subscribe() {
+	n.eventBus.SubscribeAsync(AppTopicSleepNotification, n.handleSleepEvent)
 }

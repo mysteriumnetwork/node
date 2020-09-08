@@ -52,4 +52,6 @@ type Manager interface {
 	Disconnect() error
 	// CheckChannel checks if current session channel is alive, returns error on failed keep-alive ping
 	CheckChannel(context.Context) error
+	// Reconnect reconnects current session
+	Reconnect()
 }
