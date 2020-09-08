@@ -178,16 +178,21 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
+	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(di.HermesPromiseStorage, di.BCHelper, di.EventBus)
+	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
+		log.Error().Msg("Failed to subscribe channel repository")
+		return errors.Wrap(err, "could not subscribe channel repository to relevant events")
+	}
+
 	if nodeOptions.Consumer {
 		log.Debug().Msg("Skipping hermes promise settler for consumer mode")
 		di.HermesPromiseSettler = &pingpong_noop.NoopHermesPromiseSettler{}
 		return nil
 	}
 
-	di.HermesPromiseSettler = pingpong.NewHermesPromiseSettler(
-		di.EventBus,
+	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
-		pingpong.NewHermesChannelRepository(di.HermesPromiseStorage, di.BCHelper),
+		di.HermesChannelRepository,
 		di.BCHelper,
 		di.IdentityRegistry,
 		di.Keystore,
@@ -198,7 +203,12 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 		},
 	)
-	return di.HermesPromiseSettler.Subscribe()
+	if err := settler.Subscribe(di.EventBus); err != nil {
+		return errors.Wrap(err, "could not subscribe promise settler to relevant events")
+	}
+
+	di.HermesPromiseSettler = settler
+	return nil
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
