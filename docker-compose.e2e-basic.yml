@@ -164,6 +164,8 @@ services:
       - trust
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
@@ -285,6 +287,8 @@ services:
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -313,6 +317,8 @@ services:
       dockerfile: ./e2e/gorunner/Dockerfile.precompiled
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     volumes:
       - ./e2e/blockchain/keystore:/node/keystore
     working_dir: /node

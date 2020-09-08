@@ -527,7 +527,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	sleepNotifier := sleep.NewNotifier(di.EventBus)
+	sleepNotifier := sleep.NewNotifier(di.ConnectionManager, di.EventBus)
+	sleepNotifier.Subscribe()
 
 	di.Node = NewNode(di.ConnectionManager, tequilapiHTTPServer, di.EventBus, di.NATPinger, di.UIServer, sleepNotifier)
 	return nil

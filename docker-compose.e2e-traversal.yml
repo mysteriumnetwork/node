@@ -285,6 +285,8 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -373,6 +375,8 @@ services:
       - ganache
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -415,6 +419,8 @@ services:
       - trust
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050
@@ -463,6 +469,8 @@ services:
     dns: 172.30.0.254
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     networks:
       public0:
         ipv4_address: 172.30.0.222
