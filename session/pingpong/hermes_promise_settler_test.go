@@ -140,7 +140,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	settler := NewHermesPromiseSettler(&mockTransactor{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	// no receive on unknown provider
-	channelProvider.channelToReturn = NewHermesChannel(mockID, hermesID, mockProviderChannel, HermesPromise{})
+	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
 		HermesID:   hermesID,
 		ProviderID: mockID,
@@ -151,7 +151,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	settler.currentState[mockID] = settlementState{
 		registered: false,
 	}
-	channelProvider.channelToReturn = NewHermesChannel(mockID, hermesID, mockProviderChannel, HermesPromise{})
+	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
 		HermesID:   hermesID,
 		ProviderID: mockID,
@@ -164,7 +164,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	settler.currentState[mockID] = settlementState{
 		registered: true,
 	}
-	channelProvider.channelToReturn = NewHermesChannel(mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise})
+	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, expectedChannel, HermesPromise{Promise: expectedPromise})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
 		HermesID:   hermesID,
 		ProviderID: mockID,
@@ -181,7 +181,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 		registered:       true,
 		settleInProgress: false,
 	}
-	channelProvider.channelToReturn = NewHermesChannel(mockID, hermesID, mockProviderChannel, HermesPromise{Promise: expectedPromise})
+	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{Promise: expectedPromise})
 	settler.handleHermesPromiseReceived(event.AppEventHermesPromise{
 		HermesID:   hermesID,
 		ProviderID: mockID,
@@ -239,6 +239,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		registered: true,
 	}
 	channel := NewHermesChannel(
+		"1",
 		mockID,
 		hermesID,
 		client.ProviderChannel{Balance: big.NewInt(100), Stake: big.NewInt(1000)},
@@ -250,6 +251,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		registered: true,
 	}
 	channel = NewHermesChannel(
+		"1",
 		mockID,
 		hermesID,
 		client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
@@ -267,6 +269,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		registered: true,
 	}
 	channel = NewHermesChannel(
+		"1",
 		mockID,
 		hermesID,
 		client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},

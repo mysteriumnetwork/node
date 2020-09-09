@@ -78,7 +78,7 @@ func (hcr *HermesChannelRepository) Fetch(id identity.Identity, hermesID common.
 		return HermesChannel{}, fmt.Errorf("could not get hermes promise for provider %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
-	channel, err := hcr.fetchChannel(id, hermesID, promise)
+	channel, err := hcr.fetchChannel(promise.ChannelID, id, hermesID, promise)
 	if err != nil {
 		return HermesChannel{}, err
 	}
@@ -159,13 +159,13 @@ func (hcr *HermesChannelRepository) fetchKnownChannels() {
 	}
 
 	for _, promise := range promises {
-		if _, err := hcr.fetchChannel(promise.Identity, promise.HermesID, promise); err != nil {
+		if _, err := hcr.fetchChannel(promise.ChannelID, promise.Identity, promise.HermesID, promise); err != nil {
 			log.Error().Err(err).Msg("could not load initial earnings state")
 		}
 	}
 }
 
-func (hcr *HermesChannelRepository) fetchChannel(id identity.Identity, hermesID common.Address, promise HermesPromise) (HermesChannel, error) {
+func (hcr *HermesChannelRepository) fetchChannel(channelID string, id identity.Identity, hermesID common.Address, promise HermesPromise) (HermesChannel, error) {
 	// TODO Should call GetProviderChannelByID() but can't pass pending=false
 	// This will get retried so we do not need to explicitly retry
 	// TODO: maybe add a sane limit of retries
@@ -174,7 +174,7 @@ func (hcr *HermesChannelRepository) fetchChannel(id identity.Identity, hermesID 
 		return HermesChannel{}, fmt.Errorf("could not get provider channel for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
-	hermesChannel := NewHermesChannel(id, hermesID, channel, promise)
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
 	hcr.updateChannel(hermesChannel)
 
 	return hermesChannel, nil
