@@ -182,6 +182,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	channelID, err := crypto.GenerateProviderChannelID(providerID.Address, hermesID.Hex())
 	if err != nil {
 		er.errChan <- fmt.Errorf("could not generate provider channel address: %w", err)
+		return
 	}
 
 	if !aph.transactorFee.IsValid() {
