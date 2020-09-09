@@ -37,6 +37,7 @@ import (
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	nodeSession "github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/rs/zerolog/log"
@@ -71,6 +72,7 @@ type balanceProvider interface {
 }
 
 type earningsProvider interface {
+	List() []pingpong.HermesChannel
 	GetEarnings(id identity.Identity) pingpongEvent.Earnings
 }
 
@@ -123,6 +125,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 		deps: deps,
 	}
 	k.state.Identities = k.fetchIdentities()
+	k.state.PaymentChannels = k.deps.EarningsProvider.List()
 
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
@@ -476,6 +479,9 @@ func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 		log.Warn().Msg("Received a wrong kind of event for earnings change")
 		return
 	}
+
+	k.state.PaymentChannels = k.deps.EarningsProvider.List()
+
 	var id *stateEvent.Identity
 	for i := range k.state.Identities {
 		if k.state.Identities[i].Address == evt.Identity.Address {
@@ -489,6 +495,7 @@ func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 	}
 	id.Earnings = evt.Current.UnsettledBalance
 	id.EarningsTotal = evt.Current.LifetimeBalance
+
 	go k.announceStateChanges(nil)
 }
 
