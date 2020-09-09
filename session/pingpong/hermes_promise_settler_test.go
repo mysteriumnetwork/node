@@ -45,13 +45,13 @@ func TestPromiseSettler_resyncState_returns_errors(t *testing.T) {
 	ks := identity.NewMockKeystore()
 
 	settler := NewHermesPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
-	err := settler.resyncState(mockID, common.Address{})
-	assert.Equal(t, fmt.Sprintf("could not get provider channel for %v, hermes %v: %v", mockID, common.Address{}.Hex(), errMock.Error()), err.Error())
+	err := settler.resyncState(mockID, hermesID)
+	assert.Equal(t, fmt.Sprintf("could not get provider channel for %v, hermes %v: %v", mockID, hermesID.Hex(), errMock.Error()), err.Error())
 
 	channelStatusProvider.channelReturnError = nil
 	mapg.err = errMock
-	err = settler.resyncState(mockID, common.Address{})
-	assert.Equal(t, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v: %v", mockID, common.Address{}.Hex(), errMock.Error()), err.Error())
+	err = settler.resyncState(mockID, hermesID)
+	assert.Equal(t, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v: %v", mockID, hermesID.Hex(), errMock.Error()), err.Error())
 }
 
 func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
@@ -65,15 +65,14 @@ func TestPromiseSettler_resyncState_handles_no_promise(t *testing.T) {
 
 	ks := identity.NewMockKeystore()
 
-	id := identity.FromAddress("test")
 	settler := NewHermesPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
-	err := settler.resyncState(id, common.Address{})
+	err := settler.resyncState(mockID, hermesID)
 	assert.NoError(t, err)
 
-	v := settler.currentState[id]
+	v := settler.currentState[mockID]
 	expectedBalance := new(big.Int).Add(channelStatusProvider.channelToReturn.Balance, channelStatusProvider.channelToReturn.Settled)
-	assert.Equal(t, expectedBalance, v.hermeses[common.Address{}].balance())
-	assert.Equal(t, expectedBalance, v.hermeses[common.Address{}].availableBalance())
+	assert.Equal(t, expectedBalance, v.hermeses[hermesID].balance())
+	assert.Equal(t, expectedBalance, v.hermeses[hermesID].availableBalance())
 	assert.True(t, v.registered)
 }
 
@@ -93,14 +92,14 @@ func TestPromiseSettler_resyncState_takes_promise_into_account(t *testing.T) {
 	ks := identity.NewMockKeystore()
 
 	settler := NewHermesPromiseSettler(eventbus.New(), &mockTransactor{}, mapg, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
-	err := settler.resyncState(mockID, common.Address{})
+	err := settler.resyncState(mockID, hermesID)
 	assert.NoError(t, err)
 
 	v := settler.currentState[mockID]
 	added := new(big.Int).Add(channelStatusProvider.channelToReturn.Balance, channelStatusProvider.channelToReturn.Settled)
 	expectedBalance := added.Sub(added, mapg.promise.Promise.Amount)
-	assert.Equal(t, expectedBalance, v.hermeses[common.Address{}].balance())
-	assert.Equal(t, new(big.Int).Add(channelStatusProvider.channelToReturn.Balance, channelStatusProvider.channelToReturn.Settled), v.hermeses[common.Address{}].availableBalance())
+	assert.Equal(t, expectedBalance, v.hermeses[hermesID].balance())
+	assert.Equal(t, new(big.Int).Add(channelStatusProvider.channelToReturn.Balance, channelStatusProvider.channelToReturn.Settled), v.hermeses[hermesID].availableBalance())
 	assert.True(t, v.registered)
 }
 
@@ -487,7 +486,7 @@ type mockHermesPromiseGetter struct {
 	err     error
 }
 
-func (mapg *mockHermesPromiseGetter) Get(_ identity.Identity, _ common.Address) (HermesPromise, error) {
+func (mapg *mockHermesPromiseGetter) Get(string) (HermesPromise, error) {
 	return mapg.promise, mapg.err
 }
 
@@ -509,7 +508,8 @@ func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Id
 }
 
 var errMock = errors.New("explosions everywhere")
-var mockID = identity.FromAddress("test")
+var mockID = identity.FromAddress("0x0000000000000000000000000000000000000001")
+var hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
 
 var mockProviderChannel = client.ProviderChannel{
 	Balance: big.NewInt(1000000000000),

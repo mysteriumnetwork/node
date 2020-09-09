@@ -65,7 +65,7 @@ type transactor interface {
 }
 
 type promiseStorage interface {
-	Get(id identity.Identity, hermesID common.Address) (HermesPromise, error)
+	Get(channelID string) (HermesPromise, error)
 }
 
 type receivedPromise struct {
@@ -163,7 +163,7 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 		return errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", id, hermesID.Hex()))
 	}
 
-	hermesPromise, err := aps.promiseStorage.Get(id, hermesID)
+	hermesPromise, err := aps.getLastPromise(id, hermesID)
 	if err != nil && err != ErrNotFound {
 		return errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
 	}
@@ -183,6 +183,15 @@ func (aps *hermesPromiseSettler) resyncState(id identity.Identity, hermesID comm
 	aps.currentState[id] = s
 	log.Info().Msgf("Loaded state for provider %q, hermesID %q: balance %v, available balance %v, unsettled balance %v", id, hermesID.Hex(), hs.balance(), hs.availableBalance(), hs.unsettledBalance())
 	return nil
+}
+
+func (aps *hermesPromiseSettler) getLastPromise(id identity.Identity, hermesID common.Address) (HermesPromise, error) {
+	channelID, err := crypto.GenerateProviderChannelID(id.Address, hermesID.Hex())
+	if err != nil {
+		return HermesPromise{}, fmt.Errorf("could not generate provider channel address: %w", err)
+	}
+
+	return aps.promiseStorage.Get(channelID)
 }
 
 func (aps *hermesPromiseSettler) publishChangeEvent(id identity.Identity, before, after settlementState) {
@@ -315,7 +324,7 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 }
 
 func (aps *hermesPromiseSettler) initiateSettling(providerID identity.Identity, hermesID common.Address, beneficiary common.Address) {
-	promise, err := aps.promiseStorage.Get(providerID, hermesID)
+	promise, err := aps.getLastPromise(providerID, hermesID)
 	if err == ErrNotFound {
 		log.Debug().Msgf("no promise to settle for %q %q", providerID, hermesID.Hex())
 		return
@@ -374,7 +383,7 @@ func (aps *hermesPromiseSettler) GetEarnings(id identity.Identity) event.Earning
 
 // SettleIntoStake settles the promise but transfers the money to stake increase, not to beneficiary.
 func (aps *hermesPromiseSettler) SettleIntoStake(providerID identity.Identity, hermesID common.Address) error {
-	promise, err := aps.promiseStorage.Get(providerID, hermesID)
+	promise, err := aps.getLastPromise(providerID, hermesID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
 	}
@@ -403,7 +412,7 @@ var ErrNothingToSettle = errors.New("nothing to settle for the given provider")
 
 // ForceSettle forces the settlement for a provider
 func (aps *hermesPromiseSettler) ForceSettle(providerID identity.Identity, hermesID common.Address) error {
-	promise, err := aps.promiseStorage.Get(providerID, hermesID)
+	promise, err := aps.getLastPromise(providerID, hermesID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
 	}
@@ -430,7 +439,7 @@ func (aps *hermesPromiseSettler) ForceSettle(providerID identity.Identity, herme
 
 // ForceSettle forces the settlement for a provider
 func (aps *hermesPromiseSettler) SettleWithBeneficiary(providerID identity.Identity, hermesID, beneficiary common.Address) error {
-	promise, err := aps.promiseStorage.Get(providerID, hermesID)
+	promise, err := aps.getLastPromise(providerID, hermesID)
 	if err == ErrNotFound {
 		return ErrNothingToSettle
 	}

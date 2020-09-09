@@ -39,8 +39,7 @@ import (
 )
 
 type hermesPromiseStorage interface {
-	Store(providerID identity.Identity, hermesID common.Address, promise HermesPromise) error
-	Get(providerID identity.Identity, hermesID common.Address) (HermesPromise, error)
+	Store(promise HermesPromise) error
 }
 
 type feeProvider interface {
@@ -178,6 +177,14 @@ func (aph *HermesPromiseHandler) handleNodeStopEvents(e event.Payload) {
 func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	defer func() { close(er.errChan) }()
 
+	providerID := er.providerID
+	hermesID := common.HexToAddress(er.em.HermesID)
+	channelID, err := crypto.GenerateProviderChannelID(providerID.Address, hermesID.Hex())
+	if err != nil {
+		er.errChan <- fmt.Errorf("could not generate provider channel address: %w", err)
+		return
+	}
+
 	if !aph.transactorFee.IsValid() {
 		aph.updateFee()
 	}
@@ -193,7 +200,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		return
 	}
 
-	encrypted, err := aph.deps.Encryption.Encrypt(er.providerID.ToCommonAddress(), bytes)
+	encrypted, err := aph.deps.Encryption.Encrypt(providerID.ToCommonAddress(), bytes)
 	if err != nil {
 		er.errChan <- fmt.Errorf("could not encrypt R: %w", err)
 		return
@@ -205,27 +212,29 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
-	hermesID := common.HexToAddress(request.ExchangeMessage.HermesID)
 	hermesCaller, err := aph.getHermesCaller(hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
 		return
 	}
 	promise, err := hermesCaller.RequestPromise(request)
-	err = aph.handleHermesError(err, er.providerID, hermesID)
+	err = aph.handleHermesError(err, providerID, hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 		return
 	}
 
 	ap := HermesPromise{
+		ChannelID:   channelID,
+		Identity:    providerID,
+		HermesID:    hermesID,
 		Promise:     promise,
 		R:           hex.EncodeToString(er.r),
 		Revealed:    false,
 		AgreementID: er.em.AgreementID,
 	}
 
-	err = aph.deps.HermesPromiseStorage.Store(er.providerID, hermesID, ap)
+	err = aph.deps.HermesPromiseStorage.Store(ap)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		er.errChan <- fmt.Errorf("could not store hermes promise: %w", err)
 		return
@@ -234,16 +243,16 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	aph.deps.EventBus.Publish(pinge.AppTopicHermesPromise, pinge.AppEventHermesPromise{
 		Promise:    promise,
 		HermesID:   hermesID,
-		ProviderID: er.providerID,
+		ProviderID: providerID,
 	})
 	aph.deps.EventBus.Publish(sessionEvent.AppTopicTokensEarned, sessionEvent.AppEventTokensEarned{
-		ProviderID: er.providerID,
+		ProviderID: providerID,
 		SessionID:  er.sessionID,
 		Total:      er.em.AgreementTotal,
 	})
 
-	err = aph.revealR(er.providerID, hermesID)
-	err = aph.handleHermesError(err, er.providerID, hermesID)
+	err = aph.revealR(ap)
+	err = aph.handleHermesError(err, providerID, hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("hermes reveal r error: %w", err)
 		return
@@ -258,35 +267,24 @@ func (aph *HermesPromiseHandler) getHermesCaller(hermesID common.Address) (Herme
 	return aph.deps.HermesCallerFactory(addr), nil
 }
 
-func (aph *HermesPromiseHandler) revealR(providerID identity.Identity, hermesID common.Address) error {
-	needsRevealing := false
-	hermesPromise, err := aph.deps.HermesPromiseStorage.Get(providerID, hermesID)
-	switch err {
-	case nil:
-		needsRevealing = !hermesPromise.Revealed
-	case ErrNotFound:
-		needsRevealing = false
-	default:
-		return fmt.Errorf("could not get hermes promise: %w", err)
-	}
-
-	if !needsRevealing {
+func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
+	if hermesPromise.Revealed {
 		return nil
 	}
 
-	hermesCaller, err := aph.getHermesCaller(hermesID)
+	hermesCaller, err := aph.getHermesCaller(hermesPromise.HermesID)
 	if err != nil {
 		return fmt.Errorf("could not get hermes caller: %w", err)
 	}
 
-	err = hermesCaller.RevealR(hermesPromise.R, providerID.Address, hermesPromise.AgreementID)
-	handledErr := aph.handleHermesError(err, providerID, hermesID)
+	err = hermesCaller.RevealR(hermesPromise.R, hermesPromise.Identity.Address, hermesPromise.AgreementID)
+	handledErr := aph.handleHermesError(err, hermesPromise.Identity, hermesPromise.HermesID)
 	if handledErr != nil {
 		return fmt.Errorf("could not reveal R: %w", err)
 	}
 
 	hermesPromise.Revealed = true
-	err = aph.deps.HermesPromiseStorage.Store(providerID, hermesID, hermesPromise)
+	err = aph.deps.HermesPromiseStorage.Store(hermesPromise)
 	if err != nil && !stdErr.Is(err, ErrAttemptToOverwrite) {
 		return fmt.Errorf("could not store hermes promise: %w", err)
 	}

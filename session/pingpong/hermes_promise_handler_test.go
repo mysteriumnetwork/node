@@ -61,7 +61,7 @@ func TestHermesPromiseHandler_RequestPromise(t *testing.T) {
 		Promise: crypto.Promise{},
 	}
 
-	ch := aph.RequestPromise(r, em, identity.FromAddress("asddadadqweqwe"), "session")
+	ch := aph.RequestPromise(r, em, identity.FromAddress("0x0000000000000000000000000000000000000001"), "session")
 
 	err, more := <-ch
 	assert.False(t, more)
@@ -102,7 +102,7 @@ func TestHermesPromiseHandler_RequestPromise_BubblesErrors(t *testing.T) {
 		Promise: crypto.Promise{},
 	}
 
-	ch := aph.RequestPromise(r, em, identity.FromAddress("asddadadqweqwe"), "session")
+	ch := aph.RequestPromise(r, em, identity.FromAddress("0x0000000000000000000000000000000000000001"), "session")
 
 	err, more := <-ch
 	assert.True(t, more)
