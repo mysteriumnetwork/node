@@ -230,6 +230,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	return regReq, nil
 }
 
+// CheckIfRegistrationBountyEligible determines if the identity is eligible for registration bounty
 func (t *Transactor) CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error) {
 	signer := t.signerFactory(identity)
 	message := common.HexToAddress(identity.Address)

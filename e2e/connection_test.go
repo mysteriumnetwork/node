@@ -58,6 +58,7 @@ var (
 
 var ethClient *ethclient.Client
 var ethSigner func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error)
+var transactorMongo *Mongo
 
 var (
 	providerStake, _            = big.NewInt(0).SetString("12000000000000000000", 10)
@@ -117,6 +118,7 @@ var consumersToTest = []*consumer{
 
 func TestConsumerConnectsToProvider(t *testing.T) {
 	initEthClient(t)
+	initTransactorMongo(t)
 
 	tequilapiProvider := newTequilapiProvider()
 	t.Run("Provider has a registered identity", func(t *testing.T) {
@@ -287,6 +289,61 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		proposal := consumerPicksProposal(t, c.tequila(), c.serviceType)
 		consumerRejectWhitelistedFlow(t, c.tequila(), c.consumerID, hermesID, c.serviceType, proposal)
 	})
+
+	t.Run("Registration with bounty", func(t *testing.T) {
+		t.Run("consumer", func(t *testing.T) {
+			c := consumersToTest[0]
+			id, err := c.tequila().NewIdentity("")
+			assert.NoError(t, err)
+
+			err = c.tequila().Unlock(id.Address, "")
+			assert.NoError(t, err)
+
+			err = transactorMongo.InsertRegistrationBounty(common.HexToAddress(id.Address))
+			assert.NoError(t, err)
+
+			status, err := c.tequila().IdentityRegistrationStatus(id.Address)
+			assert.NoError(t, err)
+			assert.Equal(t, "Unregistered", status.Status)
+
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), new(big.Int))
+			assert.NoError(t, err)
+
+			assert.Eventually(t, func() bool {
+				status, err := c.tequila().IdentityRegistrationStatus(id.Address)
+				if err != nil {
+					return false
+				}
+				return status.Status == "Registered"
+			}, time.Second*5, time.Millisecond*100)
+		})
+		t.Run("provider", func(t *testing.T) {
+			c := consumersToTest[0]
+			id, err := c.tequila().NewIdentity("")
+			assert.NoError(t, err)
+
+			err = c.tequila().Unlock(id.Address, "")
+			assert.NoError(t, err)
+
+			err = transactorMongo.InsertRegistrationBounty(common.HexToAddress(id.Address))
+			assert.NoError(t, err)
+
+			status, err := c.tequila().IdentityRegistrationStatus(id.Address)
+			assert.NoError(t, err)
+			assert.Equal(t, "Unregistered", status.Status)
+
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, new(big.Int))
+			assert.NoError(t, err)
+
+			assert.Eventually(t, func() bool {
+				status, err := c.tequila().IdentityRegistrationStatus(id.Address)
+				if err != nil {
+					return false
+				}
+				return status.Status == "Registered"
+			}, time.Second*5, time.Millisecond*100)
+		})
+	})
 }
 
 func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending *big.Int, serviceType, hermesURL string) {
@@ -307,6 +364,12 @@ func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPass
 	log.Info().Msg("Created new identity: " + id.Address)
 
 	return id.Address
+}
+
+func initTransactorMongo(t *testing.T) {
+	tm, err := NewMongo()
+	assert.NoError(t, err)
+	transactorMongo = tm
 }
 
 func initEthClient(t *testing.T) {

@@ -77,7 +77,7 @@ services:
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
 
   transactor:
-    image: mysteriumnetwork/transactor:0.4.4
+    image: mysteriumnetwork/transactor:0.4.5
     environment:
       PORT: 8888
     expose:

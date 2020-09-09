@@ -71,7 +71,7 @@ services:
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   transactor:
-    image: mysteriumnetwork/transactor:0.4.4
+    image: mysteriumnetwork/transactor:0.4.5
     environment:
       PORT: 8888
     expose:
