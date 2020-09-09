@@ -206,6 +206,31 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	tx, err = ts.Mint(transactor, accs, mystToMint)
 	checkError("mint myst for hermes2", err)
 	checkTxStatus(client, tx)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+
+	// transfer eth and myst for transactions during the e2e tests
+	value = big.NewInt(0).SetUint64(10000000000000000000)
+	gasLimit = uint64(21000)
+	gasPrice, err = client.SuggestGasPrice(context.Background())
+	checkError("suggest gas price", err)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+
+	tx = types.NewTransaction(transactor.Nonce.Uint64(), common.HexToAddress("0xa29fb77b25181df094908b027821a7492ca4245b"), value, gasLimit, gasPrice, data)
+	chainID, err = client.NetworkID(context.Background())
+	checkError("get chain id", err)
+
+	signedTx, err = transactor.Signer(types.NewEIP155Signer(chainID), transactor.From, tx)
+	checkError("sign tx", err)
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	checkError("transfer eth", err)
+	checkTxStatus(client, signedTx)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+
+	tx, err = ts.Mint(transactor, common.HexToAddress("0xa29fb77b25181df094908b027821a7492ca4245b"), mystToMint)
+	checkError("mint myst for future topups during tests", err)
+	checkTxStatus(client, tx)
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
 
 	// print some state from hermes2
 	caller, err := bindings.NewHermesImplementationCaller(accs, client)

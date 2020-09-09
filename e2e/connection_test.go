@@ -18,36 +18,50 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/payments/bindings"
+	"github.com/mysteriumnetwork/payments/crypto"
 
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
 var (
-	consumerPassphrase = "localconsumer"
-	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
-	providerPassphrase = "localprovider"
-	hermesID           = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
-	hermes2ID          = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
-	mystAddress        = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+	consumerPassphrase    = "localconsumer"
+	providerID            = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
+	providerPassphrase    = "localprovider"
+	hermesID              = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
+	hermes2ID             = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
+	mystAddress           = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+	registryAddress       = "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"
+	channelImplementation = "0x599d43715DF3070f83355D9D90AE62c159E62A75"
+	addressForTopups      = "0xa29fb77b25181df094908b027821a7492ca4245b"
 )
+
+var ethClient *ethclient.Client
+var ethSigner func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error)
 
 var (
 	providerStake, _            = big.NewInt(0).SetString("12000000000000000000", 10)
-	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
+	balanceAfterRegistration, _ = big.NewInt(0).SetString("1900000000000000000", 10)
 	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
 )
 
@@ -102,6 +116,8 @@ var consumersToTest = []*consumer{
 }
 
 func TestConsumerConnectsToProvider(t *testing.T) {
+	initEthClient(t)
+
 	tequilapiProvider := newTequilapiProvider()
 	t.Run("Provider has a registered identity", func(t *testing.T) {
 		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
@@ -110,16 +126,28 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	t.Run("Consumer Creates And Registers Identity", func(t *testing.T) {
 		wg := sync.WaitGroup{}
 		wg.Add(len(consumersToTest))
+		topUps := make(chan *consumer, len(consumersToTest))
+		defer close(topUps)
+
+		go func() {
+			for c := range topUps {
+				fees, err := c.tequila().GetTransactorFees()
+				assert.NoError(t, err)
+				topUpConsumer(t, c.consumerID, c.hermesID, fees.Registration)
+			}
+		}()
 
 		for _, c := range consumersToTest {
 			go func(c *consumer) {
 				defer wg.Done()
 				tequilapiConsumer := c.tequila()
 				consumerID := identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
-				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
 				c.consumerID = consumerID
+				topUps <- c
+				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
 			}(c)
 		}
+
 		wg.Wait()
 	})
 
@@ -139,7 +167,6 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		wg.Wait()
 	})
-
 	t.Run("Validate provider earnings", func(t *testing.T) {
 		var sum = new(big.Int)
 		for _, v := range consumersToTest {
@@ -151,7 +178,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	t.Run("Provider settlement flow", func(t *testing.T) {
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
-		assert.Equal(t, new(big.Int).Sub(balanceAfterRegistration, registrationFee), providerStatus.Balance)
+		assert.Equal(t, new(big.Int), providerStatus.Balance)
 
 		// settle hermes 1
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
@@ -185,10 +212,15 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		hermesFee, _ := new(big.Float).Mul(big.NewFloat(0.04), new(big.Float).SetInt(hermesOneEarnings)).Int(nil)
 		feeSum := big.NewInt(0).Add(fees.Settlement, hermesFee)
-		tokenSum := new(big.Int).Add(new(big.Int).Sub(balanceAfterRegistration, registrationFee), hermesOneEarnings)
-		expected := new(big.Int).Sub(tokenSum, feeSum)
-		diff := new(big.Int).Sub(expected, providerStatus.Balance)
-		diff.Abs(diff)
+		expected := new(big.Int).Sub(hermesOneEarnings, feeSum)
+
+		caller, err := bindings.NewMystTokenCaller(common.HexToAddress(mystAddress), ethClient)
+		assert.NoError(t, err)
+
+		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerID))
+		assert.NoError(t, err)
+		diff := new(big.Int).Sub(balance, expected)
+		diff = diff.Abs(diff)
 		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
 	})
 
@@ -241,7 +273,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	t.Run("Whitelisted consumer connects to the whitelisted noop service", func(t *testing.T) {
 		c := consumersToTest[0]
+
+		topUpConsumer(t, "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", common.HexToAddress(hermesID), registrationFee)
+
 		consumerRegistrationFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", "")
+
 		proposal := consumerPicksProposal(t, c.tequila(), "noop")
 		consumerConnectFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", hermesID, "noop", proposal)
 	})
@@ -273,8 +309,58 @@ func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPass
 	return id.Address
 }
 
+func initEthClient(t *testing.T) {
+	addr := common.HexToAddress(addressForTopups)
+	ks := keystore.NewKeyStore("/node/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
+	acc, err := ks.Find(accounts.Account{Address: addr})
+	assert.NoError(t, err)
+
+	err = ks.Unlock(acc, "")
+	assert.NoError(t, err)
+
+	c, err := ethclient.Dial("ws://ganache:8545")
+	assert.NoError(t, err)
+
+	cid, err := c.ChainID(context.Background())
+	assert.NoError(t, err)
+
+	ethClient = c
+
+	ethSigner = func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		return ks.SignTx(acc, tx, cid)
+	}
+}
+
+func mintMyst(t *testing.T, amount *big.Int, chid common.Address) {
+	ts, err := bindings.NewTestMystTokenTransactor(common.HexToAddress(mystAddress), ethClient)
+	assert.NoError(t, err)
+
+	nonce, err := ethClient.PendingNonceAt(context.Background(), common.HexToAddress(addressForTopups))
+	assert.NoError(t, err)
+
+	_, err = ts.Transfer(&bind.TransactOpts{
+		From:   common.HexToAddress(addressForTopups),
+		Signer: ethSigner,
+		Nonce:  big.NewInt(0).SetUint64(nonce),
+	}, chid, amount)
+	assert.NoError(t, err)
+}
+
 func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
 	err := tequilapi.Unlock(id, idPassphrase)
+	assert.NoError(t, err)
+
+	fees, err := tequilapi.GetTransactorFees()
+	assert.NoError(t, err)
+
+	topUpAmount := big.NewInt(0).Add(fees.Registration, providerStake)
+
+	chid, err := crypto.GenerateChannelAddress(providerID, hermesID, registryAddress, channelImplementation)
+	assert.NoError(t, err)
+
+	mintMyst(t, topUpAmount, common.HexToAddress(chid))
+
+	err = tequilapi.RegisterIdentity(id, id, providerStake, fees.Registration)
 	assert.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
@@ -287,10 +373,19 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
 	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
-	assert.Equal(t, new(big.Int).Sub(balanceAfterRegistration, registrationFee), idStatus.Balance)
+	assert.Equal(t, new(big.Int), idStatus.Balance)
 	assert.Equal(t, providerStake, idStatus.Stake)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
+}
+
+func topUpConsumer(t *testing.T, id string, hermesID common.Address, registrationFee *big.Int) {
+	chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
+	assert.NoError(t, err)
+
+	// add some balance for fees + consuming service
+	amountToTopUp := big.NewInt(0).Mul(registrationFee, big.NewInt(20))
+	mintMyst(t, amountToTopUp, common.HexToAddress(chid))
 }
 
 func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
@@ -313,7 +408,8 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	assert.Equal(t, new(big.Int).Sub(balanceAfterRegistration, registrationFee), idStatus.Balance)
+	expectedBalance := new(big.Int).Sub(new(big.Int).Mul(registrationFee, big.NewInt(20)), registrationFee)
+	assert.Equal(t, expectedBalance, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
@@ -404,11 +500,11 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	consumerStatus, err := tequilapi.Identity(consumerID)
 	assert.NoError(t, err)
 	assert.True(t, consumerStatus.Balance.Cmp(big.NewInt(0)) == 1, "consumer balance should not be empty")
-	assert.True(t, consumerStatus.Balance.Cmp(new(big.Int).Sub(balanceAfterRegistration, registrationFee)) == -1, "balance should decrease but is %sd", consumerStatus.Balance)
+	assert.True(t, consumerStatus.Balance.Cmp(balanceAfterRegistration) == -1, "balance should decrease but is %sd", consumerStatus.Balance)
 	assert.Zero(t, consumerStatus.Earnings.Uint64())
 	assert.Zero(t, consumerStatus.EarningsTotal.Uint64())
 
-	return new(big.Int).Sub(new(big.Int).Sub(balanceAfterRegistration, registrationFee), consumerStatus.Balance)
+	return new(big.Int).Sub(balanceAfterRegistration, consumerStatus.Balance)
 }
 
 func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal contract.ProposalDTO) {
@@ -435,7 +531,7 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 	// Before settlement
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
-	assert.True(t, providerStatus.Balance.Cmp(new(big.Int).Sub(balanceAfterRegistration, registrationFee)) == 0)
+	assert.True(t, providerStatus.Balance.Cmp(new(big.Int)) == 0)
 	assert.Equal(t, earningsExpected, providerStatus.Earnings, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
 	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
 	assert.True(t, providerStatus.Earnings.Cmp(big.NewInt(500)) == 1, "earnings should be at least 500 but is %d", providerStatus.Earnings)
