@@ -521,14 +521,14 @@ func (ss settlementState) needsSettling(threshold float64, channel HermesChannel
 
 	if channel.channel.Stake.Cmp(big.NewInt(0)) == 0 {
 		// if starting with zero stake, only settle one myst or more.
-		if channel.unsettledBalance().Cmp(big.NewInt(0).SetUint64(crypto.Myst)) == -1 {
+		if channel.UnsettledBalance().Cmp(big.NewInt(0).SetUint64(crypto.Myst)) == -1 {
 			return false
 		}
 	}
 
 	floated := new(big.Float).SetInt(channel.availableBalance())
 	calculatedThreshold := new(big.Float).Mul(big.NewFloat(threshold), floated)
-	possibleEarnings := channel.unsettledBalance()
+	possibleEarnings := channel.UnsettledBalance()
 	i, _ := calculatedThreshold.Int(nil)
 	if possibleEarnings.Cmp(i) == -1 {
 		return false

@@ -121,8 +121,8 @@ func (hcr *HermesChannelRepository) sumChannels(id identity.Identity) event.Earn
 	var unsettledBalance = new(big.Int)
 	for _, channel := range hcr.channels {
 		if channel.Identity == id {
-			lifetimeBalance = new(big.Int).Add(lifetimeBalance, channel.lifetimeBalance())
-			unsettledBalance = new(big.Int).Add(unsettledBalance, channel.unsettledBalance())
+			lifetimeBalance = new(big.Int).Add(lifetimeBalance, channel.LifetimeBalance())
+			unsettledBalance = new(big.Int).Add(unsettledBalance, channel.UnsettledBalance())
 		}
 	}
 
@@ -200,7 +200,7 @@ func (hcr *HermesChannelRepository) updateChannel(new HermesChannel) {
 		new.HermesID.Hex(),
 		new.balance(),
 		new.availableBalance(),
-		new.unsettledBalance(),
+		new.UnsettledBalance(),
 	)
 
 	earningsNew := hcr.sumChannels(new.Identity)

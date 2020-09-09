@@ -169,8 +169,8 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 					UnsettledBalance: big.NewInt(0),
 				},
 				Current: event.Earnings{
-					LifetimeBalance:  expectedChannel1.lifetimeBalance(),
-					UnsettledBalance: expectedChannel1.unsettledBalance(),
+					LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+					UnsettledBalance: expectedChannel1.UnsettledBalance(),
 				},
 			},
 			lastEvent,
@@ -197,12 +197,12 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 			event.AppEventEarningsChanged{
 				Identity: id,
 				Previous: event.Earnings{
-					LifetimeBalance:  expectedChannel1.lifetimeBalance(),
-					UnsettledBalance: expectedChannel1.unsettledBalance(),
+					LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+					UnsettledBalance: expectedChannel1.UnsettledBalance(),
 				},
 				Current: event.Earnings{
-					LifetimeBalance:  expectedChannel2.lifetimeBalance(),
-					UnsettledBalance: expectedChannel2.unsettledBalance(),
+					LifetimeBalance:  expectedChannel2.LifetimeBalance(),
+					UnsettledBalance: expectedChannel2.UnsettledBalance(),
 				},
 			},
 			lastEvent,

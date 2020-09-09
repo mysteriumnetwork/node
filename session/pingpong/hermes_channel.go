@@ -45,16 +45,16 @@ type HermesChannel struct {
 	lastPromise HermesPromise
 }
 
-// lifetimeBalance returns earnings of all history.
-func (hc HermesChannel) lifetimeBalance() *big.Int {
+// LifetimeBalance returns earnings of all history.
+func (hc HermesChannel) LifetimeBalance() *big.Int {
 	if hc.lastPromise.Promise.Amount == nil {
 		return new(big.Int)
 	}
 	return hc.lastPromise.Promise.Amount
 }
 
-// unsettledBalance returns current unsettled earnings.
-func (hc HermesChannel) unsettledBalance() *big.Int {
+// UnsettledBalance returns current unsettled earnings.
+func (hc HermesChannel) UnsettledBalance() *big.Int {
 	settled := new(big.Int)
 	if hc.channel.Settled != nil {
 		settled = hc.channel.Settled

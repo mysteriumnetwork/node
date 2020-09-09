@@ -125,7 +125,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 		deps: deps,
 	}
 	k.state.Identities = k.fetchIdentities()
-	k.state.PaymentChannels = k.deps.EarningsProvider.List()
+	k.state.ProviderChannels = k.deps.EarningsProvider.List()
 
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
@@ -480,7 +480,7 @@ func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 		return
 	}
 
-	k.state.PaymentChannels = k.deps.EarningsProvider.List()
+	k.state.ProviderChannels = k.deps.EarningsProvider.List()
 
 	var id *stateEvent.Identity
 	for i := range k.state.Identities {

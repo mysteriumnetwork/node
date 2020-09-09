@@ -526,8 +526,8 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
 	assert.Zero(t, keeper.GetState().Identities[0].Balance.Uint64())
-	assert.Len(t, keeper.GetState().PaymentChannels, 1)
-	assert.Equal(t, channelsProvider.Channels, keeper.GetState().PaymentChannels)
+	assert.Len(t, keeper.GetState().ProviderChannels, 1)
+	assert.Equal(t, channelsProvider.Channels, keeper.GetState().ProviderChannels)
 
 	// when
 	channelsProvider.Channels = []pingpong.HermesChannel{
@@ -544,8 +544,8 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		return keeper.GetState().Identities[0].Earnings.Cmp(big.NewInt(10)) == 0 && keeper.GetState().Identities[0].EarningsTotal.Cmp(big.NewInt(100)) == 0
 	}, 2*time.Second, 10*time.Millisecond)
-	assert.Len(t, keeper.GetState().PaymentChannels, 2)
-	assert.Equal(t, channelsProvider.Channels, keeper.GetState().PaymentChannels)
+	assert.Len(t, keeper.GetState().ProviderChannels, 2)
+	assert.Equal(t, channelsProvider.Channels, keeper.GetState().ProviderChannels)
 }
 
 func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
