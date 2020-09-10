@@ -45,7 +45,7 @@ type Transactor interface {
 	FetchSettleFees() (registry.FeesResponse, error)
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
-	DecreaseStake(id string, amount, transactorFee uint64) error
+	DecreaseStake(id string, amount, transactorFee *big.Int) error
 }
 
 // promiseSettler settles the given promises
@@ -364,14 +364,6 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 	utils.WriteAsJSON(response, resp)
 }
 
-// DecreaseStakeRequest represents the decrease stake request
-// swagger:model DecreaseStakeRequest
-type DecreaseStakeRequest struct {
-	ID            string `json:"id,omitempty"`
-	Amount        uint64 `json:"amount,omitempty"`
-	TransactorFee uint64 `json:"transactor_fee,omitempty"`
-}
-
 // swagger:operation POST /transactor/stake/decrease Decrease Stake
 // ---
 // summary: Decreases stake
@@ -394,16 +386,16 @@ type DecreaseStakeRequest struct {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	var body DecreaseStakeRequest
-	err := json.NewDecoder(request.Body).Decode(&body)
+	var req contract.DecreaseStakeRequest
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to parse decrease stake"), http.StatusBadRequest)
 		return
 	}
 
-	err = te.transactor.DecreaseStake(body.ID, body.Amount, body.TransactorFee)
+	err = te.transactor.DecreaseStake(req.ID, req.Amount, req.TransactorFee)
 	if err != nil {
-		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", body.ID, body)
+		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
 		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)
 		return
 	}

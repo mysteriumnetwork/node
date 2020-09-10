@@ -17,19 +17,8 @@
 
 package client
 
-import (
-	"math/big"
-)
-
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationDataDTO struct {
 	Status     string `json:"status"`
 	Registered bool   `json:"registered"`
-}
-
-// DecreaseStakeRequest represents the decrease stake request.
-type DecreaseStakeRequest struct {
-	ID            string   `json:"id,omitempty"`
-	Amount        *big.Int `json:"amount,omitempty"`
-	TransactorFee *big.Int `json:"transactor_fee,omitempty"`
 }

@@ -492,7 +492,7 @@ func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, wa
 
 // DecreaseStake requests the decrease of stake via the transactor.
 func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
-	decreaseRequest := DecreaseStakeRequest{
+	decreaseRequest := contract.DecreaseStakeRequest{
 		ID:            ID.Address,
 		Amount:        amount,
 		TransactorFee: transactorFee,

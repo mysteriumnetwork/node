@@ -415,7 +415,7 @@ type DecreaseProviderStakeRequest struct {
 }
 
 // DecreaseStake requests the transactor to decrease stake.
-func (t *Transactor) DecreaseStake(id string, amount, transactorFee uint64) error {
+func (t *Transactor) DecreaseStake(id string, amount, transactorFee *big.Int) error {
 	payload, err := t.fillDecreaseStakeRequest(id, amount, transactorFee)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill decrease stake request")
@@ -430,7 +430,7 @@ func (t *Transactor) DecreaseStake(id string, amount, transactorFee uint64) erro
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee uint64) (DecreaseProviderStakeRequest, error) {
+func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
 	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
@@ -449,8 +449,8 @@ func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee u
 		ChannelID:     chid,
 		Nonce:         ch.LastUsedNonce.Add(ch.LastUsedNonce, big.NewInt(1)),
 		HermesID:      common.HexToAddress(t.hermesID),
-		Amount:        big.NewInt(0).SetUint64(amount),
-		TransactorFee: big.NewInt(0).SetUint64(transactorFee),
+		Amount:        amount,
+		TransactorFee: transactorFee,
 	}
 	signer := t.signerFactory(identity.FromAddress(id))
 	signature, err := signer.Sign(req.GetMessage())

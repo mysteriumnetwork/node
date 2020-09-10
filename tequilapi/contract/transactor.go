@@ -107,3 +107,11 @@ type SettleWithBeneficiaryRequest struct {
 	SettleRequest
 	Beneficiary string `json:"beneficiary"`
 }
+
+// DecreaseStakeRequest represents the decrease stake request
+// swagger:model DecreaseStakeRequest
+type DecreaseStakeRequest struct {
+	ID            string   `json:"id,omitempty"`
+	Amount        *big.Int `json:"amount,omitempty"`
+	TransactorFee *big.Int `json:"transactor_fee,omitempty"`
+}
