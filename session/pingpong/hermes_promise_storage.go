@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -27,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )
 
@@ -66,7 +66,7 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 	defer aps.lock.Unlock()
 
 	previousPromise, err := aps.get(promise.ChannelID)
-	if err != nil && err != ErrNotFound {
+	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
 

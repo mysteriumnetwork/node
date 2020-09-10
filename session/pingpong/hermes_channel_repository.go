@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -29,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -74,8 +74,8 @@ func (hcr *HermesChannelRepository) Fetch(id identity.Identity, hermesID common.
 	}
 
 	promise, err := hcr.promiseProvider.Get(channelID)
-	if err != nil && err != ErrNotFound {
-		return HermesChannel{}, errors.Wrap(err, fmt.Sprintf("could not get hermes promise for provider %v, hermes %v", id, hermesID.Hex()))
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return HermesChannel{}, fmt.Errorf("could not get hermes promise for provider %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
 	channel, err := hcr.fetchChannel(id, hermesID, promise)
@@ -136,7 +136,7 @@ func (hcr *HermesChannelRepository) sumChannels(id identity.Identity) event.Earn
 func (hcr *HermesChannelRepository) Subscribe(bus eventbus.Subscriber) error {
 	err := bus.SubscribeAsync(nodevent.AppTopicNode, hcr.handleNodeStart)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to node status event")
+		return fmt.Errorf("could not subscribe to node status event: %w", err)
 	}
 	return nil
 }
@@ -171,7 +171,7 @@ func (hcr *HermesChannelRepository) fetchChannel(id identity.Identity, hermesID 
 	// TODO: maybe add a sane limit of retries
 	channel, err := hcr.channelProvider.GetProviderChannel(hermesID, id.ToCommonAddress(), true)
 	if err != nil {
-		return HermesChannel{}, errors.Wrap(err, fmt.Sprintf("could not get provider channel for %v, hermes %v", id, hermesID.Hex()))
+		return HermesChannel{}, fmt.Errorf("could not get provider channel for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
 	hermesChannel := NewHermesChannel(id, hermesID, channel, promise)

@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -34,7 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -141,7 +141,7 @@ func (aps *hermesPromiseSettler) loadInitialState(id identity.Identity) error {
 
 	status, err := aps.registrationStatusProvider.GetRegistrationStatus(id)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("could not check registration status for %v", id))
+		return fmt.Errorf("could not check registration status for %v: %w", id, err)
 	}
 
 	if status != registry.Registered {
@@ -159,26 +159,29 @@ func (aps *hermesPromiseSettler) loadInitialState(id identity.Identity) error {
 func (aps *hermesPromiseSettler) Subscribe(bus eventbus.Subscriber) error {
 	err := bus.SubscribeAsync(nodevent.AppTopicNode, aps.handleNodeEvent)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to node status event")
+		return fmt.Errorf("could not subscribe to node status event: %w", err)
 	}
 
 	err = bus.SubscribeAsync(registry.AppTopicIdentityRegistration, aps.handleRegistrationEvent)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to registration event")
+		return fmt.Errorf("could not subscribe to registration event: %w", err)
 	}
 
 	err = bus.SubscribeAsync(servicestate.AppTopicServiceStatus, aps.handleServiceEvent)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to service status event")
+		return fmt.Errorf("could not subscribe to service status event: %w", err)
 	}
 
 	err = bus.SubscribeAsync(event.AppTopicSettlementRequest, aps.handleSettlementEvent)
 	if err != nil {
-		return errors.Wrap(err, "could not subscribe to settlement event")
+		return fmt.Errorf("could not subscribe to settlement event: %w", err)
 	}
 
 	err = bus.SubscribeAsync(event.AppTopicHermesPromise, aps.handleHermesPromiseReceived)
-	return errors.Wrap(err, "could not subscribe to hermes promise event")
+	if err != nil {
+		return fmt.Errorf("could not subscribe to hermes promise event: %w", err)
+	}
+	return nil
 }
 
 func (aps *hermesPromiseSettler) handleSettlementEvent(event event.AppEventSettlementRequest) {
@@ -245,7 +248,7 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 	}
 
 	channel, err := aps.channelProvider.Fetch(id, apep.HermesID)
-	if err != nil && err != ErrNotFound {
+	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msgf("could not sync state for provider %v, hermesID %v", apep.ProviderID, apep.HermesID.Hex())
 		return
 	}
@@ -312,7 +315,7 @@ func (aps *hermesPromiseSettler) SettleIntoStake(providerID identity.Identity, h
 
 	hexR, err := hex.DecodeString(channel.lastPromise.R)
 	if err != nil {
-		return errors.Wrap(err, "could not decode R")
+		return fmt.Errorf("could not decode R: %w", err)
 	}
 	channel.lastPromise.Promise.R = hexR
 	return aps.settle(
@@ -338,7 +341,7 @@ func (aps *hermesPromiseSettler) ForceSettle(providerID identity.Identity, herme
 
 	hexR, err := hex.DecodeString(channel.lastPromise.R)
 	if err != nil {
-		return errors.Wrap(err, "could not decode R")
+		return fmt.Errorf("could not decode R: %w", err)
 	}
 
 	channel.lastPromise.Promise.R = hexR
@@ -362,7 +365,7 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(providerID identity.Ident
 
 	hexR, err := hex.DecodeString(channel.lastPromise.R)
 	if err != nil {
-		return errors.Wrap(err, "could not decode R")
+		return fmt.Errorf("could not decode R: %w", err)
 	}
 
 	channel.lastPromise.Promise.R = hexR

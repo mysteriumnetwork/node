@@ -43,11 +43,6 @@ type HermesChannel struct {
 	lastPromise HermesPromise
 }
 
-// hasPromise returns flag if channel has something promised at all.
-func (hc HermesChannel) hasPromise() bool {
-	return hc.lastPromise.Promise.Amount != nil
-}
-
 // lifetimeBalance returns earnings of all history.
 func (hc HermesChannel) lifetimeBalance() *big.Int {
 	if hc.lastPromise.Promise.Amount == nil {
