@@ -19,14 +19,6 @@ package client
 
 import "math/big"
 
-// Fees represents the transactor fee
-type Fees struct {
-	Registration  *big.Int `json:"registration"`
-	Settlement    *big.Int `json:"settlement"`
-	Hermes        uint16   `json:"hermes"`
-	DecreaseStake *big.Int `json:"decreaseStake"`
-}
-
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationDataDTO struct {
 	Status     string `json:"status"`

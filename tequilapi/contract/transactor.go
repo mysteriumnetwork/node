@@ -18,11 +18,21 @@
 package contract
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/vcraescu/go-paginator"
 )
+
+// FeesDTO represents the transactor fees
+// swagger:model FeesDTO
+type FeesDTO struct {
+	Registration  *big.Int `json:"registration"`
+	Settlement    *big.Int `json:"settlement"`
+	Hermes        uint16   `json:"hermes"`
+	DecreaseStake *big.Int `json:"decreaseStake"`
+}
 
 // NewSettlementListResponse maps to API settlement list.
 func NewSettlementListResponse(

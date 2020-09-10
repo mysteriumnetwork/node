@@ -20,7 +20,6 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -78,16 +77,7 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler,
 	}
 }
 
-// Fees represents the transactor fees
-// swagger:model Fees
-type Fees struct {
-	Registration  *big.Int `json:"registration"`
-	Settlement    *big.Int `json:"settlement"`
-	Hermes        uint16   `json:"hermes"`
-	DecreaseStake *big.Int `json:"decreaseStake"`
-}
-
-// swagger:operation GET /transactor/fees Fees
+// swagger:operation GET /transactor/fees FeesDTO
 // ---
 // summary: Returns fees
 // description: Returns fees applied by Transactor
@@ -95,7 +85,7 @@ type Fees struct {
 //   200:
 //     description: fees applied by Transactor
 //     schema:
-//       "$ref": "#/definitions/Fees"
+//       "$ref": "#/definitions/FeesDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -122,7 +112,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		return
 	}
 
-	f := Fees{
+	f := contract.FeesDTO{
 		Registration:  registrationFees.Fee,
 		Settlement:    settlementFees.Fee,
 		Hermes:        hermesFees,

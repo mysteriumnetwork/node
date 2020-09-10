@@ -115,8 +115,8 @@ func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDa
 }
 
 // GetTransactorFees returns the transactor fees
-func (client *Client) GetTransactorFees() (Fees, error) {
-	fees := Fees{}
+func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
+	fees := contract.FeesDTO{}
 
 	res, err := client.http.Get("transactor/fees", nil)
 	if err != nil {
