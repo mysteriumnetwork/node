@@ -79,17 +79,6 @@ func (fr FeesResponse) IsValid() bool {
 	return time.Now().After(fr.ValidUntil)
 }
 
-// IdentityRegistrationRequestDTO represents the identity registration user input parameters
-// swagger:model IdentityRegistrationRequestDTO
-type IdentityRegistrationRequestDTO struct {
-	// Stake is used by Provider, default 0
-	Stake *big.Int `json:"stake,omitempty"`
-	// Cache out address for Provider
-	Beneficiary string `json:"beneficiary,omitempty"`
-	// Fee: negotiated fee with transactor
-	Fee *big.Int `json:"fee,omitempty"`
-}
-
 // IdentityRegistrationRequest represents the identity registration request body
 type IdentityRegistrationRequest struct {
 	RegistryAddress string `json:"registryAddress"`
@@ -177,8 +166,8 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
-func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
-	regReq, err := t.fillIdentityRegistrationRequest(id, *regReqDTO)
+func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error {
+	regReq, err := t.fillIdentityRegistrationRequest(id, stake, fee, beneficiary)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
 	}
@@ -200,13 +189,13 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
+func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string) (IdentityRegistrationRequest, error) {
 	regReq := IdentityRegistrationRequest{
 		RegistryAddress: t.registryAddress,
 		HermesID:        t.hermesID,
-		Stake:           regReqDTO.Stake,
-		Fee:             regReqDTO.Fee,
-		Beneficiary:     regReqDTO.Beneficiary,
+		Stake:           stake,
+		Fee:             fee,
+		Beneficiary:     beneficiary,
 	}
 
 	if regReq.Stake == nil {

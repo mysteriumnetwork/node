@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -44,7 +45,7 @@ type Transactor interface {
 	FetchRegistrationFees() (registry.FeesResponse, error)
 	FetchSettleFees() (registry.FeesResponse, error)
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
-	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
 	DecreaseStake(id string, amount, transactorFee uint64) error
 }
 
@@ -231,17 +232,17 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	identity := params.ByName("id")
 
-	regReqDTO := &registry.IdentityRegistrationRequestDTO{}
+	req := &contract.IdentityRegistrationRequest{}
 
-	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
 		return
 	}
 
-	err = te.transactor.RegisterIdentity(identity, regReqDTO)
+	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary)
 	if err != nil {
-		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, regReqDTO)
+		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
 	}

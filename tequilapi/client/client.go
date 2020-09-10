@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -130,7 +129,7 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 
 // RegisterIdentity registers identity
 func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int) error {
-	payload := registry.IdentityRegistrationRequestDTO{
+	payload := contract.IdentityRegistrationRequest{
 		Stake:       stake,
 		Fee:         fee,
 		Beneficiary: beneficiary,

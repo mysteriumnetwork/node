@@ -116,6 +116,17 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	return errors
 }
 
+// IdentityRegistrationRequestDTO represents the identity registration user input parameters
+// swagger:model IdentityRegistrationRequestDTO
+type IdentityRegistrationRequest struct {
+	// Stake is used by Provider, default 0
+	Stake *big.Int `json:"stake,omitempty"`
+	// Cache out address for Provider
+	Beneficiary string `json:"beneficiary,omitempty"`
+	// Fee: negotiated fee with transactor
+	Fee *big.Int `json:"fee,omitempty"`
+}
+
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity
 // swagger:model RegistrationDataDTO
 type IdentityRegistrationResponse struct {
