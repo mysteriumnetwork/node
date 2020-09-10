@@ -101,14 +101,14 @@ func (client *Client) Identity(identityAddress string) (id contract.IdentityDTO,
 }
 
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
+func (client *Client) IdentityRegistrationStatus(address string) (contract.IdentityRegistrationResponse, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
 	if err != nil {
-		return RegistrationDataDTO{}, err
+		return contract.IdentityRegistrationResponse{}, err
 	}
 	defer response.Body.Close()
 
-	status := RegistrationDataDTO{}
+	status := contract.IdentityRegistrationResponse{}
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
@@ -535,10 +535,10 @@ func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID strin
 }
 
 // Beneficiary gets beneficiary address for the provided identity.
-func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponce, err error) {
+func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponse, err error) {
 	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
 	if err != nil {
-		return contract.IdentityBeneficiaryResponce{}, err
+		return contract.IdentityBeneficiaryResponse{}, err
 	}
 	defer response.Body.Close()
 

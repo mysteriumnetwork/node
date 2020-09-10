@@ -116,7 +116,7 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	return errors
 }
 
-// IdentityRegistrationRequestDTO represents the identity registration user input parameters
+// IdentityRegistrationRequest represents the identity registration user input parameters
 // swagger:model IdentityRegistrationRequestDTO
 type IdentityRegistrationRequest struct {
 	// Stake is used by Provider, default 0
@@ -128,7 +128,7 @@ type IdentityRegistrationRequest struct {
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity
-// swagger:model RegistrationDataDTO
+// swagger:model IdentityRegistrationResponseDTO
 type IdentityRegistrationResponse struct {
 	Status string `json:"status"`
 	// Returns true if identity is registered in payments smart contract
@@ -141,8 +141,8 @@ type ListProposalsResponse struct {
 	Proposals []ProposalDTO `json:"proposals"`
 }
 
-// IdentityBeneficiaryResponce represents the provider beneficiary address.
-// swagger:model IdentityBeneficiaryDTO
-type IdentityBeneficiaryResponce struct {
+// IdentityBeneficiaryResponse represents the provider beneficiary address.
+// swagger:model IdentityBeneficiaryResponseDTO
+type IdentityBeneficiaryResponse struct {
 	Beneficiary string `json:"Beneficiary"`
 }
