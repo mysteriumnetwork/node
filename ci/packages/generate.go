@@ -18,14 +18,16 @@
 package packages
 
 import (
+	"fmt"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/mysteriumnetwork/go-ci/util"
 )
 
 // Generate recreates dynamic project parts which changes time to time.
-func Generate() error {
-	mg.Deps(GenerateProtobuf)
-	return nil
+func Generate() {
+	mg.Deps(GenerateProtobuf, GenerateSwagger)
 }
 
 // GenerateProtobuf generates Protobuf models.
@@ -40,4 +42,26 @@ func GenerateProtobuf() error {
 		return err
 	}
 	return sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/payment.proto")
+}
+
+// GenerateSwagger generates Tequilapi documentation.
+func GenerateSwagger() error {
+	mg.Deps(GetSwagger)
+
+	return sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models")
+}
+
+// GetSwagger installs swagger tool.
+func GetSwagger() error {
+	path, _ := util.GetGoBinaryPath("swagger")
+	if path != "" {
+		fmt.Println("Tool 'swagger' already installed")
+		return nil
+	}
+	err := sh.RunV("go", "get", "-u", "github.com/go-swagger/go-swagger/cmd/swagger")
+	if err != nil {
+		fmt.Println("could not go get swagger")
+		return err
+	}
+	return nil
 }
