@@ -180,7 +180,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
 	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(di.HermesPromiseStorage, di.BCHelper, di.EventBus)
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
-		log.Error().Msg("Failed to subscribe channel repository")
+		log.Error().Err(err).Msg("Failed to subscribe channel repository")
 		return errors.Wrap(err, "could not subscribe channel repository to relevant events")
 	}
 
@@ -266,7 +266,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessions}
 	if err := di.EventBus.Subscribe(servicestate.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
-		log.Error().Msg("Failed to subscribe service cleaner")
+		log.Error().Err(err).Msg("Failed to subscribe service cleaner")
 	}
 
 	return nil

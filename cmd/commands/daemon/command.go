@@ -65,7 +65,7 @@ func describeQuit(err error) error {
 	if err == nil {
 		log.Info().Msg("Stopping application")
 	} else {
-		log.Error().Msgf("Terminating application due to error: %+v\n", err)
+		log.Error().Err(err).Msgf("Terminating application due to error")
 	}
 	return err
 }
