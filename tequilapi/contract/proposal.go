@@ -20,7 +20,6 @@ package contract
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -135,8 +134,16 @@ type ServiceLocationDTO struct {
 // ProposalMetricsDTO holds proposal quality metrics from Quality Oracle.
 // swagger:model ProposalMetricsDTO
 type ProposalMetricsDTO struct {
-	ConnectCount     quality.ConnectCount `json:"connect_count"`
-	MonitoringFailed bool                 `json:"monitoring_failed"`
+	ConnectCount     ProposalMetricConnectsDTO `json:"connect_count"`
+	MonitoringFailed bool                      `json:"monitoring_failed"`
+}
+
+// ProposalMetricConnectsDTO represents the metric for connect stats.
+// swagger:model ProposalMetricConnectsDTO
+type ProposalMetricConnectsDTO struct {
+	Success int `json:"success" example:"100" format:"int64"`
+	Fail    int `json:"fail" example:"50" format:"int64"`
+	Timeout int `json:"timeout" example:"10" format:"int64"`
 }
 
 // PaymentMethodDTO holds payment method details.
