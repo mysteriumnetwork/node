@@ -36,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -123,13 +122,6 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 	utils.WriteAsJSON(f, resp)
 }
 
-// SettleRequest represents the request to settle hermes promises
-// swagger:model SettleRequest
-type SettleRequest struct {
-	HermesID   string `json:"hermes_id"`
-	ProviderID string `json:"provider_id"`
-}
-
 // swagger:operation POST /transactor/settle/sync SettleSync
 // ---
 // summary: forces the settlement of promises for the given provider and hermes
@@ -139,7 +131,7 @@ type SettleRequest struct {
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted
@@ -166,7 +158,7 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted
@@ -193,7 +185,7 @@ func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *htt
 }
 
 func (te *transactorEndpoint) settle(request *http.Request, settler func(identity.Identity, common.Address) error) error {
-	req := SettleRequest{}
+	req := contract.SettleRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
@@ -253,7 +245,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 
-	req := &client.SettleWithBeneficiaryRequest{}
+	req := &contract.SettleWithBeneficiaryRequest{}
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
@@ -428,7 +420,7 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted
@@ -455,7 +447,7 @@ func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, requ
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted

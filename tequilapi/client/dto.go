@@ -17,24 +17,14 @@
 
 package client
 
-import "math/big"
+import (
+	"math/big"
+)
 
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationDataDTO struct {
 	Status     string `json:"status"`
 	Registered bool   `json:"registered"`
-}
-
-// SettleRequest represents the request to settle accountant promises
-type SettleRequest struct {
-	HermesID   string `json:"hermes_id"`
-	ProviderID string `json:"provider_id"`
-}
-
-// SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
-type SettleWithBeneficiaryRequest struct {
-	SettleRequest
-	Beneficiary string `json:"beneficiary"`
 }
 
 // DecreaseStakeRequest represents the decrease stake request.

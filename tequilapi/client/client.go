@@ -440,7 +440,7 @@ func filterSessionsByStatus(status string, sessions contract.ListSessionsRespons
 
 // Settle requests the settling of hermes promises
 func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
-	settleRequest := SettleRequest{
+	settleRequest := contract.SettleRequest{
 		ProviderID: providerID.Address,
 		HermesID:   hermesID.Address,
 	}
@@ -466,7 +466,7 @@ func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBloc
 
 // SettleIntoStake requests the settling of accountant promises into a stake increase
 func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
-	settleRequest := SettleRequest{
+	settleRequest := contract.SettleRequest{
 		ProviderID: providerID.Address,
 		HermesID:   hermesID.Address,
 	}
@@ -514,8 +514,8 @@ func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee 
 
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
 func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
-	payload := SettleWithBeneficiaryRequest{
-		SettleRequest: SettleRequest{
+	payload := contract.SettleWithBeneficiaryRequest{
+		SettleRequest: contract.SettleRequest{
 			ProviderID: address,
 			HermesID:   hermesID,
 		},

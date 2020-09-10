@@ -94,3 +94,16 @@ type SettlementDTO struct {
 	// example: 2019-06-06T11:04:43.910035Z
 	SettledAt string `json:"settled_at"`
 }
+
+// SettleRequest represents the request to settle hermes promises
+// swagger:model SettleRequestDTO
+type SettleRequest struct {
+	HermesID   string `json:"hermes_id"`
+	ProviderID string `json:"provider_id"`
+}
+
+// SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
+type SettleWithBeneficiaryRequest struct {
+	SettleRequest
+	Beneficiary string `json:"beneficiary"`
+}
