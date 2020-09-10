@@ -34,7 +34,7 @@ func Check() {
 
 // CheckCopyright checks for copyright headers in files.
 func CheckCopyright() error {
-	return commands.CopyrightD(".", "pb")
+	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets")
 }
 
 // CheckGoLint reports linting errors in the solution.
@@ -49,14 +49,14 @@ func CheckGoVet() error {
 
 // CheckGoImports checks for issues with go imports.
 func CheckGoImports() error {
-	return commands.GoImportsD(".", "pb")
+	return commands.GoImportsD(".", "pb", "tequilapi/endpoints/assets")
 }
 
-// CheckSwagger checks whether swagger spec at "tequilapi.json" is valid against swagger specification 2.0.
+// CheckSwagger checks whether swagger spec at "tequilapi/docs/swagger.json" is valid against swagger specification 2.0.
 func CheckSwagger() error {
 	mg.Deps(packages.GenerateSwagger)
 
-	if err := sh.RunV("swagger", "validate", "tequilapi.json"); err != nil {
+	if err := sh.RunV("swagger", "validate", "tequilapi/docs/swagger.json"); err != nil {
 		fmt.Println("could not validate swagger spec")
 		return err
 	}

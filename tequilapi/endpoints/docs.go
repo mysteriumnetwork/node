@@ -18,82 +18,28 @@
 package endpoints
 
 import (
-	"fmt"
 	"net/http"
-	"text/template"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints/assets"
 )
 
-const docsSwaggerTemplate = `<!DOCTYPE html>
-<html>
-<head>
-    <title>ReDoc</title>
-    <!-- needed for adaptive design -->
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-
-    <!--
-    ReDoc doesn't change outer page styles
-    -->
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
-    </style>
-</head>
-<body>
-<redoc spec-url="{{.SpecURL}}"></redoc>
-<script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"> </script>
-</body>
-</html>
-`
-
-type docsSwaggerVars struct {
-	SpecURL string
-}
-
 // NewDocsEndpoint creates and returns documentation endpoint.
-func NewDocsEndpoint() (*DocsEndpoint, error) {
-	docsTpl, err := template.New("swagger_index.html").Parse(docsSwaggerTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("cant parse swagger template: %w", err)
-	}
-
-	return &DocsEndpoint{
-		docsTpl: docsTpl,
-		docsVars: docsSwaggerVars{
-			SpecURL: "tequilapi.json",
-		},
-	}, nil
+func NewDocsEndpoint() *DocsEndpoint {
+	return &DocsEndpoint{}
 }
 
 // DocsEndpoint serves API documentation.
-type DocsEndpoint struct {
-	docsTpl  *template.Template
-	docsVars docsSwaggerVars
-}
+type DocsEndpoint struct{}
 
 // Index redirects root route to swagger docs.
-func (se *DocsEndpoint) Index(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	http.Redirect(resp, request, "/docs/index.html", http.StatusMovedPermanently)
-}
-
-// Docs middleware to serve the API docs.
-func (se *DocsEndpoint) Docs(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	se.docsTpl.Execute(resp, se.docsVars)
+func (se *DocsEndpoint) Index(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	http.Redirect(resp, request, "/docs/", http.StatusMovedPermanently)
 }
 
 // AddRoutesForDocs attaches documentation endpoints to router.
-func AddRoutesForDocs(router *httprouter.Router) error {
-	endpoint, err := NewDocsEndpoint()
-	if err != nil {
-		return err
-	}
-
+func AddRoutesForDocs(router *httprouter.Router) {
+	endpoint := NewDocsEndpoint()
 	router.GET("/", endpoint.Index)
-	router.GET("/docs", endpoint.Docs)
-	return nil
+	router.ServeFiles("/docs/*filepath", assets.DocsAssets)
 }

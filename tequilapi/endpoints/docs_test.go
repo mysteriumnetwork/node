@@ -26,26 +26,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Docs_Index(t *testing.T) {
-	endpoint, err := NewDocsEndpoint()
-	assert.NoError(t, err)
+func Test_Docs(t *testing.T) {
+	// given
+	router := httprouter.New()
+	AddRoutesForDocs(router)
 
-	req := httptest.NewRequest("GET", "/irrelevant", nil)
+	// when
+	req := httptest.NewRequest("GET", "/", nil)
 	resp := httptest.NewRecorder()
-	endpoint.Index(resp, req, httprouter.Params{})
+	router.ServeHTTP(resp, req)
 
+	// then
 	assert.Equal(t, 301, resp.Code)
-}
+	assert.Equal(t, "/docs/", resp.Header().Get("Location"))
 
-func Test_Docs_Docs(t *testing.T) {
-	endpoint, err := NewDocsEndpoint()
-	assert.NoError(t, err)
+	// when
+	req, _ = http.NewRequest("GET", "/docs", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 301, resp.Code)
+	assert.Equal(t, "/docs/", resp.Header().Get("Location"))
 
-	req, _ := http.NewRequest("GET", "/irrelevant", nil)
-	resp := httptest.NewRecorder()
-	endpoint.Docs(resp, req, httprouter.Params{})
-
+	// when
+	req, _ = http.NewRequest("GET", "/docs/", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
 	assert.Equal(t, 200, resp.Code)
-	assert.True(t, resp.Body.Len() > 1)
-	assert.Contains(t, resp.Body.String(), `<redoc spec-url="tequilapi.json"></redoc>`)
+	assert.Contains(t, resp.Body.String(), `<redoc spec-url="./swagger.json"></redoc>`)
+
+	// when
+	req, _ = http.NewRequest("GET", "/docs/index.html", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 301, resp.Code)
+	assert.Equal(t, "./", resp.Header().Get("Location"))
+
+	// when
+	req, _ = http.NewRequest("GET", "/docs/swagger.json", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	// then
+	assert.Equal(t, 200, resp.Code)
+	assert.Contains(t, resp.Body.String(), `"host": "127.0.0.1:4050"`)
 }

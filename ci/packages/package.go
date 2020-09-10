@@ -225,7 +225,7 @@ func PackageDockerSwaggerRedoc() error {
 		return err
 	}
 	return env.IfRelease(func() error {
-		if err := storage.UploadSingleArtifact("tequilapi.json"); err != nil {
+		if err := storage.UploadSingleArtifact("tequilapi/docs/swagger.json"); err != nil {
 			return err
 		}
 		if err := storage.UploadDockerImages(); err != nil {

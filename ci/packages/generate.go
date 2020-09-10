@@ -19,15 +19,17 @@ package packages
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/util"
+	"github.com/shurcooL/vfsgen"
 )
 
 // Generate recreates dynamic project parts which changes time to time.
 func Generate() {
-	mg.Deps(GenerateProtobuf, GenerateSwagger)
+	mg.Deps(GenerateProtobuf, GenerateSwagger, GenerateDocs)
 }
 
 // GenerateProtobuf generates Protobuf models.
@@ -44,11 +46,28 @@ func GenerateProtobuf() error {
 	return sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/payment.proto")
 }
 
-// GenerateSwagger generates Tequilapi documentation.
+// GenerateSwagger Tequilapi Swagger specification.
 func GenerateSwagger() error {
 	mg.Deps(GetSwagger)
 
-	return sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models")
+	return sh.RunV("swagger", "generate", "spec", "-o", "tequilapi/docs/swagger.json", "--scan-models")
+}
+
+// GenerateDocs generates Tequilapi documentation pages.
+// Based on Redoc template for swagger - https://github.com/Redocly/redoc.
+func GenerateDocs() error {
+	err := vfsgen.Generate(
+		http.Dir("./tequilapi/docs"),
+		vfsgen.Options{
+			Filename:     "tequilapi/endpoints/assets/docs.go",
+			PackageName:  "assets",
+			VariableName: "DocsAssets",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("could not generate swaggers assets: %w", err)
+	}
+	return nil
 }
 
 // GetSwagger installs swagger tool.

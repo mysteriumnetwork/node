@@ -67,7 +67,7 @@ func NewSessionStatsDTO(stats session.Stats) SessionStatsDTO {
 }
 
 // SessionStatsDTO represents the session aggregated statistics.
-// swagger:model ListSessionsResponse
+// swagger:model SessionStatsDTO
 type SessionStatsDTO struct {
 	Count            int      `json:"count"`
 	CountConsumers   int      `json:"count_consumers"`

@@ -2137,17 +2137,16 @@
           "x-go-name": "Sessions"
         },
         "stats": {
-          "$ref": "#/definitions/ListSessionsResponse"
+          "$ref": "#/definitions/SessionStatsDTO"
         },
         "stats_daily": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/ListSessionsResponse"
+            "$ref": "#/definitions/SessionStatsDTO"
           },
           "x-go-name": "StatsDaily"
         }
       },
-      "x-go-name": "SessionStatsDTO",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "ListSettlementsResponse": {
@@ -2786,6 +2785,41 @@
           "example": "Completed"
         },
         "tokens": {
+          "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionStatsDTO": {
+      "type": "object",
+      "title": "SessionStatsDTO represents the session aggregated statistics.",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Count"
+        },
+        "count_consumers": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "CountConsumers"
+        },
+        "sum_bytes_received": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "SumBytesReceived"
+        },
+        "sum_bytes_sent": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "SumBytesSent"
+        },
+        "sum_duration": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "SumDuration"
+        },
+        "sum_tokens": {
           "$ref": "#/definitions/Int"
         }
       },
