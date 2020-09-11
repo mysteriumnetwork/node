@@ -65,7 +65,7 @@ func GenerateDocs() error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("could not generate swaggers assets: %w", err)
+		return fmt.Errorf("could not generate documentation assets: %w", err)
 	}
 	return nil
 }

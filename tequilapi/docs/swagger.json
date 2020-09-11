@@ -528,7 +528,7 @@
           "200": {
             "description": "Beneficiary retrieved",
             "schema": {
-              "$ref": "#/definitions/IdentityBeneficiaryDTO"
+              "$ref": "#/definitions/IdentityBeneficiaryResponseDTO"
             }
           },
           "500": {
@@ -743,7 +743,7 @@
           "200": {
             "description": "Status retrieved",
             "schema": {
-              "$ref": "#/definitions/RegistrationDataDTO"
+              "$ref": "#/definitions/IdentityRegistrationResponseDTO"
             }
           },
           "500": {
@@ -1295,12 +1295,12 @@
       "get": {
         "description": "Returns fees applied by Transactor",
         "summary": "Returns fees",
-        "operationId": "Fees",
+        "operationId": "FeesDTO",
         "responses": {
           "200": {
             "description": "fees applied by Transactor",
             "schema": {
-              "$ref": "#/definitions/Fees"
+              "$ref": "#/definitions/FeesDTO"
             }
           },
           "500": {
@@ -1323,7 +1323,7 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/SettleRequest"
+              "$ref": "#/definitions/SettleRequestDTO"
             }
           }
         ],
@@ -1351,7 +1351,7 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/SettleRequest"
+              "$ref": "#/definitions/SettleRequestDTO"
             }
           }
         ],
@@ -1416,7 +1416,7 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/SettleRequest"
+              "$ref": "#/definitions/SettleRequestDTO"
             }
           }
         ],
@@ -1444,7 +1444,7 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/SettleRequest"
+              "$ref": "#/definitions/SettleRequestDTO"
             }
           }
         ],
@@ -1612,28 +1612,6 @@
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ConnectCount": {
-      "description": "ConnectCount represents the connection count statistics",
-      "type": "object",
-      "properties": {
-        "fail": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Fail"
-        },
-        "success": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Success"
-        },
-        "timeout": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Timeout"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/core/quality"
     },
     "ConnectOptionsDTO": {
       "description": "ConnectOptions holds tequilapi connect options",
@@ -1827,21 +1805,17 @@
       "type": "object",
       "properties": {
         "amount": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "Amount"
+          "$ref": "#/definitions/Int"
         },
         "id": {
           "type": "string",
           "x-go-name": "ID"
         },
         "transactor_fee": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "TransactorFee"
+          "$ref": "#/definitions/Int"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "EmailInfoDTO": {
       "type": "object",
@@ -1894,8 +1868,8 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/feedback/client"
     },
-    "Fees": {
-      "description": "Fees represents the transactor fees",
+    "FeesDTO": {
+      "description": "FeesDTO represents the transactor fees",
       "type": "object",
       "properties": {
         "decreaseStake": {
@@ -1913,7 +1887,7 @@
           "$ref": "#/definitions/Int"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "FieldErrorMap": {
       "description": "FieldErrorMap represents a map of field name and corresponding list of errors for that field",
@@ -1959,15 +1933,15 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "IdentityBeneficiaryDTO": {
+    "IdentityBeneficiaryResponseDTO": {
       "type": "object",
-      "title": "IdentityBeneficiaryResponce represents the provider beneficiary address.",
+      "title": "IdentityBeneficiaryResponse represents the provider beneficiary address.",
       "properties": {
         "Beneficiary": {
           "type": "string"
         }
       },
-      "x-go-name": "IdentityBeneficiaryResponce",
+      "x-go-name": "IdentityBeneficiaryResponse",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "IdentityCreateRequestDTO": {
@@ -2051,7 +2025,7 @@
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "IdentityRegistrationRequestDTO": {
-      "description": "IdentityRegistrationRequestDTO represents the identity registration user input parameters",
+      "description": "IdentityRegistrationRequest represents the identity registration user input parameters",
       "type": "object",
       "properties": {
         "beneficiary": {
@@ -2066,7 +2040,25 @@
           "$ref": "#/definitions/Int"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/node/identity/registry"
+      "x-go-name": "IdentityRegistrationRequest",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "IdentityRegistrationResponseDTO": {
+      "description": "IdentityRegistrationResponse represents registration status and needed data for registering of given identity",
+      "type": "object",
+      "properties": {
+        "registered": {
+          "description": "Returns true if identity is registered in payments smart contract",
+          "type": "boolean",
+          "x-go-name": "Registered"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-name": "IdentityRegistrationResponse",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "IdentityUnlockRequestDTO": {
       "type": "object",
@@ -2313,6 +2305,35 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "PaymentChannelDTO": {
+      "type": "object",
+      "title": "PaymentChannelDTO represents represents opened payment channel between identity and hermes.",
+      "properties": {
+        "earnings": {
+          "$ref": "#/definitions/Int"
+        },
+        "earnings_total": {
+          "$ref": "#/definitions/Int"
+        },
+        "hermes_id": {
+          "type": "string",
+          "x-go-name": "HermesID",
+          "example": "0x42a537D649d6853C0a866470f2d084DA0f73b5E4"
+        },
+        "id": {
+          "description": "Unique identifier of payment channel",
+          "type": "string",
+          "x-go-name": "ID",
+          "example": "0x8fc5f7a1794dc39c6837df10613bddf1ec9810503a50306a8667f702457a739a"
+        },
+        "owner_id": {
+          "type": "string",
+          "x-go-name": "OwnerID",
+          "example": "0x0000000000000000000000000000000000000001"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "PaymentMethodDTO": {
       "type": "object",
       "title": "PaymentMethodDTO holds payment method details.",
@@ -2406,12 +2427,34 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ProposalMetricConnectsDTO": {
+      "type": "object",
+      "title": "ProposalMetricConnectsDTO represents the metric for connect stats.",
+      "properties": {
+        "fail": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Fail"
+        },
+        "success": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Success"
+        },
+        "timeout": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Timeout"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ProposalMetricsDTO": {
       "type": "object",
       "title": "ProposalMetricsDTO holds proposal quality metrics from Quality Oracle.",
       "properties": {
         "connect_count": {
-          "$ref": "#/definitions/ConnectCount"
+          "$ref": "#/definitions/ProposalMetricConnectsDTO"
         },
         "monitoring_failed": {
           "type": "boolean",
@@ -2440,7 +2483,7 @@
       "title": "QualityMetricsResponse holds quality metrics per service.",
       "properties": {
         "connect_count": {
-          "$ref": "#/definitions/ConnectCount"
+          "$ref": "#/definitions/ProposalMetricConnectsDTO"
         },
         "monitoring_failed": {
           "type": "boolean",
@@ -2471,23 +2514,6 @@
       },
       "x-go-name": "referralInfo",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-    },
-    "RegistrationDataDTO": {
-      "description": "IdentityRegistrationResponse represents registration status and needed data for registering of given identity",
-      "type": "object",
-      "properties": {
-        "registered": {
-          "description": "Returns true if identity is registered in payments smart contract",
-          "type": "boolean",
-          "x-go-name": "Registered"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status"
-        }
-      },
-      "x-go-name": "IdentityRegistrationResponse",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "ReportIssueError": {
       "description": "ReportIssueError issue report error",
@@ -2825,7 +2851,7 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "SettleRequest": {
+    "SettleRequestDTO": {
       "description": "SettleRequest represents the request to settle hermes promises",
       "type": "object",
       "properties": {
@@ -2838,7 +2864,8 @@
           "x-go-name": "ProviderID"
         }
       },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+      "x-go-name": "SettleRequest",
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "SettlementDTO": {
       "type": "object",

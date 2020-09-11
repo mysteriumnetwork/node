@@ -18,6 +18,7 @@
 package check
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/magefile/mage/mg"
@@ -28,6 +29,7 @@ import (
 
 // Check performs commons checks.
 func Check() {
+	mg.Deps(CheckGenerate)
 	mg.Deps(CheckSwagger)
 	mg.Deps(CheckGoImports, CheckGoLint, CheckGoVet, CheckCopyright)
 }
@@ -54,11 +56,35 @@ func CheckGoImports() error {
 
 // CheckSwagger checks whether swagger spec at "tequilapi/docs/swagger.json" is valid against swagger specification 2.0.
 func CheckSwagger() error {
-	mg.Deps(packages.GenerateSwagger)
-
 	if err := sh.RunV("swagger", "validate", "tequilapi/docs/swagger.json"); err != nil {
-		fmt.Println("could not validate swagger spec")
-		return err
+		return fmt.Errorf("could not validate swagger spec: %w", err)
 	}
+	return nil
+}
+
+// CheckGenerate checks whether dynamic project parts are updated properly.
+func CheckGenerate() error {
+	filesBefore, err := sh.Output("git", "status", "--short")
+	if err != nil {
+		return fmt.Errorf("could retrieve changed files: %w", err)
+	}
+	fmt.Println("Uncommitted files:")
+	fmt.Println(filesBefore)
+
+	mg.Deps(packages.Generate)
+
+	filesAfter, err := sh.Output("git", "status", "--short")
+	if err != nil {
+		return fmt.Errorf("could retrieve changed files: %w", err)
+	}
+	fmt.Printf("Generated files")
+	fmt.Println(filesAfter)
+
+	if filesBefore != filesAfter {
+		fmt.Println(`These files needs review with "mage generate":`)
+		return errors.New("not all dynamic files are up-to-date")
+	}
+
+	fmt.Println("Dynamic files are up-to-date")
 	return nil
 }
