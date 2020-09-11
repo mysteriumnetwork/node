@@ -159,6 +159,7 @@ type Dependencies struct {
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	HermesPromiseStorage     *pingpong.HermesPromiseStorage
 	ConsumerBalanceTracker   *pingpong.ConsumerBalanceTracker
+	HermesChannelRepository  *pingpong.HermesChannelRepository
 	HermesPromiseSettler     pingpong.HermesPromiseSettler
 	HermesURLGetter          *pingpong.HermesURLGetter
 	HermesCaller             *pingpong.HermesCaller
@@ -307,7 +308,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		IdentityRegistry:          di.IdentityRegistry,
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
 		BalanceProvider:           di.ConsumerBalanceTracker,
-		EarningsProvider:          di.HermesPromiseSettler,
+		EarningsProvider:          di.HermesChannelRepository,
 	}
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
@@ -550,7 +551,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.HermesPromiseSettler, di.BCHelper)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.HermesChannelRepository, di.BCHelper)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)

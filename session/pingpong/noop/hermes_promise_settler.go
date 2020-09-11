@@ -20,21 +20,10 @@ package noop
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
 )
 
 // NoopHermesPromiseSettler doesn't do much.
 type NoopHermesPromiseSettler struct {
-}
-
-// Subscribe does nothing.
-func (n *NoopHermesPromiseSettler) Subscribe() error {
-	return nil
-}
-
-// GetEarnings returns an empty state.
-func (n *NoopHermesPromiseSettler) GetEarnings(_ identity.Identity) event.Earnings {
-	return event.Earnings{}
 }
 
 // ForceSettle does nothing.

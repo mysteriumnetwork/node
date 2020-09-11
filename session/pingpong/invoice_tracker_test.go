@@ -804,6 +804,10 @@ func (maps *mockHermesPromiseStorage) Get(_ string) (HermesPromise, error) {
 	return maps.toReturn, maps.errToReturn
 }
 
+func (maps *mockHermesPromiseStorage) List(_ HermesPromiseFilter) ([]HermesPromise, error) {
+	return []HermesPromise{maps.toReturn}, maps.errToReturn
+}
+
 type mockBlockchainHelper struct {
 	feeToReturn   uint16
 	errorToReturn error
