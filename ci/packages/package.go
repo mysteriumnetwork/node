@@ -211,14 +211,13 @@ func PackageDockerAlpine() error {
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
+	mg.Deps(GenerateSwagger)
+
 	logconfig.Bootstrap()
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
 	}
 
-	if err := sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models"); err != nil {
-		return err
-	}
 	if err := sh.RunV("bin/package_docker_docs"); err != nil {
 		return err
 	}
@@ -226,7 +225,7 @@ func PackageDockerSwaggerRedoc() error {
 		return err
 	}
 	return env.IfRelease(func() error {
-		if err := storage.UploadSingleArtifact("tequilapi.json"); err != nil {
+		if err := storage.UploadSingleArtifact("tequilapi/docs/swagger.json"); err != nil {
 			return err
 		}
 		if err := storage.UploadDockerImages(); err != nil {

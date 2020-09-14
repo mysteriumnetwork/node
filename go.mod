@@ -60,7 +60,7 @@ require (
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/zerolog v1.17.2
 	github.com/sergi/go-diff v1.1.0 // indirect
-	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c // indirect
+	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
 	github.com/spf13/cast v1.3.0
 	github.com/status-im/keycard-go v0.0.0-20191114114615-9d48af884d5b // indirect

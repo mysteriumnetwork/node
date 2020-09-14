@@ -23,7 +23,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/commands"
-	"github.com/mysteriumnetwork/go-ci/util"
+	"github.com/mysteriumnetwork/node/ci/packages"
 )
 
 // Check performs commons checks.
@@ -34,7 +34,7 @@ func Check() {
 
 // CheckCopyright checks for copyright headers in files.
 func CheckCopyright() error {
-	return commands.CopyrightD(".", "pb")
+	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets")
 }
 
 // CheckGoLint reports linting errors in the solution.
@@ -49,36 +49,15 @@ func CheckGoVet() error {
 
 // CheckGoImports checks for issues with go imports.
 func CheckGoImports() error {
-	return commands.GoImportsD(".", "pb")
+	return commands.GoImportsD(".", "pb", "tequilapi/endpoints/assets")
 }
 
-// CheckSwagger checks whether swagger spec at "tequilapi.json" is valid against swagger specification 2.0.
+// CheckSwagger checks whether swagger spec at "tequilapi/docs/swagger.json" is valid against swagger specification 2.0.
 func CheckSwagger() error {
-	mg.Deps(GetSwagger)
+	mg.Deps(packages.GenerateSwagger)
 
-	err := sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models")
-	if err != nil {
-		fmt.Println("could not generate swagger spec")
-		return err
-	}
-
-	if err := sh.RunV("swagger", "validate", "tequilapi.json"); err != nil {
+	if err := sh.RunV("swagger", "validate", "tequilapi/docs/swagger.json"); err != nil {
 		fmt.Println("could not validate swagger spec")
-		return err
-	}
-	return nil
-}
-
-// GetSwagger installs swagger tool.
-func GetSwagger() error {
-	path, _ := util.GetGoBinaryPath("swagger")
-	if path != "" {
-		fmt.Println("Tool 'swagger' already installed")
-		return nil
-	}
-	err := sh.RunV("go", "get", "-u", "github.com/go-swagger/go-swagger/cmd/swagger")
-	if err != nil {
-		fmt.Println("could not go get swagger")
 		return err
 	}
 	return nil
