@@ -116,8 +116,19 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	return errors
 }
 
+// IdentityRegistrationRequest represents the identity registration user input parameters
+// swagger:model IdentityRegistrationRequestDTO
+type IdentityRegistrationRequest struct {
+	// Stake is used by Provider, default 0
+	Stake *big.Int `json:"stake,omitempty"`
+	// Cache out address for Provider
+	Beneficiary string `json:"beneficiary,omitempty"`
+	// Fee: negotiated fee with transactor
+	Fee *big.Int `json:"fee,omitempty"`
+}
+
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity
-// swagger:model RegistrationDataDTO
+// swagger:model IdentityRegistrationResponseDTO
 type IdentityRegistrationResponse struct {
 	Status string `json:"status"`
 	// Returns true if identity is registered in payments smart contract
@@ -130,8 +141,8 @@ type ListProposalsResponse struct {
 	Proposals []ProposalDTO `json:"proposals"`
 }
 
-// IdentityBeneficiaryResponce represents the provider beneficiary address.
-// swagger:model IdentityBeneficiaryDTO
-type IdentityBeneficiaryResponce struct {
+// IdentityBeneficiaryResponse represents the provider beneficiary address.
+// swagger:model IdentityBeneficiaryResponseDTO
+type IdentityBeneficiaryResponse struct {
 	Beneficiary string `json:"Beneficiary"`
 }

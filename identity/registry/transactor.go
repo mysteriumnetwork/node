@@ -79,17 +79,6 @@ func (fr FeesResponse) IsValid() bool {
 	return time.Now().After(fr.ValidUntil)
 }
 
-// IdentityRegistrationRequestDTO represents the identity registration user input parameters
-// swagger:model IdentityRegistrationRequestDTO
-type IdentityRegistrationRequestDTO struct {
-	// Stake is used by Provider, default 0
-	Stake *big.Int `json:"stake,omitempty"`
-	// Cache out address for Provider
-	Beneficiary string `json:"beneficiary,omitempty"`
-	// Fee: negotiated fee with transactor
-	Fee *big.Int `json:"fee,omitempty"`
-}
-
 // IdentityRegistrationRequest represents the identity registration request body
 type IdentityRegistrationRequest struct {
 	RegistryAddress string `json:"registryAddress"`
@@ -177,8 +166,8 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
-func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
-	regReq, err := t.fillIdentityRegistrationRequest(id, *regReqDTO)
+func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error {
+	regReq, err := t.fillIdentityRegistrationRequest(id, stake, fee, beneficiary)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
 	}
@@ -200,13 +189,13 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
+func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string) (IdentityRegistrationRequest, error) {
 	regReq := IdentityRegistrationRequest{
 		RegistryAddress: t.registryAddress,
 		HermesID:        t.hermesID,
-		Stake:           regReqDTO.Stake,
-		Fee:             regReqDTO.Fee,
-		Beneficiary:     regReqDTO.Beneficiary,
+		Stake:           stake,
+		Fee:             fee,
+		Beneficiary:     beneficiary,
 	}
 
 	if regReq.Stake == nil {
@@ -426,7 +415,7 @@ type DecreaseProviderStakeRequest struct {
 }
 
 // DecreaseStake requests the transactor to decrease stake.
-func (t *Transactor) DecreaseStake(id string, amount, transactorFee uint64) error {
+func (t *Transactor) DecreaseStake(id string, amount, transactorFee *big.Int) error {
 	payload, err := t.fillDecreaseStakeRequest(id, amount, transactorFee)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill decrease stake request")
@@ -441,7 +430,7 @@ func (t *Transactor) DecreaseStake(id string, amount, transactorFee uint64) erro
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee uint64) (DecreaseProviderStakeRequest, error) {
+func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
 	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
@@ -460,8 +449,8 @@ func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee u
 		ChannelID:     chid,
 		Nonce:         ch.LastUsedNonce.Add(ch.LastUsedNonce, big.NewInt(1)),
 		HermesID:      common.HexToAddress(t.hermesID),
-		Amount:        big.NewInt(0).SetUint64(amount),
-		TransactorFee: big.NewInt(0).SetUint64(transactorFee),
+		Amount:        amount,
+		TransactorFee: transactorFee,
 	}
 	signer := t.signerFactory(identity.FromAddress(id))
 	signature, err := signer.Sign(req.GetMessage())

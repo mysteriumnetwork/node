@@ -37,7 +37,7 @@ type registrationStatusChecker interface {
 
 type txer interface {
 	FetchRegistrationFees() (FeesResponse, error)
-	RegisterIdentity(identity string, regReqDTO *IdentityRegistrationRequestDTO) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
 }
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
@@ -170,12 +170,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 	}
 	log.Info().Msgf("Fees fetched. Registration costs %v", fees.Fee)
 
-	regReq := &IdentityRegistrationRequestDTO{
-		Fee:   fees.Fee,
-		Stake: pr.cfg.Stake,
-	}
-
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, regReq)
+	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, fees.Fee, "")
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")

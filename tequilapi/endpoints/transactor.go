@@ -36,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -45,8 +44,8 @@ type Transactor interface {
 	FetchRegistrationFees() (registry.FeesResponse, error)
 	FetchSettleFees() (registry.FeesResponse, error)
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
-	RegisterIdentity(identity string, regReqDTO *registry.IdentityRegistrationRequestDTO) error
-	DecreaseStake(id string, amount, transactorFee uint64) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
+	DecreaseStake(id string, amount, transactorFee *big.Int) error
 }
 
 // promiseSettler settles the given promises
@@ -78,16 +77,7 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler,
 	}
 }
 
-// Fees represents the transactor fees
-// swagger:model Fees
-type Fees struct {
-	Registration  *big.Int `json:"registration"`
-	Settlement    *big.Int `json:"settlement"`
-	Hermes        uint16   `json:"hermes"`
-	DecreaseStake *big.Int `json:"decreaseStake"`
-}
-
-// swagger:operation GET /transactor/fees Fees
+// swagger:operation GET /transactor/fees FeesDTO
 // ---
 // summary: Returns fees
 // description: Returns fees applied by Transactor
@@ -95,7 +85,7 @@ type Fees struct {
 //   200:
 //     description: fees applied by Transactor
 //     schema:
-//       "$ref": "#/definitions/Fees"
+//       "$ref": "#/definitions/FeesDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -122,7 +112,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		return
 	}
 
-	f := Fees{
+	f := contract.FeesDTO{
 		Registration:  registrationFees.Fee,
 		Settlement:    settlementFees.Fee,
 		Hermes:        hermesFees,
@@ -130,13 +120,6 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 	}
 
 	utils.WriteAsJSON(f, resp)
-}
-
-// SettleRequest represents the request to settle hermes promises
-// swagger:model SettleRequest
-type SettleRequest struct {
-	HermesID   string `json:"hermes_id"`
-	ProviderID string `json:"provider_id"`
 }
 
 // swagger:operation POST /transactor/settle/sync SettleSync
@@ -148,7 +131,7 @@ type SettleRequest struct {
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted
@@ -175,7 +158,7 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted
@@ -202,7 +185,7 @@ func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *htt
 }
 
 func (te *transactorEndpoint) settle(request *http.Request, settler func(identity.Identity, common.Address) error) error {
-	req := SettleRequest{}
+	req := contract.SettleRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
@@ -241,17 +224,17 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	identity := params.ByName("id")
 
-	regReqDTO := &registry.IdentityRegistrationRequestDTO{}
+	req := &contract.IdentityRegistrationRequest{}
 
-	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
 		return
 	}
 
-	err = te.transactor.RegisterIdentity(identity, regReqDTO)
+	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary)
 	if err != nil {
-		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, regReqDTO)
+		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
 	}
@@ -262,7 +245,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 
-	req := &client.SettleWithBeneficiaryRequest{}
+	req := &contract.SettleWithBeneficiaryRequest{}
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to parse set beneficiary request: %w", err), http.StatusBadRequest)
@@ -381,14 +364,6 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 	utils.WriteAsJSON(response, resp)
 }
 
-// DecreaseStakeRequest represents the decrease stake request
-// swagger:model DecreaseStakeRequest
-type DecreaseStakeRequest struct {
-	ID            string `json:"id,omitempty"`
-	Amount        uint64 `json:"amount,omitempty"`
-	TransactorFee uint64 `json:"transactor_fee,omitempty"`
-}
-
 // swagger:operation POST /transactor/stake/decrease Decrease Stake
 // ---
 // summary: Decreases stake
@@ -411,16 +386,16 @@ type DecreaseStakeRequest struct {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	var body DecreaseStakeRequest
-	err := json.NewDecoder(request.Body).Decode(&body)
+	var req contract.DecreaseStakeRequest
+	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to parse decrease stake"), http.StatusBadRequest)
 		return
 	}
 
-	err = te.transactor.DecreaseStake(body.ID, body.Amount, body.TransactorFee)
+	err = te.transactor.DecreaseStake(req.ID, req.Amount, req.TransactorFee)
 	if err != nil {
-		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", body.ID, body)
+		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
 		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)
 		return
 	}
@@ -437,7 +412,7 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted
@@ -464,7 +439,7 @@ func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, requ
 //   name: body
 //   description: settle request body
 //   schema:
-//     $ref: "#/definitions/SettleRequest"
+//     $ref: "#/definitions/SettleRequestDTO"
 // responses:
 //   202:
 //     description: settle request accepted

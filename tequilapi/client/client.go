@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -102,21 +101,21 @@ func (client *Client) Identity(identityAddress string) (id contract.IdentityDTO,
 }
 
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
+func (client *Client) IdentityRegistrationStatus(address string) (contract.IdentityRegistrationResponse, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
 	if err != nil {
-		return RegistrationDataDTO{}, err
+		return contract.IdentityRegistrationResponse{}, err
 	}
 	defer response.Body.Close()
 
-	status := RegistrationDataDTO{}
+	status := contract.IdentityRegistrationResponse{}
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
 
 // GetTransactorFees returns the transactor fees
-func (client *Client) GetTransactorFees() (Fees, error) {
-	fees := Fees{}
+func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
+	fees := contract.FeesDTO{}
 
 	res, err := client.http.Get("transactor/fees", nil)
 	if err != nil {
@@ -130,7 +129,7 @@ func (client *Client) GetTransactorFees() (Fees, error) {
 
 // RegisterIdentity registers identity
 func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int) error {
-	payload := registry.IdentityRegistrationRequestDTO{
+	payload := contract.IdentityRegistrationRequest{
 		Stake:       stake,
 		Fee:         fee,
 		Beneficiary: beneficiary,
@@ -441,7 +440,7 @@ func filterSessionsByStatus(status string, sessions contract.ListSessionsRespons
 
 // Settle requests the settling of hermes promises
 func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
-	settleRequest := SettleRequest{
+	settleRequest := contract.SettleRequest{
 		ProviderID: providerID.Address,
 		HermesID:   hermesID.Address,
 	}
@@ -467,7 +466,7 @@ func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBloc
 
 // SettleIntoStake requests the settling of accountant promises into a stake increase
 func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
-	settleRequest := SettleRequest{
+	settleRequest := contract.SettleRequest{
 		ProviderID: providerID.Address,
 		HermesID:   hermesID.Address,
 	}
@@ -493,7 +492,7 @@ func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, wa
 
 // DecreaseStake requests the decrease of stake via the transactor.
 func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
-	decreaseRequest := DecreaseStakeRequest{
+	decreaseRequest := contract.DecreaseStakeRequest{
 		ID:            ID.Address,
 		Amount:        amount,
 		TransactorFee: transactorFee,
@@ -515,8 +514,8 @@ func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee 
 
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
 func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
-	payload := SettleWithBeneficiaryRequest{
-		SettleRequest: SettleRequest{
+	payload := contract.SettleWithBeneficiaryRequest{
+		SettleRequest: contract.SettleRequest{
 			ProviderID: address,
 			HermesID:   hermesID,
 		},
@@ -536,10 +535,10 @@ func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID strin
 }
 
 // Beneficiary gets beneficiary address for the provided identity.
-func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponce, err error) {
+func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponse, err error) {
 	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
 	if err != nil {
-		return contract.IdentityBeneficiaryResponce{}, err
+		return contract.IdentityBeneficiaryResponse{}, err
 	}
 	defer response.Body.Close()
 

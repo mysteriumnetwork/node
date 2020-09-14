@@ -179,10 +179,8 @@ func addProposalMetrics(proposals []contract.ProposalDTO, metrics []quality.Conn
 
 	for i, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			proposals[i].Metrics = &contract.ProposalMetricsDTO{
-				ConnectCount:     mc.ConnectCount,
-				MonitoringFailed: mc.MonitoringFailed,
-			}
+			proposalMetrics := mapQualityMetric(mc)
+			proposals[i].Metrics = &proposalMetrics
 		}
 	}
 }
@@ -191,20 +189,24 @@ func mapQualityMetrics(metrics []quality.ConnectMetric) contract.ProposalsQualit
 	var res []contract.QualityMetricsResponse
 	for _, m := range metrics {
 		res = append(res, contract.QualityMetricsResponse{
-			ProviderID:  m.ProposalID.ProviderID,
-			ServiceType: m.ProposalID.ServiceType,
-			ProposalMetricsDTO: contract.ProposalMetricsDTO{
-				MonitoringFailed: m.MonitoringFailed,
-				ConnectCount: quality.ConnectCount{
-					Success: m.ConnectCount.Success,
-					Timeout: m.ConnectCount.Timeout,
-					Fail:    m.ConnectCount.Fail,
-				},
-			},
+			ProviderID:         m.ProposalID.ProviderID,
+			ServiceType:        m.ProposalID.ServiceType,
+			ProposalMetricsDTO: mapQualityMetric(m),
 		})
 	}
 
 	return contract.ProposalsQualityMetricsResponse{
 		Metrics: res,
+	}
+}
+
+func mapQualityMetric(m quality.ConnectMetric) contract.ProposalMetricsDTO {
+	return contract.ProposalMetricsDTO{
+		MonitoringFailed: m.MonitoringFailed,
+		ConnectCount: contract.ProposalMetricConnectsDTO{
+			Success: m.ConnectCount.Success,
+			Timeout: m.ConnectCount.Timeout,
+			Fail:    m.ConnectCount.Fail,
+		},
 	}
 }

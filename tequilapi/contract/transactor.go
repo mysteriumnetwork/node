@@ -18,11 +18,21 @@
 package contract
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/vcraescu/go-paginator"
 )
+
+// FeesDTO represents the transactor fees
+// swagger:model FeesDTO
+type FeesDTO struct {
+	Registration  *big.Int `json:"registration"`
+	Settlement    *big.Int `json:"settlement"`
+	Hermes        uint16   `json:"hermes"`
+	DecreaseStake *big.Int `json:"decreaseStake"`
+}
 
 // NewSettlementListResponse maps to API settlement list.
 func NewSettlementListResponse(
@@ -83,4 +93,25 @@ type SettlementDTO struct {
 
 	// example: 2019-06-06T11:04:43.910035Z
 	SettledAt string `json:"settled_at"`
+}
+
+// SettleRequest represents the request to settle hermes promises
+// swagger:model SettleRequestDTO
+type SettleRequest struct {
+	HermesID   string `json:"hermes_id"`
+	ProviderID string `json:"provider_id"`
+}
+
+// SettleWithBeneficiaryRequest represent the request to settle with new beneficiary address.
+type SettleWithBeneficiaryRequest struct {
+	SettleRequest
+	Beneficiary string `json:"beneficiary"`
+}
+
+// DecreaseStakeRequest represents the decrease stake request
+// swagger:model DecreaseStakeRequest
+type DecreaseStakeRequest struct {
+	ID            string   `json:"id,omitempty"`
+	Amount        *big.Int `json:"amount,omitempty"`
+	TransactorFee *big.Int `json:"transactor_fee,omitempty"`
 }

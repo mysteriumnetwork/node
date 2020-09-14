@@ -318,7 +318,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 //   200:
 //     description: Status retrieved
 //     schema:
-//       "$ref": "#/definitions/RegistrationDataDTO"
+//       "$ref": "#/definitions/IdentityRegistrationResponseDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -358,7 +358,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //   200:
 //     description: Beneficiary retrieved
 //     schema:
-//       "$ref": "#/definitions/IdentityBeneficiaryDTO"
+//       "$ref": "#/definitions/IdentityBeneficiaryResponseDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -371,7 +371,7 @@ func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Req
 		return
 	}
 
-	registrationDataDTO := &contract.IdentityBeneficiaryResponce{
+	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
 		Beneficiary: data.Beneficiary.String(),
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)

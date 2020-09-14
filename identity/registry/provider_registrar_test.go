@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -142,6 +143,6 @@ func (mt *mockTransactor) FetchRegistrationFees() (FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 
-func (mt *mockTransactor) RegisterIdentity(identity string, regReqDTO *IdentityRegistrationRequestDTO) error {
+func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error {
 	return mt.registerError
 }
