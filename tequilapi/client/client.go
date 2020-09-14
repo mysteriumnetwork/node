@@ -149,7 +149,7 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
 		ConsumerID:     consumerID,
 		ProviderID:     providerID,
@@ -158,7 +158,7 @@ func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, service
 		ConnectOptions: options,
 	})
 	if err != nil {
-		return contract.ConnectionStatusDTO{}, err
+		return contract.ConnectionInfoDTO{}, err
 	}
 	defer response.Body.Close()
 
@@ -190,7 +190,7 @@ func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStat
 }
 
 // ConnectionStatus returns connection status
-func (client *Client) ConnectionStatus() (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionStatus() (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
 		return status, err

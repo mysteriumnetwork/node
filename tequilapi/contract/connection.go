@@ -31,9 +31,9 @@ import (
 
 var emptyAddress = common.Address{}
 
-// NewConnectionStatusDTO maps to API connection status.
-func NewConnectionStatusDTO(session connectionstate.Status) ConnectionStatusDTO {
-	response := ConnectionStatusDTO{
+// NewConnectionInfoDTO maps to API connection status.
+func NewConnectionInfoDTO(session connectionstate.Status) ConnectionInfoDTO {
+	response := ConnectionInfoDTO{
 		Status:     string(session.State),
 		ConsumerID: session.ConsumerID.Address,
 		SessionID:  string(session.SessionID),
@@ -49,9 +49,9 @@ func NewConnectionStatusDTO(session connectionstate.Status) ConnectionStatusDTO 
 	return response
 }
 
-// ConnectionStatusDTO holds partial consumer connection details.
-// swagger:model ConnectionStatusDTO
-type ConnectionStatusDTO struct {
+// ConnectionInfoDTO holds partial consumer connection details.
+// swagger:model ConnectionInfoDTO
+type ConnectionInfoDTO struct {
 	// example: Connected
 	Status string `json:"status"`
 
@@ -71,7 +71,7 @@ type ConnectionStatusDTO struct {
 // NewConnectionDTO maps to API connection.
 func NewConnectionDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
 	dto := ConnectionDTO{
-		ConnectionStatusDTO: NewConnectionStatusDTO(session),
+		ConnectionInfoDTO: NewConnectionInfoDTO(session),
 	}
 	if !statistics.At.IsZero() {
 		statsDto := NewConnectionStatisticsDTO(session, statistics, throughput, invoice)
@@ -83,7 +83,7 @@ func NewConnectionDTO(session connectionstate.Status, statistics connectionstate
 // ConnectionDTO holds full consumer connection details.
 // swagger:model ConnectionDTO
 type ConnectionDTO struct {
-	ConnectionStatusDTO
+	ConnectionInfoDTO
 	Statistics *ConnectionStatisticsDTO `json:"statistics,omitempty"`
 }
 
