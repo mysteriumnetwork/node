@@ -209,7 +209,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 //   name: body
 //   description: all body parameters a optional
 //   schema:
-//     $ref: "#/definitions/IdentityRegistrationRequestDTO"
+//     $ref: "#/definitions/IdentityRegisterRequestDTO"
 // responses:
 //   200:
 //     description: Payout info registered
@@ -224,7 +224,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	identity := params.ByName("id")
 
-	req := &contract.IdentityRegistrationRequest{}
+	req := &contract.IdentityRegisterRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
