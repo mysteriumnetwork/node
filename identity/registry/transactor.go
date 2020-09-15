@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -227,6 +228,40 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	regReq.Identity = id
 
 	return regReq, nil
+}
+
+// CheckIfRegistrationBountyEligible determines if the identity is eligible for registration bounty
+func (t *Transactor) CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error) {
+	signer := t.signerFactory(identity)
+	message := common.HexToAddress(identity.Address)
+	signature, err := signer.Sign(message.Bytes())
+	if err != nil {
+		return false, err
+	}
+
+	req := pc.ReferralTokenRequest{
+		Identity:  common.HexToAddress(identity.Address),
+		Signature: hex.EncodeToString(signature.Bytes()),
+	}
+
+	request, err := requests.NewPostRequest(t.endpointAddress, "identity/register/bounty", req)
+	if err != nil {
+		return false, fmt.Errorf("failed to create RegisterIdentity request %w", err)
+	}
+
+	resp, err := t.httpClient.Do(request)
+	if err != nil {
+		return false, fmt.Errorf("failed to check bounty status %w", err)
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		return true, nil
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("got unexpected status from bounty check %v", resp.StatusCode)
 }
 
 func (t *Transactor) validateRegisterIdentityRequest(regReq IdentityRegistrationRequest) error {

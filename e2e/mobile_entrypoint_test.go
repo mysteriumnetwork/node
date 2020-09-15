@@ -19,11 +19,11 @@ package e2e
 
 import (
 	"io/ioutil"
-	"math/big"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/mobile/mysterium"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/require"
@@ -45,11 +45,11 @@ func TestMobileNodeConsumer(t *testing.T) {
 		IPDetectorURL:                   "http://ipify:3000/?format=json",
 		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:       "http://transactor:8888/api/v1",
-		TransactorRegistryAddress:       "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
-		TransactorChannelImplementation: "0x599d43715DF3070f83355D9D90AE62c159E62A75",
+		TransactorRegistryAddress:       registryAddress,
+		TransactorChannelImplementation: channelImplementation,
 		HermesEndpointAddress:           "http://hermes:8889/api/v1",
-		HermesID:                        "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8",
-		MystSCAddress:                   "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665",
+		HermesID:                        hermesID,
+		MystSCAddress:                   mystAddress,
 	}
 
 	node, err := mysterium.NewNode(dir, options)
@@ -66,8 +66,11 @@ func TestMobileNodeConsumer(t *testing.T) {
 	t.Run("Test identity registration", func(t *testing.T) {
 		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 		require.NoError(t, err)
+
 		require.NotNil(t, identity)
 		require.Equal(t, "Unregistered", identity.RegistrationStatus)
+
+		topUpConsumer(t, identity.IdentityAddress, common.HexToAddress(options.HermesID), registrationFee)
 
 		err = node.RegisterIdentity(&mysterium.RegisterIdentityRequest{
 			IdentityAddress: identity.IdentityAddress,
@@ -87,7 +90,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
 		require.NoError(t, err)
-		require.Equal(t, crypto.BigMystToFloat(big.NewInt(0).Sub(balanceAfterRegistration, registrationFee)), balance.Balance)
+		require.Equal(t, crypto.BigMystToFloat(balanceAfterRegistration), balance.Balance)
 	})
 
 	t.Run("Test shutdown", func(t *testing.T) {

@@ -38,6 +38,7 @@ type registrationStatusChecker interface {
 type txer interface {
 	FetchRegistrationFees() (FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
+	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
 }
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
@@ -158,23 +159,29 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 		pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 		return nil
 	default:
-		log.Info().Msgf("Provider %q not registered on BC, will register", qe.event.ProviderID)
+		log.Info().Msgf("Provider %q not registered on BC, will check if elgible for auto-registration", qe.event.ProviderID)
 		return pr.registerIdentity(qe)
 	}
 }
 
 func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
-	fees, err := pr.txer.FetchRegistrationFees()
+	eligible, err := pr.txer.CheckIfRegistrationBountyEligible(identity.FromAddress(qe.event.ProviderID))
 	if err != nil {
-		return errors.Wrap(err, "could not fetch fees from transactor")
+		log.Error().Err(err).Msgf("eligibility for registration check failed for %q", qe.event.ProviderID)
+		return errors.Wrap(err, "could not check eligibility for auto-registration")
 	}
-	log.Info().Msgf("Fees fetched. Registration costs %v", fees.Fee)
 
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, fees.Fee, "")
+	if !eligible {
+		log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", qe.event.ProviderID)
+		return nil
+	}
+
+	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "")
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
 	}
+
 	pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 	log.Info().Msgf("Registration success for provider %q", qe.event.ProviderID)
 	return nil
