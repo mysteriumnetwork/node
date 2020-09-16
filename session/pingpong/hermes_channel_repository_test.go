@@ -123,10 +123,12 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	id := identity.FromAddress("0x0000000000000000000000000000000000000001")
 	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
 	expectedPromise1 := HermesPromise{
-		Promise: crypto.Promise{Amount: big.NewInt(7000000)},
+		ChannelID: "1",
+		Promise:   crypto.Promise{Amount: big.NewInt(7000000)},
 	}
 	expectedPromise2 := HermesPromise{
-		Promise: crypto.Promise{Amount: big.NewInt(8000000)},
+		ChannelID: "1",
+		Promise:   crypto.Promise{Amount: big.NewInt(8000000)},
 	}
 	expectedChannelStatus1 := client.ProviderChannel{
 		Balance: big.NewInt(1000000000000),
@@ -151,7 +153,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	assert.NoError(t, err)
 
 	// then
-	expectedChannel1 := NewHermesChannel(id, hermesID, expectedChannelStatus1, expectedPromise1)
+	expectedChannel1 := NewHermesChannel("1", id, hermesID, expectedChannelStatus1, expectedPromise1)
 	assert.Equal(t, expectedChannel1, channel)
 	assert.Eventually(t, func() bool {
 		lastEvent, ok := publisher.Pop().(event.AppEventEarningsChanged)
@@ -167,8 +169,8 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 					UnsettledBalance: big.NewInt(0),
 				},
 				Current: event.Earnings{
-					LifetimeBalance:  expectedChannel1.lifetimeBalance(),
-					UnsettledBalance: expectedChannel1.unsettledBalance(),
+					LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+					UnsettledBalance: expectedChannel1.UnsettledBalance(),
 				},
 			},
 			lastEvent,
@@ -183,7 +185,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	assert.NoError(t, err)
 
 	// then
-	expectedChannel2 := NewHermesChannel(id, hermesID, expectedChannelStatus2, expectedPromise2)
+	expectedChannel2 := NewHermesChannel("1", id, hermesID, expectedChannelStatus2, expectedPromise2)
 	assert.Equal(t, expectedChannel2, channel)
 	assert.Eventually(t, func() bool {
 		lastEvent, ok := publisher.Pop().(event.AppEventEarningsChanged)
@@ -195,12 +197,12 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 			event.AppEventEarningsChanged{
 				Identity: id,
 				Previous: event.Earnings{
-					LifetimeBalance:  expectedChannel1.lifetimeBalance(),
-					UnsettledBalance: expectedChannel1.unsettledBalance(),
+					LifetimeBalance:  expectedChannel1.LifetimeBalance(),
+					UnsettledBalance: expectedChannel1.UnsettledBalance(),
 				},
 				Current: event.Earnings{
-					LifetimeBalance:  expectedChannel2.lifetimeBalance(),
-					UnsettledBalance: expectedChannel2.unsettledBalance(),
+					LifetimeBalance:  expectedChannel2.LifetimeBalance(),
+					UnsettledBalance: expectedChannel2.UnsettledBalance(),
 				},
 			},
 			lastEvent,

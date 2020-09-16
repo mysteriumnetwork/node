@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
@@ -37,11 +38,12 @@ const AppTopicState = "State change"
 
 // State represents the node state at the current moment. It's a read only object, used only to display data.
 type State struct {
-	NATStatus  contract.NATStatusDTO
-	Services   []contract.ServiceInfoDTO
-	Sessions   []session.History
-	Connection Connection
-	Identities []Identity
+	NATStatus        contract.NATStatusDTO
+	Services         []contract.ServiceInfoDTO
+	Sessions         []session.History
+	Connection       Connection
+	Identities       []Identity
+	ProviderChannels []pingpong.HermesChannel
 }
 
 // Identity represents identity and its status.

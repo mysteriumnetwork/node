@@ -207,12 +207,13 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NATStatus     contract.NATStatusDTO     `json:"nat_status"`
-	Services      []contract.ServiceInfoDTO `json:"service_info"`
-	Sessions      []contract.SessionDTO     `json:"sessions"`
-	SessionsStats contract.SessionStatsDTO  `json:"sessions_stats"`
-	Consumer      consumerStateRes          `json:"consumer"`
-	Identities    []contract.IdentityDTO    `json:"identities"`
+	NATStatus     contract.NATStatusDTO        `json:"nat_status"`
+	Services      []contract.ServiceInfoDTO    `json:"service_info"`
+	Sessions      []contract.SessionDTO        `json:"sessions"`
+	SessionsStats contract.SessionStatsDTO     `json:"sessions_stats"`
+	Consumer      consumerStateRes             `json:"consumer"`
+	Identities    []contract.IdentityDTO       `json:"identities"`
+	Channels      []contract.PaymentChannelDTO `json:"channels"`
 }
 
 type consumerStateRes struct {
@@ -233,6 +234,11 @@ func mapState(event stateEvent.State) stateRes {
 		}
 	}
 
+	channelsRes := make([]contract.PaymentChannelDTO, len(event.ProviderChannels))
+	for idx, channel := range event.ProviderChannels {
+		channelsRes[idx] = contract.NewPaymentChannelDTO(channel)
+	}
+
 	sessionsRes := make([]contract.SessionDTO, len(event.Sessions))
 	sessionsStats := session.NewStats()
 	for idx, se := range event.Sessions {
@@ -249,6 +255,7 @@ func mapState(event stateEvent.State) stateRes {
 			Connection: contract.NewConnectionDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice),
 		},
 		Identities: identitiesRes,
+		Channels:   channelsRes,
 	}
 	return res
 }

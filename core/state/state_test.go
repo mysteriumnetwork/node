@@ -148,6 +148,7 @@ func Test_ConsumesNATEvents(t *testing.T) {
 		Publisher:         publisher,
 		ServiceLister:     sl,
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -182,6 +183,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 	deps := KeeperDeps{
 		Publisher:        eventBus,
 		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
@@ -236,6 +238,7 @@ func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
 	deps := KeeperDeps{
 		Publisher:        eventBus,
 		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
@@ -269,6 +272,7 @@ func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
 	deps := KeeperDeps{
 		Publisher:        eventBus,
 		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
@@ -301,6 +305,7 @@ func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
 	deps := KeeperDeps{
 		Publisher:        eventBus,
 		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	keeper.Subscribe(eventBus)
@@ -348,6 +353,7 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 		Publisher:         publisher,
 		ServiceLister:     sl,
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -376,6 +382,7 @@ func Test_ConsumesConnectionStateEvents(t *testing.T) {
 		Publisher:         eventBus,
 		ServiceLister:     &serviceListerMock{},
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -408,6 +415,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 		Publisher:         eventBus,
 		ServiceLister:     &serviceListerMock{},
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -438,6 +446,7 @@ func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 		Publisher:         eventBus,
 		ServiceLister:     &serviceListerMock{},
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -493,6 +502,12 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
+	channelsProvider := &mockEarningsProvider{
+		Channels: []pingpong.HermesChannel{
+			{ChannelID: "1"},
+		},
+	}
+
 	deps := KeeperDeps{
 		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
 		Publisher:         eventBus,
@@ -505,14 +520,20 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
 		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
-		EarningsProvider:          &mockEarningsProvider{},
+		EarningsProvider:          channelsProvider,
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
 	assert.Zero(t, keeper.GetState().Identities[0].Balance.Uint64())
+	assert.Len(t, keeper.GetState().ProviderChannels, 1)
+	assert.Equal(t, channelsProvider.Channels, keeper.GetState().ProviderChannels)
 
 	// when
+	channelsProvider.Channels = []pingpong.HermesChannel{
+		{ChannelID: "1"},
+		{ChannelID: "2"},
+	}
 	eventBus.Publish(pingpongEvent.AppTopicEarningsChanged, pingpongEvent.AppEventEarningsChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
 		Previous: pingpongEvent.Earnings{},
@@ -523,6 +544,8 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		return keeper.GetState().Identities[0].Earnings.Cmp(big.NewInt(10)) == 0 && keeper.GetState().Identities[0].EarningsTotal.Cmp(big.NewInt(100)) == 0
 	}, 2*time.Second, 10*time.Millisecond)
+	assert.Len(t, keeper.GetState().ProviderChannels, 2)
+	assert.Equal(t, channelsProvider.Channels, keeper.GetState().ProviderChannels)
 }
 
 func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
@@ -575,6 +598,7 @@ func Test_getServiceByID(t *testing.T) {
 		Publisher:         publisher,
 		ServiceLister:     sl,
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -612,6 +636,7 @@ func Test_incrementConnectionCount(t *testing.T) {
 		Publisher:         publisher,
 		ServiceLister:     sl,
 		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
@@ -652,6 +677,12 @@ func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) *big.Int {
 
 type mockEarningsProvider struct {
 	Earnings pingpongEvent.Earnings
+	Channels []pingpong.HermesChannel
+}
+
+// List retrieves identity's channels with all known hermeses.
+func (mep *mockEarningsProvider) List() []pingpong.HermesChannel {
+	return mep.Channels
 }
 
 // GetEarnings returns a pre-defined settlement state.

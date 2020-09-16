@@ -26,8 +26,9 @@ import (
 )
 
 // NewHermesChannel creates HermesChannel model.
-func NewHermesChannel(id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise HermesPromise) HermesChannel {
+func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Address, channel client.ProviderChannel, promise HermesPromise) HermesChannel {
 	return HermesChannel{
+		ChannelID:   channelID,
 		Identity:    id,
 		HermesID:    hermesID,
 		channel:     channel,
@@ -37,22 +38,23 @@ func NewHermesChannel(id identity.Identity, hermesID common.Address, channel cli
 
 // HermesChannel represents opened payment channel between identity and hermes.
 type HermesChannel struct {
+	ChannelID   string
 	Identity    identity.Identity
 	HermesID    common.Address
 	channel     client.ProviderChannel
 	lastPromise HermesPromise
 }
 
-// lifetimeBalance returns earnings of all history.
-func (hc HermesChannel) lifetimeBalance() *big.Int {
+// LifetimeBalance returns earnings of all history.
+func (hc HermesChannel) LifetimeBalance() *big.Int {
 	if hc.lastPromise.Promise.Amount == nil {
 		return new(big.Int)
 	}
 	return hc.lastPromise.Promise.Amount
 }
 
-// unsettledBalance returns current unsettled earnings.
-func (hc HermesChannel) unsettledBalance() *big.Int {
+// UnsettledBalance returns current unsettled earnings.
+func (hc HermesChannel) UnsettledBalance() *big.Int {
 	settled := new(big.Int)
 	if hc.channel.Settled != nil {
 		settled = hc.channel.Settled

@@ -151,7 +151,8 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
         "status": ""
       }
     },
-    "identities": []
+    "identities": [],
+    "channels": []
   },
   "type": "state-change"
 }`
@@ -189,7 +190,8 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
         "status": ""
       }
     },
-    "identities": []
+    "identities": [],
+	"channels": []
   },
   "type": "state-change"
 }`
@@ -244,7 +246,8 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 		"earnings_total": 100,
 		"stake": 0
       }
-    ]
+    ],
+    "channels": []
   },
   "type": "state-change"
 }`

@@ -38,7 +38,7 @@ func TestHermesChannel_balance(t *testing.T) {
 	}
 	assert.Equal(t, big.NewInt(110), channel.availableBalance())
 	assert.Equal(t, big.NewInt(95), channel.balance())
-	assert.Equal(t, big.NewInt(5), channel.unsettledBalance())
+	assert.Equal(t, big.NewInt(5), channel.UnsettledBalance())
 
 	channel = HermesChannel{
 		channel: client.ProviderChannel{
@@ -51,5 +51,5 @@ func TestHermesChannel_balance(t *testing.T) {
 	}
 	assert.Equal(t, big.NewInt(110), channel.availableBalance())
 	assert.Equal(t, big.NewInt(94), channel.balance())
-	assert.Equal(t, big.NewInt(6), channel.unsettledBalance())
+	assert.Equal(t, big.NewInt(6), channel.UnsettledBalance())
 }
