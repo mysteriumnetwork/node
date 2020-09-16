@@ -242,7 +242,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 
 	req := &contract.SettleWithBeneficiaryRequest{}
@@ -469,7 +469,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
 	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
-	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
+	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)
