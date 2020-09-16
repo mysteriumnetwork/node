@@ -78,7 +78,7 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //   200:
 //     description: List of sessions
 //     schema:
-//       "$ref": "#/definitions/ListSessionsResponse"
+//       "$ref": "#/definitions/SessionListResponse"
 //   400:
 //     description: Bad request
 //     schema:

@@ -93,12 +93,12 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	handlerFunc := NewSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := contract.ListSessionsResponse{}
+	parsedResponse := contract.SessionListResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
 	assert.EqualValues(
 		t,
-		contract.ListSessionsResponse{
+		contract.SessionListResponse{
 			Sessions: []contract.SessionDTO{
 				contract.NewSessionDTO(connectionSessionMock),
 			},

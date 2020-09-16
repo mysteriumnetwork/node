@@ -327,7 +327,7 @@ func (client *Client) Stop() error {
 }
 
 // Sessions returns all sessions from history
-func (client *Client) Sessions() (sessions contract.ListSessionsResponse, err error) {
+func (client *Client) Sessions() (sessions contract.SessionListResponse, err error) {
 	response, err := client.http.Get("sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -339,14 +339,14 @@ func (client *Client) Sessions() (sessions contract.ListSessionsResponse, err er
 }
 
 // SessionsByServiceType returns sessions from history filtered by type
-func (client *Client) SessionsByServiceType(serviceType string) (contract.ListSessionsResponse, error) {
+func (client *Client) SessionsByServiceType(serviceType string) (contract.SessionListResponse, error) {
 	sessions, err := client.Sessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
 // SessionsByStatus returns sessions from history filtered by their status
-func (client *Client) SessionsByStatus(status string) (contract.ListSessionsResponse, error) {
+func (client *Client) SessionsByStatus(status string) (contract.SessionListResponse, error) {
 	sessions, err := client.Sessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
@@ -413,7 +413,7 @@ func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 }
 
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
+func filterSessionsByType(serviceType string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.ServiceType == serviceType {
@@ -426,7 +426,7 @@ func filterSessionsByType(serviceType string, sessions contract.ListSessionsResp
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
+func filterSessionsByStatus(status string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.Status == status {

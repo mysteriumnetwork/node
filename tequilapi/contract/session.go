@@ -31,13 +31,13 @@ func NewSessionListResponse(
 	paginator *paginator.Paginator,
 	stats session.Stats,
 	statsDaily map[time.Time]session.Stats,
-) ListSessionsResponse {
+) SessionListResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = NewSessionDTO(se)
 	}
 
-	return ListSessionsResponse{
+	return SessionListResponse{
 		Sessions:   dtoArray,
 		Paging:     NewPagingDTO(paginator),
 		Stats:      NewSessionStatsDTO(stats),
@@ -45,9 +45,9 @@ func NewSessionListResponse(
 	}
 }
 
-// ListSessionsResponse defines session list representable as json.
-// swagger:model ListSessionsResponse
-type ListSessionsResponse struct {
+// SessionListResponse defines session list representable as json.
+// swagger:model SessionListResponse
+type SessionListResponse struct {
 	Sessions   []SessionDTO               `json:"sessions"`
 	Paging     PagingDTO                  `json:"paging"`
 	Stats      SessionStatsDTO            `json:"stats"`
