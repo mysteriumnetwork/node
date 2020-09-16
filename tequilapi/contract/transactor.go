@@ -38,21 +38,21 @@ type FeesDTO struct {
 func NewSettlementListResponse(
 	settlements []pingpong.SettlementHistoryEntry,
 	paginator *paginator.Paginator,
-) ListSettlementsResponse {
+) SettlementListResponse {
 	dtoArray := make([]SettlementDTO, len(settlements))
 	for i, settlement := range settlements {
 		dtoArray[i] = NewSettlementDTO(settlement)
 	}
 
-	return ListSettlementsResponse{
+	return SettlementListResponse{
 		Settlements: dtoArray,
 		Pagination:  NewPaginationDTO(paginator),
 	}
 }
 
-// ListSettlementsResponse defines settlement list representable as json.
-// swagger:model ListSettlementsResponse
-type ListSettlementsResponse struct {
+// SettlementListResponse defines settlement list representable as json.
+// swagger:model SettlementListResponse
+type SettlementListResponse struct {
 	Settlements []SettlementDTO `json:"settlements"`
 	Pagination  PaginationDTO   `json:"pagination"`
 }

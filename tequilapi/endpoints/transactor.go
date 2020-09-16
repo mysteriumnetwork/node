@@ -287,7 +287,7 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 //   200:
 //     description: Returns settlement history
 //     schema:
-//       "$ref": "#/definitions/ListSettlementsResponse"
+//       "$ref": "#/definitions/SettlementListResponse"
 //   400:
 //     description: Bad request
 //     schema:
