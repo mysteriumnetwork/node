@@ -59,9 +59,9 @@ type ServiceAccessPolicies struct {
 	IDs []string `json:"ids"`
 }
 
-// ListServicesResponse represents a list of running services on the node.
-// swagger:model ListServicesResponse
-type ListServicesResponse []ServiceInfoDTO
+// ServiceListResponse represents a list of running services on the node.
+// swagger:model ServiceListResponse
+type ServiceListResponse []ServiceInfoDTO
 
 // ServiceInfoDTO represents running service information.
 // swagger:model ServiceInfoDTO

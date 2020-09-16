@@ -55,7 +55,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 }
 
 // ServiceList provides a list of running services on the node.
-// swagger:operation GET /services Service ListServicesResponse
+// swagger:operation GET /services Service ServiceListResponse
 // ---
 // summary: List of services
 // description: ServiceList provides a list of running services on the node.
@@ -63,7 +63,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //   200:
 //     description: List of running services
 //     schema:
-//       "$ref": "#/definitions/ListServicesResponse"
+//       "$ref": "#/definitions/ServiceListResponse"
 func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	instances := se.serviceManager.List()
 
@@ -297,7 +297,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) contract.S
 	}
 }
 
-func toServiceListResponse(instances map[service.ID]*service.Instance) contract.ListServicesResponse {
+func toServiceListResponse(instances map[service.ID]*service.Instance) contract.ServiceListResponse {
 	res := make([]contract.ServiceInfoDTO, 0)
 	for id, instance := range instances {
 		res = append(res, toServiceInfoResponse(id, instance))

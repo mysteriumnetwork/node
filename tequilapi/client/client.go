@@ -353,7 +353,7 @@ func (client *Client) SessionsByStatus(status string) (contract.SessionListRespo
 }
 
 // Services returns all running services
-func (client *Client) Services() (services contract.ListServicesResponse, err error) {
+func (client *Client) Services() (services contract.ServiceListResponse, err error) {
 	response, err := client.http.Get("services", url.Values{})
 	if err != nil {
 		return services, err
