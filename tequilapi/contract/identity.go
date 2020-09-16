@@ -138,5 +138,5 @@ type IdentityRegistrationResponse struct {
 // IdentityBeneficiaryResponse represents the provider beneficiary address.
 // swagger:model IdentityBeneficiaryResponseDTO
 type IdentityBeneficiaryResponse struct {
-	Beneficiary string `json:"Beneficiary"`
+	Beneficiary string `json:"beneficiary"`
 }
