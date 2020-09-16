@@ -46,7 +46,7 @@ func NewSettlementListResponse(
 
 	return ListSettlementsResponse{
 		Settlements: dtoArray,
-		Paging:      NewPagingDTO(paginator),
+		Pagination:  NewPaginationDTO(paginator),
 	}
 }
 
@@ -54,7 +54,7 @@ func NewSettlementListResponse(
 // swagger:model ListSettlementsResponse
 type ListSettlementsResponse struct {
 	Settlements []SettlementDTO `json:"settlements"`
-	Paging      PagingDTO       `json:"paging"`
+	Pagination  PaginationDTO   `json:"pagination"`
 }
 
 // NewSettlementDTO maps to API settlement.

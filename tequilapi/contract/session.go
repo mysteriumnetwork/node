@@ -39,7 +39,7 @@ func NewSessionListResponse(
 
 	return SessionListResponse{
 		Sessions:   dtoArray,
-		Paging:     NewPagingDTO(paginator),
+		Pagination: NewPaginationDTO(paginator),
 		Stats:      NewSessionStatsDTO(stats),
 		StatsDaily: NewSessionStatsDailyDTO(statsDaily),
 	}
@@ -49,7 +49,7 @@ func NewSessionListResponse(
 // swagger:model SessionListResponse
 type SessionListResponse struct {
 	Sessions   []SessionDTO               `json:"sessions"`
-	Paging     PagingDTO                  `json:"paging"`
+	Pagination PaginationDTO              `json:"pagination"`
 	Stats      SessionStatsDTO            `json:"stats"`
 	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
 }

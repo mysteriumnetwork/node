@@ -21,9 +21,9 @@ import (
 	"github.com/vcraescu/go-paginator"
 )
 
-// NewPagingDTO maps to API paging DTO.
-func NewPagingDTO(paginator *paginator.Paginator) PagingDTO {
-	dto := PagingDTO{
+// NewPaginationDTO maps to API pagination DTO.
+func NewPaginationDTO(paginator *paginator.Paginator) PaginationDTO {
+	dto := PaginationDTO{
 		TotalItems:  paginator.Nums(),
 		TotalPages:  paginator.PageNums(),
 		CurrentPage: paginator.Page(),
@@ -37,9 +37,9 @@ func NewPagingDTO(paginator *paginator.Paginator) PagingDTO {
 	return dto
 }
 
-// PagingDTO holds paging information.
-// swagger:model PagingDTO
-type PagingDTO struct {
+// PaginationDTO holds pagination information.
+// swagger:model PaginationDTO
+type PaginationDTO struct {
 	// The total results.
 	TotalItems int `json:"total_items"`
 	// The last page of the results.

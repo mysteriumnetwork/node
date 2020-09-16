@@ -118,7 +118,7 @@
           "200": {
             "description": "Status",
             "schema": {
-              "$ref": "#/definitions/ConnectionStatusDTO"
+              "$ref": "#/definitions/ConnectionInfoDTO"
             }
           },
           "500": {
@@ -150,7 +150,7 @@
           "201": {
             "description": "Connection started",
             "schema": {
-              "$ref": "#/definitions/ConnectionStatusDTO"
+              "$ref": "#/definitions/ConnectionInfoDTO"
             }
           },
           "400": {
@@ -699,7 +699,7 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/IdentityRegistrationRequestDTO"
+              "$ref": "#/definitions/IdentityRegisterRequestDTO"
             }
           }
         ],
@@ -1190,7 +1190,7 @@
           "200": {
             "description": "List of sessions",
             "schema": {
-              "$ref": "#/definitions/ListSessionsResponse"
+              "$ref": "#/definitions/SessionListResponse"
             }
           },
           "400": {
@@ -1703,6 +1703,36 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "ConnectionInfoDTO": {
+      "type": "object",
+      "title": "ConnectionInfoDTO holds partial consumer connection details.",
+      "properties": {
+        "consumer_id": {
+          "type": "string",
+          "x-go-name": "ConsumerID",
+          "example": "0x00"
+        },
+        "hermes_id": {
+          "type": "string",
+          "x-go-name": "HermesID",
+          "example": "0x00"
+        },
+        "proposal": {
+          "$ref": "#/definitions/ProposalDTO"
+        },
+        "session_id": {
+          "type": "string",
+          "x-go-name": "SessionID",
+          "example": "4cfb0324-daf6-4ad8-448b-e61fe0a1f918"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status",
+          "example": "Connected"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "ConnectionStatisticsDTO": {
       "type": "object",
       "title": "ConnectionStatisticsDTO holds consumer connection statistics.",
@@ -1742,36 +1772,6 @@
         },
         "tokens_spent": {
           "$ref": "#/definitions/Int"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ConnectionStatusDTO": {
-      "type": "object",
-      "title": "ConnectionStatusDTO holds partial consumer connection details.",
-      "properties": {
-        "consumer_id": {
-          "type": "string",
-          "x-go-name": "ConsumerID",
-          "example": "0x00"
-        },
-        "hermes_id": {
-          "type": "string",
-          "x-go-name": "HermesID",
-          "example": "0x00"
-        },
-        "proposal": {
-          "$ref": "#/definitions/ProposalDTO"
-        },
-        "session_id": {
-          "type": "string",
-          "x-go-name": "SessionID",
-          "example": "4cfb0324-daf6-4ad8-448b-e61fe0a1f918"
-        },
-        "status": {
-          "type": "string",
-          "x-go-name": "Status",
-          "example": "Connected"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -1937,8 +1937,9 @@
       "type": "object",
       "title": "IdentityBeneficiaryResponse represents the provider beneficiary address.",
       "properties": {
-        "Beneficiary": {
-          "type": "string"
+        "beneficiary": {
+          "type": "string",
+          "x-go-name": "Beneficiary"
         }
       },
       "x-go-name": "IdentityBeneficiaryResponse",
@@ -2024,8 +2025,8 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "IdentityRegistrationRequestDTO": {
-      "description": "IdentityRegistrationRequest represents the identity registration user input parameters",
+    "IdentityRegisterRequestDTO": {
+      "description": "IdentityRegisterRequest represents the identity registration user input parameters",
       "type": "object",
       "properties": {
         "beneficiary": {
@@ -2040,7 +2041,7 @@
           "$ref": "#/definitions/Int"
         }
       },
-      "x-go-name": "IdentityRegistrationRequest",
+      "x-go-name": "IdentityRegisterRequest",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "IdentityRegistrationResponseDTO": {
@@ -2114,39 +2115,12 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ListSessionsResponse": {
-      "type": "object",
-      "title": "ListSessionsResponse defines session list representable as json.",
-      "properties": {
-        "paging": {
-          "$ref": "#/definitions/PagingDTO"
-        },
-        "sessions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SessionDTO"
-          },
-          "x-go-name": "Sessions"
-        },
-        "stats": {
-          "$ref": "#/definitions/SessionStatsDTO"
-        },
-        "stats_daily": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/SessionStatsDTO"
-          },
-          "x-go-name": "StatsDaily"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "ListSettlementsResponse": {
       "type": "object",
       "title": "ListSettlementsResponse defines settlement list representable as json.",
       "properties": {
-        "paging": {
-          "$ref": "#/definitions/PagingDTO"
+        "pagination": {
+          "$ref": "#/definitions/PaginationDTO"
         },
         "settlements": {
           "type": "array",
@@ -2268,9 +2242,9 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "PagingDTO": {
+    "PaginationDTO": {
       "type": "object",
-      "title": "PagingDTO holds paging information.",
+      "title": "PaginationDTO holds pagination information.",
       "properties": {
         "current_page": {
           "description": "The previous page of the results.",
@@ -2812,6 +2786,33 @@
         },
         "tokens": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionListResponse": {
+      "type": "object",
+      "title": "SessionListResponse defines session list representable as json.",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PaginationDTO"
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SessionDTO"
+          },
+          "x-go-name": "Sessions"
+        },
+        "stats": {
+          "$ref": "#/definitions/SessionStatsDTO"
+        },
+        "stats_daily": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/SessionStatsDTO"
+          },
+          "x-go-name": "StatsDaily"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

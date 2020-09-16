@@ -266,7 +266,7 @@ func Test_SettleHistory(t *testing.T) {
 						"settled_at": "2020-06-07T08:09:10Z"
 					}
 				],
-				"paging": {
+				"pagination": {
 					"total_items": 2,
 					"total_pages": 1,
 					"current_page": 1,
