@@ -74,6 +74,12 @@ func NewLocationsDTO(l market.Location) ServiceLocationDTO {
 	}
 }
 
+// ListProposalsResponse holds list of proposals.
+// swagger:model ListProposalsResponse
+type ListProposalsResponse struct {
+	Proposals []ProposalDTO `json:"proposals"`
+}
+
 // ProposalDTO holds service proposal details.
 // swagger:model ProposalDTO
 type ProposalDTO struct {
