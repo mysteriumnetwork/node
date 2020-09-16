@@ -144,10 +144,10 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 //   200:
 //     description: List of quality metrics
 //     schema:
-//       "$ref": "#/definitions/QualityMetricsDTO"
+//       "$ref": "#/definitions/ProposalMetricsResponse"
 func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	metrics := pe.qualityProvider.ProposalsMetrics()
-	utils.WriteAsJSON(mapQualityMetrics(metrics), resp)
+	utils.WriteAsJSON(contract.NewProposalMetricsResponse(metrics), resp)
 }
 
 func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
@@ -179,34 +179,8 @@ func addProposalMetrics(proposals []contract.ProposalDTO, metrics []quality.Conn
 
 	for i, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			proposalMetrics := mapQualityMetric(mc)
+			proposalMetrics := contract.NewQualityMetricsDTO(mc)
 			proposals[i].Metrics = &proposalMetrics
 		}
-	}
-}
-
-func mapQualityMetrics(metrics []quality.ConnectMetric) contract.ProposalsQualityMetricsResponse {
-	var res []contract.QualityMetricsResponse
-	for _, m := range metrics {
-		res = append(res, contract.QualityMetricsResponse{
-			ProviderID:         m.ProposalID.ProviderID,
-			ServiceType:        m.ProposalID.ServiceType,
-			ProposalMetricsDTO: mapQualityMetric(m),
-		})
-	}
-
-	return contract.ProposalsQualityMetricsResponse{
-		Metrics: res,
-	}
-}
-
-func mapQualityMetric(m quality.ConnectMetric) contract.ProposalMetricsDTO {
-	return contract.ProposalMetricsDTO{
-		MonitoringFailed: m.MonitoringFailed,
-		ConnectCount: contract.ProposalMetricConnectsDTO{
-			Success: m.ConnectCount.Success,
-			Timeout: m.ConnectCount.Timeout,
-			Fail:    m.ConnectCount.Fail,
-		},
 	}
 }
