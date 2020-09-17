@@ -92,7 +92,7 @@ type exchangeMock struct {
 	valToReturn float64
 	errToReturn error
 }
-	
+
 func (me *exchangeMock) DaiToMyst() (float64, error) {
 	return me.valToReturn, me.errToReturn
 }
