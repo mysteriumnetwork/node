@@ -141,6 +141,8 @@ func GetOptions() *Options {
 			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
 			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
 			MystSCAddress:                  config.GetString(config.FlagPaymentsMystSCAddress),
+			WethAddress:                    config.GetString(config.FlagPaymentsWethAddress),
+			DaiAddress:                     config.GetString(config.FlagPaymentsDaiAddress),
 			ConsumerUpperGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound),
 			ConsumerLowerGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound),
 			ConsumerUpperMinutePriceBound:  config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound),

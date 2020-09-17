@@ -25,7 +25,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/money"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
@@ -79,6 +81,7 @@ import (
 	"github.com/mysteriumnetwork/node/utils/netutil"
 
 	paymentClient "github.com/mysteriumnetwork/payments/client"
+	"github.com/mysteriumnetwork/payments/uniswap"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -98,6 +101,7 @@ type Dependencies struct {
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
 	EtherClient       *paymentClient.ReconnectableEthClient
+	Exchange          *money.Exchange
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -531,6 +535,16 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
+	uniswapClient := money.NewUniswapClient(func(c *ethclient.Client) *uniswap.Client {
+		return uniswap.NewClient(c)
+	}, di.EtherClient)
+	di.Exchange = money.NewExchange(
+		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
+		common.HexToAddress(nodeOptions.Payments.DaiAddress),
+		common.HexToAddress(nodeOptions.Payments.WethAddress),
+		uniswapClient,
+	)
+
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
 		return err
@@ -566,6 +580,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForMMN(router, di.MMN)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
+	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.Exchange)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}

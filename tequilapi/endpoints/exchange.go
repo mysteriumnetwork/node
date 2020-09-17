@@ -41,7 +41,7 @@ func NewExchangeEndpoint(ex exchange) *exchangeEndpoint {
 	}
 }
 
-// swagger:operation GET /myst/dai myst price in dai
+// swagger:operation GET /exchange/myst/dai myst price in dai
 // ---
 // summary: Returns the myst price in dai
 // description: Returns the myst price in dai
@@ -69,7 +69,7 @@ func (e *exchangeEndpoint) MystToDai(writer http.ResponseWriter, request *http.R
 	utils.WriteAsJSON(status, writer)
 }
 
-// swagger:operation GET /dai/myst dai price in myst
+// swagger:operation GET /exchange/dai/myst dai price in myst
 // ---
 // summary: Returns the dai price in myst
 // description: Returns the dai price in myst
@@ -95,4 +95,11 @@ func (e *exchangeEndpoint) DaiToMyst(writer http.ResponseWriter, request *http.R
 	}
 
 	utils.WriteAsJSON(status, writer)
+}
+
+// AddRoutesForCurrencyExchange attaches exchange endpoints to router.
+func AddRoutesForCurrencyExchange(router *httprouter.Router, exchange exchange) {
+	e := NewExchangeEndpoint(exchange)
+	router.GET("/exchange/myst/dai", e.MystToDai)
+	router.GET("/exchange/dai/myst", e.DaiToMyst)
 }

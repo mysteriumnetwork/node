@@ -29,6 +29,8 @@ type OptionsPayments struct {
 	HermesPromiseSettlingThreshold float64
 	SettlementTimeout              time.Duration
 	MystSCAddress                  string
+	WethAddress                    string
+	DaiAddress                     string
 	ConsumerUpperGBPriceBound      *big.Int
 	ConsumerLowerGBPriceBound      *big.Int
 	ConsumerUpperMinutePriceBound  *big.Int

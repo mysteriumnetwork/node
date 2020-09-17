@@ -21,7 +21,9 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/mysteriumnetwork/payments/uniswap"
 )
 
 type uniswapClient interface {
@@ -66,4 +68,30 @@ func (e *Exchange) DaiToMyst() (float64, error) {
 		return 0, err
 	}
 	return crypto.BigMystToFloat(resultingMyst), nil
+}
+
+type uniswapClientFactory func(*ethclient.Client) *uniswap.Client
+
+// UniswapClient wraps a payment uniswap client to use with nodes reconnectable eth client.
+type UniswapClient struct {
+	uniswapClientFactory   uniswapClientFactory
+	reconnectableEthClient reconnectableEthClient
+}
+
+// GetExchangeAmountForPath wraps the payment clients GetExchangeAmountForPath method.
+func (uc *UniswapClient) GetExchangeAmountForPath(amount *big.Int, tokens ...common.Address) (*big.Int, error) {
+	c := uc.uniswapClientFactory(uc.reconnectableEthClient.Client())
+	return c.GetExchangeAmountForPath(amount, tokens...)
+}
+
+type reconnectableEthClient interface {
+	Client() *ethclient.Client
+}
+
+// NewUniswapClient returns a new uniswap client.
+func NewUniswapClient(uniswapClientFactory uniswapClientFactory, reconnectableEthClient reconnectableEthClient) *UniswapClient {
+	return &UniswapClient{
+		uniswapClientFactory:   uniswapClientFactory,
+		reconnectableEthClient: reconnectableEthClient,
+	}
 }

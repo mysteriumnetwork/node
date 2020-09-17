@@ -17,7 +17,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20200620013148-b91950f658ec // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
-	github.com/ethereum/go-ethereum v1.9.15
+	github.com/ethereum/go-ethereum v1.9.21
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gin-contrib/cors v1.3.0
@@ -45,14 +45,12 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
 	github.com/mysteriumnetwork/metrics v0.0.5-0.20200727121404-e0e3ff9e787d
-	github.com/mysteriumnetwork/payments v0.0.14-0.20200904100631-2b76aa4e327c
+	github.com/mysteriumnetwork/payments v0.0.14-0.20200916122855-2fe1941a9c5a
 	github.com/nats-io/nats-server/v2 v2.1.7
 	github.com/nats-io/nats.go v1.10.0
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
-	github.com/onsi/ginkgo v1.11.0 // indirect
-	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
@@ -74,11 +72,10 @@ require (
 	go.etcd.io/bbolt v1.3.4
 	go.mongodb.org/mongo-driver v1.1.1
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
