@@ -20,10 +20,12 @@ package check
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/commands"
+	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/packages"
 )
 
@@ -62,29 +64,52 @@ func CheckSwagger() error {
 	return nil
 }
 
+var checkGenerateExcludes = []string{
+	"tequilapi/endpoints/assets/docs.go",
+}
+
 // CheckGenerate checks whether dynamic project parts are updated properly.
 func CheckGenerate() error {
-	filesBefore, err := sh.Output("git", "status", "--short")
-	if err != nil {
-		return fmt.Errorf("could retrieve changed files: %w", err)
-	}
-	fmt.Println("Uncommitted files:")
+	filesBefore, err := getUncommittedFiles()
+	fmt.Println("Uncommitted files (before):")
 	fmt.Println(filesBefore)
+	fmt.Println()
 
 	mg.Deps(packages.Generate)
 
-	filesAfter, err := sh.Output("git", "status", "--short")
+	filesAfter, err := getUncommittedFiles()
 	if err != nil {
 		return fmt.Errorf("could retrieve changed files: %w", err)
 	}
-	fmt.Printf("Generated files")
+	fmt.Println("Uncommitted files (after):")
 	fmt.Println(filesAfter)
+	fmt.Println()
 
-	if filesBefore != filesAfter {
-		fmt.Println(`These files needs review with "mage generate":`)
+	if len(filesBefore) != len(filesAfter) {
+		fmt.Println(`Files below needs review with "mage generate"`)
 		return errors.New("not all dynamic files are up-to-date")
 	}
 
 	fmt.Println("Dynamic files are up-to-date")
 	return nil
+}
+
+func getUncommittedFiles() ([]string, error) {
+	filesAll, err := sh.Output("git", "diff", "HEAD", "--name-only")
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve changed files: %w", err)
+	}
+
+	files := make([]string, 0)
+	for _, file := range strings.Split(filesAll, "\n") {
+		if file == "" {
+			continue
+		}
+		if util.IsPathExcluded(checkGenerateExcludes, file) {
+			continue
+		}
+		files = append(files, file)
+	}
+
+	return files, nil
 }
