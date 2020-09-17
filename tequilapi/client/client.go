@@ -415,26 +415,26 @@ func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 // filterSessionsByType removes all sessions of irrelevant types
 func filterSessionsByType(serviceType string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
-	for _, s := range sessions.Sessions {
+	for _, s := range sessions.Items {
 		if s.ServiceType == serviceType {
-			sessions.Sessions[matches] = s
+			sessions.Items[matches] = s
 			matches++
 		}
 	}
-	sessions.Sessions = sessions.Sessions[:matches]
+	sessions.Items = sessions.Items[:matches]
 	return sessions
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
 func filterSessionsByStatus(status string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
-	for _, s := range sessions.Sessions {
+	for _, s := range sessions.Items {
 		if s.Status == status {
-			sessions.Sessions[matches] = s
+			sessions.Items[matches] = s
 			matches++
 		}
 	}
-	sessions.Sessions = sessions.Sessions[:matches]
+	sessions.Items = sessions.Items[:matches]
 	return sessions
 }
 

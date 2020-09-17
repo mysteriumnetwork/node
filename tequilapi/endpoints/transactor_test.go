@@ -246,7 +246,7 @@ func Test_SettleHistory(t *testing.T) {
 		assert.JSONEq(
 			t,
 			`{
-				"settlements": [
+				"items": [
 					{
 						"tx_hash": "0x88af51047ff2da1e3626722fe239f70c3ddd668f067b2ac8d67b280d2eff39f7",
 						"provider_id": "",
@@ -266,12 +266,10 @@ func Test_SettleHistory(t *testing.T) {
 						"settled_at": "2020-06-07T08:09:10Z"
 					}
 				],
-				"pagination": {
-					"page": 1,
-					"page_size": 50,
-					"total_items": 2,
-					"total_pages": 1
-				}
+				"page": 1,
+				"page_size": 50,
+				"total_items": 2,
+				"total_pages": 1
 			}`,
 			resp.Body.String(),
 		)

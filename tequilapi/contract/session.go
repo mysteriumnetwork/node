@@ -38,18 +38,18 @@ func NewSessionListResponse(
 	}
 
 	return SessionListResponse{
-		Sessions:   dtoArray,
-		Pagination: NewPaginationDTO(paginator),
-		Stats:      NewSessionStatsDTO(stats),
-		StatsDaily: NewSessionStatsDailyDTO(statsDaily),
+		Items:       dtoArray,
+		PageableDTO: NewPageableDTO(paginator),
+		Stats:       NewSessionStatsDTO(stats),
+		StatsDaily:  NewSessionStatsDailyDTO(statsDaily),
 	}
 }
 
 // SessionListResponse defines session list representable as json.
 // swagger:model SessionListResponse
 type SessionListResponse struct {
-	Sessions   []SessionDTO               `json:"sessions"`
-	Pagination PaginationDTO              `json:"pagination"`
+	Items []SessionDTO `json:"items"`
+	PageableDTO
 	Stats      SessionStatsDTO            `json:"stats"`
 	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
 }

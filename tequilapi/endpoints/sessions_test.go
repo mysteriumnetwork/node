@@ -99,10 +99,10 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	assert.EqualValues(
 		t,
 		contract.SessionListResponse{
-			Sessions: []contract.SessionDTO{
+			Items: []contract.SessionDTO{
 				contract.NewSessionDTO(connectionSessionMock),
 			},
-			Pagination: contract.PaginationDTO{
+			PageableDTO: contract.PageableDTO{
 				Page:       1,
 				PageSize:   50,
 				TotalItems: 1,

@@ -2217,9 +2217,9 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "PaginationDTO": {
+    "PageableDTO": {
       "type": "object",
-      "title": "PaginationDTO holds pagination information.",
+      "title": "PageableDTO holds pagination information.",
       "properties": {
         "page": {
           "description": "The current page of the items.",
@@ -2770,15 +2770,24 @@
       "type": "object",
       "title": "SessionListResponse defines session list representable as json.",
       "properties": {
-        "pagination": {
-          "$ref": "#/definitions/PaginationDTO"
-        },
-        "sessions": {
+        "items": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SessionDTO"
           },
-          "x-go-name": "Sessions"
+          "x-go-name": "Items"
+        },
+        "page": {
+          "description": "The current page of the items.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Page"
+        },
+        "page_size": {
+          "description": "Number of items per page.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "PageSize"
         },
         "stats": {
           "$ref": "#/definitions/SessionStatsDTO"
@@ -2789,6 +2798,18 @@
             "$ref": "#/definitions/SessionStatsDTO"
           },
           "x-go-name": "StatsDaily"
+        },
+        "total_items": {
+          "description": "The total items.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalItems"
+        },
+        "total_pages": {
+          "description": "The last page of the items.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalPages"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2891,15 +2912,36 @@
       "type": "object",
       "title": "SettlementListResponse defines settlement list representable as json.",
       "properties": {
-        "pagination": {
-          "$ref": "#/definitions/PaginationDTO"
-        },
-        "settlements": {
+        "items": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SettlementDTO"
           },
-          "x-go-name": "Settlements"
+          "x-go-name": "Items"
+        },
+        "page": {
+          "description": "The current page of the items.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Page"
+        },
+        "page_size": {
+          "description": "Number of items per page.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "PageSize"
+        },
+        "total_items": {
+          "description": "The total items.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalItems"
+        },
+        "total_pages": {
+          "description": "The last page of the items.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TotalPages"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

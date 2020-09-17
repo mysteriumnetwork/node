@@ -21,9 +21,9 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// NewPaginationDTO maps to API pagination DTO.
-func NewPaginationDTO(paginator *utils.Paginator) PaginationDTO {
-	return PaginationDTO{
+// NewPageableDTO maps to API pagination DTO.
+func NewPageableDTO(paginator *utils.Paginator) PageableDTO {
+	return PageableDTO{
 		Page:       paginator.Page(),
 		PageSize:   paginator.PageSize(),
 		TotalItems: paginator.Nums(),
@@ -31,9 +31,9 @@ func NewPaginationDTO(paginator *utils.Paginator) PaginationDTO {
 	}
 }
 
-// PaginationDTO holds pagination information.
-// swagger:model PaginationDTO
-type PaginationDTO struct {
+// PageableDTO holds pagination information.
+// swagger:model PageableDTO
+type PageableDTO struct {
 	// The current page of the items.
 	Page int `json:"page"`
 	// Number of items per page.
