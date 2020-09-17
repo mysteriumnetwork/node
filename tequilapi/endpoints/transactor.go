@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/vcraescu/go-paginator"
 	"github.com/vcraescu/go-paginator/adapter"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -353,14 +352,13 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 	}
 
 	var settlements []pingpong.SettlementHistoryEntry
-	p := paginator.New(adapter.NewSliceAdapter(settlementsAll), pageSize)
-	p.SetPage(page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), pageSize, page)
 	if err := p.Results(&settlements); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	response := contract.NewSettlementListResponse(settlements, &p)
+	response := contract.NewSettlementListResponse(settlements, p)
 	utils.WriteAsJSON(response, resp)
 }
 

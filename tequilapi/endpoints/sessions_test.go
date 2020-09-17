@@ -103,9 +103,10 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 				contract.NewSessionDTO(connectionSessionMock),
 			},
 			Pagination: contract.PaginationDTO{
-				TotalItems:  1,
-				TotalPages:  1,
-				CurrentPage: 1,
+				Page:       1,
+				PageSize:   50,
+				TotalItems: 1,
+				TotalPages: 1,
 			},
 			Stats:      contract.NewSessionStatsDTO(sessionStatsMock),
 			StatsDaily: contract.NewSessionStatsDailyDTO(sessionStatsByDayMock),

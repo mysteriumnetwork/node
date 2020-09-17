@@ -22,13 +22,13 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/vcraescu/go-paginator"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // NewSessionListResponse maps to API session list.
 func NewSessionListResponse(
 	sessions []session.History,
-	paginator *paginator.Paginator,
+	paginator *utils.Paginator,
 	stats session.Stats,
 	statsDaily map[time.Time]session.Stats,
 ) SessionListResponse {

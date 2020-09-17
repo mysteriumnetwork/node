@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/vcraescu/go-paginator"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // FeesDTO represents the transactor fees
@@ -37,7 +37,7 @@ type FeesDTO struct {
 // NewSettlementListResponse maps to API settlement list.
 func NewSettlementListResponse(
 	settlements []pingpong.SettlementHistoryEntry,
-	paginator *paginator.Paginator,
+	paginator *utils.Paginator,
 ) SettlementListResponse {
 	dtoArray := make([]SettlementDTO, len(settlements))
 	for i, settlement := range settlements {

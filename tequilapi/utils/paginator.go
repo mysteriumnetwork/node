@@ -15,31 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package contract
+package utils
 
 import (
-	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/vcraescu/go-paginator"
 )
 
-// NewPaginationDTO maps to API pagination DTO.
-func NewPaginationDTO(paginator *utils.Paginator) PaginationDTO {
-	return PaginationDTO{
-		Page:       paginator.Page(),
-		PageSize:   paginator.PageSize(),
-		TotalItems: paginator.Nums(),
-		TotalPages: paginator.PageNums(),
+// NewPaginator creates new instance of Paginator
+func NewPaginator(adapter paginator.Adapter, pageSize, page int) *Paginator {
+	parent := paginator.New(adapter, pageSize)
+	parent.SetPage(page)
+
+	return &Paginator{
+		Paginator: parent,
+		pageSize:  pageSize,
 	}
 }
 
-// PaginationDTO holds pagination information.
-// swagger:model PaginationDTO
-type PaginationDTO struct {
-	// The current page of the items.
-	Page int `json:"page"`
-	// Number of items per page.
-	PageSize int `json:"page_size"`
-	// The total items.
-	TotalItems int `json:"total_items"`
-	// The last page of the items.
-	TotalPages int `json:"total_pages"`
+// Paginator structure.
+type Paginator struct {
+	paginator.Paginator
+	pageSize int
+}
+
+// PageSize returns number of records per page.
+func (p *Paginator) PageSize() int {
+	return p.pageSize
 }

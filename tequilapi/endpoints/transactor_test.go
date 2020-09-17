@@ -267,11 +267,10 @@ func Test_SettleHistory(t *testing.T) {
 					}
 				],
 				"pagination": {
+					"page": 1,
+					"page_size": 50,
 					"total_items": 2,
-					"total_pages": 1,
-					"current_page": 1,
-					"previous_page": null,
-					"next_page": null
+					"total_pages": 1
 				}
 			}`,
 			resp.Body.String(),

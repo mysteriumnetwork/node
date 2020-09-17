@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/vcraescu/go-paginator"
 	"github.com/vcraescu/go-paginator/adapter"
 )
 
@@ -144,14 +143,13 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 	}
 
 	var sessions []session.History
-	p := paginator.New(adapter.NewSliceAdapter(query.Sessions), pageSize)
-	p.SetPage(page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(query.Sessions), pageSize, page)
 	if err := p.Results(&sessions); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions, &p, query.Stats, query.StatsByDay)
+	sessionsDTO := contract.NewSessionListResponse(sessions, p, query.Stats, query.StatsByDay)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
