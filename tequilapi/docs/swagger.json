@@ -1017,7 +1017,7 @@
           "200": {
             "description": "List of quality metrics",
             "schema": {
-              "$ref": "#/definitions/QualityMetricsDTO"
+              "$ref": "#/definitions/ProposalMetricsResponse"
             }
           }
         }
@@ -1030,12 +1030,12 @@
           "Service"
         ],
         "summary": "List of services",
-        "operationId": "ListServicesResponse",
+        "operationId": "ServiceListResponse",
         "responses": {
           "200": {
             "description": "List of running services",
             "schema": {
-              "$ref": "#/definitions/ListServicesResponse"
+              "$ref": "#/definitions/ServiceListResponse"
             }
           }
         }
@@ -1258,7 +1258,7 @@
           "200": {
             "description": "Returns settlement history",
             "schema": {
-              "$ref": "#/definitions/ListSettlementsResponse"
+              "$ref": "#/definitions/SettlementListResponse"
             }
           },
           "400": {
@@ -2107,31 +2107,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ListServicesResponse": {
-      "type": "array",
-      "title": "ListServicesResponse represents a list of running services on the node.",
-      "items": {
-        "$ref": "#/definitions/ServiceInfoDTO"
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "ListSettlementsResponse": {
-      "type": "object",
-      "title": "ListSettlementsResponse defines settlement list representable as json.",
-      "properties": {
-        "pagination": {
-          "$ref": "#/definitions/PaginationDTO"
-        },
-        "settlements": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SettlementDTO"
-          },
-          "x-go-name": "Settlements"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "LocationDTO": {
       "type": "object",
       "title": "LocationDTO describes IP location metadata.",
@@ -2246,32 +2221,26 @@
       "type": "object",
       "title": "PaginationDTO holds pagination information.",
       "properties": {
-        "current_page": {
-          "description": "The previous page of the results.",
+        "page": {
+          "description": "The current page of the items.",
           "type": "integer",
           "format": "int64",
-          "x-go-name": "CurrentPage"
+          "x-go-name": "Page"
         },
-        "next_page": {
-          "description": "The current page of the results.",
+        "page_size": {
+          "description": "Number of items per page.",
           "type": "integer",
           "format": "int64",
-          "x-go-name": "NextPage"
-        },
-        "previous_page": {
-          "description": "The next page of the results.",
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "PreviousPage"
+          "x-go-name": "PageSize"
         },
         "total_items": {
-          "description": "The total results.",
+          "description": "The total items.",
           "type": "integer",
           "format": "int64",
           "x-go-name": "TotalItems"
         },
         "total_pages": {
-          "description": "The last page of the results.",
+          "description": "The last page of the items.",
           "type": "integer",
           "format": "int64",
           "x-go-name": "TotalPages"
@@ -2378,7 +2347,7 @@
           "example": 5
         },
         "metrics": {
-          "$ref": "#/definitions/ProposalMetricsDTO"
+          "$ref": "#/definitions/QualityMetricsDTO"
         },
         "payment_method": {
           "$ref": "#/definitions/PaymentMethodDTO"
@@ -2401,9 +2370,45 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProposalMetricConnectsDTO": {
+    "ProposalMetrics": {
       "type": "object",
-      "title": "ProposalMetricConnectsDTO represents the metric for connect stats.",
+      "title": "ProposalMetrics holds quality metrics per service.",
+      "properties": {
+        "connect_count": {
+          "$ref": "#/definitions/QualityMetricConnectsDTO"
+        },
+        "monitoring_failed": {
+          "type": "boolean",
+          "x-go-name": "MonitoringFailed"
+        },
+        "provider_id": {
+          "type": "string",
+          "x-go-name": "ProviderID"
+        },
+        "service_type": {
+          "type": "string",
+          "x-go-name": "ServiceType"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ProposalMetricsResponse": {
+      "type": "object",
+      "title": "ProposalMetricsResponse holds all quality metrics.",
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProposalMetrics"
+          },
+          "x-go-name": "Metrics"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "QualityMetricConnectsDTO": {
+      "type": "object",
+      "title": "QualityMetricConnectsDTO represents the metric for connect stats.",
       "properties": {
         "fail": {
           "type": "integer",
@@ -2423,53 +2428,16 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProposalMetricsDTO": {
-      "type": "object",
-      "title": "ProposalMetricsDTO holds proposal quality metrics from Quality Oracle.",
-      "properties": {
-        "connect_count": {
-          "$ref": "#/definitions/ProposalMetricConnectsDTO"
-        },
-        "monitoring_failed": {
-          "type": "boolean",
-          "x-go-name": "MonitoringFailed"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "QualityMetricsDTO": {
       "type": "object",
-      "title": "ProposalsQualityMetricsResponse holds all quality metrics.",
-      "properties": {
-        "metrics": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/QualityMetricsResponse"
-          },
-          "x-go-name": "Metrics"
-        }
-      },
-      "x-go-name": "ProposalsQualityMetricsResponse",
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "QualityMetricsResponse": {
-      "type": "object",
-      "title": "QualityMetricsResponse holds quality metrics per service.",
+      "title": "QualityMetricsDTO holds proposal quality metrics from Quality Oracle.",
       "properties": {
         "connect_count": {
-          "$ref": "#/definitions/ProposalMetricConnectsDTO"
+          "$ref": "#/definitions/QualityMetricConnectsDTO"
         },
         "monitoring_failed": {
           "type": "boolean",
           "x-go-name": "MonitoringFailed"
-        },
-        "provider_id": {
-          "type": "string",
-          "x-go-name": "ProviderID"
-        },
-        "service_type": {
-          "type": "string",
-          "x-go-name": "ServiceType"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2600,6 +2568,14 @@
           "x-go-name": "Type",
           "example": "openvpn"
         }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "ServiceListResponse": {
+      "type": "array",
+      "title": "ServiceListResponse represents a list of running services on the node.",
+      "items": {
+        "$ref": "#/definitions/ServiceInfoDTO"
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
@@ -2907,6 +2883,23 @@
           "type": "string",
           "x-go-name": "TxHash",
           "example": "0x20c070a9be65355adbd2ba479e095e2e8ed7e692596548734984eab75d3fdfa5"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SettlementListResponse": {
+      "type": "object",
+      "title": "SettlementListResponse defines settlement list representable as json.",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PaginationDTO"
+        },
+        "settlements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SettlementDTO"
+          },
+          "x-go-name": "Settlements"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

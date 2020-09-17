@@ -74,7 +74,7 @@ func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO 
 // swagger:model SettlementDTO
 type SettlementDTO struct {
 	// example: 0x20c070a9be65355adbd2ba479e095e2e8ed7e692596548734984eab75d3fdfa5
-	TxHash string `json:"tx_hash" storm:"id"`
+	TxHash string `json:"tx_hash"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"provider_id"`
