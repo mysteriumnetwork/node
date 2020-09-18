@@ -211,8 +211,6 @@ func PackageDockerAlpine() error {
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
-	mg.Deps(GenerateSwagger)
-
 	logconfig.Bootstrap()
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
