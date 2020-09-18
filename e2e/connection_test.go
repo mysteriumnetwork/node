@@ -529,8 +529,8 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	sessionsDTO, err := tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
-	assert.True(t, len(sessionsDTO.Sessions) >= 1)
-	se := sessionsDTO.Sessions[0]
+	assert.True(t, len(sessionsDTO.Items) >= 1)
+	se := sessionsDTO.Items[0]
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
 	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
@@ -553,8 +553,8 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	sessionsDTO, err = tequilapi.SessionsByServiceType(serviceType)
 	assert.NoError(t, err)
 
-	assert.True(t, len(sessionsDTO.Sessions) >= 1)
-	se = sessionsDTO.Sessions[0]
+	assert.True(t, len(sessionsDTO.Items) >= 1)
+	se = sessionsDTO.Items[0]
 	assert.Equal(t, "Completed", se.Status)
 
 	// call the custom asserter for the given service type

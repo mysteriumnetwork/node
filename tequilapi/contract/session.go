@@ -22,34 +22,34 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/vcraescu/go-paginator"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // NewSessionListResponse maps to API session list.
 func NewSessionListResponse(
 	sessions []session.History,
-	paginator *paginator.Paginator,
+	paginator *utils.Paginator,
 	stats session.Stats,
 	statsDaily map[time.Time]session.Stats,
-) ListSessionsResponse {
+) SessionListResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = NewSessionDTO(se)
 	}
 
-	return ListSessionsResponse{
-		Sessions:   dtoArray,
-		Paging:     NewPagingDTO(paginator),
-		Stats:      NewSessionStatsDTO(stats),
-		StatsDaily: NewSessionStatsDailyDTO(statsDaily),
+	return SessionListResponse{
+		Items:       dtoArray,
+		PageableDTO: NewPageableDTO(paginator),
+		Stats:       NewSessionStatsDTO(stats),
+		StatsDaily:  NewSessionStatsDailyDTO(statsDaily),
 	}
 }
 
-// ListSessionsResponse defines session list representable as json.
-// swagger:model ListSessionsResponse
-type ListSessionsResponse struct {
-	Sessions   []SessionDTO               `json:"sessions"`
-	Paging     PagingDTO                  `json:"paging"`
+// SessionListResponse defines session list representable as json.
+// swagger:model SessionListResponse
+type SessionListResponse struct {
+	Items []SessionDTO `json:"items"`
+	PageableDTO
 	Stats      SessionStatsDTO            `json:"stats"`
 	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
 }

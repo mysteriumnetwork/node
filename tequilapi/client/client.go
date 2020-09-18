@@ -129,7 +129,7 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 
 // RegisterIdentity registers identity
 func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int) error {
-	payload := contract.IdentityRegistrationRequest{
+	payload := contract.IdentityRegisterRequest{
 		Stake:       stake,
 		Fee:         fee,
 		Beneficiary: beneficiary,
@@ -149,7 +149,7 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
 		ConsumerID:     consumerID,
 		ProviderID:     providerID,
@@ -158,7 +158,7 @@ func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, service
 		ConnectOptions: options,
 	})
 	if err != nil {
-		return contract.ConnectionStatusDTO{}, err
+		return contract.ConnectionInfoDTO{}, err
 	}
 	defer response.Body.Close()
 
@@ -190,7 +190,7 @@ func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStat
 }
 
 // ConnectionStatus returns connection status
-func (client *Client) ConnectionStatus() (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionStatus() (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
 		return status, err
@@ -327,7 +327,7 @@ func (client *Client) Stop() error {
 }
 
 // Sessions returns all sessions from history
-func (client *Client) Sessions() (sessions contract.ListSessionsResponse, err error) {
+func (client *Client) Sessions() (sessions contract.SessionListResponse, err error) {
 	response, err := client.http.Get("sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -339,21 +339,21 @@ func (client *Client) Sessions() (sessions contract.ListSessionsResponse, err er
 }
 
 // SessionsByServiceType returns sessions from history filtered by type
-func (client *Client) SessionsByServiceType(serviceType string) (contract.ListSessionsResponse, error) {
+func (client *Client) SessionsByServiceType(serviceType string) (contract.SessionListResponse, error) {
 	sessions, err := client.Sessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
 // SessionsByStatus returns sessions from history filtered by their status
-func (client *Client) SessionsByStatus(status string) (contract.ListSessionsResponse, error) {
+func (client *Client) SessionsByStatus(status string) (contract.SessionListResponse, error) {
 	sessions, err := client.Sessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
 }
 
 // Services returns all running services
-func (client *Client) Services() (services contract.ListServicesResponse, err error) {
+func (client *Client) Services() (services contract.ServiceListResponse, err error) {
 	response, err := client.http.Get("services", url.Values{})
 	if err != nil {
 		return services, err
@@ -413,28 +413,28 @@ func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 }
 
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
+func filterSessionsByType(serviceType string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
-	for _, s := range sessions.Sessions {
+	for _, s := range sessions.Items {
 		if s.ServiceType == serviceType {
-			sessions.Sessions[matches] = s
+			sessions.Items[matches] = s
 			matches++
 		}
 	}
-	sessions.Sessions = sessions.Sessions[:matches]
+	sessions.Items = sessions.Items[:matches]
 	return sessions
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions contract.ListSessionsResponse) contract.ListSessionsResponse {
+func filterSessionsByStatus(status string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
-	for _, s := range sessions.Sessions {
+	for _, s := range sessions.Items {
 		if s.Status == status {
-			sessions.Sessions[matches] = s
+			sessions.Items[matches] = s
 			matches++
 		}
 	}
-	sessions.Sessions = sessions.Sessions[:matches]
+	sessions.Items = sessions.Items[:matches]
 	return sessions
 }
 

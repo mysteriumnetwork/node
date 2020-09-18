@@ -297,8 +297,8 @@ func (c *cliApp) serviceSessions() {
 		return
 	}
 
-	status("Current sessions", len(sessions.Sessions))
-	for _, session := range sessions.Sessions {
+	status("Current sessions", len(sessions.Items))
+	for _, session := range sessions.Items {
 		status(
 			"ID: "+session.ID,
 			"ConsumerID: "+session.ConsumerID,

@@ -116,9 +116,9 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	return errors
 }
 
-// IdentityRegistrationRequest represents the identity registration user input parameters
-// swagger:model IdentityRegistrationRequestDTO
-type IdentityRegistrationRequest struct {
+// IdentityRegisterRequest represents the identity registration user input parameters
+// swagger:model IdentityRegisterRequestDTO
+type IdentityRegisterRequest struct {
 	// Stake is used by Provider, default 0
 	Stake *big.Int `json:"stake,omitempty"`
 	// Cache out address for Provider
@@ -135,14 +135,8 @@ type IdentityRegistrationResponse struct {
 	Registered bool `json:"registered"`
 }
 
-// ListProposalsResponse holds list of proposals.
-// swagger:model ListProposalsResponse
-type ListProposalsResponse struct {
-	Proposals []ProposalDTO `json:"proposals"`
-}
-
 // IdentityBeneficiaryResponse represents the provider beneficiary address.
 // swagger:model IdentityBeneficiaryResponseDTO
 type IdentityBeneficiaryResponse struct {
-	Beneficiary string `json:"Beneficiary"`
+	Beneficiary string `json:"beneficiary"`
 }

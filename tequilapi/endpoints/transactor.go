@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/vcraescu/go-paginator"
 	"github.com/vcraescu/go-paginator/adapter"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -209,7 +208,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 //   name: body
 //   description: all body parameters a optional
 //   schema:
-//     $ref: "#/definitions/IdentityRegistrationRequestDTO"
+//     $ref: "#/definitions/IdentityRegisterRequestDTO"
 // responses:
 //   200:
 //     description: Payout info registered
@@ -224,7 +223,7 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	identity := params.ByName("id")
 
-	req := &contract.IdentityRegistrationRequest{}
+	req := &contract.IdentityRegisterRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
 	if err != nil {
@@ -242,7 +241,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 
 	req := &contract.SettleWithBeneficiaryRequest{}
@@ -287,7 +286,7 @@ func (te *transactorEndpoint) SetBeneficiary(resp http.ResponseWriter, request *
 //   200:
 //     description: Returns settlement history
 //     schema:
-//       "$ref": "#/definitions/ListSettlementsResponse"
+//       "$ref": "#/definitions/SettlementListResponse"
 //   400:
 //     description: Bad request
 //     schema:
@@ -353,14 +352,13 @@ func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *h
 	}
 
 	var settlements []pingpong.SettlementHistoryEntry
-	p := paginator.New(adapter.NewSliceAdapter(settlementsAll), pageSize)
-	p.SetPage(page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), pageSize, page)
 	if err := p.Results(&settlements); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	response := contract.NewSettlementListResponse(settlements, &p)
+	response := contract.NewSettlementListResponse(settlements, p)
 	utils.WriteAsJSON(response, resp)
 }
 
@@ -469,7 +467,7 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
 	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
-	router.POST("/identities/:id/beneficiary", te.SetBeneficiary)
+	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)

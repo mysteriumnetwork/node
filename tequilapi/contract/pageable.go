@@ -18,36 +18,28 @@
 package contract
 
 import (
-	"github.com/vcraescu/go-paginator"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// NewPagingDTO maps to API paging DTO.
-func NewPagingDTO(paginator *paginator.Paginator) PagingDTO {
-	dto := PagingDTO{
-		TotalItems:  paginator.Nums(),
-		TotalPages:  paginator.PageNums(),
-		CurrentPage: paginator.Page(),
+// NewPageableDTO maps to API pagination DTO.
+func NewPageableDTO(paginator *utils.Paginator) PageableDTO {
+	return PageableDTO{
+		Page:       paginator.Page(),
+		PageSize:   paginator.PageSize(),
+		TotalItems: paginator.Nums(),
+		TotalPages: paginator.PageNums(),
 	}
-	if page, err := paginator.PrevPage(); err == nil {
-		dto.PreviousPage = &page
-	}
-	if page, err := paginator.NextPage(); err == nil {
-		dto.NextPage = &page
-	}
-	return dto
 }
 
-// PagingDTO holds paging information.
-// swagger:model PagingDTO
-type PagingDTO struct {
-	// The total results.
+// PageableDTO holds pagination information.
+// swagger:model PageableDTO
+type PageableDTO struct {
+	// The current page of the items.
+	Page int `json:"page"`
+	// Number of items per page.
+	PageSize int `json:"page_size"`
+	// The total items.
 	TotalItems int `json:"total_items"`
-	// The last page of the results.
+	// The last page of the items.
 	TotalPages int `json:"total_pages"`
-	// The previous page of the results.
-	CurrentPage int `json:"current_page"`
-	// The next page of the results.
-	PreviousPage *int `json:"previous_page"`
-	// The current page of the results.
-	NextPage *int `json:"next_page"`
 }

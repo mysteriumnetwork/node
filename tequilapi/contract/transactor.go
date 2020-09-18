@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/vcraescu/go-paginator"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // FeesDTO represents the transactor fees
@@ -37,24 +37,24 @@ type FeesDTO struct {
 // NewSettlementListResponse maps to API settlement list.
 func NewSettlementListResponse(
 	settlements []pingpong.SettlementHistoryEntry,
-	paginator *paginator.Paginator,
-) ListSettlementsResponse {
+	paginator *utils.Paginator,
+) SettlementListResponse {
 	dtoArray := make([]SettlementDTO, len(settlements))
 	for i, settlement := range settlements {
 		dtoArray[i] = NewSettlementDTO(settlement)
 	}
 
-	return ListSettlementsResponse{
-		Settlements: dtoArray,
-		Paging:      NewPagingDTO(paginator),
+	return SettlementListResponse{
+		Items:       dtoArray,
+		PageableDTO: NewPageableDTO(paginator),
 	}
 }
 
-// ListSettlementsResponse defines settlement list representable as json.
-// swagger:model ListSettlementsResponse
-type ListSettlementsResponse struct {
-	Settlements []SettlementDTO `json:"settlements"`
-	Paging      PagingDTO       `json:"paging"`
+// SettlementListResponse defines settlement list representable as json.
+// swagger:model SettlementListResponse
+type SettlementListResponse struct {
+	Items []SettlementDTO `json:"items"`
+	PageableDTO
 }
 
 // NewSettlementDTO maps to API settlement.
@@ -74,7 +74,7 @@ func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO 
 // swagger:model SettlementDTO
 type SettlementDTO struct {
 	// example: 0x20c070a9be65355adbd2ba479e095e2e8ed7e692596548734984eab75d3fdfa5
-	TxHash string `json:"tx_hash" storm:"id"`
+	TxHash string `json:"tx_hash"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"provider_id"`

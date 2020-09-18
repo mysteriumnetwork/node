@@ -77,14 +77,14 @@ func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvid
 //   200:
 //     description: Status
 //     schema:
-//       "$ref": "#/definitions/ConnectionStatusDTO"
+//       "$ref": "#/definitions/ConnectionInfoDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	status := ce.manager.Status()
-	statusResponse := contract.NewConnectionStatusDTO(status)
+	statusResponse := contract.NewConnectionInfoDTO(status)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -103,7 +103,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //   201:
 //     description: Connection started
 //     schema:
-//       "$ref": "#/definitions/ConnectionStatusDTO"
+//       "$ref": "#/definitions/ConnectionInfoDTO"
 //   400:
 //     description: Bad request
 //     schema:

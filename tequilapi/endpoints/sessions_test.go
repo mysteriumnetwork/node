@@ -93,19 +93,20 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	handlerFunc := NewSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := contract.ListSessionsResponse{}
+	parsedResponse := contract.SessionListResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
 	assert.EqualValues(
 		t,
-		contract.ListSessionsResponse{
-			Sessions: []contract.SessionDTO{
+		contract.SessionListResponse{
+			Items: []contract.SessionDTO{
 				contract.NewSessionDTO(connectionSessionMock),
 			},
-			Paging: contract.PagingDTO{
-				TotalItems:  1,
-				TotalPages:  1,
-				CurrentPage: 1,
+			PageableDTO: contract.PageableDTO{
+				Page:       1,
+				PageSize:   50,
+				TotalItems: 1,
+				TotalPages: 1,
 			},
 			Stats:      contract.NewSessionStatsDTO(sessionStatsMock),
 			StatsDaily: contract.NewSessionStatsDailyDTO(sessionStatsByDayMock),
