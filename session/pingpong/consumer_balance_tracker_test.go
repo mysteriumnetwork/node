@@ -18,7 +18,9 @@
 package pingpong
 
 import (
+	"errors"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -259,17 +261,96 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 	}, defaultWaitTime, defaultWaitInterval)
 }
 
+func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	accountantID := common.HexToAddress("0x000000acc")
+	var grandTotalPromised = new(big.Int)
+	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
+		bus: bus,
+	}
+	bc := mockConsumerBalanceChecker{
+		channelToReturn: client.ConsumerChannel{
+			Balance: initialBalance,
+			Settled: big.NewInt(0),
+		},
+		errToReturn: errors.New("boom"),
+		ch:          make(chan *bindings.MystTokenTransfer),
+	}
+	calc := mockChannelAddressCalculator{}
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
+		map[identity.Identity]mockRegistrationStatus{
+			id1: {
+				status: registry.Unregistered,
+			},
+		},
+	})
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+
+	time.Sleep(time.Millisecond * 20)
+	bc.setError(nil)
+
+	bc.ch <- &bindings.MystTokenTransfer{}
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(id1).Cmp(initialBalance) == 0
+	}, defaultWaitTime, defaultWaitInterval)
+}
+
+func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
+	id1 := identity.FromAddress("0x000000001")
+	accountantID := common.HexToAddress("0x000000acc")
+	var grandTotalPromised = new(big.Int)
+	bus := eventbus.New()
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
+		bus: bus,
+	}
+	bc := mockConsumerBalanceChecker{
+		mystBalanceToReturn: initialBalance,
+		errToReturn:         errors.New("boom"),
+		ch:                  make(chan *bindings.MystTokenTransfer),
+	}
+	calc := mockChannelAddressCalculator{}
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
+		map[identity.Identity]mockRegistrationStatus{
+			id1: {
+				status: registry.Unregistered,
+			},
+		},
+	})
+
+	b := cbt.ForceBalanceUpdate(id1)
+	assert.Equal(t, initialBalance, b)
+}
+
 type mockConsumerBalanceChecker struct {
 	channelToReturn client.ConsumerChannel
 	errToReturn     error
+	errLock         sync.Mutex
 	ch              chan *bindings.MystTokenTransfer
 
 	mystBalanceToReturn *big.Int
 	mystBalanceError    error
 }
 
+func (mcbc *mockConsumerBalanceChecker) getError() error {
+	mcbc.errLock.Lock()
+	defer mcbc.errLock.Unlock()
+	return mcbc.errToReturn
+}
+
+func (mcbc *mockConsumerBalanceChecker) setError(err error) {
+	mcbc.errLock.Lock()
+	defer mcbc.errLock.Unlock()
+	mcbc.errToReturn = err
+}
+
 func (mcbc *mockConsumerBalanceChecker) GetConsumerChannel(addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error) {
-	return mcbc.channelToReturn, mcbc.errToReturn
+	return mcbc.channelToReturn, mcbc.getError()
 }
 
 func (mcbc *mockConsumerBalanceChecker) SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error) {

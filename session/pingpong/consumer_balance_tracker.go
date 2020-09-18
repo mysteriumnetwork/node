@@ -163,6 +163,51 @@ func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGran
 	cbt.updateGrandTotal(ev.ConsumerID, ev.Current)
 }
 
+func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(id identity.Identity) *big.Int {
+	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
+	if err != nil {
+		log.Error().Err(err).Msg("could not compute channel address")
+		return new(big.Int)
+	}
+	balance, err := cbt.consumerBalanceChecker.GetMystBalance(cbt.mystSCAddress, addr)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get myst balance on consumer channel")
+		return new(big.Int)
+	}
+	return balance
+}
+
+func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.Identity) {
+	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
+	if err != nil {
+		log.Error().Err(err).Msg("could not compute channel address")
+		return
+	}
+
+	ev, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(addr, cbt.mystSCAddress, time.Hour*72)
+	if err != nil {
+		log.Error().Err(err).Msg("could not subscribe to channel balance events")
+		return
+	}
+	defer cancel()
+	log.Info().Msgf("Subscribed to channel %v balance events", addr.Hex())
+
+	go func() {
+		<-cbt.stop
+		// cancel closes ev, so no need to close it.
+		cancel()
+	}()
+
+	for e := range ev {
+		if e == nil {
+			return
+		}
+
+		cbt.ForceBalanceUpdate(id)
+		return
+	}
+}
+
 // ForceBalanceUpdate forces a balance update and returns the updated balance
 func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big.Int {
 	fallback := cbt.GetBalance(id)
@@ -176,7 +221,16 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(addr, cbt.mystSCAddress)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get consumer channel")
-		return fallback
+		// This indicates we're not registered, check for unregistered balance.
+		unregisteredBalance := cbt.getUnregisteredChannelBalance(id)
+		// We'll also launch a goroutine to listen for external top up.
+		go cbt.subscribeToExternalChannelTopup(id)
+		cbt.setBalance(id, ConsumerBalance{
+			BCBalance:          unregisteredBalance,
+			BCSettled:          new(big.Int),
+			GrandTotalPromised: new(big.Int),
+		})
+		return unregisteredBalance
 	}
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
@@ -265,18 +319,8 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 
 	if data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
 		// if we've got no bounty, get myst balance from BC and use that as bounty
-		addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
-		if err != nil {
-			log.Error().Err(err).Msg("could not compute channel address")
-			return
-		}
-		balance, err := cbt.consumerBalanceChecker.GetMystBalance(cbt.mystSCAddress, addr)
-		if err != nil {
-			log.Error().Err(err).Msg("could not get myst balance on consumer channel")
-			return
-		}
-
-		data.BountyAmount = balance
+		b := cbt.getUnregisteredChannelBalance(id)
+		data.BountyAmount = b
 	}
 
 	c := ConsumerBalance{
@@ -392,6 +436,10 @@ func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, curren
 }
 
 func safeSub(a, b *big.Int) *big.Int {
+	if a == nil || b == nil {
+		return new(big.Int)
+	}
+
 	if a.Cmp(b) >= 0 {
 		return new(big.Int).Sub(a, b)
 	}
