@@ -289,6 +289,58 @@
         }
       }
     },
+    "/exchange/dai/myst": {
+      "get": {
+        "description": "Returns the dai price in myst",
+        "tags": [
+          "dai",
+          "price",
+          "in"
+        ],
+        "summary": "Returns the dai price in myst",
+        "operationId": "myst",
+        "responses": {
+          "200": {
+            "description": "Dai price in myst",
+            "schema": {
+              "$ref": "#/definitions/CurrencyExchangeDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/exchange/myst/dai": {
+      "get": {
+        "description": "Returns the myst price in dai",
+        "tags": [
+          "myst",
+          "price",
+          "in"
+        ],
+        "summary": "Returns the myst price in dai",
+        "operationId": "dai",
+        "responses": {
+          "200": {
+            "description": "Myst price in dai",
+            "schema": {
+              "$ref": "#/definitions/CurrencyExchangeDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/feedback/issue": {
       "post": {
         "description": "Reports user issue",
@@ -1794,6 +1846,22 @@
       "description": "Currency represents a supported currency",
       "type": "string",
       "x-go-package": "github.com/mysteriumnetwork/node/money"
+    },
+    "CurrencyExchangeDTO": {
+      "type": "object",
+      "title": "CurrencyExchangeDTO the value of a given currency.",
+      "properties": {
+        "currency": {
+          "type": "string",
+          "x-go-name": "Currency"
+        },
+        "value": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "DNSOption": {
       "description": "DNSOption defines DNS server selection strategy for consumer",
