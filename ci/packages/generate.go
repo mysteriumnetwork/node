@@ -34,8 +34,6 @@ func Generate() {
 
 // GenerateProtobuf generates Protobuf models.
 func GenerateProtobuf() error {
-	mg.Deps(GetProtobuf)
-
 	if err := sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/ping.proto"); err != nil {
 		return err
 	}
@@ -46,21 +44,6 @@ func GenerateProtobuf() error {
 		return err
 	}
 	return sh.Run("protoc", "-I=.", "--go_out=./pb", "./pb/payment.proto")
-}
-
-// GetProtobuf installs protobuf golang compiler.
-func GetProtobuf() error {
-	path, _ := util.GetGoBinaryPath("protoc-gen-go")
-	if path != "" {
-		fmt.Println("Tool 'protoc-gen-go' already installed")
-		return nil
-	}
-	err := sh.RunV("go", "get", "-u", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.25.0")
-	if err != nil {
-		fmt.Println("could not go get 'protoc-gen-go'")
-		return err
-	}
-	return nil
 }
 
 // GenerateSwagger Tequilapi Swagger specification.
@@ -82,7 +65,7 @@ func GenerateDocs() error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("could not generate documentation assets: %w", err)
+		return fmt.Errorf("could not generate swaggers assets: %w", err)
 	}
 	return nil
 }

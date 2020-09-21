@@ -2248,35 +2248,6 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "PaymentChannelDTO": {
-      "type": "object",
-      "title": "PaymentChannelDTO represents represents opened payment channel between identity and hermes.",
-      "properties": {
-        "earnings": {
-          "$ref": "#/definitions/Int"
-        },
-        "earnings_total": {
-          "$ref": "#/definitions/Int"
-        },
-        "hermes_id": {
-          "type": "string",
-          "x-go-name": "HermesID",
-          "example": "0x42a537D649d6853C0a866470f2d084DA0f73b5E4"
-        },
-        "id": {
-          "description": "Unique identifier of payment channel",
-          "type": "string",
-          "x-go-name": "ID",
-          "example": "0x8fc5f7a1794dc39c6837df10613bddf1ec9810503a50306a8667f702457a739a"
-        },
-        "owner_id": {
-          "type": "string",
-          "x-go-name": "OwnerID",
-          "example": "0x0000000000000000000000000000000000000001"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
     "PaymentMethodDTO": {
       "type": "object",
       "title": "PaymentMethodDTO holds payment method details.",
@@ -2867,45 +2838,32 @@
     },
     "SettlementDTO": {
       "type": "object",
-      "title": "SettlementDTO represents the settlement object.",
+      "title": "PaymentChannelDTO represents represents opened payment channel between identity and hermes.",
       "properties": {
-        "amount": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "Amount",
-          "example": 500000
+        "earnings": {
+          "$ref": "#/definitions/Int"
         },
-        "beneficiary": {
-          "type": "string",
-          "x-go-name": "Beneficiary",
-          "example": "0x0000000000000000000000000000000000000001"
-        },
-        "channel_address": {
-          "type": "string",
-          "x-go-name": "ChannelAddress",
-          "example": "0x0000000000000000000000000000000000000001"
+        "earnings_total": {
+          "$ref": "#/definitions/Int"
         },
         "hermes_id": {
           "type": "string",
           "x-go-name": "HermesID",
+          "example": "0x42a537D649d6853C0a866470f2d084DA0f73b5E4"
+        },
+        "id": {
+          "description": "Unique identifier of payment channel",
+          "type": "string",
+          "x-go-name": "ID",
+          "example": "0x8fc5f7a1794dc39c6837df10613bddf1ec9810503a50306a8667f702457a739a"
+        },
+        "owner_id": {
+          "type": "string",
+          "x-go-name": "OwnerID",
           "example": "0x0000000000000000000000000000000000000001"
-        },
-        "provider_id": {
-          "type": "string",
-          "x-go-name": "ProviderID",
-          "example": "0x0000000000000000000000000000000000000001"
-        },
-        "settled_at": {
-          "type": "string",
-          "x-go-name": "SettledAt",
-          "example": "2019-06-06T11:04:43.910035Z"
-        },
-        "tx_hash": {
-          "type": "string",
-          "x-go-name": "TxHash",
-          "example": "0x20c070a9be65355adbd2ba479e095e2e8ed7e692596548734984eab75d3fdfa5"
         }
       },
+      "x-go-name": "PaymentChannelDTO",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "SettlementListResponse": {
