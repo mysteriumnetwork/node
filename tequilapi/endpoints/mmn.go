@@ -146,7 +146,7 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 			errors := validation.NewErrorMap()
 			errors.ForField("api_key").AddError(
 				"already_owned",
-				"This node has already been claimed. Please visit https://my.mysterium.network/ and unclaim it first.",
+				fmt.Sprintf("This node has already been claimed. Please visit %s and unclaim it first.", api.config.GetString(config.FlagMMNAddress.Name)),
 			)
 			utils.SendValidationErrorMessage(writer, errors)
 		case strings.Contains(err.Error(), "invalid api key"):

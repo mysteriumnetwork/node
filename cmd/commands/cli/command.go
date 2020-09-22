@@ -428,8 +428,8 @@ func (c *cliApp) payout(argsString string) {
 func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
-	const profileUrl = "https://my.mysterium.network/user/profile"
-	const usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
+	var profileUrl = config.GetString(config.FlagMMNAddress) + "user/profile"
+	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
 		info(usage)

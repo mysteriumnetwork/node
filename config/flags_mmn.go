@@ -26,19 +26,19 @@ var (
 	// FlagMMNAddress URL Of my.mysterium.network API.
 	FlagMMNAddress = cli.StringFlag{
 		Name:  "mmn.web-address",
-		Usage: "URL of my.mysterium.network WEB",
+		Usage: "URL of MMN WEB",
 		Value: metadata.DefaultNetwork.MMNAddress,
 	}
 	// FlagMMNAPIAddress URL Of my.mysterium.network API.
 	FlagMMNAPIAddress = cli.StringFlag{
 		Name:  "mmn.api-address",
-		Usage: "URL of my.mysterium.network API",
+		Usage: "URL of MMN API",
 		Value: metadata.DefaultNetwork.MMNAPIAddress,
 	}
 	// FlagMMNAPIKey token Of my.mysterium.network API.
 	FlagMMNAPIKey = cli.StringFlag{
 		Name:  "mmn.api-key",
-		Usage: "Token of my.mysterium.network API",
+		Usage: "Token of MMN API",
 		Value: "",
 	}
 )
