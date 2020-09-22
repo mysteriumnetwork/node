@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -258,8 +257,6 @@ func (registry *contractRegistry) handleStart() {
 	}
 }
 
-const month = time.Hour * 24 * 7 * 4
-
 func (registry *contractRegistry) loadInitialState() error {
 	registry.lock.Lock()
 	defer registry.lock.Unlock()
@@ -271,10 +268,6 @@ func (registry *contractRegistry) loadInitialState() error {
 	}
 
 	for i := range entries {
-		if time.Now().UTC().Sub(entries[i].UpdatedAt) > month {
-			log.Debug().Msgf("Skipping identity %q as it has not been updated recently", entries[i].Identity)
-			continue
-		}
 		switch entries[i].RegistrationStatus {
 		case RegistrationError, InProgress:
 			err := registry.handleUnregisteredIdentityInitialLoad(entries[i].Identity)
