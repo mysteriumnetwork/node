@@ -85,7 +85,7 @@ func (m *MMN) handleServiceStart(e servicestate.AppEventServiceStatus) {
 	}
 
 	// TODO Turn off auto-register then WEB UI will have possibility to configure API key
-	// isRegistrationEnabled := len(config.Current.GetString(config.FlagMMNKey.Name)) != 0
+	// isRegistrationEnabled := len(config.Current.GetString(config.FlagMMNAPIKey.Name)) != 0
 	// if !isRegistrationEnabled {
 	// 	log.Debug().Msg("Identity unlocked, registration to MMN disabled because the API key missing in config.")
 	// 	return
@@ -100,7 +100,7 @@ func (m *MMN) register() error {
 	return m.client.RegisterNode(&NodeInformationDto{
 		LocalIP:     m.lastIP,
 		Identity:    m.lastIdentity,
-		APIKey:      config.GetString(config.FlagMMNKey),
+		APIKey:      config.GetString(config.FlagMMNAPIKey),
 		VendorID:    config.GetString(config.FlagVendorID),
 		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
 		OS:          getOS(),

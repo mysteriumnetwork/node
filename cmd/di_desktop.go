@@ -312,8 +312,8 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 	return nil
 }
 
-func (di *Dependencies) bootstrapMMN(options node.Options) error {
-	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
+func (di *Dependencies) bootstrapMMN() error {
+	client := mmn.NewClient(di.HTTPClient, config.GetString(config.FlagMMNAPIAddress), di.SignerFactory)
 
 	di.MMN = mmn.NewMMN(di.IPResolver, client)
 	return di.MMN.Subscribe(di.EventBus)

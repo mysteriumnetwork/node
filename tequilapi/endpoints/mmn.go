@@ -87,7 +87,7 @@ func (api *mmnAPI) GetNodeReport(writer http.ResponseWriter, httpReq *http.Reque
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) GetApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
-	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNKey.Name)}
+	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNAPIKey.Name)}
 	utils.WriteAsJSON(res, writer)
 }
 
@@ -127,7 +127,7 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 		return
 	}
 
-	api.config.SetUser(config.FlagMMNKey.Name, req.ApiKey)
+	api.config.SetUser(config.FlagMMNAPIKey.Name, req.ApiKey)
 	if err = api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return
@@ -173,7 +173,7 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) ClearApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
-	api.config.RemoveUser(config.FlagMMNKey.Name)
+	api.config.RemoveUser(config.FlagMMNAPIKey.Name)
 	if err := api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return

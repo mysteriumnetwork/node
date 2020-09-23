@@ -67,7 +67,6 @@ type Options struct {
 	logconfig.LogOptions
 	OptionsNetwork
 	Discovery  OptionsDiscovery
-	MMN        OptionsMMN
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
@@ -112,9 +111,6 @@ func GetOptions() *Options {
 		LogOptions:     *GetLogOptions(),
 		OptionsNetwork: network,
 		Discovery:      *GetDiscoveryOptions(),
-		MMN: OptionsMMN{
-			Address: config.GetString(config.FlagMMNAddress),
-		},
 		Quality: OptionsQuality{
 			Type:    QualityType(config.GetString(config.FlagQualityType)),
 			Address: config.GetString(config.FlagQualityAddress),

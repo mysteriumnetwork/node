@@ -25,13 +25,19 @@ import (
 var (
 	// FlagMMNAddress URL Of my.mysterium.network API.
 	FlagMMNAddress = cli.StringFlag{
-		Name:  "mmn.url",
-		Usage: "URL of my.mysterium.network API",
+		Name:  "mmn.web-address",
+		Usage: "URL of my.mysterium.network WEB",
 		Value: metadata.DefaultNetwork.MMNAddress,
 	}
-	// FlagMMNKey token Of my.mysterium.network API.
-	FlagMMNKey = cli.StringFlag{
-		Name:  "mmn.key",
+	// FlagMMNAPIAddress URL Of my.mysterium.network API.
+	FlagMMNAPIAddress = cli.StringFlag{
+		Name:  "mmn.api-address",
+		Usage: "URL of my.mysterium.network API",
+		Value: metadata.DefaultNetwork.MMNAPIAddress,
+	}
+	// FlagMMNAPIKey token Of my.mysterium.network API.
+	FlagMMNAPIKey = cli.StringFlag{
+		Name:  "mmn.api-key",
 		Usage: "Token of my.mysterium.network API",
 		Value: "",
 	}
@@ -41,12 +47,14 @@ var (
 func RegisterFlagsMMN(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		&FlagMMNAddress,
-		&FlagMMNKey,
+		&FlagMMNAPIAddress,
+		&FlagMMNAPIKey,
 	)
 }
 
 // ParseFlagsMMN function fills in MMN options from CLI context.
 func ParseFlagsMMN(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagMMNAddress)
-	Current.ParseStringFlag(ctx, FlagMMNKey)
+	Current.ParseStringFlag(ctx, FlagMMNAPIAddress)
+	Current.ParseStringFlag(ctx, FlagMMNAPIKey)
 }
