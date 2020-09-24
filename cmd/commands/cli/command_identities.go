@@ -39,7 +39,7 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
 		"  " + usageSettle,
-		"  " + usageGetReferralToken,
+		"  " + usageGetReferralCode,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -66,8 +66,8 @@ func (c *cliApp) identities(argsString string) {
 		c.setBeneficiary(actionArgs)
 	case "settle":
 		c.settle(actionArgs)
-	case "referraltoken":
-		c.getReferralToken(actionArgs)
+	case "referralcode":
+		c.getReferralCode(actionArgs)
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -157,10 +157,10 @@ func (c *cliApp) unlockIdentity(actionArgs []string) {
 	success(fmt.Sprintf("Identity %s unlocked.", address))
 }
 
-const usageRegisterIdentity = "register <identity> [stake] [beneficiary]"
+const usageRegisterIdentity = "register <identity> [stake] [beneficiary] [referralcode]"
 
 func (c *cliApp) registerIdentity(actionArgs []string) {
-	if len(actionArgs) < 1 || len(actionArgs) > 3 {
+	if len(actionArgs) < 1 || len(actionArgs) > 4 {
 		info("Usage: " + usageRegisterIdentity)
 		return
 	}
@@ -179,13 +179,18 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		beneficiary = actionArgs[2]
 	}
 
+	var token *string
+	if len(actionArgs) >= 4 {
+		token = &actionArgs[3]
+	}
+
 	fees, err := c.tequilapi.GetTransactorFees()
 	if err != nil {
 		warn(err)
 		return
 	}
 
-	err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration)
+	err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration, token)
 	if err != nil {
 		warn(errors.Wrap(err, "could not register identity"))
 		return
@@ -238,22 +243,22 @@ func (c *cliApp) settle(args []string) {
 	}
 }
 
-const usageGetReferralToken = "referraltoken <identity>"
+const usageGetReferralCode = "referralcode <identity>"
 
-func (c *cliApp) getReferralToken(actionArgs []string) {
+func (c *cliApp) getReferralCode(actionArgs []string) {
 	if len(actionArgs) != 1 {
-		info("Usage: " + usageGetReferralToken)
+		info("Usage: " + usageGetReferralCode)
 		return
 	}
 
 	address := actionArgs[0]
-	res, err := c.tequilapi.ReferralsGetToken(address)
+	res, err := c.tequilapi.IdentityReferralCode(address)
 	if err != nil {
 		warn(errors.Wrap(err, "could not get referral token"))
 		return
 	}
 
-	success(fmt.Sprintf("Your referral token is: %q", res))
+	success(fmt.Sprintf("Your referral token is: %q", res.Token))
 }
 
 func (c *cliApp) setBeneficiary(actionArgs []string) {

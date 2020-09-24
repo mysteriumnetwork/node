@@ -125,6 +125,8 @@ type IdentityRegisterRequest struct {
 	Beneficiary string `json:"beneficiary,omitempty"`
 	// Fee: negotiated fee with transactor
 	Fee *big.Int `json:"fee,omitempty"`
+	// Token: referral token, if the user has one
+	ReferralToken *string `json:"token,omitempty"`
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity

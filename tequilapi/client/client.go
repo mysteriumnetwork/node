@@ -161,11 +161,12 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int) error {
+func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int, token *string) error {
 	payload := contract.IdentityRegisterRequest{
-		Stake:       stake,
-		Fee:         fee,
-		Beneficiary: beneficiary,
+		Stake:         stake,
+		Fee:           fee,
+		Beneficiary:   beneficiary,
+		ReferralToken: token,
 	}
 
 	response, err := client.http.Post("identities/"+address+"/register", payload)
@@ -613,15 +614,15 @@ func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
 	return nil
 }
 
-// ReferralsGetToken returns a referral token for the given identity.
-func (client *Client) ReferralsGetToken(identity string) (string, error) {
-	response, err := client.http.Get(fmt.Sprintf("transactor/referral/token/%v", identity), nil)
+// IdentityReferralCode returns a referral token for the given identity.
+func (client *Client) IdentityReferralCode(identity string) (contract.ReferralTokenResponse, error) {
+	response, err := client.http.Get(fmt.Sprintf("identities/%v/referral", identity), nil)
 	if err != nil {
-		return "", err
+		return contract.ReferralTokenResponse{}, err
 	}
 	defer response.Body.Close()
 
 	res := contract.ReferralTokenResponse{}
 	err = parseResponseJSON(response, &res)
-	return res.Token, err
+	return res, err
 }

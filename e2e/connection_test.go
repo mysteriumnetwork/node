@@ -306,7 +306,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), new(big.Int))
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), new(big.Int), nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -332,7 +332,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, new(big.Int))
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, new(big.Int), nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -423,7 +423,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 
 	mintMyst(t, topUpAmount, common.HexToAddress(chid))
 
-	err = tequilapi.RegisterIdentity(id, id, providerStake, fees.Registration)
+	err = tequilapi.RegisterIdentity(id, id, providerStake, fees.Registration, nil)
 	assert.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
@@ -458,7 +458,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	fees, err := tequilapi.GetTransactorFees()
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), fees.Registration)
+	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), fees.Registration, nil)
 	assert.NoError(t, err)
 
 	// now we check identity again
