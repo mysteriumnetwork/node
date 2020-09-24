@@ -94,7 +94,7 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 	})
 }
 
-// swagger:operation POST /auth/logout Authentication Logout
+// swagger:operation DELETE /auth/logout Authentication Logout
 // ---
 // summary: Logout
 // description: Clears JWT session cookie

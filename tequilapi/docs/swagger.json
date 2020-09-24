@@ -71,7 +71,7 @@
       }
     },
     "/auth/logout": {
-      "post": {
+      "delete": {
         "description": "Clears JWT session cookie",
         "tags": [
           "Authentication"
