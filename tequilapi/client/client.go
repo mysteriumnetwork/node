@@ -612,3 +612,16 @@ func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
 
 	return nil
 }
+
+// ReferralsGetToken returns a referral token for the given identity.
+func (client *Client) ReferralsGetToken(identity string) (string, error) {
+	response, err := client.http.Get(fmt.Sprintf("transactor/referral/token/%v", identity), nil)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	res := contract.ReferralTokenResponse{}
+	err = parseResponseJSON(response, &res)
+	return res.Token, err
+}

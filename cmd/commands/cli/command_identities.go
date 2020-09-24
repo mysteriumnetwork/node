@@ -39,6 +39,7 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageUnlockIdentity,
 		"  " + usageRegisterIdentity,
 		"  " + usageSettle,
+		"  " + usageGetReferralToken,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -65,6 +66,8 @@ func (c *cliApp) identities(argsString string) {
 		c.setBeneficiary(actionArgs)
 	case "settle":
 		c.settle(actionArgs)
+	case "referraltoken":
+		c.getReferralToken(actionArgs)
 	default:
 		warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -233,6 +236,24 @@ func (c *cliApp) settle(args []string) {
 			return
 		}
 	}
+}
+
+const usageGetReferralToken = "referraltoken <identity>"
+
+func (c *cliApp) getReferralToken(actionArgs []string) {
+	if len(actionArgs) != 1 {
+		info("Usage: " + usageGetReferralToken)
+		return
+	}
+
+	address := actionArgs[0]
+	res, err := c.tequilapi.ReferralsGetToken(address)
+	if err != nil {
+		warn(errors.Wrap(err, "could not get referral token"))
+		return
+	}
+
+	success(fmt.Sprintf("Your referral token is: %q", res))
 }
 
 func (c *cliApp) setBeneficiary(actionArgs []string) {
