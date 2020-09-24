@@ -37,7 +37,7 @@ type registrationStatusChecker interface {
 
 type txer interface {
 	FetchRegistrationFees() (FeesResponse, error)
-	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error
 	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
 }
 
@@ -176,7 +176,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 		return nil
 	}
 
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "")
+	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "", nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
