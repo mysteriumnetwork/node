@@ -54,7 +54,12 @@ func (client *Client) AuthAuthenticate(request contract.AuthRequest) (res contra
 	defer response.Body.Close()
 
 	err = parseResponseJSON(response, &res)
-	return res, err
+	if err != nil {
+		return res, err
+	}
+
+	client.http.SetToken(res.Token)
+	return res, nil
 }
 
 // AuthLogin authenticates user and sets cookie with issued auth token
@@ -66,7 +71,12 @@ func (client *Client) AuthLogin(request contract.AuthRequest) (res contract.Auth
 	defer response.Body.Close()
 
 	err = parseResponseJSON(response, &res)
-	return res, err
+	if err != nil {
+		return res, err
+	}
+
+	client.http.SetToken(res.Token)
+	return res, nil
 }
 
 // AuthLogout Clears authentication cookie

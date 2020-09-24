@@ -34,6 +34,7 @@ import (
 )
 
 type httpClientInterface interface {
+	SetToken(token string)
 	Get(path string, values url.Values) (*http.Response, error)
 	Post(path string, payload interface{}) (*http.Response, error)
 	Put(path string, payload interface{}) (*http.Response, error)
@@ -53,9 +54,14 @@ func newHTTPClient(baseURL string, ua string) *httpClient {
 }
 
 type httpClient struct {
-	http    httpRequestInterface
-	baseURL string
-	ua      string
+	http      httpRequestInterface
+	authToken string
+	baseURL   string
+	ua        string
+}
+
+func (client *httpClient) SetToken(token string) {
+	client.authToken = token
 }
 
 func (client *httpClient) Get(path string, values url.Values) (*http.Response, error) {
@@ -102,9 +108,11 @@ func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []
 	request.Header.Set("User-Agent", client.ua)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
+	if client.authToken != "" {
+		request.Header.Set("Authorization", "Bearer "+client.authToken)
+	}
 
 	response, err := client.http.Do(request)
-
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return response, err
