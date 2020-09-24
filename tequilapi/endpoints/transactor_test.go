@@ -187,6 +187,27 @@ func Test_SettleSync_ReturnsError(t *testing.T) {
 	assert.JSONEq(t, `{"message":"settling failed: explosions everywhere"}`, resp.Body.String())
 }
 
+func Test_ReferralTokenGet(t *testing.T) {
+	router := httprouter.New()
+
+	server := newTestTransactorServer(http.StatusAccepted, `{"token":"yay-free-myst"}`)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
+	AddRoutesForTransactor(router, tr, &mockSettler{errToReturn: errors.New("explosions everywhere")}, &settlementHistoryProviderMock{}, common.Address{})
+
+	tokenRequest := `{"identity": "0x0"}`
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/transactor/referral/token/0x0",
+		bytes.NewBufferString(tokenRequest),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(t, `{"token":"yay-free-myst"}`, resp.Body.String())
+}
+
 func Test_SettleHistory(t *testing.T) {
 	t.Run("returns error on failed history retrieval", func(t *testing.T) {
 		mockResponse := ""
