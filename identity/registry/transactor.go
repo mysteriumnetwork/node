@@ -230,6 +230,33 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	return regReq, nil
 }
 
+// GetReferralToken returns the referral token
+func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
+	req, err := t.getReferralTokenRequest(id)
+	if err != nil {
+		return "", err
+	}
+
+	request, err := requests.NewPostRequest(t.endpointAddress, "rp/tokens/request", req)
+	if err != nil {
+		return "", fmt.Errorf("failed to create referral token request %w", err)
+	}
+
+	var resp struct {
+		Token string `json:"token"`
+	}
+	err = t.httpClient.DoRequestAndParseResponse(request, &resp)
+	return resp.Token, err
+}
+
+func (t *Transactor) getReferralTokenRequest(id common.Address) (pc.ReferralTokenRequest, error) {
+	signature, err := t.signerFactory(identity.FromAddress(id.Hex())).Sign(id.Bytes())
+	return pc.ReferralTokenRequest{
+		Identity:  id,
+		Signature: hex.EncodeToString(signature.Bytes()),
+	}, err
+}
+
 // CheckIfRegistrationBountyEligible determines if the identity is eligible for registration bounty
 func (t *Transactor) CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error) {
 	signer := t.signerFactory(identity)

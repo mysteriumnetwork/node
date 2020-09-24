@@ -45,6 +45,7 @@ type Transactor interface {
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
 	DecreaseStake(id string, amount, transactorFee *big.Int) error
+	GetReferralToken(id common.Address) (string, error)
 }
 
 // promiseSettler settles the given promises
@@ -463,6 +464,35 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 	resp.WriteHeader(http.StatusOK)
 }
 
+// swagger:operation GET /transactor/referral/token/{id} get referral token
+// ---
+// summary: Gets referral token
+// description: Gets a referral token for the given identity if a campaign exists
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get a token
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Token response
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	identity := params.ByName("id")
+	tkn, err := te.transactor.GetReferralToken(common.HexToAddress(identity))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	utils.WriteAsJSON(contract.ReferralTokenResponse{
+		Token: tkn,
+	}, resp)
+}
+
 // AddRoutesForTransactor attaches Transactor endpoints to router
 func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
 	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
@@ -472,6 +502,7 @@ func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, pr
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)
 	router.GET("/transactor/settle/history", te.SettlementHistory)
+	router.GET("/transactor/referral/token/:id", te.GetReferralToken)
 	router.POST("/transactor/stake/increase/sync", te.SettleIntoStakeSync)
 	router.POST("/transactor/stake/increase/async", te.SettleIntoStakeAsync)
 	router.POST("/transactor/stake/decrease", te.DecreaseStake)
