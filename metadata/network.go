@@ -28,6 +28,8 @@ type NetworkDefinition struct {
 	HermesID                  string
 	ChannelImplAddress        string
 	MMNAddress                string
+	DAIAddress                string
+	WETHAddress               string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -41,6 +43,8 @@ var TestnetDefinition = NetworkDefinition{
 	ChannelImplAddress:        "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
 	HermesID:                  "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
+	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
+	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
 }
 
 // BetanetDefinition defines parameters for Betanet network (currently default network)
@@ -54,6 +58,8 @@ var BetanetDefinition = NetworkDefinition{
 	ChannelImplAddress:        "0x29a615aA7E03D8c04B24cc91B2949447D3A10bD6",
 	HermesID:                  "0x42a537D649d6853C0a866470f2d084DA0f73b5E4",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
+	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
+	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
 }
 
 // LocalnetDefinition defines parameters for local network

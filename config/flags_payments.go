@@ -20,6 +20,7 @@ package config
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,6 +54,18 @@ var (
 		Name:  "payments.mystscaddress",
 		Value: "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
 		Usage: "The address of myst token smart contract",
+	}
+	// FlagPaymentsWethAddress represents the WETH smart contract address
+	FlagPaymentsWethAddress = cli.StringFlag{
+		Name:  "payments.wethaddress",
+		Value: metadata.DefaultNetwork.WETHAddress,
+		Usage: "The address of weth token smart contract",
+	}
+	// FlagPaymentsDaiAddress represents the DAI smart contract address
+	FlagPaymentsDaiAddress = cli.StringFlag{
+		Name:  "payments.daiaddress",
+		Value: metadata.DefaultNetwork.DAIAddress,
+		Usage: "The address of dai token smart contract",
 	}
 	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
 	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
@@ -114,6 +127,8 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsConsumerPricePerGBLowerBound,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
+		&FlagPaymentsWethAddress,
+		&FlagPaymentsDaiAddress,
 	)
 }
 
@@ -131,4 +146,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
+	Current.ParseStringFlag(ctx, FlagPaymentsWethAddress)
+	Current.ParseStringFlag(ctx, FlagPaymentsDaiAddress)
 }
