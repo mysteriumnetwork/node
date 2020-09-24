@@ -45,6 +45,39 @@ type Client struct {
 	http httpClientInterface
 }
 
+// AuthLogin checks user credentials and sets JWT session cookie
+func (client *Client) AuthLogin(request contract.LoginRequest) error {
+	response, err := client.http.Post("/auth/login", request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// AuthLogout Clears JWT session cookie
+func (client *Client) AuthLogout() error {
+	response, err := client.http.Delete("/auth/logout", nil)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// AuthChangePassword changes user password
+func (client *Client) AuthChangePassword(request contract.ChangePasswordRequest) error {
+	response, err := client.http.Put("/auth/password", request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
 // GetIdentities returns a list of client identities
 func (client *Client) GetIdentities() (ids []contract.IdentityRefDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})
