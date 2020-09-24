@@ -45,18 +45,31 @@ type Client struct {
 	http httpClientInterface
 }
 
-// AuthLogin checks user credentials and sets JWT session cookie
-func (client *Client) AuthLogin(request contract.LoginRequest) error {
-	response, err := client.http.Post("/auth/login", request)
+// AuthAuthenticate authenticates user and issues auth token
+func (client *Client) AuthAuthenticate(request contract.AuthRequest) (res contract.AuthResponse, err error) {
+	response, err := client.http.Post("/auth/authenticate", request)
 	if err != nil {
-		return err
+		return res, err
 	}
 	defer response.Body.Close()
 
-	return nil
+	err = parseResponseJSON(response, &res)
+	return res, err
 }
 
-// AuthLogout Clears JWT session cookie
+// AuthLogin authenticates user and sets cookie with issued auth token
+func (client *Client) AuthLogin(request contract.AuthRequest) (res contract.AuthResponse, err error) {
+	response, err := client.http.Post("/auth/login", request)
+	if err != nil {
+		return res, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	return res, err
+}
+
+// AuthLogout Clears authentication cookie
 func (client *Client) AuthLogout() error {
 	response, err := client.http.Delete("/auth/logout", nil)
 	if err != nil {

@@ -18,6 +18,7 @@
 package ui
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -77,16 +78,16 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 			return
 		}
 
-		// authenticate all but the login route
-		if !isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiLoginEndpointPath) {
-			cookieToken, err := c.Cookie(auth.JWTCookieName)
-
+		// authenticate all but the authentication routes
+		if !(isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiAuthenticateEndpointPath) || isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiLoginEndpointPath)) {
+			// authenticate from header
+			authToken, err := parseToken(c)
 			if err != nil {
-				c.AbortWithStatus(http.StatusUnauthorized)
+				c.AbortWithStatus(http.StatusBadRequest)
 				return
 			}
 
-			if _, err := authenticator.ValidateToken(cookieToken); err != nil {
+			if _, err := authenticator.ValidateToken(authToken); err != nil {
 				c.AbortWithStatus(http.StatusUnauthorized)
 				return
 			}
@@ -105,6 +106,43 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+func parseToken(c *gin.Context) (string, error) {
+	// authenticate from header
+	token, err := parseHeaderToken(c)
+	if err != nil {
+		return "", err
+	}
+	if token != "" {
+		return token, nil
+	}
+
+	// authenticate from cookie
+	return parseHeaderToken(c)
+}
+
+func parseCookieToken(c *gin.Context) (string, error) {
+	token, err := c.Cookie(auth.JWTCookieName)
+	if err == http.ErrNoCookie {
+		// No error, just no token
+		return "", nil // No error, just no token
+	}
+	return token, nil
+}
+
+func parseHeaderToken(c *gin.Context) (string, error) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return "", nil // No error, just no token
+	}
+
+	authHeaderParts := strings.Fields(authHeader)
+	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
+		return "", errors.New(`authorization header format must be: "Bearer {token}"`)
+	}
+
+	return authHeaderParts[1], nil
 }
 
 func isTequilapiURL(url string, endpoints ...string) bool {
