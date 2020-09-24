@@ -41,7 +41,13 @@ SOFTWARE.
 
 package config
 
-import "github.com/spf13/cast"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+
+	"github.com/spf13/cast"
+)
 
 // Contains snippets from https://github.com/spf13/viper
 
@@ -105,4 +111,73 @@ func deepSearch(m map[string]interface{}, path []string) map[string]interface{} 
 		m = m3
 	}
 	return m
+}
+
+func keyExists(k string, m map[string]interface{}) string {
+	lk := strings.ToLower(k)
+	for mk := range m {
+		lmk := strings.ToLower(mk)
+		if lmk == lk {
+			return mk
+		}
+	}
+	return ""
+}
+
+func castToMapStringInterface(
+	src map[interface{}]interface{}) map[string]interface{} {
+	tgt := map[string]interface{}{}
+	for k, v := range src {
+		tgt[fmt.Sprintf("%v", k)] = v
+	}
+	return tgt
+}
+
+// mergeMaps merges two maps. The `itgt` parameter is for handling go-yaml's
+// insistence on parsing nested structures as `map[interface{}]interface{}`
+// instead of using a `string` as the key for nest structures beyond one level
+// deep. Both map types are supported as there is a go-yaml fork that uses
+// `map[string]interface{}` instead.
+func mergeMaps(
+	src, tgt map[string]interface{}, itgt map[interface{}]interface{}) {
+	for sk, sv := range src {
+		tk := keyExists(sk, tgt)
+		if tk == "" {
+			tgt[sk] = sv
+			if itgt != nil {
+				itgt[sk] = sv
+			}
+			continue
+		}
+
+		tv, ok := tgt[tk]
+		if !ok {
+			tgt[sk] = sv
+			if itgt != nil {
+				itgt[sk] = sv
+			}
+			continue
+		}
+
+		svType := reflect.TypeOf(sv)
+		tvType := reflect.TypeOf(tv)
+		if svType != tvType {
+			continue
+		}
+
+		switch ttv := tv.(type) {
+		case map[interface{}]interface{}:
+			tsv := sv.(map[interface{}]interface{})
+			ssv := castToMapStringInterface(tsv)
+			stv := castToMapStringInterface(ttv)
+			mergeMaps(ssv, stv, ttv)
+		case map[string]interface{}:
+			mergeMaps(sv.(map[string]interface{}), ttv, nil)
+		default:
+			tgt[tk] = sv
+			if itgt != nil {
+				itgt[tk] = sv
+			}
+		}
+	}
 }

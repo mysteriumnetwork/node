@@ -118,6 +118,15 @@ func (cfg *Config) GetUserConfig() map[string]interface{} {
 	return cfg.user
 }
 
+// GetConfig returns current configuration.
+func (cfg *Config) GetConfig() map[string]interface{} {
+	config := make(map[string]interface{}, 0)
+	mergeMaps(cfg.defaults, config, nil)
+	mergeMaps(cfg.user, config, nil)
+	mergeMaps(cfg.cli, config, nil)
+	return config
+}
+
 // SetDefault sets default value for key.
 func (cfg *Config) SetDefault(key string, value interface{}) {
 	cfg.set(&cfg.defaults, key, value)

@@ -164,6 +164,54 @@ func TestUserConfig_Get(t *testing.T) {
 	assert.Equal(t, 1003, cfg.Get("openvpn.port"))
 }
 
+func TestUserConfig_GetConfig(t *testing.T) {
+	cfg := NewConfig()
+
+	// when
+	cfg.SetDefault("enabled", false)
+	cfg.SetDefault("openvpn.port", 1001)
+	// then
+	assert.Equal(
+		t,
+		map[string]interface{}{
+			"enabled": false,
+			"openvpn": map[string]interface{}{
+				"port": 1001,
+			},
+		},
+		cfg.GetConfig(),
+	)
+
+	// when
+	cfg.SetUser("openvpn.port", 1002)
+	// then
+	assert.Equal(
+		t,
+		map[string]interface{}{
+			"enabled": false,
+			"openvpn": map[string]interface{}{
+				"port": 1002,
+			},
+		},
+		cfg.GetConfig(),
+	)
+
+	// when
+	cfg.SetCLI("enabled", true)
+	cfg.SetCLI("openvpn.port", 1003)
+	// then
+	assert.Equal(
+		t,
+		map[string]interface{}{
+			"enabled": true,
+			"openvpn": map[string]interface{}{
+				"port": 1003,
+			},
+		},
+		cfg.GetConfig(),
+	)
+}
+
 func must(t *testing.T, err error) {
 	assert.NoError(t, err)
 }
