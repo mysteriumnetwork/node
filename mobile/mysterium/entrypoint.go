@@ -158,7 +158,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		UI: node.OptionsUI{
 			UIEnabled: false,
 		},
-		MMN:            node.OptionsMMN{},
 		FeedbackURL:    options.FeedbackURL,
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{

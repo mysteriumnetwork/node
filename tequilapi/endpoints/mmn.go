@@ -87,7 +87,7 @@ func (api *mmnAPI) GetNodeReport(writer http.ResponseWriter, httpReq *http.Reque
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) GetApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
-	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString("mmn.api-key")}
+	res := contract.MMNApiKeyRequest{ApiKey: api.config.GetString(config.FlagMMNAPIKey.Name)}
 	utils.WriteAsJSON(res, writer)
 }
 
@@ -127,7 +127,7 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 		return
 	}
 
-	api.config.SetUser("mmn.api-key", req.ApiKey)
+	api.config.SetUser(config.FlagMMNAPIKey.Name, req.ApiKey)
 	if err = api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return
@@ -146,7 +146,7 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 			errors := validation.NewErrorMap()
 			errors.ForField("api_key").AddError(
 				"already_owned",
-				"This node has already been claimed. Please visit https://my.mysterium.network/ and unclaim it first.",
+				fmt.Sprintf("This node has already been claimed. Please visit %s and unclaim it first.", api.config.GetString(config.FlagMMNAddress.Name)),
 			)
 			utils.SendValidationErrorMessage(writer, errors)
 		case strings.Contains(err.Error(), "invalid api key"):
@@ -173,7 +173,7 @@ func (api *mmnAPI) SetApiKey(writer http.ResponseWriter, httpReq *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *mmnAPI) ClearApiKey(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
-	api.config.RemoveUser("mmn")
+	api.config.RemoveUser(config.FlagMMNAPIKey.Name)
 	if err := api.config.SaveUserConfig(); err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return

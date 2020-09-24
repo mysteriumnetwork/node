@@ -25,8 +25,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
-
-	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -106,12 +104,6 @@ var (
 			return fmt.Sprintf("Set the logging level (%s)", strings.Join(allLevels, "|"))
 		}(),
 		Value: zerolog.DebugLevel.String(),
-	}
-	// FlagMMNAddress URL Of my.mysterium.network API.
-	FlagMMNAddress = cli.StringFlag{
-		Name:  "mymysterium.url",
-		Usage: "URL of my.mysterium.network API",
-		Value: metadata.DefaultNetwork.MMNAddress,
 	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
 	FlagOpenvpnBinary = cli.StringFlag{
@@ -209,6 +201,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsHermes(flags)
 	RegisterFlagsPayments(flags)
 	RegisterFlagsPolicy(flags)
+	RegisterFlagsMMN(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -222,7 +215,6 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
-		&FlagMMNAddress,
 		&FlagOpenvpnBinary,
 		&FlagQualityType,
 		&FlagQualityAddress,
@@ -251,6 +243,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsHermes(ctx)
 	ParseFlagsPayments(ctx)
 	ParseFlagsPolicy(ctx)
+	ParseFlagsMMN(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
@@ -263,7 +256,6 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
-	Current.ParseStringFlag(ctx, FlagMMNAddress)
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
 	Current.ParseStringFlag(ctx, FlagQualityType)
