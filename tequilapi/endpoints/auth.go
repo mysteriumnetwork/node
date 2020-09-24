@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -59,7 +60,7 @@ type authenticator interface {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 //   401:
-//     description: Unauthorized
+//     description: Login failed
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
@@ -87,6 +88,25 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 		Name:     auth.JWTCookieName,
 		Value:    jwtToken.Token,
 		Expires:  jwtToken.ExpirationTime,
+		HttpOnly: true,
+		Secure:   false,
+		Path:     "/",
+	})
+}
+
+// swagger:operation DELETE /auth/logout Authentication Logout
+// ---
+// summary: Logout
+// description: Clears JWT session cookie
+// responses:
+//   200:
+//     description: Logged out successfully
+func (api *authenticationAPI) Logout(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+	http.SetCookie(httpRes, &http.Cookie{
+		Name:     auth.JWTCookieName,
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   0,
 		HttpOnly: true,
 		Secure:   false,
 		Path:     "/",
@@ -159,4 +179,5 @@ func AddRoutesForAuthentication(
 	}
 	router.PUT("/auth/password", api.ChangePassword)
 	router.POST(TequilapiLoginEndpointPath, api.Login)
+	router.DELETE("/auth/logout", api.Logout)
 }

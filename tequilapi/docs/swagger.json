@@ -62,10 +62,25 @@
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Login failed",
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
             }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "delete": {
+        "description": "Clears JWT session cookie",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Logout",
+        "operationId": "Logout",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully"
           }
         }
       }
