@@ -48,7 +48,7 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 // swagger:operation GET /sessions Session sessionList
 // ---
 // summary: Returns sessions history
-// description: Returns list of sessions history
+// description: Returns list of sessions history filtered by given query
 // responses:
 //   200:
 //     description: List of sessions
@@ -98,12 +98,6 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		return
 	}
 
-	stats, err := endpoint.sessionStorage.Stats(filter)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
 	statsByDay, err := endpoint.sessionStorage.StatsByDay(filter)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -117,7 +111,54 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions, p, stats, statsByDay)
+	sessionsDTO := contract.NewSessionListResponse(sessions, p, statsByDay)
+	utils.WriteAsJSON(sessionsDTO, resp)
+}
+
+// swagger:operation GET /sessions/stats Session sessionStats
+// ---
+// summary: Returns sessions stats
+// description: Returns aggregated statistics of sessions filtered by given query
+// responses:
+//   200:
+//     description: List of sessions
+//     schema:
+//       "$ref": "#/definitions/SessionStatsDTO"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/ValidationErrorDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *sessionsEndpoint) Stats(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	query, errors := contract.NewSessionQuery(request)
+	if errors.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errors)
+		return
+	}
+
+	filter := session.NewFilter()
+	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
+	if query.DateFrom != nil {
+		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
+	}
+	filter.SetStartedTo(time.Now())
+	if query.DateTo != nil {
+		filter.SetStartedTo(time.Time(*query.DateTo).AddDate(0, 0, 1).Truncate(24 * time.Hour))
+	}
+	filter.Direction = query.Direction
+	filter.ServiceType = query.ServiceType
+	filter.Status = query.Status
+
+	stats, err := endpoint.sessionStorage.Stats(filter)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	sessionsDTO := contract.NewSessionStatsDTO(stats)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
@@ -125,4 +166,5 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 func AddRoutesForSessions(router *httprouter.Router, sessionStorage sessionStorage) {
 	sessionsEndpoint := NewSessionsEndpoint(sessionStorage)
 	router.GET("/sessions", sessionsEndpoint.List)
+	router.GET("/sessions/stats", sessionsEndpoint.Stats)
 }

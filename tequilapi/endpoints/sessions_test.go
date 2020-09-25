@@ -85,7 +85,6 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 
 	ssm := &sessionStorageMock{
 		sessionsToReturn:   sessionsMock,
-		statsToReturn:      sessionStatsMock,
 		statsByDayToReturn: sessionStatsByDayMock,
 	}
 
@@ -109,7 +108,6 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 				TotalItems: 1,
 				TotalPages: 1,
 			},
-			Stats:      contract.NewSessionStatsDTO(sessionStatsMock),
 			StatsDaily: contract.NewSessionStatsDailyDTO(sessionStatsByDayMock),
 		},
 		parsedResponse,
@@ -137,6 +135,33 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 	assert.Equal(t,
 		fmt.Sprintf(`{"message":%q}%v`, mockErr.Error(), "\n"),
 		resp.Body.String(),
+	)
+}
+
+func Test_SessionsEndpoint_Stats(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	ssm := &sessionStorageMock{
+		statsToReturn: sessionStatsMock,
+	}
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewSessionsEndpoint(ssm).Stats
+	handlerFunc(resp, req, nil)
+
+	parsedResponse := contract.SessionStatsDTO{}
+	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.EqualValues(
+		t,
+		contract.NewSessionStatsDTO(sessionStatsMock),
+		parsedResponse,
 	)
 }
 

@@ -26,9 +26,9 @@ import (
 
 // NewPaginationQuery creates pagination query from API request.
 func NewPaginationQuery(request *http.Request) (PaginationQuery, *validation.FieldErrorMap) {
-	query := request.URL.Query()
 	errs := validation.NewErrorMap()
 
+	query := request.URL.Query()
 	return PaginationQuery{
 		PageSize: parseIntOptional(query.Get("page_size"), errs.ForField("page_size")),
 		Page:     parseIntOptional(query.Get("page"), errs.ForField("page")),

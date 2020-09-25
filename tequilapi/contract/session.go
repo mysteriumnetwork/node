@@ -28,26 +28,23 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
-// NewSessionListQuery creates session query from API request.
-func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
-	pagination, errs := NewPaginationQuery(request)
+// NewSessionQuery creates session query from API request.
+func NewSessionQuery(request *http.Request) (SessionQuery, *validation.FieldErrorMap) {
+	errs := validation.NewErrorMap()
 
 	query := request.URL.Query()
-	return SessionListQuery{
-		PaginationQuery: pagination,
-		DateFrom:        parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
-		DateTo:          parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
-		Direction:       parseStringOptional(query.Get("direction"), errs.ForField("direction")),
-		ServiceType:     parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
-		Status:          parseStringOptional(query.Get("status"), errs.ForField("status")),
+	return SessionQuery{
+		DateFrom:    parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
+		DateTo:      parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
+		Direction:   parseStringOptional(query.Get("direction"), errs.ForField("direction")),
+		ServiceType: parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
+		Status:      parseStringOptional(query.Get("status"), errs.ForField("status")),
 	}, errs
 }
 
-// SessionListQuery allows to filter requested sessions.
-// swagger:parameters sessionList
-type SessionListQuery struct {
-	PaginationQuery
-
+// SessionQuery allows to filter requested sessions.
+// swagger:parameters sessionStats
+type SessionQuery struct {
 	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
 	// in: query
 	DateFrom *strfmt.Date `json:"date_from"`
@@ -69,11 +66,33 @@ type SessionListQuery struct {
 	Status *string `json:"status"`
 }
 
+// NewSessionListQuery creates session list query from API request.
+func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
+	errs := validation.NewErrorMap()
+
+	sessionQ, subErrs := NewSessionQuery(request)
+	errs.Set(subErrs)
+
+	paginationQ, subErrs := NewPaginationQuery(request)
+	errs.Set(subErrs)
+
+	return SessionListQuery{
+		SessionQuery:    sessionQ,
+		PaginationQuery: paginationQ,
+	}, errs
+}
+
+// SessionListQuery allows to filter requested sessions.
+// swagger:parameters sessionList
+type SessionListQuery struct {
+	PaginationQuery
+	SessionQuery
+}
+
 // NewSessionListResponse maps to API session list.
 func NewSessionListResponse(
 	sessions []session.History,
 	paginator *utils.Paginator,
-	stats session.Stats,
 	statsDaily map[time.Time]session.Stats,
 ) SessionListResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
@@ -84,7 +103,6 @@ func NewSessionListResponse(
 	return SessionListResponse{
 		Items:       dtoArray,
 		PageableDTO: NewPageableDTO(paginator),
-		Stats:       NewSessionStatsDTO(stats),
 		StatsDaily:  NewSessionStatsDailyDTO(statsDaily),
 	}
 }
@@ -94,7 +112,6 @@ func NewSessionListResponse(
 type SessionListResponse struct {
 	Items []SessionDTO `json:"items"`
 	PageableDTO
-	Stats      SessionStatsDTO            `json:"stats"`
 	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
 }
 

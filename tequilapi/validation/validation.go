@@ -69,6 +69,13 @@ func (fem *FieldErrorMap) ForField(key string) *FieldErrorList {
 	return fieldErrors
 }
 
+// Set sets errors from another error map
+func (fem *FieldErrorMap) Set(errors *FieldErrorMap) {
+	for key, fieldErrors := range errors.errorMap {
+		fem.errorMap[key] = fieldErrors
+	}
+}
+
 // MarshalJSON implements JSON marshaller interface to represent error map as JSON
 func (fem FieldErrorMap) MarshalJSON() ([]byte, error) {
 	for key, fieldErrors := range fem.errorMap {
