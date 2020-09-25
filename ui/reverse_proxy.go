@@ -79,7 +79,7 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 		}
 
 		// authenticate all but the authentication routes
-		if !(isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiAuthenticateEndpointPath) || isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiLoginEndpointPath)) {
+		if isTequilapiProtectedUrl(c.Request.URL.Path) {
 			authToken, err := parseToken(c)
 			if err != nil {
 				c.AbortWithStatus(http.StatusBadRequest)
@@ -146,4 +146,14 @@ func parseHeaderToken(c *gin.Context) (string, error) {
 
 func isTequilapiURL(url string, endpoints ...string) bool {
 	return strings.Contains(url, tequilapiUrlPrefix+strings.Join(endpoints, ""))
+}
+
+func isTequilapiProtectedUrl(url string) bool {
+	if isTequilapiURL(url, endpoints.TequilapiAuthenticateEndpointPath) {
+		return false
+	}
+	if isTequilapiURL(url, endpoints.TequilapiLoginEndpointPath) {
+		return false
+	}
+	return true
 }
