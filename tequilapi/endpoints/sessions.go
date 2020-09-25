@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -48,112 +47,73 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 // ---
 // summary: Returns sessions history
 // description: Returns list of sessions history
-// parameters:
-//   - in: query
-//     name: date_from
-//     description: Created date to filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
-//     type: string
-//   - in: query
-//     name: date_to
-//     description: Created date to filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
-//     type: string
-//   - in: query
-//     name: direction
-//     description: Direction to filter the sessions by. Possible values are "Provided", "Consumed".
-//     type: string
-//   - in: query
-//     name: service_type
-//     description: Service type to filter the sessions by.
-//     type: string
-//   - in: query
-//     name: status
-//     description: Status to filter the sessions by. Possible values are "New", "Completed".
-//     type: string
-//   - in: query
-//     name: page
-//     description: Page to filter the sessions by.
-//     type: int
-//   - in: query
-//     name: page_size
-//     description: Number of records per page.
-//     type: int
 // responses:
 //   200:
 //     description: List of sessions
 //     schema:
 //       "$ref": "#/definitions/SessionListResponse"
-//   400:
-//     description: Bad request
+//   422:
+//     description: Parameters validation error
 //     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
+//       "$ref": "#/definitions/ValidationErrorDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	query := session.NewQuery()
+	query, errors := contract.NewSessionListQuery(request)
+	if errors.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errors)
+		return
+	}
+
+	filter := session.NewQuery()
 
 	dateFrom := time.Now().AddDate(0, 0, -30)
-	if fromStr := request.URL.Query().Get("date_from"); fromStr != "" {
-		var err error
-		if dateFrom, err = time.Parse(time.RFC3339, fromStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
+	if query.DateFrom != nil {
+		dateFrom = *query.DateFrom
 	}
-	query.FilterFrom(dateFrom)
+	filter.FilterFrom(dateFrom)
 
 	dateTo := time.Now()
-	if toStr := request.URL.Query().Get("date_to"); toStr != "" {
-		var err error
-		if dateTo, err = time.Parse(time.RFC3339, toStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
+	if query.DateTo != nil {
+		dateTo = *query.DateTo
 	}
-	query.FilterTo(dateTo)
+	filter.FilterTo(dateTo)
 
-	if direction := request.URL.Query().Get("direction"); direction != "" {
-		query.FilterDirection(direction)
+	if query.Direction != nil {
+		filter.FilterDirection(*query.Direction)
 	}
-	if serviceType := request.URL.Query().Get("service_type"); serviceType != "" {
-		query.FilterServiceType(serviceType)
+	if query.ServiceType != nil {
+		filter.FilterServiceType(*query.ServiceType)
 	}
-	if status := request.URL.Query().Get("status"); status != "" {
-		query.FilterStatus(status)
+	if query.Status != nil {
+		filter.FilterStatus(*query.Status)
 	}
 
 	page := 1
-	if pageStr := request.URL.Query().Get("page"); pageStr != "" {
-		var err error
-		if page, err = strconv.Atoi(pageStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
+	if query.Page != nil {
+		page = *query.Page
 	}
 
 	pageSize := 50
-	if pageSizeStr := request.URL.Query().Get("page_size"); pageSizeStr != "" {
-		var err error
-		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
+	if query.PageSize != nil {
+		page = *query.PageSize
 	}
 
-	if err := endpoint.sessionStorage.Query(query.FetchSessions().FetchStats().FetchStatsByDay()); err != nil {
+	if err := endpoint.sessionStorage.Query(filter.FetchSessions().FetchStats().FetchStatsByDay()); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	var sessions []session.History
-	p := utils.NewPaginator(adapter.NewSliceAdapter(query.Sessions), pageSize, page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(filter.Sessions), pageSize, page)
 	if err := p.Results(&sessions); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions, p, query.Stats, query.StatsByDay)
+	sessionsDTO := contract.NewSessionListResponse(sessions, p, filter.Stats, filter.StatsByDay)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 

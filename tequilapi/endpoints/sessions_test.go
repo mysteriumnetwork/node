@@ -96,6 +96,7 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	parsedResponse := contract.SessionListResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.EqualValues(
 		t,
 		contract.SessionListResponse{
