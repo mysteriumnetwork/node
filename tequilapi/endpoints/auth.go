@@ -43,31 +43,32 @@ type authenticator interface {
 	ChangePassword(username, oldPassword, newPassword string) error
 }
 
-// swagger:operation POST /auth/login Authentication Login
+// swagger:operation POST /auth/authenticate Authentication Authenticate
 // ---
-// summary: Login
-// description: Checks user credentials and sets JWT session cookie
+// summary: Authenticate
+// description: Authenticates user and issues auth token
 // parameters:
 //   - in: body
 //     name: body
 //     schema:
-//       $ref: "#/definitions/LoginRequest"
+//       $ref: "#/definitions/AuthRequest"
 // responses:
 //   200:
-//     description: Logged in successfully
+//     description: Authentication succeeded
 //   400:
 //     description: Body parsing error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 //   401:
-//     description: Login failed
+//     description: Authentication failed
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
-	var req *contract.LoginRequest
-	var err error
-
-	req, err = toLoginRequest(httpReq)
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (api *authenticationAPI) Authenticate(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+	req, err := toAuthRequest(httpReq)
 	if err != nil {
 		utils.SendError(httpRes, err, http.StatusBadRequest)
 		return
@@ -80,9 +81,57 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
 	if err != nil {
+		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		return
+	}
+
+	response := contract.NewAuthResponse(jwtToken)
+	utils.WriteAsJSON(response, httpRes)
+}
+
+// swagger:operation POST /auth/login Authentication Login
+// ---
+// summary: Login
+// description: Authenticates user and sets cookie with issued auth token
+// parameters:
+//   - in: body
+//     name: body
+//     schema:
+//       $ref: "#/definitions/AuthRequest"
+// responses:
+//   200:
+//     description: Authentication succeeded
+//   400:
+//     description: Body parsing error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   401:
+//     description: Authentication failed
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+	req, err := toAuthRequest(httpReq)
+	if err != nil {
 		utils.SendError(httpRes, err, http.StatusBadRequest)
 		return
 	}
+	err = api.authenticator.CheckCredentials(req.Username, req.Password)
+	if err != nil {
+		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		return
+	}
+
+	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
+	if err != nil {
+		utils.SendError(httpRes, err, http.StatusInternalServerError)
+		return
+	}
+
+	response := contract.NewAuthResponse(jwtToken)
 
 	http.SetCookie(httpRes, &http.Cookie{
 		Name:     auth.JWTCookieName,
@@ -92,16 +141,17 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 		Secure:   false,
 		Path:     "/",
 	})
+	utils.WriteAsJSON(response, httpRes)
 }
 
 // swagger:operation DELETE /auth/logout Authentication Logout
 // ---
 // summary: Logout
-// description: Clears JWT session cookie
+// description: Clears authentication cookie
 // responses:
 //   200:
 //     description: Logged out successfully
-func (api *authenticationAPI) Logout(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+func (api *authenticationAPI) Logout(httpRes http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	http.SetCookie(httpRes, &http.Cookie{
 		Name:     auth.JWTCookieName,
 		Value:    "",
@@ -148,12 +198,10 @@ func (api *authenticationAPI) ChangePassword(httpRes http.ResponseWriter, httpRe
 	}
 }
 
-func toLoginRequest(req *http.Request) (*contract.LoginRequest, error) {
-	var loginReq = contract.LoginRequest{}
-	if err := json.NewDecoder(req.Body).Decode(&loginReq); err != nil {
-		return nil, err
-	}
-	return &loginReq, nil
+func toAuthRequest(req *http.Request) (contract.AuthRequest, error) {
+	var request contract.AuthRequest
+	err := json.NewDecoder(req.Body).Decode(&request)
+	return request, err
 }
 
 func toChangePasswordRequest(req *http.Request) (*contract.ChangePasswordRequest, error) {
@@ -163,6 +211,9 @@ func toChangePasswordRequest(req *http.Request) (*contract.ChangePasswordRequest
 	}
 	return &cpReq, nil
 }
+
+// TequilapiAuthenticateEndpointPath used by UIServer to know which endpoint doesn't need auth
+const TequilapiAuthenticateEndpointPath = "/auth/authenticate"
 
 // TequilapiLoginEndpointPath used by UIServer to know which endpoint doesn't need auth
 const TequilapiLoginEndpointPath = "/auth/login"
@@ -178,6 +229,7 @@ func AddRoutesForAuthentication(
 		jwtAuthenticator: jwtAuth,
 	}
 	router.PUT("/auth/password", api.ChangePassword)
+	router.POST(TequilapiAuthenticateEndpointPath, api.Authenticate)
 	router.POST(TequilapiLoginEndpointPath, api.Login)
 	router.DELETE("/auth/logout", api.Logout)
 }

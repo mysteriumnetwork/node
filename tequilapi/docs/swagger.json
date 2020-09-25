@@ -34,9 +34,51 @@
         }
       }
     },
+    "/auth/authenticate": {
+      "post": {
+        "description": "Authenticates user and issues auth token",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Authenticate",
+        "operationId": "Authenticate",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AuthRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authentication succeeded"
+          },
+          "400": {
+            "description": "Body parsing error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "401": {
+            "description": "Authentication failed",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/auth/login": {
       "post": {
-        "description": "Checks user credentials and sets JWT session cookie",
+        "description": "Authenticates user and sets cookie with issued auth token",
         "tags": [
           "Authentication"
         ],
@@ -47,13 +89,13 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/LoginRequest"
+              "$ref": "#/definitions/AuthRequest"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Logged in successfully"
+            "description": "Authentication succeeded"
           },
           "400": {
             "description": "Body parsing error",
@@ -62,7 +104,13 @@
             }
           },
           "401": {
-            "description": "Login failed",
+            "description": "Authentication failed",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
             }
@@ -72,7 +120,7 @@
     },
     "/auth/logout": {
       "delete": {
-        "description": "Clears JWT session cookie",
+        "description": "Clears authentication cookie",
         "tags": [
           "Authentication"
         ],
@@ -1660,6 +1708,38 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/market"
     },
+    "AuthRequest": {
+      "type": "object",
+      "title": "AuthRequest request used to authenticate to API.",
+      "properties": {
+        "password": {
+          "type": "string",
+          "x-go-name": "Password"
+        },
+        "username": {
+          "type": "string",
+          "x-go-name": "Username"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "AuthResponse": {
+      "type": "object",
+      "title": "AuthResponse response after successful authentication to API.",
+      "properties": {
+        "expires_at": {
+          "type": "string",
+          "x-go-name": "ExpiresAt",
+          "example": "2019-06-06T11:04:43.910035Z"
+        },
+        "token": {
+          "type": "string",
+          "x-go-name": "Token",
+          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im15c3QiLCJleHAiOjE2MDEwNDA1NzB9.hnn9FosblyWtx1feSupx3MhZZdkbCuMTaiM6xl54VwQ"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "BuildInfoDTO": {
       "type": "object",
       "title": "BuildInfoDTO holds info about build.",
@@ -2268,21 +2348,6 @@
           "type": "string",
           "x-go-name": "UserType",
           "example": "residential"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "LoginRequest": {
-      "type": "object",
-      "title": "LoginRequest request used to login to API.",
-      "properties": {
-        "password": {
-          "type": "string",
-          "x-go-name": "Password"
-        },
-        "username": {
-          "type": "string",
-          "x-go-name": "Username"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

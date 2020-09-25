@@ -17,11 +17,35 @@
 
 package contract
 
-// LoginRequest request used to login to API.
-// swagger:model LoginRequest
-type LoginRequest struct {
+import (
+	"time"
+
+	"github.com/mysteriumnetwork/node/core/auth"
+)
+
+// AuthRequest request used to authenticate to API.
+// swagger:model AuthRequest
+type AuthRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+// NewAuthResponse maps to API authentication response.
+func NewAuthResponse(jwtToken auth.JWT) AuthResponse {
+	return AuthResponse{
+		Token:     jwtToken.Token,
+		ExpiresAt: jwtToken.ExpirationTime.Format(time.RFC3339),
+	}
+}
+
+// AuthResponse response after successful authentication to API.
+// swagger:model AuthResponse
+type AuthResponse struct {
+	// example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im15c3QiLCJleHAiOjE2MDEwNDA1NzB9.hnn9FosblyWtx1feSupx3MhZZdkbCuMTaiM6xl54VwQ
+	Token string `json:"token"`
+
+	// example: 2019-06-06T11:04:43.910035Z
+	ExpiresAt string `json:"expires_at"`
 }
 
 // ChangePasswordRequest request used to change API password.

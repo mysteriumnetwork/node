@@ -18,6 +18,7 @@
 package ui
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -77,16 +78,15 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 			return
 		}
 
-		// authenticate all but the login route
-		if !isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiLoginEndpointPath) {
-			cookieToken, err := c.Cookie(auth.JWTCookieName)
-
+		// authenticate all but the authentication routes
+		if isTequilapiProtectedUrl(c.Request.URL.Path) {
+			authToken, err := parseToken(c)
 			if err != nil {
-				c.AbortWithStatus(http.StatusUnauthorized)
+				c.AbortWithStatus(http.StatusBadRequest)
 				return
 			}
 
-			if _, err := authenticator.ValidateToken(cookieToken); err != nil {
+			if _, err := authenticator.ValidateToken(authToken); err != nil {
 				c.AbortWithStatus(http.StatusUnauthorized)
 				return
 			}
@@ -107,6 +107,53 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 	}
 }
 
+func parseToken(c *gin.Context) (string, error) {
+	// authenticate from header
+	token, err := parseHeaderToken(c)
+	if err != nil {
+		return "", err
+	}
+	if token != "" {
+		return token, nil
+	}
+
+	// authenticate from cookie
+	return parseCookieToken(c)
+}
+
+func parseCookieToken(c *gin.Context) (string, error) {
+	token, err := c.Cookie(auth.JWTCookieName)
+	if err == http.ErrNoCookie {
+		// No error, just no token
+		return "", nil
+	}
+	return token, nil
+}
+
+func parseHeaderToken(c *gin.Context) (string, error) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return "", nil // No error, just no token
+	}
+
+	authHeaderParts := strings.Fields(authHeader)
+	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
+		return "", errors.New(`authorization header format must be: "Bearer {token}"`)
+	}
+
+	return authHeaderParts[1], nil
+}
+
 func isTequilapiURL(url string, endpoints ...string) bool {
 	return strings.Contains(url, tequilapiUrlPrefix+strings.Join(endpoints, ""))
+}
+
+func isTequilapiProtectedUrl(url string) bool {
+	if isTequilapiURL(url, endpoints.TequilapiAuthenticateEndpointPath) {
+		return false
+	}
+	if isTequilapiURL(url, endpoints.TequilapiLoginEndpointPath) {
+		return false
+	}
+	return true
 }
