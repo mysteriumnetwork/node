@@ -65,7 +65,7 @@ func TestSessionQuery_FilterDirection(t *testing.T) {
 	assert.Equal(t, []History{sessionExpected}, query.Sessions)
 
 	// when
-	query = NewQuery().FetchSessions().FilterDirection(DirectionConsumed)
+	query = NewQuery().FetchSessions().SetDirection(DirectionConsumed)
 	err = storage.Query(query)
 	// then
 	assert.Nil(t, err)
@@ -109,7 +109,7 @@ func TestSessionQuery_FetchStats(t *testing.T) {
 	)
 
 	// when
-	query = NewQuery().FilterDirection(DirectionConsumed).FetchStats()
+	query = NewQuery().SetDirection(DirectionConsumed).FetchStats()
 	err = storage.Query(query)
 	// then
 	assert.Nil(t, err)
@@ -134,8 +134,8 @@ func TestSessionQuery_FetchStatsByDay(t *testing.T) {
 
 	// when
 	query := NewQuery().
-		FilterFrom(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
-		FilterTo(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
+		SetStartedFrom(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
+		SetStartedTo(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
 		FetchStatsByDay()
 	err := storage.Query(query)
 	// then
@@ -150,8 +150,8 @@ func TestSessionQuery_FetchStatsByDay(t *testing.T) {
 
 	// when
 	query = NewQuery().
-		FilterFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
-		FilterTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
+		SetStartedFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
+		SetStartedTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
 		FetchStatsByDay()
 	err = storage.Query(query)
 	// then
@@ -176,9 +176,9 @@ func TestSessionQuery_FetchStatsByDay(t *testing.T) {
 
 	// when
 	query = NewQuery().
-		FilterFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
-		FilterTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
-		FilterDirection(DirectionConsumed).
+		SetStartedFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
+		SetStartedTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
+		SetDirection(DirectionConsumed).
 		FetchStatsByDay()
 	err = storage.Query(query)
 	// then

@@ -37,44 +37,42 @@ type Query struct {
 	Stats      Stats
 	StatsByDay map[time.Time]Stats
 
-	filterFrom        *time.Time
-	filterTo          *time.Time
-	filterDirection   *string
-	filterServiceType *string
-	filterStatus      *string
+	StartedFrom *time.Time
+	StartedTo   *time.Time
+	Direction   *string
+	ServiceType *string
+	Status      *string
 
 	fetch []q.Matcher
 }
 
-// FilterFrom filters fetched sessions from given time.
-func (qr *Query) FilterFrom(from time.Time) *Query {
-	from = from.UTC()
-	qr.filterFrom = &from
+// SetStartedFrom filters fetched sessions from given time.
+func (qr *Query) SetStartedFrom(from time.Time) *Query {
+	qr.StartedFrom = &from
 	return qr
 }
 
-// FilterTo filters fetched sessions to given time.
-func (qr *Query) FilterTo(to time.Time) *Query {
-	to = to.UTC()
-	qr.filterTo = &to
+// SetStartedTo filters fetched sessions to given time.
+func (qr *Query) SetStartedTo(to time.Time) *Query {
+	qr.StartedTo = &to
 	return qr
 }
 
-// FilterDirection filters fetched sessions by direction.
-func (qr *Query) FilterDirection(direction string) *Query {
-	qr.filterDirection = &direction
+// SetDirection filters fetched sessions by direction.
+func (qr *Query) SetDirection(direction string) *Query {
+	qr.Direction = &direction
 	return qr
 }
 
-// FilterServiceType filters fetched sessions by service type.
-func (qr *Query) FilterServiceType(serviceType string) *Query {
-	qr.filterServiceType = &serviceType
+// SetServiceType filters fetched sessions by service type.
+func (qr *Query) SetServiceType(serviceType string) *Query {
+	qr.ServiceType = &serviceType
 	return qr
 }
 
-// FilterStatus filters fetched sessions by status.
-func (qr *Query) FilterStatus(status string) *Query {
-	qr.filterStatus = &status
+// SetStatus filters fetched sessions by status.
+func (qr *Query) SetStatus(status string) *Query {
+	qr.Status = &status
 	return qr
 }
 
@@ -104,8 +102,8 @@ const stepDay = 24 * time.Hour
 func (qr *Query) FetchStatsByDay() *Query {
 	// fill the period with zeros
 	qr.StatsByDay = make(map[time.Time]Stats)
-	if qr.filterFrom != nil && qr.filterTo != nil {
-		for i := qr.filterFrom.Truncate(stepDay); !i.After(*qr.filterTo); i = i.Add(stepDay) {
+	if qr.StartedFrom != nil && qr.StartedTo != nil {
+		for i := qr.StartedFrom.Truncate(stepDay); !i.After(*qr.StartedTo); i = i.Add(stepDay) {
 			qr.StatsByDay[i] = NewStats()
 		}
 	}
@@ -127,20 +125,20 @@ func (qr *Query) FetchStatsByDay() *Query {
 
 func (qr *Query) run(node storm.Node) error {
 	where := make([]q.Matcher, 0)
-	if qr.filterFrom != nil {
-		where = append(where, q.Gte("Started", qr.filterFrom))
+	if qr.StartedFrom != nil {
+		where = append(where, q.Gte("Started", qr.StartedFrom))
 	}
-	if qr.filterTo != nil {
-		where = append(where, q.Lte("Started", qr.filterTo))
+	if qr.StartedTo != nil {
+		where = append(where, q.Lte("Started", qr.StartedTo))
 	}
-	if qr.filterDirection != nil {
-		where = append(where, q.Eq("Direction", qr.filterDirection))
+	if qr.Direction != nil {
+		where = append(where, q.Eq("Direction", qr.Direction))
 	}
-	if qr.filterServiceType != nil {
-		where = append(where, q.Eq("ServiceType", qr.filterServiceType))
+	if qr.ServiceType != nil {
+		where = append(where, q.Eq("ServiceType", qr.ServiceType))
 	}
-	if qr.filterStatus != nil {
-		where = append(where, q.Eq("Status", qr.filterStatus))
+	if qr.Status != nil {
+		where = append(where, q.Eq("Status", qr.Status))
 	}
 
 	sq := node.

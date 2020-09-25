@@ -68,37 +68,26 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 	}
 
 	filter := session.NewQuery()
-
-	dateFrom := time.Now().AddDate(0, 0, -30)
+	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
 	if query.DateFrom != nil {
-		dateFrom = *query.DateFrom
+		filter.SetStartedFrom(*query.DateFrom)
 	}
-	filter.FilterFrom(dateFrom)
-
-	dateTo := time.Now()
+	filter.SetStartedTo(time.Now())
 	if query.DateTo != nil {
-		dateTo = *query.DateTo
+		filter.SetStartedTo(*query.DateTo)
 	}
-	filter.FilterTo(dateTo)
+	filter.Direction = query.Direction
+	filter.ServiceType = query.ServiceType
+	filter.Status = query.Status
 
-	if query.Direction != nil {
-		filter.FilterDirection(*query.Direction)
-	}
-	if query.ServiceType != nil {
-		filter.FilterServiceType(*query.ServiceType)
-	}
-	if query.Status != nil {
-		filter.FilterStatus(*query.Status)
+	pageSize := 50
+	if query.PageSize != nil {
+		pageSize = *query.PageSize
 	}
 
 	page := 1
 	if query.Page != nil {
 		page = *query.Page
-	}
-
-	pageSize := 50
-	if query.PageSize != nil {
-		page = *query.PageSize
 	}
 
 	if err := endpoint.sessionStorage.Query(filter.FetchSessions().FetchStats().FetchStatsByDay()); err != nil {
