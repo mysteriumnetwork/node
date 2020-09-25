@@ -66,6 +66,12 @@
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
             }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
           }
         }
       }
@@ -99,6 +105,12 @@
           },
           "401": {
             "description": "Authentication failed",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
             "schema": {
               "$ref": "#/definitions/ErrorMessageDTO"
             }

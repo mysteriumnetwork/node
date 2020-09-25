@@ -80,7 +80,6 @@ func ReverseTequilapiProxy(tequilapiAddress string, tequilapiPort int, authentic
 
 		// authenticate all but the authentication routes
 		if !(isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiAuthenticateEndpointPath) || isTequilapiURL(c.Request.URL.Path, endpoints.TequilapiLoginEndpointPath)) {
-			// authenticate from header
 			authToken, err := parseToken(c)
 			if err != nil {
 				c.AbortWithStatus(http.StatusBadRequest)
@@ -119,14 +118,14 @@ func parseToken(c *gin.Context) (string, error) {
 	}
 
 	// authenticate from cookie
-	return parseHeaderToken(c)
+	return parseCookieToken(c)
 }
 
 func parseCookieToken(c *gin.Context) (string, error) {
 	token, err := c.Cookie(auth.JWTCookieName)
 	if err == http.ErrNoCookie {
 		// No error, just no token
-		return "", nil // No error, just no token
+		return "", nil
 	}
 	return token, nil
 }

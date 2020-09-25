@@ -63,6 +63,10 @@ type authenticator interface {
 //     description: Authentication failed
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *authenticationAPI) Authenticate(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
 	req, err := toAuthRequest(httpReq)
 	if err != nil {
@@ -77,7 +81,7 @@ func (api *authenticationAPI) Authenticate(httpRes http.ResponseWriter, httpReq 
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusBadRequest)
+		utils.SendError(httpRes, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -105,6 +109,10 @@ func (api *authenticationAPI) Authenticate(httpRes http.ResponseWriter, httpReq 
 //     description: Authentication failed
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
 	req, err := toAuthRequest(httpReq)
 	if err != nil {
@@ -119,7 +127,7 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusBadRequest)
+		utils.SendError(httpRes, err, http.StatusInternalServerError)
 		return
 	}
 
