@@ -59,7 +59,7 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     type: string
 //   - in: query
 //     name: direction
-//     description: Direction to filter the sessions by. Possible values are "Provider", "Consumed".
+//     description: Direction to filter the sessions by. Possible values are "Provided", "Consumed".
 //     type: string
 //   - in: query
 //     name: service_type
@@ -72,7 +72,11 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //   - in: query
 //     name: page
 //     description: Page to filter the sessions by.
-//     type: string
+//     type: int
+//   - in: query
+//     name: page_size
+//     description: Number of records per page.
+//     type: int
 // responses:
 //   200:
 //     description: List of sessions
