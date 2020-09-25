@@ -29,7 +29,9 @@ import (
 )
 
 type sessionStorage interface {
-	Query(*session.Query) error
+	List(*session.Filter) ([]session.History, error)
+	Stats(*session.Filter) (session.Stats, error)
+	StatsByDay(*session.Filter) (map[time.Time]session.Stats, error)
 }
 
 type sessionsEndpoint struct {
@@ -67,7 +69,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		return
 	}
 
-	filter := session.NewQuery()
+	filter := session.NewFilter()
 	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
 	if query.DateFrom != nil {
 		filter.SetStartedFrom(*query.DateFrom)
@@ -90,19 +92,32 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		page = *query.Page
 	}
 
-	if err := endpoint.sessionStorage.Query(filter.FetchSessions().FetchStats().FetchStatsByDay()); err != nil {
+	sessionsAll, err := endpoint.sessionStorage.List(filter)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	stats, err := endpoint.sessionStorage.Stats(filter)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	statsByDay, err := endpoint.sessionStorage.StatsByDay(filter)
+	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	var sessions []session.History
-	p := utils.NewPaginator(adapter.NewSliceAdapter(filter.Sessions), pageSize, page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(sessionsAll), pageSize, page)
 	if err := p.Results(&sessions); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	sessionsDTO := contract.NewSessionListResponse(sessions, p, filter.Stats, filter.StatsByDay)
+	sessionsDTO := contract.NewSessionListResponse(sessions, p, stats, statsByDay)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 

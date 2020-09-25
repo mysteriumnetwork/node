@@ -63,7 +63,7 @@ var (
 	connectionInvoiceMock = crypto.Invoice{AgreementID: big.NewInt(10), AgreementTotal: big.NewInt(1000), TransactorFee: big.NewInt(10)}
 )
 
-func TestSessionStorageGetAll(t *testing.T) {
+func TestSessionStorage_GetAll(t *testing.T) {
 	// given
 	sessionExpected := History{
 		SessionID:       session_node.ID("session1"),
@@ -80,10 +80,169 @@ func TestSessionStorageGetAll(t *testing.T) {
 	defer storageCleanup()
 
 	// when
-	sessions, err := storage.GetAll()
+	result, err := storage.GetAll()
 	// then
 	assert.Nil(t, err)
-	assert.Equal(t, []History{sessionExpected}, sessions)
+	assert.Equal(t, []History{sessionExpected}, result)
+}
+
+func TestSessionStorage_List(t *testing.T) {
+	// given
+	session1Expected := History{
+		SessionID: session_node.ID("session1"),
+		Started:   time.Date(2020, 6, 17, 0, 0, 1, 0, time.UTC),
+	}
+	session2Expected := History{
+		SessionID: session_node.ID("session2"),
+		Started:   time.Date(2020, 6, 17, 0, 0, 2, 0, time.UTC),
+	}
+	storage, storageCleanup := newStorageWithSessions(session1Expected, session2Expected)
+	defer storageCleanup()
+
+	// when
+	result, err := storage.List(NewFilter())
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, []History{session2Expected, session1Expected}, result)
+}
+
+func TestSessionStorage_ListFiltersDirection(t *testing.T) {
+	// given
+	sessionExpected := History{
+		SessionID: session_node.ID("session1"),
+		Direction: "Provided",
+	}
+	storage, storageCleanup := newStorageWithSessions(sessionExpected)
+	defer storageCleanup()
+
+	// when
+	result, err := storage.List(NewFilter())
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, []History{sessionExpected}, result)
+
+	// when
+	result, err = storage.List(NewFilter().SetDirection(DirectionConsumed))
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, []History{}, result)
+}
+
+func TestSessionStorage_Stats(t *testing.T) {
+	// given
+	sessionExpected := History{
+		SessionID:    session_node.ID("session1"),
+		Direction:    "Provided",
+		ConsumerID:   identity.FromAddress("consumer1"),
+		DataSent:     1234,
+		DataReceived: 123,
+		Tokens:       big.NewInt(12),
+		Started:      time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+		Updated:      time.Date(2020, 6, 17, 10, 11, 32, 0, time.UTC),
+		Status:       "New",
+	}
+	storage, storageCleanup := newStorageWithSessions(sessionExpected)
+	defer storageCleanup()
+
+	// when
+	result, err := storage.Stats(NewFilter())
+	// then
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		Stats{
+			Count: 1,
+			ConsumerCounts: map[identity.Identity]int{
+				identity.FromAddress("consumer1"): 1,
+			},
+			SumDataSent:     1234,
+			SumDataReceived: 123,
+			SumTokens:       big.NewInt(12),
+			SumDuration:     20 * time.Second,
+		},
+		result,
+	)
+
+	// when
+	result, err = storage.Stats(NewFilter().SetDirection(DirectionConsumed))
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, NewStats(), result)
+}
+
+func TestSessionStorage_StatsByDay(t *testing.T) {
+	// given
+	sessionExpected := History{
+		SessionID:    session_node.ID("session1"),
+		Direction:    "Provided",
+		ConsumerID:   identity.FromAddress("consumer1"),
+		DataSent:     1234,
+		DataReceived: 123,
+		Tokens:       big.NewInt(12),
+		Started:      time.Date(2020, 6, 17, 10, 11, 12, 0, time.UTC),
+		Updated:      time.Date(2020, 6, 17, 10, 11, 32, 0, time.UTC),
+		Status:       "New",
+	}
+	storage, storageCleanup := newStorageWithSessions(sessionExpected)
+	defer storageCleanup()
+
+	// when
+	filter := NewFilter().
+		SetStartedFrom(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC)).
+		SetStartedTo(time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC))
+	result, err := storage.StatsByDay(filter)
+	// then
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		map[time.Time]Stats{
+			time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC): NewStats(),
+		},
+		result,
+	)
+
+	// when
+	filter = NewFilter().
+		SetStartedFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
+		SetStartedTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC))
+	result, err = storage.StatsByDay(filter)
+	// then
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		map[time.Time]Stats{
+			time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC): {
+				Count: 1,
+				ConsumerCounts: map[identity.Identity]int{
+					identity.FromAddress("consumer1"): 1,
+				},
+				SumDataSent:     1234,
+				SumDataReceived: 123,
+				SumTokens:       big.NewInt(12),
+				SumDuration:     20 * time.Second,
+			},
+			time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC): NewStats(),
+		},
+		result,
+	)
+
+	// when
+	filter = NewFilter().
+		SetStartedFrom(time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC)).
+		SetStartedTo(time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC)).
+		SetDirection(DirectionConsumed)
+	result, err = storage.StatsByDay(filter)
+	// then
+	assert.Nil(t, err)
+	assert.Equal(
+		t,
+		map[time.Time]Stats{
+			time.Date(2020, 6, 17, 0, 0, 0, 0, time.UTC): NewStats(),
+			time.Date(2020, 6, 18, 0, 0, 0, 0, time.UTC): NewStats(),
+		},
+		result,
+	)
+	return
 }
 
 func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {

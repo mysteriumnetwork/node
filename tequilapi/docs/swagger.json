@@ -1390,6 +1390,24 @@
         "operationId": "sessionList",
         "parameters": [
           {
+            "type": "integer",
+            "format": "int64",
+            "default": 50,
+            "x-go-name": "PageSize",
+            "description": "Number of items per page.",
+            "name": "page_size",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "default": 1,
+            "x-go-name": "Page",
+            "description": "Page to filter the items by.",
+            "name": "page",
+            "in": "query"
+          },
+          {
             "type": "string",
             "format": "date-time",
             "x-go-name": "DateFrom",
@@ -1424,24 +1442,6 @@
             "x-go-name": "Status",
             "description": "Status to filter the sessions by. Possible values are \"New\", \"Completed\".",
             "name": "status",
-            "in": "query"
-          },
-          {
-            "type": "integer",
-            "format": "int64",
-            "default": 50,
-            "x-go-name": "PageSize",
-            "description": "Number of records per page.",
-            "name": "page_size",
-            "in": "query"
-          },
-          {
-            "type": "integer",
-            "format": "int64",
-            "default": 1,
-            "x-go-name": "Page",
-            "description": "Page to filter the sessions by.",
-            "name": "page",
             "in": "query"
           }
         ],

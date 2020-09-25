@@ -18,8 +18,35 @@
 package contract
 
 import (
+	"net/http"
+
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
+
+// NewPaginationQuery creates pagination query from API request.
+func NewPaginationQuery(request *http.Request) (PaginationQuery, *validation.FieldErrorMap) {
+	query := request.URL.Query()
+	errs := validation.NewErrorMap()
+
+	return PaginationQuery{
+		PageSize: parseIntOptional(query.Get("page_size"), errs.ForField("page_size")),
+		Page:     parseIntOptional(query.Get("page"), errs.ForField("page")),
+	}, errs
+}
+
+// PaginationQuery allows to page response items.
+type PaginationQuery struct {
+	// Number of items per page.
+	// in: query
+	// default: 50
+	PageSize *int `json:"page_size"`
+
+	// Page to filter the items by.
+	// in: query
+	// default: 1
+	Page *int `json:"page"`
+}
 
 // NewPageableDTO maps to API pagination DTO.
 func NewPageableDTO(paginator *utils.Paginator) PageableDTO {

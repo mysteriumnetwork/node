@@ -20,7 +20,6 @@ package contract
 import (
 	"math/big"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -30,98 +29,24 @@ import (
 
 // NewSessionListQuery creates session query from API request.
 func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
+	pagination, errs := NewPaginationQuery(request)
+
 	query := request.URL.Query()
-	errs := validation.NewErrorMap()
-
 	return SessionListQuery{
-		DateFrom:    parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
-		DateTo:      parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
-		Direction:   parseStringOptional(query.Get("direction"), errs.ForField("direction")),
-		ServiceType: parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
-		Status:      parseStringOptional(query.Get("status"), errs.ForField("status")),
-		Page:        parseIntOptional(query.Get("page"), errs.ForField("page")),
-		PageSize:    parseIntOptional(query.Get("page_size"), errs.ForField("page_size")),
+		PaginationQuery: pagination,
+		DateFrom:        parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
+		DateTo:          parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
+		Direction:       parseStringOptional(query.Get("direction"), errs.ForField("direction")),
+		ServiceType:     parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
+		Status:          parseStringOptional(query.Get("status"), errs.ForField("status")),
 	}, errs
-}
-
-func parseString(str string, errs *validation.FieldErrorList) string {
-	if str == "" {
-		errs.AddError("required", "Field is required")
-		return ""
-	}
-
-	return str
-}
-
-func parseStringOptional(str string, _ *validation.FieldErrorList) *string {
-	if str == "" {
-		return nil
-	}
-
-	return &str
-}
-
-func parseInt(str string, errs *validation.FieldErrorList) int {
-	if str == "" {
-		errs.AddError("required", "Field is required")
-		return 0
-	}
-
-	value, err := strconv.Atoi(str)
-	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return 0
-	}
-
-	return value
-}
-
-func parseIntOptional(str string, errs *validation.FieldErrorList) *int {
-	if str == "" {
-		return nil
-	}
-
-	value, err := strconv.Atoi(str)
-	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return nil
-	}
-
-	return &value
-}
-
-func parseDate(str string, errs *validation.FieldErrorList) time.Time {
-	if str == "" {
-		errs.AddError("required", "Field is required")
-		return time.Time{}
-	}
-
-	value, err := time.Parse(time.RFC3339, str)
-	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return time.Time{}
-	}
-
-	return value
-}
-
-func parseDateOptional(str string, errs *validation.FieldErrorList) *time.Time {
-	if str == "" {
-		return nil
-	}
-
-	value, err := time.Parse(time.RFC3339, str)
-	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return nil
-	}
-
-	return &value
 }
 
 // SessionListQuery allows to filter requested sessions.
 // swagger:parameters sessionList
 type SessionListQuery struct {
+	PaginationQuery
+
 	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
 	// in: query
 	DateFrom *time.Time `json:"date_from"`
@@ -141,16 +66,6 @@ type SessionListQuery struct {
 	// Status to filter the sessions by. Possible values are "New", "Completed".
 	// in: query
 	Status *string `json:"status"`
-
-	// Number of records per page.
-	// in: query
-	// default: 50
-	PageSize *int `json:"page_size"`
-
-	// Page to filter the sessions by.
-	// in: query
-	// default: 1
-	Page *int `json:"page"`
 }
 
 // NewSessionListResponse maps to API session list.
