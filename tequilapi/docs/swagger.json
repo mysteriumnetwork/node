@@ -307,8 +307,11 @@
     "/exchange/dai/myst": {
       "get": {
         "description": "Returns the dai price in myst",
+        "tags": [
+          "Exchange"
+        ],
         "summary": "Returns the dai price in myst",
-        "operationId": "Exchange",
+        "operationId": "DaiToMyst",
         "responses": {
           "200": {
             "description": "Dai price in myst",
@@ -329,12 +332,10 @@
       "get": {
         "description": "Returns the myst price in dai",
         "tags": [
-          "myst",
-          "price",
-          "in"
+          "Exchange"
         ],
         "summary": "Returns the myst price in dai",
-        "operationId": "dai",
+        "operationId": "MystToDai",
         "responses": {
           "200": {
             "description": "Myst price in dai",
