@@ -69,7 +69,7 @@ func (e *exchangeEndpoint) MystToDai(writer http.ResponseWriter, request *http.R
 	utils.WriteAsJSON(status, writer)
 }
 
-// swagger:operation GET /exchange/dai/myst dai price in myst
+// swagger:operation GET /exchange/dai/myst Exchange
 // ---
 // summary: Returns the dai price in myst
 // description: Returns the dai price in myst

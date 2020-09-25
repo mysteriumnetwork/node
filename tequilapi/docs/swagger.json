@@ -307,13 +307,8 @@
     "/exchange/dai/myst": {
       "get": {
         "description": "Returns the dai price in myst",
-        "tags": [
-          "dai",
-          "price",
-          "in"
-        ],
         "summary": "Returns the dai price in myst",
-        "operationId": "myst",
+        "operationId": "Exchange",
         "responses": {
           "200": {
             "description": "Dai price in myst",
@@ -704,12 +699,8 @@
     "/identities/{id}/referral": {
       "get": {
         "description": "Gets a referral token for the given identity if a campaign exists",
-        "tags": [
-          "get",
-          "referral"
-        ],
         "summary": "Gets referral token",
-        "operationId": "token",
+        "operationId": "Referral",
         "parameters": [
           {
             "type": "string",
@@ -2155,7 +2146,7 @@
         "token": {
           "description": "Token: referral token, if the user has one",
           "type": "string",
-          "x-go-name": "Token"
+          "x-go-name": "ReferralToken"
         }
       },
       "x-go-name": "IdentityRegisterRequest",

@@ -378,7 +378,7 @@ func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Req
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
-// swagger:operation GET /identities/{id}/referral get referral token
+// swagger:operation GET /identities/{id}/referral Referral
 // ---
 // summary: Gets referral token
 // description: Gets a referral token for the given identity if a campaign exists
