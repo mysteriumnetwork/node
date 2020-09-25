@@ -84,8 +84,7 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	assert.Nil(t, err)
 
 	ssm := &sessionStorageMock{
-		sessionsToReturn:   sessionsMock,
-		statsByDayToReturn: sessionStatsByDayMock,
+		sessionsToReturn: sessionsMock,
 	}
 
 	resp := httptest.NewRecorder()
@@ -108,7 +107,6 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 				TotalItems: 1,
 				TotalPages: 1,
 			},
-			StatsDaily: contract.NewSessionStatsDailyDTO(sessionStatsByDayMock),
 		},
 		parsedResponse,
 	)
@@ -161,6 +159,37 @@ func Test_SessionsEndpoint_Stats(t *testing.T) {
 	assert.EqualValues(
 		t,
 		contract.NewSessionStatsDTO(sessionStatsMock),
+		parsedResponse,
+	)
+}
+
+func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	ssm := &sessionStorageMock{
+		statsByDayToReturn: sessionStatsByDayMock,
+	}
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewSessionsEndpoint(ssm).StatsDaily
+	handlerFunc(resp, req, nil)
+
+	parsedResponse := contract.SessionStatsDailyResponse{}
+	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.EqualValues(
+		t,
+		contract.SessionStatsDailyResponse{
+			Items: map[string]contract.SessionStatsDTO{
+				"2010-01-01": contract.NewSessionStatsDTO(sessionStatsMock),
+			},
+		},
 		parsedResponse,
 	)
 }

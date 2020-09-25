@@ -43,7 +43,7 @@ func NewSessionQuery(request *http.Request) (SessionQuery, *validation.FieldErro
 }
 
 // SessionQuery allows to filter requested sessions.
-// swagger:parameters sessionStats
+// swagger:parameters sessionStats sessionStatsDaily
 type SessionQuery struct {
 	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
 	// in: query
@@ -90,11 +90,7 @@ type SessionListQuery struct {
 }
 
 // NewSessionListResponse maps to API session list.
-func NewSessionListResponse(
-	sessions []session.History,
-	paginator *utils.Paginator,
-	statsDaily map[time.Time]session.Stats,
-) SessionListResponse {
+func NewSessionListResponse(sessions []session.History, paginator *utils.Paginator) SessionListResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = NewSessionDTO(se)
@@ -103,7 +99,6 @@ func NewSessionListResponse(
 	return SessionListResponse{
 		Items:       dtoArray,
 		PageableDTO: NewPageableDTO(paginator),
-		StatsDaily:  NewSessionStatsDailyDTO(statsDaily),
 	}
 }
 
@@ -112,7 +107,6 @@ func NewSessionListResponse(
 type SessionListResponse struct {
 	Items []SessionDTO `json:"items"`
 	PageableDTO
-	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
 }
 
 // NewSessionStatsDTO maps to API session stats.
@@ -138,13 +132,22 @@ type SessionStatsDTO struct {
 	SumTokens        *big.Int `json:"sum_tokens"`
 }
 
-// NewSessionStatsDailyDTO maps to API session stats grouped by day.
-func NewSessionStatsDailyDTO(statsGrouped map[time.Time]session.Stats) map[string]SessionStatsDTO {
-	dto := make(map[string]SessionStatsDTO, len(statsGrouped))
-	for date, stats := range statsGrouped {
-		dto[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
+// SessionStatsDailyResponse defines session list representable as json.
+// swagger:model SessionStatsDailyResponse
+type SessionStatsDailyResponse struct {
+	Items map[string]SessionStatsDTO `json:"items"`
+}
+
+// NewSessionStatsDailyResponse maps to API session stats grouped by day.
+func NewSessionStatsDailyResponse(stats map[time.Time]session.Stats) SessionStatsDailyResponse {
+	dtoMap := make(map[string]SessionStatsDTO, len(stats))
+	for date, stats := range stats {
+		dtoMap[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
 	}
-	return dto
+
+	return SessionStatsDailyResponse{
+		Items: dtoMap,
+	}
 }
 
 // NewSessionDTO maps to API session.
