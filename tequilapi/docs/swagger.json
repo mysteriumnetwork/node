@@ -308,12 +308,10 @@
       "get": {
         "description": "Returns the dai price in myst",
         "tags": [
-          "dai",
-          "price",
-          "in"
+          "Exchange"
         ],
         "summary": "Returns the dai price in myst",
-        "operationId": "myst",
+        "operationId": "DaiToMyst",
         "responses": {
           "200": {
             "description": "Dai price in myst",
@@ -334,12 +332,10 @@
       "get": {
         "description": "Returns the myst price in dai",
         "tags": [
-          "myst",
-          "price",
-          "in"
+          "Exchange"
         ],
         "summary": "Returns the myst price in dai",
-        "operationId": "dai",
+        "operationId": "MystToDai",
         "responses": {
           "200": {
             "description": "Myst price in dai",
@@ -702,6 +698,31 @@
       }
     },
     "/identities/{id}/referral": {
+      "get": {
+        "description": "Gets a referral token for the given identity if a campaign exists",
+        "summary": "Gets referral token",
+        "operationId": "Referral",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get a token",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token response"
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      },
       "put": {
         "description": "Registers referral code for identity",
         "tags": [
@@ -2122,6 +2143,11 @@
         },
         "stake": {
           "$ref": "#/definitions/Int"
+        },
+        "token": {
+          "description": "Token: referral token, if the user has one",
+          "type": "string",
+          "x-go-name": "ReferralToken"
         }
       },
       "x-go-name": "IdentityRegisterRequest",
@@ -2539,6 +2565,17 @@
       },
       "x-go-name": "referralInfo",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+    },
+    "ReferralTokenResponse": {
+      "type": "object",
+      "title": "ReferralTokenResponse represents a response for referral token.",
+      "properties": {
+        "token": {
+          "type": "string",
+          "x-go-name": "Token"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
     "ReportIssueError": {
       "description": "ReportIssueError issue report error",

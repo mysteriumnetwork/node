@@ -183,7 +183,7 @@ func (mt *mockTransactor) FetchRegistrationFees() (FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 
-func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error {
+func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error {
 	return mt.registerError
 }
 

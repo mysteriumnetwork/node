@@ -115,3 +115,9 @@ type DecreaseStakeRequest struct {
 	Amount        *big.Int `json:"amount,omitempty"`
 	TransactorFee *big.Int `json:"transactor_fee,omitempty"`
 }
+
+// ReferralTokenResponse represents a response for referral token.
+// swagger:model ReferralTokenResponse
+type ReferralTokenResponse struct {
+	Token string `json:"token"`
+}

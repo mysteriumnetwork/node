@@ -57,6 +57,7 @@ type identitiesAPI struct {
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
 	bc                providerChannel
+	transactor        Transactor
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -377,6 +378,35 @@ func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Req
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
+// swagger:operation GET /identities/{id}/referral Referral
+// ---
+// summary: Gets referral token
+// description: Gets a referral token for the given identity if a campaign exists
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get a token
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Token response
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	identity := params.ByName("id")
+	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(identity))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	utils.WriteAsJSON(contract.ReferralTokenResponse{
+		Token: tkn,
+	}, resp)
+}
+
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
@@ -387,6 +417,7 @@ func AddRoutesForIdentities(
 	channelAddressCalculator *pingpong.ChannelAddressCalculator,
 	earningsProvider earningsProvider,
 	bc providerChannel,
+	transactor Transactor,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:               idm,
@@ -396,6 +427,7 @@ func AddRoutesForIdentities(
 		channelCalculator: channelAddressCalculator,
 		earningsProvider:  earningsProvider,
 		bc:                bc,
+		transactor:        transactor,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
@@ -413,4 +445,5 @@ func AddRoutesForIdentities(
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
+	router.GET("/identities/:id/referral", idmEnd.GetReferralToken)
 }

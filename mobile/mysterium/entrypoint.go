@@ -483,7 +483,7 @@ func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 		return errors.Wrap(err, "could not get registration fees")
 	}
 
-	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "")
+	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", nil)
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
 	}

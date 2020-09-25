@@ -27,15 +27,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"github.com/vcraescu/go-paginator/adapter"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/vcraescu/go-paginator/adapter"
 )
 
 // Transactor represents interface to Transactor service
@@ -43,8 +42,9 @@ type Transactor interface {
 	FetchRegistrationFees() (registry.FeesResponse, error)
 	FetchSettleFees() (registry.FeesResponse, error)
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
-	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error
 	DecreaseStake(id string, amount, transactorFee *big.Int) error
+	GetReferralToken(id common.Address) (string, error)
 }
 
 // promiseSettler settles the given promises
@@ -231,7 +231,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
-	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary)
+	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)

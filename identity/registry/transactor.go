@@ -166,8 +166,7 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 	return t.httpClient.DoRequest(req)
 }
 
-// RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
-func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string) error {
+func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiary string) error {
 	regReq, err := t.fillIdentityRegistrationRequest(id, stake, fee, beneficiary)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
@@ -188,6 +187,48 @@ func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiar
 	t.publisher.Publish(AppTopicTransactorRegistration, regReq)
 
 	return t.httpClient.DoRequest(req)
+}
+
+type identityRegistrationRequestWithToken struct {
+	IdentityRegistrationRequest
+	Token string `json:"token"`
+}
+
+func (t *Transactor) registerIdentityWithReferralToken(id string, stake *big.Int, beneficiary string, token string) error {
+	regReq, err := t.fillIdentityRegistrationRequest(id, stake, new(big.Int), beneficiary)
+	if err != nil {
+		return errors.Wrap(err, "failed to fill in identity request")
+	}
+
+	err = t.validateRegisterIdentityRequest(regReq)
+	if err != nil {
+		return errors.Wrap(err, "identity request validation failed")
+	}
+
+	r := identityRegistrationRequestWithToken{
+		IdentityRegistrationRequest: regReq,
+		Token:                       token,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register/referer", r)
+	if err != nil {
+		return errors.Wrap(err, "failed to create RegisterIdentity request")
+	}
+
+	// This is left as a synchronous call on purpose.
+	// We need to notify registry before returning.
+	t.publisher.Publish(AppTopicTransactorRegistration, regReq)
+
+	return t.httpClient.DoRequest(req)
+}
+
+// RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
+func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error {
+	if referralToken == nil {
+		return t.registerIdentity(id, stake, fee, beneficiary)
+	}
+
+	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken)
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string) (IdentityRegistrationRequest, error) {
@@ -228,6 +269,33 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	regReq.Identity = id
 
 	return regReq, nil
+}
+
+// GetReferralToken returns the referral token
+func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
+	req, err := t.getReferralTokenRequest(id)
+	if err != nil {
+		return "", err
+	}
+
+	request, err := requests.NewPostRequest(t.endpointAddress, "rp/tokens/request", req)
+	if err != nil {
+		return "", fmt.Errorf("failed to create referral token request %w", err)
+	}
+
+	var resp struct {
+		Token string `json:"token"`
+	}
+	err = t.httpClient.DoRequestAndParseResponse(request, &resp)
+	return resp.Token, err
+}
+
+func (t *Transactor) getReferralTokenRequest(id common.Address) (pc.ReferralTokenRequest, error) {
+	signature, err := t.signerFactory(identity.FromAddress(id.Hex())).Sign(id.Bytes())
+	return pc.ReferralTokenRequest{
+		Identity:  id,
+		Signature: hex.EncodeToString(signature.Bytes()),
+	}, err
 }
 
 // CheckIfRegistrationBountyEligible determines if the identity is eligible for registration bounty
