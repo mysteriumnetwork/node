@@ -138,14 +138,15 @@ type SessionStatsAggregatedResponse struct {
 }
 
 // NewSessionStatsDailyResponse maps to API session stats grouped by day.
-func NewSessionStatsDailyResponse(stats map[time.Time]session.Stats) SessionStatsDailyResponse {
-	dtoMap := make(map[string]SessionStatsDTO, len(stats))
-	for date, stats := range stats {
+func NewSessionStatsDailyResponse(stats session.Stats, statsDaily map[time.Time]session.Stats) SessionStatsDailyResponse {
+	dtoMap := make(map[string]SessionStatsDTO, len(statsDaily))
+	for date, stats := range statsDaily {
 		dtoMap[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
 	}
 
 	return SessionStatsDailyResponse{
 		Items: dtoMap,
+		Stats: NewSessionStatsDTO(stats),
 	}
 }
 
@@ -153,6 +154,7 @@ func NewSessionStatsDailyResponse(stats map[time.Time]session.Stats) SessionStat
 // swagger:model SessionStatsDailyResponse
 type SessionStatsDailyResponse struct {
 	Items map[string]SessionStatsDTO `json:"items"`
+	Stats SessionStatsDTO            `json:"stats"`
 }
 
 // NewSessionStatsDTO maps to API session stats.

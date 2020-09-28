@@ -3288,6 +3288,9 @@
             "$ref": "#/definitions/SessionStatsDTO"
           },
           "x-go-name": "Items"
+        },
+        "stats": {
+          "$ref": "#/definitions/SessionStatsDTO"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

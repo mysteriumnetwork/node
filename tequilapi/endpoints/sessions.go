@@ -161,13 +161,19 @@ func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *
 		SetStartedTo(time.Now())
 	filter = queryToFilter(query, filter)
 
+	stats, err := endpoint.sessionStorage.Stats(filter)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
 	statsDaily, err := endpoint.sessionStorage.StatsByDay(filter)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	sessionsDTO := contract.NewSessionStatsDailyResponse(statsDaily)
+	sessionsDTO := contract.NewSessionStatsDailyResponse(stats, statsDaily)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 

@@ -204,6 +204,7 @@ func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
 	assert.Nil(t, err)
 
 	ssm := &sessionStorageMock{
+		statsToReturn:      sessionStatsMock,
 		statsByDayToReturn: sessionStatsByDayMock,
 	}
 
@@ -221,6 +222,7 @@ func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
 			Items: map[string]contract.SessionStatsDTO{
 				"2010-01-01": contract.NewSessionStatsDTO(sessionStatsMock),
 			},
+			Stats: contract.NewSessionStatsDTO(sessionStatsMock),
 		},
 		parsedResponse,
 	)
