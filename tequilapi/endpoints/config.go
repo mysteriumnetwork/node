@@ -168,7 +168,7 @@ func AddRoutesForConfig(
 	router *httprouter.Router,
 ) {
 	api := newConfigAPI(config.Current)
-	router.GET("/config", api.GetDefaultConfig)
+	router.GET("/config", api.GetConfig)
 	router.GET("/config/default", api.GetDefaultConfig)
 	router.GET("/config/user", api.GetUserConfig)
 	router.POST("/config/user", api.SetUserConfig)
