@@ -120,7 +120,7 @@ func (cfg *Config) GetUserConfig() map[string]interface{} {
 
 // GetConfig returns current configuration.
 func (cfg *Config) GetConfig() map[string]interface{} {
-	config := make(map[string]interface{}, 0)
+	config := make(map[string]interface{})
 	mergeMaps(cfg.defaults, config, nil)
 	mergeMaps(cfg.user, config, nil)
 	mergeMaps(cfg.cli, config, nil)
