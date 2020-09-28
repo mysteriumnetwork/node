@@ -37,6 +37,9 @@ func NewSessionQuery(request *http.Request) (SessionQuery, *validation.FieldErro
 		DateFrom:    parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
 		DateTo:      parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
 		Direction:   parseStringOptional(query.Get("direction"), errs.ForField("direction")),
+		ConsumerID:  parseStringOptional(query.Get("consumer_id"), errs.ForField("consumer_id")),
+		HermesID:    parseStringOptional(query.Get("hermes_id"), errs.ForField("hermes_id")),
+		ProviderID:  parseStringOptional(query.Get("provider_id"), errs.ForField("provider_id")),
 		ServiceType: parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
 		Status:      parseStringOptional(query.Get("status"), errs.ForField("status")),
 	}, errs
@@ -56,6 +59,18 @@ type SessionQuery struct {
 	// Direction to filter the sessions by. Possible values are "Provided", "Consumed".
 	// in: query
 	Direction *string `json:"direction"`
+
+	// Consumer identity to filter the sessions by.
+	// in: query
+	ConsumerID *string `json:"consumer_id"`
+
+	// Hermes ID to filter the sessions by.
+	// in: query
+	HermesID *string `json:"hermes_id"`
+
+	// Provider identity to filter the sessions by.
+	// in: query
+	ProviderID *string `json:"provider_id"`
 
 	// Service type to filter the sessions by.
 	// in: query

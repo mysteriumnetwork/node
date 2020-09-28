@@ -23,6 +23,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/vcraescu/go-paginator/adapter"
@@ -187,6 +188,15 @@ func queryToFilter(query contract.SessionQuery, filter *session.Filter) *session
 	}
 	if query.Direction != nil {
 		filter.SetDirection(*query.Direction)
+	}
+	if query.ConsumerID != nil {
+		filter.SetConsumerID(identity.FromAddress(*query.ConsumerID))
+	}
+	if query.HermesID != nil {
+		filter.SetHermesID(*query.HermesID)
+	}
+	if query.ProviderID != nil {
+		filter.SetProviderID(identity.FromAddress(*query.ProviderID))
 	}
 	if query.ServiceType != nil {
 		filter.SetServiceType(*query.ServiceType)

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/asdine/storm/v3/q"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // NewFilter creates instance of filter.
@@ -33,6 +34,9 @@ type Filter struct {
 	StartedFrom *time.Time
 	StartedTo   *time.Time
 	Direction   *string
+	ConsumerID  *identity.Identity
+	HermesID    *string
+	ProviderID  *identity.Identity
 	ServiceType *string
 	Status      *string
 }
@@ -54,6 +58,24 @@ func (f *Filter) SetStartedTo(to time.Time) *Filter {
 // SetDirection filters fetched sessions by direction.
 func (f *Filter) SetDirection(direction string) *Filter {
 	f.Direction = &direction
+	return f
+}
+
+// SetConsumerID filters fetched sessions by consumer.
+func (f *Filter) SetConsumerID(id identity.Identity) *Filter {
+	f.ConsumerID = &id
+	return f
+}
+
+// SetHermesID filters fetched sessions by hermes.
+func (f *Filter) SetHermesID(hermesID string) *Filter {
+	f.HermesID = &hermesID
+	return f
+}
+
+// SetProviderID filters fetched sessions by provider.
+func (f *Filter) SetProviderID(id identity.Identity) *Filter {
+	f.ProviderID = &id
 	return f
 }
 
@@ -79,6 +101,15 @@ func (f *Filter) toMatcher() q.Matcher {
 	}
 	if f.Direction != nil {
 		where = append(where, q.Eq("Direction", *f.Direction))
+	}
+	if f.ConsumerID != nil {
+		where = append(where, q.Eq("ConsumerID", *f.ConsumerID))
+	}
+	if f.HermesID != nil {
+		where = append(where, q.Eq("HermesID", *f.HermesID))
+	}
+	if f.ProviderID != nil {
+		where = append(where, q.Eq("ProviderID", *f.ProviderID))
 	}
 	if f.ServiceType != nil {
 		where = append(where, q.Eq("ServiceType", *f.ServiceType))

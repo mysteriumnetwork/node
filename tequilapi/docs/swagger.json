@@ -1432,6 +1432,27 @@
           },
           {
             "type": "string",
+            "x-go-name": "ConsumerID",
+            "description": "Consumer identity to filter the sessions by.",
+            "name": "consumer_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
+            "name": "hermes_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
+            "name": "provider_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
             "x-go-name": "ServiceType",
             "description": "Service type to filter the sessions by.",
             "name": "service_type",
@@ -1516,6 +1537,27 @@
           },
           {
             "type": "string",
+            "x-go-name": "ConsumerID",
+            "description": "Consumer identity to filter the sessions by.",
+            "name": "consumer_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
+            "name": "hermes_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
+            "name": "provider_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
             "x-go-name": "ServiceType",
             "description": "Service type to filter the sessions by.",
             "name": "service_type",
@@ -1581,6 +1623,27 @@
             "x-go-name": "Direction",
             "description": "Direction to filter the sessions by. Possible values are \"Provided\", \"Consumed\".",
             "name": "direction",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ConsumerID",
+            "description": "Consumer identity to filter the sessions by.",
+            "name": "consumer_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
+            "name": "hermes_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
+            "name": "provider_id",
             "in": "query"
           },
           {
