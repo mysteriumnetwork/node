@@ -169,6 +169,110 @@
         }
       }
     },
+    "/config": {
+      "get": {
+        "description": "Returns default configuration",
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Returns current configuration values",
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "description": "Currently active configuration",
+            "schema": {
+              "$ref": "#/definitions/configPayload"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/config/default": {
+      "get": {
+        "description": "Returns default configuration",
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Returns default configuration",
+        "operationId": "getDefaultConfig",
+        "responses": {
+          "200": {
+            "description": "Default configuration values",
+            "schema": {
+              "$ref": "#/definitions/configPayload"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/config/user": {
+      "get": {
+        "description": "Returns current user configuration",
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Returns current user configuration",
+        "operationId": "getUserConfig",
+        "responses": {
+          "200": {
+            "description": "User set configuration values",
+            "schema": {
+              "$ref": "#/definitions/configPayload"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "For keys present in the payload, it will set or remove the user config values (if the key is null). Changes are persisted to the config file.",
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "Sets and returns user configuration",
+        "operationId": "serUserConfig",
+        "parameters": [
+          {
+            "description": "configuration keys/values",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/configPayload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User configuration",
+            "schema": {
+              "$ref": "#/definitions/configPayload"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/connection": {
       "get": {
         "description": "Returns status of current connection",
@@ -1587,86 +1691,6 @@
         "responses": {
           "202": {
             "description": "settle request accepted"
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
-    "/user/config": {
-      "get": {
-        "description": "Returns current user configuration",
-        "tags": [
-          "Configuration"
-        ],
-        "summary": "Returns current user configuration",
-        "operationId": "getUserConfig",
-        "responses": {
-          "200": {
-            "description": "User configuration",
-            "schema": {
-              "$ref": "#/definitions/configPayload"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "For keys present in the payload, it will set or remove the user config values (if the key is null). Changes are persisted to the config file.",
-        "tags": [
-          "Configuration"
-        ],
-        "summary": "Sets and returns user configuration",
-        "operationId": "serUserConfig",
-        "parameters": [
-          {
-            "description": "configuration keys/values",
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/configPayload"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User configuration",
-            "schema": {
-              "$ref": "#/definitions/configPayload"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
-    "/user/default": {
-      "get": {
-        "description": "Returns default configuration",
-        "tags": [
-          "Configuration"
-        ],
-        "summary": "Returns default configuration",
-        "operationId": "getDefaultConfig",
-        "responses": {
-          "200": {
-            "description": "Default configuration",
-            "schema": {
-              "$ref": "#/definitions/configPayload"
-            }
           },
           "500": {
             "description": "Internal server error",
