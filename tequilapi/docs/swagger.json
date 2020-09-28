@@ -1482,14 +1482,14 @@
         }
       }
     },
-    "/sessions/stats": {
+    "/sessions/stats-aggregated": {
       "get": {
         "description": "Returns aggregated statistics of sessions filtered by given query",
         "tags": [
           "Session"
         ],
         "summary": "Returns sessions stats",
-        "operationId": "sessionStats",
+        "operationId": "sessionStatsAggregated",
         "parameters": [
           {
             "type": "string",
@@ -1533,7 +1533,7 @@
           "200": {
             "description": "List of sessions",
             "schema": {
-              "$ref": "#/definitions/SessionStatsDTO"
+              "$ref": "#/definitions/SessionStatsAggregatedResponse"
             }
           },
           "422": {
@@ -3170,6 +3170,16 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "SessionStatsAggregatedResponse": {
+      "type": "object",
+      "title": "SessionStatsAggregatedResponse defines aggregated sessions stats response as json.",
+      "properties": {
+        "stats": {
+          "$ref": "#/definitions/SessionStatsDTO"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "SessionStatsDTO": {
       "type": "object",
       "title": "SessionStatsDTO represents the session aggregated statistics.",
@@ -3207,7 +3217,7 @@
     },
     "SessionStatsDailyResponse": {
       "type": "object",
-      "title": "SessionStatsDailyResponse defines session list representable as json.",
+      "title": "SessionStatsDailyResponse defines session stats representable as json.",
       "properties": {
         "items": {
           "type": "object",

@@ -72,19 +72,19 @@ func (f *Filter) SetStatus(status string) *Filter {
 func (f *Filter) toMatcher() q.Matcher {
 	where := make([]q.Matcher, 0)
 	if f.StartedFrom != nil {
-		where = append(where, q.Gte("Started", f.StartedFrom))
+		where = append(where, q.Gte("Started", *f.StartedFrom))
 	}
 	if f.StartedTo != nil {
-		where = append(where, q.Lt("Started", f.StartedTo))
+		where = append(where, q.Lte("Started", *f.StartedTo))
 	}
 	if f.Direction != nil {
-		where = append(where, q.Eq("Direction", f.Direction))
+		where = append(where, q.Eq("Direction", *f.Direction))
 	}
 	if f.ServiceType != nil {
-		where = append(where, q.Eq("ServiceType", f.ServiceType))
+		where = append(where, q.Eq("ServiceType", *f.ServiceType))
 	}
 	if f.Status != nil {
-		where = append(where, q.Eq("Status", f.Status))
+		where = append(where, q.Eq("Status", *f.Status))
 	}
 	return q.And(where...)
 }

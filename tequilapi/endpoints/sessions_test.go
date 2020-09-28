@@ -110,6 +110,35 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 		},
 		parsedResponse,
 	)
+	assert.Equal(t, session.NewFilter(), ssm.calledWithFilter)
+}
+
+func Test_SessionsEndpoint_ListRespectsFilters(t *testing.T) {
+	ssm := &sessionStorageMock{
+		sessionsToReturn: sessionsMock,
+	}
+
+	// when
+	req, _ := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant?date_from=2020-09-19&date_to=2020-09-20&direction=direction&service_type=service_type&status=status",
+		nil,
+	)
+	resp := httptest.NewRecorder()
+	NewSessionsEndpoint(ssm).List(resp, req, nil)
+
+	// then
+	assert.Equal(
+		t,
+		session.NewFilter().
+			SetStartedFrom(time.Date(2020, 9, 19, 0, 0, 0, 0, time.UTC)).
+			SetStartedTo(time.Date(2020, 9, 20, 23, 59, 59, 0, time.UTC)).
+			SetDirection("direction").
+			SetServiceType("service_type").
+			SetStatus("status"),
+		ssm.calledWithFilter,
+	)
+	assert.Equal(t, http.StatusOK, resp.Code)
 }
 
 func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
@@ -136,7 +165,7 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 	)
 }
 
-func Test_SessionsEndpoint_Stats(t *testing.T) {
+func Test_SessionsEndpoint_StatsAggregated(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
@@ -149,18 +178,21 @@ func Test_SessionsEndpoint_Stats(t *testing.T) {
 	}
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewSessionsEndpoint(ssm).Stats
+	handlerFunc := NewSessionsEndpoint(ssm).StatsAggregated
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := contract.SessionStatsDTO{}
+	parsedResponse := contract.SessionStatsAggregatedResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.EqualValues(
 		t,
-		contract.NewSessionStatsDTO(sessionStatsMock),
+		contract.SessionStatsAggregatedResponse{
+			Stats: contract.NewSessionStatsDTO(sessionStatsMock),
+		},
 		parsedResponse,
 	)
+	assert.Equal(t, session.NewFilter(), ssm.calledWithFilter)
 }
 
 func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
@@ -192,6 +224,9 @@ func Test_SessionsEndpoint_StatsDaily(t *testing.T) {
 		},
 		parsedResponse,
 	)
+	assert.NotEqual(t, session.NewFilter(), ssm.calledWithFilter)
+	assert.Equal(t, time.Now().Add(-30*24*time.Hour).Day(), ssm.calledWithFilter.StartedFrom.Day())
+	assert.Equal(t, time.Now().Day(), ssm.calledWithFilter.StartedTo.Day())
 }
 
 type sessionStorageMock struct {
@@ -199,16 +234,21 @@ type sessionStorageMock struct {
 	statsToReturn      session.Stats
 	statsByDayToReturn map[time.Time]session.Stats
 	errToReturn        error
+
+	calledWithFilter *session.Filter
 }
 
-func (ssm *sessionStorageMock) List(_ *session.Filter) ([]session.History, error) {
+func (ssm *sessionStorageMock) List(filter *session.Filter) ([]session.History, error) {
+	ssm.calledWithFilter = filter
 	return ssm.sessionsToReturn, ssm.errToReturn
 }
 
-func (ssm *sessionStorageMock) Stats(_ *session.Filter) (session.Stats, error) {
+func (ssm *sessionStorageMock) Stats(filter *session.Filter) (session.Stats, error) {
+	ssm.calledWithFilter = filter
 	return ssm.statsToReturn, ssm.errToReturn
 }
 
-func (ssm *sessionStorageMock) StatsByDay(_ *session.Filter) (map[time.Time]session.Stats, error) {
+func (ssm *sessionStorageMock) StatsByDay(filter *session.Filter) (map[time.Time]session.Stats, error) {
+	ssm.calledWithFilter = filter
 	return ssm.statsByDayToReturn, ssm.errToReturn
 }

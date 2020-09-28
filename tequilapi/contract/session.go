@@ -43,7 +43,7 @@ func NewSessionQuery(request *http.Request) (SessionQuery, *validation.FieldErro
 }
 
 // SessionQuery allows to filter requested sessions.
-// swagger:parameters sessionStats sessionStatsDaily
+// swagger:parameters sessionStatsAggregated sessionStatsDaily
 type SessionQuery struct {
 	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
 	// in: query
@@ -109,6 +109,37 @@ type SessionListResponse struct {
 	PageableDTO
 }
 
+// NewSessionStatsAggregatedResponse maps to API aggregated stats.
+func NewSessionStatsAggregatedResponse(stats session.Stats) SessionStatsAggregatedResponse {
+	return SessionStatsAggregatedResponse{
+		Stats: NewSessionStatsDTO(stats),
+	}
+}
+
+// SessionStatsAggregatedResponse defines aggregated sessions stats response as json.
+// swagger:model SessionStatsAggregatedResponse
+type SessionStatsAggregatedResponse struct {
+	Stats SessionStatsDTO `json:"stats"`
+}
+
+// NewSessionStatsDailyResponse maps to API session stats grouped by day.
+func NewSessionStatsDailyResponse(stats map[time.Time]session.Stats) SessionStatsDailyResponse {
+	dtoMap := make(map[string]SessionStatsDTO, len(stats))
+	for date, stats := range stats {
+		dtoMap[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
+	}
+
+	return SessionStatsDailyResponse{
+		Items: dtoMap,
+	}
+}
+
+// SessionStatsDailyResponse defines session stats representable as json.
+// swagger:model SessionStatsDailyResponse
+type SessionStatsDailyResponse struct {
+	Items map[string]SessionStatsDTO `json:"items"`
+}
+
 // NewSessionStatsDTO maps to API session stats.
 func NewSessionStatsDTO(stats session.Stats) SessionStatsDTO {
 	return SessionStatsDTO{
@@ -130,24 +161,6 @@ type SessionStatsDTO struct {
 	SumBytesSent     uint64   `json:"sum_bytes_sent"`
 	SumDuration      uint64   `json:"sum_duration"`
 	SumTokens        *big.Int `json:"sum_tokens"`
-}
-
-// SessionStatsDailyResponse defines session list representable as json.
-// swagger:model SessionStatsDailyResponse
-type SessionStatsDailyResponse struct {
-	Items map[string]SessionStatsDTO `json:"items"`
-}
-
-// NewSessionStatsDailyResponse maps to API session stats grouped by day.
-func NewSessionStatsDailyResponse(stats map[time.Time]session.Stats) SessionStatsDailyResponse {
-	dtoMap := make(map[string]SessionStatsDTO, len(stats))
-	for date, stats := range stats {
-		dtoMap[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
-	}
-
-	return SessionStatsDailyResponse{
-		Items: dtoMap,
-	}
 }
 
 // NewSessionDTO maps to API session.

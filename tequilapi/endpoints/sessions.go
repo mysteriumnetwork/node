@@ -68,19 +68,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-
-	filter := session.NewFilter()
-	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
-	if query.DateFrom != nil {
-		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
-	}
-	filter.SetStartedTo(time.Now())
-	if query.DateTo != nil {
-		filter.SetStartedTo(time.Time(*query.DateTo).AddDate(0, 0, 1).Truncate(24 * time.Hour))
-	}
-	filter.Direction = query.Direction
-	filter.ServiceType = query.ServiceType
-	filter.Status = query.Status
+	filter := queryToFilter(query.SessionQuery, session.NewFilter())
 
 	pageSize := 50
 	if query.PageSize != nil {
@@ -109,7 +97,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
-// swagger:operation GET /sessions/stats Session sessionStats
+// swagger:operation GET /sessions/stats-aggregated Session sessionStatsAggregated
 // ---
 // summary: Returns sessions stats
 // description: Returns aggregated statistics of sessions filtered by given query
@@ -117,7 +105,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 //   200:
 //     description: List of sessions
 //     schema:
-//       "$ref": "#/definitions/SessionStatsDTO"
+//       "$ref": "#/definitions/SessionStatsAggregatedResponse"
 //   422:
 //     description: Parameters validation error
 //     schema:
@@ -126,25 +114,13 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) Stats(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	query, errors := contract.NewSessionQuery(request)
 	if errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-
-	filter := session.NewFilter()
-	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
-	if query.DateFrom != nil {
-		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
-	}
-	filter.SetStartedTo(time.Now())
-	if query.DateTo != nil {
-		filter.SetStartedTo(time.Time(*query.DateTo).AddDate(0, 0, 1).Truncate(24 * time.Hour))
-	}
-	filter.Direction = query.Direction
-	filter.ServiceType = query.ServiceType
-	filter.Status = query.Status
+	filter := queryToFilter(query, session.NewFilter())
 
 	stats, err := endpoint.sessionStorage.Stats(filter)
 	if err != nil {
@@ -152,7 +128,7 @@ func (endpoint *sessionsEndpoint) Stats(resp http.ResponseWriter, request *http.
 		return
 	}
 
-	sessionsDTO := contract.NewSessionStatsDTO(stats)
+	sessionsDTO := contract.NewSessionStatsAggregatedResponse(stats)
 	utils.WriteAsJSON(sessionsDTO, resp)
 }
 
@@ -179,19 +155,10 @@ func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-
-	filter := session.NewFilter()
-	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
-	if query.DateFrom != nil {
-		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
-	}
-	filter.SetStartedTo(time.Now())
-	if query.DateTo != nil {
-		filter.SetStartedTo(time.Time(*query.DateTo).AddDate(0, 0, 1).Truncate(24 * time.Hour))
-	}
-	filter.Direction = query.Direction
-	filter.ServiceType = query.ServiceType
-	filter.Status = query.Status
+	filter := session.NewFilter().
+		SetStartedFrom(time.Now().AddDate(0, 0, -30)).
+		SetStartedTo(time.Now())
+	filter = queryToFilter(query, filter)
 
 	statsDaily, err := endpoint.sessionStorage.StatsByDay(filter)
 	if err != nil {
@@ -207,6 +174,25 @@ func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *
 func AddRoutesForSessions(router *httprouter.Router, sessionStorage sessionStorage) {
 	sessionsEndpoint := NewSessionsEndpoint(sessionStorage)
 	router.GET("/sessions", sessionsEndpoint.List)
-	router.GET("/sessions/stats", sessionsEndpoint.Stats)
+	router.GET("/sessions/stats-aggregated", sessionsEndpoint.StatsAggregated)
 	router.GET("/sessions/stats-daily", sessionsEndpoint.StatsDaily)
+}
+
+func queryToFilter(query contract.SessionQuery, filter *session.Filter) *session.Filter {
+	if query.DateFrom != nil {
+		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
+	}
+	if query.DateTo != nil {
+		filter.SetStartedTo(time.Time(*query.DateTo).Truncate(24 * time.Hour).Add(23 * time.Hour).Add(59 * time.Minute).Add(59 * time.Second))
+	}
+	if query.Direction != nil {
+		filter.SetDirection(*query.Direction)
+	}
+	if query.ServiceType != nil {
+		filter.SetServiceType(*query.ServiceType)
+	}
+	if query.Status != nil {
+		filter.SetStatus(*query.Status)
+	}
+	return filter
 }
