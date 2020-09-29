@@ -124,7 +124,7 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			FlagQualityType.Name,
 		),
-		Value: "https://quality.mysterium.network/api/v1",
+		Value: "https://betanet-quality.mysterium.network/api/v1",
 	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
