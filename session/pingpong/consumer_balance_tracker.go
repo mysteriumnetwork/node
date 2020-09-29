@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -203,7 +204,23 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 			return
 		}
 
-		cbt.ForceBalanceUpdate(id)
+		// we've received money
+		previous, _ := cbt.getBalance(id)
+		if bytes.Equal(e.To.Bytes(), addr.Bytes()) {
+			cbt.setBalance(id, ConsumerBalance{
+				BCBalance:          new(big.Int).Add(previous.BCBalance, e.Value),
+				BCSettled:          new(big.Int),
+				GrandTotalPromised: new(big.Int),
+			})
+		} else {
+			cbt.setBalance(id, ConsumerBalance{
+				BCBalance:          new(big.Int).Sub(previous.BCBalance, e.Value),
+				BCSettled:          new(big.Int),
+				GrandTotalPromised: new(big.Int),
+			})
+		}
+		currentBalance, _ := cbt.getBalance(id)
+		go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
 		return
 	}
 }
@@ -230,6 +247,9 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 			BCSettled:          new(big.Int),
 			GrandTotalPromised: new(big.Int),
 		})
+
+		currentBalance, _ := cbt.getBalance(id)
+		go cbt.publishChangeEvent(id, new(big.Int), currentBalance.GetBalance())
 		return unregisteredBalance
 	}
 
@@ -431,7 +451,6 @@ func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, curren
 	}
 
 	after, _ := cbt.getBalance(id)
-
 	go cbt.publishChangeEvent(id, before, after.GetBalance())
 }
 

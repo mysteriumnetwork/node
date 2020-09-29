@@ -271,6 +271,7 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 		bus: bus,
 	}
 	bc := mockConsumerBalanceChecker{
+		mystBalanceToReturn: new(big.Int),
 		channelToReturn: client.ConsumerChannel{
 			Balance: initialBalance,
 			Settled: big.NewInt(0),
@@ -294,7 +295,10 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 	time.Sleep(time.Millisecond * 20)
 	bc.setError(nil)
 
-	bc.ch <- &bindings.MystTokenTransfer{}
+	bc.ch <- &bindings.MystTokenTransfer{
+		Value: initialBalance,
+	}
+
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1).Cmp(initialBalance) == 0
 	}, defaultWaitTime, defaultWaitInterval)
