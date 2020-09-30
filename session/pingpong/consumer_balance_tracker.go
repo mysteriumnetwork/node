@@ -221,7 +221,6 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 		}
 		currentBalance, _ := cbt.getBalance(id)
 		go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
-		return
 	}
 }
 
