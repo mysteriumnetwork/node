@@ -32,10 +32,17 @@ type FieldErrorList struct {
 	list []FieldError
 }
 
+// Add adds specified error to error field
+func (fel *FieldErrorList) Add(error *FieldError) {
+	if error == nil {
+		return
+	}
+	fel.list = append(fel.list, *error)
+}
+
 // AddError adds error to error field list with specified code and message
 func (fel *FieldErrorList) AddError(code string, message string) {
-
-	fel.list = append(fel.list, FieldError{code, message})
+	fel.Add(&FieldError{code, message})
 }
 
 // HasErrors return true if at least one field errors exist
@@ -78,11 +85,6 @@ func (fem *FieldErrorMap) Set(errors *FieldErrorMap) {
 
 // MarshalJSON implements JSON marshaller interface to represent error map as JSON
 func (fem FieldErrorMap) MarshalJSON() ([]byte, error) {
-	for key, fieldErrors := range fem.errorMap {
-		if !fieldErrors.HasErrors() {
-			delete(fem.errorMap, key)
-		}
-	}
 	return json.Marshal(fem.errorMap)
 }
 

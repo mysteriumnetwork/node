@@ -26,77 +26,57 @@ import (
 
 var defaultFormats = strfmt.NewFormats()
 
-func parseString(str string, errs *validation.FieldErrorList) string {
+func bindString(ptr *string, str string) *validation.FieldError {
 	if str == "" {
-		errs.AddError("required", "Field is required")
-		return ""
+		return &validation.FieldError{Code: "required", Message: "Field is required"}
 	}
 
-	return str
+	*ptr = str
+	return nil
 }
 
-func parseStringOptional(str string, _ *validation.FieldErrorList) *string {
+func bindInt(ptr *int, str string) *validation.FieldError {
 	if str == "" {
-		return nil
+		return &validation.FieldError{Code: "required", Message: "Field is required"}
 	}
 
-	return &str
+	value, err := parseInt(str)
+	if err != nil {
+		return err
+	}
+
+	*ptr = *value
+	return nil
 }
 
-func parseInt(str string, errs *validation.FieldErrorList) int {
-	if str == "" {
-		errs.AddError("required", "Field is required")
-		return 0
-	}
-
+func parseInt(str string) (*int, *validation.FieldError) {
 	value, err := strconv.Atoi(str)
 	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return 0
+		return nil, &validation.FieldError{Code: "invalid", Message: err.Error()}
 	}
 
-	return value
+	return &value, nil
 }
 
-func parseIntOptional(str string, errs *validation.FieldErrorList) *int {
+func bindDate(ptr *strfmt.Date, str string) *validation.FieldError {
 	if str == "" {
-		return nil
+		return &validation.FieldError{Code: "required", Message: "Field is required"}
 	}
 
-	value, err := strconv.Atoi(str)
+	value, err := parseDate(str)
 	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return nil
+		return err
 	}
 
-	return &value
+	*ptr = *value
+	return nil
 }
 
-func parseDate(str string, errs *validation.FieldErrorList) strfmt.Date {
-	if str == "" {
-		errs.AddError("required", "Field is required")
-		return strfmt.Date{}
-	}
-
+func parseDate(str string) (*strfmt.Date, *validation.FieldError) {
 	value, err := defaultFormats.Parse("date", str)
 	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return strfmt.Date{}
+		return nil, &validation.FieldError{Code: "invalid", Message: err.Error()}
 	}
 
-	return *(value.(*strfmt.Date))
-}
-
-func parseDateOptional(str string, errs *validation.FieldErrorList) *strfmt.Date {
-	if str == "" {
-		return nil
-	}
-
-	value, err := defaultFormats.Parse("date", str)
-	if err != nil {
-		errs.AddError("invalid", err.Error())
-		return nil
-	}
-
-	return value.(*strfmt.Date)
+	return value.(*strfmt.Date), nil
 }

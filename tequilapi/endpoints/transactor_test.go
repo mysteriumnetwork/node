@@ -300,7 +300,6 @@ func Test_SettleHistory(t *testing.T) {
 			},
 			mockStorage.calledWithFilter,
 		)
-		assert.Equal(t, http.StatusOK, resp.Code)
 	})
 }
 

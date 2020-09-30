@@ -277,31 +277,20 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	query, errors := contract.NewSettlementListQuery(req)
-	if errors.HasErrors() {
+	query := contract.NewSettlementListQuery()
+	if errors := query.Bind(req); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-	filter := query.ToFilter(pingpong.SettlementHistoryFilter{})
 
-	pageSize := 50
-	if query.PageSize != nil {
-		pageSize = *query.PageSize
-	}
-
-	page := 1
-	if query.Page != nil {
-		page = *query.Page
-	}
-
-	settlementsAll, err := te.settlementHistoryProvider.List(filter)
+	settlementsAll, err := te.settlementHistoryProvider.List(query.ToFilter())
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	var settlements []pingpong.SettlementHistoryEntry
-	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), pageSize, page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(settlementsAll), query.PageSize, query.PageSize)
 	if err := p.Results(&settlements); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

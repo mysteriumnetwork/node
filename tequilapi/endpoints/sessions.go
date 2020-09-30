@@ -64,22 +64,12 @@ func NewSessionsEndpoint(sessionStorage sessionStorage) *sessionsEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	query, errors := contract.NewSessionListQuery(request)
-	if errors.HasErrors() {
+	query := contract.NewSessionListQuery()
+	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
 	filter := queryToFilter(query.SessionQuery, session.NewFilter())
-
-	pageSize := 50
-	if query.PageSize != nil {
-		pageSize = *query.PageSize
-	}
-
-	page := 1
-	if query.Page != nil {
-		page = *query.Page
-	}
 
 	sessionsAll, err := endpoint.sessionStorage.List(filter)
 	if err != nil {
@@ -88,7 +78,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 	}
 
 	var sessions []session.History
-	p := utils.NewPaginator(adapter.NewSliceAdapter(sessionsAll), pageSize, page)
+	p := utils.NewPaginator(adapter.NewSliceAdapter(sessionsAll), query.PageSize, query.Page)
 	if err := p.Results(&sessions); err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -116,8 +106,8 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	query, errors := contract.NewSessionQuery(request)
-	if errors.HasErrors() {
+	query := contract.NewSessionQuery()
+	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
@@ -151,8 +141,8 @@ func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, requ
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	query, errors := contract.NewSessionQuery(request)
-	if errors.HasErrors() {
+	query := contract.NewSessionQuery()
+	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}

@@ -47,17 +47,3 @@ func TestErrorsListRenderedInJSON(t *testing.T) {
 		string(v),
 	)
 }
-
-func TestErrorsListDoesNotRenderEmptyErrors(t *testing.T) {
-	errorMap := NewErrorMap()
-	errorMap.ForField("email")
-
-	v, err := json.Marshal(errorMap)
-	assert.Nil(t, err)
-	assert.JSONEq(
-		t,
-		`{}`,
-		string(v),
-	)
-
-}

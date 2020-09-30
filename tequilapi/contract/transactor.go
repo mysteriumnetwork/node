@@ -39,21 +39,11 @@ type FeesDTO struct {
 	DecreaseStake *big.Int `json:"decreaseStake"`
 }
 
-// NewSettlementListQuery creates settlement list query from API request.
-func NewSettlementListQuery(request *http.Request) (SettlementListQuery, *validation.FieldErrorMap) {
-	errs := validation.NewErrorMap()
-
-	paginationQ, subErrs := NewPaginationQuery(request)
-	errs.Set(subErrs)
-
-	query := request.URL.Query()
+// NewSettlementListQuery creates settlement list query with default values.
+func NewSettlementListQuery() SettlementListQuery {
 	return SettlementListQuery{
-		PaginationQuery: paginationQ,
-		DateFrom:        parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
-		DateTo:          parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
-		ProviderID:      parseStringOptional(query.Get("provider_id"), errs.ForField("provider_id")),
-		HermesID:        parseStringOptional(query.Get("hermes_id"), errs.ForField("hermes_id")),
-	}, errs
+		PaginationQuery: NewPaginationQuery(),
+	}
 }
 
 // SettlementListQuery allows to filter requested settlements.
@@ -78,8 +68,39 @@ type SettlementListQuery struct {
 	HermesID *string `json:"hermes_id"`
 }
 
+// Bind creates and validates query from API request.
+func (q *SettlementListQuery) Bind(request *http.Request) *validation.FieldErrorMap {
+	errs := validation.NewErrorMap()
+	errs.Set(q.PaginationQuery.Bind(request))
+
+	qs := request.URL.Query()
+	if qStr := qs.Get("date_from"); qStr != "" {
+		if qVal, err := parseDate(qStr); err != nil {
+			errs.ForField("date_from").Add(err)
+		} else {
+			q.DateFrom = qVal
+		}
+	}
+	if qStr := qs.Get("date_to"); qStr != "" {
+		if qVal, err := parseDate(qStr); err != nil {
+			errs.ForField("date_to").Add(err)
+		} else {
+			q.DateTo = qVal
+		}
+	}
+	if qStr := qs.Get("provider_id"); qStr != "" {
+		q.ProviderID = &qStr
+	}
+	if qStr := qs.Get("hermes_id"); qStr != "" {
+		q.HermesID = &qStr
+	}
+
+	return errs
+}
+
 // ToFilter converts API query to storage filter.
-func (q SettlementListQuery) ToFilter(filter pingpong.SettlementHistoryFilter) pingpong.SettlementHistoryFilter {
+func (q *SettlementListQuery) ToFilter() pingpong.SettlementHistoryFilter {
+	filter := pingpong.SettlementHistoryFilter{}
 	if q.DateFrom != nil {
 		timeFrom := time.Time(*q.DateFrom).Truncate(24 * time.Hour)
 		filter.TimeFrom = &timeFrom
