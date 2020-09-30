@@ -153,6 +153,8 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
 	default:
 		cbt.ForceBalanceUpdate(identity)
 	}
+
+	go cbt.subscribeToExternalChannelTopup(identity)
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
@@ -179,6 +181,14 @@ func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(id identity.Ide
 }
 
 func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.Identity) {
+	// if we've been stopped, don't re-start
+	select {
+	case <-cbt.stop:
+		return
+	default:
+		break
+	}
+
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
 	if err != nil {
 		log.Error().Err(err).Msg("could not compute channel address")
@@ -201,6 +211,8 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 
 	for e := range ev {
 		if e == nil {
+			// we've been interrupted, restart
+			go cbt.subscribeToExternalChannelTopup(id)
 			return
 		}
 
@@ -240,7 +252,6 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 		// This indicates we're not registered, check for unregistered balance.
 		unregisteredBalance := cbt.getUnregisteredChannelBalance(id)
 		// We'll also launch a goroutine to listen for external top up.
-		go cbt.subscribeToExternalChannelTopup(id)
 		cbt.setBalance(id, ConsumerBalance{
 			BCBalance:          unregisteredBalance,
 			BCSettled:          new(big.Int),
