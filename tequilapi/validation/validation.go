@@ -71,6 +71,11 @@ func (fem *FieldErrorMap) ForField(key string) *FieldErrorList {
 
 // MarshalJSON implements JSON marshaller interface to represent error map as JSON
 func (fem FieldErrorMap) MarshalJSON() ([]byte, error) {
+	for key, fieldErrors := range fem.errorMap {
+		if !fieldErrors.HasErrors() {
+			delete(fem.errorMap, key)
+		}
+	}
 	return json.Marshal(fem.errorMap)
 }
 

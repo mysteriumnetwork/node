@@ -19,6 +19,7 @@ package validation
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,6 +45,21 @@ func TestErrorsListRenderedInJSON(t *testing.T) {
 				{ "code" : "invalid" , "message" : "field invalid" }
 			]
 		}`,
+		string(v),
+	)
+}
+
+func TestErrorsListDoesNotRenderEmptyErrors(t *testing.T) {
+	errorMap := NewErrorMap()
+	errorMap.ForField("email")
+
+	v, err := json.Marshal(errorMap)
+	assert.Nil(t, err)
+	fmt.Println(string(v))
+
+	assert.JSONEq(
+		t,
+		`{}`,
 		string(v),
 	)
 
