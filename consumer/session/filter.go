@@ -75,7 +75,7 @@ func (f *Filter) toMatcher() q.Matcher {
 		where = append(where, q.Gte("Started", f.StartedFrom))
 	}
 	if f.StartedTo != nil {
-		where = append(where, q.Lte("Started", f.StartedTo))
+		where = append(where, q.Lt("Started", f.StartedTo))
 	}
 	if f.Direction != nil {
 		where = append(where, q.Eq("Direction", f.Direction))

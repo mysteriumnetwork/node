@@ -72,11 +72,11 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 	filter := session.NewFilter()
 	filter.SetStartedFrom(time.Now().AddDate(0, 0, -30))
 	if query.DateFrom != nil {
-		filter.SetStartedFrom(*query.DateFrom)
+		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
 	}
 	filter.SetStartedTo(time.Now())
 	if query.DateTo != nil {
-		filter.SetStartedTo(*query.DateTo)
+		filter.SetStartedTo(time.Time(*query.DateTo).AddDate(0, 0, 1).Truncate(24 * time.Hour))
 	}
 	filter.Direction = query.Direction
 	filter.ServiceType = query.ServiceType

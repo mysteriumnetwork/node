@@ -19,10 +19,12 @@ package contract
 
 import (
 	"strconv"
-	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
+
+var defaultFormats = strfmt.NewFormats()
 
 func parseString(str string, errs *validation.FieldErrorList) string {
 	if str == "" {
@@ -70,31 +72,31 @@ func parseIntOptional(str string, errs *validation.FieldErrorList) *int {
 	return &value
 }
 
-func parseDate(str string, errs *validation.FieldErrorList) time.Time {
+func parseDate(str string, errs *validation.FieldErrorList) strfmt.Date {
 	if str == "" {
 		errs.AddError("required", "Field is required")
-		return time.Time{}
+		return strfmt.Date{}
 	}
 
-	value, err := time.Parse(time.RFC3339, str)
+	value, err := defaultFormats.Parse("date", str)
 	if err != nil {
 		errs.AddError("invalid", err.Error())
-		return time.Time{}
+		return strfmt.Date{}
 	}
 
-	return value
+	return *(value.(*strfmt.Date))
 }
 
-func parseDateOptional(str string, errs *validation.FieldErrorList) *time.Time {
+func parseDateOptional(str string, errs *validation.FieldErrorList) *strfmt.Date {
 	if str == "" {
 		return nil
 	}
 
-	value, err := time.Parse(time.RFC3339, str)
+	value, err := defaultFormats.Parse("date", str)
 	if err != nil {
 		errs.AddError("invalid", err.Error())
 		return nil
 	}
 
-	return &value
+	return value.(*strfmt.Date)
 }

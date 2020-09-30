@@ -40,7 +40,7 @@ func (fel *FieldErrorList) AddError(code string, message string) {
 
 // HasErrors return true if at least one field errors exist
 func (fel *FieldErrorList) HasErrors() bool {
-	return fel.list != nil && len(fel.list) > 0
+	return len(fel.list) > 0
 }
 
 // MarshalJSON implements JSON marshaller interface to represent error list as JSON

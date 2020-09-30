@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
@@ -47,13 +48,13 @@ func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.F
 type SessionListQuery struct {
 	PaginationQuery
 
-	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
 	// in: query
-	DateFrom *time.Time `json:"date_from"`
+	DateFrom *strfmt.Date `json:"date_from"`
 
-	// Created date to filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
+	// Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.
 	// in: query
-	DateTo *time.Time `json:"date_to"`
+	DateTo *strfmt.Date `json:"date_to"`
 
 	// Direction to filter the sessions by. Possible values are "Provided", "Consumed".
 	// in: query

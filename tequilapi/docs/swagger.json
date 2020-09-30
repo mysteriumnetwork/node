@@ -1409,17 +1409,17 @@
           },
           {
             "type": "string",
-            "format": "date-time",
+            "format": "date",
             "x-go-name": "DateFrom",
-            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.",
+            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
           {
             "type": "string",
-            "format": "date-time",
+            "format": "date",
             "x-go-name": "DateTo",
-            "description": "Created date to filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.",
+            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
