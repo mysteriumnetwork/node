@@ -19,10 +19,15 @@ package contract
 
 import (
 	"math/big"
+	"net/http"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/go-openapi/strfmt"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // FeesDTO represents the transactor fees
@@ -32,6 +37,66 @@ type FeesDTO struct {
 	Settlement    *big.Int `json:"settlement"`
 	Hermes        uint16   `json:"hermes"`
 	DecreaseStake *big.Int `json:"decreaseStake"`
+}
+
+// NewSettlementListQuery creates settlement list query from API request.
+func NewSettlementListQuery(request *http.Request) (SettlementListQuery, *validation.FieldErrorMap) {
+	errs := validation.NewErrorMap()
+
+	paginationQ, subErrs := NewPaginationQuery(request)
+	errs.Set(subErrs)
+
+	query := request.URL.Query()
+	return SettlementListQuery{
+		PaginationQuery: paginationQ,
+		DateFrom:        parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
+		DateTo:          parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
+		ProviderID:      parseStringOptional(query.Get("provider_id"), errs.ForField("provider_id")),
+		HermesID:        parseStringOptional(query.Get("hermes_id"), errs.ForField("hermes_id")),
+	}, errs
+}
+
+// SettlementListQuery allows to filter requested settlements.
+// swagger:parameters settlementList
+type SettlementListQuery struct {
+	PaginationQuery
+
+	// Filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01.
+	// in: query
+	DateFrom *strfmt.Date `json:"date_from"`
+
+	// Filter the settlements until this date Formatted in RFC3339 e.g. 2020-07-30.
+	// in: query
+	DateTo *strfmt.Date `json:"date_to"`
+
+	// Provider identity to filter the sessions by.
+	// in: query
+	ProviderID *string `json:"provider_id"`
+
+	// Hermes ID to filter the sessions by.
+	// in: query
+	HermesID *string `json:"hermes_id"`
+}
+
+// ToFilter converts API query to storage filter.
+func (q SettlementListQuery) ToFilter(filter pingpong.SettlementHistoryFilter) pingpong.SettlementHistoryFilter {
+	if q.DateFrom != nil {
+		timeFrom := time.Time(*q.DateFrom).Truncate(24 * time.Hour)
+		filter.TimeFrom = &timeFrom
+	}
+	if q.DateTo != nil {
+		timeTo := time.Time(*q.DateTo).Truncate(24 * time.Hour).Add(23 * time.Hour).Add(59 * time.Minute).Add(59 * time.Second)
+		filter.TimeTo = &timeTo
+	}
+	if q.ProviderID != nil {
+		providerID := identity.FromAddress(*q.ProviderID)
+		filter.ProviderID = &providerID
+	}
+	if q.HermesID != nil {
+		hermesID := common.HexToAddress(*q.HermesID)
+		filter.HermesID = &hermesID
+	}
+	return filter
 }
 
 // NewSettlementListResponse maps to API settlement list.

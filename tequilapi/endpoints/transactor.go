@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
@@ -261,27 +259,10 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-// swagger:operation GET /settle/history SettlementHistory
+// swagger:operation GET /settle/history settlementList
 // ---
 // summary: Returns settlement history
 // description: Returns settlement history
-// parameters:
-//   - in: query
-//     name: date_from
-//     description: To filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
-//     type: string
-//   - in: query
-//     name: date_to
-//     description: To filter the settlements until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.
-//     type: string
-//   - in: query
-//     name: provider_id
-//     description: Provider ID to filter the settlements by.
-//     type: string
-//   - in: query
-//     name: hermes_id
-//     description: Hermes ID to filter the settlements by.
-//     type: string
 // responses:
 //   200:
 //     description: Returns settlement history
@@ -296,53 +277,21 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettlementHistory(resp http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	filter := pingpong.SettlementHistoryFilter{}
-
-	dateFrom := time.Now().AddDate(0, 0, -30)
-	if fromStr := req.URL.Query().Get("settled_at_from"); fromStr != "" {
-		var err error
-		if dateFrom, err = time.Parse(time.RFC3339, fromStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
+	query, errors := contract.NewSettlementListQuery(req)
+	if errors.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errors)
+		return
 	}
-	filter.TimeFrom = &dateFrom
+	filter := query.ToFilter(pingpong.SettlementHistoryFilter{})
 
-	dateTo := time.Now()
-	if toStr := req.URL.Query().Get("settled_at_to"); toStr != "" {
-		var err error
-		if dateTo, err = time.Parse(time.RFC3339, toStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
-	}
-	filter.TimeFrom = &dateTo
-
-	if param := req.URL.Query().Get("provider_id"); param != "" {
-		providerID := identity.FromAddress(param)
-		filter.ProviderID = &providerID
-	}
-	if param := req.URL.Query().Get("hermes_id"); param != "" {
-		hermesID := common.HexToAddress(param)
-		filter.HermesID = &hermesID
+	pageSize := 50
+	if query.PageSize != nil {
+		pageSize = *query.PageSize
 	}
 
 	page := 1
-	if pageStr := req.URL.Query().Get("page"); pageStr != "" {
-		var err error
-		if page, err = strconv.Atoi(pageStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
-	}
-
-	pageSize := 50
-	if pageSizeStr := req.URL.Query().Get("page_size"); pageSizeStr != "" {
-		var err error
-		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
-			utils.SendError(resp, err, http.StatusBadRequest)
-			return
-		}
+	if query.Page != nil {
+		page = *query.Page
 	}
 
 	settlementsAll, err := te.settlementHistoryProvider.List(filter)
