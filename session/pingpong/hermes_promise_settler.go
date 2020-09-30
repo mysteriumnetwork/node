@@ -423,6 +423,13 @@ func (aps *hermesPromiseSettler) settle(
 				log.Error().Err(err).Msg("Could not generate provider channel address")
 			}
 
+			ch, err := aps.channelProvider.Fetch(provider, hermesID)
+			if err != nil {
+				log.Error().Err(err).Msgf("Resync failed for provider %v", provider)
+			} else {
+				log.Info().Msgf("Resync success for provider %v", provider)
+			}
+
 			she := SettlementHistoryEntry{
 				TxHash:         info.Raw.TxHash,
 				ProviderID:     provider,
@@ -431,20 +438,15 @@ func (aps *hermesPromiseSettler) settle(
 				Time:           time.Now().UTC(),
 				Promise:        promise,
 				Beneficiary:    beneficiary,
-				Amount:         info.Amount,
-				TotalSettled:   info.TotalSettled,
+				Amount:         info.SentToBeneficiary,
+				TotalSettled:   ch.channel.Settled,
 			}
+
 			err = aps.settlementHistoryStorage.Store(she)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not store settlement history")
 			}
 
-			_, err = aps.channelProvider.Fetch(provider, hermesID)
-			if err != nil {
-				log.Error().Err(err).Msgf("Resync failed for provider %v", provider)
-			} else {
-				log.Info().Msgf("Resync success for provider %v", provider)
-			}
 			return
 		case <-time.After(aps.config.MaxWaitForSettlement):
 			log.Info().Msgf("Settle timeout for %v", provider)

@@ -77,7 +77,7 @@ services:
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
 
   transactor:
-    image: mysteriumnetwork/transactor:0.4.5
+    image: mysteriumnetwork/transactor:v3-dev
     environment:
       PORT: 8888
     expose:
@@ -88,8 +88,8 @@ services:
       - redis
     command: >
       -settlemntFee 1000
-      -topUpAmount 7000000000000000000
       -stakeAmount 62000000000000000000
+      -topUpAmount 7000000000000000000
       -stakeDecreaseFee 1
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -rpcEndpoint ws://ganache:8545

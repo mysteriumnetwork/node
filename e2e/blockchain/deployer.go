@@ -120,13 +120,12 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		minimalStake,
 		channelImplAddress,
 		hermesImplAddress,
-		common.Address{},
 	)
 	checkError("Deploy registry v2", err)
 	fmt.Println("v2 registry address: ", registryAddress.String())
 	checkTxStatus(client, tx)
 
-	ts, err := bindings.NewTestMystTokenTransactor(mystTokenAddress, client)
+	ts, err := bindings.NewMystTokenTransactor(mystTokenAddress, client)
 	checkError("myst transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
@@ -163,7 +162,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	accs, err := rc.GetHermesAddress(&bind.CallOpts{
 		Context: context.Background(),
 		From:    transactor.From,
-	}, transactor.From)
+	}, transactor.From, big.NewInt(0))
 	checkError("get hermes address", err)
 	fmt.Println("registered hermes", accs.Hex())
 
@@ -310,7 +309,7 @@ func registerHermes2(ks *keystore.KeyStore, client *ethclient.Client, registryAd
 	accs, err := rc.GetHermesAddress(&bind.CallOpts{
 		Context: context.Background(),
 		From:    transactor.From,
-	}, transactor.From)
+	}, transactor.From, big.NewInt(0))
 	checkError("get hermes2 address", err)
 	fmt.Println("registered hermes2", accs.Hex())
 
