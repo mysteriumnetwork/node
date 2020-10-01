@@ -49,7 +49,7 @@ type ConsumerBalanceTracker struct {
 	mystSCAddress                        common.Address
 	consumerBalanceChecker               consumerBalanceChecker
 	channelAddressCalculator             channelAddressCalculator
-	publisher                            eventbus.Publisher
+	bus                                  eventbus.EventBus
 	consumerGrandTotalsStorage           consumerTotalsStorage
 	consumerInfoGetter                   consumerInfoGetter
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider
@@ -63,7 +63,7 @@ type transactorRegistrationStatusProvider interface {
 
 // NewConsumerBalanceTracker creates a new instance
 func NewConsumerBalanceTracker(
-	publisher eventbus.Publisher,
+	publisher eventbus.EventBus,
 	mystSCAddress common.Address,
 	hermesAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
@@ -78,7 +78,7 @@ func NewConsumerBalanceTracker(
 		consumerBalanceChecker:               consumerBalanceChecker,
 		mystSCAddress:                        mystSCAddress,
 		hermesAddress:                        hermesAddress,
-		publisher:                            publisher,
+		bus:                                  publisher,
 		channelAddressCalculator:             channelAddressCalculator,
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
 		consumerInfoGetter:                   consumerInfoGetter,
@@ -128,7 +128,7 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 		return
 	}
 
-	cbt.publisher.Publish(event.AppTopicBalanceChanged, event.AppEventBalanceChanged{
+	cbt.bus.Publish(event.AppTopicBalanceChanged, event.AppEventBalanceChanged{
 		Identity: id,
 		Previous: before,
 		Current:  after,
@@ -209,31 +209,39 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 		cancel()
 	}()
 
-	for e := range ev {
-		if e == nil {
+	cbt.bus.Subscribe(registry.AppTopicEthereumClientReconnected, func(interface{}) {
+		cancel()
+	})
+
+	func() {
+		defer func() {
 			// we've been interrupted, restart
 			go cbt.subscribeToExternalChannelTopup(id)
-			return
-		}
+		}()
 
-		// we've received money
-		previous, _ := cbt.getBalance(id)
-		if bytes.Equal(e.To.Bytes(), addr.Bytes()) {
-			cbt.setBalance(id, ConsumerBalance{
-				BCBalance:          new(big.Int).Add(previous.BCBalance, e.Value),
-				BCSettled:          new(big.Int),
-				GrandTotalPromised: new(big.Int),
-			})
-		} else {
-			cbt.setBalance(id, ConsumerBalance{
-				BCBalance:          new(big.Int).Sub(previous.BCBalance, e.Value),
-				BCSettled:          new(big.Int),
-				GrandTotalPromised: new(big.Int),
-			})
+		for e := range ev {
+			if e == nil {
+				return
+			}
+
+			previous, _ := cbt.getBalance(id)
+			if bytes.Equal(e.To.Bytes(), addr.Bytes()) {
+				cbt.setBalance(id, ConsumerBalance{
+					BCBalance:          new(big.Int).Add(previous.BCBalance, e.Value),
+					BCSettled:          previous.BCSettled,
+					GrandTotalPromised: previous.GrandTotalPromised,
+				})
+			} else {
+				cbt.setBalance(id, ConsumerBalance{
+					BCBalance:          new(big.Int).Sub(previous.BCBalance, e.Value),
+					BCSettled:          previous.BCSettled,
+					GrandTotalPromised: previous.GrandTotalPromised,
+				})
+			}
+			currentBalance, _ := cbt.getBalance(id)
+			go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
 		}
-		currentBalance, _ := cbt.getBalance(id)
-		go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
-	}
+	}()
 }
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance
