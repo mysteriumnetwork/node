@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -108,6 +109,36 @@ func (q *SessionQuery) Bind(request *http.Request) *validation.FieldErrorMap {
 	}
 
 	return errs
+}
+
+// ToFilter converts API query to storage filter.
+func (q *SessionQuery) ToFilter() *session.Filter {
+	filter := session.NewFilter()
+	if q.DateFrom != nil {
+		filter.SetStartedFrom(time.Time(*q.DateFrom).Truncate(24 * time.Hour))
+	}
+	if q.DateTo != nil {
+		filter.SetStartedTo(time.Time(*q.DateTo).Truncate(24 * time.Hour).Add(23 * time.Hour).Add(59 * time.Minute).Add(59 * time.Second))
+	}
+	if q.Direction != nil {
+		filter.SetDirection(*q.Direction)
+	}
+	if q.ConsumerID != nil {
+		filter.SetConsumerID(identity.FromAddress(*q.ConsumerID))
+	}
+	if q.HermesID != nil {
+		filter.SetHermesID(*q.HermesID)
+	}
+	if q.ProviderID != nil {
+		filter.SetProviderID(identity.FromAddress(*q.ProviderID))
+	}
+	if q.ServiceType != nil {
+		filter.SetServiceType(*q.ServiceType)
+	}
+	if q.Status != nil {
+		filter.SetStatus(*q.Status)
+	}
+	return filter
 }
 
 // NewSessionListQuery creates session list with default values.

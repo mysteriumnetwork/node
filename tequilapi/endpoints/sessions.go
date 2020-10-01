@@ -21,9 +21,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/strfmt/conv"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/vcraescu/go-paginator/adapter"
@@ -69,9 +70,8 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-	filter := queryToFilter(query.SessionQuery, session.NewFilter())
 
-	sessionsAll, err := endpoint.sessionStorage.List(filter)
+	sessionsAll, err := endpoint.sessionStorage.List(query.ToFilter())
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -111,9 +111,8 @@ func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, requ
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-	filter := queryToFilter(query, session.NewFilter())
 
-	stats, err := endpoint.sessionStorage.Stats(filter)
+	stats, err := endpoint.sessionStorage.Stats(query.ToFilter())
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -141,16 +140,16 @@ func (endpoint *sessionsEndpoint) StatsAggregated(resp http.ResponseWriter, requ
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) StatsDaily(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	query := contract.NewSessionQuery()
+	query := contract.SessionQuery{
+		DateFrom: conv.Date(strfmt.Date(time.Now().AddDate(0, 0, -30))),
+		DateTo:   conv.Date(strfmt.Date(time.Now())),
+	}
 	if errors := query.Bind(request); errors.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errors)
 		return
 	}
-	filter := session.NewFilter().
-		SetStartedFrom(time.Now().AddDate(0, 0, -30)).
-		SetStartedTo(time.Now())
-	filter = queryToFilter(query, filter)
 
+	filter := query.ToFilter()
 	stats, err := endpoint.sessionStorage.Stats(filter)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -173,32 +172,4 @@ func AddRoutesForSessions(router *httprouter.Router, sessionStorage sessionStora
 	router.GET("/sessions", sessionsEndpoint.List)
 	router.GET("/sessions/stats-aggregated", sessionsEndpoint.StatsAggregated)
 	router.GET("/sessions/stats-daily", sessionsEndpoint.StatsDaily)
-}
-
-func queryToFilter(query contract.SessionQuery, filter *session.Filter) *session.Filter {
-	if query.DateFrom != nil {
-		filter.SetStartedFrom(time.Time(*query.DateFrom).Truncate(24 * time.Hour))
-	}
-	if query.DateTo != nil {
-		filter.SetStartedTo(time.Time(*query.DateTo).Truncate(24 * time.Hour).Add(23 * time.Hour).Add(59 * time.Minute).Add(59 * time.Second))
-	}
-	if query.Direction != nil {
-		filter.SetDirection(*query.Direction)
-	}
-	if query.ConsumerID != nil {
-		filter.SetConsumerID(identity.FromAddress(*query.ConsumerID))
-	}
-	if query.HermesID != nil {
-		filter.SetHermesID(*query.HermesID)
-	}
-	if query.ProviderID != nil {
-		filter.SetProviderID(identity.FromAddress(*query.ProviderID))
-	}
-	if query.ServiceType != nil {
-		filter.SetServiceType(*query.ServiceType)
-	}
-	if query.Status != nil {
-		filter.SetStatus(*query.Status)
-	}
-	return filter
 }
