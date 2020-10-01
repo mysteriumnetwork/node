@@ -395,7 +395,7 @@ func initEthClient(t *testing.T) {
 }
 
 func mintMyst(t *testing.T, amount *big.Int, chid common.Address) {
-	ts, err := bindings.NewTestMystTokenTransactor(common.HexToAddress(mystAddress), ethClient)
+	ts, err := bindings.NewMystTokenTransactor(common.HexToAddress(mystAddress), ethClient)
 	assert.NoError(t, err)
 
 	nonce, err := ethClient.PendingNonceAt(context.Background(), common.HexToAddress(addressForTopups))
