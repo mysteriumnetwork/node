@@ -18,6 +18,7 @@
 package session
 
 import (
+	"errors"
 	"math/big"
 	"sync"
 	"time"
@@ -90,7 +91,7 @@ func (repo *Storage) List(filter *Filter) (result []History, err error) {
 		Reverse()
 
 	err = query.Find(&result)
-	if err == storm.ErrNotFound {
+	if errors.Is(err, storm.ErrNotFound) {
 		return []History{}, nil
 	}
 

@@ -242,7 +242,6 @@ func TestSessionStorage_StatsByDay(t *testing.T) {
 		},
 		result,
 	)
-	return
 }
 
 func TestSessionStorage_consumeServiceSessionsEvent(t *testing.T) {

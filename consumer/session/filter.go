@@ -88,9 +88,3 @@ func (f *Filter) toMatcher() q.Matcher {
 	}
 	return q.And(where...)
 }
-
-type matcher func(History) bool
-
-func (m matcher) Match(i interface{}) (bool, error) {
-	return m(i.(History)), nil
-}

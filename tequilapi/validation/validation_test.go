@@ -19,7 +19,6 @@ package validation
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,8 +54,6 @@ func TestErrorsListDoesNotRenderEmptyErrors(t *testing.T) {
 
 	v, err := json.Marshal(errorMap)
 	assert.Nil(t, err)
-	fmt.Println(string(v))
-
 	assert.JSONEq(
 		t,
 		`{}`,
