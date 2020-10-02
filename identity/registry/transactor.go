@@ -182,11 +182,16 @@ func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiar
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
+	err = t.httpClient.DoRequest(req)
+	if err != nil {
+		return err
+	}
+
 	// This is left as a synchronous call on purpose.
 	// We need to notify registry before returning.
 	t.publisher.Publish(AppTopicTransactorRegistration, regReq)
 
-	return t.httpClient.DoRequest(req)
+	return nil
 }
 
 type identityRegistrationRequestWithToken struct {
@@ -215,11 +220,16 @@ func (t *Transactor) registerIdentityWithReferralToken(id string, stake *big.Int
 		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
+	err = t.httpClient.DoRequest(req)
+	if err != nil {
+		return err
+	}
+
 	// This is left as a synchronous call on purpose.
 	// We need to notify registry before returning.
 	t.publisher.Publish(AppTopicTransactorRegistration, regReq)
 
-	return t.httpClient.DoRequest(req)
+	return nil
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
