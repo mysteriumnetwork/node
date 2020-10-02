@@ -24,11 +24,16 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
+const (
+	defaultPageSize = 50
+	defaultPage     = 1
+)
+
 // NewPaginationQuery creates pagination query with default values.
 func NewPaginationQuery() PaginationQuery {
 	return PaginationQuery{
-		PageSize: 50,
-		Page:     1,
+		PageSize: defaultPageSize,
+		Page:     defaultPage,
 	}
 }
 
