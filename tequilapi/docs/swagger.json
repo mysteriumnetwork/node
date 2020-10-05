@@ -1687,29 +1687,53 @@
       "get": {
         "description": "Returns settlement history",
         "summary": "Returns settlement history",
-        "operationId": "SettlementHistory",
+        "operationId": "settlementList",
         "parameters": [
           {
+            "type": "integer",
+            "format": "int64",
+            "default": 50,
+            "x-go-name": "PageSize",
+            "description": "Number of items per page.",
+            "name": "page_size",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "default": 1,
+            "x-go-name": "Page",
+            "description": "Page to filter the items by.",
+            "name": "page",
+            "in": "query"
+          },
+          {
             "type": "string",
-            "description": "To filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.",
+            "format": "date",
+            "x-go-name": "DateFrom",
+            "description": "Filter the settlements from this date. Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
           {
             "type": "string",
-            "description": "To filter the settlements until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.",
+            "format": "date",
+            "x-go-name": "DateTo",
+            "description": "Filter the settlements until this date Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
           {
             "type": "string",
-            "description": "Provider ID to filter the settlements by.",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
             "name": "provider_id",
             "in": "query"
           },
           {
             "type": "string",
-            "description": "Hermes ID to filter the settlements by.",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
             "name": "hermes_id",
             "in": "query"
           }

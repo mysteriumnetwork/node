@@ -197,11 +197,7 @@ func Test_SettleHistory(t *testing.T) {
 		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
 		AddRoutesForTransactor(router, tr, nil, &settlementHistoryProviderMock{errToReturn: errors.New("explosions everywhere")}, common.Address{})
 
-		req, err := http.NewRequest(
-			http.MethodGet,
-			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10&hermesID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
-			nil,
-		)
+		req, err := http.NewRequest(http.MethodGet, "/transactor/settle/history", nil)
 		assert.Nil(t, err)
 
 		resp := httptest.NewRecorder()
@@ -232,11 +228,7 @@ func Test_SettleHistory(t *testing.T) {
 		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
 		AddRoutesForTransactor(router, tr, nil, mockStorage, common.Address{})
 
-		req, err := http.NewRequest(
-			http.MethodGet,
-			"/transactor/settle/history?providerID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10&hermesID=0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
-			nil,
-		)
+		req, err := http.NewRequest(http.MethodGet, "/transactor/settle/history", nil)
 		assert.Nil(t, err)
 
 		resp := httptest.NewRecorder()
@@ -272,6 +264,41 @@ func Test_SettleHistory(t *testing.T) {
 				"total_pages": 1
 			}`,
 			resp.Body.String(),
+		)
+	})
+	t.Run("respects filters", func(t *testing.T) {
+		mockStorage := &settlementHistoryProviderMock{}
+
+		server := newTestTransactorServer(http.StatusAccepted, "")
+		defer server.Close()
+
+		router := httprouter.New()
+		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
+		AddRoutesForTransactor(router, tr, nil, mockStorage, common.Address{})
+
+		req, err := http.NewRequest(
+			http.MethodGet,
+			"/transactor/settle/history?date_from=2020-09-19&date_to=2020-09-20&provider_id=0xab1&hermes_id=0xaB2",
+			nil,
+		)
+		assert.Nil(t, err)
+
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		expectedTimeFrom := time.Date(2020, 9, 19, 0, 0, 0, 0, time.UTC)
+		expectedTimeTo := time.Date(2020, 9, 20, 23, 59, 59, 0, time.UTC)
+		expectedProviderID := identity.FromAddress("0xab1")
+		expectedHermesID := common.HexToAddress("0xaB2")
+		assert.Equal(
+			t,
+			&pingpong.SettlementHistoryFilter{
+				TimeFrom:   &expectedTimeFrom,
+				TimeTo:     &expectedTimeTo,
+				ProviderID: &expectedProviderID,
+				HermesID:   &expectedHermesID,
+			},
+			mockStorage.calledWithFilter,
 		)
 	})
 }
@@ -331,8 +358,11 @@ func (ms *mockSettler) GetHermesFee(_ common.Address) (uint16, error) {
 type settlementHistoryProviderMock struct {
 	settlementHistoryToReturn []pingpong.SettlementHistoryEntry
 	errToReturn               error
+
+	calledWithFilter *pingpong.SettlementHistoryFilter
 }
 
-func (shpm *settlementHistoryProviderMock) List(_ pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error) {
+func (shpm *settlementHistoryProviderMock) List(filter pingpong.SettlementHistoryFilter) ([]pingpong.SettlementHistoryEntry, error) {
+	shpm.calledWithFilter = &filter
 	return shpm.settlementHistoryToReturn, shpm.errToReturn
 }

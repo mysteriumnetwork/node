@@ -24,25 +24,14 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
-// NewSessionQuery creates session query from API request.
-func NewSessionQuery(request *http.Request) (SessionQuery, *validation.FieldErrorMap) {
-	errs := validation.NewErrorMap()
-
-	query := request.URL.Query()
-	return SessionQuery{
-		DateFrom:    parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
-		DateTo:      parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
-		Direction:   parseStringOptional(query.Get("direction"), errs.ForField("direction")),
-		ConsumerID:  parseStringOptional(query.Get("consumer_id"), errs.ForField("consumer_id")),
-		HermesID:    parseStringOptional(query.Get("hermes_id"), errs.ForField("hermes_id")),
-		ProviderID:  parseStringOptional(query.Get("provider_id"), errs.ForField("provider_id")),
-		ServiceType: parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
-		Status:      parseStringOptional(query.Get("status"), errs.ForField("status")),
-	}, errs
+// NewSessionQuery creates session query with default values.
+func NewSessionQuery() SessionQuery {
+	return SessionQuery{}
 }
 
 // SessionQuery allows to filter requested sessions.
@@ -81,20 +70,82 @@ type SessionQuery struct {
 	Status *string `json:"status"`
 }
 
-// NewSessionListQuery creates session list query from API request.
-func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
+// Bind creates and validates query from API request.
+func (q *SessionQuery) Bind(request *http.Request) *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 
-	sessionQ, subErrs := NewSessionQuery(request)
-	errs.Set(subErrs)
+	qs := request.URL.Query()
+	if qStr := qs.Get("date_from"); qStr != "" {
+		if qVal, err := parseDate(qStr); err != nil {
+			errs.ForField("date_from").Add(err)
+		} else {
+			q.DateFrom = qVal
+		}
+	}
+	if qStr := qs.Get("date_to"); qStr != "" {
+		if qVal, err := parseDate(qStr); err != nil {
+			errs.ForField("date_to").Add(err)
+		} else {
+			q.DateTo = qVal
+		}
+	}
+	if qStr := qs.Get("direction"); qStr != "" {
+		q.Direction = &qStr
+	}
+	if qStr := qs.Get("consumer_id"); qStr != "" {
+		q.ConsumerID = &qStr
+	}
+	if qStr := qs.Get("hermes_id"); qStr != "" {
+		q.HermesID = &qStr
+	}
+	if qStr := qs.Get("provider_id"); qStr != "" {
+		q.ProviderID = &qStr
+	}
+	if qStr := qs.Get("service_type"); qStr != "" {
+		q.ServiceType = &qStr
+	}
+	if qStr := qs.Get("status"); qStr != "" {
+		q.Status = &qStr
+	}
 
-	paginationQ, subErrs := NewPaginationQuery(request)
-	errs.Set(subErrs)
+	return errs
+}
 
+// ToFilter converts API query to storage filter.
+func (q *SessionQuery) ToFilter() *session.Filter {
+	filter := session.NewFilter()
+	if q.DateFrom != nil {
+		filter.SetStartedFrom(time.Time(*q.DateFrom).Truncate(24 * time.Hour))
+	}
+	if q.DateTo != nil {
+		filter.SetStartedTo(time.Time(*q.DateTo).Truncate(24 * time.Hour).Add(23 * time.Hour).Add(59 * time.Minute).Add(59 * time.Second))
+	}
+	if q.Direction != nil {
+		filter.SetDirection(*q.Direction)
+	}
+	if q.ConsumerID != nil {
+		filter.SetConsumerID(identity.FromAddress(*q.ConsumerID))
+	}
+	if q.HermesID != nil {
+		filter.SetHermesID(*q.HermesID)
+	}
+	if q.ProviderID != nil {
+		filter.SetProviderID(identity.FromAddress(*q.ProviderID))
+	}
+	if q.ServiceType != nil {
+		filter.SetServiceType(*q.ServiceType)
+	}
+	if q.Status != nil {
+		filter.SetStatus(*q.Status)
+	}
+	return filter
+}
+
+// NewSessionListQuery creates session list with default values.
+func NewSessionListQuery() SessionListQuery {
 	return SessionListQuery{
-		SessionQuery:    sessionQ,
-		PaginationQuery: paginationQ,
-	}, errs
+		PaginationQuery: NewPaginationQuery(),
+	}
 }
 
 // SessionListQuery allows to filter requested sessions.
@@ -102,6 +153,15 @@ func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.F
 type SessionListQuery struct {
 	PaginationQuery
 	SessionQuery
+}
+
+// Bind creates and validates query from API request.
+func (q *SessionListQuery) Bind(request *http.Request) *validation.FieldErrorMap {
+	errs := validation.NewErrorMap()
+	errs.Set(q.PaginationQuery.Bind(request))
+	errs.Set(q.SessionQuery.Bind(request))
+
+	return errs
 }
 
 // NewSessionListResponse maps to API session list.

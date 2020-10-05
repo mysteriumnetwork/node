@@ -24,15 +24,17 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
-// NewPaginationQuery creates pagination query from API request.
-func NewPaginationQuery(request *http.Request) (PaginationQuery, *validation.FieldErrorMap) {
-	errs := validation.NewErrorMap()
+const (
+	defaultPageSize = 50
+	defaultPage     = 1
+)
 
-	query := request.URL.Query()
+// NewPaginationQuery creates pagination query with default values.
+func NewPaginationQuery() PaginationQuery {
 	return PaginationQuery{
-		PageSize: parseIntOptional(query.Get("page_size"), errs.ForField("page_size")),
-		Page:     parseIntOptional(query.Get("page"), errs.ForField("page")),
-	}, errs
+		PageSize: defaultPageSize,
+		Page:     defaultPage,
+	}
 }
 
 // PaginationQuery allows to page response items.
@@ -40,12 +42,35 @@ type PaginationQuery struct {
 	// Number of items per page.
 	// in: query
 	// default: 50
-	PageSize *int `json:"page_size"`
+	PageSize int `json:"page_size"`
 
 	// Page to filter the items by.
 	// in: query
 	// default: 1
-	Page *int `json:"page"`
+	Page int `json:"page"`
+}
+
+// Bind creates and validates query from API request.
+func (q *PaginationQuery) Bind(request *http.Request) *validation.FieldErrorMap {
+	errs := validation.NewErrorMap()
+
+	qs := request.URL.Query()
+	if qStr := qs.Get("page_size"); qStr != "" {
+		if qVal, err := parseInt(qStr); err != nil {
+			errs.ForField("page_size").Add(err)
+		} else {
+			q.PageSize = *qVal
+		}
+	}
+	if qStr := qs.Get("page"); qStr != "" {
+		if qVal, err := parseInt(qStr); err != nil {
+			errs.ForField("page").Add(err)
+		} else {
+			q.Page = *qVal
+		}
+	}
+
+	return errs
 }
 
 // NewPageableDTO maps to API pagination DTO.
