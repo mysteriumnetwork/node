@@ -135,8 +135,20 @@ var (
 	// FlagTequilapiPort port for listening for incoming API requests.
 	FlagTequilapiPort = cli.IntFlag{
 		Name:  "tequilapi.port",
-		Usage: "Port for listening incoming api requests",
+		Usage: "Port for listening incoming Tequilapi requests",
 		Value: 4050,
+	}
+	// FlagTequilapiUsername username for API authorisation.
+	FlagTequilapiUsername = cli.StringFlag{
+		Name:  "tequilapi.username",
+		Usage: "Default username for Tequilapi authentication",
+		Value: "myst",
+	}
+	// FlagTequilapiPassword username for API authorisation.
+	FlagTequilapiPassword = cli.StringFlag{
+		Name:  "tequilapi.password",
+		Usage: "Default password for Tequilapi authentication",
+		Value: "mystberry",
 	}
 	// FlagPProfEnable enables pprof via TequilAPI.
 	FlagPProfEnable = cli.BoolFlag{
@@ -220,6 +232,8 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagQualityAddress,
 		&FlagTequilapiAddress,
 		&FlagTequilapiPort,
+		&FlagTequilapiUsername,
+		&FlagTequilapiPassword,
 		&FlagPProfEnable,
 		&FlagUIEnable,
 		&FlagUIAddress,
@@ -261,6 +275,8 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagQualityType)
 	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
+	Current.ParseStringFlag(ctx, FlagTequilapiUsername)
+	Current.ParseStringFlag(ctx, FlagTequilapiPassword)
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
 	Current.ParseStringFlag(ctx, FlagUIAddress)
