@@ -110,13 +110,19 @@ func TestSessionStorage_ListFiltersDirection(t *testing.T) {
 	// given
 	sessionExpected := History{
 		SessionID: session_node.ID("session1"),
-		Direction: "Provided",
+		Direction: DirectionProvided,
 	}
 	storage, storageCleanup := newStorageWithSessions(sessionExpected)
 	defer storageCleanup()
 
 	// when
 	result, err := storage.List(NewFilter())
+	// then
+	assert.Nil(t, err)
+	assert.Equal(t, []History{sessionExpected}, result)
+
+	// when
+	result, err = storage.List(NewFilter().SetDirection(DirectionProvided))
 	// then
 	assert.Nil(t, err)
 	assert.Equal(t, []History{sessionExpected}, result)

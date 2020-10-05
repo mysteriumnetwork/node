@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/asdine/storm/v3/q"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // NewFilter creates instance of filter.
@@ -33,6 +34,9 @@ type Filter struct {
 	StartedFrom *time.Time
 	StartedTo   *time.Time
 	Direction   *string
+	ConsumerID  *identity.Identity
+	HermesID    *string
+	ProviderID  *identity.Identity
 	ServiceType *string
 	Status      *string
 }
@@ -57,6 +61,24 @@ func (f *Filter) SetDirection(direction string) *Filter {
 	return f
 }
 
+// SetConsumerID filters fetched sessions by consumer.
+func (f *Filter) SetConsumerID(id identity.Identity) *Filter {
+	f.ConsumerID = &id
+	return f
+}
+
+// SetHermesID filters fetched sessions by hermes.
+func (f *Filter) SetHermesID(hermesID string) *Filter {
+	f.HermesID = &hermesID
+	return f
+}
+
+// SetProviderID filters fetched sessions by provider.
+func (f *Filter) SetProviderID(id identity.Identity) *Filter {
+	f.ProviderID = &id
+	return f
+}
+
 // SetServiceType filters fetched sessions by service type.
 func (f *Filter) SetServiceType(serviceType string) *Filter {
 	f.ServiceType = &serviceType
@@ -72,19 +94,28 @@ func (f *Filter) SetStatus(status string) *Filter {
 func (f *Filter) toMatcher() q.Matcher {
 	where := make([]q.Matcher, 0)
 	if f.StartedFrom != nil {
-		where = append(where, q.Gte("Started", f.StartedFrom))
+		where = append(where, q.Gte("Started", *f.StartedFrom))
 	}
 	if f.StartedTo != nil {
-		where = append(where, q.Lt("Started", f.StartedTo))
+		where = append(where, q.Lte("Started", *f.StartedTo))
 	}
 	if f.Direction != nil {
-		where = append(where, q.Eq("Direction", f.Direction))
+		where = append(where, q.Eq("Direction", *f.Direction))
+	}
+	if f.ConsumerID != nil {
+		where = append(where, q.Eq("ConsumerID", *f.ConsumerID))
+	}
+	if f.HermesID != nil {
+		where = append(where, q.Eq("HermesID", *f.HermesID))
+	}
+	if f.ProviderID != nil {
+		where = append(where, q.Eq("ProviderID", *f.ProviderID))
 	}
 	if f.ServiceType != nil {
-		where = append(where, q.Eq("ServiceType", f.ServiceType))
+		where = append(where, q.Eq("ServiceType", *f.ServiceType))
 	}
 	if f.Status != nil {
-		where = append(where, q.Eq("Status", f.Status))
+		where = append(where, q.Eq("Status", *f.Status))
 	}
 	return q.And(where...)
 }

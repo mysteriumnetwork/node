@@ -28,26 +28,26 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
-// NewSessionListQuery creates session query from API request.
-func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
-	pagination, errs := NewPaginationQuery(request)
+// NewSessionQuery creates session query from API request.
+func NewSessionQuery(request *http.Request) (SessionQuery, *validation.FieldErrorMap) {
+	errs := validation.NewErrorMap()
 
 	query := request.URL.Query()
-	return SessionListQuery{
-		PaginationQuery: pagination,
-		DateFrom:        parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
-		DateTo:          parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
-		Direction:       parseStringOptional(query.Get("direction"), errs.ForField("direction")),
-		ServiceType:     parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
-		Status:          parseStringOptional(query.Get("status"), errs.ForField("status")),
+	return SessionQuery{
+		DateFrom:    parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
+		DateTo:      parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
+		Direction:   parseStringOptional(query.Get("direction"), errs.ForField("direction")),
+		ConsumerID:  parseStringOptional(query.Get("consumer_id"), errs.ForField("consumer_id")),
+		HermesID:    parseStringOptional(query.Get("hermes_id"), errs.ForField("hermes_id")),
+		ProviderID:  parseStringOptional(query.Get("provider_id"), errs.ForField("provider_id")),
+		ServiceType: parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
+		Status:      parseStringOptional(query.Get("status"), errs.ForField("status")),
 	}, errs
 }
 
-// SessionListQuery allows to filter requested sessions.
-// swagger:parameters sessionList
-type SessionListQuery struct {
-	PaginationQuery
-
+// SessionQuery allows to filter requested sessions.
+// swagger:parameters sessionStatsAggregated sessionStatsDaily
+type SessionQuery struct {
 	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
 	// in: query
 	DateFrom *strfmt.Date `json:"date_from"`
@@ -60,6 +60,18 @@ type SessionListQuery struct {
 	// in: query
 	Direction *string `json:"direction"`
 
+	// Consumer identity to filter the sessions by.
+	// in: query
+	ConsumerID *string `json:"consumer_id"`
+
+	// Hermes ID to filter the sessions by.
+	// in: query
+	HermesID *string `json:"hermes_id"`
+
+	// Provider identity to filter the sessions by.
+	// in: query
+	ProviderID *string `json:"provider_id"`
+
 	// Service type to filter the sessions by.
 	// in: query
 	ServiceType *string `json:"service_type"`
@@ -69,13 +81,31 @@ type SessionListQuery struct {
 	Status *string `json:"status"`
 }
 
+// NewSessionListQuery creates session list query from API request.
+func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
+	errs := validation.NewErrorMap()
+
+	sessionQ, subErrs := NewSessionQuery(request)
+	errs.Set(subErrs)
+
+	paginationQ, subErrs := NewPaginationQuery(request)
+	errs.Set(subErrs)
+
+	return SessionListQuery{
+		SessionQuery:    sessionQ,
+		PaginationQuery: paginationQ,
+	}, errs
+}
+
+// SessionListQuery allows to filter requested sessions.
+// swagger:parameters sessionList
+type SessionListQuery struct {
+	PaginationQuery
+	SessionQuery
+}
+
 // NewSessionListResponse maps to API session list.
-func NewSessionListResponse(
-	sessions []session.History,
-	paginator *utils.Paginator,
-	stats session.Stats,
-	statsDaily map[time.Time]session.Stats,
-) SessionListResponse {
+func NewSessionListResponse(sessions []session.History, paginator *utils.Paginator) SessionListResponse {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = NewSessionDTO(se)
@@ -84,8 +114,6 @@ func NewSessionListResponse(
 	return SessionListResponse{
 		Items:       dtoArray,
 		PageableDTO: NewPageableDTO(paginator),
-		Stats:       NewSessionStatsDTO(stats),
-		StatsDaily:  NewSessionStatsDailyDTO(statsDaily),
 	}
 }
 
@@ -94,8 +122,39 @@ func NewSessionListResponse(
 type SessionListResponse struct {
 	Items []SessionDTO `json:"items"`
 	PageableDTO
-	Stats      SessionStatsDTO            `json:"stats"`
-	StatsDaily map[string]SessionStatsDTO `json:"stats_daily"`
+}
+
+// NewSessionStatsAggregatedResponse maps to API aggregated stats.
+func NewSessionStatsAggregatedResponse(stats session.Stats) SessionStatsAggregatedResponse {
+	return SessionStatsAggregatedResponse{
+		Stats: NewSessionStatsDTO(stats),
+	}
+}
+
+// SessionStatsAggregatedResponse defines aggregated sessions stats response as json.
+// swagger:model SessionStatsAggregatedResponse
+type SessionStatsAggregatedResponse struct {
+	Stats SessionStatsDTO `json:"stats"`
+}
+
+// NewSessionStatsDailyResponse maps to API session stats grouped by day.
+func NewSessionStatsDailyResponse(stats session.Stats, statsDaily map[time.Time]session.Stats) SessionStatsDailyResponse {
+	dtoMap := make(map[string]SessionStatsDTO, len(statsDaily))
+	for date, stats := range statsDaily {
+		dtoMap[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
+	}
+
+	return SessionStatsDailyResponse{
+		Items: dtoMap,
+		Stats: NewSessionStatsDTO(stats),
+	}
+}
+
+// SessionStatsDailyResponse defines session stats representable as json.
+// swagger:model SessionStatsDailyResponse
+type SessionStatsDailyResponse struct {
+	Items map[string]SessionStatsDTO `json:"items"`
+	Stats SessionStatsDTO            `json:"stats"`
 }
 
 // NewSessionStatsDTO maps to API session stats.
@@ -119,15 +178,6 @@ type SessionStatsDTO struct {
 	SumBytesSent     uint64   `json:"sum_bytes_sent"`
 	SumDuration      uint64   `json:"sum_duration"`
 	SumTokens        *big.Int `json:"sum_tokens"`
-}
-
-// NewSessionStatsDailyDTO maps to API session stats grouped by day.
-func NewSessionStatsDailyDTO(statsGrouped map[time.Time]session.Stats) map[string]SessionStatsDTO {
-	dto := make(map[string]SessionStatsDTO, len(statsGrouped))
-	for date, stats := range statsGrouped {
-		dto[date.Format("2006-01-02")] = NewSessionStatsDTO(stats)
-	}
-	return dto
 }
 
 // NewSessionDTO maps to API session.

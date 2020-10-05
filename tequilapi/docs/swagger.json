@@ -1382,7 +1382,7 @@
     },
     "/sessions": {
       "get": {
-        "description": "Returns list of sessions history",
+        "description": "Returns list of sessions history filtered by given query",
         "tags": [
           "Session"
         ],
@@ -1432,6 +1432,27 @@
           },
           {
             "type": "string",
+            "x-go-name": "ConsumerID",
+            "description": "Consumer identity to filter the sessions by.",
+            "name": "consumer_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
+            "name": "hermes_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
+            "name": "provider_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
             "x-go-name": "ServiceType",
             "description": "Service type to filter the sessions by.",
             "name": "service_type",
@@ -1477,6 +1498,186 @@
             "description": "List of connectivity statuses",
             "schema": {
               "$ref": "#/definitions/ConnectivityStatus"
+            }
+          }
+        }
+      }
+    },
+    "/sessions/stats-aggregated": {
+      "get": {
+        "description": "Returns aggregated statistics of sessions filtered by given query",
+        "tags": [
+          "Session"
+        ],
+        "summary": "Returns sessions stats",
+        "operationId": "sessionStatsAggregated",
+        "parameters": [
+          {
+            "type": "string",
+            "format": "date",
+            "x-go-name": "DateFrom",
+            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "name": "date_from",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date",
+            "x-go-name": "DateTo",
+            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "name": "date_to",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Direction",
+            "description": "Direction to filter the sessions by. Possible values are \"Provided\", \"Consumed\".",
+            "name": "direction",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ConsumerID",
+            "description": "Consumer identity to filter the sessions by.",
+            "name": "consumer_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
+            "name": "hermes_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
+            "name": "provider_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ServiceType",
+            "description": "Service type to filter the sessions by.",
+            "name": "service_type",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Status",
+            "description": "Status to filter the sessions by. Possible values are \"New\", \"Completed\".",
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sessions",
+            "schema": {
+              "$ref": "#/definitions/SessionStatsAggregatedResponse"
+            }
+          },
+          "422": {
+            "description": "Parameters validation error",
+            "schema": {
+              "$ref": "#/definitions/ValidationErrorDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/sessions/stats-daily": {
+      "get": {
+        "description": "Returns aggregated daily statistics of sessions filtered by given query",
+        "tags": [
+          "Session"
+        ],
+        "summary": "Returns sessions stats",
+        "operationId": "sessionStatsDaily",
+        "parameters": [
+          {
+            "type": "string",
+            "format": "date",
+            "x-go-name": "DateFrom",
+            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
+            "name": "date_from",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "date",
+            "x-go-name": "DateTo",
+            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
+            "name": "date_to",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Direction",
+            "description": "Direction to filter the sessions by. Possible values are \"Provided\", \"Consumed\".",
+            "name": "direction",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ConsumerID",
+            "description": "Consumer identity to filter the sessions by.",
+            "name": "consumer_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "HermesID",
+            "description": "Hermes ID to filter the sessions by.",
+            "name": "hermes_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ProviderID",
+            "description": "Provider identity to filter the sessions by.",
+            "name": "provider_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ServiceType",
+            "description": "Service type to filter the sessions by.",
+            "name": "service_type",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Status",
+            "description": "Status to filter the sessions by. Possible values are \"New\", \"Completed\".",
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sessions",
+            "schema": {
+              "$ref": "#/definitions/SessionStatsDTO"
+            }
+          },
+          "422": {
+            "description": "Parameters validation error",
+            "schema": {
+              "$ref": "#/definitions/ValidationErrorDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -3017,16 +3218,6 @@
           "format": "int64",
           "x-go-name": "PageSize"
         },
-        "stats": {
-          "$ref": "#/definitions/SessionStatsDTO"
-        },
-        "stats_daily": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/SessionStatsDTO"
-          },
-          "x-go-name": "StatsDaily"
-        },
         "total_items": {
           "description": "The total items.",
           "type": "integer",
@@ -3038,6 +3229,16 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TotalPages"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionStatsAggregatedResponse": {
+      "type": "object",
+      "title": "SessionStatsAggregatedResponse defines aggregated sessions stats response as json.",
+      "properties": {
+        "stats": {
+          "$ref": "#/definitions/SessionStatsDTO"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3073,6 +3274,23 @@
         },
         "sum_tokens": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SessionStatsDailyResponse": {
+      "type": "object",
+      "title": "SessionStatsDailyResponse defines session stats representable as json.",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/SessionStatsDTO"
+          },
+          "x-go-name": "Items"
+        },
+        "stats": {
+          "$ref": "#/definitions/SessionStatsDTO"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
