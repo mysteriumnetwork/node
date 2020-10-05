@@ -38,6 +38,11 @@ func (fel *FieldErrorList) AddError(code string, message string) {
 	fel.list = append(fel.list, FieldError{code, message})
 }
 
+// HasErrors return true if at least one field errors exist
+func (fel *FieldErrorList) HasErrors() bool {
+	return len(fel.list) > 0
+}
+
 // MarshalJSON implements JSON marshaller interface to represent error list as JSON
 func (fel FieldErrorList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(fel.list)
@@ -66,10 +71,20 @@ func (fem *FieldErrorMap) ForField(key string) *FieldErrorList {
 
 // MarshalJSON implements JSON marshaller interface to represent error map as JSON
 func (fem FieldErrorMap) MarshalJSON() ([]byte, error) {
+	for key, fieldErrors := range fem.errorMap {
+		if !fieldErrors.HasErrors() {
+			delete(fem.errorMap, key)
+		}
+	}
 	return json.Marshal(fem.errorMap)
 }
 
 // HasErrors return true if at least one error exist for any field
 func (fem *FieldErrorMap) HasErrors() bool {
-	return len(fem.errorMap) > 0
+	for _, fieldErrors := range fem.errorMap {
+		if fieldErrors.HasErrors() {
+			return true
+		}
+	}
+	return false
 }

@@ -19,11 +19,55 @@ package contract
 
 import (
 	"math/big"
+	"net/http"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
+
+// NewSessionListQuery creates session query from API request.
+func NewSessionListQuery(request *http.Request) (SessionListQuery, *validation.FieldErrorMap) {
+	pagination, errs := NewPaginationQuery(request)
+
+	query := request.URL.Query()
+	return SessionListQuery{
+		PaginationQuery: pagination,
+		DateFrom:        parseDateOptional(query.Get("date_from"), errs.ForField("date_from")),
+		DateTo:          parseDateOptional(query.Get("date_to"), errs.ForField("date_to")),
+		Direction:       parseStringOptional(query.Get("direction"), errs.ForField("direction")),
+		ServiceType:     parseStringOptional(query.Get("service_type"), errs.ForField("service_type")),
+		Status:          parseStringOptional(query.Get("status"), errs.ForField("status")),
+	}, errs
+}
+
+// SessionListQuery allows to filter requested sessions.
+// swagger:parameters sessionList
+type SessionListQuery struct {
+	PaginationQuery
+
+	// Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.
+	// in: query
+	DateFrom *strfmt.Date `json:"date_from"`
+
+	// Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.
+	// in: query
+	DateTo *strfmt.Date `json:"date_to"`
+
+	// Direction to filter the sessions by. Possible values are "Provided", "Consumed".
+	// in: query
+	Direction *string `json:"direction"`
+
+	// Service type to filter the sessions by.
+	// in: query
+	ServiceType *string `json:"service_type"`
+
+	// Status to filter the sessions by. Possible values are "New", "Completed".
+	// in: query
+	Status *string `json:"status"`
+}
 
 // NewSessionListResponse maps to API session list.
 func NewSessionListResponse(
@@ -112,7 +156,7 @@ type SessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	ID string `json:"id"`
 
-	// example: Consumer
+	// example: Consumed
 	Direction string `json:"direction"`
 
 	// example: 0x0000000000000000000000000000000000000001

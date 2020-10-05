@@ -18,10 +18,12 @@
 package session
 
 import (
+	"errors"
 	"math/big"
 	"sync"
 	"time"
 
+	"github.com/asdine/storm/v3"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -75,15 +77,75 @@ func (repo *Storage) Subscribe(bus eventbus.Subscriber) error {
 	return bus.Subscribe(pingpong_event.AppTopicInvoicePaid, repo.consumeConnectionSpendingEvent)
 }
 
-// Query executes given query.
-func (repo *Storage) Query(query *Query) (err error) {
-	return query.run(repo.storage.DB().From(sessionStorageBucketName))
-}
-
 // GetAll returns array of all sessions.
 func (repo *Storage) GetAll() ([]History, error) {
-	query := NewQuery().FetchSessions()
-	return query.Sessions, repo.Query(query)
+	return repo.List(NewFilter())
+}
+
+// List retrieves stored entries.
+func (repo *Storage) List(filter *Filter) (result []History, err error) {
+	query := repo.storage.DB().
+		From(sessionStorageBucketName).
+		Select(filter.toMatcher()).
+		OrderBy("Started").
+		Reverse()
+
+	err = query.Find(&result)
+	if errors.Is(err, storm.ErrNotFound) {
+		return []History{}, nil
+	}
+
+	return result, err
+}
+
+// Stats fetches aggregated statistics to Filter.Stats.
+func (repo *Storage) Stats(filter *Filter) (result Stats, err error) {
+	query := repo.storage.DB().
+		From(sessionStorageBucketName).
+		Select(filter.toMatcher()).
+		OrderBy("Started").
+		Reverse()
+
+	result = NewStats()
+	err = query.Each(new(History), func(record interface{}) error {
+		session := record.(*History)
+
+		result.Add(*session)
+
+		return nil
+	})
+	return result, err
+}
+
+const stepDay = 24 * time.Hour
+
+// StatsByDay retrieves aggregated statistics grouped by day to Filter.StatsByDay.
+func (repo *Storage) StatsByDay(filter *Filter) (result map[time.Time]Stats, err error) {
+	query := repo.storage.DB().
+		From(sessionStorageBucketName).
+		Select(filter.toMatcher()).
+		OrderBy("Started").
+		Reverse()
+
+	// fill the period with zeros
+	result = make(map[time.Time]Stats)
+	if filter.StartedFrom != nil && filter.StartedTo != nil {
+		for i := filter.StartedFrom.Truncate(stepDay); !i.After(*filter.StartedTo); i = i.Add(stepDay) {
+			result[i] = NewStats()
+		}
+	}
+
+	err = query.Each(new(History), func(record interface{}) error {
+		session := record.(*History)
+
+		i := session.Started.Truncate(stepDay)
+		stats := result[i]
+		stats.Add(*session)
+		result[i] = stats
+
+		return nil
+	})
+	return result, err
 }
 
 // consumeServiceSessionEvent consumes the provided sessions.

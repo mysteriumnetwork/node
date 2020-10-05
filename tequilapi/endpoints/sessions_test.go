@@ -96,6 +96,7 @@ func Test_SessionsEndpoint_List(t *testing.T) {
 	parsedResponse := contract.SessionListResponse{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.EqualValues(
 		t,
 		contract.SessionListResponse{
@@ -146,9 +147,14 @@ type sessionStorageMock struct {
 	errToReturn        error
 }
 
-func (ssm *sessionStorageMock) Query(query *session.Query) error {
-	query.Sessions = ssm.sessionsToReturn
-	query.Stats = ssm.statsToReturn
-	query.StatsByDay = ssm.statsByDayToReturn
-	return ssm.errToReturn
+func (ssm *sessionStorageMock) List(_ *session.Filter) ([]session.History, error) {
+	return ssm.sessionsToReturn, ssm.errToReturn
+}
+
+func (ssm *sessionStorageMock) Stats(_ *session.Filter) (session.Stats, error) {
+	return ssm.statsToReturn, ssm.errToReturn
+}
+
+func (ssm *sessionStorageMock) StatsByDay(_ *session.Filter) (map[time.Time]session.Stats, error) {
+	return ssm.statsByDayToReturn, ssm.errToReturn
 }

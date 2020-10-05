@@ -1390,39 +1390,58 @@
         "operationId": "sessionList",
         "parameters": [
           {
+            "type": "integer",
+            "format": "int64",
+            "default": 50,
+            "x-go-name": "PageSize",
+            "description": "Number of items per page.",
+            "name": "page_size",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "default": 1,
+            "x-go-name": "Page",
+            "description": "Page to filter the items by.",
+            "name": "page",
+            "in": "query"
+          },
+          {
             "type": "string",
-            "description": "Created date to filter the sessions from this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.",
+            "format": "date",
+            "x-go-name": "DateFrom",
+            "description": "Filter the sessions from this date (now -30d, by default). Formatted in RFC3339 e.g. 2020-07-01.",
             "name": "date_from",
             "in": "query"
           },
           {
             "type": "string",
-            "description": "Created date to filter the sessions until this date. Formatted in RFC3339 e.g. 2020-07-01T00:00:00Z.",
+            "format": "date",
+            "x-go-name": "DateTo",
+            "description": "Filter the sessions until this date (now, by default). Formatted in RFC3339 e.g. 2020-07-30.",
             "name": "date_to",
             "in": "query"
           },
           {
             "type": "string",
-            "description": "Direction to filter the sessions by. Possible values are \"Provider\", \"Consumed\".",
+            "x-go-name": "Direction",
+            "description": "Direction to filter the sessions by. Possible values are \"Provided\", \"Consumed\".",
             "name": "direction",
             "in": "query"
           },
           {
             "type": "string",
+            "x-go-name": "ServiceType",
             "description": "Service type to filter the sessions by.",
             "name": "service_type",
             "in": "query"
           },
           {
             "type": "string",
+            "x-go-name": "Status",
             "description": "Status to filter the sessions by. Possible values are \"New\", \"Completed\".",
             "name": "status",
-            "in": "query"
-          },
-          {
-            "type": "string",
-            "description": "Page to filter the sessions by.",
-            "name": "page",
             "in": "query"
           }
         ],
@@ -1433,10 +1452,10 @@
               "$ref": "#/definitions/SessionListResponse"
             }
           },
-          "400": {
-            "description": "Bad request",
+          "422": {
+            "description": "Parameters validation error",
             "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
+              "$ref": "#/definitions/ValidationErrorDTO"
             }
           },
           "500": {
@@ -1489,7 +1508,7 @@
           },
           {
             "type": "string",
-            "description": "Hermes ID to filter the sessions by.",
+            "description": "Hermes ID to filter the settlements by.",
             "name": "hermes_id",
             "in": "query"
           }
@@ -2930,7 +2949,7 @@
         "direction": {
           "type": "string",
           "x-go-name": "Direction",
-          "example": "Consumer"
+          "example": "Consumed"
         },
         "duration": {
           "description": "duration in seconds",

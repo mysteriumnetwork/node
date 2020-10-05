@@ -280,7 +280,7 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 //     type: string
 //   - in: query
 //     name: hermes_id
-//     description: Hermes ID to filter the sessions by.
+//     description: Hermes ID to filter the settlements by.
 //     type: string
 // responses:
 //   200:

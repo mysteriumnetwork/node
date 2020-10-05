@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"errors"
 	"math/big"
 	"time"
 
@@ -92,7 +93,7 @@ func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (resul
 		Reverse()
 
 	err = sq.Find(&result)
-	if err == storm.ErrNotFound {
+	if errors.Is(err, storm.ErrNotFound) {
 		return []SettlementHistoryEntry{}, nil
 	}
 
