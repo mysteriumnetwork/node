@@ -23,6 +23,7 @@ import (
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
+	"github.com/mysteriumnetwork/node/cmd/commands/reset"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
 	"github.com/mysteriumnetwork/node/config"
@@ -43,6 +44,7 @@ var (
 	licenseCommand = license.NewCommand(licenseCopyright)
 	serviceCommand = service.NewCommand(licenseCommand.Name)
 	cliCommand     = command_cli.NewCommand()
+	resetCommand   = reset.NewCommand()
 )
 
 func main() {
@@ -82,6 +84,7 @@ func NewCommand() (*cli.App, error) {
 		serviceCommand,
 		daemonCommand,
 		cliCommand,
+		resetCommand,
 	}
 
 	return app, nil
