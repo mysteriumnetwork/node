@@ -59,7 +59,9 @@ type MysteriumMORQA struct {
 	batch    metrics.Batch
 	eventsMu sync.Mutex
 	metrics  chan metric
-	stop     chan struct{}
+
+	once sync.Once
+	stop chan struct{}
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
@@ -136,7 +138,9 @@ func (m *MysteriumMORQA) signMetric(metric metric) (*metrics.Event, error) {
 
 // Stop sends the final metrics to the MORQA and stops the sending process.
 func (m *MysteriumMORQA) Stop() {
-	close(m.stop)
+	m.once.Do(func() {
+		close(m.stop)
+	})
 
 	if err := m.sendMetrics(); err != nil {
 		log.Error().Err(err).Msg("Failed to sent batch metrics request on close")
