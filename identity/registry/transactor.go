@@ -255,7 +255,11 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	}
 
 	if regReq.Fee == nil {
-		regReq.Fee = big.NewInt(0)
+		fees, err := t.FetchRegistrationFees()
+		if err != nil {
+			return IdentityRegistrationRequest{}, errors.Wrap(err, "could not get registration fees")
+		}
+		regReq.Fee = fees.Fee
 	}
 
 	if regReq.Beneficiary == "" {
