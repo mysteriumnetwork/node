@@ -232,6 +232,23 @@ func (t *Transactor) registerIdentityWithReferralToken(id string, stake *big.Int
 	return nil
 }
 
+// TokenRewardResponse represents the token reward response.
+type TokenRewardResponse struct {
+	Reward *big.Int `json:"reward"`
+}
+
+// GetTokenReward returns the reward that is issued for the given token.
+func (t *Transactor) GetTokenReward(token string) (TokenRewardResponse, error) {
+	f := TokenRewardResponse{}
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("referal/%v/reward", token), nil)
+	if err != nil {
+		return f, fmt.Errorf("failed to fetch transactor fees %w", err)
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &f)
+	return f, err
+}
+
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
 func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error {
 	if referralToken == nil {
