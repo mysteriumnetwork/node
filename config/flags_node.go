@@ -140,13 +140,13 @@ var (
 	}
 	// FlagTequilapiUsername username for API authorisation.
 	FlagTequilapiUsername = cli.StringFlag{
-		Name:  "tequilapi.username",
+		Name:  "tequilapi.auth.username",
 		Usage: "Default username for API authentication",
 		Value: "myst",
 	}
 	// FlagTequilapiPassword username for API authorisation.
 	FlagTequilapiPassword = cli.StringFlag{
-		Name:  "tequilapi.password",
+		Name:  "tequilapi.auth.password",
 		Usage: "Default password for API authentication",
 		Value: "mystberry",
 	}
