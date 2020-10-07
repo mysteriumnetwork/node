@@ -40,53 +40,59 @@ var flagResetTequilapiAuth = cli.BoolFlag{
 
 // NewCommand creates reset command.
 func NewCommand() *cli.Command {
+	var action *resetAction
+
 	return &cli.Command{
 		Name:      "reset",
 		Usage:     "Resets Mysterium Node to defaults",
 		ArgsUsage: " ",
 		Flags:     []cli.Flag{&flagResetTequilapiAuth},
 		Action: func(ctx *cli.Context) error {
-			config.ParseFlagsNode(ctx)
-			nodeOptions := node.GetOptions()
-
-			cmd, err := newResetCommand(ctx.App.Writer, nodeOptions.Directories)
+			action, err := newAction(ctx)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx)
+			return action.Run(ctx)
+		},
+		After: func(ctx *cli.Context) error {
+			if action == nil {
+				return nil
+			}
+
+			return action.Cleanup(ctx)
 		},
 	}
 }
 
-// newResetCommand creates instance of reset command.
-func newResetCommand(
-	writer io.Writer,
-	dirOptions node.OptionsDirectory,
-) (*resetCommand, error) {
-	if err := dirOptions.Check(); err != nil {
+// newAction creates instance of reset action.
+func newAction(ctx *cli.Context) (*resetAction, error) {
+	config.ParseFlagsNode(ctx)
+
+	nodeOptions := node.GetOptions()
+	if err := nodeOptions.Directories.Check(); err != nil {
 		return nil, err
 	}
 
-	localStorage, err := boltdb.NewStorage(dirOptions.Storage)
+	storage, err := boltdb.NewStorage(nodeOptions.Directories.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	return &resetCommand{
-		writer:  writer,
-		storage: localStorage,
+	return &resetAction{
+		writer:  ctx.App.Writer,
+		storage: storage,
 	}, nil
 }
 
-// resetCommand represent entrypoint for reset command with top level components.
-type resetCommand struct {
+// resetAction represent entrypoint for reset command with top level components.
+type resetAction struct {
 	writer  io.Writer
 	storage *boltdb.Bolt
 }
 
-// Run runs a command.
-func (rc *resetCommand) Run(ctx *cli.Context) error {
+// Run runs action tasks.
+func (rc *resetAction) Run(ctx *cli.Context) error {
 	if ctx.Bool(flagResetTequilapiAuth.Name) {
 		return rc.resetTequilapi()
 	}
@@ -94,7 +100,12 @@ func (rc *resetCommand) Run(ctx *cli.Context) error {
 	return nil
 }
 
-func (rc *resetCommand) resetTequilapi() error {
+// Cleanup runs action cleanup tasks.
+func (rc *resetAction) Cleanup(_ *cli.Context) error {
+	return rc.storage.Close()
+}
+
+func (rc *resetAction) resetTequilapi() error {
 	err := auth.NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, rc.storage).Set()
 	if err != nil {
 		return fmt.Errorf("error changing Tequialpi password: %w", err)
