@@ -51,7 +51,8 @@ func TestCommandRun(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, cmdOutput.String(), `user password changed successfully`)
 
-	storage, _ := boltdb.NewStorage(tempDir)
+	storage, err := boltdb.NewStorage(tempDir)
+	assert.NoError(t, err)
 
 	defer func() { _ = storage.Close() }()
 

@@ -76,16 +76,18 @@ func (credentials *Credentials) loadOrInitialize() (s string, err error) {
 	var storedHash string
 
 	err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
-	if errors.Is(err, storage.ErrNotFound) {
-		log.Info().Msg("Credentials not found, initializing to default")
-
-		err = NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, credentials.db).Set()
-		if err != nil {
-			return "", fmt.Errorf("failed to set initial credentials: %w", err)
-		}
-
-		err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
+	if !errors.Is(err, storage.ErrNotFound) {
+		return storedHash, err
 	}
+
+	log.Info().Msg("Credentials not found, initializing to default")
+
+	err = NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, credentials.db).Set()
+	if err != nil {
+		return "", fmt.Errorf("failed to set initial credentials: %w", err)
+	}
+
+	err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
 
 	return storedHash, err
 }

@@ -64,8 +64,6 @@ func newResetCommand(
 	writer io.Writer,
 	dirOptions node.OptionsDirectory,
 ) (*resetCommand, error) {
-	fmt.Println(dirOptions.Storage)
-
 	if err := dirOptions.Check(); err != nil {
 		return nil, err
 	}
@@ -90,9 +88,7 @@ type resetCommand struct {
 // Run runs a command.
 func (rc *resetCommand) Run(ctx *cli.Context) error {
 	if ctx.Bool(flagResetTequilapiAuth.Name) {
-		if err := rc.resetTequilapi(); err != nil {
-			return err
-		}
+		return rc.resetTequilapi()
 	}
 
 	return nil

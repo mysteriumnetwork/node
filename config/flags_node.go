@@ -129,25 +129,25 @@ var (
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
 		Name:  "tequilapi.address",
-		Usage: "IP address to bind Tequilapi to",
+		Usage: "IP address to bind API to",
 		Value: "127.0.0.1",
 	}
 	// FlagTequilapiPort port for listening for incoming API requests.
 	FlagTequilapiPort = cli.IntFlag{
 		Name:  "tequilapi.port",
-		Usage: "Port for listening incoming Tequilapi requests",
+		Usage: "Port for listening incoming API requests",
 		Value: 4050,
 	}
 	// FlagTequilapiUsername username for API authorisation.
 	FlagTequilapiUsername = cli.StringFlag{
 		Name:  "tequilapi.username",
-		Usage: "Default username for Tequilapi authentication",
+		Usage: "Default username for API authentication",
 		Value: "myst",
 	}
 	// FlagTequilapiPassword username for API authorisation.
 	FlagTequilapiPassword = cli.StringFlag{
 		Name:  "tequilapi.password",
-		Usage: "Default password for Tequilapi authentication",
+		Usage: "Default password for API authentication",
 		Value: "mystberry",
 	}
 	// FlagPProfEnable enables pprof via TequilAPI.
