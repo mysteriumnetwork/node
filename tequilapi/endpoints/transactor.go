@@ -42,6 +42,7 @@ type Transactor interface {
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error
 	DecreaseStake(id string, amount, transactorFee *big.Int) error
+	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
 	GetReferralToken(id common.Address) (string, error)
 }
 
@@ -227,6 +228,20 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
 		return
+	}
+
+	if req.Stake == nil {
+		req.Stake = new(big.Int)
+	}
+
+	// set stake to referal reward if registering provider with token
+	if req.ReferralToken != nil && req.Stake.Cmp(new(big.Int)) > 0 {
+		reward, err := te.transactor.GetTokenReward(*req.ReferralToken)
+		if err != nil {
+			utils.SendError(resp, fmt.Errorf("failed to get referral token info %w", err), http.StatusBadRequest)
+			return
+		}
+		req.Stake = reward.Reward
 	}
 
 	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, req.ReferralToken)
