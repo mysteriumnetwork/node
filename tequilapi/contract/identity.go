@@ -140,6 +140,8 @@ func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
 	if irr.ReferralToken == nil {
 		if irr.Stake == nil {
 			errors.ForField("stake").Required()
+		} else if irr.Stake.Cmp(big.NewInt(0)) == -1 {
+			errors.ForField("stake").Invalid("Must be positive")
 		}
 	}
 
