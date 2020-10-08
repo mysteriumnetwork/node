@@ -49,6 +49,10 @@ func (fel *FieldErrorList) Required() {
 	fel.Add(&FieldError{"required", "Field is required"})
 }
 
+func (fel *FieldErrorList) Invalid(message string) {
+	fel.Add(&FieldError{"invalid", message})
+}
+
 // HasErrors return true if at least one field errors exist
 func (fel *FieldErrorList) HasErrors() bool {
 	return len(fel.list) > 0
