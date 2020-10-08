@@ -234,6 +234,11 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
+	if errorMap := req.Validate(); errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
 	if req.Stake == nil {
 		req.Stake = new(big.Int)
 	}

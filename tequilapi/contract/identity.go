@@ -18,6 +18,7 @@
 package contract
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -80,7 +81,7 @@ type IdentityCreateRequest struct {
 func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -95,7 +96,7 @@ type IdentityUnlockRequest struct {
 func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -111,7 +112,7 @@ type IdentityCurrentRequest struct {
 func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -127,6 +128,22 @@ type IdentityRegisterRequest struct {
 	Fee *big.Int `json:"fee,omitempty"`
 	// Token: referral token, if the user has one
 	ReferralToken *string `json:"token,omitempty"`
+}
+
+func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+
+	if okAddress := common.IsHexAddress(irr.Beneficiary); irr.Beneficiary != "" && !okAddress {
+		errors.ForField("beneficiary").AddError("invalid", irr.Beneficiary+" - is not a valid ethereum wallet address")
+	}
+
+	if irr.ReferralToken == nil {
+		if irr.Stake == nil {
+			errors.ForField("stake").Required()
+		}
+	}
+
+	return errors
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity
