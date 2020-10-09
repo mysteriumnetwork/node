@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	installURL  = "https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh"
 	installFile = "install.sh"
 )
 
@@ -100,7 +99,7 @@ func testImage(t *testing.T, image string) {
 	failIf(scanner.Err())
 	assert.NotEmpty(containerId)
 
-	err = sh.RunV("docker", "exec", containerId, "curl", "-o", installFile, installURL)
+	err = sh.RunV("docker", "cp", "../../../"+installFile, containerId+":/")
 	failIf(err)
 	err = sh.RunV("docker", "exec", containerId, "bash", installFile)
 	failIf(err)
