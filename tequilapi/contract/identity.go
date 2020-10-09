@@ -18,9 +18,9 @@
 package contract
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -130,11 +130,12 @@ type IdentityRegisterRequest struct {
 	ReferralToken *string `json:"token,omitempty"`
 }
 
+// Validate validates fields in request
 func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 
-	if okAddress := common.IsHexAddress(irr.Beneficiary); irr.Beneficiary != "" && !okAddress {
-		errors.ForField("beneficiary").Invalid(irr.Beneficiary+" - is not a valid ethereum wallet address")
+	if irr.Beneficiary != "" && !common.IsHexAddress(irr.Beneficiary) {
+		errors.ForField("beneficiary").Invalid(irr.Beneficiary + " - is not a valid ethereum wallet address")
 	}
 
 	if irr.ReferralToken == nil {
