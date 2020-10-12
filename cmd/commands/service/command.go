@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -162,8 +163,8 @@ func (sc *serviceCommand) runService(request contract.ServiceStartRequest) {
 
 func printTermWarning(licenseCommandName string) {
 	fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
-		"run program with 'myst "+licenseCommandName+" --"+config.LicenseWarrantyFlag.Name+"' option",
-		"run program with 'myst "+licenseCommandName+" --"+config.LicenseConditionsFlag.Name+"' option",
+		"run program with 'myst "+licenseCommandName+" --"+license.FlagShowWarranty.Name+"' option",
+		"run program with 'myst "+licenseCommandName+" --"+license.FlagShowConditions.Name+"' option",
 	)))
 	fmt.Println()
 
