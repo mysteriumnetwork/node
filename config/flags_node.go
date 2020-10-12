@@ -138,13 +138,13 @@ var (
 		Usage: "Port for listening incoming API requests",
 		Value: 4050,
 	}
-	// FlagTequilapiUsername username for API authorisation.
+	// FlagTequilapiUsername username for API authentication.
 	FlagTequilapiUsername = cli.StringFlag{
 		Name:  "tequilapi.auth.username",
 		Usage: "Default username for API authentication",
 		Value: "myst",
 	}
-	// FlagTequilapiPassword username for API authorisation.
+	// FlagTequilapiPassword username for API authentication.
 	FlagTequilapiPassword = cli.StringFlag{
 		Name:  "tequilapi.auth.password",
 		Usage: "Default password for API authentication",
