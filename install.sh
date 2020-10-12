@@ -142,7 +142,7 @@ install_ubuntu() {
     if [[ "$container" != "docker" ]]; then
         apt install -y "linux-headers-$(uname -r)"
     fi
-    add-apt-repository -y ppa:wireguard/wireguard
+
     apt update
     apt install -y wireguard wireguard-dkms
     dpkg-reconfigure wireguard-dkms
