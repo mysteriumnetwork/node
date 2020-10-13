@@ -3,7 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
 [![pipeline status](https://gitlab.com/mysteriumnetwork/node/badges/master/pipeline.svg)](https://gitlab.com/mysteriumnetwork/node/pipelines)
 [![pullreminders](https://pullreminders.com/badge.svg)](https://pullreminders.com?ref=badge)
-[![codecov](https://codecov.io/gh/mysteriumnetwork/node/branch/master/graph/badge.svg)](https://codecov.io/gh/mysteriumnetwork/node) 
+[![codecov](https://codecov.io/gh/mysteriumnetwork/node/branch/master/graph/badge.svg)](https://codecov.io/gh/mysteriumnetwork/node)
 [![GoDoc](https://godoc.org/github.com/mysteriumnetwork/node?status.svg)](http://godoc.org/github.com/mysteriumnetwork/node)
 
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node),
@@ -25,14 +25,19 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 ### Debian / Ubuntu / Raspbian
 
-Install latest stable release:
+Install latest stable testnet release:
 ```bash
-sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)" 
+sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
+```
+
+Install latest betanet release:
+```bash
+NETWORK=betanet sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
 
 Or install latest snapshot (development build):
 ```bash
-SNAPSHOT=true sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)" 
+SNAPSHOT=true sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
 
 Service logs:
@@ -74,7 +79,7 @@ docker logs -f myst
 
 ### Further information
 
-More installation options are described in the [installation guide](http://docs.mysterium.network/en/latest/user-guide/installation/).  
+More installation options are described in the [installation guide](http://docs.mysterium.network/en/latest/user-guide/installation/).
 For possible issues while running a node refer to our [FAQ](https://github.com/mysteriumnetwork/node/wiki/Node-operation) section.
 
 ## Built With
