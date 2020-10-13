@@ -45,7 +45,6 @@ func TestInstall(t *testing.T) {
 	images := []string{
 		"debian-buster",
 		"debian-stretch",
-		"ubuntu-xenial",
 		"ubuntu-bionic",
 		"ubuntu-focal",
 	}

@@ -20,10 +20,7 @@ RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
 # https://github.com/moby/moby/issues/1297
 RUN echo resolvconf resolvconf/linkify-resolvconf boolean false | debconf-set-selections
 
-RUN apt update \
-    && apt install -y \
-    sudo \
-    curl
+RUN apt update && apt install -y sudo curl gnupg
 
 VOLUME ["/sys/fs/cgroup"]
 
