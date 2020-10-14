@@ -14,10 +14,8 @@ add_apt_source() {
 touch /boot/ssh
 
 # Add APT sources
-add_apt_source "deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu bionic main" "/etc/apt/sources.list.d/mysterium.list"
+add_apt_source "deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu focal main" "/etc/apt/sources.list.d/mysterium.list"
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ECCB6A56B22C536D
-add_apt_source "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu bionic main" "/etc/apt/sources.list.d/wireguard.list"
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AE33835F504A1A25
 
 add_apt_source "deb http://deb.debian.org/debian/ unstable main" "/etc/apt/sources.list.d/unstable.list"
 wget -O - https://ftp-master.debian.org/keys/archive-key-$(lsb_release -sr).asc | sudo apt-key add -
