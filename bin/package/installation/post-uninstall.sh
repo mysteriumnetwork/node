@@ -17,6 +17,7 @@ function disable_systemd {
         return
     fi
     printf  "Disabling systemd script '$system_service'..\n"
+    systemctl stop mysterium-node
     systemctl disable mysterium-node
     rm -f $system_service
 }
@@ -39,7 +40,7 @@ if [[ -f /etc/redhat-release ]]; then
     if [[ "$1" = "0" ]]; then
 	# MysteriumNode is no longer installed, remove from init system
 	rm -f /etc/default/mysterium-node
-	
+
 	which systemctl &>/dev/null
 	if [[ $? -eq 0 ]]; then
 	    disable_systemd
@@ -53,7 +54,7 @@ elif [[ -f /etc/lsb-release ]]; then
     if [[ "$1" != "upgrade" ]]; then
 	# Remove/purge
 	rm -f /etc/default/mysterium-node
-	
+
 	which systemctl &>/dev/null
 	if [[ $? -eq 0 ]]; then
 	    disable_systemd

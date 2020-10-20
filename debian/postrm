@@ -17,6 +17,7 @@ function disable_systemd {
         return
     fi
     printf  "Disabling systemd script '$system_service'..\n"
+    systemctl stop mysterium-node
     systemctl disable mysterium-node
     rm -f $system_service
 }
