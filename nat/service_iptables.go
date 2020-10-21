@@ -161,6 +161,10 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 		"--table", "nat")
 	rules = append(rules, rule)
 
+	// ACCEPT forwarding rules
+	rules = append(rules, iptables.AppendTo(chainForward).RuleSpec("--source", vpnNetwork, "--jump", "ACCEPT"))
+	rules = append(rules, iptables.AppendTo(chainForward).RuleSpec("--destination", vpnNetwork, "--jump", "ACCEPT"))
+
 	return rules
 }
 
