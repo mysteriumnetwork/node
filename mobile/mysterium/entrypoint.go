@@ -474,6 +474,7 @@ func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFee
 // RegisterIdentityRequest represents identity registration request.
 type RegisterIdentityRequest struct {
 	IdentityAddress string
+	Token           string
 }
 
 // RegisterIdentity starts identity registration in background.
@@ -483,7 +484,11 @@ func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 		return errors.Wrap(err, "could not get registration fees")
 	}
 
-	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", nil)
+	var token *string
+	if req.Token != "" {
+		token = &req.Token
+	}
+	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", token)
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
 	}
