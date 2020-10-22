@@ -17,7 +17,11 @@
 
 package noop
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/rs/zerolog/log"
+)
 
 // Server doesn't do much really
 type Server struct {
@@ -33,8 +37,9 @@ func NewServer() *Server {
 }
 
 // Serve blocks
-func (s *Server) Serve() error {
-	return <-s.iSimulateWork
+func (s *Server) Serve() {
+	err := <-s.iSimulateWork
+	log.Err(err).Msg("NOOP UI server")
 }
 
 // Stop stops the blocking of serve

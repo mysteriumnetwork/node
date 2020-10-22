@@ -68,13 +68,7 @@ func (node *Node) Start() error {
 	go node.sleepNotifier.Start()
 	node.httpAPIServer.StartServing()
 
-	go func() {
-		err := node.uiServer.Serve()
-		if err != nil {
-			log.Error().Err(err).Msg("UI server error")
-		}
-	}()
-
+	node.uiServer.Serve()
 	node.publisher.Publish(event.AppTopicNode, event.Payload{Status: event.StatusStarted})
 
 	return nil
