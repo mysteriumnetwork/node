@@ -31,27 +31,24 @@ import (
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
 	proposalRepository := discovery.NewRepository()
-	discoveryRegistry := discovery.NewRegistry()
+	proposalRegistry := discovery.NewRegistry()
+	discoveryWorker := discovery.NewWorker()
 
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
-			discoveryRegistry.AddRegistry(apidiscovery.NewRegistry(di.MysteriumAPI))
+			proposalRegistry.AddRegistry(apidiscovery.NewRegistry(di.MysteriumAPI))
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
 
 		case node.DiscoveryTypeBroker:
-			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
-
 			storage := brokerdiscovery.NewStorage(di.EventBus)
 			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, storage, options.PingInterval+time.Second, 1*time.Second)
-			proposalRepository.Add(brokerRepository)
-
 			if options.FetchEnabled {
-				di.DiscoveryWorker = brokerRepository
-				if err := di.DiscoveryWorker.Start(); err != nil {
-					return errors.Wrap(err, "failed to enable broker discovery")
-				}
+				discoveryWorker.AddWorker(brokerRepository)
 			}
+
+			proposalRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
+			proposalRepository.Add(brokerRepository)
 
 		case node.DiscoveryTypeDHT:
 			dhtNode, err := dhtdiscovery.NewNode(
@@ -63,24 +60,24 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 			if err != nil {
 				return errors.Wrap(err, "failed to configure DHT node")
 			}
-			discoveryRegistry.AddRegistry(dhtdiscovery.NewRegistry())
+			discoveryWorker.AddWorker(dhtNode)
 
-			brokerRepository := dhtdiscovery.NewRepository()
-			proposalRepository.Add(brokerRepository)
-
-			di.DiscoveryWorker = dhtNode
-			if err := di.DiscoveryWorker.Start(); err != nil {
-				return errors.Wrap(err, "failed to enable DHT discovery")
-			}
+			proposalRegistry.AddRegistry(dhtdiscovery.NewRegistry())
+			proposalRepository.Add(dhtdiscovery.NewRepository())
 
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
 	}
 
+	di.DiscoveryWorker = discoveryWorker
+	if err := di.DiscoveryWorker.Start(); err != nil {
+		return errors.Wrap(err, "failed to start discovery")
+	}
+
 	di.ProposalRepository = proposalRepository
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, discoveryRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
+		return discovery.NewService(di.IdentityRegistry, proposalRegistry, options.PingInterval, di.SignerFactory, di.EventBus)
 	}
 	return nil
 }

@@ -30,6 +30,7 @@ import (
 
 // Node represents DHT server-client in P2P network.
 type Node struct {
+	libP2PConfig     libp2p.Config
 	libP2PNode       host.Host
 	libP2PNodeCtx    context.Context
 	libP2PNodeCancel context.CancelFunc
@@ -39,13 +40,15 @@ type Node struct {
 
 // NewNode create an instance of DHT node.
 func NewNode(listenAddress string, bootstrapPeerAddresses []string) (*Node, error) {
+	node := &Node{
+		bootstrapPeers: make([]*peer.AddrInfo, len(bootstrapPeerAddresses)),
+	}
+
 	// Parse and validate configuration
 	listenAddr, err := multiaddr.NewMultiaddr(listenAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse DHT listen address. %w", err)
 	}
-
-	bootstrapPeers := make([]*peer.AddrInfo, len(bootstrapPeerAddresses))
 
 	for i, peerAddress := range bootstrapPeerAddresses {
 		peerAddr, err := multiaddr.NewMultiaddr(peerAddress)
@@ -53,44 +56,36 @@ func NewNode(listenAddress string, bootstrapPeerAddresses []string) (*Node, erro
 			return nil, fmt.Errorf("failed to parse DHT peer address. %w", err)
 		}
 
-		if bootstrapPeers[i], err = peer.AddrInfoFromP2pAddr(peerAddr); err != nil {
+		if node.bootstrapPeers[i], err = peer.AddrInfoFromP2pAddr(peerAddr); err != nil {
 			return nil, fmt.Errorf("failed to parse DHT peer info. %w", err)
 		}
 	}
 
 	// Preparing config for libp2p Host. Other options can be added here.
-	var config libp2p.Config
-	if err = config.Apply(
+	if err = node.libP2PConfig.Apply(
 		libp2p.ListenAddrs(listenAddr),
 		libp2p.FallbackDefaults,
 	); err != nil {
 		return nil, fmt.Errorf("failed to configure DHT node. %w", err)
 	}
 
-	// Prepare context which stops the libp2p host.
-	ctx, ctxCancel := context.WithCancel(context.Background())
-
-	// Constructs a new libp2p node.
-	node, err := config.NewNode(ctx)
-	if err != nil {
-		ctxCancel()
-
-		return nil, fmt.Errorf("failed to start DHT node. %w", err)
-	}
-
-	log.Info().Msgf("DHT node started on %s with ID=%s", node.Addrs(), node.ID())
-
-	return &Node{
-		libP2PNode:       node,
-		libP2PNodeCtx:    ctx,
-		libP2PNodeCancel: ctxCancel,
-		bootstrapPeers:   bootstrapPeers,
-	}, nil
+	return node, nil
 }
 
 // Start begins DHT bootstrapping process.
-func (n *Node) Start() error {
-	// Let's connect to the bootstrap nodes first. They will tell us about the other nodes in the network.
+func (n *Node) Start() (err error) {
+	// Prepare context which stops the libp2p host.
+	n.libP2PNodeCtx, n.libP2PNodeCancel = context.WithCancel(context.Background())
+
+	// Stats libp2p node.
+	n.libP2PNode, err = n.libP2PConfig.NewNode(n.libP2PNodeCtx)
+	if err != nil {
+		return fmt.Errorf("failed to start DHT node. %w", err)
+	}
+
+	log.Info().Msgf("DHT node started on %s with ID=%s", n.libP2PNode.Addrs(), n.libP2PNode.ID())
+
+	// Let's connect to the bootstrap peer nodes first. They will tell us about the other nodes in the network.
 	for _, peerInfo := range n.bootstrapPeers {
 		go n.connectToPeer(*peerInfo)
 	}

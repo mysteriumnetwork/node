@@ -17,8 +17,44 @@
 
 package discovery
 
+import (
+	"fmt"
+)
+
 // Worker continuously runs discovery process in node's background.
 type Worker interface {
 	Start() error
 	Stop()
+}
+
+type workerComposite struct {
+	workers []Worker
+}
+
+// NewWorker creates an instance of composite worker.
+func NewWorker(workers ...Worker) *workerComposite {
+	return &workerComposite{workers: workers}
+}
+
+// AddWorker adds worker to set of workers.
+func (wc *workerComposite) AddWorker(worker Worker) {
+	wc.workers = append(wc.workers, worker)
+}
+
+// Start starts all workers.
+func (wc *workerComposite) Start() error {
+	for _, worker := range wc.workers {
+		if err := worker.Start(); err != nil {
+			return fmt.Errorf("failed to start worker. %w", err)
+		}
+	}
+
+	return nil
+}
+
+// Start starts all workers.
+func (wc *workerComposite) Stop() {
+	for _, worker := range wc.workers {
+		worker.Stop()
+	}
 }
