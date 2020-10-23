@@ -165,7 +165,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Address: options.QualityOracleURL,
 		},
 		Discovery: node.OptionsDiscovery{
-			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker},
+			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker, node.DiscoveryTypeDHT},
 			Address:      network.MysteriumAPIAddress,
 			FetchEnabled: false,
 		},

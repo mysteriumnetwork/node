@@ -27,6 +27,8 @@ const (
 	DiscoveryTypeAPI = DiscoveryType("api")
 	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
 	DiscoveryTypeBroker = DiscoveryType("broker")
+	// DiscoveryTypeDHT defines type which discovers proposals through DHT (Distributed Hash Table)
+	DiscoveryTypeDHT = DiscoveryType("dht")
 )
 
 // OptionsDiscovery describes possible parameters of discovery configuration

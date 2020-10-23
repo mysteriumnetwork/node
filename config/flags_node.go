@@ -34,8 +34,8 @@ var (
 	// FlagDiscoveryType proposal discovery adapter.
 	FlagDiscoveryType = cli.StringSliceFlag{
 		Name:  "discovery.type",
-		Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
-		Value: cli.NewStringSlice("api", "broker"),
+		Usage: `Proposal discovery adapter(s) separated by comma. Options: { "api", "broker", "api,broker,dht" }`,
+		Value: cli.NewStringSlice("api", "broker", "dht"),
 	}
 	// FlagDiscoveryPingInterval proposal ping interval in seconds.
 	FlagDiscoveryPingInterval = cli.DurationFlag{

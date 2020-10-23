@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/apidiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
+	"github.com/mysteriumnetwork/node/core/discovery/dhtdiscovery"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/pkg/errors"
@@ -31,23 +32,40 @@ import (
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
 	proposalRepository := discovery.NewRepository()
 	discoveryRegistry := discovery.NewRegistry()
+
 	for _, discoveryType := range options.Types {
 		switch discoveryType {
 		case node.DiscoveryTypeAPI:
 			discoveryRegistry.AddRegistry(apidiscovery.NewRegistry(di.MysteriumAPI))
 			proposalRepository.Add(apidiscovery.NewRepository(di.MysteriumAPI))
+
 		case node.DiscoveryTypeBroker:
 			discoveryRegistry.AddRegistry(brokerdiscovery.NewRegistry(di.BrokerConnection))
 
 			storage := brokerdiscovery.NewStorage(di.EventBus)
 			brokerRepository := brokerdiscovery.NewRepository(di.BrokerConnection, storage, options.PingInterval+time.Second, 1*time.Second)
+			proposalRepository.Add(brokerRepository)
+
 			if options.FetchEnabled {
 				di.DiscoveryWorker = brokerRepository
 				if err := di.DiscoveryWorker.Start(); err != nil {
 					return errors.Wrap(err, "failed to enable broker discovery")
 				}
 			}
+
+		case node.DiscoveryTypeDHT:
+			discoveryRegistry.AddRegistry(dhtdiscovery.NewRegistry())
+
+			brokerRepository := dhtdiscovery.NewRepository()
 			proposalRepository.Add(brokerRepository)
+
+			if options.FetchEnabled {
+				di.DiscoveryWorker = brokerRepository
+				if err := di.DiscoveryWorker.Start(); err != nil {
+					return errors.Wrap(err, "failed to enable DHT discovery")
+				}
+			}
+
 		default:
 			return errors.Errorf("unknown discovery adapter: %s", discoveryType)
 		}
