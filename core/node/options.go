@@ -192,6 +192,17 @@ func GetDiscoveryOptions() *OptionsDiscovery {
 		PingInterval:  config.GetDuration(config.FlagDiscoveryPingInterval),
 		FetchEnabled:  true,
 		FetchInterval: config.GetDuration(config.FlagDiscoveryFetchInterval),
+		DHT:           *GetDHTOptions(),
+	}
+}
+
+// GetDHTOptions retrieves DHT options from the app configuration.
+func GetDHTOptions() *OptionsDHT {
+	return &OptionsDHT{
+		Address:        config.GetString(config.FlagDHTAddress),
+		Port:           config.GetInt(config.FlagDHTPort),
+		Protocol:       config.GetString(config.FlagDHTProtocol),
+		BootstrapPeers: config.GetStringSlice(config.FlagDHTBootstrapPeers),
 	}
 }
 

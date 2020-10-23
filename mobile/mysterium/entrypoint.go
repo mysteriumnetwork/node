@@ -168,6 +168,12 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Types:        []node.DiscoveryType{node.DiscoveryTypeAPI, node.DiscoveryTypeBroker, node.DiscoveryTypeDHT},
 			Address:      network.MysteriumAPIAddress,
 			FetchEnabled: false,
+			DHT: node.OptionsDHT{
+				Address:        "0.0.0.0",
+				Port:           0,
+				Protocol:       "tcp",
+				BootstrapPeers: []string{},
+			},
 		},
 		Location: node.OptionsLocation{
 			IPDetectorURL: options.IPDetectorURL,
