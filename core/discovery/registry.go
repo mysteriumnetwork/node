@@ -23,6 +23,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
+type ProposalRegistry interface {
+	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+}
+
 type registryComposite struct {
 	registries []ProposalRegistry
 }

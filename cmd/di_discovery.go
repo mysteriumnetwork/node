@@ -54,16 +54,23 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 			}
 
 		case node.DiscoveryTypeDHT:
+			dhtNode, err := dhtdiscovery.NewNode(
+				"/ip4/127.0.0.1/tcp/0",
+				[]string{
+					"/ip4/127.0.0.1/tcp/6666/p2p/QmNUZRp1zrk8i8TpfyeDZ9Yg3C4PjZ5o61yao3YhyY1TE8",
+				},
+			)
+			if err != nil {
+				return errors.Wrap(err, "failed to configure DHT node")
+			}
 			discoveryRegistry.AddRegistry(dhtdiscovery.NewRegistry())
 
 			brokerRepository := dhtdiscovery.NewRepository()
 			proposalRepository.Add(brokerRepository)
 
-			if options.FetchEnabled {
-				di.DiscoveryWorker = brokerRepository
-				if err := di.DiscoveryWorker.Start(); err != nil {
-					return errors.Wrap(err, "failed to enable DHT discovery")
-				}
+			di.DiscoveryWorker = dhtNode
+			if err := di.DiscoveryWorker.Start(); err != nil {
+				return errors.Wrap(err, "failed to enable DHT discovery")
 			}
 
 		default:
