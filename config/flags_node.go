@@ -34,8 +34,8 @@ var (
 	// FlagDiscoveryType proposal discovery adapter.
 	FlagDiscoveryType = cli.StringSliceFlag{
 		Name:  "discovery.type",
-		Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
-		Value: cli.NewStringSlice("api", "broker"),
+		Usage: `Proposal discovery adapter(s) separated by comma. Options: { "api", "broker", "api,broker,dht" }`,
+		Value: cli.NewStringSlice("api", "broker", "dht"),
 	}
 	// FlagDiscoveryPingInterval proposal ping interval in seconds.
 	FlagDiscoveryPingInterval = cli.DurationFlag{
@@ -49,6 +49,31 @@ var (
 		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
 		Value: 180 * time.Second,
 	}
+	// FlagDHTAddress IP address of interface to listen for DHT connections.
+	FlagDHTAddress = cli.StringFlag{
+		Name:  "discovery.dht.address",
+		Usage: "IP address to bind DHT to",
+		Value: "0.0.0.0",
+	}
+	// FlagDHTPort listens DHT connections on the specified port.
+	FlagDHTPort = cli.IntFlag{
+		Name:  "discovery.dht.port",
+		Usage: "The port to bind DHT to (by default, random port will be used)",
+		Value: 0,
+	}
+	// FlagDHTProtocol protocol for DHT to use.
+	FlagDHTProtocol = cli.StringFlag{
+		Name:  "discovery.dht.proto",
+		Usage: "Protocol to use with DHT. Options: { udp, tcp }",
+		Value: "tcp",
+	}
+	// FlagDHTBootstrapPeers DHT bootstrap peer nodes list.
+	FlagDHTBootstrapPeers = cli.StringSliceFlag{
+		Name:  "discovery.dht.peers",
+		Usage: `Peer URL(s) for DHT bootstrap (e.g. /ip4/127.0.0.1/tcp/1234/p2p/QmNUZRp1zrk8i8TpfyeDZ9Yg3C4PjZ5o61yao3YhyY1TE8") separated by comma. They will tell us about the other nodes in the network.`,
+		Value: cli.NewStringSlice(),
+	}
+
 	// FlagBindAddress IP address to bind to.
 	FlagBindAddress = cli.StringFlag{
 		Name:  "bind.address",
@@ -220,6 +245,10 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagDiscoveryType,
 		&FlagDiscoveryPingInterval,
 		&FlagDiscoveryFetchInterval,
+		&FlagDHTAddress,
+		&FlagDHTPort,
+		&FlagDHTProtocol,
+		&FlagDHTBootstrapPeers,
 		&FlagFeedbackURL,
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
@@ -263,6 +292,10 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryPingInterval)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryFetchInterval)
+	Current.ParseStringFlag(ctx, FlagDHTAddress)
+	Current.ParseIntFlag(ctx, FlagDHTPort)
+	Current.ParseStringFlag(ctx, FlagDHTProtocol)
+	Current.ParseStringSliceFlag(ctx, FlagDHTBootstrapPeers)
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)

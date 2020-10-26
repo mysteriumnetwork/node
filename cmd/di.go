@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/money"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
@@ -37,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/discovery/brokerdiscovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -116,7 +116,7 @@ type Dependencies struct {
 
 	DiscoveryFactory   service.DiscoveryFactory
 	ProposalRepository proposal.Repository
-	DiscoveryWorker    brokerdiscovery.Worker
+	DiscoveryWorker    discovery.Worker
 
 	QualityClient *quality.MysteriumMORQA
 

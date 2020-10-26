@@ -33,12 +33,15 @@ require (
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/klauspost/pgzip v1.2.4 // indirect
-	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
+	github.com/koron/go-ssdp v0.0.0-20191105050749-2e1c40ed0b5d
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lib/pq v1.7.0 // indirect
+	github.com/libp2p/go-libp2p v0.5.2
+	github.com/libp2p/go-libp2p-core v0.3.0
 	github.com/magefile/mage v1.10.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.29
+	github.com/multiformats/go-multiaddr v0.2.0
 	github.com/mysteriumnetwork/feedback v1.1.1
 	github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4
 	github.com/mysteriumnetwork/go-dvpn-web v0.1.9

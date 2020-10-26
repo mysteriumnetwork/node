@@ -27,12 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// Worker continuously tracks service proposals from discovery service to storage
-type Worker interface {
-	Start() error
-	Stop()
-}
-
 // ProposalReducer proposal match function
 type ProposalReducer func(proposal market.ServiceProposal) bool
 
