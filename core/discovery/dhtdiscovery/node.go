@@ -47,17 +47,17 @@ func NewNode(listenAddress string, bootstrapPeerAddresses []string) (*Node, erro
 	// Parse and validate configuration
 	listenAddr, err := multiaddr.NewMultiaddr(listenAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse DHT listen address. %w", err)
+		return nil, fmt.Errorf("failed to parse DHT listen address: %w", err)
 	}
 
 	for i, peerAddress := range bootstrapPeerAddresses {
 		peerAddr, err := multiaddr.NewMultiaddr(peerAddress)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse DHT peer address. %w", err)
+			return nil, fmt.Errorf("failed to parse DHT peer address: %w", err)
 		}
 
 		if node.bootstrapPeers[i], err = peer.AddrInfoFromP2pAddr(peerAddr); err != nil {
-			return nil, fmt.Errorf("failed to parse DHT peer info. %w", err)
+			return nil, fmt.Errorf("failed to parse DHT peer info: %w", err)
 		}
 	}
 
@@ -66,7 +66,7 @@ func NewNode(listenAddress string, bootstrapPeerAddresses []string) (*Node, erro
 		libp2p.ListenAddrs(listenAddr),
 		libp2p.FallbackDefaults,
 	); err != nil {
-		return nil, fmt.Errorf("failed to configure DHT node. %w", err)
+		return nil, fmt.Errorf("failed to configure DHT node: %w", err)
 	}
 
 	return node, nil
@@ -77,15 +77,15 @@ func (n *Node) Start() (err error) {
 	// Prepare context which stops the libp2p host.
 	n.libP2PNodeCtx, n.libP2PNodeCancel = context.WithCancel(context.Background())
 
-	// Stats libp2p node.
+	// Start libp2p node.
 	n.libP2PNode, err = n.libP2PConfig.NewNode(n.libP2PNodeCtx)
 	if err != nil {
-		return fmt.Errorf("failed to start DHT node. %w", err)
+		return fmt.Errorf("failed to start DHT node: %w", err)
 	}
 
 	log.Info().Msgf("DHT node started on %s with ID=%s", n.libP2PNode.Addrs(), n.libP2PNode.ID())
 
-	// Let's connect to the bootstrap peer nodes first. They will tell us about the other nodes in the network.
+	// Start connecting to the bootstrap peer nodes early. They will tell us about the other nodes in the network.
 	for _, peerInfo := range n.bootstrapPeers {
 		go n.connectToPeer(*peerInfo)
 	}

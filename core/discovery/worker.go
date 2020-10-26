@@ -27,25 +27,24 @@ type Worker interface {
 	Stop()
 }
 
-type workerComposite struct {
-	workers []Worker
-}
+type workerComposite []Worker
 
 // NewWorker creates an instance of composite worker.
 func NewWorker(workers ...Worker) *workerComposite {
-	return &workerComposite{workers: workers}
+	wc := workerComposite(workers)
+	return &wc
 }
 
 // AddWorker adds worker to set of workers.
 func (wc *workerComposite) AddWorker(worker Worker) {
-	wc.workers = append(wc.workers, worker)
+	*wc = append(*wc, worker)
 }
 
 // Start starts all workers.
 func (wc *workerComposite) Start() error {
-	for _, worker := range wc.workers {
+	for _, worker := range *wc {
 		if err := worker.Start(); err != nil {
-			return fmt.Errorf("failed to start worker. %w", err)
+			return fmt.Errorf("failed to start worker: %w", err)
 		}
 	}
 
@@ -54,7 +53,7 @@ func (wc *workerComposite) Start() error {
 
 // Start starts all workers.
 func (wc *workerComposite) Stop() {
-	for _, worker := range wc.workers {
+	for _, worker := range *wc {
 		worker.Stop()
 	}
 }
