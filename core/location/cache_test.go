@@ -63,6 +63,7 @@ func TestCache_needsRefresh(t *testing.T) {
 			c := &Cache{
 				lastFetched: tt.fields.lastFetched,
 				expiry:      tt.fields.expiry,
+				pub:         mockPublisher{},
 			}
 			if got := c.needsRefresh(); got != tt.want {
 				t.Errorf("Cache.needsRefresh() = %v, want %v", got, tt.want)
@@ -81,11 +82,16 @@ func (mr *mockResolver) DetectLocation() (locationstate.Location, error) {
 	return locationstate.Location{}, mr.errToReturn
 }
 
+type mockPublisher struct{}
+
+func (mp mockPublisher) Publish(topic string, data interface{}) {}
+
 func TestCacheHandlesConnection_Connected(t *testing.T) {
 	r := &mockResolver{}
 	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
+		pub:              mockPublisher{},
 	}
 	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.Connected})
 	assert.True(t, r.called)
@@ -96,6 +102,7 @@ func TestCacheHandlesConnection_NotConnected(t *testing.T) {
 	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
+		pub:              mockPublisher{},
 	}
 	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.NotConnected})
 	assert.True(t, r.called)
@@ -106,6 +113,7 @@ func TestCacheIgnoresOther(t *testing.T) {
 	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
+		pub:              mockPublisher{},
 	}
 	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.Reconnecting})
 	assert.False(t, r.called)

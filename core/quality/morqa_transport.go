@@ -58,9 +58,27 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
 	case traceEventName:
 		return traceEventToMetricsEvent(event.Context.(sessionTraceContext), event.Application)
+	case registerIdentity:
+		return identityRegistrationEvent(event.Context.(registrationEvent), event.Application)
 	}
 
 	return "", nil
+}
+
+func identityRegistrationEvent(data registrationEvent, info appInfo) (string, *metrics.Event) {
+	return data.Identity, &metrics.Event{
+		Metric: &metrics.Event_RegistrationPayload{
+			RegistrationPayload: &metrics.RegistrationPayload{
+				Version: &metrics.VersionPayload{
+					Version: info.Version,
+					Os:      info.OS,
+					Arch:    info.Arch,
+				},
+				Country: data.Country,
+				Status:  data.Status,
+			},
+		},
+	}
 }
 
 func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Event) {
