@@ -34,14 +34,23 @@ type Cache struct {
 	location         locationstate.Location
 	origin           locationstate.Location
 	expiry           time.Duration
+	pub              publisher
 	lock             sync.Mutex
 }
 
+type publisher interface {
+	Publish(topic string, data interface{})
+}
+
+// LocUpdateEvent is the event type used to sending or receiving event updates
+const LocUpdateEvent string = "location-update-event"
+
 // NewCache returns a new instance of location cache
-func NewCache(resolver Resolver, expiry time.Duration) *Cache {
+func NewCache(resolver Resolver, pub publisher, expiry time.Duration) *Cache {
 	return &Cache{
 		locationDetector: resolver,
 		expiry:           expiry,
+		pub:              pub,
 	}
 }
 
@@ -54,6 +63,7 @@ func (c *Cache) fetchAndSave() (locationstate.Location, error) {
 
 	// on successful fetch save the values for further use
 	if err == nil {
+		c.pub.Publish(LocUpdateEvent, loc)
 		c.location = loc
 		c.lastFetched = time.Now()
 	}

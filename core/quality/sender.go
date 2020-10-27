@@ -26,8 +26,11 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
@@ -41,6 +44,7 @@ const (
 	sessionTokensName   = "session_tokens"
 	sessionEventName    = "session_event"
 	traceEventName      = "trace_event"
+	registerIdentity    = "register_identity"
 	unlockEventName     = "unlock"
 	proposalEventName   = "proposal_event"
 	natMappingEventName = "nat_mapping"
@@ -68,6 +72,7 @@ type Sender struct {
 
 	sessionsMu     sync.RWMutex
 	sessionsActive map[string]sessionContext
+	location       locationstate.Location
 }
 
 // Event contains data about event, which is sent using transport
@@ -105,6 +110,12 @@ type sessionDataContext struct {
 type sessionTokensContext struct {
 	Tokens *big.Int
 	sessionContext
+}
+
+type registrationEvent struct {
+	Identity string
+	Status   string
+	Country  string
 }
 
 type sessionTraceContext struct {
@@ -146,8 +157,28 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(trace.AppTopicTraceEvent, sender.sendTraceEvent); err != nil {
 		return err
 	}
+	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, sender.sendRegistrationEvent); err != nil {
+		return err
+	}
+	if err := bus.SubscribeAsync(location.LocUpdateEvent, sender.cacheLocationData); err != nil {
+		return err
+	}
 
 	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, sender.sendUnlockEvent)
+}
+
+func (sender *Sender) cacheLocationData(l locationstate.Location) {
+	sender.sessionsMu.RLock()
+	defer sender.sessionsMu.RUnlock()
+
+	sender.location = l
+}
+
+func (sender *Sender) getCachedLocationData() (l locationstate.Location) {
+	sender.sessionsMu.RLock()
+	defer sender.sessionsMu.RUnlock()
+	l = sender.location
+	return
 }
 
 // sendSessionData sends transferred information about session.
@@ -242,6 +273,15 @@ func (sender *Sender) sendUnlockEvent(id string) {
 // sendProposalEvent sends provider proposal event.
 func (sender *Sender) sendProposalEvent(p market.ServiceProposal) {
 	sender.sendEvent(proposalEventName, p)
+}
+
+func (sender *Sender) sendRegistrationEvent(r registry.AppEventIdentityRegistration) {
+	l := sender.getCachedLocationData()
+	sender.sendEvent(registerIdentity, registrationEvent{
+		Identity: r.ID.Address,
+		Status:   r.Status.String(),
+		Country:  l.Country,
+	})
 }
 
 func (sender *Sender) sendTraceEvent(stage trace.Event) {

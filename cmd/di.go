@@ -779,7 +779,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 		return err
 	}
 
-	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
+	di.LocationResolver = location.NewCache(resolver, di.EventBus, time.Minute*5)
 
 	err = di.EventBus.SubscribeAsync(connectionstate.AppTopicConnectionState, di.LocationResolver.HandleConnectionEvent)
 	if err != nil {
