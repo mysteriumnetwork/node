@@ -39,7 +39,7 @@ func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
 		clientFactory: func() *http.Client {
 			return &http.Client{
 				Timeout:   timeout,
-				Transport: GetDefaultTransport(srcIP),
+				Transport: NewTransport(NewDialer(srcIP)),
 			}
 		},
 	}
