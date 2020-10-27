@@ -357,7 +357,7 @@ func (aps *hermesPromiseSettler) ForceSettle(providerID identity.Identity, herme
 }
 
 // ForceSettle forces the settlement for a provider
-func (aps *hermesPromiseSettler) SettleWithBeneficiary(providerID identity.Identity, hermesID, beneficiary common.Address) error {
+func (aps *hermesPromiseSettler) SettleWithBeneficiary(providerID identity.Identity, beneficiary, hermesID common.Address) error {
 	channel, found := aps.channelProvider.Get(providerID, hermesID)
 	if !found {
 		return ErrNothingToSettle
