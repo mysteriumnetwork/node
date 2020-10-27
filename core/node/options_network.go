@@ -27,6 +27,6 @@ type OptionsNetwork struct {
 
 	MysteriumAPIAddress string
 	BrokerAddress       string
-
-	EtherClientRPC string
+	EtherClientRPC      string
+	DNSMap              map[string]string
 }
