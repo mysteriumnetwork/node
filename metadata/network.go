@@ -31,6 +31,7 @@ type NetworkDefinition struct {
 	MMNAPIAddress             string
 	DAIAddress                string
 	WETHAddress               string
+	DNSMap                    map[string]string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -47,6 +48,9 @@ var TestnetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://my.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
+	DNSMap: map[string]string{
+		"testnet-api.mysterium.network:443": "78.47.176.149",
+	},
 }
 
 // BetanetDefinition defines parameters for Betanet network (currently default network)
@@ -63,6 +67,9 @@ var BetanetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://betanet.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
+	DNSMap: map[string]string{
+		"betanet-api.mysterium.network:443": "78.47.55.197",
+	},
 }
 
 // LocalnetDefinition defines parameters for local network
@@ -74,6 +81,9 @@ var LocalnetDefinition = NetworkDefinition{
 	EtherClientRPC:            "http://localhost:8545",
 	MMNAddress:                "http://localhost/",
 	MMNAPIAddress:             "http://localhost/api/v1",
+	DNSMap: map[string]string{
+		"localhost:8001": "127.0.0.1",
+	},
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given

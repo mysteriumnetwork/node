@@ -33,19 +33,25 @@ const (
 	DefaultTimeout = 20 * time.Second
 )
 
-// NewHTTPClient creates a new HTTP client.
-func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
+// NewHTTPClientWithTransport creates a new HTTP client with custom transport.
+func NewHTTPClientWithTransport(transport *http.Transport, timeout time.Duration) *HTTPClient {
 	c := &HTTPClient{
 		clientFactory: func() *http.Client {
 			return &http.Client{
 				Timeout:   timeout,
-				Transport: GetDefaultTransport(srcIP),
+				Transport: transport,
 			}
 		},
 	}
 	// Create initial clean before any HTTP request is made.
 	c.client = c.clientFactory()
+
 	return c
+}
+
+// NewHTTPClient creates a new HTTP client.
+func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
+	return NewHTTPClientWithTransport(NewTransport(NewDialer(srcIP)), timeout)
 }
 
 // HTTPClient describes a client for performing HTTP requests.

@@ -610,6 +610,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	//override defined values one by one from options
 	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
 		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
+		network.DNSMap = nil
 	}
 
 	if optionsNetwork.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
@@ -622,7 +623,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.NetworkDefinition = network
 
-	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
+	httpTransport := requests.NewTransport(requests.NewDialerBypassDNS(options.BindAddress, network.DNSMap))
+	httpClient := requests.NewHTTPClientWithTransport(httpTransport, requests.DefaultTimeout)
+	di.MysteriumAPI = mysterium.NewClient(httpClient, network.MysteriumAPIAddress)
 
 	brokerURL, err := nats.ParseServerURI(di.NetworkDefinition.BrokerAddress)
 	if err != nil {

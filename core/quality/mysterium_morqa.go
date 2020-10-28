@@ -74,7 +74,7 @@ func NewMorqaClient(srcIP, baseURL string, signer identity.SignerFactory, timeou
 		clientFactory: func() *http.Client {
 			return &http.Client{
 				Timeout:   timeout,
-				Transport: requests.GetDefaultTransport(srcIP),
+				Transport: requests.NewTransport(requests.NewDialer(srcIP)),
 			}
 		},
 	}
