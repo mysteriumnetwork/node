@@ -26,8 +26,8 @@ import (
 
 // Dialer wraps default go dialer with extra features.
 type Dialer struct {
-	zeroDialer *net.Dialer
-	addrToIP   map[string]string
+	dialer   *net.Dialer
+	addrToIP map[string]string
 }
 
 // DialContext connects to the address on the named network using the provided context.
@@ -46,13 +46,13 @@ func (d *Dialer) DialContext(ctx context.Context, network, addr string) (net.Con
 		addr = addrIP + ":" + addrPort
 	}
 
-	return d.zeroDialer.DialContext(ctx, network, addr)
+	return d.dialer.DialContext(ctx, network, addr)
 }
 
 // NewDialer creates dialer with default configuration.
 func NewDialer(srcIP string) *Dialer {
 	return &Dialer{
-		zeroDialer: &net.Dialer{
+		dialer: &net.Dialer{
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},

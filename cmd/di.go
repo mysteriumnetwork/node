@@ -624,7 +624,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.NetworkDefinition = network
 
 	httpTransport := requests.NewTransport(requests.NewDialerBypassDNS(options.BindAddress, network.DNSMap))
-	httpClient := requests.NewHTTPClientWith(httpTransport, requests.DefaultTimeout)
+	httpClient := requests.NewHTTPClientWithTransport(httpTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(httpClient, network.MysteriumAPIAddress)
 
 	brokerURL, err := nats.ParseServerURI(di.NetworkDefinition.BrokerAddress)
