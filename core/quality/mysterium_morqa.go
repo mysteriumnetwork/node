@@ -26,11 +26,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -45,16 +45,11 @@ type metric struct {
 	event *metrics.Event
 }
 
-// MysteriumMORQA HTTP client for Mysterium Quality Oracle - MORQA
+// MysteriumMORQA HTTP client for Mysterium Quality Oracle - MORQA.
 type MysteriumMORQA struct {
-	// http    HTTPClient
 	baseURL string
-
-	signer identity.SignerFactory
-
-	client        *http.Client
-	clientMu      sync.Mutex
-	clientFactory func() *http.Client
+	client  *requests.HTTPClient
+	signer  identity.SignerFactory
 
 	batch    metrics.Batch
 	eventsMu sync.Mutex
@@ -64,21 +59,16 @@ type MysteriumMORQA struct {
 	stop chan struct{}
 }
 
-// NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(srcIP, baseURL string, signer identity.SignerFactory, timeout time.Duration) *MysteriumMORQA {
+// NewMorqaClient creates Mysterium Morqa client with a real communication.
+func NewMorqaClient(httpClient *requests.HTTPClient, baseURL string, signer identity.SignerFactory) *MysteriumMORQA {
 	morqa := &MysteriumMORQA{
 		baseURL: baseURL,
+		client:  httpClient,
 		signer:  signer,
+
 		metrics: make(chan metric, maxBatchMetricsToKeep),
 		stop:    make(chan struct{}),
-		clientFactory: func() *http.Client {
-			return &http.Client{
-				Timeout:   timeout,
-				Transport: requests.NewTransport(requests.NewDialer(srcIP)),
-			}
-		},
 	}
-	morqa.client = morqa.clientFactory()
 
 	return morqa
 }
@@ -93,6 +83,7 @@ func (m *MysteriumMORQA) Start() {
 			event, err := m.signMetric(metric)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to sign metrics event")
+
 				continue
 			}
 
@@ -125,8 +116,7 @@ func (m *MysteriumMORQA) signMetric(metric metric) (*metrics.Event, error) {
 		return nil, fmt.Errorf("failed to marshal metrics event: %w", err)
 	}
 
-	signer := m.signer(identity.FromAddress(metric.owner))
-	signature, err := signer.Sign(bin)
+	signature, err := m.signer(identity.FromAddress(metric.owner)).Sign(bin)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sing metrics event: %w", err)
 	}
@@ -174,7 +164,9 @@ func (m *MysteriumMORQA) sendMetrics() error {
 		return err
 	}
 
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	if err := parseResponseError(response); err != nil {
 		return err
@@ -185,31 +177,36 @@ func (m *MysteriumMORQA) sendMetrics() error {
 	return nil
 }
 
-// ProposalsMetrics returns a list of proposals connection metrics
+// ProposalsMetrics returns a list of proposals connection metrics.
 func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
 	request, err := m.newRequestJSON(http.MethodGet, "providers/sessions", nil)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to create proposals metrics request")
+
 		return nil
 	}
 
 	response, err := m.client.Do(request)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
+
 		return nil
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	var metricsResponse ServiceMetricsResponse
 	if err = parseResponseJSON(response, &metricsResponse); err != nil {
 		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
+
 		return nil
 	}
 
 	return metricsResponse.Connects
 }
 
-// SendMetric submits new metric
+// SendMetric submits new metric.
 func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	m.metrics <- metric{
 		owner: id,
@@ -217,14 +214,6 @@ func (m *MysteriumMORQA) SendMetric(id string, event *metrics.Event) error {
 	}
 
 	return nil
-}
-
-// Reconnect creates new instance of underlying HTTP client.
-func (m *MysteriumMORQA) Reconnect() {
-	m.clientMu.Lock()
-	defer m.clientMu.Unlock()
-	m.client.CloseIdleConnections()
-	m.client = m.clientFactory()
 }
 
 func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*http.Request, error) {
@@ -236,6 +225,7 @@ func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*http.Req
 	request, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	request.Header.Set("User-Agent", mysteriumMorqaAgentName)
 	request.Header.Set("Accept", "application/json")
+
 	return request, err
 }
 
@@ -247,6 +237,7 @@ func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}
 
 	req, err := m.newRequest(method, path, payloadBody)
 	req.Header.Set("Accept", "application/json")
+
 	return req, err
 }
 
@@ -258,6 +249,7 @@ func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Mes
 
 	request, err := m.newRequest(method, path, payloadBody)
 	request.Header.Set("Content-Type", "application/octet-stream")
+
 	return request, err
 }
 
@@ -266,6 +258,7 @@ func parseResponseJSON(response *http.Response, dto interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(responseJSON, dto)
 }
 
@@ -273,19 +266,22 @@ type errorDTO struct {
 	Message string `json:"message"`
 }
 
-// Sometimes we can get json message with single "message" field which represents error - try to get that
+// Sometimes we can get json message with single "message" field which represents error - try to get that.
 func parseResponseError(response *http.Response) error {
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return nil
 	}
 
 	var parsedBody errorDTO
+
 	var message string
+
 	err := parseResponseJSON(response, &parsedBody)
 	if err != nil {
 		message = err.Error()
 	} else {
 		message = parsedBody.Message
 	}
+
 	return fmt.Errorf("server response invalid: %s (%s). Possible error: %s", response.Status, response.Request.URL, message)
 }

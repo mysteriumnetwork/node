@@ -139,27 +139,35 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, sender.sendConnStateEvent); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(sessionEvent.AppTopicSession, sender.sendServiceSessionEvent); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(pingpongEvent.AppTopicInvoicePaid, sender.sendSessionEarning); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(trace.AppTopicTraceEvent, sender.sendTraceEvent); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, sender.sendRegistrationEvent); err != nil {
 		return err
 	}
+
 	if err := bus.SubscribeAsync(location.LocUpdateEvent, sender.cacheLocationData); err != nil {
 		return err
 	}
