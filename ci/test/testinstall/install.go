@@ -21,7 +21,7 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
-// TestInstallScript tests install.sh
+// TestInstallScript tests install.sh.
 func TestInstallScript() error {
 	return sh.RunV("go", "test", "-v", "-tags=integration", "github.com/mysteriumnetwork/node/ci/test/testinstall")
 }

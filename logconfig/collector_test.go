@@ -33,9 +33,10 @@ func TestCollector_List_ListsAllLogFilesMatchingPattern(t *testing.T) {
 	// given
 	baseName := "mysterium-test.log"
 	fn1 := NewTempFileName(t, baseName)
-	defer func() { _ = os.Remove(fn1) }()
+	defer os.Remove(fn1)
+
 	fn2 := NewTempFileName(t, baseName)
-	defer func() { _ = os.Remove(fn2) }()
+	defer os.Remove(fn2)
 
 	opts := LogOptions{
 		LogLevel: zerolog.DebugLevel,
@@ -58,9 +59,10 @@ func TestCollector_Archive(t *testing.T) {
 	// given
 	baseName := "mysterium-test.log"
 	fn1 := NewTempFileName(t, baseName)
-	defer func() { _ = os.Remove(fn1) }()
+	defer os.Remove(fn1)
+
 	fn2 := NewTempFileName(t, baseName)
-	defer func() { _ = os.Remove(fn2) }()
+	defer os.Remove(fn2)
 
 	opts := LogOptions{
 		LogLevel: zerolog.DebugLevel,
@@ -70,7 +72,7 @@ func TestCollector_Archive(t *testing.T) {
 
 	// when
 	zipFilename, err := collector.Archive()
-	defer func() { _ = os.Remove(zipFilename) }()
+	defer os.Remove(zipFilename)
 
 	// then
 	assert.NoError(err)

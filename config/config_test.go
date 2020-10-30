@@ -32,9 +32,8 @@ import (
 func TestUserConfig_Load(t *testing.T) {
 	// given
 	configFileName := NewTempFileName(t)
-	defer func() {
-		_ = os.Remove(configFileName)
-	}()
+	defer os.Remove(configFileName)
+
 	toml := `
 		[openvpn]
 		port = 31338
@@ -57,9 +56,8 @@ func TestUserConfig_Load(t *testing.T) {
 func TestUserConfig_Save(t *testing.T) {
 	// given
 	configFileName := NewTempFileName(t)
-	defer func() {
-		_ = os.Remove(configFileName)
-	}()
+	defer os.Remove(configFileName)
+
 	cfg := NewConfig()
 	err := cfg.LoadUserConfig(configFileName)
 	assert.NoError(t, err)

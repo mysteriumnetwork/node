@@ -118,7 +118,8 @@ type Dependencies struct {
 	ProposalRepository proposal.Repository
 	DiscoveryWorker    discovery.Worker
 
-	QualityClient *quality.MysteriumMORQA
+	QualityHttpClient *requests.HTTPClient
+	QualityClient     *quality.MysteriumMORQA
 
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
@@ -714,7 +715,8 @@ func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options n
 	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(bindAddress, options.Address, di.SignerFactory, 10*time.Second)
+	di.QualityHttpClient = requests.NewHTTPClient(bindAddress, 10*time.Second)
+	di.QualityClient = quality.NewMorqaClient(di.QualityHttpClient, options.Address, di.SignerFactory)
 	go di.QualityClient.Start()
 
 	var transport quality.Transport
@@ -870,7 +872,7 @@ func (di *Dependencies) handleConnStateChange() error {
 
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPClient.Reconnect()
-			di.QualityClient.Reconnect()
+			di.QualityHttpClient.Reconnect()
 
 			if err := di.EtherClient.Reconnect(); err != nil {
 				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
