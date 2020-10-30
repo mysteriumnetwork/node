@@ -163,10 +163,7 @@ func (m *MysteriumMORQA) sendMetrics() error {
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		_ = response.Body.Close()
-	}()
+	defer response.Body.Close()
 
 	if err := parseResponseError(response); err != nil {
 		return err
@@ -192,9 +189,7 @@ func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
 
 		return nil
 	}
-	defer func() {
-		_ = response.Body.Close()
-	}()
+	defer response.Body.Close()
 
 	var metricsResponse ServiceMetricsResponse
 	if err = parseResponseJSON(response, &metricsResponse); err != nil {

@@ -175,7 +175,7 @@ func (aph *HermesPromiseHandler) handleNodeStopEvents(e event.Payload) {
 }
 
 func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
-	defer func() { close(er.errChan) }()
+	defer close(er.errChan)
 
 	providerID := er.providerID
 	hermesID := common.HexToAddress(er.em.HermesID)

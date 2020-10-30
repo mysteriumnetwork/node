@@ -284,9 +284,7 @@ func (aps *hermesPromiseSettler) initiateSettling(channel HermesChannel) {
 
 func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 	log.Info().Msg("Listening for settlement events")
-	defer func() {
-		log.Info().Msg("Stopped listening for settlement events")
-	}()
+	defer log.Info().Msg("Stopped listening for settlement events")
 
 	for {
 		select {

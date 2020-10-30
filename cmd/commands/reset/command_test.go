@@ -54,7 +54,7 @@ func TestCommandRun(t *testing.T) {
 	storage, err := boltdb.NewStorage(tempDir)
 	assert.NoError(t, err)
 
-	defer func() { _ = storage.Close() }()
+	defer storage.Close()
 
 	err = auth.NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, storage).Validate()
 	assert.NoError(t, err)

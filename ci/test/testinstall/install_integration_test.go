@@ -93,9 +93,9 @@ func testImage(t *testing.T, image string) {
 		fmt.Println(line)
 		containerId = strings.TrimSpace(line)[0:12]
 	}
-	defer func() {
-		_ = sh.RunV("docker", "kill", containerId)
-	}()
+
+	defer sh.RunV("docker", "kill", containerId)
+
 	failIf(scanner.Err())
 	assert.NotEmpty(containerId)
 
