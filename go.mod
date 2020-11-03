@@ -29,6 +29,7 @@ require (
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/gateway v1.0.6
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
+	github.com/jcuga/golongpoll v1.1.0
 	github.com/jinzhu/now v1.1.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
@@ -53,6 +54,7 @@ require (
 	github.com/mysteriumnetwork/payments v0.0.14-0.20201104103245-25c66ae989dd
 	github.com/nats-io/nats-server/v2 v2.1.7
 	github.com/nats-io/nats.go v1.10.0
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oleksandr/bonjour v0.0.0-20160508152359-5dcf00d8b228
 	github.com/olekukonko/tablewriter v0.0.2 // indirect

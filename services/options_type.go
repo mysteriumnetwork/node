@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/services/broker"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -35,6 +36,7 @@ var (
 		noop.ServiceType:      noop.ParseJSONOptions,
 		openvpn.ServiceType:   openvpn_service.ParseJSONOptions,
 		wireguard.ServiceType: wireguard_service.ParseJSONOptions,
+		broker.ServiceType:    broker.ParseJSONOptions,
 	}
 )
 
@@ -55,6 +57,8 @@ func TypeConfiguredOptions(serviceType string) (service.Options, error) {
 		return wireguard_service.GetOptions(), nil
 	case noop.ServiceType:
 		return noop.GetOptions(), nil
+	case broker.ServiceType:
+		return broker.GetOptions(), nil
 	default:
 		return nil, errors.Errorf("unknown service type: %q", serviceType)
 	}

@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/services/broker"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -65,8 +66,9 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 		return errors.Wrap(err, "service bootstrap failed")
 	}
 
-	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
+	di.bootstrapServiceBroker(nodeOptions)
+	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceWireguard(nodeOptions)
 
 	return nil
@@ -156,6 +158,20 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 			}
 
 			return service_noop.NewManager(), service_noop.GetProposal(loc), nil
+		},
+	)
+}
+
+func (di *Dependencies) bootstrapServiceBroker(nodeOptions node.Options) {
+	di.ServiceRegistry.Register(
+		broker.ServiceType,
+		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+			loc, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
+
+			return broker.NewManager(":12345"), broker.GetProposal(loc), nil
 		},
 	)
 }
@@ -275,6 +291,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
+	di.registerBrokerConnection()
 	di.registerWireguardConnection(nodeOptions)
 }
 

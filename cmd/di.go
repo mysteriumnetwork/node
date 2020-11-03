@@ -74,6 +74,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/services"
+	"github.com/mysteriumnetwork/node/services/broker"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -283,8 +284,8 @@ func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 		natPinger = traversal.NewNoopPinger()
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
-	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
+	di.P2PListener = p2p.NewListenerHTTP("http://localhost:12345", di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
+	di.P2PDialer = p2p.NewDialerHTTP(di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -340,6 +341,11 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnection)
+}
+
+func (di *Dependencies) registerBrokerConnection() {
+	broker.Bootstrap()
+	di.ConnectionRegistry.Register(broker.ServiceType, broker.NewConnection)
 }
 
 // Shutdown stops container
