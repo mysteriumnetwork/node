@@ -32,6 +32,7 @@ type NetworkDefinition struct {
 	DAIAddress                string
 	WETHAddress               string
 	DNSMap                    map[string]string
+	DefaultChainID            int64
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -51,6 +52,7 @@ var TestnetDefinition = NetworkDefinition{
 	DNSMap: map[string]string{
 		"testnet-api.mysterium.network:443": "78.47.176.149",
 	},
+	DefaultChainID: 5,
 }
 
 // BetanetDefinition defines parameters for Betanet network (currently default network)
@@ -70,6 +72,7 @@ var BetanetDefinition = NetworkDefinition{
 	DNSMap: map[string]string{
 		"betanet-api.mysterium.network:443": "78.47.55.197",
 	},
+	DefaultChainID: 5,
 }
 
 // LocalnetDefinition defines parameters for local network
@@ -84,6 +87,7 @@ var LocalnetDefinition = NetworkDefinition{
 	DNSMap: map[string]string{
 		"localhost:8001": "127.0.0.1",
 	},
+	DefaultChainID: 1,
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given

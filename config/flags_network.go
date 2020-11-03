@@ -44,6 +44,12 @@ var (
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	}
+	// FlagChainID chain id to use
+	FlagChainID = cli.Int64Flag{
+		Name:  "chain-id",
+		Usage: "the chain id to use",
+		Value: metadata.DefaultNetwork.DefaultChainID,
+	}
 	// FlagBrokerAddress message broker URI.
 	FlagBrokerAddress = cli.StringFlag{
 		Name:  "broker-address",
@@ -96,6 +102,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
 		&FlagBetanet,
+		&FlagChainID,
 	)
 }
 
@@ -111,4 +118,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
+	Current.ParseInt64Flag(ctx, FlagChainID)
 }

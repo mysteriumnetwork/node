@@ -92,6 +92,7 @@ func GetOptions() *Options {
 		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 		BrokerAddress:         config.GetString(config.FlagBrokerAddress),
 		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
+		ChainID:               config.GetInt64(config.FlagChainID),
 	}
 	return &Options{
 		Directories:      *GetOptionsDirectory(&network),
