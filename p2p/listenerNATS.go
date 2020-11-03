@@ -102,7 +102,7 @@ func (c *p2pConnectConfig) peerIP() string {
 
 func (m *listener) GetContact() market.Contact {
 	return market.Contact{
-		Type:       ContactTypeV1,
+		Type:       ContactTypeNATSV1,
 		Definition: ContactDefinition{BrokerAddresses: m.brokerConn.Servers()}}
 }
 

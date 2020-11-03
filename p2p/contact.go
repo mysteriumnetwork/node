@@ -31,8 +31,11 @@ var (
 )
 
 const (
-	// ContactTypeV1 is p2p contact type.
-	ContactTypeV1 = "nats/p2p/v1"
+	// ContactTypeNATSV1 is p2p contact type that uses NATS service.
+	ContactTypeNATSV1 = "nats/p2p/v1"
+
+	// ContactTypeHTTPV1 is p2p contact type that uses builtin broker.
+	ContactTypeHTTPV1 = "broker/p2p/v1"
 )
 
 // ContactDefinition represents p2p contact which contains NATS broker addresses for connection.
@@ -43,7 +46,7 @@ type ContactDefinition struct {
 // ParseContact tries to parse p2p contact from given contacts list.
 func ParseContact(contacts market.ContactList) (ContactDefinition, error) {
 	for _, c := range contacts {
-		if c.Type == ContactTypeV1 {
+		if c.Type == ContactTypeNATSV1 || c.Type == ContactTypeHTTPV1 {
 			def, ok := c.Definition.(ContactDefinition)
 			if !ok {
 				return ContactDefinition{}, fmt.Errorf("invalid p2p contact definition: %#v", c.Definition)
@@ -57,7 +60,15 @@ func ParseContact(contacts market.ContactList) (ContactDefinition, error) {
 // RegisterContactUnserializer registers global proposal contact unserializer.
 func RegisterContactUnserializer() {
 	market.RegisterContactUnserializer(
-		ContactTypeV1,
+		ContactTypeNATSV1,
+		func(rawDefinition *json.RawMessage) (market.ContactDefinition, error) {
+			var contact ContactDefinition
+			err := json.Unmarshal(*rawDefinition, &contact)
+			return contact, err
+		},
+	)
+	market.RegisterContactUnserializer(
+		ContactTypeHTTPV1,
 		func(rawDefinition *json.RawMessage) (market.ContactDefinition, error) {
 			var contact ContactDefinition
 			err := json.Unmarshal(*rawDefinition, &contact)
