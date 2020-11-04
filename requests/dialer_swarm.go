@@ -19,18 +19,24 @@ package requests
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"time"
 )
 
-// DialerSwarm is a connects to multiple addresses in parallel and first successful connection wins.
-type DialerSwarm struct {
-	resolver *net.Resolver
-	dialer   *net.Dialer
+// ErrAllDialsFailed is returned when connecting to a peer has ultimately failed.
+var ErrAllDialsFailed = errors.New("all dials failed")
 
+// DialerSwarm is a dials to multiple addresses in parallel and earliest successful connection wins.
+type DialerSwarm struct {
 	// ResolveContext specifies the dial function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
 	ResolveContext func(ctx context.Context, network, host string) (addrs []string, err error)
+
+	resolver *net.Resolver
+	dialer   *net.Dialer
 }
 
 // NewDialerSwarm creates swarm dialer with default configuration.
@@ -65,13 +71,162 @@ func (ds *DialerSwarm) lookupAndDial(ctx context.Context, network, addr string) 
 		return nil, &net.OpError{Op: "dial", Net: network, Source: nil, Addr: nil, Err: err}
 	}
 
+	addrs := []string{addr}
 	for _, addrIP := range addrIPs {
-		conn, err = ds.dialer.DialContext(ctx, network, net.JoinHostPort(addrIP, addrPort))
-		if err != nil {
-			return nil, &net.OpError{Op: "dial", Net: network, Source: ds.dialer.LocalAddr, Addr: &net.IPAddr{IP: net.ParseIP(addrIP)}, Err: err}
-		}
-		break
+		addrs = append(addrs, net.JoinHostPort(addrIP, addrPort))
+	}
+
+	conn, errDial := ds.dialAddrs(ctx, network, addrs)
+	if errDial != nil {
+		errDial.OriginalAddr = addr
+
+		return nil, errDial
 	}
 
 	return conn, nil
+}
+
+func (ds *DialerSwarm) dialAddrs(ctx context.Context, network string, addrs []string) (net.Conn, *ErrorSwarmDial) {
+	addrChan := make(chan string, len(addrs))
+	for _, addr := range addrs {
+		addrChan <- addr
+	}
+
+	close(addrChan)
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	resultCh := make(chan dialResult)
+	err := &ErrorSwarmDial{}
+
+	var active int
+dialLoop:
+	for addrChan != nil || active > 0 {
+		// Check for context cancellations and/or responses first.
+		select {
+		// Overall dialing canceled.
+		case <-ctx.Done():
+			break dialLoop
+
+		// Some dial result arrived.
+		case resp := <-resultCh:
+			active--
+			if resp.Err != nil {
+				err.addErr(resp.Addr, resp.Err)
+			} else if resp.Conn != nil {
+				return resp.Conn, nil
+			}
+
+			continue
+
+		default:
+		}
+
+		// Now, attempt to dial.
+		select {
+		case addr, ok := <-addrChan:
+			if !ok {
+				addrChan = nil
+
+				continue
+			}
+
+			go ds.dialAddr(ctx, network, addr, resultCh)
+			active++
+
+		case <-ctx.Done():
+			break dialLoop
+
+		case resp := <-resultCh:
+			active--
+			if resp.Err != nil {
+				err.addErr(resp.Addr, resp.Err)
+			} else if resp.Conn != nil {
+				return resp.Conn, nil
+			}
+		}
+	}
+
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		err.Cause = ctxErr
+	} else {
+		err.Cause = ErrAllDialsFailed
+	}
+
+	return nil, err
+}
+
+func (ds *DialerSwarm) dialAddr(ctx context.Context, network, addr string, resp chan dialResult) {
+	// Dialing might be canceled already.
+	if ctx.Err() != nil {
+		return
+	}
+
+	conn, err := ds.dialer.DialContext(ctx, network, addr)
+	select {
+	case resp <- dialResult{Conn: conn, Addr: addr, Err: err}:
+	case <-ctx.Done():
+		if err == nil {
+			conn.Close()
+		}
+	}
+}
+
+type dialResult struct {
+	Conn net.Conn
+	Addr string
+	Err  error
+}
+
+// ErrorSwarmDial is the error type returned when dialing multiple addresses.
+type ErrorSwarmDial struct {
+	OriginalAddr string
+	DialErrors   []ErrorDial
+	Cause        error
+}
+
+func (e *ErrorSwarmDial) addErr(addr string, err error) {
+	e.DialErrors = append(e.DialErrors, ErrorDial{
+		Addr:  addr,
+		Cause: err,
+	})
+}
+
+// Error returns string equivalent for error.
+func (e *ErrorSwarmDial) Error() string {
+	var builder strings.Builder
+
+	fmt.Fprintf(&builder, "failed to dial %s:", e.OriginalAddr)
+
+	if e.Cause != nil {
+		fmt.Fprintf(&builder, " %s", e.Cause)
+	}
+
+	for _, te := range e.DialErrors {
+		fmt.Fprintf(&builder, "\n  * [%s] %s", te.Addr, te.Cause)
+	}
+
+	return builder.String()
+}
+
+// Unwrap unwraps the original err for use with errors.Unwrap.
+func (e *ErrorSwarmDial) Unwrap() error {
+	return e.Cause
+}
+
+// ErrorDial is the error returned when dialing a specific address.
+type ErrorDial struct {
+	Addr  string
+	Cause error
+}
+
+// Error returns string equivalent for error.
+func (e *ErrorDial) Error() string {
+	return fmt.Sprintf("failed to dial %s: %s", e.Addr, e.Cause)
+}
+
+// Unwrap unwraps the original err for use with errors.Unwrap.
+func (e *ErrorDial) Unwrap() error {
+	return e.Cause
 }
