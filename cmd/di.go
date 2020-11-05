@@ -611,7 +611,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	// override defined values one by one from options
 	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
 		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
-		network.DNSMap = nil
 	}
 
 	if !reflect.DeepEqual(optionsNetwork.BrokerAddresses, metadata.DefaultNetwork.BrokerAddresses) {
@@ -620,6 +619,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
+	}
+
+	dnsMap := optionsNetwork.DNSMap
+	for host, hostIPs := range network.DNSMap {
+		dnsMap[host] = append(dnsMap[host], hostIPs...)
 	}
 
 	di.NetworkDefinition = network

@@ -134,6 +134,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
 		BrokerAddresses:       options.BrokerAddresses,
 		EtherClientRPC:        options.EtherClientRPC,
+		DNSMap:                map[string][]string{},
 	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,

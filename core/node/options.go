@@ -92,6 +92,18 @@ func GetOptions() *Options {
 		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
 		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
+		DNSMap: map[string][]string{
+			"testnet-location.mysterium.network": {"82.196.15.9"},
+			"betanet-location.mysterium.network": {"95.216.204.232"},
+			"betanet-quality.mysterium.network":  {"116.202.100.246"},
+			"feedback.mysterium.network":         {"116.203.17.150"},
+			"api.ipify.org": {
+				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
+				"23.21.109.69", "23.21.126.66",
+				"50.19.252.36",
+				"174.129.214.20",
+			},
+		},
 	}
 	return &Options{
 		Directories:      *GetOptionsDirectory(&network),
