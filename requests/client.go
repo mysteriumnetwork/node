@@ -51,7 +51,7 @@ func NewHTTPClientWithTransport(transport *http.Transport, timeout time.Duration
 
 // NewHTTPClient creates a new HTTP client.
 func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
-	return NewHTTPClientWithTransport(NewTransport(NewDialer(srcIP)), timeout)
+	return NewHTTPClientWithTransport(NewTransport(NewDialer(srcIP).DialContext), timeout)
 }
 
 // HTTPClient describes a client for performing HTTP requests.
@@ -93,14 +93,6 @@ func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface
 	}
 
 	return ParseResponseJSON(response, &resp)
-}
-
-// Reconnect creates new instance of underlying HTTP client.
-func (c *HTTPClient) Reconnect() {
-	c.clientMu.Lock()
-	defer c.clientMu.Unlock()
-	c.client.CloseIdleConnections()
-	c.client = c.clientFactory()
 }
 
 func (c *HTTPClient) resolveClient() *http.Client {
