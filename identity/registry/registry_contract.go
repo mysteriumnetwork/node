@@ -155,10 +155,6 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 }
 
 func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity.Identity) {
-	hermesIdentities := []common.Address{
-		registry.hermesAddress,
-	}
-
 	userIdentities := []common.Address{
 		common.HexToAddress(identity.Address),
 	}
@@ -168,7 +164,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 	}
 
 	go func() {
-		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), hermesIdentities[0].Hex())
+		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 
 		filterer, err := bindings.NewRegistryFilterer(registry.registryAddress, registry.ethC.Client())
@@ -177,7 +173,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			return
 		}
 
-		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, hermesIdentities)
+		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities)
 		if err != nil {
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
 				ID:     identity,

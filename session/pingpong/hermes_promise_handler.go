@@ -224,6 +224,10 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		return
 	}
 
+	if promise.ChainID != request.ExchangeMessage.ChainID {
+		log.Debug().Msgf("Received promise with wrong chain id from hermes. Expected %v, got %v", request.ExchangeMessage.ChainID, promise.ChainID)
+	}
+
 	ap := HermesPromise{
 		ChannelID:   channelID,
 		Identity:    providerID,
@@ -232,6 +236,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		R:           hex.EncodeToString(er.r),
 		Revealed:    false,
 		AgreementID: er.em.AgreementID,
+		ChainID:     promise.ChainID,
 	}
 
 	err = aph.deps.HermesPromiseStorage.Store(ap)

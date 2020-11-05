@@ -159,7 +159,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	assertNoReceive(t, settler.settleQueue)
 
 	// should receive on registered provider. Should also expect a recalculated balance to be added to the settlementState
-	expectedChannel := client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)}
+	expectedChannel := client.ProviderChannel{Stake: big.NewInt(1000)}
 	expectedPromise := crypto.Promise{Amount: big.NewInt(9000)}
 	settler.currentState[mockID] = settlementState{
 		registered: true,
@@ -175,7 +175,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	assert.Equal(t, mockID, p.provider)
 
 	// should not receive here due to balance being large and stake being small
-	expectedChannel = client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(0)}
+	expectedChannel = client.ProviderChannel{Stake: big.NewInt(0)}
 	expectedPromise = crypto.Promise{Amount: big.NewInt(8900)}
 	settler.currentState[mockID] = settlementState{
 		registered:       true,
@@ -242,7 +242,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Balance: big.NewInt(100), Stake: big.NewInt(1000)},
+		client.ProviderChannel{Stake: big.NewInt(1000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(100)}},
 	)
 	assert.True(t, s.needsSettling(0.1, channel), "should be true with zero balance left")
@@ -254,7 +254,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
+		client.ProviderChannel{Stake: big.NewInt(1000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(9000)}},
 	)
 	assert.True(t, s.needsSettling(0.1, channel), "should be true with 10% missing")
@@ -272,7 +272,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
+		client.ProviderChannel{Stake: big.NewInt(1000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(8999)}},
 	)
 	assert.False(t, s.needsSettling(0.1, channel), "should be false with 10.01% missing")
@@ -289,15 +289,15 @@ type mockProviderChannelStatusProvider struct {
 	feeError           error
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
+func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
 	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetHermesFee(hermesAddress common.Address) (uint16, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error) {
 	return mpcsp.feeToReturn, mpcsp.feeError
 }
 
@@ -312,11 +312,11 @@ type mockHermesChannelProvider struct {
 	channelReturnError error
 }
 
-func (mhcp *mockHermesChannelProvider) Get(_ identity.Identity, _ common.Address) (HermesChannel, bool) {
+func (mhcp *mockHermesChannelProvider) Get(chainID int64, _ identity.Identity, _ common.Address) (HermesChannel, bool) {
 	return mhcp.channelToReturn, true
 }
 
-func (mhcp *mockHermesChannelProvider) Fetch(_ identity.Identity, _ common.Address) (HermesChannel, error) {
+func (mhcp *mockHermesChannelProvider) Fetch(chainID int64, _ identity.Identity, _ common.Address) (HermesChannel, error) {
 	return mhcp.channelToReturn, mhcp.channelReturnError
 }
 
@@ -342,9 +342,8 @@ var mockID = identity.FromAddress("0x0000000000000000000000000000000000000001")
 var hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
 
 var mockProviderChannel = client.ProviderChannel{
-	Balance: big.NewInt(1000000000000),
 	Settled: big.NewInt(9000000),
-	Stake:   big.NewInt(12312323),
+	Stake:   big.NewInt(1000000000000),
 }
 
 type mockTransactor struct {

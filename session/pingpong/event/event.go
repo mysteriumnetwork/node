@@ -42,6 +42,7 @@ const (
 type AppEventSettlementRequest struct {
 	HermesID   common.Address
 	ProviderID identity.Identity
+	ChainID    int64
 }
 
 // AppEventHermesPromise represents the payload that is sent on the AppTopicHermesPromise.

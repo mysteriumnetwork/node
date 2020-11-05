@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -244,13 +245,17 @@ func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toProm
 	return amountToPromise, diff, nil
 }
 
+func (ip *InvoicePayer) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
+
 func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 	amountToPromise, diff, err := ip.calculateAmountToPromise(invoice)
 	if err != nil {
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.HermesAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
+	msg, err := crypto.CreateExchangeMessage(ip.chainID(), invoice, amountToPromise, ip.channelAddress.Address, ip.deps.HermesAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}

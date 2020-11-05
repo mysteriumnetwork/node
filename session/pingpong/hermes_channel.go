@@ -43,6 +43,7 @@ type HermesChannel struct {
 	HermesID    common.Address
 	channel     client.ProviderChannel
 	lastPromise HermesPromise
+	Beneficiary common.Address
 }
 
 // LifetimeBalance returns earnings of all history.
@@ -70,8 +71,8 @@ func (hc HermesChannel) UnsettledBalance() *big.Int {
 
 func (hc HermesChannel) availableBalance() *big.Int {
 	balance := new(big.Int)
-	if hc.channel.Balance != nil {
-		balance = hc.channel.Balance
+	if hc.channel.Stake != nil {
+		balance = hc.channel.Stake
 	}
 
 	settled := new(big.Int)

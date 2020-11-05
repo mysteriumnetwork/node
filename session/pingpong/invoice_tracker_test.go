@@ -541,7 +541,7 @@ func generateExchangeMessage(t *testing.T, amount *big.Int, invoice crypto.Invoi
 		channel = addr
 	}
 
-	em, err := crypto.CreateExchangeMessage(invoice, amount, channel, "", ks, acc.Address)
+	em, err := crypto.CreateExchangeMessage(1, invoice, amount, channel, "", ks, acc.Address)
 	assert.Nil(t, err)
 	if em != nil {
 		return *em, acc.Address.Hex()

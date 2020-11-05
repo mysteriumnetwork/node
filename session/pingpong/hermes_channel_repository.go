@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -39,7 +40,7 @@ type promiseProvider interface {
 }
 
 type channelProvider interface {
-	GetProviderChannel(hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 // HermesChannelRepository is fetches HermesChannel models from blockchain.
@@ -48,7 +49,7 @@ type HermesChannelRepository struct {
 	channelProvider channelProvider
 	publisher       eventbus.Publisher
 
-	channels []HermesChannel
+	channels map[int64][]HermesChannel
 	lock     sync.RWMutex
 }
 
@@ -59,12 +60,12 @@ func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider
 		channelProvider: channelProvider,
 		publisher:       publisher,
 
-		channels: make([]HermesChannel, 0),
+		channels: make(map[int64][]HermesChannel, 0),
 	}
 }
 
 // Fetch force identity's channel update and returns updated channel.
-func (hcr *HermesChannelRepository) Fetch(id identity.Identity, hermesID common.Address) (HermesChannel, error) {
+func (hcr *HermesChannelRepository) Fetch(chainID int64, id identity.Identity, hermesID common.Address) (HermesChannel, error) {
 	hcr.lock.Lock()
 	defer hcr.lock.Unlock()
 
@@ -78,7 +79,7 @@ func (hcr *HermesChannelRepository) Fetch(id identity.Identity, hermesID common.
 		return HermesChannel{}, fmt.Errorf("could not get hermes promise for provider %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
-	channel, err := hcr.fetchChannel(promise.ChannelID, id, hermesID, promise)
+	channel, err := hcr.fetchChannel(chainID, promise.ChannelID, id, hermesID, promise)
 	if err != nil {
 		return HermesChannel{}, err
 	}
@@ -86,12 +87,19 @@ func (hcr *HermesChannelRepository) Fetch(id identity.Identity, hermesID common.
 	return channel, nil
 }
 
+var ErrUnknownChain = errors.New("unknown chain")
+
 // Get retrieves identity's channel with given hermes.
-func (hcr *HermesChannelRepository) Get(id identity.Identity, hermesID common.Address) (HermesChannel, bool) {
+func (hcr *HermesChannelRepository) Get(chainID int64, id identity.Identity, hermesID common.Address) (HermesChannel, bool) {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()
 
-	for _, channel := range hcr.channels {
+	v, ok := hcr.channels[chainID]
+	if !ok {
+		return HermesChannel{}, false
+	}
+
+	for _, channel := range v {
 		if channel.Identity == id && channel.HermesID == hermesID {
 			return channel, true
 		}
@@ -101,25 +109,34 @@ func (hcr *HermesChannelRepository) Get(id identity.Identity, hermesID common.Ad
 }
 
 // List retrieves identity's channels with all known hermeses.
-func (hcr *HermesChannelRepository) List() []HermesChannel {
+func (hcr *HermesChannelRepository) List(chainID int64) []HermesChannel {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()
 
-	return hcr.channels
+	v, ok := hcr.channels[chainID]
+	if !ok {
+		return nil
+	}
+	return v
 }
 
 // GetEarnings returns all channels earnings for given identity
-func (hcr *HermesChannelRepository) GetEarnings(id identity.Identity) event.Earnings {
+func (hcr *HermesChannelRepository) GetEarnings(chainID int64, id identity.Identity) event.Earnings {
 	hcr.lock.RLock()
 	defer hcr.lock.RUnlock()
 
-	return hcr.sumChannels(id)
+	return hcr.sumChannels(chainID, id)
 }
 
-func (hcr *HermesChannelRepository) sumChannels(id identity.Identity) event.Earnings {
+func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Identity) event.Earnings {
 	var lifetimeBalance = new(big.Int)
 	var unsettledBalance = new(big.Int)
-	for _, channel := range hcr.channels {
+	v, ok := hcr.channels[chainID]
+	if !ok {
+		return event.Earnings{}
+	}
+
+	for _, channel := range v {
 		if channel.Identity == id {
 			lifetimeBalance = new(big.Int).Add(lifetimeBalance, channel.LifetimeBalance())
 			unsettledBalance = new(big.Int).Add(unsettledBalance, channel.UnsettledBalance())
@@ -145,55 +162,66 @@ func (hcr *HermesChannelRepository) handleNodeStart(payload nodevent.Payload) {
 	if payload.Status != nodevent.StatusStarted {
 		return
 	}
-	hcr.fetchKnownChannels()
+	hcr.fetchKnownChannels(config.GetInt64(config.FlagChainID))
 }
 
-func (hcr *HermesChannelRepository) fetchKnownChannels() {
+func (hcr *HermesChannelRepository) fetchKnownChannels(chainID int64) {
 	hcr.lock.Lock()
 	defer hcr.lock.Unlock()
 
-	promises, err := hcr.promiseProvider.List(HermesPromiseFilter{})
+	promises, err := hcr.promiseProvider.List(HermesPromiseFilter{
+		ChainID: chainID,
+	})
 	if err != nil {
 		log.Error().Err(err).Msg("could not load initial earnings state")
 		return
 	}
 
 	for _, promise := range promises {
-		if _, err := hcr.fetchChannel(promise.ChannelID, promise.Identity, promise.HermesID, promise); err != nil {
+		if _, err := hcr.fetchChannel(chainID, promise.ChannelID, promise.Identity, promise.HermesID, promise); err != nil {
 			log.Error().Err(err).Msg("could not load initial earnings state")
 		}
 	}
 }
 
-func (hcr *HermesChannelRepository) fetchChannel(channelID string, id identity.Identity, hermesID common.Address, promise HermesPromise) (HermesChannel, error) {
+func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string, id identity.Identity, hermesID common.Address, promise HermesPromise) (HermesChannel, error) {
 	// TODO Should call GetProviderChannelByID() but can't pass pending=false
 	// This will get retried so we do not need to explicitly retry
 	// TODO: maybe add a sane limit of retries
-	channel, err := hcr.channelProvider.GetProviderChannel(hermesID, id.ToCommonAddress(), true)
+	channel, err := hcr.channelProvider.GetProviderChannel(chainID, hermesID, id.ToCommonAddress(), true)
 	if err != nil {
 		return HermesChannel{}, fmt.Errorf("could not get provider channel for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
 
 	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
-	hcr.updateChannel(hermesChannel)
+	hcr.updateChannel(chainID, hermesChannel)
 
 	return hermesChannel, nil
 }
 
-func (hcr *HermesChannelRepository) updateChannel(new HermesChannel) {
-	earningsOld := hcr.sumChannels(new.Identity)
+func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChannel) {
+	earningsOld := hcr.sumChannels(chainID, new.Identity)
 
 	updated := false
-	for i, channel := range hcr.channels {
+
+	v, ok := hcr.channels[chainID]
+	if !ok {
+		log.Debug().Msgf("unknown chain %v", chainID)
+		return
+	}
+
+	for i, channel := range v {
 		if channel.Identity == new.Identity && channel.HermesID == new.HermesID {
 			updated = true
-			hcr.channels[i] = new
+			hcr.channels[chainID][i] = new
 			break
 		}
 	}
+	res := append(hcr.channels[chainID], new)
 	if !updated {
-		hcr.channels = append(hcr.channels, new)
+		hcr.channels[chainID] = res
 	}
+
 	log.Info().Msgf(
 		"Loaded state for provider %q, hermesID %q: balance %v, available balance %v, unsettled balance %v",
 		new.Identity,
@@ -203,7 +231,7 @@ func (hcr *HermesChannelRepository) updateChannel(new HermesChannel) {
 		new.UnsettledBalance(),
 	)
 
-	earningsNew := hcr.sumChannels(new.Identity)
+	earningsNew := hcr.sumChannels(chainID, new.Identity)
 	go hcr.publisher.Publish(event.AppTopicEarningsChanged, event.AppEventEarningsChanged{
 		Identity: new.Identity,
 		Previous: earningsOld,

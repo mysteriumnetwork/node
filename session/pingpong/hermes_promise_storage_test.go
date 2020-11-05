@@ -46,6 +46,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 	secondHermes := common.HexToAddress("0x000000acc2")
 
 	firstPromise := HermesPromise{
+		ChainID:     1,
 		ChannelID:   "1",
 		Identity:    id,
 		HermesID:    firstHermes,
@@ -55,6 +56,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 	}
 
 	secondPromise := HermesPromise{
+		ChainID:     1,
 		ChannelID:   "2",
 		Identity:    id,
 		HermesID:    secondHermes,
@@ -64,7 +66,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 	}
 
 	// check if errors are wrapped correctly
-	_, err = hermesStorage.Get("unknown_id")
+	_, err = hermesStorage.Get(1, "unknown_id")
 	assert.Equal(t, ErrNotFound, err)
 
 	promises, err := hermesStorage.List(HermesPromiseFilter{})
@@ -75,7 +77,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 	err = hermesStorage.Store(firstPromise)
 	assert.NoError(t, err)
 
-	promise, err := hermesStorage.Get(firstPromise.ChannelID)
+	promise, err := hermesStorage.Get(1, firstPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
@@ -87,7 +89,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 	err = hermesStorage.Store(secondPromise)
 	assert.NoError(t, err)
 
-	promise, err = hermesStorage.Get(secondPromise.ChannelID)
+	promise, err = hermesStorage.Get(1, secondPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
 
