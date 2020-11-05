@@ -41,14 +41,14 @@ func TestHermesChannelRepository_Fetch_returns_errors(t *testing.T) {
 	// when
 	channelStatusProvider.channelReturnError = errMock
 	promiseProvider.errToReturn = nil
-	_, err := repo.Fetch(id, hermesID)
+	_, err := repo.Fetch(1, id, hermesID)
 	// then
 	assert.Errorf(t, err, "could not get provider channel for %v, hermes %v: %v", mockID, common.Address{}.Hex(), errMock.Error())
 
 	// when
 	channelStatusProvider.channelReturnError = nil
 	promiseProvider.errToReturn = errMock
-	_, err = repo.Fetch(mockID, hermesID)
+	_, err = repo.Fetch(1, mockID, hermesID)
 	// then
 	assert.Errorf(t, err, "could not get hermes promise for provider %v, hermes %v: %v", mockID, common.Address{}.Hex(), errMock.Error())
 
@@ -66,9 +66,8 @@ func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 	}
 
 	expectedChannelStatus := client.ProviderChannel{
-		Balance: big.NewInt(1000000000000),
 		Settled: big.NewInt(9000000),
-		Stake:   big.NewInt(12312323),
+		Stake:   big.NewInt(1000000000000),
 	}
 	channelStatusProvider := &mockProviderChannelStatusProvider{
 		channelToReturn: expectedChannelStatus,
@@ -76,11 +75,11 @@ func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 
 	// when
 	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
-	channel, err := repo.Fetch(id, hermesID)
+	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
 	// then
-	expectedBalance := new(big.Int).Add(expectedChannelStatus.Balance, expectedChannelStatus.Settled)
+	expectedBalance := new(big.Int).Add(expectedChannelStatus.Stake, expectedChannelStatus.Settled)
 	assert.Equal(t, expectedBalance, channel.balance())
 	assert.Equal(t, expectedBalance, channel.availableBalance())
 }
@@ -98,9 +97,8 @@ func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) 
 	}
 
 	expectedChannelStatus := client.ProviderChannel{
-		Balance: big.NewInt(1000000000000),
 		Settled: big.NewInt(9000000),
-		Stake:   big.NewInt(12312323),
+		Stake:   big.NewInt(1000000000000),
 	}
 	channelStatusProvider := &mockProviderChannelStatusProvider{
 		channelToReturn: expectedChannelStatus,
@@ -108,14 +106,14 @@ func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) 
 
 	// when
 	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
-	channel, err := repo.Fetch(id, hermesID)
+	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
 	// then
-	added := new(big.Int).Add(expectedChannelStatus.Balance, expectedChannelStatus.Settled)
+	added := new(big.Int).Add(expectedChannelStatus.Stake, expectedChannelStatus.Settled)
 	expectedBalance := added.Sub(added, expectedPromise.Promise.Amount)
 	assert.Equal(t, expectedBalance, channel.balance())
-	assert.Equal(t, new(big.Int).Add(expectedChannelStatus.Balance, expectedChannelStatus.Settled), channel.availableBalance())
+	assert.Equal(t, new(big.Int).Add(expectedChannelStatus.Stake, expectedChannelStatus.Settled), channel.availableBalance())
 }
 
 func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
@@ -131,14 +129,12 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 		Promise:   crypto.Promise{Amount: big.NewInt(8000000)},
 	}
 	expectedChannelStatus1 := client.ProviderChannel{
-		Balance: big.NewInt(1000000000000),
 		Settled: big.NewInt(9000000),
-		Stake:   big.NewInt(12312323),
+		Stake:   big.NewInt(1000000000000),
 	}
 	expectedChannelStatus2 := client.ProviderChannel{
-		Balance: big.NewInt(1000000000001),
 		Settled: big.NewInt(9000001),
-		Stake:   big.NewInt(12312324),
+		Stake:   big.NewInt(1000000000001),
 	}
 
 	promiseProvider := &mockHermesPromiseStorage{}
@@ -149,7 +145,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	// when
 	promiseProvider.toReturn = expectedPromise1
 	channelStatusProvider.channelToReturn = expectedChannelStatus1
-	channel, err := repo.Fetch(id, hermesID)
+	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
 	// then
@@ -181,7 +177,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	// when
 	promiseProvider.toReturn = expectedPromise2
 	channelStatusProvider.channelToReturn = expectedChannelStatus2
-	channel, err = repo.Fetch(id, hermesID)
+	channel, err = repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
 	// then

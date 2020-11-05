@@ -58,6 +58,7 @@ type HermesPromise struct {
 	R           string
 	Revealed    bool
 	AgreementID *big.Int
+	ChainID     int64
 }
 
 // Store stores the given promise.
@@ -65,7 +66,7 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	previousPromise, err := aps.get(promise.ChannelID)
+	previousPromise, err := aps.get(promise.ChainID, promise.ChannelID)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
@@ -78,15 +79,15 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 		return ErrAttemptToOverwrite
 	}
 
-	if err := aps.bolt.SetValue(hermesPromiseBucketName, promise.ChannelID, promise); err != nil {
+	if err := aps.bolt.SetValue(aps.getBucketName(promise.ChainID), promise.ChannelID, promise); err != nil {
 		return fmt.Errorf("could not store hermes promise: %w", err)
 	}
 	return nil
 }
 
-func (aps *HermesPromiseStorage) get(channelID string) (HermesPromise, error) {
+func (aps *HermesPromiseStorage) get(chainID int64, channelID string) (HermesPromise, error) {
 	result := &HermesPromise{}
-	err := aps.bolt.GetValue(hermesPromiseBucketName, channelID, result)
+	err := aps.bolt.GetValue(aps.getBucketName(chainID), channelID, result)
 	if err != nil {
 		if err.Error() == errBoltNotFound {
 			err = ErrNotFound
@@ -98,16 +99,21 @@ func (aps *HermesPromiseStorage) get(channelID string) (HermesPromise, error) {
 }
 
 // Get fetches the promise by channel ID identifier.
-func (aps *HermesPromiseStorage) Get(channelID string) (HermesPromise, error) {
+func (aps *HermesPromiseStorage) Get(chainID int64, channelID string) (HermesPromise, error) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
-	return aps.get(channelID)
+	return aps.get(chainID, channelID)
 }
 
 // HermesPromiseFilter defines all flags for filtering in promises in storage.
 type HermesPromiseFilter struct {
 	Identity *identity.Identity
 	HermesID *common.Address
+	ChainID  int64
+}
+
+func (aps *HermesPromiseStorage) getBucketName(chainID int64) string {
+	return fmt.Sprintf("%v_%v", hermesPromiseBucketName, chainID)
 }
 
 // List fetches the promise for the given hermes.
@@ -117,7 +123,7 @@ func (aps *HermesPromiseStorage) List(filter HermesPromiseFilter) ([]HermesPromi
 
 	result := make([]HermesPromise, 0)
 	err := aps.bolt.DB().Bolt.View(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(hermesPromiseBucketName))
+		bucket := tx.Bucket([]byte(aps.getBucketName(filter.ChainID)))
 		if bucket == nil {
 			return nil
 		}

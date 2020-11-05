@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -433,6 +434,10 @@ func (it *InvoiceTracker) getLastExchangeMessage() crypto.ExchangeMessage {
 	return it.lastExchangeMessage
 }
 
+func (it *InvoiceTracker) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
+
 func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	if it.getNotSentExchangeMessageCount() >= it.maxNotSentExchangeMessages {
 		return ErrInvoiceSendMaxFailCountReached
@@ -452,7 +457,7 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	}
 
 	r := it.generateR()
-	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r)
+	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r, it.chainID())
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
@@ -531,6 +536,7 @@ func (it *InvoiceTracker) handleHermesError(err error) error {
 		it.deps.EventBus.Publish(
 			event.AppTopicSettlementRequest,
 			event.AppEventSettlementRequest{
+				ChainID:    it.chainID(),
 				HermesID:   it.deps.ProvidersHermesID,
 				ProviderID: it.deps.ProviderID,
 			},
@@ -560,6 +566,10 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	peerAddr := common.HexToAddress(it.deps.Peer.Address)
 	if res := em.IsMessageValid(peerAddr); !res {
 		return ErrExchangeValidationFailed
+	}
+
+	if em.ChainID != it.chainID() {
+		return fmt.Errorf("Invalid chain id in exchange message: expected %v, got %v", it.chainID(), em.ChainID)
 	}
 
 	signer, err := em.Promise.RecoverSigner()

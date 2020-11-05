@@ -408,7 +408,7 @@ type SettleWithBeneficiaryRequest struct {
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
 func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, promise pc.Promise) error {
-	signedReq, err := t.fillSetBeneficiaryRequest(id, beneficiary)
+	signedReq, err := t.fillSetBeneficiaryRequest(promise.ChainID, id, beneficiary)
 	if err != nil {
 		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
 	}
@@ -436,20 +436,16 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillSetBeneficiaryRequest(id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
+func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
 	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
 	}
 
-	addr, err := pc.GenerateProviderChannelID(id, t.hermesID)
-	if err != nil {
-		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
-	}
-
 	regReq := pc.SetBeneficiaryRequest{
+		ChainID:     chainID,
 		Beneficiary: strings.ToLower(beneficiary),
-		ChannelID:   strings.ToLower(addr),
+		Identity:    id,
 		Nonce:       new(big.Int).Add(ch.LastUsedNonce, big.NewInt(1)),
 	}
 
