@@ -58,7 +58,7 @@ func TestCurrentIdentitySuccess(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chainID": 1}`),
 	)
 	params := httprouter.Params{{Key: "id", Value: "current"}}
 	assert.Nil(t, err)
@@ -85,7 +85,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chainID": 1}`),
 	)
 	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
@@ -97,6 +97,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 
 	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+	assert.Equal(t, int64(1), mockIdm.LastUnlockChainID)
 }
 
 func TestUnlockIdentityWithInvalidJSON(t *testing.T) {

@@ -22,6 +22,7 @@ import "github.com/pkg/errors"
 type idmFake struct {
 	LastUnlockAddress    string
 	LastUnlockPassphrase string
+	LastUnlockChainID    int64
 	existingIdentities   []Identity
 	newIdentity          Identity
 	unlockFails          bool
@@ -31,7 +32,7 @@ type idmFake struct {
 // NewIdentityManagerFake creates fake identity manager for testing purposes
 // TODO each caller should use it's own mocked manager part instead of global one
 func NewIdentityManagerFake(existingIdentities []Identity, newIdentity Identity) *idmFake {
-	return &idmFake{"", "", existingIdentities, newIdentity, false, true}
+	return &idmFake{"", "", 0, existingIdentities, newIdentity, false, true}
 }
 
 func (fakeIdm *idmFake) IsUnlocked(id string) bool {
@@ -60,9 +61,10 @@ func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 	return true
 }
 
-func (fakeIdm *idmFake) Unlock(address string, passphrase string) error {
+func (fakeIdm *idmFake) Unlock(address string, passphrase string, chainID int64) error {
 	fakeIdm.LastUnlockAddress = address
 	fakeIdm.LastUnlockPassphrase = passphrase
+	fakeIdm.LastUnlockChainID = chainID
 	if fakeIdm.unlockFails {
 		return errors.New("Unlock failed")
 	}

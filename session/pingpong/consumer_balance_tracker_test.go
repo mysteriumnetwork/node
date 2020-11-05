@@ -83,7 +83,10 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 		return cbt.GetBalance(id2).Uint64() == 0
 	}, defaultWaitTime, defaultWaitInterval)
 
-	bus.Publish(identity.AppTopicIdentityUnlock, id2.Address)
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id2.Address,
+	})
 
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id2).Cmp(initialBalance) == 0
@@ -193,7 +196,10 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
-	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id1.Address,
+	})
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1).Cmp(new(big.Int).Sub(initialBalance, grandTotalPromised)) == 0
 	}, defaultWaitTime, defaultWaitInterval)
@@ -255,7 +261,10 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
-	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id1.Address,
+	})
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1).Uint64() == 100
 	}, defaultWaitTime, defaultWaitInterval)
@@ -290,7 +299,10 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
-	bus.Publish(identity.AppTopicIdentityUnlock, id1.Address)
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id1.Address,
+	})
 
 	time.Sleep(time.Millisecond * 20)
 	bc.setError(nil)
@@ -378,7 +390,7 @@ type mockconsumerInfoGetter struct {
 	amount *big.Int
 }
 
-func (mcig *mockconsumerInfoGetter) GetConsumerData(_ string) (ConsumerData, error) {
+func (mcig *mockconsumerInfoGetter) GetConsumerData(_ int64, _ string) (ConsumerData, error) {
 	return ConsumerData{
 		LatestPromise: LatestPromise{
 			Amount: mcig.amount,

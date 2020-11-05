@@ -106,7 +106,7 @@ func TestHermesGetConsumerData_Error(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	_, err := caller.GetConsumerData("something")
+	_, err := caller.GetConsumerData(-1, "something")
 	assert.NotNil(t, err)
 }
 
@@ -140,7 +140,7 @@ func TestHermesGetConsumerData_OK(t *testing.T) {
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	data, err := caller.GetConsumerData("0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b")
+	data, err := caller.GetConsumerData(defaultChainID, "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b")
 	assert.Nil(t, err)
 	res, err := json.Marshal(data)
 	assert.Nil(t, err)
@@ -148,8 +148,11 @@ func TestHermesGetConsumerData_OK(t *testing.T) {
 	assert.JSONEq(t, mockConsumerData, string(res))
 }
 
-var mockConsumerData = `
+const defaultChainID = 1
+
+var mockConsumerData = fmt.Sprintf(`
 {
+  %d: {
 	"Identity": "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
 	"Beneficiary": "0x0000000000000000000000000000000000000000",
 	"ChannelID": "0x6295502615e5dDfd1FC7bD22EA5b78d65751A835",
@@ -167,7 +170,7 @@ var mockConsumerData = `
 	},
 	"LatestSettlement": "0001-01-01T00:00:00Z"
 	}
-`
+}`, defaultChainID)
 
 func TestLatestPromise_isValid(t *testing.T) {
 	type fields struct {

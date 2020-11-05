@@ -128,10 +128,11 @@ func (client *Client) NewIdentity(passphrase string) (id contract.IdentityRefDTO
 }
 
 // CurrentIdentity unlocks and returns the last used, new or first identity
-func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.IdentityRefDTO, err error) {
+func (client *Client) CurrentIdentity(identity, passphrase string, chainID int64) (id contract.IdentityRefDTO, err error) {
 	response, err := client.http.Put("identities/current", contract.IdentityCurrentRequest{
 		Address:    &identity,
 		Passphrase: &passphrase,
+		ChainID:    &chainID,
 	})
 	if err != nil {
 		return
@@ -341,10 +342,14 @@ func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB *b
 }
 
 // Unlock allows using identity in following commands
-func (client *Client) Unlock(identity, passphrase string) error {
-	path := fmt.Sprintf("identities/%s/unlock", identity)
+func (client *Client) Unlock(identity, passphrase string, chainID int64) error {
+	payload := contract.IdentityUnlockRequest{
+		Passphrase: &passphrase,
+		ChainID:    &chainID,
+	}
 
-	response, err := client.http.Put(path, contract.IdentityUnlockRequest{Passphrase: &passphrase})
+	path := fmt.Sprintf("identities/%s/unlock", identity)
+	response, err := client.http.Put(path, payload)
 	if err != nil {
 		return err
 	}

@@ -423,6 +423,7 @@ func (mb *MobileNode) Disconnect() error {
 type GetIdentityRequest struct {
 	Address    string
 	Passphrase string
+	ChainID    int64
 }
 
 // GetIdentityResponse represents identity response.
@@ -438,7 +439,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 	if req == nil {
 		req = &GetIdentityRequest{}
 	}
-	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase)
+	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, req.ChainID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}

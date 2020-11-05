@@ -20,6 +20,7 @@ package cli
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -133,7 +134,7 @@ func (c *cliApp) newIdentity(args []string) {
 	success("New identity created:", id.Address)
 }
 
-const usageUnlockIdentity = "unlock <identity> [passphrase]"
+const usageUnlockIdentity = "unlock <identity> [passphrase] [chainID]"
 
 func (c *cliApp) unlockIdentity(actionArgs []string) {
 	if len(actionArgs) < 1 {
@@ -146,9 +147,18 @@ func (c *cliApp) unlockIdentity(actionArgs []string) {
 	if len(actionArgs) >= 2 {
 		passphrase = actionArgs[1]
 	}
+	chainID := config.GetInt64(config.FlagChainID)
+	if len(actionArgs) == 3 {
+		var err error
+		chainID, err = strconv.ParseInt(actionArgs[2], 10, 64)
+		if err != nil {
+			warn(errors.Wrap(err, "could not parse chainID argument"))
+			return
+		}
+	}
 
 	info("Unlocking", address)
-	err := c.tequilapi.Unlock(address, passphrase)
+	err := c.tequilapi.Unlock(address, passphrase, chainID)
 	if err != nil {
 		warn(err)
 		return

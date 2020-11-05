@@ -37,6 +37,12 @@ const (
 	AppTopicIdentityCreated = "identity-created"
 )
 
+// AppEventIdentityUnlock represents the payload that is sent on identity unlock.
+type AppEventIdentityUnlock struct {
+	ChainID int64
+	ID      Identity
+}
+
 type identityManager struct {
 	keystoreManager keystore
 	unlocked        map[string]bool // Currently unlocked addresses
@@ -121,7 +127,7 @@ func (idm *identityManager) HasIdentity(address string) bool {
 	return err == nil
 }
 
-func (idm *identityManager) Unlock(address string, passphrase string) error {
+func (idm *identityManager) Unlock(chainID int64, address string, passphrase string) error {
 	idm.unlockedMu.Lock()
 	defer idm.unlockedMu.Unlock()
 
@@ -142,7 +148,10 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	log.Debug().Msgf("Caching unlocked address: %s", address)
 	idm.unlocked[address] = true
 
-	go idm.eventBus.Publish(AppTopicIdentityUnlock, address)
+	go idm.eventBus.Publish(AppTopicIdentityUnlock, AppEventIdentityUnlock{
+		ChainID: chainID,
+		ID:      FromAddress(address),
+	})
 
 	return nil
 }

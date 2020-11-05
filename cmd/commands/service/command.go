@@ -57,6 +57,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			config.ParseFlagsServiceWireguard(ctx)
 			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
+			config.ParseFlagsNetwork(ctx)
 
 			nodeOptions := node.GetOptions()
 			nodeOptions.Discovery.FetchEnabled = false
@@ -86,6 +87,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	config.RegisterFlagsServiceOpenvpn(&command.Flags)
 	config.RegisterFlagsServiceWireguard(&command.Flags)
 	config.RegisterFlagsServiceNoop(&command.Flags)
+	config.RegisterFlagsNetwork(&command.Flags)
 
 	return command
 }
@@ -116,6 +118,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	providerID := sc.unlockIdentity(
 		ctx.String(config.FlagIdentity.Name),
 		ctx.String(config.FlagIdentityPassphrase.Name),
+		ctx.Int64(config.FlagChainID.Name),
 	)
 	log.Info().Msgf("Unlocked identity: %v", providerID)
 
@@ -141,10 +144,10 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	return <-sc.errorChannel
 }
 
-func (sc *serviceCommand) unlockIdentity(id, passphrase string) string {
+func (sc *serviceCommand) unlockIdentity(id, passphrase string, chainID int64) string {
 	const retryRate = 10 * time.Second
 	for {
-		id, err := sc.tequilapi.CurrentIdentity(id, passphrase)
+		id, err := sc.tequilapi.CurrentIdentity(id, passphrase, chainID)
 		if err == nil {
 			return id.Address
 		}
