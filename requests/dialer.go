@@ -19,34 +19,15 @@ package requests
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 )
 
 // Dialer wraps default go dialer with extra features.
 type Dialer struct {
-	dialer   *net.Dialer
-	addrToIP map[string]string
-}
+	ResolveContext ResolveContext
 
-// DialContext connects to the address on the named network using the provided context.
-func (d *Dialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	if d.addrToIP != nil {
-		_, addrPort, err := net.SplitHostPort(addr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid dial address: %w", err)
-		}
-
-		addrIP, exist := d.addrToIP[addr]
-		if !exist {
-			return nil, &net.DNSError{Err: "unmapped address", Name: addr, Server: "localmap", IsNotFound: true}
-		}
-
-		addr = addrIP + ":" + addrPort
-	}
-
-	return d.dialer.DialContext(ctx, network, addr)
+	dialer *net.Dialer
 }
 
 // NewDialer creates dialer with default configuration.
@@ -60,10 +41,32 @@ func NewDialer(srcIP string) *Dialer {
 	}
 }
 
-// NewDialerBypassDNS creates dialer which avoids DNS lookups.
-func NewDialerBypassDNS(srcIP string, addrToIP map[string]string) *Dialer {
-	dialer := NewDialer(srcIP)
-	dialer.addrToIP = addrToIP
+// DialContext connects to the address on the named network using the provided context.
+func (d *Dialer) DialContext(ctx context.Context, network, addr string) (conn net.Conn, err error) {
+	if d.ResolveContext != nil {
+		addrs, err := d.ResolveContext(ctx, network, addr)
+		if err != nil {
+			return nil, &net.OpError{Op: "dial", Net: network, Source: nil, Addr: nil, Err: err}
+		}
 
-	return dialer
+		conn, err := d.dialAddrs(ctx, network, addrs)
+		if err != nil {
+			return nil, &net.OpError{Op: "dial", Net: network, Source: nil, Addr: nil, Err: err}
+		}
+
+		return conn, nil
+	}
+
+	return d.dialer.DialContext(ctx, network, addr)
+}
+
+func (d *Dialer) dialAddrs(ctx context.Context, network string, addrs []string) (conn net.Conn, err error) {
+	for _, addr := range addrs {
+		conn, err = d.dialer.DialContext(ctx, network, addr)
+		if err == nil {
+			return conn, nil
+		}
+	}
+
+	return conn, err
 }

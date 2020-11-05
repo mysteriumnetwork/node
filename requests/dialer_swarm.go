@@ -33,16 +33,14 @@ var ErrAllDialsFailed = errors.New("all dials failed")
 type DialerSwarm struct {
 	// ResolveContext specifies the dial function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
-	ResolveContext func(ctx context.Context, network, host string) (addrs []string, err error)
+	ResolveContext ResolveContext
 
-	resolver *net.Resolver
-	dialer   *net.Dialer
+	dialer *net.Dialer
 }
 
 // NewDialerSwarm creates swarm dialer with default configuration.
 func NewDialerSwarm(srcIP string) *DialerSwarm {
 	return &DialerSwarm{
-		resolver: net.DefaultResolver,
 		dialer: &net.Dialer{
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
@@ -54,36 +52,22 @@ func NewDialerSwarm(srcIP string) *DialerSwarm {
 // DialContext connects to the address on the named network using the provided context.
 func (ds *DialerSwarm) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	if ds.ResolveContext != nil {
-		return ds.lookupAndDial(ctx, network, addr)
+		addrs, err := ds.ResolveContext(ctx, network, addr)
+		if err != nil {
+			return nil, &net.OpError{Op: "dial", Net: network, Source: nil, Addr: nil, Err: err}
+		}
+
+		conn, errDial := ds.dialAddrs(ctx, network, addrs)
+		if errDial != nil {
+			errDial.OriginalAddr = addr
+
+			return nil, errDial
+		}
+
+		return conn, nil
 	}
 
 	return ds.dialer.DialContext(ctx, network, addr)
-}
-
-func (ds *DialerSwarm) lookupAndDial(ctx context.Context, network, addr string) (conn net.Conn, err error) {
-	addrHost, addrPort, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, &net.OpError{Op: "dial", Net: network, Source: nil, Addr: nil, Err: err}
-	}
-
-	addrIPs, err := ds.ResolveContext(ctx, network, addrHost)
-	if err != nil {
-		return nil, &net.OpError{Op: "dial", Net: network, Source: nil, Addr: nil, Err: err}
-	}
-
-	addrs := []string{addr}
-	for _, addrIP := range addrIPs {
-		addrs = append(addrs, net.JoinHostPort(addrIP, addrPort))
-	}
-
-	conn, errDial := ds.dialAddrs(ctx, network, addrs)
-	if errDial != nil {
-		errDial.OriginalAddr = addr
-
-		return nil, errDial
-	}
-
-	return conn, nil
 }
 
 func (ds *DialerSwarm) dialAddrs(ctx context.Context, network string, addrs []string) (net.Conn, *ErrorSwarmDial) {

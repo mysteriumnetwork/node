@@ -53,13 +53,9 @@ func Test_DialerSwarm_CustomResolverSuccessfully(t *testing.T) {
 	defer ln.Close()
 
 	dialer := NewDialerSwarm("127.0.0.1")
-	dialer.ResolveContext = func(_ context.Context, _, host string) ([]string, error) {
-		if host == "dns-is-faked.golang" {
-			return []string{"127.0.0.1", "2001:db8::a3"}, nil
-		}
-
-		return nil, &net.DNSError{Err: "unmapped address", Name: host, IsNotFound: true}
-	}
+	dialer.ResolveContext = NewResolverMap(map[string][]string{
+		"dns-is-faked.golang": {"127.0.0.1", "2001:db8::a3"},
+	})
 
 	// when
 	conn, err := dialer.DialContext(context.Background(), "tcp", "dns-is-faked.golang:12345")
@@ -78,9 +74,9 @@ func Test_DialerSwarm_CustomResolverWithSomeUnreachableIPs(t *testing.T) {
 	defer ln.Close()
 
 	dialer := NewDialerSwarm("127.0.0.1")
-	dialer.ResolveContext = func(_ context.Context, _, host string) ([]string, error) {
-		return []string{"2001:db8::a3", "127.0.0.1"}, nil
-	}
+	dialer.ResolveContext = NewResolverMap(map[string][]string{
+		"dns-is-faked.golang": {"2001:db8::a3", "127.0.0.1"},
+	})
 
 	// when
 	conn, err := dialer.DialContext(context.Background(), "tcp", "dns-is-faked.golang:12345")
@@ -92,9 +88,9 @@ func Test_DialerSwarm_CustomResolverWithSomeUnreachableIPs(t *testing.T) {
 
 func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
 	dialer := NewDialerSwarm("127.0.0.1")
-	dialer.ResolveContext = func(_ context.Context, _, host string) ([]string, error) {
-		return []string{"2001:db8::a1", "2001:db8::a3"}, nil
-	}
+	dialer.ResolveContext = NewResolverMap(map[string][]string{
+		"dns-is-faked.golang": {"2001:db8::a1", "2001:db8::a3"},
+	})
 
 	// when
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -116,9 +112,7 @@ func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
 
 func Test_DialerSwarm_CustomResolverIsCancelable(t *testing.T) {
 	dialer := NewDialerSwarm("127.0.0.1")
-	dialer.ResolveContext = func(_ context.Context, _, host string) ([]string, error) {
-		return []string{}, nil
-	}
+	dialer.ResolveContext = NewResolverMap(map[string][]string{})
 
 	// when
 	ctx, cancel := context.WithCancel(context.Background())
