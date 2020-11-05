@@ -89,7 +89,7 @@ func NewConsumerBalanceTracker(
 }
 
 type consumerInfoGetter interface {
-	GetConsumerData(id string) (ConsumerData, error)
+	GetConsumerData(chainID int64, id string) (ConsumerData, error)
 }
 
 type consumerBalanceChecker interface {
@@ -135,26 +135,25 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
-	identity := identity.FromAddress(id)
-	err := cbt.recoverGrandTotalPromised(identity)
+func (cbt *ConsumerBalanceTracker) handleUnlockEvent(data identity.AppEventIdentityUnlock) {
+	err := cbt.recoverGrandTotalPromised(data.ChainID, data.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 	}
 
-	status, err := cbt.registry.GetRegistrationStatus(identity)
+	status, err := cbt.registry.GetRegistrationStatus(data.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover get registration status")
 	}
 
 	switch status {
 	case registry.InProgress:
-		cbt.alignWithTransactor(identity)
+		cbt.alignWithTransactor(data.ID)
 	default:
-		cbt.ForceBalanceUpdate(identity)
+		cbt.ForceBalanceUpdate(data.ChainID, data.ID)
 	}
 
-	go cbt.subscribeToExternalChannelTopup(identity)
+	go cbt.subscribeToExternalChannelTopup(data.ID)
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
@@ -245,7 +244,7 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 }
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance
-func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big.Int {
+func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
 	fallback := cbt.GetBalance(id)
 
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
@@ -273,7 +272,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 
 	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
 	if errors.Is(err, ErrNotFound) {
-		if err := cbt.recoverGrandTotalPromised(id); err != nil {
+		if err := cbt.recoverGrandTotalPromised(chainID, id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
 		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
@@ -371,7 +370,7 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 	go cbt.publishChangeEvent(id, balance.GetBalance(), c.GetBalance())
 }
 
-func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.Identity) error {
+func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, identity identity.Identity) error {
 	var boff backoff.BackOff
 	eback := backoff.NewExponentialBackOff()
 	eback.MaxElapsedTime = time.Second * 20
@@ -392,7 +391,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 	var data ConsumerData
 	boff = backoff.WithContext(boff, ctx)
 	toRetry := func() error {
-		d, err := cbt.consumerInfoGetter.GetConsumerData(identity.Address)
+		d, err := cbt.consumerInfoGetter.GetConsumerData(chainID, identity.Address)
 		if err != nil {
 			if err != ErrHermesNotFound {
 				return err

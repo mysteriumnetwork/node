@@ -74,6 +74,7 @@ func NewIdentityListResponse(ids []identity.Identity) ListIdentitiesResponse {
 // swagger:model IdentityCreateRequestDTO
 type IdentityCreateRequest struct {
 	Passphrase *string `json:"passphrase"`
+	ChainID    *int64  `json:"chainID"`
 }
 
 // Validate validates fields in request
@@ -82,6 +83,9 @@ func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
 	if r.Passphrase == nil {
 		errors.ForField("passphrase").AddError("required", "Field is required")
 	}
+	if r.ChainID == nil {
+		errors.ForField("chainID").AddError("required", "Field is required")
+	}
 	return errors
 }
 
@@ -89,6 +93,7 @@ func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
 // swagger:model IdentityUnlockRequestDTO
 type IdentityUnlockRequest struct {
 	Passphrase *string `json:"passphrase"`
+	ChainID    *int64  `json:"chainID"`
 }
 
 // Validate validates fields in request
@@ -96,6 +101,9 @@ func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
 		errors.ForField("passphrase").AddError("required", "Field is required")
+	}
+	if r.ChainID == nil {
+		errors.ForField("chainID").AddError("required", "Field is required")
 	}
 	return errors
 }
@@ -105,6 +113,7 @@ func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
 type IdentityCurrentRequest struct {
 	Address    *string `json:"id"`
 	Passphrase *string `json:"passphrase"`
+	ChainID    *int64  `json:"chainID"`
 }
 
 // Validate validates fields in request
@@ -112,6 +121,9 @@ func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
 		errors.ForField("passphrase").AddError("required", "Field is required")
+	}
+	if r.ChainID == nil {
+		errors.ForField("chainID").AddError("required", "Field is required")
 	}
 	return errors
 }

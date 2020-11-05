@@ -184,23 +184,28 @@ func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error 
 }
 
 // GetConsumerData gets consumer data from hermes
-func (ac *HermesCaller) GetConsumerData(id string) (ConsumerData, error) {
+func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
-	var resp ConsumerData
+	var resp map[int64]ConsumerData
 	err = ac.doRequest(req, &resp)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
 	}
 
-	err = resp.LatestPromise.isValid(id)
+	data, ok := resp[chainID]
+	if !ok {
+		return ConsumerData{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
+	}
+
+	err = data.LatestPromise.isValid(id)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not check promise validity: %w", err)
 	}
 
-	return resp, nil
+	return data, nil
 }
 
 func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
