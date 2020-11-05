@@ -21,7 +21,7 @@ package metadata
 type NetworkDefinition struct {
 	MysteriumAPIAddress       string
 	AccessPolicyOracleAddress string
-	BrokerAddress             string
+	BrokerAddresses           []string
 	EtherClientRPC            string
 	TransactorAddress         string
 	RegistryAddress           string
@@ -38,7 +38,7 @@ type NetworkDefinition struct {
 var TestnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddress:             "nats://testnet-broker.mysterium.network",
+	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network", "nats://82.196.15.9"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
@@ -57,7 +57,7 @@ var TestnetDefinition = NetworkDefinition{
 var BetanetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://betanet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://betanet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddress:             "nats://betanet-broker.mysterium.network",
+	BrokerAddresses:           []string{"nats://betanet-broker.mysterium.network", "nats://95.216.204.232"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0xc82Cc5B0bAe95F443e33FF053aAa70F1Eb7d312A",
@@ -77,7 +77,7 @@ var BetanetDefinition = NetworkDefinition{
 var LocalnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "http://localhost:8001/v1",
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
-	BrokerAddress:             "localhost",
+	BrokerAddresses:           []string{"localhost"},
 	EtherClientRPC:            "http://localhost:8545",
 	MMNAddress:                "http://localhost/",
 	MMNAPIAddress:             "http://localhost/api/v1",
