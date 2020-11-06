@@ -314,6 +314,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
 		BalanceProvider:           di.ConsumerBalanceTracker,
 		EarningsProvider:          di.HermesChannelRepository,
+		ChainID:                   options.ChainID,
 	}
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
