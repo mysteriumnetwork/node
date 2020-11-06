@@ -46,21 +46,19 @@ func TestHermesPromiseStorage(t *testing.T) {
 	secondHermes := common.HexToAddress("0x000000acc2")
 
 	firstPromise := HermesPromise{
-		ChainID:     1,
 		ChannelID:   "1",
 		Identity:    id,
 		HermesID:    firstHermes,
-		Promise:     crypto.Promise{Amount: big.NewInt(1), Fee: big.NewInt(1)},
+		Promise:     crypto.Promise{Amount: big.NewInt(1), Fee: big.NewInt(1), ChainID: 1},
 		R:           "some r",
 		AgreementID: big.NewInt(123),
 	}
 
 	secondPromise := HermesPromise{
-		ChainID:     1,
 		ChannelID:   "2",
 		Identity:    id,
 		HermesID:    secondHermes,
-		Promise:     crypto.Promise{Amount: big.NewInt(2), Fee: big.NewInt(2)},
+		Promise:     crypto.Promise{Amount: big.NewInt(2), Fee: big.NewInt(2), ChainID: 1},
 		R:           "some other r",
 		AgreementID: big.NewInt(1234),
 	}
@@ -81,7 +79,9 @@ func TestHermesPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
-	promises, err = hermesStorage.List(HermesPromiseFilter{})
+	promises, err = hermesStorage.List(HermesPromiseFilter{
+		ChainID: 1,
+	})
 	assert.Equal(t, []HermesPromise{firstPromise}, promises)
 	assert.NoError(t, err)
 
@@ -93,7 +93,9 @@ func TestHermesPromiseStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
 
-	promises, err = hermesStorage.List(HermesPromiseFilter{})
+	promises, err = hermesStorage.List(HermesPromiseFilter{
+		ChainID: 1,
+	})
 	assert.Equal(t, []HermesPromise{firstPromise, secondPromise}, promises)
 	assert.NoError(t, err)
 

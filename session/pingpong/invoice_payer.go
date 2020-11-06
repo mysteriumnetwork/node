@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -102,6 +101,7 @@ type InvoicePayerDeps struct {
 	EventBus                  eventbus.EventBus
 	HermesAddress             common.Address
 	DataLeeway                datasize.BitSize
+	ChainID                   int64
 }
 
 // NewInvoicePayer returns a new instance of exchange message tracker.
@@ -246,7 +246,7 @@ func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toProm
 }
 
 func (ip *InvoicePayer) chainID() int64 {
-	return config.GetInt64(config.FlagChainID)
+	return ip.deps.ChainID
 }
 
 func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {

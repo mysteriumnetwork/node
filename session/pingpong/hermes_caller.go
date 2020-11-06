@@ -244,7 +244,6 @@ type ConsumerData struct {
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
 	Balance          *big.Int      `json:"Balance"`
-	Promised         *big.Int      `json:"Promised"`
 	Settled          *big.Int      `json:"Settled"`
 	Stake            *big.Int      `json:"Stake"`
 	LatestPromise    LatestPromise `json:"LatestPromise"`
@@ -253,12 +252,12 @@ type ConsumerData struct {
 
 // LatestPromise represents the latest promise
 type LatestPromise struct {
-	ChannelID string      `json:"ChannelID"`
-	Amount    *big.Int    `json:"Amount"`
-	Fee       *big.Int    `json:"Fee"`
-	Hashlock  string      `json:"Hashlock"`
-	R         interface{} `json:"R"`
-	Signature string      `json:"Signature"`
+	ChainID   int64    `json:"ChainID"`
+	ChannelID string   `json:"ChannelID"`
+	Amount    *big.Int `json:"Amount"`
+	Fee       *big.Int `json:"Fee"`
+	Hashlock  string   `json:"Hashlock"`
+	Signature string   `json:"Signature"`
 }
 
 // isValid checks if the promise is really issued by the given identity
@@ -283,6 +282,7 @@ func (lp LatestPromise) isValid(id string) error {
 	}
 
 	p := crypto.Promise{
+		ChainID:   lp.ChainID,
 		ChannelID: decodedChannelID,
 		Amount:    lp.Amount,
 		Fee:       lp.Fee,

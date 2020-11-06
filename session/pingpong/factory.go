@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
@@ -178,6 +179,7 @@ func ExchangeFactoryFunc(
 			EventBus:                  eventBus,
 			HermesAddress:             hermes,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
+			ChainID:                   config.GetInt64(config.FlagChainID),
 		}
 		return NewInvoicePayer(deps), nil
 	}
