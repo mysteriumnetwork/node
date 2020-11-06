@@ -85,7 +85,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 
 	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
 		ChainID: 1,
-		ID:      id2.Address,
+		ID:      id2,
 	})
 
 	assert.Eventually(t, func() bool {
@@ -94,6 +94,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 
 	var promised = big.NewInt(100)
 	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+		ChainID:    1,
 		ConsumerID: id1,
 		Current:    promised,
 	})
@@ -198,7 +199,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	assert.NoError(t, err)
 	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
 		ChainID: 1,
-		ID:      id1.Address,
+		ID:      id1,
 	})
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1).Cmp(new(big.Int).Sub(initialBalance, grandTotalPromised)) == 0
@@ -206,6 +207,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 	var diff = big.NewInt(10)
 	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+		ChainID:    1,
 		ConsumerID: id1,
 		Current:    new(big.Int).Add(grandTotalPromised, diff),
 	})
@@ -218,6 +220,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 
 	var diff2 = big.NewInt(20)
 	bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+		ChainID:    1,
 		ConsumerID: id1,
 		Current:    new(big.Int).Add(grandTotalPromised, diff2),
 	})
@@ -263,7 +266,7 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 	assert.NoError(t, err)
 	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
 		ChainID: 1,
-		ID:      id1.Address,
+		ID:      id1,
 	})
 	assert.Eventually(t, func() bool {
 		return cbt.GetBalance(id1).Uint64() == 100
@@ -301,7 +304,7 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 	assert.NoError(t, err)
 	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
 		ChainID: 1,
-		ID:      id1.Address,
+		ID:      id1,
 	})
 
 	time.Sleep(time.Millisecond * 20)
@@ -339,7 +342,7 @@ func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
 		},
 	})
 
-	b := cbt.ForceBalanceUpdate(id1)
+	b := cbt.ForceBalanceUpdate(1, id1)
 	assert.Equal(t, initialBalance, b)
 }
 
@@ -414,8 +417,8 @@ func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) 
 	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	// Make sure we are not dead locked here. https://github.com/mysteriumnetwork/node/issues/2181
-	cbt.increaseBCBalance(identity.FromAddress("0x0000"), big.NewInt(1))
-	cbt.updateGrandTotal(identity.FromAddress("0x0000"), big.NewInt(1))
+	cbt.increaseBCBalance(1, identity.FromAddress("0x0000"), big.NewInt(1))
+	cbt.updateGrandTotal(1, identity.FromAddress("0x0000"), big.NewInt(1))
 }
 
 func TestConsumerBalance_GetBalance(t *testing.T) {

@@ -158,11 +158,11 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(data identity.AppEventIdent
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
 	if _, ok := cbt.getBalance(ev.ConsumerID); !ok {
-		cbt.ForceBalanceUpdate(ev.ConsumerID)
+		cbt.ForceBalanceUpdate(ev.ChainID, ev.ConsumerID)
 		return
 	}
 
-	cbt.updateGrandTotal(ev.ConsumerID, ev.Current)
+	cbt.updateGrandTotal(ev.ChainID, ev.ConsumerID, ev.Current)
 }
 
 func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(id identity.Identity) *big.Int {
@@ -270,12 +270,12 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 		return unregisteredBalance
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
+	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, cbt.hermesAddress)
 	if errors.Is(err, ErrNotFound) {
 		if err := cbt.recoverGrandTotalPromised(chainID, id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
-		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
+		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(chainID, id, cbt.hermesAddress)
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
@@ -303,7 +303,7 @@ func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEve
 	case registry.InProgress:
 		cbt.alignWithTransactor(event.ID)
 	case registry.Registered:
-		cbt.ForceBalanceUpdate(event.ID)
+		cbt.ForceBalanceUpdate(event.ChainID, event.ID)
 	}
 }
 
@@ -412,7 +412,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 	}
 
 	log.Debug().Msgf("Loaded hermes state: already promised: %v", data.LatestPromise.Amount)
-	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.hermesAddress, data.LatestPromise.Amount)
+	return cbt.consumerGrandTotalsStorage.Store(chainID, identity, cbt.hermesAddress, data.LatestPromise.Amount)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
@@ -421,14 +421,14 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) increaseBCBalance(id identity.Identity, diff *big.Int) {
+func (cbt *ConsumerBalanceTracker) increaseBCBalance(chainID int64, id identity.Identity, diff *big.Int) {
 	b, ok := cbt.getBalance(id)
 	before := b.BCBalance
 	if ok {
 		b.BCBalance = new(big.Int).Add(b.BCBalance, diff)
 		cbt.setBalance(id, b)
 	} else {
-		cbt.ForceBalanceUpdate(id)
+		cbt.ForceBalanceUpdate(chainID, id)
 	}
 	after, _ := cbt.getBalance(id)
 
@@ -457,14 +457,14 @@ func (cbt *ConsumerBalanceTracker) setBalance(id identity.Identity, balance Cons
 	cbt.balances[id] = balance
 }
 
-func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, current *big.Int) {
+func (cbt *ConsumerBalanceTracker) updateGrandTotal(chainID int64, id identity.Identity, current *big.Int) {
 	b, ok := cbt.getBalance(id)
 	before := b.BCBalance
 	if ok {
 		b.GrandTotalPromised = current
 		cbt.setBalance(id, b)
 	} else {
-		cbt.ForceBalanceUpdate(id)
+		cbt.ForceBalanceUpdate(chainID, id)
 	}
 
 	after, _ := cbt.getBalance(id)

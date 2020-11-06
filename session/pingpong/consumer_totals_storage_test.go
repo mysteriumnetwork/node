@@ -46,36 +46,36 @@ func TestConsumerTotalStorage(t *testing.T) {
 	var amount = big.NewInt(12)
 
 	// check if errors are wrapped correctly
-	_, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
+	_, err = consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
 	assert.Equal(t, ErrNotFound, err)
 
 	// store and check that total is stored correctly
-	err = consumerTotalsStorage.Store(channelAddress, hermesAddress, amount)
+	err = consumerTotalsStorage.Store(1, channelAddress, hermesAddress, amount)
 	assert.NoError(t, err)
 
-	a, err := consumerTotalsStorage.Get(channelAddress, hermesAddress)
+	a, err := consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
 	assert.NoError(t, err)
 	assert.Equal(t, amount, a)
 
 	var newAmount = big.NewInt(123)
 	// overwrite the amount, check if it is overwritten
-	err = consumerTotalsStorage.Store(channelAddress, hermesAddress, newAmount)
+	err = consumerTotalsStorage.Store(1, channelAddress, hermesAddress, newAmount)
 	assert.NoError(t, err)
 
-	a, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
+	a, err = consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
 	someOtherChannel := identity.FromAddress("someOtherChannel")
 	// store two amounts, check if both are gotten correctly
-	err = consumerTotalsStorage.Store(someOtherChannel, hermesAddress, amount)
+	err = consumerTotalsStorage.Store(1, someOtherChannel, hermesAddress, amount)
 	assert.NoError(t, err)
 
-	a, err = consumerTotalsStorage.Get(channelAddress, hermesAddress)
+	a, err = consumerTotalsStorage.Get(1, channelAddress, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, newAmount, a)
 
-	a, err = consumerTotalsStorage.Get(someOtherChannel, hermesAddress)
+	a, err = consumerTotalsStorage.Get(1, someOtherChannel, hermesAddress)
 	assert.NoError(t, err)
 	assert.EqualValues(t, amount, a)
 }
