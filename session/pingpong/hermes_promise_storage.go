@@ -58,7 +58,6 @@ type HermesPromise struct {
 	R           string
 	Revealed    bool
 	AgreementID *big.Int
-	ChainID     int64
 }
 
 // Store stores the given promise.
@@ -66,7 +65,7 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 
-	previousPromise, err := aps.get(promise.ChainID, promise.ChannelID)
+	previousPromise, err := aps.get(promise.Promise.ChainID, promise.ChannelID)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
@@ -79,7 +78,7 @@ func (aps *HermesPromiseStorage) Store(promise HermesPromise) error {
 		return ErrAttemptToOverwrite
 	}
 
-	if err := aps.bolt.SetValue(aps.getBucketName(promise.ChainID), promise.ChannelID, promise); err != nil {
+	if err := aps.bolt.SetValue(aps.getBucketName(promise.Promise.ChainID), promise.ChannelID, promise); err != nil {
 		return fmt.Errorf("could not store hermes promise: %w", err)
 	}
 	return nil
@@ -113,6 +112,7 @@ type HermesPromiseFilter struct {
 }
 
 func (aps *HermesPromiseStorage) getBucketName(chainID int64) string {
+	fmt.Println(fmt.Sprintf("%v_%v", hermesPromiseBucketName, chainID))
 	return fmt.Sprintf("%v_%v", hermesPromiseBucketName, chainID)
 }
 

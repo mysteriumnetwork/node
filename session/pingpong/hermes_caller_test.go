@@ -133,14 +133,14 @@ func TestHermesCaller_UnmarshalsErrors(t *testing.T) {
 func TestHermesGetConsumerData_OK(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		bytes := []byte(mockConsumerData)
+		bytes := []byte(mockConsumerDataResponse)
 		w.Write(bytes)
 	}))
 	defer server.Close()
 
 	c := requests.NewHTTPClient("0.0.0.0", time.Second)
 	caller := NewHermesCaller(c, server.URL)
-	data, err := caller.GetConsumerData(defaultChainID, "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b")
+	data, err := caller.GetConsumerData(defaultChainID, "0x74CbcbBfEd45D7836D270068116440521033EDc7")
 	assert.Nil(t, err)
 	res, err := json.Marshal(data)
 	assert.Nil(t, err)
@@ -150,27 +150,8 @@ func TestHermesGetConsumerData_OK(t *testing.T) {
 
 const defaultChainID = 1
 
-var mockConsumerData = fmt.Sprintf(`
-{
-  %d: {
-	"Identity": "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
-	"Beneficiary": "0x0000000000000000000000000000000000000000",
-	"ChannelID": "0x6295502615e5dDfd1FC7bD22EA5b78d65751A835",
-	"Balance": 12185543791,
-	"Promised": 217345248,
-	"Settled": 0,
-	"Stake": 0,
-	"LatestPromise": {
-	"ChannelID": "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
-	"Amount": 461730032,
-	"Fee": 0,
-	"R": null,
-	"Hashlock": "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
-	"Signature": "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b"
-	},
-	"LatestSettlement": "0001-01-01T00:00:00Z"
-	}
-}`, defaultChainID)
+var mockConsumerData = `{"Identity":"0x74CbcbBfEd45D7836D270068116440521033EDc7","Beneficiary":"0x0000000000000000000000000000000000000000","ChannelID":"0xc80A1758A36cf9a0903a9FE37f98B51AEC978CB6","Balance":133,"Settled":0,"Stake":0,"LatestPromise":{"ChannelID":"0xc80a1758a36cf9a0903a9fe37f98b51aec978cb6","Amount":1077,"Fee":0,"Hashlock":"0x528a7340eb740124306c25c53ac7fa27c0d038ac4ab0bb09c0894487b8d1bc5f","Signature":"0xaf3f9e23336513fa75b5a03cb81dbecf8e4b5c61ce14a9479b8d5728970eab1f1d2cf4d22d14f6441d0ae8db06b5ce34eb18000aae9aeedc013e449fc1ced8a31b","ChainID":1},"LatestSettlement":"0001-01-01T00:00:00Z"}`
+var mockConsumerDataResponse = fmt.Sprintf(`{"%d":%v}`, defaultChainID, mockConsumerData)
 
 func TestLatestPromise_isValid(t *testing.T) {
 	type fields struct {
@@ -178,8 +159,8 @@ func TestLatestPromise_isValid(t *testing.T) {
 		Amount    *big.Int
 		Fee       *big.Int
 		Hashlock  string
-		R         interface{}
 		Signature string
+		ChainID   int64
 	}
 	tests := []struct {
 		name    string
@@ -190,25 +171,27 @@ func TestLatestPromise_isValid(t *testing.T) {
 		{
 			name:    "returns no error for a valid promise",
 			wantErr: false,
-			id:      "0x75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
+			id:      "0xF53aCDd584ccb85eE4EC1590007aD3c16FDFF057",
 			fields: fields{
-				ChannelID: "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
-				Amount:    big.NewInt(461730032),
+				ChainID:   1,
+				ChannelID: "0xfd34a0a135b9ed5dc11a4780926efccaedb5e50b",
+				Amount:    big.NewInt(4030),
 				Fee:       new(big.Int),
-				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
-				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
+				Hashlock:  "0xbcfee24a3f12e1b2f37a560b2bf52fedd3a1f1795844229495711fd4405f139e",
+				Signature: "0xf12c79560a9a9463ffdf5a5f12ff2d33c26345ce62cd7b1d324d897f9f6ce65d7eaf113897b48c2e7ae3d38325db68f212d1dd601c36a608ec24ed3d5f94f9171b",
 			},
 		},
 		{
 			name:    "returns no error for a valid promise with no prefix on identity",
 			wantErr: false,
-			id:      "75C2067Ca5B42467FD6CD789d785aafb52a6B95b",
+			id:      "F53aCDd584ccb85eE4EC1590007aD3c16FDFF057",
 			fields: fields{
-				ChannelID: "0x6295502615e5ddfd1fc7bd22ea5b78d65751a835",
-				Amount:    big.NewInt(461730032),
+				ChainID:   1,
+				ChannelID: "0xfd34a0a135b9ed5dc11a4780926efccaedb5e50b",
+				Amount:    big.NewInt(4030),
 				Fee:       new(big.Int),
-				Hashlock:  "0x31c88b635e72755012289cd04bf9b34a11a95f5962f8f1b15dc4b6b80d4af34a",
-				Signature: "0x28d4f2a8c1e2a6b8943e3e110b1d5f66cacaee0841dd7e60ed89e02096419b27188b7c74a9fa1e30e29b4fd75877f503c5d2b193d1d64d7d56232a67b0a102261b",
+				Hashlock:  "0xbcfee24a3f12e1b2f37a560b2bf52fedd3a1f1795844229495711fd4405f139e",
+				Signature: "0xf12c79560a9a9463ffdf5a5f12ff2d33c26345ce62cd7b1d324d897f9f6ce65d7eaf113897b48c2e7ae3d38325db68f212d1dd601c36a608ec24ed3d5f94f9171b",
 			},
 		},
 		{
@@ -243,8 +226,8 @@ func TestLatestPromise_isValid(t *testing.T) {
 				Amount:    tt.fields.Amount,
 				Fee:       tt.fields.Fee,
 				Hashlock:  tt.fields.Hashlock,
-				R:         tt.fields.R,
 				Signature: tt.fields.Signature,
+				ChainID:   tt.fields.ChainID,
 			}
 			err := lp.isValid(tt.id)
 			if (err != nil) != tt.wantErr {

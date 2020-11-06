@@ -236,7 +236,6 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		R:           hex.EncodeToString(er.r),
 		Revealed:    false,
 		AgreementID: er.em.AgreementID,
-		ChainID:     promise.ChainID,
 	}
 
 	err = aph.deps.HermesPromiseStorage.Store(ap)

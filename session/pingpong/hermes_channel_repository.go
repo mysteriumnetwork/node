@@ -133,7 +133,10 @@ func (hcr *HermesChannelRepository) sumChannels(chainID int64, id identity.Ident
 	var unsettledBalance = new(big.Int)
 	v, ok := hcr.channels[chainID]
 	if !ok {
-		return event.Earnings{}
+		return event.Earnings{
+			LifetimeBalance:  new(big.Int),
+			UnsettledBalance: new(big.Int),
+		}
 	}
 
 	for _, channel := range v {
@@ -204,12 +207,7 @@ func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChann
 
 	updated := false
 
-	v, ok := hcr.channels[chainID]
-	if !ok {
-		log.Debug().Msgf("unknown chain %v", chainID)
-		return
-	}
-
+	v := hcr.channels[chainID]
 	for i, channel := range v {
 		if channel.Identity == new.Identity && channel.HermesID == new.HermesID {
 			updated = true

@@ -243,7 +243,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		mockID,
 		hermesID,
 		client.ProviderChannel{Stake: big.NewInt(1000)},
-		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(100)}},
+		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(1000)}},
 	)
 	assert.True(t, s.needsSettling(0.1, channel), "should be true with zero balance left")
 
@@ -272,7 +272,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Stake: big.NewInt(1000)},
+		client.ProviderChannel{Stake: big.NewInt(10000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(8999)}},
 	)
 	assert.False(t, s.needsSettling(0.1, channel), "should be false with 10.01% missing")

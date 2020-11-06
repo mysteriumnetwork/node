@@ -130,6 +130,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		EventBus:                  mocks.NewEventBus(),
+		ChainID:                   1,
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -594,6 +595,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 			EventBus: mp,
 			Identity: identity.FromAddress(acc.Address.Hex()),
 			Peer:     peerID,
+			ChainID:  1,
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
