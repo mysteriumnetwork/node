@@ -38,11 +38,11 @@ import (
 )
 
 type balanceProvider interface {
-	ForceBalanceUpdate(id identity.Identity) *big.Int
+	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
-	GetEarnings(id identity.Identity) pingpong_event.Earnings
+	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
 }
 
 type providerChannel interface {
@@ -293,8 +293,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		stake = data.Stake
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
-	settlement := endpoint.earningsProvider.GetEarnings(id)
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(config.GetInt64(config.FlagChainID), id)
+	settlement := endpoint.earningsProvider.GetEarnings(config.GetInt64(config.FlagChainID), id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),

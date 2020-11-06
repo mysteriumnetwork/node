@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/location"
 
@@ -109,7 +110,7 @@ type PaymentIssuer interface {
 }
 
 type validator interface {
-	Validate(consumerID identity.Identity, proposal market.ServiceProposal) error
+	Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error
 }
 
 // TimeGetter function returns current time
@@ -178,6 +179,10 @@ func NewManager(
 	}
 }
 
+func (m *connectionManager) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
+
 func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	var sessionID session.ID
 
@@ -198,7 +203,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, hermesID commo
 		return ErrAlreadyExists
 	}
 
-	err = m.validator.Validate(consumerID, proposal)
+	err = m.validator.Validate(m.chainID(), consumerID, proposal)
 	if err != nil {
 		return err
 	}
