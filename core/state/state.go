@@ -72,8 +72,8 @@ type balanceProvider interface {
 }
 
 type earningsProvider interface {
-	List() []pingpong.HermesChannel
-	GetEarnings(id identity.Identity) pingpongEvent.Earnings
+	List(chainID int64) []pingpong.HermesChannel
+	GetEarnings(chainID int64, id identity.Identity) pingpongEvent.Earnings
 }
 
 // Keeper keeps track of state through eventual consistency.
@@ -106,6 +106,7 @@ type KeeperDeps struct {
 	IdentityChannelCalculator channelAddressCalculator
 	BalanceProvider           balanceProvider
 	EarningsProvider          earningsProvider
+	ChainID                   int64
 }
 
 // NewKeeper returns a new instance of the keeper.
@@ -125,7 +126,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 		deps: deps,
 	}
 	k.state.Identities = k.fetchIdentities()
-	k.state.ProviderChannels = k.deps.EarningsProvider.List()
+	k.state.ProviderChannels = k.deps.EarningsProvider.List(deps.ChainID)
 
 	// provider
 	k.consumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
@@ -157,7 +158,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
 		}
 
-		earnings := k.deps.EarningsProvider.GetEarnings(id)
+		earnings := k.deps.EarningsProvider.GetEarnings(k.deps.ChainID, id)
 		stateIdentity := event.Identity{
 			Address:            id.Address,
 			RegistrationStatus: status,
@@ -480,7 +481,7 @@ func (k *Keeper) consumeEarningsChangedEvent(e interface{}) {
 		return
 	}
 
-	k.state.ProviderChannels = k.deps.EarningsProvider.List()
+	k.state.ProviderChannels = k.deps.EarningsProvider.List(k.deps.ChainID)
 
 	var id *stateEvent.Identity
 	for i := range k.state.Identities {
