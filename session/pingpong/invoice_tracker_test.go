@@ -800,7 +800,7 @@ func (maps *mockHermesPromiseStorage) Store(_ HermesPromise) error {
 	return maps.errToReturn
 }
 
-func (maps *mockHermesPromiseStorage) Get(_ string) (HermesPromise, error) {
+func (maps *mockHermesPromiseStorage) Get(chainID int64, _ string) (HermesPromise, error) {
 	return maps.toReturn, maps.errToReturn
 }
 
