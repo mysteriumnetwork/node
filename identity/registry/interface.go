@@ -25,5 +25,5 @@ import (
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
 	Subscribe(eventbus.Subscriber) error
-	GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error)
+	GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error)
 }

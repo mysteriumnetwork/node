@@ -147,7 +147,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 	ids := k.deps.IdentityProvider.GetIdentities()
 	identities := make([]event.Identity, len(ids))
 	for idx, id := range ids {
-		status, err := k.deps.IdentityRegistry.GetRegistrationStatus(id)
+		status, err := k.deps.IdentityRegistry.GetRegistrationStatus(k.deps.ChainID, id)
 		if err != nil {
 			log.Warn().Err(err).Msgf("Could not get registration status for %s", id.Address)
 			status = registry.Unregistered

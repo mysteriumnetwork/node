@@ -74,6 +74,7 @@ type MobileNode struct {
 	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
 	registryAddress              string
 	channelImplementationAddress string
+	chainID                      int64
 	startTime                    time.Time
 }
 
@@ -95,6 +96,7 @@ type MobileNodeOptions struct {
 	HermesEndpointAddress           string
 	HermesID                        string
 	MystSCAddress                   string
+	ChainID                         int64
 }
 
 // DefaultNodeOptions returns default options.
@@ -114,6 +116,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		TransactorChannelImplementation: metadata.BetanetDefinition.ChannelImplAddress,
 		HermesID:                        metadata.BetanetDefinition.HermesID,
 		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
+		ChainID:                         metadata.BetanetDefinition.DefaultChainID,
 	}
 }
 
@@ -134,6 +137,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
 		BrokerAddress:         options.BrokerAddress,
 		EtherClientRPC:        options.EtherClientRPC,
+		ChainID:               options.ChainID,
 	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,
@@ -232,6 +236,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.QualityClient,
 		),
 		startTime: time.Now(),
+		chainID:   nodeOptions.OptionsNetwork.ChainID,
 	}
 	return mobileNode, nil
 }
@@ -423,7 +428,6 @@ func (mb *MobileNode) Disconnect() error {
 type GetIdentityRequest struct {
 	Address    string
 	Passphrase string
-	ChainID    int64
 }
 
 // GetIdentityResponse represents identity response.
@@ -439,7 +443,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 	if req == nil {
 		req = &GetIdentityRequest{}
 	}
-	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, req.ChainID)
+	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, mb.chainID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}
@@ -449,7 +453,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 		return nil, errors.Wrap(err, "could not generate channel address")
 	}
 
-	status, err := mb.identityRegistry.GetRegistrationStatus(id)
+	status, err := mb.identityRegistry.GetRegistrationStatus(mb.chainID, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get identity registration status")
 	}
@@ -495,7 +499,7 @@ func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	if req.Token != "" {
 		token = &req.Token
 	}
-	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", token)
+	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", mb.chainID, token)
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
 	}

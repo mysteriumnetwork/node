@@ -85,7 +85,7 @@ func (h *handler) useExisting(address, passphrase string, chainID int64) (id ide
 		return id, err
 	}
 
-	if err = h.manager.Unlock(id.Address, passphrase, chainID); err != nil {
+	if err = h.manager.Unlock(chainID, id.Address, passphrase); err != nil {
 		return id, errors.Wrap(err, "failed to unlock identity")
 	}
 
@@ -112,7 +112,7 @@ func (h *handler) useLast(passphrase string, chainID int64) (identity identity.I
 	}
 	log.Debug().Msg("Found identity in cache: " + identity.Address)
 
-	if err = h.manager.Unlock(identity.Address, passphrase, chainID); err != nil {
+	if err = h.manager.Unlock(chainID, identity.Address, passphrase); err != nil {
 		return identity, errors.Wrap(err, "failed to unlock identity")
 	}
 	log.Debug().Msg("Unlocked identity: " + identity.Address)
@@ -128,7 +128,7 @@ func (h *handler) useNew(passphrase string, chainID int64) (id identity.Identity
 		return id, errors.Wrap(err, "failed to create identity")
 	}
 
-	if err = h.manager.Unlock(id.Address, passphrase, chainID); err != nil {
+	if err = h.manager.Unlock(chainID, id.Address, passphrase); err != nil {
 		return id, errors.Wrap(err, "failed to unlock identity")
 	}
 

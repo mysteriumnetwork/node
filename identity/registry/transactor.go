@@ -95,6 +95,7 @@ type IdentityRegistrationRequest struct {
 	// Signature from fields above
 	Signature string `json:"signature"`
 	Identity  string `json:"identity"`
+	ChainID   int64  `json:"chainID"`
 }
 
 // PromiseSettlementRequest represents the settlement request body
@@ -166,8 +167,8 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiary string) error {
-	regReq, err := t.fillIdentityRegistrationRequest(id, stake, fee, beneficiary)
+func (t *Transactor) registerIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64) error {
+	regReq, err := t.fillIdentityRegistrationRequest(id, stake, fee, beneficiary, chainID)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
 	}
@@ -199,8 +200,8 @@ type identityRegistrationRequestWithToken struct {
 	Token string `json:"token"`
 }
 
-func (t *Transactor) registerIdentityWithReferralToken(id string, stake *big.Int, beneficiary string, token string) error {
-	regReq, err := t.fillIdentityRegistrationRequest(id, stake, new(big.Int), beneficiary)
+func (t *Transactor) registerIdentityWithReferralToken(id string, stake *big.Int, beneficiary string, token string, chainID int64) error {
+	regReq, err := t.fillIdentityRegistrationRequest(id, stake, new(big.Int), beneficiary, chainID)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
 	}
@@ -250,21 +251,22 @@ func (t *Transactor) GetTokenReward(token string) (TokenRewardResponse, error) {
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
-func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error {
+func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
 	if referralToken == nil {
-		return t.registerIdentity(id, stake, fee, beneficiary)
+		return t.registerIdentity(id, stake, fee, beneficiary, chainID)
 	}
 
-	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken)
+	return t.registerIdentityWithReferralToken(id, stake, beneficiary, *referralToken, chainID)
 }
 
-func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string) (IdentityRegistrationRequest, error) {
+func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string, chainID int64) (IdentityRegistrationRequest, error) {
 	regReq := IdentityRegistrationRequest{
 		RegistryAddress: t.registryAddress,
 		HermesID:        t.hermesID,
 		Stake:           stake,
 		Fee:             fee,
 		Beneficiary:     beneficiary,
+		ChainID:         chainID,
 	}
 
 	if regReq.Stake == nil {

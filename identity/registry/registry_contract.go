@@ -36,7 +36,7 @@ import (
 
 type registryStorage interface {
 	Store(status StoredRegistrationStatus) error
-	Get(identity identity.Identity) (StoredRegistrationStatus, error)
+	Get(chainID int64, identity identity.Identity) (StoredRegistrationStatus, error)
 	GetAll() ([]StoredRegistrationStatus, error)
 }
 
@@ -78,8 +78,8 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 }
 
 // GetRegistrationStatus returns the registration status of the provided identity
-func (registry *contractRegistry) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
-	status, err := registry.storage.Get(id)
+func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
+	status, err := registry.storage.Get(chainID, id)
 	if err == nil {
 		return status.RegistrationStatus, nil
 	}
@@ -95,6 +95,7 @@ func (registry *contractRegistry) GetRegistrationStatus(id identity.Identity) (R
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           id,
 		RegistrationStatus: statusBC,
+		ChainID:            chainID,
 	})
 	return statusBC, errors.Wrap(err, "could not store registration status")
 }
@@ -115,7 +116,7 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 	registry.lock.Lock()
 	defer registry.lock.Unlock()
 
-	status, err := registry.storage.Get(identity.FromAddress(ev.Identity))
+	status, err := registry.storage.Get(ev.ChainID, identity.FromAddress(ev.Identity))
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get status from local db")
 		return
@@ -140,21 +141,23 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 	ID := identity.FromAddress(ev.Identity)
 
 	go registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-		ID:     ID,
-		Status: s,
+		ID:      ID,
+		Status:  s,
+		ChainID: ev.ChainID,
 	})
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           ID,
 		RegistrationStatus: s,
+		ChainID:            ev.ChainID,
 	})
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("Could not store registration status")
 	}
 
-	registry.subscribeToRegistrationEvent(ID)
+	registry.subscribeToRegistrationEvent(ev.ChainID, ID)
 }
 
-func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity.Identity) {
+func (registry *contractRegistry) subscribeToRegistrationEvent(chainID int64, identity identity.Identity) {
 	userIdentities := []common.Address{
 		common.HexToAddress(identity.Address),
 	}
@@ -164,7 +167,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 	}
 
 	go func() {
-		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex())
+		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), registry.hermesAddress.Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 
 		filterer, err := bindings.NewRegistryFilterer(registry.registryAddress, registry.ethC.Client())
@@ -176,14 +179,16 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities)
 		if err != nil {
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:     identity,
-				Status: RegistrationError,
+				ID:      identity,
+				Status:  RegistrationError,
+				ChainID: chainID,
 			})
 			log.Error().Err(err).Msg("Could not register to identity events")
 
 			updateErr := registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: RegistrationError,
+				ChainID:            chainID,
 			})
 			if updateErr != nil {
 				log.Error().Err(updateErr).Msg("Could not store registration status")
@@ -197,7 +202,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			return
 		case <-sink:
 			log.Info().Msgf("Received registration event for %v", identity)
-			_, err := registry.storage.Get(identity)
+			_, err := registry.storage.Get(chainID, identity)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not store registration status")
 			}
@@ -206,13 +211,15 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 
 			log.Debug().Msgf("Sending registration success event for %v", identity)
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:     identity,
-				Status: status,
+				ID:      identity,
+				Status:  status,
+				ChainID: chainID,
 			})
 
 			err = registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: status,
+				ChainID:            chainID,
 			})
 			if err != nil {
 				log.Error().Err(err).Msg("Could not store registration status")
@@ -224,12 +231,14 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 
 			log.Error().Err(err).Msg("Subscription error")
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:     identity,
-				Status: RegistrationError,
+				ID:      identity,
+				Status:  RegistrationError,
+				ChainID: chainID,
 			})
 			updateErr := registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: RegistrationError,
+				ChainID:            chainID,
 			})
 			if updateErr != nil {
 				log.Error().Err(updateErr).Msg("could not store registration status")
@@ -266,7 +275,8 @@ func (registry *contractRegistry) loadInitialState() error {
 	for i := range entries {
 		switch entries[i].RegistrationStatus {
 		case RegistrationError, InProgress:
-			err := registry.handleUnregisteredIdentityInitialLoad(entries[i].Identity)
+			entry := entries[i]
+			err := registry.handleUnregisteredIdentityInitialLoad(entry.ChainID, entry.Identity)
 			if err != nil {
 				return errors.Wrapf(err, "could not check %q registration status", entries[i].Identity)
 			}
@@ -292,7 +302,7 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentit
 	return addressBytes, nil
 }
 
-func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(id identity.Identity) error {
+func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID int64, id identity.Identity) error {
 	registered, err := registry.isRegisteredInBC(id)
 	if err != nil {
 		return errors.Wrap(err, "could not check status on blockchain")
@@ -308,7 +318,7 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(id ident
 			return errors.Wrap(err, "could not store registration status on local db")
 		}
 	default:
-		registry.subscribeToRegistrationEvent(id)
+		registry.subscribeToRegistrationEvent(chainID, id)
 	}
 	return nil
 }

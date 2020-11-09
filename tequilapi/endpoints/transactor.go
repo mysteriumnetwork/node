@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -40,7 +41,7 @@ type Transactor interface {
 	FetchRegistrationFees() (registry.FeesResponse, error)
 	FetchSettleFees() (registry.FeesResponse, error)
 	FetchStakeDecreaseFee() (registry.FeesResponse, error)
-	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, amount, transactorFee *big.Int) error
 	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
 	GetReferralToken(id common.Address) (string, error)
@@ -244,7 +245,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		req.Stake = reward.Reward
 	}
 
-	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, req.ReferralToken)
+	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, config.GetInt64(config.FlagChainID), req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
