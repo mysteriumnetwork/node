@@ -68,7 +68,7 @@ type channelAddressCalculator interface {
 }
 
 type balanceProvider interface {
-	GetBalance(id identity.Identity) *big.Int
+	GetBalance(chainID int64, id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
@@ -163,7 +163,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			Address:            id.Address,
 			RegistrationStatus: status,
 			ChannelAddress:     channelAddress,
-			Balance:            k.deps.BalanceProvider.GetBalance(id),
+			Balance:            k.deps.BalanceProvider.GetBalance(k.deps.ChainID, id),
 			Earnings:           earnings.UnsettledBalance,
 			EarningsTotal:      earnings.LifetimeBalance,
 		}

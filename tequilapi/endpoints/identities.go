@@ -235,7 +235,7 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 		return
 	}
 
-	err = endpoint.idm.Unlock(id.Address, *req.Passphrase, *req.ChainID)
+	err = endpoint.idm.Unlock(*req.ChainID, id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return

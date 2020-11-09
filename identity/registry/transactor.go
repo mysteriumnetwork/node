@@ -40,7 +40,7 @@ import (
 const AppTopicTransactorRegistration = "transactor_identity_registration"
 
 type channelProvider interface {
-	GetProviderChannel(hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
 }
 
 // Transactor allows for convenient calls to the transactor service
@@ -107,6 +107,7 @@ type PromiseSettlementRequest struct {
 	Preimage      string   `json:"preimage"`
 	Signature     string   `json:"signature"`
 	ProviderID    string   `json:"providerID"`
+	ChainID       int64    `json:"chain_id"`
 }
 
 // FetchRegistrationFees fetches current transactor registration fees
@@ -158,6 +159,7 @@ func (t *Transactor) SettleAndRebalance(hermesID, providerID string, promise pc.
 		TransactorFee: promise.Fee,
 		Preimage:      hex.EncodeToString(promise.R),
 		Signature:     hex.EncodeToString(promise.Signature),
+		ChainID:       promise.ChainID,
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_and_rebalance", payload)
@@ -406,6 +408,7 @@ type SettleWithBeneficiaryRequest struct {
 	Nonce       *big.Int `json:"nonce"`
 	Signature   string   `json:"signature"`
 	ProviderID  string   `json:"providerID"`
+	ChainID     int64    `json:"chainID"`
 }
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
@@ -428,6 +431,7 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 		Nonce:       signedReq.Nonce,
 		Signature:   signedReq.Signature,
 		ProviderID:  id,
+		ChainID:     promise.ChainID,
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
@@ -439,7 +443,7 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 }
 
 func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
-	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
+	ch, err := t.bc.GetProviderChannel(chainID, common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
 	}
@@ -526,6 +530,7 @@ func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Pro
 		Preimage:      hex.EncodeToString(promise.R),
 		Signature:     hex.EncodeToString(promise.Signature),
 		ProviderID:    providerID,
+		ChainID:       promise.ChainID,
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle/into_stake", payload)
@@ -543,11 +548,12 @@ type DecreaseProviderStakeRequest struct {
 	Amount        uint64 `json:"amount,omitempty"`
 	TransactorFee uint64 `json:"transactor_fee,omitempty"`
 	Signature     string `json:"signature,omitempty"`
+	ChainID       int64  `json:"chain_id"`
 }
 
 // DecreaseStake requests the transactor to decrease stake.
-func (t *Transactor) DecreaseStake(id string, amount, transactorFee *big.Int) error {
-	payload, err := t.fillDecreaseStakeRequest(id, amount, transactorFee)
+func (t *Transactor) DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error {
+	payload, err := t.fillDecreaseStakeRequest(id, chainID, amount, transactorFee)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill decrease stake request")
 	}
@@ -561,8 +567,8 @@ func (t *Transactor) DecreaseStake(id string, amount, transactorFee *big.Int) er
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
-	ch, err := t.bc.GetProviderChannel(common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
+func (t *Transactor) fillDecreaseStakeRequest(id string, chainID int64, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
+	ch, err := t.bc.GetProviderChannel(chainID, common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
 	}
@@ -582,6 +588,7 @@ func (t *Transactor) fillDecreaseStakeRequest(id string, amount, transactorFee *
 		HermesID:      common.HexToAddress(t.hermesID),
 		Amount:        amount,
 		TransactorFee: transactorFee,
+		ChainID:       chainID,
 	}
 	signer := t.signerFactory(identity.FromAddress(id))
 	signature, err := signer.Sign(req.GetMessage())
