@@ -349,11 +349,10 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 
 		var status *registry.TransactorStatusResponse
 		for _, v := range resp {
-			if v.ChainID != chainID {
-				continue
+			if v.ChainID == chainID {
+				status = &v
+				break
 			}
-			status = &v
-			break
 		}
 
 		if status == nil {
