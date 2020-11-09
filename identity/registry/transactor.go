@@ -502,19 +502,18 @@ type TransactorStatusResponse struct {
 	CreatedAt    time.Time                         `json:"created_at"`
 	UpdatedAt    time.Time                         `json:"updated_at"`
 	BountyAmount *big.Int                          `json:"bounty_amount"`
+	ChainID      int64                             `json:"chain_id"`
 }
 
 // FetchRegistrationStatus fetches current transactor registration status for given identity.
-func (t *Transactor) FetchRegistrationStatus(id string) (TransactorStatusResponse, error) {
-	f := TransactorStatusResponse{}
-
+func (t *Transactor) FetchRegistrationStatus(id string) ([]TransactorStatusResponse, error) {
 	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("identity/%v/status", id), nil)
 	if err != nil {
-		return f, fmt.Errorf("failed to fetch transactor registration status: %w", err)
+		return nil, fmt.Errorf("failed to fetch transactor registration status: %w", err)
 	}
 
-	err = t.httpClient.DoRequestAndParseResponse(req, &f)
-	return f, err
+	var resp []TransactorStatusResponse
+	return resp, t.httpClient.DoRequestAndParseResponse(req, &resp)
 }
 
 // SettleIntoStake requests the transactor to settle and transfer the balance to stake.

@@ -64,7 +64,7 @@ type ConsumerBalanceTracker struct {
 }
 
 type transactorRegistrationStatusProvider interface {
-	FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error)
+	FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error)
 }
 
 // NewConsumerBalanceTracker creates a new instance
@@ -346,7 +346,21 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 		if err != nil {
 			return err
 		}
-		data = resp
+
+		var status *registry.TransactorStatusResponse
+		for _, v := range resp {
+			if v.ChainID == chainID {
+				status = &v
+				break
+			}
+		}
+
+		if status == nil {
+			err := fmt.Errorf("got response but failed to find status for id '%s' on chain '%d'", id.Address, chainID)
+			return backoff.Permanent(err)
+		}
+
+		data = *status
 		return nil
 	}
 
