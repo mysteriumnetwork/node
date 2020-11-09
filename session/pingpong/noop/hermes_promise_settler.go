@@ -27,21 +27,21 @@ type NoopHermesPromiseSettler struct {
 }
 
 // ForceSettle does nothing.
-func (n *NoopHermesPromiseSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
+func (n *NoopHermesPromiseSettler) ForceSettle(chainID int64, _ identity.Identity, _ common.Address) error {
 	return nil
 }
 
 // SettleIntoStake does nothing.
-func (n *NoopHermesPromiseSettler) SettleIntoStake(providerID identity.Identity, accountantID common.Address) error {
+func (n *NoopHermesPromiseSettler) SettleIntoStake(chainID int64, providerID identity.Identity, accountantID common.Address) error {
 	return nil
 }
 
 // SettleWithBeneficiary does nothing.
-func (n *NoopHermesPromiseSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
+func (n *NoopHermesPromiseSettler) SettleWithBeneficiary(chainID int64, _ identity.Identity, _, _ common.Address) error {
 	return nil
 }
 
 // GetHermesFee does absolutely nothing.
-func (n *NoopHermesPromiseSettler) GetHermesFee(_ common.Address) (uint16, error) {
+func (n *NoopHermesPromiseSettler) GetHermesFee(chainID int64, _ common.Address) (uint16, error) {
 	return 0, nil
 }

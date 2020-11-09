@@ -35,7 +35,7 @@ import (
 )
 
 type promiseProvider interface {
-	Get(channelID string) (HermesPromise, error)
+	Get(chainID int64, channelID string) (HermesPromise, error)
 	List(filter HermesPromiseFilter) ([]HermesPromise, error)
 }
 
@@ -74,7 +74,7 @@ func (hcr *HermesChannelRepository) Fetch(chainID int64, id identity.Identity, h
 		return HermesChannel{}, fmt.Errorf("could not generate provider channel address: %w", err)
 	}
 
-	promise, err := hcr.promiseProvider.Get(channelID)
+	promise, err := hcr.promiseProvider.Get(chainID, channelID)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return HermesChannel{}, fmt.Errorf("could not get hermes promise for provider %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}
