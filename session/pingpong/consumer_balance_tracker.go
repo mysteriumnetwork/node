@@ -141,7 +141,7 @@ func (cbt *ConsumerBalanceTracker) handleUnlockEvent(data identity.AppEventIdent
 		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 	}
 
-	status, err := cbt.registry.GetRegistrationStatus(data.ID)
+	status, err := cbt.registry.GetRegistrationStatus(data.ChainID, data.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover get registration status")
 	}

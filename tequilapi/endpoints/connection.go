@@ -46,7 +46,7 @@ type ProposalGetter interface {
 }
 
 type identityRegistry interface {
-	GetRegistrationStatus(identity.Identity) (registry.RegistrationStatus, error)
+	GetRegistrationStatus(int64, identity.Identity) (registry.RegistrationStatus, error)
 }
 
 // ConnectionEndpoint struct represents /connection resource and it's subresources
@@ -138,7 +138,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 
 	// TODO Validate for account existence
 	consumerID := identity.FromAddress(cr.ConsumerID)
-	status, err := ce.identityRegistry.GetRegistrationStatus(consumerID)
+	status, err := ce.identityRegistry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), consumerID)
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("could not check registration status")
 		utils.SendError(resp, err, http.StatusInternalServerError)

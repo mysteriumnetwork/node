@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -32,12 +33,12 @@ import (
 )
 
 type registrationStatusChecker interface {
-	GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error)
+	GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error)
 }
 
 type txer interface {
 	FetchRegistrationFees() (FeesResponse, error)
-	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
 }
 
@@ -147,8 +148,12 @@ func (pr *ProviderRegistrar) delayedRequeue(qe queuedEvent) {
 	}
 }
 
+func (pr *ProviderRegistrar) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
+
 func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
-	registered, err := pr.registrationStatusChecker.GetRegistrationStatus(identity.FromAddress(qe.event.ProviderID))
+	registered, err := pr.registrationStatusChecker.GetRegistrationStatus(pr.chainID(), identity.FromAddress(qe.event.ProviderID))
 	if err != nil {
 		return errors.Wrap(err, "could not check registration status on BC")
 	}
@@ -176,7 +181,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 		return nil
 	}
 
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "", nil)
+	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "", pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")

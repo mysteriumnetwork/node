@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"testing"
@@ -255,8 +256,8 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 			BountyAmount: big.NewInt(100),
 		},
 	}, &mockRegistrationStatusProvider{
-		map[identity.Identity]mockRegistrationStatus{
-			id1: {
+		map[string]mockRegistrationStatus{
+			fmt.Sprintf("%d%s", 1, id1.Address): {
 				status: registry.InProgress,
 			},
 		},
@@ -293,8 +294,8 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 	}
 	calc := mockChannelAddressCalculator{}
 	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
-		map[identity.Identity]mockRegistrationStatus{
-			id1: {
+		map[string]mockRegistrationStatus{
+			fmt.Sprintf("%d%s", 1, id1.Address): {
 				status: registry.Unregistered,
 			},
 		},
@@ -335,8 +336,8 @@ func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
 	}
 	calc := mockChannelAddressCalculator{}
 	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
-		map[identity.Identity]mockRegistrationStatus{
-			id1: {
+		map[string]mockRegistrationStatus{
+			fmt.Sprintf("%d%s", 1, id1.Address): {
 				status: registry.Unregistered,
 			},
 		},

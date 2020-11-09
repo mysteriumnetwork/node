@@ -29,7 +29,7 @@ type FakeRegistry struct {
 }
 
 // GetRegistrationStatus returns fake identity registration status within payments contract
-func (registry *FakeRegistry) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
+func (registry *FakeRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
 	return registry.RegistrationStatus, registry.RegistrationCheckError
 }
 

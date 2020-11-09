@@ -270,7 +270,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -334,7 +334,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
