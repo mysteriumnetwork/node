@@ -25,7 +25,7 @@ import (
 )
 
 type consumerBalanceGetter interface {
-	GetBalance(id identity.Identity) *big.Int
+	GetBalance(chainID int64, id identity.Identity) *big.Int
 	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
 
@@ -54,7 +54,7 @@ func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity,
 	}
 
 	proposalPrice := proposal.PaymentMethod.GetPrice()
-	balance := v.consumerBalanceGetter.GetBalance(consumerID)
+	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
 	if balance.Cmp(proposalPrice.Amount) >= 0 {
 		return true
 	}

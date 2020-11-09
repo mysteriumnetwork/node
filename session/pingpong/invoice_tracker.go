@@ -72,7 +72,7 @@ type PeerInvoiceSender interface {
 }
 
 type bcHelper interface {
-	GetHermesFee(hermesAddress common.Address) (uint16, error)
+	GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error)
 }
 
 type providerInvoiceStorage interface {
@@ -157,6 +157,7 @@ type InvoiceTrackerDeps struct {
 	SessionID                  string
 	PromiseHandler             promiseHandler
 	MaxNotPaidInvoice          *big.Int
+	ChainID                    int64
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -279,7 +280,7 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	fee, err := it.deps.BlockchainHelper.GetHermesFee(it.deps.ConsumersHermesID)
+	fee, err := it.deps.BlockchainHelper.GetHermesFee(it.deps.ChainID, it.deps.ConsumersHermesID)
 	if err != nil {
 		return errors.Wrap(err, "could not get hermess fee")
 	}
