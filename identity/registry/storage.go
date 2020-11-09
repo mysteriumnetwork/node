@@ -132,5 +132,5 @@ func (rss *RegistrationStatusStorage) GetAll() ([]StoredRegistrationStatus, erro
 }
 
 func (rss *RegistrationStatusStorage) makeKey(identity identity.Identity, chainID int64) string {
-	return fmt.Sprintf("%s%d", identity.Address, chainID)
+	return fmt.Sprintf("%s|%d", identity.Address, chainID)
 }

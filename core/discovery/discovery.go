@@ -56,7 +56,6 @@ type Discovery struct {
 	signer           identity.Signer
 	proposal         market.ServiceProposal
 	eventBus         eventbus.EventBus
-	chainID          int64
 
 	statusChan                  chan Status
 	status                      Status
@@ -97,7 +96,6 @@ func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.Service
 	d.ownIdentity = ownIdentity
 	d.signer = d.signerCreate(ownIdentity)
 	d.proposal = proposal
-	d.chainID = config.GetInt64(config.FlagChainID)
 
 	d.proposalAnnouncementStopped.Add(1)
 
@@ -223,7 +221,8 @@ func (d *Discovery) unregisterProposal() {
 
 func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
-	status, err := d.identityRegistry.GetRegistrationStatus(d.chainID, d.ownIdentity)
+	chainID := config.GetInt64(config.FlagChainID)
+	status, err := d.identityRegistry.GetRegistrationStatus(chainID, d.ownIdentity)
 	if err != nil {
 		log.Error().Err(err).Msg("Checking identity registration failed")
 		d.changeStatus(IdentityRegisterFailed)
