@@ -272,7 +272,7 @@ type mockFeeProvider struct {
 	errToReturn error
 }
 
-func (mfp *mockFeeProvider) FetchSettleFees() (registry.FeesResponse, error) {
+func (mfp *mockFeeProvider) FetchSettleFees(chainID int64) (registry.FeesResponse, error) {
 	return mfp.toReturn, mfp.errToReturn
 }
 

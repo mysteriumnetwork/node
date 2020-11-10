@@ -37,7 +37,6 @@ type registrationStatusChecker interface {
 }
 
 type txer interface {
-	FetchRegistrationFees() (FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
 }
