@@ -87,6 +87,8 @@ func (hcr *HermesChannelRepository) Fetch(chainID int64, id identity.Identity, h
 	return channel, nil
 }
 
+// ErrUnknownChain is returned when an operation cannot be completed because
+// the given chain is unknown or isn't configured.
 var ErrUnknownChain = errors.New("unknown chain")
 
 // Get retrieves identity's channel with given hermes.
