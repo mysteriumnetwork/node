@@ -124,7 +124,9 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 	if req.Address != nil {
 		idAddress = *req.Address
 	}
-	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase, *req.ChainID)
+
+	chainID := config.GetInt64(config.FlagChainID)
+	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase, chainID)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -235,7 +237,8 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 		return
 	}
 
-	err = endpoint.idm.Unlock(*req.ChainID, id.Address, *req.Passphrase)
+	chainID := config.GetInt64(config.FlagChainID)
+	err = endpoint.idm.Unlock(chainID, id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
