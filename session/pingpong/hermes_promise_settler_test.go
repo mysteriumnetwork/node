@@ -372,8 +372,8 @@ func (mt *mockTransactor) SettleIntoStake(accountantID, providerID string, promi
 	return nil
 }
 
-func (mt *mockTransactor) FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error) {
-	return mt.statusToReturn, mt.statusError
+func (mt *mockTransactor) FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error) {
+	return []registry.TransactorStatusResponse{mt.statusToReturn}, mt.statusError
 }
 
 type settlementHistoryStorageMock struct{}

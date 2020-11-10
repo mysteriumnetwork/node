@@ -816,7 +816,7 @@ type mockBlockchainHelper struct {
 	isRegisteredError error
 }
 
-func (mbh *mockBlockchainHelper) GetHermesFee(hermesAddress common.Address) (uint16, error) {
+func (mbh *mockBlockchainHelper) GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error) {
 	return mbh.feeToReturn, mbh.errorToReturn
 }
 

@@ -742,7 +742,7 @@ type mockValidator struct {
 	errorToReturn error
 }
 
-func (mv *mockValidator) Validate(consumerID identity.Identity, proposal market.ServiceProposal) error {
+func (mv *mockValidator) Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error {
 	return mv.errorToReturn
 }
 

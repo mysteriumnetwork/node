@@ -337,7 +337,7 @@ func newManager(service *Instance, sessions *SessionPool, publisher publisher, p
 	return NewSessionManager(
 		service,
 		sessions,
-		func(_, _ identity.Identity, _ common.Address, _ string, _ chan crypto.ExchangeMessage) (PaymentEngine, error) {
+		func(_, _ identity.Identity, _ int64, _ common.Address, _ string, _ chan crypto.ExchangeMessage) (PaymentEngine, error) {
 			return paymentEngine, nil
 		},
 		&MockNatEventTracker{},
