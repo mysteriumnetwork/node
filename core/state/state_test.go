@@ -671,7 +671,7 @@ type mockBalanceProvider struct {
 }
 
 // GetBalance returns a pre-defined balance.
-func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) *big.Int {
+func (mbp *mockBalanceProvider) GetBalance(_ int64, _ identity.Identity) *big.Int {
 	return mbp.Balance
 }
 

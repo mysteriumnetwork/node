@@ -61,7 +61,7 @@ func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 	return true
 }
 
-func (fakeIdm *idmFake) Unlock(address string, passphrase string, chainID int64) error {
+func (fakeIdm *idmFake) Unlock(chainID int64, address string, passphrase string) error {
 	fakeIdm.LastUnlockAddress = address
 	fakeIdm.LastUnlockPassphrase = passphrase
 	fakeIdm.LastUnlockChainID = chainID

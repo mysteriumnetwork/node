@@ -128,6 +128,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 			statusToReturn: registry.TransactorStatusResponse{
 				Status:       registry.TransactorRegistrationEntryStatusCreated,
 				BountyAmount: ba,
+				ChainID:      1,
 			},
 		}, &mockRegistrationStatusProvider{})
 
@@ -165,6 +166,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 			statusToReturn: registry.TransactorStatusResponse{
 				Status:       registry.TransactorRegistrationEntryStatusCreated,
 				BountyAmount: big.NewInt(0),
+				ChainID:      1,
 			},
 		}, &mockRegistrationStatusProvider{})
 
@@ -258,6 +260,7 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
 		statusToReturn: registry.TransactorStatusResponse{
 			Status:       registry.TransactorRegistrationEntryStatusCreated,
+			ChainID:      1,
 			BountyAmount: big.NewInt(100),
 		},
 	}, &mockRegistrationStatusProvider{

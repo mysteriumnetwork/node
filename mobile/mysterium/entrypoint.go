@@ -518,7 +518,7 @@ type GetBalanceResponse struct {
 
 // GetBalance returns current balance.
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
-	balance := mb.consumerBalanceTracker.GetBalance(identity.FromAddress(req.IdentityAddress))
+	balance := mb.consumerBalanceTracker.GetBalance(mb.chainID, identity.FromAddress(req.IdentityAddress))
 	b := crypto.BigMystToFloat(balance)
 	return &GetBalanceResponse{Balance: b}, nil
 }

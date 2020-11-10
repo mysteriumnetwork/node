@@ -44,7 +44,7 @@ var (
 type selectorFake struct {
 }
 
-func (hf *selectorFake) UseOrCreate(address, _ string) (identity.Identity, error) {
+func (hf *selectorFake) UseOrCreate(address, _ string, _ int64) (identity.Identity, error) {
 	if len(address) > 0 {
 		return identity.Identity{Address: address}, nil
 	}
@@ -58,7 +58,7 @@ func TestCurrentIdentitySuccess(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chainID": 1}`),
+		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chain_id": 1}`),
 	)
 	params := httprouter.Params{{Key: "id", Value: "current"}}
 	assert.Nil(t, err)
@@ -85,7 +85,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chainID": 1}`),
+		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chain_id": 1}`),
 	)
 	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
@@ -123,7 +123,7 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		identityUrl,
-		bytes.NewBufferString(`{}`),
+		bytes.NewBufferString(`{"chain_id": 1}`),
 	)
 	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.NoError(t, err)
@@ -144,13 +144,40 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	)
 }
 
+func TestUnlockIdentityWithNoChainID(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodPost,
+		identityUrl,
+		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+	)
+	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
+	assert.NoError(t, err)
+
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Unlock(resp, req, params)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message": "validation_error",
+			"errors" : {
+				"chain_id": [ {"code" : "required" , "message" : "Field is required" } ]
+			}
+		}`,
+		resp.Body.String(),
+	)
+}
+
 func TestUnlockFailure(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+		bytes.NewBufferString(`{"passphrase": "mypassphrase", "chain_id": 1}`),
 	)
 	params := httprouter.Params{{Key: "id", Value: "0x000000000000000000000000000000000000000a"}}
 	assert.Nil(t, err)
@@ -164,6 +191,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+	assert.Equal(t, int64(1), mockIdm.LastUnlockChainID)
 }
 
 func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
