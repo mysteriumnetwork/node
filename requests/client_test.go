@@ -72,7 +72,8 @@ func TestHTTPClientRecreateUnderlyingHTTPClientInstance(t *testing.T) {
 	}))
 	defer server.Close()
 
-	httpClient := NewHTTPClient("0.0.0.0", 50*time.Millisecond)
+	httpTransport := NewTransport(NewDialer("0.0.0.0").DialContext)
+	httpClient := NewHTTPClientWithTransport(httpTransport, 50*time.Millisecond)
 
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -87,7 +88,7 @@ func TestHTTPClientRecreateUnderlyingHTTPClientInstance(t *testing.T) {
 		}()
 
 		go func() {
-			httpClient.Reconnect()
+			httpTransport.CloseIdleConnections()
 		}()
 	}
 

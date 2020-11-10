@@ -31,7 +31,7 @@ type NetworkDefinition struct {
 	MMNAPIAddress             string
 	DAIAddress                string
 	WETHAddress               string
-	DNSMap                    map[string]string
+	DNSMap                    map[string][]string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -48,8 +48,11 @@ var TestnetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://my.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
-	DNSMap: map[string]string{
-		"testnet-api.mysterium.network:443": "78.47.176.149",
+	DNSMap: map[string][]string{
+		"testnet-api.mysterium.network":        {"78.47.176.149"},
+		"testnet-trust.mysterium.network":      {"82.196.15.9"},
+		"testnet-transactor.mysterium.network": {"116.203.17.150"},
+		"my.mysterium.network":                 {"168.119.183.173"},
 	},
 }
 
@@ -67,8 +70,11 @@ var BetanetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://betanet.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
-	DNSMap: map[string]string{
-		"betanet-api.mysterium.network:443": "78.47.55.197",
+	DNSMap: map[string][]string{
+		"betanet-api.mysterium.network":        {"78.47.55.197"},
+		"betanet-trust.mysterium.network":      {"95.216.204.232"},
+		"betanet-transactor.mysterium.network": {"135.181.82.67"},
+		"betanet.mysterium.network":            {"138.201.244.63"},
 	},
 }
 
@@ -81,8 +87,8 @@ var LocalnetDefinition = NetworkDefinition{
 	EtherClientRPC:            "http://localhost:8545",
 	MMNAddress:                "http://localhost/",
 	MMNAPIAddress:             "http://localhost/api/v1",
-	DNSMap: map[string]string{
-		"localhost:8001": "127.0.0.1",
+	DNSMap: map[string][]string{
+		"localhost": {"127.0.0.1"},
 	},
 }
 
