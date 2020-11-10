@@ -21,12 +21,16 @@ import (
 	"net/url"
 
 	"github.com/mysteriumnetwork/node/firewall"
+	nats_lib "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
+	// Dialer specifies the custom dialer for creating unencrypted TCP connections.
+	// If Dialer is nil, then the connector dials using package net.
+	Dialer nats_lib.CustomDialer
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
@@ -48,11 +52,7 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 		return nil, errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, servers)
 	}
 
-	conn, err := newConnection(servers...)
-	if err != nil {
-		return nil, err
-	}
-
+	conn := newConnectionWith(b.Dialer, servers...)
 	if err := conn.Open(); err != nil {
 		return nil, errors.Wrapf(err, `failed to connect to NATS servers "%v"`, servers)
 	}

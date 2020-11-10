@@ -41,6 +41,11 @@ func NewDialer(srcIP string) *Dialer {
 	}
 }
 
+// Dial connects to the address on the named network.
+func (d *Dialer) Dial(network, address string) (net.Conn, error) {
+	return d.DialContext(context.Background(), network, address)
+}
+
 // DialContext connects to the address on the named network using the provided context.
 func (d *Dialer) DialContext(ctx context.Context, network, addr string) (conn net.Conn, err error) {
 	if d.ResolveContext != nil {

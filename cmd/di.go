@@ -187,7 +187,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	netutil.LogNetworkStats()
 
 	p2p.RegisterContactUnserializer()
-	di.BrokerConnector = nats.NewBrokerConnector()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
@@ -637,9 +636,10 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.NetworkDefinition = network
 
-	httpDialer := requests.NewDialerSwarm(options.BindAddress)
-	httpDialer.ResolveContext = requests.NewResolverMap(dnsMap)
-	di.HTTPTransport = requests.NewTransport(httpDialer.DialContext)
+	dialer := requests.NewDialerSwarm(options.BindAddress)
+	dialer.ResolveContext = requests.NewResolverMap(dnsMap)
+
+	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
@@ -652,6 +652,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		brokerURLs[i] = brokerURL
 	}
 
+	di.BrokerConnector = nats.NewBrokerConnector()
+	di.BrokerConnector.Dialer = dialer
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}

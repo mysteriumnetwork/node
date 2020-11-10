@@ -31,7 +31,7 @@ var ErrAllDialsFailed = errors.New("all dials failed")
 
 // DialerSwarm is a dials to multiple addresses in parallel and earliest successful connection wins.
 type DialerSwarm struct {
-	// ResolveContext specifies the dial function for doing custom DNS lookup.
+	// ResolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
 	ResolveContext ResolveContext
 
@@ -47,6 +47,11 @@ func NewDialerSwarm(srcIP string) *DialerSwarm {
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
 		},
 	}
+}
+
+// Dial connects to the address on the named network.
+func (ds *DialerSwarm) Dial(network, address string) (net.Conn, error) {
+	return ds.DialContext(context.Background(), network, address)
 }
 
 // DialContext connects to the address on the named network using the provided context.
