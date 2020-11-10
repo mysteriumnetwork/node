@@ -625,11 +625,14 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	for host, hostIPs := range network.DNSMap {
 		dnsMap[host] = append(dnsMap[host], hostIPs...)
 	}
+	for host, hostIPs := range dnsMap {
+		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
+	}
 
 	di.NetworkDefinition = network
 
 	httpDialer := requests.NewDialerSwarm(options.BindAddress)
-	httpDialer.ResolveContext = requests.NewResolverMap(network.DNSMap)
+	httpDialer.ResolveContext = requests.NewResolverMap(dnsMap)
 	di.HTTPTransport = requests.NewTransport(httpDialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
