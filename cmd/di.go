@@ -648,11 +648,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		if err != nil {
 			return err
 		}
-
-		if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
-			return err
-		}
-
 		brokerURLs[i] = brokerURL.String()
 	}
 
