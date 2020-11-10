@@ -472,7 +472,7 @@ type GetIdentityRegistrationFeesResponse struct {
 
 // GetIdentityRegistrationFees returns identity registration fees.
 func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFeesResponse, error) {
-	fees, err := mb.transactor.FetchRegistrationFees()
+	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get registration fees")
 	}
@@ -490,7 +490,7 @@ type RegisterIdentityRequest struct {
 
 // RegisterIdentity starts identity registration in background.
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
-	fees, err := mb.transactor.FetchRegistrationFees()
+	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
 		return errors.Wrap(err, "could not get registration fees")
 	}

@@ -111,10 +111,10 @@ type PromiseSettlementRequest struct {
 }
 
 // FetchRegistrationFees fetches current transactor registration fees
-func (t *Transactor) FetchRegistrationFees() (FeesResponse, error) {
+func (t *Transactor) FetchRegistrationFees(chainID int64) (FeesResponse, error) {
 	f := FeesResponse{}
 
-	req, err := requests.NewGetRequest(t.endpointAddress, "fee/register", nil)
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v/register", chainID), nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
@@ -124,10 +124,10 @@ func (t *Transactor) FetchRegistrationFees() (FeesResponse, error) {
 }
 
 // FetchSettleFees fetches current transactor settlement fees
-func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
+func (t *Transactor) FetchSettleFees(chainID int64) (FeesResponse, error) {
 	f := FeesResponse{}
 
-	req, err := requests.NewGetRequest(t.endpointAddress, "fee/settle", nil)
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v/settle", chainID), nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
@@ -137,10 +137,10 @@ func (t *Transactor) FetchSettleFees() (FeesResponse, error) {
 }
 
 // FetchStakeDecreaseFee fetches current transactor stake decrease fees.
-func (t *Transactor) FetchStakeDecreaseFee() (FeesResponse, error) {
+func (t *Transactor) FetchStakeDecreaseFee(chainID int64) (FeesResponse, error) {
 	f := FeesResponse{}
 
-	req, err := requests.NewGetRequest(t.endpointAddress, "fee/stake/decrease", nil)
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("fee/%v/stake/decrease", chainID), nil)
 	if err != nil {
 		return f, errors.Wrap(err, "failed to fetch transactor fees")
 	}
@@ -276,7 +276,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	}
 
 	if regReq.Fee == nil {
-		fees, err := t.FetchRegistrationFees()
+		fees, err := t.FetchRegistrationFees(chainID)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "could not get registration fees")
 		}

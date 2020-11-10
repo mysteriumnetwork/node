@@ -57,7 +57,6 @@ type registrationStatusProvider interface {
 }
 
 type transactor interface {
-	FetchSettleFees() (registry.FeesResponse, error)
 	SettleAndRebalance(hermesID, providerID string, promise crypto.Promise) error
 	SettleWithBeneficiary(id, beneficiary, hermesID string, promise crypto.Promise) error
 	SettleIntoStake(hermesID, providerID string, promise crypto.Promise) error

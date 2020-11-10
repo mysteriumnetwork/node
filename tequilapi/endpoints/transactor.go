@@ -38,9 +38,9 @@ import (
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
-	FetchRegistrationFees() (registry.FeesResponse, error)
-	FetchSettleFees() (registry.FeesResponse, error)
-	FetchStakeDecreaseFee() (registry.FeesResponse, error)
+	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
+	FetchSettleFees(chainID int64) (registry.FeesResponse, error)
+	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
 	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
 	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
@@ -90,23 +90,23 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler,
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	registrationFees, err := te.transactor.FetchRegistrationFees()
+	chainID := config.GetInt64(config.FlagChainID)
+	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	settlementFees, err := te.transactor.FetchSettleFees()
+	settlementFees, err := te.transactor.FetchSettleFees(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee()
+	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	chainID := config.GetInt64(config.FlagChainID)
 	hermesFees, err := te.promiseSettler.GetHermesFee(chainID, te.hermesAddress)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
