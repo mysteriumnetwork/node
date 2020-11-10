@@ -86,7 +86,6 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	config.RegisterFlagsServiceOpenvpn(&command.Flags)
 	config.RegisterFlagsServiceWireguard(&command.Flags)
 	config.RegisterFlagsServiceNoop(&command.Flags)
-	config.RegisterFlagsNetwork(&command.Flags)
 
 	return command
 }
