@@ -123,7 +123,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	tequilapiProvider := newTequilapiProvider()
 	t.Run("Provider has a registered identity", func(t *testing.T) {
-		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase, chainID)
+		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
 	})
 
 	t.Run("Consumer Creates And Registers Identity", func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 				consumerID := identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
 				c.consumerID = consumerID
 				topUps <- c
-				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase, chainID)
+				consumerRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
 			}(c)
 		}
 
@@ -279,7 +279,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		topUpConsumer(t, "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", common.HexToAddress(hermesID), registrationFee)
 
-		consumerRegistrationFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", "", chainID)
+		consumerRegistrationFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", "")
 
 		proposal := consumerPicksProposal(t, c.tequila(), "noop")
 		consumerConnectFlow(t, c.tequila(), "0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3", hermesID, "noop", proposal)
@@ -297,7 +297,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			id, err := c.tequila().NewIdentity("")
 			assert.NoError(t, err)
 
-			err = c.tequila().Unlock(id.Address, "", chainID)
+			err = c.tequila().Unlock(id.Address, "")
 			assert.NoError(t, err)
 
 			err = transactorMongo.InsertRegistrationBounty(common.HexToAddress(id.Address))
@@ -323,7 +323,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			id, err := c.tequila().NewIdentity("")
 			assert.NoError(t, err)
 
-			err = c.tequila().Unlock(id.Address, "", chainID)
+			err = c.tequila().Unlock(id.Address, "")
 			assert.NoError(t, err)
 
 			err = transactorMongo.InsertRegistrationBounty(common.HexToAddress(id.Address))
@@ -351,7 +351,7 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 	var lastHermes *big.Int
 	assert.Eventually(t, func() bool {
 		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
-		hermesData, err := hermesCaller.GetConsumerData(consumerID)
+		hermesData, err := hermesCaller.GetConsumerData(chainID, consumerID)
 		assert.NoError(t, err)
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised
@@ -410,8 +410,8 @@ func mintMyst(t *testing.T, amount *big.Int, chid common.Address) {
 	assert.NoError(t, err)
 }
 
-func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string, chainID int64) {
-	err := tequilapi.Unlock(id, idPassphrase, chainID)
+func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
+	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
 	fees, err := tequilapi.GetTransactorFees()
@@ -452,8 +452,8 @@ func topUpConsumer(t *testing.T, id string, hermesID common.Address, registratio
 	mintMyst(t, amountToTopUp, common.HexToAddress(chid))
 }
 
-func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string, chainID int64) {
-	err := tequilapi.Unlock(id, idPassphrase, chainID)
+func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
+	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
 	fees, err := tequilapi.GetTransactorFees()

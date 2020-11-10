@@ -336,7 +336,7 @@ func GetInt(flag cli.IntFlag) int {
 	return Current.GetInt(flag.Name)
 }
 
-// GetInt shorthand for getting current configuration value for cli.IntFlag.
+// GetInt64 shorthand for getting current configuration value for cli.IntFlag.
 func GetInt64(flag cli.Int64Flag) int64 {
 	return Current.GetInt64(flag.Name)
 }

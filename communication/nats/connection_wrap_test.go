@@ -39,14 +39,22 @@ func TestParseServerURI(t *testing.T) {
 		{"nats://127.0.0.1:4333", &url.URL{Scheme: "nats", Host: "127.0.0.1:4333"}, nil},
 		{"nats://example.com:4333", &url.URL{Scheme: "nats", Host: "example.com:4333"}, nil},
 
-		{"nats:// example.com", nil, errors.New(`failed to parse NATS server URI "nats:// example.com": parse "nats:// example.com": invalid character " " in host name`)},
-		{"nats://example.com:a", nil, errors.New(`failed to parse NATS server URI "nats://example.com:a": parse "nats://example.com:a": invalid port ":a" after host`)},
+		{
+			"nats:// example.com",
+			nil,
+			errors.New(`failed to parse NATS server URI "nats:// example.com"`),
+		},
+		{
+			"nats://example.com:a",
+			nil,
+			errors.New(`failed to parse NATS server URI "nats://example.com:a":`),
+		},
 	}
 
 	for _, tc := range tests {
 		address, err := ParseServerURI(tc.uri)
 		if tc.wantError != nil {
-			assert.EqualError(t, err, tc.wantError.Error())
+			assert.Contains(t, err.Error(), tc.wantError.Error())
 		} else {
 			assert.NoError(t, err)
 		}
@@ -66,7 +74,7 @@ func TestConnectionWrap_NewConnection(t *testing.T) {
 	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.servers)
 
 	connection, err = newConnection("nats:// example.com")
-	assert.EqualError(t, err, `failed to parse NATS server URI "nats:// example.com": parse "nats:// example.com": invalid character " " in host name`)
+	assert.Contains(t, err.Error(), `failed to parse NATS server URI "nats:// example.com":`)
 	assert.Nil(t, connection)
 }
 
