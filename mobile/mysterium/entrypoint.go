@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -129,6 +130,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 	dataDir := filepath.Join(appPath, ".mysterium")
 	currentDir := appPath
+
+	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
 
 	network := node.OptionsNetwork{
 		Betanet:               options.Betanet,

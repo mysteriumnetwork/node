@@ -64,11 +64,11 @@ services:
 
   #private blockchain
   ganache:
-    image: trufflesuite/ganache-cli:v6.9.1
+    image: trufflesuite/ganache-cli:v6.12.0
     expose:
       - 8545
     command: >
-      --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+      --chainId 5 --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   trust:
     image: mysteriumnetwork/trust-oracle:latest
@@ -77,7 +77,7 @@ services:
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
 
   transactor:
-    image: mysteriumnetwork/transactor:v3-dev
+    image: mysteriumnetwork/transactor:v4-alpha
     environment:
       PORT: 8888
     expose:
@@ -87,12 +87,13 @@ services:
       - mongodb
       - redis
     command: >
-      -settlemntFee 1000
+      -chain1SettlementFee 1000
       -stakeAmount 62000000000000000000
       -topUpAmount 7000000000000000000
-      -stakeDecreaseFee 1
+      -chain1StakeDecreaseFee 1
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
+      -chain1RPCEndpoint ws://ganache:8545
+      -chain1ChainID 5
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -114,7 +115,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   hermes:
-    image: mysteriumnetwork/hermes:v3-dev
+    image: mysteriumnetwork/hermes:v4-alpha
     environment:
       PORT: 8889
     expose:
@@ -126,7 +127,8 @@ services:
     command: >
       -identityPassphrase ""
       -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
+      -Chain1RPCEndpoint ws://ganache:8545
+      -Chain1ChainID 5
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -143,7 +145,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   hermes2:
-    image: mysteriumnetwork/hermes:v3-dev
+    image: mysteriumnetwork/hermes:v4-alpha
     environment:
       PORT: 8889
     expose:
@@ -155,7 +157,8 @@ services:
     command: >
       -identityPassphrase ""
       -myst 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
-      -rpcEndpoint ws://ganache:8545
+      -Chain1RPCEndpoint ws://ganache:8545
+      -Chain1ChainID 5
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -operator 0x761f2bb3e7ad6385a4c7833c5a26a8ddfdabf9f3
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
