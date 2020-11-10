@@ -54,7 +54,7 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 
 	conn := newConnectionWith(b.Dialer, servers...)
 	if err := conn.Open(); err != nil {
-		return nil, errors.Wrapf(err, `failed to connect to NATS servers "%v"`, servers)
+		return nil, err
 	}
 
 	conn.onClose = removeFirewallRule
