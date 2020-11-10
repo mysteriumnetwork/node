@@ -215,6 +215,7 @@ func invoiceReceiver(channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
 			TransactorFee:  transactorFee,
 			Hashlock:       msg.GetHashlock(),
 			Provider:       msg.GetProvider(),
+			ChainID:        msg.GetChainID(),
 		}
 
 		return nil

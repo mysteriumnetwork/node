@@ -147,12 +147,14 @@ func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
 				Hashlock:  msg.GetPromise().GetHashlock(),
 				R:         msg.GetPromise().GetR(),
 				Signature: msg.GetPromise().GetSignature(),
+				ChainID:   msg.GetPromise().GetChainID(),
 			},
 			AgreementID:    agreementID,
 			AgreementTotal: agreementTotal,
 			Provider:       msg.GetProvider(),
 			Signature:      msg.GetSignature(),
 			HermesID:       msg.GetHermesID(),
+			ChainID:        msg.GetChainID(),
 		}
 
 		return nil
