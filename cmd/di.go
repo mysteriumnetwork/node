@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -642,13 +643,13 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	brokerURLs := make([]string, len(di.NetworkDefinition.BrokerAddresses))
+	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
-		brokerURL, err := nats.ParseServerURI(brokerAddress)
+		brokerURL, err := nats.ParseServerURL(brokerAddress)
 		if err != nil {
 			return err
 		}
-		brokerURLs[i] = brokerURL.String()
+		brokerURLs[i] = brokerURL
 	}
 
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {

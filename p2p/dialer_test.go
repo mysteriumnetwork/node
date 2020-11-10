@@ -20,6 +20,7 @@ package p2p
 import (
 	"context"
 	"net"
+	"net/url"
 	"testing"
 	"time"
 
@@ -142,7 +143,7 @@ type mockBroker struct {
 	conn nats.Connection
 }
 
-func (m *mockBroker) Connect(serverURIs ...string) (nats.Connection, error) {
+func (m *mockBroker) Connect(serverURLs ...*url.URL) (nats.Connection, error) {
 	return m.conn, nil
 }
 

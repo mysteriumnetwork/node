@@ -18,7 +18,7 @@
 package nats
 
 import (
-	"strings"
+	"net/url"
 
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/pkg/errors"
@@ -35,21 +35,26 @@ func NewBrokerConnector() *BrokerConnector {
 }
 
 // Connect establishes a new connection to the broker(s).
-func (b *BrokerConnector) Connect(serverURIs ...string) (Connection, error) {
-	log.Debug().Msg("Connecting to NATS servers: " + strings.Join(serverURIs, ","))
+func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
+	log.Debug().Msgf("Connecting to NATS servers: %v", serverURLs)
 
-	conn, err := newConnection(serverURIs...)
+	servers := make([]string, len(serverURLs))
+	for i, serverURL := range serverURLs {
+		servers[i] = serverURL.String()
+	}
+
+	removeFirewallRule, err := firewall.AllowURLAccess(servers...)
+	if err != nil {
+		return nil, errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, servers)
+	}
+
+	conn, err := newConnection(servers...)
 	if err != nil {
 		return nil, err
 	}
 
-	removeFirewallRule, err := firewall.AllowURLAccess(conn.servers...)
-	if err != nil {
-		return nil, errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, conn.servers)
-	}
-
 	if err := conn.Open(); err != nil {
-		return nil, errors.Wrapf(err, `failed to connect to NATS servers "%v"`, conn.servers)
+		return nil, errors.Wrapf(err, `failed to connect to NATS servers "%v"`, servers)
 	}
 
 	conn.onClose = removeFirewallRule

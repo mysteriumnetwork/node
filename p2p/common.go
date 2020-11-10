@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -38,7 +39,7 @@ const (
 )
 
 type brokerConnector interface {
-	Connect(serverURIs ...string) (nats.Connection, error)
+	Connect(serverURIs ...*url.URL) (nats.Connection, error)
 }
 
 type natConsumerPinger interface {

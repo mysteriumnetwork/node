@@ -29,21 +29,24 @@ import (
 )
 
 const (
+	// DefaultBrokerScheme broker scheme.
+	DefaultBrokerScheme = "nats"
 	// DefaultBrokerPort broker port.
 	DefaultBrokerPort = 4222
 )
 
-// ParseServerURI validates given NATS server address.
-func ParseServerURI(serverURI string) (*url.URL, error) {
+// ParseServerURL validates given NATS server address.
+func ParseServerURL(serverURI string) (*url.URL, error) {
 	// Add scheme first otherwise serverURL.Parse() fails.
-	if !strings.HasPrefix(serverURI, "nats:") {
-		serverURI = fmt.Sprintf("nats://%s", serverURI)
+	if !strings.HasPrefix(serverURI, DefaultBrokerScheme) {
+		serverURI = fmt.Sprintf("%s://%s", DefaultBrokerScheme, serverURI)
 	}
 
 	serverURL, err := url.Parse(serverURI)
 	if err != nil {
 		return nil, errors.Wrapf(err, `failed to parse NATS server URI "%s"`, serverURI)
 	}
+
 	if serverURL.Port() == "" {
 		serverURL.Host = fmt.Sprintf("%s:%d", serverURL.Host, DefaultBrokerPort)
 	}
@@ -51,21 +54,27 @@ func ParseServerURI(serverURI string) (*url.URL, error) {
 	return serverURL, nil
 }
 
-func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
-	connection := &ConnectionWrap{
-		servers: make([]string, len(serverURIs)),
-		onClose: func() {},
-	}
+// ParseServerURIs validates given list of NATS server addresses.
+func ParseServerURIs(serverURIs []string) ([]*url.URL, error) {
+	serverURLs := make([]*url.URL, len(serverURIs))
 
 	for i, server := range serverURIs {
-		natsURL, err := ParseServerURI(server)
+		natsURL, err := ParseServerURL(server)
 		if err != nil {
 			return nil, err
 		}
-		connection.servers[i] = natsURL.String()
+
+		serverURLs[i] = natsURL
 	}
 
-	return connection, nil
+	return serverURLs, nil
+}
+
+func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
+	return &ConnectionWrap{
+		servers: serverURIs,
+		onClose: func() {},
+	}, nil
 }
 
 // ConnectionWrap defines wrapped connection to NATS server(s).
