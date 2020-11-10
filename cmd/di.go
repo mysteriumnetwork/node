@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -608,14 +609,14 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network = metadata.LocalnetDefinition
 	}
 
-	//override defined values one by one from options
+	// override defined values one by one from options
 	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
 		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
 		network.DNSMap = nil
 	}
 
-	if optionsNetwork.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
-		network.BrokerAddress = optionsNetwork.BrokerAddress
+	if !reflect.DeepEqual(optionsNetwork.BrokerAddresses, metadata.DefaultNetwork.BrokerAddresses) {
+		network.BrokerAddresses = optionsNetwork.BrokerAddresses
 	}
 
 	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
@@ -628,14 +629,21 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	httpClient := requests.NewHTTPClientWithTransport(httpTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(httpClient, network.MysteriumAPIAddress)
 
-	brokerURL, err := nats.ParseServerURI(di.NetworkDefinition.BrokerAddress)
-	if err != nil {
-		return err
+	brokerURLs := make([]string, len(di.NetworkDefinition.BrokerAddresses))
+	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
+		brokerURL, err := nats.ParseServerURI(brokerAddress)
+		if err != nil {
+			return err
+		}
+
+		if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
+			return err
+		}
+
+		brokerURLs[i] = brokerURL.String()
 	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
-		return err
-	}
-	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURL.String()); err != nil {
+
+	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}
 

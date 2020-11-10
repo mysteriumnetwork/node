@@ -90,7 +90,7 @@ func GetOptions() *Options {
 		Betanet:               config.GetBool(config.FlagBetanet),
 		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
 		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
-		BrokerAddress:         config.GetString(config.FlagBrokerAddress),
+		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
 		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
 	}
 	return &Options{
