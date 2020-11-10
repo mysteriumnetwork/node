@@ -52,6 +52,7 @@ func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 		TransactorFee:  invoice.TransactorFee.Text(bigIntBase),
 		Hashlock:       invoice.Hashlock,
 		Provider:       invoice.Provider,
+		ChainID:        invoice.ChainID,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentInvoice, pInvoice.String())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

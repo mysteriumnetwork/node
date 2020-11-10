@@ -56,12 +56,14 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 			Hashlock:  em.Promise.Hashlock,
 			R:         em.Promise.R,
 			Signature: em.Promise.Signature,
+			ChainID:   em.Promise.ChainID,
 		},
 		AgreementID:    em.AgreementID.Text(bigIntBase),
 		AgreementTotal: em.AgreementTotal.Text(bigIntBase),
 		Provider:       em.Provider,
 		Signature:      em.Signature,
 		HermesID:       em.HermesID,
+		ChainID:        em.ChainID,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
 
