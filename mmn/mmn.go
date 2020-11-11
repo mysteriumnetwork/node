@@ -74,8 +74,8 @@ func (m *MMN) handleNodeStart(e nodevent.Payload) {
 	}
 }
 
-func (m *MMN) handleIdentityUnlock(identity string) {
-	m.lastIdentity = identity
+func (m *MMN) handleIdentityUnlock(ev identity.AppEventIdentityUnlock) {
+	m.lastIdentity = ev.ID.Address
 }
 
 // handleServiceStart does auto-register to MMN, but only for providers.

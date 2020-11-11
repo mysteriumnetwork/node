@@ -179,6 +179,9 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("Provider settlement flow", func(t *testing.T) {
+		caller, err := bindings.NewMystTokenCaller(common.HexToAddress(mystAddress), ethClient)
+		assert.NoError(t, err)
+
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
 		assert.Equal(t, new(big.Int), providerStatus.Balance)
@@ -213,17 +216,21 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
 		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
 
-		hermesFee, _ := new(big.Float).Mul(big.NewFloat(0.04), new(big.Float).SetInt(hermesOneEarnings)).Int(nil)
-		feeSum := big.NewInt(0).Add(fees.Settlement, hermesFee)
-		expected := new(big.Int).Sub(hermesOneEarnings, feeSum)
-
-		caller, err := bindings.NewMystTokenCaller(common.HexToAddress(mystAddress), ethClient)
+		hic, err := bindings.NewHermesImplementationCaller(common.HexToAddress(hermesID), ethClient)
 		assert.NoError(t, err)
+
+		hermesFee, err := hic.CalculateHermesFee(&bind.CallOpts{}, totalEarnings)
+		assert.NoError(t, err)
+
+		feeSum := big.NewInt(0).Add(big.NewInt(0).Add(fees.Settlement, hermesFee), fees.Settlement)
+		expected := new(big.Int).Sub(totalEarnings, feeSum)
 
 		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerID))
 		assert.NoError(t, err)
+
 		diff := new(big.Int).Sub(balance, expected)
 		diff = diff.Abs(diff)
+
 		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
 	})
 

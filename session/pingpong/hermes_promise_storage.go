@@ -112,7 +112,6 @@ type HermesPromiseFilter struct {
 }
 
 func (aps *HermesPromiseStorage) getBucketName(chainID int64) string {
-	fmt.Println(fmt.Sprintf("%v_%v", hermesPromiseBucketName, chainID))
 	return fmt.Sprintf("%v_%v", hermesPromiseBucketName, chainID)
 }
 

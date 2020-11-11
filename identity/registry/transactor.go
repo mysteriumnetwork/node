@@ -107,7 +107,7 @@ type PromiseSettlementRequest struct {
 	Preimage      string   `json:"preimage"`
 	Signature     string   `json:"signature"`
 	ProviderID    string   `json:"providerID"`
-	ChainID       int64    `json:"chain_id"`
+	ChainID       int64    `json:"chainID"`
 }
 
 // FetchRegistrationFees fetches current transactor registration fees
@@ -549,6 +549,7 @@ type DecreaseProviderStakeRequest struct {
 	TransactorFee uint64 `json:"transactor_fee,omitempty"`
 	Signature     string `json:"signature,omitempty"`
 	ChainID       int64  `json:"chain_id"`
+	ProviderID    string `json:"providerID"`
 }
 
 // DecreaseStake requests the transactor to decrease stake.
@@ -608,6 +609,8 @@ func (t *Transactor) fillDecreaseStakeRequest(id string, chainID int64, amount, 
 		HermesID:      req.HermesID.Hex(),
 		Amount:        req.Amount.Uint64(),
 		TransactorFee: req.TransactorFee.Uint64(),
+		ChainID:       req.ChainID,
+		ProviderID:    id,
 	}
 	return regReq, nil
 }
