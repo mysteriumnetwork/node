@@ -51,10 +51,10 @@ var (
 		Value: metadata.DefaultNetwork.DefaultChainID,
 	}
 	// FlagBrokerAddress message broker URI.
-	FlagBrokerAddress = cli.StringFlag{
+	FlagBrokerAddress = cli.StringSliceFlag{
 		Name:  "broker-address",
 		Usage: "URI of message broker",
-		Value: metadata.DefaultNetwork.BrokerAddress,
+		Value: cli.NewStringSlice(metadata.DefaultNetwork.BrokerAddresses...),
 	}
 	// FlagEtherRPC URL or IPC socket to connect to Ethereum node.
 	FlagEtherRPC = cli.StringFlag{
@@ -112,7 +112,7 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
 	Current.ParseBoolFlag(ctx, FlagBetanet)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
-	Current.ParseStringFlag(ctx, FlagBrokerAddress)
+	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)

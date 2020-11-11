@@ -21,7 +21,7 @@ package metadata
 type NetworkDefinition struct {
 	MysteriumAPIAddress       string
 	AccessPolicyOracleAddress string
-	BrokerAddress             string
+	BrokerAddresses           []string
 	EtherClientRPC            string
 	TransactorAddress         string
 	RegistryAddress           string
@@ -31,7 +31,7 @@ type NetworkDefinition struct {
 	MMNAPIAddress             string
 	DAIAddress                string
 	WETHAddress               string
-	DNSMap                    map[string]string
+	DNSMap                    map[string][]string
 	DefaultChainID            int64
 }
 
@@ -39,7 +39,7 @@ type NetworkDefinition struct {
 var TestnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddress:             "nats://testnet-broker.mysterium.network",
+	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network", "nats://82.196.15.9"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
@@ -49,8 +49,11 @@ var TestnetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://my.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
-	DNSMap: map[string]string{
-		"testnet-api.mysterium.network:443": "78.47.176.149",
+	DNSMap: map[string][]string{
+		"testnet-api.mysterium.network":        {"78.47.176.149"},
+		"testnet-trust.mysterium.network":      {"82.196.15.9"},
+		"testnet-transactor.mysterium.network": {"116.203.17.150"},
+		"my.mysterium.network":                 {"168.119.183.173"},
 	},
 	DefaultChainID: 5,
 }
@@ -59,7 +62,7 @@ var TestnetDefinition = NetworkDefinition{
 var BetanetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://betanet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://betanet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddress:             "nats://betanet-broker.mysterium.network",
+	BrokerAddresses:           []string{"nats://betanet-broker.mysterium.network", "nats://95.216.204.232"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0xc82Cc5B0bAe95F443e33FF053aAa70F1Eb7d312A",
@@ -69,8 +72,11 @@ var BetanetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://betanet.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
-	DNSMap: map[string]string{
-		"betanet-api.mysterium.network:443": "78.47.55.197",
+	DNSMap: map[string][]string{
+		"betanet-api.mysterium.network":        {"78.47.55.197"},
+		"betanet-trust.mysterium.network":      {"95.216.204.232"},
+		"betanet-transactor.mysterium.network": {"135.181.82.67"},
+		"betanet.mysterium.network":            {"138.201.244.63"},
 	},
 	DefaultChainID: 5,
 }
@@ -80,12 +86,12 @@ var BetanetDefinition = NetworkDefinition{
 var LocalnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "http://localhost:8001/v1",
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
-	BrokerAddress:             "localhost",
+	BrokerAddresses:           []string{"localhost"},
 	EtherClientRPC:            "http://localhost:8545",
 	MMNAddress:                "http://localhost/",
 	MMNAPIAddress:             "http://localhost/api/v1",
-	DNSMap: map[string]string{
-		"localhost:8001": "127.0.0.1",
+	DNSMap: map[string][]string{
+		"localhost": {"127.0.0.1"},
 	},
 	DefaultChainID: 1,
 }

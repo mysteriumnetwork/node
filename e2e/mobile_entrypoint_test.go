@@ -38,7 +38,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		Betanet:                         true,
 		ExperimentNATPunching:           true,
 		MysteriumAPIAddress:             "http://mysterium-api:8001/v1",
-		BrokerAddress:                   "broker",
+		BrokerAddresses:                 []string{"broker"},
 		EtherClientRPC:                  "ws://ganache:8545",
 		FeedbackURL:                     "TODO",
 		QualityOracleURL:                "http://morqa:8085/api/v1",

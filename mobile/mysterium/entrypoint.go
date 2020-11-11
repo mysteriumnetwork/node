@@ -85,7 +85,7 @@ type MobileNodeOptions struct {
 	Localnet                        bool
 	ExperimentNATPunching           bool
 	MysteriumAPIAddress             string
-	BrokerAddress                   string
+	BrokerAddresses                 []string
 	EtherClientRPC                  string
 	FeedbackURL                     string
 	QualityOracleURL                string
@@ -106,7 +106,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		Betanet:                         true,
 		ExperimentNATPunching:           true,
 		MysteriumAPIAddress:             metadata.BetanetDefinition.MysteriumAPIAddress,
-		BrokerAddress:                   metadata.BetanetDefinition.BrokerAddress,
+		BrokerAddresses:                 metadata.BetanetDefinition.BrokerAddresses,
 		EtherClientRPC:                  metadata.BetanetDefinition.EtherClientRPC,
 		FeedbackURL:                     "https://feedback.mysterium.network",
 		QualityOracleURL:                "https://betanet-quality.mysterium.network/api/v1",
@@ -138,9 +138,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		Localnet:              options.Localnet,
 		ExperimentNATPunching: options.ExperimentNATPunching,
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
-		BrokerAddress:         options.BrokerAddress,
+		BrokerAddresses:       options.BrokerAddresses,
 		EtherClientRPC:        options.EtherClientRPC,
 		ChainID:               options.ChainID,
+		DNSMap:                map[string][]string{},
 	}
 	logOptions := logconfig.LogOptions{
 		LogLevel: zerolog.DebugLevel,

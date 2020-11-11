@@ -26,8 +26,8 @@ type OptionsNetwork struct {
 	ExperimentNATPunching bool
 
 	MysteriumAPIAddress string
-	BrokerAddress       string
+	BrokerAddresses     []string
 	EtherClientRPC      string
 	ChainID             int64
-	DNSMap              map[string]string
+	DNSMap              map[string][]string
 }

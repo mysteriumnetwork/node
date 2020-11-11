@@ -20,7 +20,9 @@ package cmd
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -96,7 +98,8 @@ type UIServer interface {
 type Dependencies struct {
 	Node *Node
 
-	HTTPClient *requests.HTTPClient
+	HTTPTransport *http.Transport
+	HTTPClient    *requests.HTTPClient
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
@@ -118,8 +121,7 @@ type Dependencies struct {
 	ProposalRepository proposal.Repository
 	DiscoveryWorker    discovery.Worker
 
-	QualityHttpClient *requests.HTTPClient
-	QualityClient     *quality.MysteriumMORQA
+	QualityClient *quality.MysteriumMORQA
 
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
@@ -186,8 +188,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
-	di.HTTPClient = requests.NewHTTPClient(nodeOptions.BindAddress, requests.DefaultTimeout)
-
 	// Check early for presence of an already running node
 	tequilaListener, err := di.createTequilaListener(nodeOptions)
 	if err != nil {
@@ -249,7 +249,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapQualityComponents(nodeOptions.BindAddress, nodeOptions.Quality); err != nil {
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
 		return err
 	}
 
@@ -609,34 +609,50 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network = metadata.LocalnetDefinition
 	}
 
-	//override defined values one by one from options
+	// override defined values one by one from options
 	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
 		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
-		network.DNSMap = nil
 	}
 
-	if optionsNetwork.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
-		network.BrokerAddress = optionsNetwork.BrokerAddress
+	if !reflect.DeepEqual(optionsNetwork.BrokerAddresses, metadata.DefaultNetwork.BrokerAddresses) {
+		network.BrokerAddresses = optionsNetwork.BrokerAddresses
 	}
 
 	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
 
+	dnsMap := optionsNetwork.DNSMap
+	for host, hostIPs := range network.DNSMap {
+		dnsMap[host] = append(dnsMap[host], hostIPs...)
+	}
+	for host, hostIPs := range dnsMap {
+		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
+	}
+
 	di.NetworkDefinition = network
 
-	httpTransport := requests.NewTransport(requests.NewDialerBypassDNS(options.BindAddress, network.DNSMap))
-	httpClient := requests.NewHTTPClientWithTransport(httpTransport, requests.DefaultTimeout)
-	di.MysteriumAPI = mysterium.NewClient(httpClient, network.MysteriumAPIAddress)
+	httpDialer := requests.NewDialerSwarm(options.BindAddress)
+	httpDialer.ResolveContext = requests.NewResolverMap(dnsMap)
+	di.HTTPTransport = requests.NewTransport(httpDialer.DialContext)
+	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
+	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	brokerURL, err := nats.ParseServerURI(di.NetworkDefinition.BrokerAddress)
-	if err != nil {
-		return err
+	brokerURLs := make([]string, len(di.NetworkDefinition.BrokerAddresses))
+	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
+		brokerURL, err := nats.ParseServerURI(brokerAddress)
+		if err != nil {
+			return err
+		}
+
+		if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
+			return err
+		}
+
+		brokerURLs[i] = brokerURL.String()
 	}
-	if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
-		return err
-	}
-	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURL.String()); err != nil {
+
+	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}
 
@@ -711,15 +727,19 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 
 }
 
-func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options node.OptionsQuality) (err error) {
+func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
 	if _, err := firewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
 	if _, err := di.ServiceFirewall.AllowURLAccess(options.Address); err != nil {
 		return err
 	}
-	di.QualityHttpClient = requests.NewHTTPClient(bindAddress, 10*time.Second)
-	di.QualityClient = quality.NewMorqaClient(di.QualityHttpClient, options.Address, di.SignerFactory)
+
+	di.QualityClient = quality.NewMorqaClient(
+		requests.NewHTTPClientWithTransport(di.HTTPTransport, 10*time.Second),
+		options.Address,
+		di.SignerFactory,
+	)
 	go di.QualityClient.Start()
 
 	var transport quality.Transport
@@ -874,8 +894,7 @@ func (di *Dependencies) handleConnStateChange() error {
 			netutil.LogNetworkStats()
 
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
-			di.HTTPClient.Reconnect()
-			di.QualityHttpClient.Reconnect()
+			di.HTTPTransport.CloseIdleConnections()
 
 			if err := di.EtherClient.Reconnect(); err != nil {
 				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
