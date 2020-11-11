@@ -77,19 +77,10 @@ func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
 	}, nil
 }
 
-func newConnectionWith(dialer nats_lib.CustomDialer, serverURIs ...string) *ConnectionWrap {
-	return &ConnectionWrap{
-		dialer:  dialer,
-		servers: serverURIs,
-		onClose: func() {},
-	}
-}
-
 // ConnectionWrap defines wrapped connection to NATS server(s).
 type ConnectionWrap struct {
 	*nats_lib.Conn
 
-	dialer  nats_lib.CustomDialer
 	servers []string
 	onClose func()
 }
@@ -103,7 +94,6 @@ func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options.ClosedCB = func(conn *nats_lib.Conn) { log.Warn().Msg("NATS: connection closed") }
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: reconnected") }
-	options.CustomDialer = c.dialer
 
 	return options
 }

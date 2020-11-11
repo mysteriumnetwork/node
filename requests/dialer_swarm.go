@@ -49,11 +49,6 @@ func NewDialerSwarm(srcIP string) *DialerSwarm {
 	}
 }
 
-// Dial connects to the address on the named network.
-func (ds *DialerSwarm) Dial(network, address string) (net.Conn, error) {
-	return ds.DialContext(context.Background(), network, address)
-}
-
 // DialContext connects to the address on the named network using the provided context.
 func (ds *DialerSwarm) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	if ds.ResolveContext != nil {

@@ -626,6 +626,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
 
+	di.NetworkDefinition = network
+
 	dnsMap := optionsNetwork.DNSMap
 	for host, hostIPs := range network.DNSMap {
 		dnsMap[host] = append(dnsMap[host], hostIPs...)
@@ -633,12 +635,10 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	for host, hostIPs := range dnsMap {
 		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
 	}
-
-	di.NetworkDefinition = network
+	resolver := requests.NewResolverMap(dnsMap)
 
 	dialer := requests.NewDialerSwarm(options.BindAddress)
-	dialer.ResolveContext = requests.NewResolverMap(dnsMap)
-
+	dialer.ResolveContext = resolver
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
@@ -653,7 +653,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	di.BrokerConnector = nats.NewBrokerConnector()
-	di.BrokerConnector.Dialer = dialer
+	di.BrokerConnector.ResolveContext = resolver
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}

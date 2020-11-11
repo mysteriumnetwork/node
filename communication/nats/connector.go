@@ -18,19 +18,20 @@
 package nats
 
 import (
+	"context"
 	"net/url"
 
 	"github.com/mysteriumnetwork/node/firewall"
-	nats_lib "github.com/nats-io/nats.go"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
-	// Dialer specifies the custom dialer for creating unencrypted TCP connections.
-	// If Dialer is nil, then the connector dials using package net.
-	Dialer nats_lib.CustomDialer
+	// ResolveContext specifies the resolve function for doing custom DNS lookup.
+	// If ResolveContext is nil, then the transport dials using package net.
+	ResolveContext requests.ResolveContext
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
@@ -38,9 +39,35 @@ func NewBrokerConnector() *BrokerConnector {
 	return &BrokerConnector{}
 }
 
+func (b *BrokerConnector) resolveServers(serverURLs []*url.URL) ([]*url.URL, error) {
+	if b.ResolveContext == nil {
+		return serverURLs, nil
+	}
+
+	for _, serverURL := range serverURLs {
+		addrs, err := b.ResolveContext(context.Background(), "tcp", serverURL.Host)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to resolve NATS server "%s"`, serverURL.Hostname())
+		}
+
+		for _, addr := range addrs {
+			serverURLResolved := *serverURL
+			serverURLResolved.Host = addr
+			serverURLs = append(serverURLs, &serverURLResolved)
+		}
+	}
+
+	return serverURLs, nil
+}
+
 // Connect establishes a new connection to the broker(s).
 func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 	log.Debug().Msgf("Connecting to NATS servers: %v", serverURLs)
+
+	serverURLs, err := b.resolveServers(serverURLs)
+	if err != nil {
+		return nil, err
+	}
 
 	servers := make([]string, len(serverURLs))
 	for i, serverURL := range serverURLs {
@@ -52,7 +79,11 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 		return nil, errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, servers)
 	}
 
-	conn := newConnectionWith(b.Dialer, servers...)
+	conn, err := newConnection(servers...)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := conn.Open(); err != nil {
 		return nil, err
 	}
