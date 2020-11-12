@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/pilvytis"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
@@ -174,7 +175,8 @@ type Dependencies struct {
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 
-	MMN *mmn.MMN
+	MMN         *mmn.MMN
+	PilvytisAPI *pilvytis.API
 }
 
 // Bootstrap initiates all container dependencies
@@ -546,6 +548,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		uniswapClient,
 	)
 
+	di.bootstrapPilvytis(nodeOptions)
+
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
 		return err
@@ -582,6 +586,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.Exchange)
+	tequilapi_endpoints.AddRoutesForPilvytis(router, di.PilvytisAPI)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}
@@ -828,6 +833,10 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 	di.JWTAuthenticator = auth.NewJWTAuthenticator(key)
 
 	return nil
+}
+
+func (di *Dependencies) bootstrapPilvytis(options node.Options) {
+	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {

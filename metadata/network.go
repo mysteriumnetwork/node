@@ -31,6 +31,7 @@ type NetworkDefinition struct {
 	MMNAPIAddress             string
 	DAIAddress                string
 	WETHAddress               string
+	PilvytisAddress           string
 	DNSMap                    map[string][]string
 }
 
@@ -70,6 +71,7 @@ var BetanetDefinition = NetworkDefinition{
 	MMNAPIAddress:             "https://betanet.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
+	PilvytisAddress:           "https://betanet-pilvytis.mysterium.network/api/v1",
 	DNSMap: map[string][]string{
 		"betanet-api.mysterium.network":        {"78.47.55.197"},
 		"betanet-trust.mysterium.network":      {"95.216.204.232"},
@@ -87,6 +89,7 @@ var LocalnetDefinition = NetworkDefinition{
 	EtherClientRPC:            "http://localhost:8545",
 	MMNAddress:                "http://localhost/",
 	MMNAPIAddress:             "http://localhost/api/v1",
+	PilvytisAddress:           "http://localhost:8002/api/v1",
 	DNSMap: map[string][]string{
 		"localhost": {"127.0.0.1"},
 	},
