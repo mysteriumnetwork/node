@@ -35,17 +35,18 @@ type DialerSwarm struct {
 	// If ResolveContext is nil, then the transport dials using package net.
 	ResolveContext ResolveContext
 
-	dialer *net.Dialer
+	// Dialer specifies the dial function for creating unencrypted TCP connections.
+	Dialer DialContext
 }
 
 // NewDialerSwarm creates swarm dialer with default configuration.
 func NewDialerSwarm(srcIP string) *DialerSwarm {
 	return &DialerSwarm{
-		dialer: &net.Dialer{
+		Dialer: (&net.Dialer{
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
-		},
+		}).DialContext,
 	}
 }
 
@@ -67,7 +68,7 @@ func (ds *DialerSwarm) DialContext(ctx context.Context, network, addr string) (n
 		return conn, nil
 	}
 
-	return ds.dialer.DialContext(ctx, network, addr)
+	return ds.Dialer(ctx, network, addr)
 }
 
 func (ds *DialerSwarm) dialAddrs(ctx context.Context, network string, addrs []string) (net.Conn, *ErrorSwarmDial) {
@@ -147,7 +148,7 @@ func (ds *DialerSwarm) dialAddr(ctx context.Context, network, addr string, resp 
 		return
 	}
 
-	conn, err := ds.dialer.DialContext(ctx, network, addr)
+	conn, err := ds.Dialer(ctx, network, addr)
 	select {
 	case resp <- dialResult{Conn: conn, Addr: addr, Err: err}:
 	case <-ctx.Done():
