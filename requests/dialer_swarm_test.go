@@ -106,13 +106,22 @@ func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
 		assert.Equal(t, ErrAllDialsFailed, dialErr.Cause)
 		assert.Len(t, dialErr.DialErrors, 3)
 	} else {
-		assert.Fail(t, "expected to fail with ErrorSwarmDial")
+		assert.Failf(t, "expected to fail with ErrorSwarmDial", "but got: %v", err)
 	}
 }
 
-func Test_DialerSwarm_CustomResolverIsCancelable(t *testing.T) {
+func Test_DialerSwarm_CustomDialingIsCancelable(t *testing.T) {
+	// configure lagging dialer
 	dialer := NewDialerSwarm("127.0.0.1")
 	dialer.ResolveContext = NewResolverMap(map[string][]string{})
+	dialer.Dialer = func(ctx context.Context, _, _ string) (net.Conn, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Second):
+			return nil, nil
+		}
+	}
 
 	// when
 	ctx, cancel := context.WithCancel(context.Background())
@@ -135,10 +144,42 @@ func Test_DialerSwarm_CustomResolverIsCancelable(t *testing.T) {
 	if dialErr, ok := err.(*ErrorSwarmDial); ok {
 		assert.Equal(t, "dns-is-faked.golang:12345", dialErr.OriginalAddr)
 		assert.Equal(t, context.Canceled, dialErr.Cause)
-		assert.Len(t, dialErr.DialErrors, 0)
 	} else {
-		assert.Fail(t, "expected to fail with ErrorSwarmDial")
+		assert.Failf(t, "expected to fail with ErrorSwarmDial", "but got: %v", err)
 	}
+
+	wg.Wait()
+}
+
+func Test_DialerSwarm_CustomResolvingIsCancelable(t *testing.T) {
+	// configure lagging dialer
+	dialer := NewDialerSwarm("127.0.0.1")
+	dialer.ResolveContext = func(ctx context.Context, _, _ string) ([]string, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Second):
+			return nil, nil
+		}
+	}
+
+	// when
+	ctx, cancel := context.WithCancel(context.Background())
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		time.Sleep(4 * time.Millisecond)
+		cancel()
+		wg.Done()
+	}()
+
+	conn, err := dialer.DialContext(ctx, "tcp", "dns-is-faked.golang:12345")
+
+	// then
+	assert.Nil(t, conn)
+	assert.Equal(t, &net.OpError{Op: "dial", Net: "tcp", Source: nil, Addr: nil, Err: context.Canceled}, err)
 
 	wg.Wait()
 }

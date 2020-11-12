@@ -22,7 +22,7 @@ import (
 	"net"
 )
 
-// ResolveContext specifies the dial function for doing custom DNS lookup.
+// ResolveContext specifies the resolve function for doing custom DNS lookup.
 type ResolveContext func(ctx context.Context, network, addr string) (addrs []string, err error)
 
 // NewResolverMap creates resolver with predefined host -> IP map.
