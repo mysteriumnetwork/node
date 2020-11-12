@@ -18,14 +18,9 @@
 package requests
 
 import (
-	"context"
-	"net"
 	"net/http"
 	"time"
 )
-
-// DialContext specifies the dial function for creating unencrypted TCP connections.
-type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // NewTransport returns default HTTP transport which
 // should be reused as it caches underlying TCP connections.

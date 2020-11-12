@@ -23,21 +23,27 @@ import (
 	"time"
 )
 
+// DialContext specifies the dial function for creating unencrypted TCP connections.
+type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+
 // Dialer wraps default go dialer with extra features.
 type Dialer struct {
+	// ResolveContext specifies the resolve function for doing custom DNS lookup.
+	// If ResolveContext is nil, then the transport dials using package net.
 	ResolveContext ResolveContext
 
-	dialer *net.Dialer
+	// Dialer specifies the dial function for creating unencrypted TCP connections.
+	Dialer DialContext
 }
 
 // NewDialer creates dialer with default configuration.
 func NewDialer(srcIP string) *Dialer {
 	return &Dialer{
-		dialer: &net.Dialer{
+		Dialer: (&net.Dialer{
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
-		},
+		}).DialContext,
 	}
 }
 
@@ -57,12 +63,12 @@ func (d *Dialer) DialContext(ctx context.Context, network, addr string) (conn ne
 		return conn, nil
 	}
 
-	return d.dialer.DialContext(ctx, network, addr)
+	return d.Dialer(ctx, network, addr)
 }
 
 func (d *Dialer) dialAddrs(ctx context.Context, network string, addrs []string) (conn net.Conn, err error) {
 	for _, addr := range addrs {
-		conn, err = d.dialer.DialContext(ctx, network, addr)
+		conn, err = d.Dialer(ctx, network, addr)
 		if err == nil {
 			return conn, nil
 		}
