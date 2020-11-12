@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -186,7 +187,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	netutil.LogNetworkStats()
 
 	p2p.RegisterContactUnserializer()
-	di.BrokerConnector = nats.NewBrokerConnector()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
@@ -626,6 +626,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
 
+	di.NetworkDefinition = network
+
 	dnsMap := optionsNetwork.DNSMap
 	for host, hostIPs := range network.DNSMap {
 		dnsMap[host] = append(dnsMap[host], hostIPs...)
@@ -633,29 +635,25 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	for host, hostIPs := range dnsMap {
 		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
 	}
+	resolver := requests.NewResolverMap(dnsMap)
 
-	di.NetworkDefinition = network
-
-	httpDialer := requests.NewDialerSwarm(options.BindAddress)
-	httpDialer.ResolveContext = requests.NewResolverMap(dnsMap)
-	di.HTTPTransport = requests.NewTransport(httpDialer.DialContext)
+	dialer := requests.NewDialerSwarm(options.BindAddress)
+	dialer.ResolveContext = resolver
+	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	brokerURLs := make([]string, len(di.NetworkDefinition.BrokerAddresses))
+	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
-		brokerURL, err := nats.ParseServerURI(brokerAddress)
+		brokerURL, err := nats.ParseServerURL(brokerAddress)
 		if err != nil {
 			return err
 		}
-
-		if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
-			return err
-		}
-
-		brokerURLs[i] = brokerURL.String()
+		brokerURLs[i] = brokerURL
 	}
 
+	di.BrokerConnector = nats.NewBrokerConnector()
+	di.BrokerConnector.ResolveContext = resolver
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ type NetworkDefinition struct {
 var TestnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network", "nats://82.196.15.9"},
+	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
@@ -52,6 +52,7 @@ var TestnetDefinition = NetworkDefinition{
 	DNSMap: map[string][]string{
 		"testnet-api.mysterium.network":        {"78.47.176.149"},
 		"testnet-trust.mysterium.network":      {"82.196.15.9"},
+		"testnet-broker.mysterium.network":     {"82.196.15.9"},
 		"testnet-transactor.mysterium.network": {"116.203.17.150"},
 		"my.mysterium.network":                 {"168.119.183.173"},
 	},
@@ -61,7 +62,7 @@ var TestnetDefinition = NetworkDefinition{
 var BetanetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://betanet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://betanet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://betanet-broker.mysterium.network", "nats://95.216.204.232"},
+	BrokerAddresses:           []string{"nats://betanet-broker.mysterium.network"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0xc82Cc5B0bAe95F443e33FF053aAa70F1Eb7d312A",
@@ -75,6 +76,7 @@ var BetanetDefinition = NetworkDefinition{
 	DNSMap: map[string][]string{
 		"betanet-api.mysterium.network":        {"78.47.55.197"},
 		"betanet-trust.mysterium.network":      {"95.216.204.232"},
+		"betanet-broker.mysterium.network":     {"95.216.204.232"},
 		"betanet-transactor.mysterium.network": {"135.181.82.67"},
 		"betanet.mysterium.network":            {"138.201.244.63"},
 	},

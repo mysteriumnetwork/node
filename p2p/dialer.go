@@ -144,7 +144,12 @@ func (m *dialer) connect(contactDef ContactDefinition, tracer *trace.Tracer) (co
 
 	// broker connect might fail due to reconfiguration of network routes in progress
 	for i := 0; i < maxBrokerConnectAttempts; i++ {
-		conn, err = m.broker.Connect(contactDef.BrokerAddresses...)
+		serverURLs, err := nats.ParseServerURIs(contactDef.BrokerAddresses)
+		if err != nil {
+			return nil, err
+		}
+
+		conn, err = m.broker.Connect(serverURLs...)
 		if err != nil {
 			log.Warn().Msgf("broker connect failed - attempting again in 1sec: %s", err)
 			time.Sleep(time.Second)
