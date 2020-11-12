@@ -36,7 +36,6 @@ type DialerSwarm struct {
 	ResolveContext ResolveContext
 
 	// Dialer specifies the dial function for creating unencrypted TCP connections.
-	// If DialContext is nil hen the dials using package net.
 	Dialer DialContext
 }
 
