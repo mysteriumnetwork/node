@@ -31,7 +31,7 @@ var ErrAllDialsFailed = errors.New("all dials failed")
 
 // DialerSwarm is a dials to multiple addresses in parallel and earliest successful connection wins.
 type DialerSwarm struct {
-	// ResolveContext specifies the dial function for doing custom DNS lookup.
+	// ResolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
 	ResolveContext ResolveContext
 

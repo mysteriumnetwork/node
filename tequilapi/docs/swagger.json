@@ -799,6 +799,121 @@
         }
       }
     },
+    "/identities/{id}/payment-order": {
+      "get": {
+        "description": "Gets all orders for a given identity from the pilvytis service",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get all orders for identity",
+        "operationId": "getOrders",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get orders",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of order objects",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/OrderResponse"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Takes the given data and tries to create a new payment order in the pilvytis service.",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Create order",
+        "operationId": "createOrder",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to create an order",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Required data to create a new order",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/OrderRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order object",
+            "schema": {
+              "$ref": "#/definitions/OrderResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
+    "/identities/{id}/payment-order/{order_id}": {
+      "get": {
+        "description": "Gets an order for a given identity and order id combo from the pilvytis service",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get order",
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get an order",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Order id",
+            "name": "order_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order object",
+            "schema": {
+              "$ref": "#/definitions/OrderResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/identities/{id}/payout": {
       "put": {
         "description": "Registers payout address for identity",
@@ -1183,6 +1298,33 @@
             "description": "NAT status (\"not_finished\"/\"successful\"/\"failed\") and optionally error if status is \"failed\"",
             "schema": {
               "$ref": "#/definitions/NATStatusDTO"
+            }
+          }
+        }
+      }
+    },
+    "/payment-order-currencies": {
+      "get": {
+        "description": "Gets all possible currencies that can be used for payments",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get all possible currencies for payments",
+        "operationId": "getOrdersCurrencies",
+        "responses": {
+          "200": {
+            "description": "Array of order objects",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
             }
           }
         }
@@ -2655,6 +2797,101 @@
         "status": {
           "type": "string",
           "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "OrderRequest": {
+      "description": "OrderRequest holds order request details",
+      "type": "object",
+      "properties": {
+        "lightning_network": {
+          "type": "boolean",
+          "x-go-name": "LightningNetwork",
+          "example": false
+        },
+        "myst_amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "MystAmount",
+          "example": 3.14
+        },
+        "pay_currency": {
+          "type": "string",
+          "x-go-name": "PayCurrency",
+          "example": "EUR"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "OrderResponse": {
+      "description": "OrderResponse holds order request details",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "ID",
+          "example": 1
+        },
+        "identity": {
+          "type": "string",
+          "x-go-name": "Identity",
+          "example": "0x0000000000000000000000000000000000000002"
+        },
+        "myst_amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "MystAmount",
+          "example": 1.1
+        },
+        "pay_amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "PayAmount",
+          "example": 1.1
+        },
+        "pay_currency": {
+          "type": "string",
+          "x-go-name": "PayCurrency",
+          "example": "BTC"
+        },
+        "payment_address": {
+          "type": "string",
+          "x-go-name": "PaymentAddress",
+          "example": "0x0000000000000000000000000000000000000002"
+        },
+        "payment_url": {
+          "type": "string",
+          "x-go-name": "PaymentURL",
+          "example": "http://coingate.com/invoice/4949cf0a-fccb-4cc2-9342-7af1890cc664"
+        },
+        "price_amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "PriceAmount",
+          "example": 1.1
+        },
+        "price_currency": {
+          "type": "string",
+          "x-go-name": "PriceCurrency",
+          "example": "BTC"
+        },
+        "receive_amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "ReceiveAmount",
+          "example": 1.1
+        },
+        "receive_currency": {
+          "type": "string",
+          "x-go-name": "ReceiveCurrency",
+          "example": "BTC"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status",
+          "example": "pending"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

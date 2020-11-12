@@ -652,3 +652,53 @@ func (client *Client) IdentityReferralCode(identity string) (contract.ReferralTo
 	err = parseResponseJSON(response, &res)
 	return res, err
 }
+
+// OrderCreate creates a new order for currency exchange in pilvytis
+func (client *Client) OrderCreate(id identity.Identity, order contract.OrderRequest) (contract.OrderResponse, error) {
+	resp, err := client.http.Post(fmt.Sprintf("identities/%s/payment-order", id.Address), order)
+	if err != nil {
+		return contract.OrderResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.OrderResponse
+	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderGet returns a single order istance given it's ID.
+func (client *Client) OrderGet(address identity.Identity, orderID uint64) (contract.OrderResponse, error) {
+	path := fmt.Sprintf("identities/%s/payment-order/%d", address.Address, orderID)
+	resp, err := client.http.Get(path, nil)
+	if err != nil {
+		return contract.OrderResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.OrderResponse
+	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderGetAll returns all order istances for a given identity
+func (client *Client) OrderGetAll(id identity.Identity) ([]contract.OrderResponse, error) {
+	path := fmt.Sprintf("identities/%s/payment-order", id.Address)
+	resp, err := client.http.Get(path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var res []contract.OrderResponse
+	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderCurrencies returns all possible order currencies
+func (client *Client) OrderCurrencies() ([]string, error) {
+	resp, err := client.http.Get("payment-order-currencies", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var res []string
+	return res, parseResponseJSON(resp, &res)
+}

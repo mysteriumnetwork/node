@@ -18,6 +18,7 @@
 package nats
 
 import (
+	"net/url"
 	"testing"
 	"time"
 
@@ -37,7 +38,10 @@ func TestBrokerConnector(t *testing.T) {
 	connector := NewBrokerConnector()
 
 	// when
-	conn, err := connector.Connect(srv.Addr().String())
+	conn, err := connector.Connect(&url.URL{
+		Scheme: DefaultBrokerScheme,
+		Host:   srv.Addr().String(),
+	})
 	// then
 	assert.NoError(err)
 	defer conn.Close()

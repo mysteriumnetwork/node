@@ -79,7 +79,8 @@ type Options struct {
 
 	Consumer bool
 
-	P2PPorts *port.Range
+	P2PPorts        *port.Range
+	PilvytisAddress string
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -169,8 +170,9 @@ func GetOptions() *Options {
 		Firewall: OptionsFirewall{
 			BlockAlways: config.GetBool(config.FlagFirewallKillSwitch),
 		},
-		P2PPorts: getP2PListenPorts(),
-		Consumer: config.GetBool(config.FlagConsumer),
+		P2PPorts:        getP2PListenPorts(),
+		Consumer:        config.GetBool(config.FlagConsumer),
+		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
 	}
 }
 

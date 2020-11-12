@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -31,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/pilvytis"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
@@ -174,7 +176,8 @@ type Dependencies struct {
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 
-	MMN *mmn.MMN
+	MMN         *mmn.MMN
+	PilvytisAPI *pilvytis.API
 }
 
 // Bootstrap initiates all container dependencies
@@ -184,7 +187,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	netutil.LogNetworkStats()
 
 	p2p.RegisterContactUnserializer()
-	di.BrokerConnector = nats.NewBrokerConnector()
 
 	log.Info().Msg("Starting Mysterium Node " + metadata.VersionAsString())
 
@@ -547,6 +549,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		uniswapClient,
 	)
 
+	di.bootstrapPilvytis(nodeOptions)
+
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
 	if err != nil {
 		return err
@@ -583,6 +587,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.Exchange)
+	tequilapi_endpoints.AddRoutesForPilvytis(router, di.PilvytisAPI)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}
@@ -622,6 +627,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
 
+	di.NetworkDefinition = network
+
 	dnsMap := optionsNetwork.DNSMap
 	for host, hostIPs := range network.DNSMap {
 		dnsMap[host] = append(dnsMap[host], hostIPs...)
@@ -629,29 +636,25 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	for host, hostIPs := range dnsMap {
 		log.Info().Msgf("Using local DNS: %s -> %s", host, hostIPs)
 	}
+	resolver := requests.NewResolverMap(dnsMap)
 
-	di.NetworkDefinition = network
-
-	httpDialer := requests.NewDialerSwarm(options.BindAddress)
-	httpDialer.ResolveContext = requests.NewResolverMap(dnsMap)
-	di.HTTPTransport = requests.NewTransport(httpDialer.DialContext)
+	dialer := requests.NewDialerSwarm(options.BindAddress)
+	dialer.ResolveContext = resolver
+	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
 	di.MysteriumAPI = mysterium.NewClient(di.HTTPClient, network.MysteriumAPIAddress)
 
-	brokerURLs := make([]string, len(di.NetworkDefinition.BrokerAddresses))
+	brokerURLs := make([]*url.URL, len(di.NetworkDefinition.BrokerAddresses))
 	for i, brokerAddress := range di.NetworkDefinition.BrokerAddresses {
-		brokerURL, err := nats.ParseServerURI(brokerAddress)
+		brokerURL, err := nats.ParseServerURL(brokerAddress)
 		if err != nil {
 			return err
 		}
-
-		if _, err := di.ServiceFirewall.AllowURLAccess(brokerURL.String()); err != nil {
-			return err
-		}
-
-		brokerURLs[i] = brokerURL.String()
+		brokerURLs[i] = brokerURL
 	}
 
+	di.BrokerConnector = nats.NewBrokerConnector()
+	di.BrokerConnector.ResolveContext = resolver
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}
@@ -831,6 +834,10 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 	di.JWTAuthenticator = auth.NewJWTAuthenticator(key)
 
 	return nil
+}
+
+func (di *Dependencies) bootstrapPilvytis(options node.Options) {
+	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {

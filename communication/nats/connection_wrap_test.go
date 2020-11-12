@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseServerURI(t *testing.T) {
+func TestParseServerURL(t *testing.T) {
 	var tests = []struct {
 		uri         string
 		wantAddress *url.URL
@@ -52,7 +52,7 @@ func TestParseServerURI(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		address, err := ParseServerURI(tc.uri)
+		address, err := ParseServerURL(tc.uri)
 		if tc.wantError != nil {
 			assert.Contains(t, err.Error(), tc.wantError.Error())
 		} else {
@@ -66,16 +66,11 @@ func TestConnectionWrap_NewConnection(t *testing.T) {
 	connection, err := newConnection("nats://127.0.0.1:4222")
 	assert.NoError(t, err)
 	assert.Nil(t, connection.Conn)
-	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.servers)
+	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.Servers())
 
-	connection, err = newConnection("nats://127.0.0.1")
-	assert.NoError(t, err)
+	connection, err = newConnection("nats://127.0.0.1:4222", "nats://example.com:4222")
 	assert.Nil(t, connection.Conn)
-	assert.Equal(t, []string{"nats://127.0.0.1:4222"}, connection.servers)
-
-	connection, err = newConnection("nats:// example.com")
-	assert.Contains(t, err.Error(), `failed to parse NATS server URI "nats:// example.com":`)
-	assert.Nil(t, connection)
+	assert.Equal(t, []string{"nats://127.0.0.1:4222", "nats://example.com:4222"}, connection.Servers())
 }
 
 func TestConnectionWrap_Close_AfterFailedOpen(t *testing.T) {
