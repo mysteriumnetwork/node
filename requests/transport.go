@@ -18,17 +18,22 @@
 package requests
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"time"
 )
+
+// DialContext specifies the dial function for creating unencrypted TCP connections.
+type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // NewTransport returns default HTTP transport which
 // should be reused as it caches underlying TCP connections.
 // If connections pooling is not needed consider to set
 // DisableKeepAlives=false and MaxIdleConnsPerHost=-1.
-func NewTransport(dialer *Dialer) *http.Transport {
+func NewTransport(dialFunc DialContext) *http.Transport {
 	return &http.Transport{
-		DialContext:           dialer.DialContext,
+		DialContext:           dialFunc,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
