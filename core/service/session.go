@@ -46,23 +46,26 @@ type Session struct {
 	cleanupLock      sync.Mutex
 	cleanup          []func() error
 	tracer           *trace.Tracer
+	once             sync.Once
 }
 
 // Close ends session.
 func (s *Session) Close() {
-	close(s.done)
+	s.once.Do(func() {
+		close(s.done)
 
-	s.cleanupLock.Lock()
-	defer s.cleanupLock.Unlock()
+		s.cleanupLock.Lock()
+		defer s.cleanupLock.Unlock()
 
-	for i := len(s.cleanup) - 1; i >= 0; i-- {
-		log.Trace().Msgf("Session cleaning up: (%v/%v)", i+1, len(s.cleanup))
-		err := s.cleanup[i]()
-		if err != nil {
-			log.Warn().Err(err).Msg("Cleanup error")
+		for i := len(s.cleanup) - 1; i >= 0; i-- {
+			log.Trace().Msgf("Session cleaning up: (%v/%v)", i+1, len(s.cleanup))
+			err := s.cleanup[i]()
+			if err != nil {
+				log.Warn().Err(err).Msg("Cleanup error")
+			}
 		}
-	}
-	s.cleanup = nil
+		s.cleanup = nil
+	})
 }
 
 // Done returns readonly done channel.
