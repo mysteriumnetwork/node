@@ -274,8 +274,8 @@ func (sender *Sender) sendSessionEvent(e connectionstate.AppEventConnectionSessi
 }
 
 // sendUnlockEvent sends startup event
-func (sender *Sender) sendUnlockEvent(id string) {
-	sender.sendEvent(unlockEventName, id)
+func (sender *Sender) sendUnlockEvent(ev identity.AppEventIdentityUnlock) {
+	sender.sendEvent(unlockEventName, ev.ID.Address)
 }
 
 // sendProposalEvent sends provider proposal event.

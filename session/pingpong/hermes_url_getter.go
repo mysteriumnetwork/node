@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 )
 
 // HermesURLGetter allows for fetching and storing of hermes urls.
@@ -46,7 +47,7 @@ func NewHermesURLGetter(
 }
 
 type bc interface {
-	GetHermesURL(registryID, hermesID common.Address) (string, error)
+	GetHermesURL(chainID int64, registryID, hermesID common.Address) (string, error)
 }
 
 const suffix = "api/v2"
@@ -69,7 +70,8 @@ func (hug *HermesURLGetter) GetHermesURL(address common.Address) (string, error)
 		return add, nil
 	}
 
-	add, err := hug.bc.GetHermesURL(hug.Registry, address)
+	chainID := config.GetInt64(config.FlagChainID)
+	add, err := hug.bc.GetHermesURL(chainID, hug.Registry, address)
 	if err != nil {
 		return "", err
 	}

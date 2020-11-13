@@ -123,13 +123,14 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(10))
+	totalsStorage.Store(1, identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(10))
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		EventBus:                  mocks.NewEventBus(),
+		ChainID:                   1,
 		Ks:                        ks,
 		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
@@ -196,7 +197,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 
 	tracker := session.NewTracker(mbtime.Now)
 	totalsStorage := NewConsumerTotalsStorage(bolt, eventbus.New())
-	totalsStorage.Store(identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(0))
+	totalsStorage.Store(1, identity.FromAddress(acc.Address.Hex()), common.Address{}, big.NewInt(0))
 	deps := InvoicePayerDeps{
 		InvoiceChan:               invoiceChan,
 		PeerExchangeMessageSender: mockSender,
@@ -594,6 +595,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 			EventBus: mp,
 			Identity: identity.FromAddress(acc.Address.Hex()),
 			Peer:     peerID,
+			ChainID:  1,
 		},
 	}
 	emt.lastInvoice = crypto.Invoice{
@@ -624,6 +626,7 @@ func TestInvoicePayer_issueExchangeMessage_publishesEvents(t *testing.T) {
 	ev = <-mp.publicationChan
 	assert.Equal(t, event.AppTopicGrandTotalChanged, ev.name)
 	assert.EqualValues(t, event.AppEventGrandTotalChanged{
+		ChainID:    1,
 		ConsumerID: emt.deps.Identity,
 		Current:    big.NewInt(5),
 	}, ev.value)
@@ -785,10 +788,11 @@ type mockConsumerTotalsStorage struct {
 	calledWith *big.Int
 }
 
-func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount *big.Int) error {
+func (mcts *mockConsumerTotalsStorage) Store(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
 	mcts.calledWith = amount
 	if mcts.bus != nil {
 		go mcts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+			ChainID:    chainID,
 			Current:    amount,
 			HermesID:   hermesID,
 			ConsumerID: id,
@@ -797,7 +801,7 @@ func (mcts *mockConsumerTotalsStorage) Store(id identity.Identity, hermesID comm
 	return nil
 }
 
-func (mcts *mockConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (*big.Int, error) {
+func (mcts *mockConsumerTotalsStorage) Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	mcts.resLock.Lock()
 	defer mcts.resLock.Unlock()
 	return mcts.res, mcts.err

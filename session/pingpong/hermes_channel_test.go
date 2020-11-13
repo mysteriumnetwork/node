@@ -29,7 +29,7 @@ import (
 func TestHermesChannel_balance(t *testing.T) {
 	channel := HermesChannel{
 		channel: client.ProviderChannel{
-			Balance: big.NewInt(100),
+			Stake:   big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
 		lastPromise: HermesPromise{
@@ -42,7 +42,7 @@ func TestHermesChannel_balance(t *testing.T) {
 
 	channel = HermesChannel{
 		channel: client.ProviderChannel{
-			Balance: big.NewInt(100),
+			Stake:   big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
 		lastPromise: HermesPromise{

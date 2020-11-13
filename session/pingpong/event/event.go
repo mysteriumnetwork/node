@@ -42,6 +42,7 @@ const (
 type AppEventSettlementRequest struct {
 	HermesID   common.Address
 	ProviderID identity.Identity
+	ChainID    int64
 }
 
 // AppEventHermesPromise represents the payload that is sent on the AppTopicHermesPromise.
@@ -84,6 +85,7 @@ const AppTopicGrandTotalChanged = "consumer_grand_total_change"
 // AppEventGrandTotalChanged represents the grand total changed event.
 type AppEventGrandTotalChanged struct {
 	Current    *big.Int
+	ChainID    int64
 	HermesID   common.Address
 	ConsumerID identity.Identity
 }

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,8 +36,8 @@ import (
 
 func TestPromiseSettler_loadInitialState(t *testing.T) {
 	mrsp := &mockRegistrationStatusProvider{
-		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: {
+		identities: map[string]mockRegistrationStatus{
+			mockChainIdentity: {
 				status: registry.Registered,
 			},
 		},
@@ -47,7 +48,7 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	settler.currentState[mockID] = settlementState{}
 
 	// check if existing gets skipped
-	err := settler.loadInitialState(mockID)
+	err := settler.loadInitialState(0, mockID)
 	assert.NoError(t, err)
 
 	v := settler.currentState[mockID]
@@ -56,11 +57,11 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	// check if unregistered gets skipped
 	delete(settler.currentState, mockID)
 
-	mrsp.identities[mockID] = mockRegistrationStatus{
+	mrsp.identities[mockChainIdentity] = mockRegistrationStatus{
 		status: registry.Registered,
 	}
 
-	err = settler.loadInitialState(mockID)
+	err = settler.loadInitialState(0, mockID)
 	assert.NoError(t, err)
 
 	v = settler.currentState[mockID]
@@ -71,11 +72,11 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	// check if will resync
 	delete(settler.currentState, mockID)
 
-	mrsp.identities[mockID] = mockRegistrationStatus{
+	mrsp.identities[mockChainIdentity] = mockRegistrationStatus{
 		status: registry.Registered,
 	}
 
-	err = settler.loadInitialState(mockID)
+	err = settler.loadInitialState(0, mockID)
 	assert.NoError(t, err)
 
 	v = settler.currentState[mockID]
@@ -84,19 +85,19 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	// check if will bubble registration status errors
 	delete(settler.currentState, mockID)
 
-	mrsp.identities[mockID] = mockRegistrationStatus{
+	mrsp.identities[mockChainIdentity] = mockRegistrationStatus{
 		status: registry.Registered,
 		err:    errMock,
 	}
 
-	err = settler.loadInitialState(mockID)
+	err = settler.loadInitialState(0, mockID)
 	assert.Equal(t, fmt.Sprintf("could not check registration status for %v: %v", mockID, errMock.Error()), err.Error())
 }
 
 func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	mrsp := &mockRegistrationStatusProvider{
-		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: {
+		identities: map[string]mockRegistrationStatus{
+			mockChainIdentity: {
 				status: registry.Registered,
 			},
 		},
@@ -130,8 +131,8 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	channelProvider := &mockHermesChannelProvider{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	mrsp := &mockRegistrationStatusProvider{
-		identities: map[identity.Identity]mockRegistrationStatus{
-			mockID: {
+		identities: map[string]mockRegistrationStatus{
+			mockChainIdentity: {
 				status: registry.Registered,
 			},
 		},
@@ -159,7 +160,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	assertNoReceive(t, settler.settleQueue)
 
 	// should receive on registered provider. Should also expect a recalculated balance to be added to the settlementState
-	expectedChannel := client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)}
+	expectedChannel := client.ProviderChannel{Stake: big.NewInt(1000)}
 	expectedPromise := crypto.Promise{Amount: big.NewInt(9000)}
 	settler.currentState[mockID] = settlementState{
 		registered: true,
@@ -175,7 +176,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	assert.Equal(t, mockID, p.provider)
 
 	// should not receive here due to balance being large and stake being small
-	expectedChannel = client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(0)}
+	expectedChannel = client.ProviderChannel{Stake: big.NewInt(0)}
 	expectedPromise = crypto.Promise{Amount: big.NewInt(8900)}
 	settler.currentState[mockID] = settlementState{
 		registered:       true,
@@ -209,11 +210,11 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	assert.NoError(t, err)
 
 	mrsp := &mockRegistrationStatusProvider{
-		identities: map[identity.Identity]mockRegistrationStatus{
-			identity.FromAddress(acc2.Address.Hex()): {
+		identities: map[string]mockRegistrationStatus{
+			"0" + strings.ToLower(acc2.Address.Hex()): {
 				status: registry.Registered,
 			},
-			identity.FromAddress(acc1.Address.Hex()): {
+			"0" + strings.ToLower(acc1.Address.Hex()): {
 				status: registry.Unregistered,
 			},
 		},
@@ -242,8 +243,8 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Balance: big.NewInt(100), Stake: big.NewInt(1000)},
-		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(100)}},
+		client.ProviderChannel{Stake: big.NewInt(1000)},
+		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(1000)}},
 	)
 	assert.True(t, s.needsSettling(0.1, channel), "should be true with zero balance left")
 
@@ -254,7 +255,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
+		client.ProviderChannel{Stake: big.NewInt(1000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(9000)}},
 	)
 	assert.True(t, s.needsSettling(0.1, channel), "should be true with 10% missing")
@@ -272,7 +273,7 @@ func TestPromiseSettlerState_needsSettling(t *testing.T) {
 		"1",
 		mockID,
 		hermesID,
-		client.ProviderChannel{Balance: big.NewInt(10000), Stake: big.NewInt(1000)},
+		client.ProviderChannel{Stake: big.NewInt(10000)},
 		HermesPromise{Promise: crypto.Promise{Amount: big.NewInt(8999)}},
 	)
 	assert.False(t, s.needsSettling(0.1, channel), "should be false with 10.01% missing")
@@ -289,15 +290,15 @@ type mockProviderChannelStatusProvider struct {
 	feeError           error
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
+func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
 	return mpcsp.sinkToReturn, mpcsp.subCancel, mpcsp.subError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error) {
 	return mpcsp.channelToReturn, mpcsp.channelReturnError
 }
 
-func (mpcsp *mockProviderChannelStatusProvider) GetHermesFee(hermesAddress common.Address) (uint16, error) {
+func (mpcsp *mockProviderChannelStatusProvider) GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error) {
 	return mpcsp.feeToReturn, mpcsp.feeError
 }
 
@@ -312,11 +313,11 @@ type mockHermesChannelProvider struct {
 	channelReturnError error
 }
 
-func (mhcp *mockHermesChannelProvider) Get(_ identity.Identity, _ common.Address) (HermesChannel, bool) {
+func (mhcp *mockHermesChannelProvider) Get(chainID int64, _ identity.Identity, _ common.Address) (HermesChannel, bool) {
 	return mhcp.channelToReturn, true
 }
 
-func (mhcp *mockHermesChannelProvider) Fetch(_ identity.Identity, _ common.Address) (HermesChannel, error) {
+func (mhcp *mockHermesChannelProvider) Fetch(chainID int64, _ identity.Identity, _ common.Address) (HermesChannel, error) {
 	return mhcp.channelToReturn, mhcp.channelReturnError
 }
 
@@ -326,11 +327,11 @@ type mockRegistrationStatus struct {
 }
 
 type mockRegistrationStatusProvider struct {
-	identities map[identity.Identity]mockRegistrationStatus
+	identities map[string]mockRegistrationStatus
 }
 
-func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Identity) (registry.RegistrationStatus, error) {
-	if v, ok := mrsp.identities[id]; ok {
+func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(chainID int64, id identity.Identity) (registry.RegistrationStatus, error) {
+	if v, ok := mrsp.identities[fmt.Sprintf("%d%s", chainID, id.Address)]; ok {
 		return v.status, v.err
 	}
 
@@ -340,11 +341,11 @@ func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Id
 var errMock = errors.New("explosions everywhere")
 var mockID = identity.FromAddress("0x0000000000000000000000000000000000000001")
 var hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
+var mockChainIdentity = "0" + mockID.Address
 
 var mockProviderChannel = client.ProviderChannel{
-	Balance: big.NewInt(1000000000000),
 	Settled: big.NewInt(9000000),
-	Stake:   big.NewInt(12312323),
+	Stake:   big.NewInt(1000000000000),
 }
 
 type mockTransactor struct {
@@ -371,8 +372,8 @@ func (mt *mockTransactor) SettleIntoStake(accountantID, providerID string, promi
 	return nil
 }
 
-func (mt *mockTransactor) FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error) {
-	return mt.statusToReturn, mt.statusError
+func (mt *mockTransactor) FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error) {
+	return []registry.TransactorStatusResponse{mt.statusToReturn}, mt.statusError
 }
 
 type settlementHistoryStorageMock struct{}

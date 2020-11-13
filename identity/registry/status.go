@@ -61,7 +61,8 @@ func (rs RegistrationStatus) Registered() bool {
 // StoredRegistrationStatus represents a registration status that is being stored in our local DB
 type StoredRegistrationStatus struct {
 	RegistrationStatus  RegistrationStatus
-	Identity            identity.Identity `storm:"id"`
+	Identity            identity.Identity
+	ChainID             int64
 	RegistrationRequest IdentityRegistrationRequest
 	UpdatedAt           time.Time
 }
@@ -72,6 +73,7 @@ func (srs StoredRegistrationStatus) FromEvent(status RegistrationStatus, ev Iden
 		RegistrationStatus:  status,
 		RegistrationRequest: ev,
 		Identity:            identity.FromAddress(ev.Identity),
+		ChainID:             ev.ChainID,
 	}
 }
 
@@ -80,6 +82,7 @@ const AppTopicIdentityRegistration = "registration_event_topic"
 
 // AppEventIdentityRegistration represents the registration event payload.
 type AppEventIdentityRegistration struct {
-	ID     identity.Identity
-	Status RegistrationStatus
+	ID      identity.Identity
+	Status  RegistrationStatus
+	ChainID int64
 }

@@ -38,11 +38,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type balanceKey string
+
+func newBalanceKey(chainID int64, id identity.Identity) balanceKey {
+	return balanceKey(fmt.Sprintf("%v_%v", id.Address, chainID))
+}
+
 // ConsumerBalanceTracker keeps track of consumer balances.
 // TODO: this needs to take into account the saved state.
 type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
-	balances     map[identity.Identity]ConsumerBalance
+	balances     map[balanceKey]ConsumerBalance
 
 	registry                             registrationStatusProvider
 	hermesAddress                        common.Address
@@ -58,7 +64,7 @@ type ConsumerBalanceTracker struct {
 }
 
 type transactorRegistrationStatusProvider interface {
-	FetchRegistrationStatus(id string) (registry.TransactorStatusResponse, error)
+	FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error)
 }
 
 // NewConsumerBalanceTracker creates a new instance
@@ -74,7 +80,7 @@ func NewConsumerBalanceTracker(
 	registry registrationStatusProvider,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
-		balances:                             make(map[identity.Identity]ConsumerBalance),
+		balances:                             make(map[balanceKey]ConsumerBalance),
 		consumerBalanceChecker:               consumerBalanceChecker,
 		mystSCAddress:                        mystSCAddress,
 		hermesAddress:                        hermesAddress,
@@ -89,13 +95,13 @@ func NewConsumerBalanceTracker(
 }
 
 type consumerInfoGetter interface {
-	GetConsumerData(id string) (ConsumerData, error)
+	GetConsumerData(chainID int64, id string) (ConsumerData, error)
 }
 
 type consumerBalanceChecker interface {
-	SubscribeToConsumerBalanceEvent(channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error)
-	GetConsumerChannel(addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error)
-	GetMystBalance(mystAddress, identity common.Address) (*big.Int, error)
+	SubscribeToConsumerBalanceEvent(chainID int64, channel, mystSCAddress common.Address, timeout time.Duration) (chan *bindings.MystTokenTransfer, func(), error)
+	GetConsumerChannel(chainID int64, addr common.Address, mystSCAddress common.Address) (client.ConsumerChannel, error)
+	GetMystBalance(chainID int64, mystAddress, identity common.Address) (*big.Int, error)
 }
 
 // Subscribe subscribes the consumer balance tracker to relevant events
@@ -116,8 +122,8 @@ func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 }
 
 // GetBalance gets the current balance for given identity
-func (cbt *ConsumerBalanceTracker) GetBalance(id identity.Identity) *big.Int {
-	if v, ok := cbt.getBalance(id); ok {
+func (cbt *ConsumerBalanceTracker) GetBalance(chainID int64, id identity.Identity) *big.Int {
+	if v, ok := cbt.getBalance(chainID, id); ok {
 		return v.GetBalance()
 	}
 	return new(big.Int)
@@ -135,44 +141,43 @@ func (cbt *ConsumerBalanceTracker) publishChangeEvent(id identity.Identity, befo
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) handleUnlockEvent(id string) {
-	identity := identity.FromAddress(id)
-	err := cbt.recoverGrandTotalPromised(identity)
+func (cbt *ConsumerBalanceTracker) handleUnlockEvent(data identity.AppEventIdentityUnlock) {
+	err := cbt.recoverGrandTotalPromised(data.ChainID, data.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 	}
 
-	status, err := cbt.registry.GetRegistrationStatus(identity)
+	status, err := cbt.registry.GetRegistrationStatus(data.ChainID, data.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not recover get registration status")
 	}
 
 	switch status {
 	case registry.InProgress:
-		cbt.alignWithTransactor(identity)
+		cbt.alignWithTransactor(data.ChainID, data.ID)
 	default:
-		cbt.ForceBalanceUpdate(identity)
+		cbt.ForceBalanceUpdate(data.ChainID, data.ID)
 	}
 
-	go cbt.subscribeToExternalChannelTopup(identity)
+	go cbt.subscribeToExternalChannelTopup(data.ChainID, data.ID)
 }
 
 func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGrandTotalChanged) {
-	if _, ok := cbt.getBalance(ev.ConsumerID); !ok {
-		cbt.ForceBalanceUpdate(ev.ConsumerID)
+	if _, ok := cbt.getBalance(ev.ChainID, ev.ConsumerID); !ok {
+		cbt.ForceBalanceUpdate(ev.ChainID, ev.ConsumerID)
 		return
 	}
 
-	cbt.updateGrandTotal(ev.ConsumerID, ev.Current)
+	cbt.updateGrandTotal(ev.ChainID, ev.ConsumerID, ev.Current)
 }
 
-func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(id identity.Identity) *big.Int {
+func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, id identity.Identity) *big.Int {
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
 	if err != nil {
 		log.Error().Err(err).Msg("could not compute channel address")
 		return new(big.Int)
 	}
-	balance, err := cbt.consumerBalanceChecker.GetMystBalance(cbt.mystSCAddress, addr)
+	balance, err := cbt.consumerBalanceChecker.GetMystBalance(chainID, cbt.mystSCAddress, addr)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get myst balance on consumer channel")
 		return new(big.Int)
@@ -180,7 +185,7 @@ func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(id identity.Ide
 	return balance
 }
 
-func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.Identity) {
+func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64, id identity.Identity) {
 	// if we've been stopped, don't re-start
 	select {
 	case <-cbt.stop:
@@ -195,7 +200,7 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 		return
 	}
 
-	ev, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(addr, cbt.mystSCAddress, time.Hour*72)
+	ev, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(chainID, addr, cbt.mystSCAddress, time.Hour*72)
 	if err != nil {
 		log.Error().Err(err).Msg("could not subscribe to channel balance events")
 		return
@@ -216,7 +221,7 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 	func() {
 		defer func() {
 			// we've been interrupted, restart
-			go cbt.subscribeToExternalChannelTopup(id)
+			go cbt.subscribeToExternalChannelTopup(chainID, id)
 		}()
 
 		for e := range ev {
@@ -224,29 +229,29 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(id identity.I
 				return
 			}
 
-			previous, _ := cbt.getBalance(id)
+			previous, _ := cbt.getBalance(chainID, id)
 			if bytes.Equal(e.To.Bytes(), addr.Bytes()) {
-				cbt.setBalance(id, ConsumerBalance{
+				cbt.setBalance(chainID, id, ConsumerBalance{
 					BCBalance:          new(big.Int).Add(previous.BCBalance, e.Value),
 					BCSettled:          previous.BCSettled,
 					GrandTotalPromised: previous.GrandTotalPromised,
 				})
 			} else {
-				cbt.setBalance(id, ConsumerBalance{
+				cbt.setBalance(chainID, id, ConsumerBalance{
 					BCBalance:          new(big.Int).Sub(previous.BCBalance, e.Value),
 					BCSettled:          previous.BCSettled,
 					GrandTotalPromised: previous.GrandTotalPromised,
 				})
 			}
-			currentBalance, _ := cbt.getBalance(id)
+			currentBalance, _ := cbt.getBalance(chainID, id)
 			go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
 		}
 	}()
 }
 
 // ForceBalanceUpdate forces a balance update and returns the updated balance
-func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big.Int {
-	fallback := cbt.GetBalance(id)
+func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
+	fallback := cbt.GetBalance(chainID, id)
 
 	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
 	if err != nil {
@@ -254,29 +259,29 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 		return fallback
 	}
 
-	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(addr, cbt.mystSCAddress)
+	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, cbt.mystSCAddress)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get consumer channel")
 		// This indicates we're not registered, check for unregistered balance.
-		unregisteredBalance := cbt.getUnregisteredChannelBalance(id)
+		unregisteredBalance := cbt.getUnregisteredChannelBalance(chainID, id)
 		// We'll also launch a goroutine to listen for external top up.
-		cbt.setBalance(id, ConsumerBalance{
+		cbt.setBalance(chainID, id, ConsumerBalance{
 			BCBalance:          unregisteredBalance,
 			BCSettled:          new(big.Int),
 			GrandTotalPromised: new(big.Int),
 		})
 
-		currentBalance, _ := cbt.getBalance(id)
+		currentBalance, _ := cbt.getBalance(chainID, id)
 		go cbt.publishChangeEvent(id, new(big.Int), currentBalance.GetBalance())
 		return unregisteredBalance
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
+	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, cbt.hermesAddress)
 	if errors.Is(err, ErrNotFound) {
-		if err := cbt.recoverGrandTotalPromised(id); err != nil {
+		if err := cbt.recoverGrandTotalPromised(chainID, id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
-		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(id, cbt.hermesAddress)
+		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(chainID, id, cbt.hermesAddress)
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
@@ -284,17 +289,17 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 	}
 
 	var before = new(big.Int)
-	if v, ok := cbt.getBalance(id); ok {
+	if v, ok := cbt.getBalance(chainID, id); ok {
 		before = v.GetBalance()
 	}
 
-	cbt.setBalance(id, ConsumerBalance{
+	cbt.setBalance(chainID, id, ConsumerBalance{
 		BCBalance:          cc.Balance,
 		BCSettled:          cc.Settled,
 		GrandTotalPromised: grandTotal,
 	})
 
-	currentBalance, _ := cbt.getBalance(id)
+	currentBalance, _ := cbt.getBalance(chainID, id)
 	go cbt.publishChangeEvent(id, before, currentBalance.GetBalance())
 	return currentBalance.GetBalance()
 }
@@ -302,14 +307,14 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(id identity.Identity) *big
 func (cbt *ConsumerBalanceTracker) handleRegistrationEvent(event registry.AppEventIdentityRegistration) {
 	switch event.Status {
 	case registry.InProgress:
-		cbt.alignWithTransactor(event.ID)
+		cbt.alignWithTransactor(event.ChainID, event.ID)
 	case registry.Registered:
-		cbt.ForceBalanceUpdate(event.ID)
+		cbt.ForceBalanceUpdate(event.ChainID, event.ID)
 	}
 }
 
-func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
-	balance, ok := cbt.getBalance(id)
+func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identity.Identity) {
+	balance, ok := cbt.getBalance(chainID, id)
 	if ok {
 		// do not override existing values with transactor data
 		return
@@ -341,7 +346,21 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 		if err != nil {
 			return err
 		}
-		data = resp
+
+		var status *registry.TransactorStatusResponse
+		for _, v := range resp {
+			if v.ChainID == chainID {
+				status = &v
+				break
+			}
+		}
+
+		if status == nil {
+			err := fmt.Errorf("got response but failed to find status for id '%s' on chain '%d'", id.Address, chainID)
+			return backoff.Permanent(err)
+		}
+
+		data = *status
 		return nil
 	}
 
@@ -357,7 +376,7 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 
 	if data.BountyAmount.Cmp(big.NewInt(0)) == 0 {
 		// if we've got no bounty, get myst balance from BC and use that as bounty
-		b := cbt.getUnregisteredChannelBalance(id)
+		b := cbt.getUnregisteredChannelBalance(chainID, id)
 		data.BountyAmount = b
 	}
 
@@ -367,11 +386,11 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(id identity.Identity) {
 		GrandTotalPromised: new(big.Int),
 	}
 	log.Debug().Msgf("Loaded transactor state, current balance: %v MYST", data.BountyAmount)
-	cbt.setBalance(id, c)
+	cbt.setBalance(chainID, id, c)
 	go cbt.publishChangeEvent(id, balance.GetBalance(), c.GetBalance())
 }
 
-func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.Identity) error {
+func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, identity identity.Identity) error {
 	var boff backoff.BackOff
 	eback := backoff.NewExponentialBackOff()
 	eback.MaxElapsedTime = time.Second * 20
@@ -392,7 +411,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 	var data ConsumerData
 	boff = backoff.WithContext(boff, ctx)
 	toRetry := func() error {
-		d, err := cbt.consumerInfoGetter.GetConsumerData(identity.Address)
+		d, err := cbt.consumerInfoGetter.GetConsumerData(chainID, identity.Address)
 		if err != nil {
 			if err != ErrHermesNotFound {
 				return err
@@ -413,7 +432,7 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(identity identity.I
 	}
 
 	log.Debug().Msgf("Loaded hermes state: already promised: %v", data.LatestPromise.Amount)
-	return cbt.consumerGrandTotalsStorage.Store(identity, cbt.hermesAddress, data.LatestPromise.Amount)
+	return cbt.consumerGrandTotalsStorage.Store(chainID, identity, cbt.hermesAddress, data.LatestPromise.Amount)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
@@ -422,25 +441,25 @@ func (cbt *ConsumerBalanceTracker) handleStopEvent() {
 	})
 }
 
-func (cbt *ConsumerBalanceTracker) increaseBCBalance(id identity.Identity, diff *big.Int) {
-	b, ok := cbt.getBalance(id)
+func (cbt *ConsumerBalanceTracker) increaseBCBalance(chainID int64, id identity.Identity, diff *big.Int) {
+	b, ok := cbt.getBalance(chainID, id)
 	before := b.BCBalance
 	if ok {
 		b.BCBalance = new(big.Int).Add(b.BCBalance, diff)
-		cbt.setBalance(id, b)
+		cbt.setBalance(chainID, id, b)
 	} else {
-		cbt.ForceBalanceUpdate(id)
+		cbt.ForceBalanceUpdate(chainID, id)
 	}
-	after, _ := cbt.getBalance(id)
+	after, _ := cbt.getBalance(chainID, id)
 
 	go cbt.publishChangeEvent(id, before, after.GetBalance())
 }
 
-func (cbt *ConsumerBalanceTracker) getBalance(id identity.Identity) (ConsumerBalance, bool) {
+func (cbt *ConsumerBalanceTracker) getBalance(chainID int64, id identity.Identity) (ConsumerBalance, bool) {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 
-	if v, ok := cbt.balances[id]; ok {
+	if v, ok := cbt.balances[newBalanceKey(chainID, id)]; ok {
 		return v, true
 	}
 
@@ -451,24 +470,24 @@ func (cbt *ConsumerBalanceTracker) getBalance(id identity.Identity) (ConsumerBal
 	}, false
 }
 
-func (cbt *ConsumerBalanceTracker) setBalance(id identity.Identity, balance ConsumerBalance) {
+func (cbt *ConsumerBalanceTracker) setBalance(chainID int64, id identity.Identity, balance ConsumerBalance) {
 	cbt.balancesLock.Lock()
 	defer cbt.balancesLock.Unlock()
 
-	cbt.balances[id] = balance
+	cbt.balances[newBalanceKey(chainID, id)] = balance
 }
 
-func (cbt *ConsumerBalanceTracker) updateGrandTotal(id identity.Identity, current *big.Int) {
-	b, ok := cbt.getBalance(id)
+func (cbt *ConsumerBalanceTracker) updateGrandTotal(chainID int64, id identity.Identity, current *big.Int) {
+	b, ok := cbt.getBalance(chainID, id)
 	before := b.BCBalance
 	if ok {
 		b.GrandTotalPromised = current
-		cbt.setBalance(id, b)
+		cbt.setBalance(chainID, id, b)
 	} else {
-		cbt.ForceBalanceUpdate(id)
+		cbt.ForceBalanceUpdate(chainID, id)
 	}
 
-	after, _ := cbt.getBalance(id)
+	after, _ := cbt.getBalance(chainID, id)
 	go cbt.publishChangeEvent(id, before, after.GetBalance())
 }
 

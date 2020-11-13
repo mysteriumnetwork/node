@@ -339,19 +339,19 @@ type mockSettler struct {
 	feeErrorToReturn error
 }
 
-func (ms *mockSettler) ForceSettle(_ identity.Identity, _ common.Address) error {
+func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ common.Address) error {
 	return ms.errToReturn
 }
 
-func (ms *mockSettler) SettleWithBeneficiary(_ identity.Identity, _, _ common.Address) error {
+func (ms *mockSettler) SettleWithBeneficiary(_ int64, _ identity.Identity, _, _ common.Address) error {
 	return ms.errToReturn
 }
 
-func (ms *mockSettler) SettleIntoStake(providerID identity.Identity, hermesID common.Address) error {
+func (ms *mockSettler) SettleIntoStake(_ int64, providerID identity.Identity, hermesID common.Address) error {
 	return nil
 }
 
-func (ms *mockSettler) GetHermesFee(_ common.Address) (uint16, error) {
+func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 

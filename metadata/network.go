@@ -33,6 +33,7 @@ type NetworkDefinition struct {
 	WETHAddress               string
 	PilvytisAddress           string
 	DNSMap                    map[string][]string
+	DefaultChainID            int64
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -56,6 +57,7 @@ var TestnetDefinition = NetworkDefinition{
 		"testnet-transactor.mysterium.network": {"116.203.17.150"},
 		"my.mysterium.network":                 {"168.119.183.173"},
 	},
+	DefaultChainID: 5,
 }
 
 // BetanetDefinition defines parameters for Betanet network (currently default network)
@@ -80,6 +82,7 @@ var BetanetDefinition = NetworkDefinition{
 		"betanet-transactor.mysterium.network": {"135.181.82.67"},
 		"betanet.mysterium.network":            {"138.201.244.63"},
 	},
+	DefaultChainID: 5,
 }
 
 // LocalnetDefinition defines parameters for local network
@@ -95,6 +98,7 @@ var LocalnetDefinition = NetworkDefinition{
 	DNSMap: map[string][]string{
 		"localhost": {"127.0.0.1"},
 	},
+	DefaultChainID: 1,
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given

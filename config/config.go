@@ -207,6 +207,11 @@ func (cfg *Config) GetInt(key string) int {
 	return cast.ToInt(cfg.Get(key))
 }
 
+// GetInt64 returns config value as int64.
+func (cfg *Config) GetInt64(key string) int64 {
+	return cast.ToInt64(cfg.Get(key))
+}
+
 // GetUInt64 returns config value as uint64.
 func (cfg *Config) GetUInt64(key string) uint64 {
 	return cast.ToUint64(cfg.Get(key))
@@ -266,6 +271,17 @@ func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
 	}
 }
 
+// ParseInt64Flag parses a cli.Int64Flag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseInt64Flag(ctx *cli.Context, flag cli.Int64Flag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Int64(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
 // ParseFloat64Flag parses a cli.Float64Flag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
@@ -318,6 +334,11 @@ func GetBool(flag cli.BoolFlag) bool {
 // GetInt shorthand for getting current configuration value for cli.IntFlag.
 func GetInt(flag cli.IntFlag) int {
 	return Current.GetInt(flag.Name)
+}
+
+// GetInt64 shorthand for getting current configuration value for cli.IntFlag.
+func GetInt64(flag cli.Int64Flag) int64 {
+	return Current.GetInt64(flag.Name)
 }
 
 // GetString shorthand for getting current configuration value for cli.StringFlag.

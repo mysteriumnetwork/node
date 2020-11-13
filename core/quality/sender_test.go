@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,7 +44,7 @@ func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	sender.sendUnlockEvent("0x1234567890abcdef")
+	sender.sendUnlockEvent(identity.AppEventIdentityUnlock{ID: identity.FromAddress("0x1234567890abcdef")})
 
 	sentEvent := mockTransport.sentEvent
 	assert.Equal(t, "unlock", sentEvent.EventName)

@@ -38,15 +38,16 @@ import (
 )
 
 type balanceProvider interface {
-	ForceBalanceUpdate(id identity.Identity) *big.Int
+	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
-	GetEarnings(id identity.Identity) pingpong_event.Earnings
+	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
 }
 
 type providerChannel interface {
-	GetProviderChannel(hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
+	GetProviderChannel(chainID int64, hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
+	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
 
 type identitiesAPI struct {
@@ -123,7 +124,9 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 	if req.Address != nil {
 		idAddress = *req.Address
 	}
-	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase)
+
+	chainID := config.GetInt64(config.FlagChainID)
+	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase, chainID)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -234,7 +237,8 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 		return
 	}
 
-	err = endpoint.idm.Unlock(id.Address, *req.Passphrase)
+	chainID := config.GetInt64(config.FlagChainID)
+	err = endpoint.idm.Unlock(chainID, id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
@@ -269,7 +273,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -283,7 +287,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 
 	var stake = new(big.Int)
 	if regStatus == registry.Registered {
-		data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
+
+		data, err := endpoint.bc.GetProviderChannel(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return
@@ -291,8 +296,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		stake = data.Stake
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
-	settlement := endpoint.earningsProvider.GetEarnings(id)
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(config.GetInt64(config.FlagChainID), id)
+	settlement := endpoint.earningsProvider.GetEarnings(config.GetInt64(config.FlagChainID), id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
@@ -332,7 +337,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -366,14 +371,14 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
+	data, err := endpoint.bc.GetBeneficiary(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagTransactorRegistryAddress)), common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
 	}
 
 	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
-		Beneficiary: data.Beneficiary.String(),
+		Beneficiary: data.Hex(),
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }

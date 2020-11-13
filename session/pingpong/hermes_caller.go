@@ -184,23 +184,28 @@ func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error 
 }
 
 // GetConsumerData gets consumer data from hermes
-func (ac *HermesCaller) GetConsumerData(id string) (ConsumerData, error) {
+func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not form consumer data request: %w", err)
 	}
-	var resp ConsumerData
+	var resp map[int64]ConsumerData
 	err = ac.doRequest(req, &resp)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not request consumer data from hermes: %w", err)
 	}
 
-	err = resp.LatestPromise.isValid(id)
+	data, ok := resp[chainID]
+	if !ok {
+		return ConsumerData{}, fmt.Errorf("could not get data for chain ID: %d", chainID)
+	}
+
+	err = data.LatestPromise.isValid(id)
 	if err != nil {
 		return ConsumerData{}, fmt.Errorf("could not check promise validity: %w", err)
 	}
 
-	return resp, nil
+	return data, nil
 }
 
 func (ac *HermesCaller) doRequest(req *http.Request, to interface{}) error {
@@ -239,7 +244,6 @@ type ConsumerData struct {
 	Beneficiary      string        `json:"Beneficiary"`
 	ChannelID        string        `json:"ChannelID"`
 	Balance          *big.Int      `json:"Balance"`
-	Promised         *big.Int      `json:"Promised"`
 	Settled          *big.Int      `json:"Settled"`
 	Stake            *big.Int      `json:"Stake"`
 	LatestPromise    LatestPromise `json:"LatestPromise"`
@@ -248,12 +252,12 @@ type ConsumerData struct {
 
 // LatestPromise represents the latest promise
 type LatestPromise struct {
-	ChannelID string      `json:"ChannelID"`
-	Amount    *big.Int    `json:"Amount"`
-	Fee       *big.Int    `json:"Fee"`
-	Hashlock  string      `json:"Hashlock"`
-	R         interface{} `json:"R"`
-	Signature string      `json:"Signature"`
+	ChainID   int64    `json:"ChainID"`
+	ChannelID string   `json:"ChannelID"`
+	Amount    *big.Int `json:"Amount"`
+	Fee       *big.Int `json:"Fee"`
+	Hashlock  string   `json:"Hashlock"`
+	Signature string   `json:"Signature"`
 }
 
 // isValid checks if the promise is really issued by the given identity
@@ -278,6 +282,7 @@ func (lp LatestPromise) isValid(id string) error {
 	}
 
 	p := crypto.Promise{
+		ChainID:   lp.ChainID,
 		ChannelID: decodedChannelID,
 		Amount:    lp.Amount,
 		Fee:       lp.Fee,

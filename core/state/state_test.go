@@ -671,7 +671,7 @@ type mockBalanceProvider struct {
 }
 
 // GetBalance returns a pre-defined balance.
-func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) *big.Int {
+func (mbp *mockBalanceProvider) GetBalance(_ int64, _ identity.Identity) *big.Int {
 	return mbp.Balance
 }
 
@@ -681,12 +681,12 @@ type mockEarningsProvider struct {
 }
 
 // List retrieves identity's channels with all known hermeses.
-func (mep *mockEarningsProvider) List() []pingpong.HermesChannel {
+func (mep *mockEarningsProvider) List(chainID int64) []pingpong.HermesChannel {
 	return mep.Channels
 }
 
 // GetEarnings returns a pre-defined settlement state.
-func (mep *mockEarningsProvider) GetEarnings(_ identity.Identity) pingpongEvent.Earnings {
+func (mep *mockEarningsProvider) GetEarnings(chainID int64, _ identity.Identity) pingpongEvent.Earnings {
 	return mep.Earnings
 }
 

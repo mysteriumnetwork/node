@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 
@@ -46,16 +47,18 @@ func NewConsumerTotalsStorage(bolt persistentStorage, bus eventbus.Publisher) *C
 }
 
 // Store stores the given amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Address, amount *big.Int) error {
+func (cts *ConsumerTotalsStorage) Store(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 
-	err := cts.bolt.SetValue(consumerTotalStorageBucketName, id.Address+hermesID.Hex(), amount)
+	key := cts.makeKey(chainID, id, hermesID)
+	err := cts.bolt.SetValue(consumerTotalStorageBucketName, key, amount)
 	if err != nil {
 		return err
 	}
 
 	go cts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
+		ChainID:    chainID,
 		Current:    amount,
 		HermesID:   hermesID,
 		ConsumerID: id,
@@ -65,11 +68,12 @@ func (cts *ConsumerTotalsStorage) Store(id identity.Identity, hermesID common.Ad
 }
 
 // Get fetches the amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Address) (*big.Int, error) {
+func (cts *ConsumerTotalsStorage) Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 	var res = new(big.Int)
-	err := cts.bolt.GetValue(consumerTotalStorageBucketName, id.Address+hermesID.Hex(), &res)
+	key := cts.makeKey(chainID, id, hermesID)
+	err := cts.bolt.GetValue(consumerTotalStorageBucketName, key, &res)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {
@@ -79,4 +83,8 @@ func (cts *ConsumerTotalsStorage) Get(id identity.Identity, hermesID common.Addr
 		}
 	}
 	return res, err
+}
+
+func (cts *ConsumerTotalsStorage) makeKey(chainID int64, id identity.Identity, hermesID common.Address) string {
+	return fmt.Sprintf("%d%s%s", chainID, id.Address, hermesID.Hex())
 }

@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -220,7 +221,8 @@ func (d *Discovery) unregisterProposal() {
 
 func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
-	status, err := d.identityRegistry.GetRegistrationStatus(d.ownIdentity)
+	chainID := config.GetInt64(config.FlagChainID)
+	status, err := d.identityRegistry.GetRegistrationStatus(chainID, d.ownIdentity)
 	if err != nil {
 		log.Error().Err(err).Msg("Checking identity registration failed")
 		d.changeStatus(IdentityRegisterFailed)

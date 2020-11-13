@@ -541,7 +541,7 @@ func generateExchangeMessage(t *testing.T, amount *big.Int, invoice crypto.Invoi
 		channel = addr
 	}
 
-	em, err := crypto.CreateExchangeMessage(invoice, amount, channel, "", ks, acc.Address)
+	em, err := crypto.CreateExchangeMessage(1, invoice, amount, channel, "", ks, acc.Address)
 	assert.Nil(t, err)
 	if em != nil {
 		return *em, acc.Address.Hex()
@@ -800,7 +800,7 @@ func (maps *mockHermesPromiseStorage) Store(_ HermesPromise) error {
 	return maps.errToReturn
 }
 
-func (maps *mockHermesPromiseStorage) Get(_ string) (HermesPromise, error) {
+func (maps *mockHermesPromiseStorage) Get(chainID int64, _ string) (HermesPromise, error) {
 	return maps.toReturn, maps.errToReturn
 }
 
@@ -816,7 +816,7 @@ type mockBlockchainHelper struct {
 	isRegisteredError error
 }
 
-func (mbh *mockBlockchainHelper) GetHermesFee(hermesAddress common.Address) (uint16, error) {
+func (mbh *mockBlockchainHelper) GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error) {
 	return mbh.feeToReturn, mbh.errorToReturn
 }
 

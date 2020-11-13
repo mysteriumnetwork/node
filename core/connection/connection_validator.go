@@ -25,8 +25,8 @@ import (
 )
 
 type consumerBalanceGetter interface {
-	GetBalance(id identity.Identity) *big.Int
-	ForceBalanceUpdate(id identity.Identity) *big.Int
+	GetBalance(chainID int64, id identity.Identity) *big.Int
+	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
 
 type unlockChecker interface {
@@ -48,18 +48,18 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 }
 
 // validateBalance checks if consumer has enough money for given proposal.
-func (v *Validator) validateBalance(consumerID identity.Identity, proposal market.ServiceProposal) bool {
+func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) bool {
 	if proposal.PaymentMethodType == "" || proposal.PaymentMethod == nil {
 		return true
 	}
 
 	proposalPrice := proposal.PaymentMethod.GetPrice()
-	balance := v.consumerBalanceGetter.GetBalance(consumerID)
+	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
 	if balance.Cmp(proposalPrice.Amount) >= 0 {
 		return true
 	}
 
-	balance = v.consumerBalanceGetter.ForceBalanceUpdate(consumerID)
+	balance = v.consumerBalanceGetter.ForceBalanceUpdate(chainID, consumerID)
 	return balance.Cmp(proposalPrice.Amount) >= 0
 }
 
@@ -69,12 +69,12 @@ func (v *Validator) isUnlocked(consumerID identity.Identity) bool {
 }
 
 // Validate checks whether the pre-connection conditions are fulfilled.
-func (v *Validator) Validate(consumerID identity.Identity, proposal market.ServiceProposal) error {
+func (v *Validator) Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error {
 	if !v.isUnlocked(consumerID) {
 		return ErrUnlockRequired
 	}
 
-	if !v.validateBalance(consumerID, proposal) {
+	if !v.validateBalance(chainID, consumerID, proposal) {
 		return ErrInsufficientBalance
 	}
 

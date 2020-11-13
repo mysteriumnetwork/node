@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -31,7 +32,6 @@ type persistentStorage interface {
 	Store(bucket string, data interface{}) error
 	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
 	GetAllFrom(bucket string, data interface{}) error
-	Update(bucket string, object interface{}) error
 }
 
 var errBoltNotFound = "not found"
@@ -43,6 +43,11 @@ var ErrNotFound = errors.New("no info for provided identity available in storage
 type RegistrationStatusStorage struct {
 	lock sync.Mutex
 	bolt persistentStorage
+}
+
+type storedRegistrationStatus struct {
+	ID string `storm:"id"`
+	StoredRegistrationStatus
 }
 
 // NewRegistrationStatusStorage returns a new instance of the registration status storage
@@ -57,7 +62,7 @@ func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) err
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
 
-	s, err := rss.get(status.Identity)
+	s, err := rss.get(status.ChainID, status.Identity)
 	if err == ErrNotFound {
 		return rss.store(status)
 	} else if err != nil {
@@ -77,27 +82,32 @@ func (rss *RegistrationStatusStorage) Store(status StoredRegistrationStatus) err
 
 func (rss *RegistrationStatusStorage) store(status StoredRegistrationStatus) error {
 	status.UpdatedAt = time.Now().UTC()
-	return errors.Wrap(rss.bolt.Store(registrationStatusBucket, &status), "could not store registration status")
+	store := &storedRegistrationStatus{
+		ID:                       rss.makeKey(status.Identity, status.ChainID),
+		StoredRegistrationStatus: status,
+	}
+
+	err := rss.bolt.Store(registrationStatusBucket, store)
+	return errors.Wrap(err, "could not store registration status")
 }
 
-func (rss *RegistrationStatusStorage) get(identity identity.Identity) (StoredRegistrationStatus, error) {
-	result := &StoredRegistrationStatus{}
-	err := rss.bolt.GetOneByField(registrationStatusBucket, "Identity", identity, result)
+func (rss *RegistrationStatusStorage) get(chainID int64, identity identity.Identity) (StoredRegistrationStatus, error) {
+	result := &storedRegistrationStatus{}
+	err := rss.bolt.GetOneByField(registrationStatusBucket, "ID", rss.makeKey(identity, chainID), result)
 	if err != nil {
 		if err.Error() == errBoltNotFound {
-			err = ErrNotFound
-		} else {
-			err = errors.Wrap(err, "could not get registration status")
+			return StoredRegistrationStatus{}, ErrNotFound
 		}
+		return StoredRegistrationStatus{}, errors.Wrap(err, "could not get registration status")
 	}
-	return *result, err
+	return result.StoredRegistrationStatus, err
 }
 
 // Get fetches the promise for the given hermes.
-func (rss *RegistrationStatusStorage) Get(identity identity.Identity) (StoredRegistrationStatus, error) {
+func (rss *RegistrationStatusStorage) Get(chainID int64, identity identity.Identity) (StoredRegistrationStatus, error) {
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
-	return rss.get(identity)
+	return rss.get(chainID, identity)
 }
 
 // GetAll fetches all the registration statuses
@@ -105,14 +115,22 @@ func (rss *RegistrationStatusStorage) GetAll() ([]StoredRegistrationStatus, erro
 	rss.lock.Lock()
 	defer rss.lock.Unlock()
 
-	res := []StoredRegistrationStatus{}
-	err := rss.bolt.GetAllFrom(registrationStatusBucket, &res)
+	list := []storedRegistrationStatus{}
+	err := rss.bolt.GetAllFrom(registrationStatusBucket, &list)
 	if err != nil {
 		if err.Error() == errBoltNotFound {
-			err = ErrNotFound
-		} else {
-			err = errors.Wrap(err, "could not get all registration statuses")
+			return nil, ErrNotFound
 		}
+		return nil, errors.Wrap(err, "could not get all registration statuses")
 	}
-	return res, err
+
+	result := make([]StoredRegistrationStatus, len(list))
+	for i, l := range list {
+		result[i] = l.StoredRegistrationStatus
+	}
+	return result, nil
+}
+
+func (rss *RegistrationStatusStorage) makeKey(identity identity.Identity, chainID int64) string {
+	return fmt.Sprintf("%s|%d", identity.Address, chainID)
 }

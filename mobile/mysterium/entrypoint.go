@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -74,6 +75,7 @@ type MobileNode struct {
 	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
 	registryAddress              string
 	channelImplementationAddress string
+	chainID                      int64
 	startTime                    time.Time
 }
 
@@ -95,6 +97,7 @@ type MobileNodeOptions struct {
 	HermesEndpointAddress           string
 	HermesID                        string
 	MystSCAddress                   string
+	ChainID                         int64
 }
 
 // DefaultNodeOptions returns default options.
@@ -114,6 +117,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		TransactorChannelImplementation: metadata.BetanetDefinition.ChannelImplAddress,
 		HermesID:                        metadata.BetanetDefinition.HermesID,
 		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
+		ChainID:                         metadata.BetanetDefinition.DefaultChainID,
 	}
 }
 
@@ -127,6 +131,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	dataDir := filepath.Join(appPath, ".mysterium")
 	currentDir := appPath
 
+	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
+
 	network := node.OptionsNetwork{
 		Betanet:               options.Betanet,
 		Localnet:              options.Localnet,
@@ -134,6 +140,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
 		BrokerAddresses:       options.BrokerAddresses,
 		EtherClientRPC:        options.EtherClientRPC,
+		ChainID:               options.ChainID,
 		DNSMap:                map[string][]string{},
 	}
 	logOptions := logconfig.LogOptions{
@@ -233,6 +240,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.QualityClient,
 		),
 		startTime: time.Now(),
+		chainID:   nodeOptions.OptionsNetwork.ChainID,
 	}
 	return mobileNode, nil
 }
@@ -439,7 +447,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 	if req == nil {
 		req = &GetIdentityRequest{}
 	}
-	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase)
+	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, mb.chainID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unlock identity")
 	}
@@ -449,7 +457,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 		return nil, errors.Wrap(err, "could not generate channel address")
 	}
 
-	status, err := mb.identityRegistry.GetRegistrationStatus(id)
+	status, err := mb.identityRegistry.GetRegistrationStatus(mb.chainID, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get identity registration status")
 	}
@@ -468,7 +476,7 @@ type GetIdentityRegistrationFeesResponse struct {
 
 // GetIdentityRegistrationFees returns identity registration fees.
 func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFeesResponse, error) {
-	fees, err := mb.transactor.FetchRegistrationFees()
+	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get registration fees")
 	}
@@ -486,7 +494,7 @@ type RegisterIdentityRequest struct {
 
 // RegisterIdentity starts identity registration in background.
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
-	fees, err := mb.transactor.FetchRegistrationFees()
+	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
 		return errors.Wrap(err, "could not get registration fees")
 	}
@@ -495,7 +503,7 @@ func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	if req.Token != "" {
 		token = &req.Token
 	}
-	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", token)
+	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", mb.chainID, token)
 	if err != nil {
 		return errors.Wrap(err, "could not register identity")
 	}
@@ -514,7 +522,7 @@ type GetBalanceResponse struct {
 
 // GetBalance returns current balance.
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
-	balance := mb.consumerBalanceTracker.GetBalance(identity.FromAddress(req.IdentityAddress))
+	balance := mb.consumerBalanceTracker.GetBalance(mb.chainID, identity.FromAddress(req.IdentityAddress))
 	b := crypto.BigMystToFloat(balance)
 	return &GetBalanceResponse{Balance: b}, nil
 }

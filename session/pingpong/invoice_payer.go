@@ -57,8 +57,8 @@ type PeerExchangeMessageSender interface {
 }
 
 type consumerTotalsStorage interface {
-	Store(id identity.Identity, hermesID common.Address, amount *big.Int) error
-	Get(id identity.Identity, hermesID common.Address) (*big.Int, error)
+	Store(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error
+	Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error)
 }
 
 type timeTracker interface {
@@ -101,6 +101,7 @@ type InvoicePayerDeps struct {
 	EventBus                  eventbus.EventBus
 	HermesAddress             common.Address
 	DataLeeway                datasize.BitSize
+	ChainID                   int64
 }
 
 // NewInvoicePayer returns a new instance of exchange message tracker.
@@ -157,7 +158,7 @@ func (ip *InvoicePayer) Start() error {
 }
 
 func (ip *InvoicePayer) incrementGrandTotalPromised(amount big.Int) error {
-	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.HermesAddress)
+	res, err := ip.deps.ConsumerTotalsStorage.Get(ip.chainID(), ip.deps.Identity, ip.deps.HermesAddress)
 	if err != nil {
 		if err == ErrNotFound {
 			log.Debug().Msg("No previous invoice grand total, assuming zero")
@@ -169,7 +170,7 @@ func (ip *InvoicePayer) incrementGrandTotalPromised(amount big.Int) error {
 	if res == nil {
 		res = big.NewInt(0)
 	}
-	return ip.deps.ConsumerTotalsStorage.Store(ip.deps.Identity, ip.deps.HermesAddress, new(big.Int).Add(res, &amount))
+	return ip.deps.ConsumerTotalsStorage.Store(ip.chainID(), ip.deps.Identity, ip.deps.HermesAddress, new(big.Int).Add(res, &amount))
 }
 
 func (ip *InvoicePayer) isInvoiceOK(invoice crypto.Invoice) error {
@@ -224,7 +225,7 @@ func estimateInvoiceTolerance(elapsed time.Duration, transferred DataTransferred
 
 func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toPromise *big.Int, diff *big.Int, err error) {
 	diff = safeSub(invoice.AgreementTotal, ip.lastInvoice.AgreementTotal)
-	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.deps.Identity, ip.deps.HermesAddress)
+	totalPromised, err := ip.deps.ConsumerTotalsStorage.Get(ip.chainID(), ip.deps.Identity, ip.deps.HermesAddress)
 	if err != nil {
 		if err != ErrNotFound {
 			return new(big.Int), new(big.Int), fmt.Errorf("could not get previous grand total: %w", err)
@@ -244,13 +245,17 @@ func (ip *InvoicePayer) calculateAmountToPromise(invoice crypto.Invoice) (toProm
 	return amountToPromise, diff, nil
 }
 
+func (ip *InvoicePayer) chainID() int64 {
+	return ip.deps.ChainID
+}
+
 func (ip *InvoicePayer) issueExchangeMessage(invoice crypto.Invoice) error {
 	amountToPromise, diff, err := ip.calculateAmountToPromise(invoice)
 	if err != nil {
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, ip.channelAddress.Address, ip.deps.HermesAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
+	msg, err := crypto.CreateExchangeMessage(ip.chainID(), invoice, amountToPromise, ip.channelAddress.Address, ip.deps.HermesAddress.Hex(), ip.deps.Ks, common.HexToAddress(ip.deps.Identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}

@@ -44,7 +44,7 @@ var (
 type selectorFake struct {
 }
 
-func (hf *selectorFake) UseOrCreate(address, _ string) (identity.Identity, error) {
+func (hf *selectorFake) UseOrCreate(address, _ string, _ int64) (identity.Identity, error) {
 	if len(address) > 0 {
 		return identity.Identity{Address: address}, nil
 	}
@@ -97,6 +97,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 
 	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+	assert.Equal(t, int64(0), mockIdm.LastUnlockChainID)
 }
 
 func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
@@ -163,6 +164,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+	assert.Equal(t, int64(0), mockIdm.LastUnlockChainID)
 }
 
 func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {

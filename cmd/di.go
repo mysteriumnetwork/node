@@ -158,7 +158,7 @@ type Dependencies struct {
 	JWTAuthenticator  *auth.JWTAuthenticator
 	UIServer          UIServer
 	Transactor        *registry.Transactor
-	BCHelper          *paymentClient.BlockchainWithRetries
+	BCHelper          *paymentClient.MultichainBlockchainClient
 	ProviderRegistrar *registry.ProviderRegistrar
 
 	LogCollector *logconfig.Collector
@@ -316,6 +316,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		IdentityChannelCalculator: di.ChannelAddressCalculator,
 		BalanceProvider:           di.ConsumerBalanceTracker,
 		EarningsProvider:          di.HermesChannelRepository,
+		ChainID:                   options.ChainID,
 	}
 	di.StateKeeper = state.NewKeeper(deps, state.DefaultDebounceDuration)
 	return di.StateKeeper.Subscribe(di.EventBus)
@@ -665,7 +666,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
-	di.BCHelper = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
+	clients := make(map[int64]paymentClient.BC)
+	clients[network.DefaultChainID] = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
+	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
 
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, common.HexToAddress(options.Transactor.RegistryAddress))
 

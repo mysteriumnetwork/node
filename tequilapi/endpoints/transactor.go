@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -37,21 +38,21 @@ import (
 
 // Transactor represents interface to Transactor service
 type Transactor interface {
-	FetchRegistrationFees() (registry.FeesResponse, error)
-	FetchSettleFees() (registry.FeesResponse, error)
-	FetchStakeDecreaseFee() (registry.FeesResponse, error)
-	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error
-	DecreaseStake(id string, amount, transactorFee *big.Int) error
+	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
+	FetchSettleFees(chainID int64) (registry.FeesResponse, error)
+	FetchStakeDecreaseFee(chainID int64) (registry.FeesResponse, error)
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
+	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
 	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
 	GetReferralToken(id common.Address) (string, error)
 }
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
-	ForceSettle(providerID identity.Identity, hermesID common.Address) error
-	SettleWithBeneficiary(id identity.Identity, beneficiary, hermesID common.Address) error
-	GetHermesFee(common.Address) (uint16, error)
-	SettleIntoStake(providerID identity.Identity, hermesID common.Address) error
+	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	SettleWithBeneficiary(chainID int64, id identity.Identity, beneficiary, hermesID common.Address) error
+	GetHermesFee(chainID int64, id common.Address) (uint16, error)
+	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
 }
 
 type settlementHistoryProvider interface {
@@ -89,22 +90,24 @@ func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler,
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	registrationFees, err := te.transactor.FetchRegistrationFees()
+	chainID := config.GetInt64(config.FlagChainID)
+	registrationFees, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	settlementFees, err := te.transactor.FetchSettleFees()
+	settlementFees, err := te.transactor.FetchSettleFees(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee()
+	decreaseStakeFees, err := te.transactor.FetchStakeDecreaseFee(chainID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	hermesFees, err := te.promiseSettler.GetHermesFee(te.hermesAddress)
+
+	hermesFees, err := te.promiseSettler.GetHermesFee(chainID, te.hermesAddress)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -165,9 +168,9 @@ func (te *transactorEndpoint) SettleSync(resp http.ResponseWriter, request *http
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, func(provider identity.Identity, hermes common.Address) error {
+	err := te.settle(request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
 		go func() {
-			err := te.promiseSettler.ForceSettle(provider, hermes)
+			err := te.promiseSettler.ForceSettle(chainID, provider, hermes)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not settle provider(%q) promises", provider.Address)
 			}
@@ -182,7 +185,7 @@ func (te *transactorEndpoint) SettleAsync(resp http.ResponseWriter, request *htt
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (te *transactorEndpoint) settle(request *http.Request, settler func(identity.Identity, common.Address) error) error {
+func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, identity.Identity, common.Address) error) error {
 	req := contract.SettleRequest{}
 
 	err := json.NewDecoder(request.Body).Decode(&req)
@@ -190,7 +193,8 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(identit
 		return errors.Wrap(err, "failed to unmarshal settle request")
 	}
 
-	return errors.Wrap(settler(identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID)), "settling failed")
+	chainID := config.GetInt64(config.FlagChainID)
+	return errors.Wrap(settler(chainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID)), "settling failed")
 }
 
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
@@ -244,7 +248,7 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		req.Stake = reward.Reward
 	}
 
-	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, req.ReferralToken)
+	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, config.GetInt64(config.FlagChainID), req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
@@ -264,7 +268,8 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 		return
 	}
 
-	err = te.promiseSettler.SettleWithBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.HermesID))
+	chainID := config.GetInt64(config.FlagChainID)
+	err = te.promiseSettler.SettleWithBeneficiary(chainID, identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.HermesID))
 	if err != nil {
 		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
 		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
@@ -344,7 +349,8 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 		return
 	}
 
-	err = te.transactor.DecreaseStake(req.ID, req.Amount, req.TransactorFee)
+	chainID := config.GetInt64(config.FlagChainID)
+	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, req.TransactorFee)
 	if err != nil {
 		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
 		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)
@@ -399,9 +405,9 @@ func (te *transactorEndpoint) SettleIntoStakeSync(resp http.ResponseWriter, requ
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	err := te.settle(request, func(provider identity.Identity, hermes common.Address) error {
+	err := te.settle(request, func(chainID int64, provider identity.Identity, hermes common.Address) error {
 		go func() {
-			err := te.promiseSettler.SettleIntoStake(provider, hermes)
+			err := te.promiseSettler.SettleIntoStake(chainID, provider, hermes)
 			if err != nil {
 				log.Error().Err(err).Msgf("could not settle into stake provider(%q) promises", provider.Address)
 			}

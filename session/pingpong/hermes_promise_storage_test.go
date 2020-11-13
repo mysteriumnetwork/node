@@ -49,7 +49,7 @@ func TestHermesPromiseStorage(t *testing.T) {
 		ChannelID:   "1",
 		Identity:    id,
 		HermesID:    firstHermes,
-		Promise:     crypto.Promise{Amount: big.NewInt(1), Fee: big.NewInt(1)},
+		Promise:     crypto.Promise{Amount: big.NewInt(1), Fee: big.NewInt(1), ChainID: 1},
 		R:           "some r",
 		AgreementID: big.NewInt(123),
 	}
@@ -58,13 +58,13 @@ func TestHermesPromiseStorage(t *testing.T) {
 		ChannelID:   "2",
 		Identity:    id,
 		HermesID:    secondHermes,
-		Promise:     crypto.Promise{Amount: big.NewInt(2), Fee: big.NewInt(2)},
+		Promise:     crypto.Promise{Amount: big.NewInt(2), Fee: big.NewInt(2), ChainID: 1},
 		R:           "some other r",
 		AgreementID: big.NewInt(1234),
 	}
 
 	// check if errors are wrapped correctly
-	_, err = hermesStorage.Get("unknown_id")
+	_, err = hermesStorage.Get(1, "unknown_id")
 	assert.Equal(t, ErrNotFound, err)
 
 	promises, err := hermesStorage.List(HermesPromiseFilter{})
@@ -75,11 +75,13 @@ func TestHermesPromiseStorage(t *testing.T) {
 	err = hermesStorage.Store(firstPromise)
 	assert.NoError(t, err)
 
-	promise, err := hermesStorage.Get(firstPromise.ChannelID)
+	promise, err := hermesStorage.Get(1, firstPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, firstPromise, promise)
 
-	promises, err = hermesStorage.List(HermesPromiseFilter{})
+	promises, err = hermesStorage.List(HermesPromiseFilter{
+		ChainID: 1,
+	})
 	assert.Equal(t, []HermesPromise{firstPromise}, promises)
 	assert.NoError(t, err)
 
@@ -87,11 +89,13 @@ func TestHermesPromiseStorage(t *testing.T) {
 	err = hermesStorage.Store(secondPromise)
 	assert.NoError(t, err)
 
-	promise, err = hermesStorage.Get(secondPromise.ChannelID)
+	promise, err = hermesStorage.Get(1, secondPromise.ChannelID)
 	assert.NoError(t, err)
 	assert.EqualValues(t, secondPromise, promise)
 
-	promises, err = hermesStorage.List(HermesPromiseFilter{})
+	promises, err = hermesStorage.List(HermesPromiseFilter{
+		ChainID: 1,
+	})
 	assert.Equal(t, []HermesPromise{firstPromise, secondPromise}, promises)
 	assert.NoError(t, err)
 

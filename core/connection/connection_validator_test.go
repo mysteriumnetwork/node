@@ -35,6 +35,7 @@ func TestValidator_Validate(t *testing.T) {
 	type args struct {
 		consumerID identity.Identity
 		proposal   market.ServiceProposal
+		chainID    int64
 	}
 	tests := []struct {
 		name    string
@@ -55,6 +56,7 @@ func TestValidator_Validate(t *testing.T) {
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.ServiceProposal{
 					ProviderID:        activeProviderID.Address,
@@ -82,6 +84,7 @@ func TestValidator_Validate(t *testing.T) {
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.ServiceProposal{
 					ProviderID:        activeProviderID.Address,
@@ -105,6 +108,7 @@ func TestValidator_Validate(t *testing.T) {
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 			},
 		},
@@ -120,6 +124,7 @@ func TestValidator_Validate(t *testing.T) {
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.ServiceProposal{
 					ProviderID:        activeProviderID.Address,
@@ -141,7 +146,7 @@ func TestValidator_Validate(t *testing.T) {
 				consumerBalanceGetter: tt.fields.consumerBalanceGetter,
 				unlockChecker:         tt.fields.unlockChecker,
 			}
-			err := v.Validate(tt.args.consumerID, tt.args.proposal)
+			err := v.Validate(tt.args.chainID, tt.args.consumerID, tt.args.proposal)
 			if tt.wantErr != nil {
 				assert.EqualError(t, err, tt.wantErr.Error(), tt.name)
 			} else {
@@ -164,10 +169,10 @@ type mockConsumerBalanceGetter struct {
 	forceReturn *big.Int
 }
 
-func (mcbg *mockConsumerBalanceGetter) GetBalance(id identity.Identity) *big.Int {
+func (mcbg *mockConsumerBalanceGetter) GetBalance(chainID int64, id identity.Identity) *big.Int {
 	return mcbg.toReturn
 }
 
-func (mcbg *mockConsumerBalanceGetter) ForceBalanceUpdate(id identity.Identity) *big.Int {
+func (mcbg *mockConsumerBalanceGetter) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
 	return mcbg.forceReturn
 }

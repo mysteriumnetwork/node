@@ -45,15 +45,16 @@ import (
 )
 
 var (
-	consumerPassphrase    = "localconsumer"
-	providerID            = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
-	providerPassphrase    = "localprovider"
-	hermesID              = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
-	hermes2ID             = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
-	mystAddress           = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
-	registryAddress       = "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"
-	channelImplementation = "0x599d43715DF3070f83355D9D90AE62c159E62A75"
-	addressForTopups      = "0xa29fb77b25181df094908b027821a7492ca4245b"
+	consumerPassphrase          = "localconsumer"
+	providerID                  = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
+	providerPassphrase          = "localprovider"
+	chainID               int64 = 5
+	hermesID                    = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
+	hermes2ID                   = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
+	mystAddress                 = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
+	registryAddress             = "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"
+	channelImplementation       = "0x599d43715DF3070f83355D9D90AE62c159E62A75"
+	addressForTopups            = "0xa29fb77b25181df094908b027821a7492ca4245b"
 )
 
 var ethClient *ethclient.Client
@@ -178,6 +179,9 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("Provider settlement flow", func(t *testing.T) {
+		caller, err := bindings.NewMystTokenCaller(common.HexToAddress(mystAddress), ethClient)
+		assert.NoError(t, err)
+
 		providerStatus, err := tequilapiProvider.Identity(providerID)
 		assert.NoError(t, err)
 		assert.Equal(t, new(big.Int), providerStatus.Balance)
@@ -212,17 +216,21 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
 		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
 
-		hermesFee, _ := new(big.Float).Mul(big.NewFloat(0.04), new(big.Float).SetInt(hermesOneEarnings)).Int(nil)
-		feeSum := big.NewInt(0).Add(fees.Settlement, hermesFee)
-		expected := new(big.Int).Sub(hermesOneEarnings, feeSum)
-
-		caller, err := bindings.NewMystTokenCaller(common.HexToAddress(mystAddress), ethClient)
+		hic, err := bindings.NewHermesImplementationCaller(common.HexToAddress(hermesID), ethClient)
 		assert.NoError(t, err)
+
+		hermesFee, err := hic.CalculateHermesFee(&bind.CallOpts{}, totalEarnings)
+		assert.NoError(t, err)
+
+		feeSum := big.NewInt(0).Add(big.NewInt(0).Add(fees.Settlement, hermesFee), fees.Settlement)
+		expected := new(big.Int).Sub(totalEarnings, feeSum)
 
 		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerID))
 		assert.NoError(t, err)
+
 		diff := new(big.Int).Sub(balance, expected)
 		diff = diff.Abs(diff)
+
 		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
 	})
 
@@ -350,7 +358,7 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 	var lastHermes *big.Int
 	assert.Eventually(t, func() bool {
 		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
-		hermesData, err := hermesCaller.GetConsumerData(consumerID)
+		hermesData, err := hermesCaller.GetConsumerData(chainID, consumerID)
 		assert.NoError(t, err)
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised

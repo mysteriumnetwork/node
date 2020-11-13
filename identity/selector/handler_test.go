@@ -29,6 +29,7 @@ var fakeSignerFactory = func(id identity.Identity) identity.Signer {
 }
 var existingIdentity = identity.Identity{Address: "existing"}
 var newIdentity = identity.Identity{Address: "new"}
+var chainID int64 = 1
 
 func TestUseOrCreateSucceeds(t *testing.T) {
 	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
@@ -37,13 +38,14 @@ func TestUseOrCreateSucceeds(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.UseOrCreate(existingIdentity.Address, "pass")
+	id, err := handler.UseOrCreate(existingIdentity.Address, "pass", chainID)
 	assert.Equal(t, existingIdentity, id)
 	assert.Nil(t, err)
 	assert.Equal(t, "", registry.registeredIdentity.Address)
 
 	assert.Equal(t, existingIdentity.Address, identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+	assert.Equal(t, chainID, identityManager.LastUnlockChainID)
 }
 
 func TestUseOrCreateFailsWhenUnlockFails(t *testing.T) {
@@ -54,11 +56,12 @@ func TestUseOrCreateFailsWhenUnlockFails(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.UseOrCreate(existingIdentity.Address, "pass")
+	_, err := handler.UseOrCreate(existingIdentity.Address, "pass", chainID)
 	assert.Error(t, err)
 
 	assert.Equal(t, existingIdentity.Address, identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+	assert.Equal(t, chainID, identityManager.LastUnlockChainID)
 }
 
 func TestUseOrCreateReturnsFirstIdentity(t *testing.T) {
@@ -69,7 +72,7 @@ func TestUseOrCreateReturnsFirstIdentity(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.UseOrCreate("", "pass")
+	id, err := handler.UseOrCreate("", "pass", chainID)
 	assert.Equal(t, existingIdentity, id)
 	assert.Nil(t, err)
 }
@@ -80,7 +83,7 @@ func TestUseOrCreateFailsWhenIdentityNotFound(t *testing.T) {
 	cache := identity.NewIdentityCacheFake()
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
-	_, err := handler.UseOrCreate("does-not-exist", "pass")
+	_, err := handler.UseOrCreate("does-not-exist", "pass", chainID)
 	assert.NotNil(t, err)
 }
 
@@ -91,7 +94,7 @@ func TestUseFailsWhenIdentityNotFound(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.UseOrCreate("does-not-exist", "pass")
+	_, err := handler.UseOrCreate("does-not-exist", "pass", chainID)
 	assert.NotNil(t, err)
 }
 
@@ -105,7 +108,7 @@ func TestUseLastSucceeds(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.useLast("pass")
+	id, err := handler.useLast("pass", chainID)
 	assert.Equal(t, fakeIdentity, id)
 	assert.Nil(t, err)
 
@@ -113,6 +116,7 @@ func TestUseLastSucceeds(t *testing.T) {
 
 	assert.Equal(t, "abc", identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+	assert.Equal(t, chainID, identityManager.LastUnlockChainID)
 }
 
 func TestUseLastFailsWhenUnlockFails(t *testing.T) {
@@ -126,13 +130,14 @@ func TestUseLastFailsWhenUnlockFails(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.useLast("pass")
+	_, err := handler.useLast("pass", chainID)
 	assert.Error(t, err)
 
 	assert.Equal(t, "", registry.registeredIdentity.Address)
 
 	assert.Equal(t, "abc", identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+	assert.Equal(t, chainID, identityManager.LastUnlockChainID)
 }
 
 func TestUseNewSucceeds(t *testing.T) {
@@ -142,7 +147,7 @@ func TestUseNewSucceeds(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.useNew("pass")
+	id, err := handler.useNew("pass", chainID)
 	assert.Equal(t, newIdentity, id)
 	assert.Nil(t, err)
 
@@ -150,6 +155,7 @@ func TestUseNewSucceeds(t *testing.T) {
 
 	assert.Equal(t, newIdentity.Address, identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+	assert.Equal(t, chainID, identityManager.LastUnlockChainID)
 }
 
 func TestUseNewFailsWhenUnlockFails(t *testing.T) {
@@ -160,11 +166,12 @@ func TestUseNewFailsWhenUnlockFails(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.useNew("pass")
+	_, err := handler.useNew("pass", chainID)
 	assert.Error(t, err)
 
 	assert.Equal(t, newIdentity.Address, identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+	assert.Equal(t, chainID, identityManager.LastUnlockChainID)
 }
 
 type fakeSigner struct {

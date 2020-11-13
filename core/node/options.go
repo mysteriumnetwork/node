@@ -93,6 +93,7 @@ func GetOptions() *Options {
 		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
 		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
+		ChainID:               config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
 			"testnet-location.mysterium.network": {"82.196.15.9"},
 			"betanet-location.mysterium.network": {"95.216.204.232"},

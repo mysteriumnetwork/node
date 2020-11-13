@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -103,7 +104,7 @@ type PromiseProcessor interface {
 }
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID, consumerID identity.Identity, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (PaymentEngine, error)
 
 // PaymentEngine is responsible for interacting with the consumer in regard to payments.
 type PaymentEngine interface {
@@ -263,7 +264,9 @@ func (manager *SessionManager) paymentLoop(session *Session) error {
 	defer session.tracer.EndStage(trace)
 
 	log.Info().Msg("Using new payments")
-	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, session.HermesID, string(session.ID), manager.paymentEngineChan)
+
+	chainID := config.GetInt64(config.FlagChainID)
+	engine, err := manager.paymentEngineFactory(manager.service.ProviderID, session.ConsumerID, chainID, session.HermesID, string(session.ID), manager.paymentEngineChan)
 	if err != nil {
 		return err
 	}

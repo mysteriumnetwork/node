@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -43,7 +44,7 @@ type hermesPromiseStorage interface {
 }
 
 type feeProvider interface {
-	FetchSettleFees() (registry.FeesResponse, error)
+	FetchSettleFees(chainID int64) (registry.FeesResponse, error)
 }
 
 // HermesHTTPRequester represents HTTP requests to Hermes.
@@ -115,7 +116,7 @@ func (aph *HermesPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMess
 }
 
 func (aph *HermesPromiseHandler) updateFee() {
-	fees, err := aph.deps.FeeProvider.FetchSettleFees()
+	fees, err := aph.deps.FeeProvider.FetchSettleFees(config.GetInt64(config.FlagChainID))
 	if err != nil {
 		log.Warn().Err(err).Msg("could not fetch fees, ignoring")
 		return
@@ -222,6 +223,10 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	if err != nil {
 		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 		return
+	}
+
+	if promise.ChainID != request.ExchangeMessage.ChainID {
+		log.Debug().Msgf("Received promise with wrong chain id from hermes. Expected %v, got %v", request.ExchangeMessage.ChainID, promise.ChainID)
 	}
 
 	ap := HermesPromise{

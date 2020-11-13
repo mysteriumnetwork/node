@@ -9,6 +9,7 @@ message Invoice {
   string TransactorFee = 3;
   string Hashlock = 4;
   string Provider = 5;
+	int64 ChainID = 6;   
 }
 
 message ExchangeMessage {
@@ -18,6 +19,7 @@ message ExchangeMessage {
   string Provider = 4;
   string Signature = 5;
   string HermesID = 6;
+  int64 ChainID = 7;   
 }
 
 message Promise {
@@ -26,5 +28,7 @@ message Promise {
   string Fee = 3;
   bytes Hashlock = 4;
   bytes R = 5;
-  bytes Signature = 6;
+	int64 ChainID = 6;   
+  bytes Signature = 7;
 }
+

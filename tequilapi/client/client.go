@@ -342,9 +342,12 @@ func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB *b
 
 // Unlock allows using identity in following commands
 func (client *Client) Unlock(identity, passphrase string) error {
-	path := fmt.Sprintf("identities/%s/unlock", identity)
+	payload := contract.IdentityUnlockRequest{
+		Passphrase: &passphrase,
+	}
 
-	response, err := client.http.Put(path, contract.IdentityUnlockRequest{Passphrase: &passphrase})
+	path := fmt.Sprintf("identities/%s/unlock", identity)
+	response, err := client.http.Put(path, payload)
 	if err != nil {
 		return err
 	}

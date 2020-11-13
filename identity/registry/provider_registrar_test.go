@@ -167,7 +167,7 @@ type mockRegistrationStatusProvider struct {
 	err    error
 }
 
-func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
+func (mrsp *mockRegistrationStatusProvider) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
 	return mrsp.status, mrsp.err
 }
 
@@ -183,7 +183,7 @@ func (mt *mockTransactor) FetchRegistrationFees() (FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 
-func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, referralToken *string) error {
+func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
 	return mt.registerError
 }
 
