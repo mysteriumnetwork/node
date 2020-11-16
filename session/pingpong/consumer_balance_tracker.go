@@ -53,6 +53,7 @@ type ConsumerBalanceTracker struct {
 	registry                             registrationStatusProvider
 	hermesAddress                        common.Address
 	mystSCAddress                        common.Address
+	transactorAddress                    common.Address
 	consumerBalanceChecker               consumerBalanceChecker
 	channelAddressCalculator             channelAddressCalculator
 	bus                                  eventbus.EventBus
@@ -64,6 +65,7 @@ type ConsumerBalanceTracker struct {
 }
 
 type transactorRegistrationStatusProvider interface {
+	FetchRegistrationFees(chainID int64) (registry.FeesResponse, error)
 	FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error)
 }
 
@@ -72,6 +74,7 @@ func NewConsumerBalanceTracker(
 	publisher eventbus.EventBus,
 	mystSCAddress common.Address,
 	hermesAddress common.Address,
+	transactorAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
 	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,
@@ -84,6 +87,7 @@ func NewConsumerBalanceTracker(
 		consumerBalanceChecker:               consumerBalanceChecker,
 		mystSCAddress:                        mystSCAddress,
 		hermesAddress:                        hermesAddress,
+		transactorAddress:                    transactorAddress,
 		bus:                                  publisher,
 		channelAddressCalculator:             channelAddressCalculator,
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
@@ -224,8 +228,16 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 			go cbt.subscribeToExternalChannelTopup(chainID, id)
 		}()
 
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		for e := range ev {
 			if e == nil {
+				return
+			}
+
+			if cbt.isFreeRegistrationTransaction(ctx, e, id, chainID) {
+				log.Debug().Msg("skipping balance update reason: free registration transaction")
 				return
 			}
 
@@ -243,6 +255,7 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 					GrandTotalPromised: previous.GrandTotalPromised,
 				})
 			}
+
 			currentBalance, _ := cbt.getBalance(chainID, id)
 			go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
 		}
@@ -325,9 +338,6 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 		return
 	}
 
-	var boff backoff.BackOff
-	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
-	boff = backoff.WithMaxRetries(eback, 5)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -339,32 +349,8 @@ func (cbt *ConsumerBalanceTracker) alignWithTransactor(chainID int64, id identit
 		}
 	}()
 
-	var data registry.TransactorStatusResponse
-	boff = backoff.WithContext(boff, ctx)
-	toRetry := func() error {
-		resp, err := cbt.transactorRegistrationStatusProvider.FetchRegistrationStatus(id.Address)
-		if err != nil {
-			return err
-		}
-
-		var status *registry.TransactorStatusResponse
-		for _, v := range resp {
-			if v.ChainID == chainID {
-				status = &v
-				break
-			}
-		}
-
-		if status == nil {
-			err := fmt.Errorf("got response but failed to find status for id '%s' on chain '%d'", id.Address, chainID)
-			return backoff.Permanent(err)
-		}
-
-		data = *status
-		return nil
-	}
-
-	if err := backoff.Retry(toRetry, boff); err != nil {
+	data, err := cbt.identityRegistrationStatus(ctx, id, chainID)
+	if err != nil {
 		log.Error().Err(fmt.Errorf("could not fetch registration status from transactor: %w", err))
 		return
 	}
@@ -489,6 +475,59 @@ func (cbt *ConsumerBalanceTracker) updateGrandTotal(chainID int64, id identity.I
 
 	after, _ := cbt.getBalance(chainID, id)
 	go cbt.publishChangeEvent(id, before, after.GetBalance())
+}
+
+// identityRegistrationStatus returns the registration status of a given identity.
+func (cbt *ConsumerBalanceTracker) identityRegistrationStatus(ctx context.Context, id identity.Identity, chainID int64) (registry.TransactorStatusResponse, error) {
+	var data registry.TransactorStatusResponse
+	boff := backoff.WithContext(backoff.NewConstantBackOff(time.Millisecond*500), ctx)
+	toRetry := func() error {
+		resp, err := cbt.transactorRegistrationStatusProvider.FetchRegistrationStatus(id.Address)
+		if err != nil {
+			return err
+		}
+
+		var status *registry.TransactorStatusResponse
+		for _, v := range resp {
+			if v.ChainID == chainID {
+				status = &v
+				break
+			}
+		}
+
+		if status == nil {
+			err := fmt.Errorf("got response but failed to find status for id '%s' on chain '%d'", id.Address, chainID)
+			return backoff.Permanent(err)
+		}
+
+		data = *status
+		return nil
+	}
+
+	return data, backoff.Retry(toRetry, boff)
+}
+
+// isFreeRegistrationTransaction returns true if a given transaction was received
+// because of transactor allowing free registration.
+func (cbt *ConsumerBalanceTracker) isFreeRegistrationTransaction(ctx context.Context, e *bindings.MystTokenTransfer, id identity.Identity, chainID int64) bool {
+	if e.From.Hex() != cbt.transactorAddress.Hex() {
+		return false
+	}
+
+	data, err := cbt.identityRegistrationStatus(ctx, id, chainID)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("could not fetch registration status from transactor: %w", err))
+		return false
+	}
+
+	fess, err := cbt.transactorRegistrationStatusProvider.FetchRegistrationFees(chainID)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("failed to get registration fees: %w", err))
+		return false
+	}
+
+	total := new(big.Int).Add(data.BountyAmount, fess.Fee)
+	return total.Cmp(e.Value) == 0
 }
 
 func safeSub(a, b *big.Int) *big.Int {

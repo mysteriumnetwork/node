@@ -46,6 +46,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	id2 := identity.FromAddress("0x000000002")
 	hermesID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 	assert.NotEqual(t, id1.Address, id2.Address)
 
 	bus := eventbus.New()
@@ -62,7 +63,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 	}
 	calc := mockChannelAddressCalculator{}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -110,6 +111,7 @@ func TestConsumerBalanceTracker_Fresh_Registration(t *testing.T) {
 func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	hermesID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 	t.Run("Takes balance from hermes response", func(t *testing.T) {
 		bus := eventbus.New()
 		mcts := mockConsumerTotalsStorage{
@@ -124,7 +126,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 		calc := mockChannelAddressCalculator{}
 
 		var ba = big.NewInt(10000000)
-		cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
+		cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
 			statusToReturn: registry.TransactorStatusResponse{
 				Status:       registry.TransactorRegistrationEntryStatusCreated,
 				BountyAmount: ba,
@@ -162,7 +164,7 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 		}
 		calc := mockChannelAddressCalculator{}
 
-		cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
+		cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{
 			statusToReturn: registry.TransactorStatusResponse{
 				Status:       registry.TransactorRegistrationEntryStatusCreated,
 				BountyAmount: big.NewInt(0),
@@ -185,9 +187,97 @@ func TestConsumerBalanceTracker_Fast_Registration(t *testing.T) {
 	})
 }
 
+func TestConsumerBalanceTracker_Handles_FreeRegistration(t *testing.T) {
+	fees := big.NewInt(10000000)
+	bounty := big.NewInt(100000000)
+
+	id1 := identity.FromAddress("0x000000001")
+	hermesID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
+	var grandTotalPromised = big.NewInt(100)
+	bus := eventbus.New()
+
+	updates := make(chan *bindings.MystTokenTransfer, 0)
+	mcts := mockConsumerTotalsStorage{
+		res: grandTotalPromised,
+	}
+	bc := mockConsumerBalanceChecker{
+		ch: updates,
+		channelToReturn: client.ConsumerChannel{
+			Balance: big.NewInt(0),
+			Settled: big.NewInt(0),
+		},
+	}
+
+	tr := &mockTransactor{
+		feesToReturn: registry.FeesResponse{Fee: fees},
+		statusToReturn: registry.TransactorStatusResponse{
+			Status:       registry.TransactorRegistrationEntryStatusCreated,
+			BountyAmount: bounty,
+			ChainID:      1,
+		},
+	}
+
+	rp := &mockRegistrationStatusProvider{
+		identities: map[string]mockRegistrationStatus{
+			"1" + id1.Address: {status: registry.InProgress},
+		},
+	}
+
+	channel := common.HexToAddress("0x000000002")
+	calc := mockChannelAddressCalculator{
+		addrToReturn: channel,
+	}
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, tr, rp)
+
+	err := cbt.Subscribe(bus)
+	assert.NoError(t, err)
+
+	bus.Publish(identity.AppTopicIdentityUnlock, identity.AppEventIdentityUnlock{
+		ChainID: 1,
+		ID:      id1,
+	})
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(1, id1).Cmp(bounty) == 0
+	}, defaultWaitTime, defaultWaitInterval, "balance should be equal to the bounty amount")
+
+	updates <- &bindings.MystTokenTransfer{
+		From:  transactorID,
+		To:    channel,
+		Value: new(big.Int).Add(bounty, fees),
+	}
+
+	assert.Never(t, func() bool {
+		return cbt.GetBalance(1, id1).Cmp(new(big.Int).Add(bounty, fees)) == 0
+	}, defaultWaitTime, defaultWaitInterval, "transactor free registration transaction should affect increase balance")
+
+	updates <- &bindings.MystTokenTransfer{
+		From:  transactorID,
+		To:    channel,
+		Value: fees,
+	}
+
+	bounty = new(big.Int).Add(bounty, fees)
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(1, id1).Cmp(bounty) == 0
+	}, defaultWaitTime, defaultWaitInterval, "transactor fee decrease should affect balance")
+
+	updates <- &bindings.MystTokenTransfer{
+		From:  common.HexToAddress("0x000000002"),
+		To:    channel,
+		Value: fees,
+	}
+
+	assert.Eventually(t, func() bool {
+		return cbt.GetBalance(1, id1).Cmp(new(big.Int).Add(bounty, fees)) == 0
+	}, defaultWaitTime, defaultWaitInterval, "if transaction was received not from transactor, it should affect balance")
+}
+
 func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	hermesID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 	var grandTotalPromised = big.NewInt(100)
 	bus := eventbus.New()
 
@@ -201,7 +291,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 		},
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	err := cbt.Subscribe(bus)
 	assert.NoError(t, err)
@@ -243,6 +333,7 @@ func TestConsumerBalanceTracker_Handles_GrandTotalChanges(t *testing.T) {
 func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	accountantID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 	var grandTotalPromised = new(big.Int)
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{
@@ -257,7 +348,7 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 		ch: make(chan *bindings.MystTokenTransfer),
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{
 		statusToReturn: registry.TransactorStatusResponse{
 			Status:       registry.TransactorRegistrationEntryStatusCreated,
 			ChainID:      1,
@@ -285,6 +376,7 @@ func TestConsumerBalanceTracker_FallsBackToTransactorIfInProgress(t *testing.T) 
 func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	accountantID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 	var grandTotalPromised = new(big.Int)
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{
@@ -301,7 +393,7 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 		ch:          make(chan *bindings.MystTokenTransfer),
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
 		map[string]mockRegistrationStatus{
 			fmt.Sprintf("%d%s", 1, id1.Address): {
 				status: registry.Unregistered,
@@ -331,6 +423,7 @@ func TestConsumerBalanceTracker_ForceUpdatesOnSuccessfulSubscription(t *testing.
 func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
 	id1 := identity.FromAddress("0x000000001")
 	accountantID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 	var grandTotalPromised = new(big.Int)
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{
@@ -343,7 +436,7 @@ func TestConsumerBalanceTracker_UnregisteredBalanceReturned(t *testing.T) {
 		ch:                  make(chan *bindings.MystTokenTransfer),
 	}
 	calc := mockChannelAddressCalculator{}
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, accountantID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{grandTotalPromised}, &mockTransactor{}, &mockRegistrationStatusProvider{
 		map[string]mockRegistrationStatus{
 			fmt.Sprintf("%d%s", 1, id1.Address): {
 				status: registry.Unregistered,
@@ -412,6 +505,7 @@ func (mcig *mockconsumerInfoGetter) GetConsumerData(_ int64, _ string) (Consumer
 
 func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) {
 	hermesID := common.HexToAddress("0x000000acc")
+	transactorID := common.HexToAddress("0x000003")
 
 	bus := eventbus.New()
 	mcts := mockConsumerTotalsStorage{bus: bus, res: big.NewInt(0)}
@@ -423,7 +517,7 @@ func TestConsumerBalanceTracker_DoesNotBlockedOnEmptyBalancesList(t *testing.T) 
 	}
 	calc := mockChannelAddressCalculator{}
 
-	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
+	cbt := NewConsumerBalanceTracker(bus, mockMystSCaddress, hermesID, transactorID, &bc, &calc, &mcts, &mockconsumerInfoGetter{}, &mockTransactor{}, &mockRegistrationStatusProvider{})
 
 	// Make sure we are not dead locked here. https://github.com/mysteriumnetwork/node/issues/2181
 	cbt.increaseBCBalance(1, identity.FromAddress("0x0000"), big.NewInt(1))

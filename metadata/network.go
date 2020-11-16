@@ -24,6 +24,7 @@ type NetworkDefinition struct {
 	BrokerAddresses           []string
 	EtherClientRPC            string
 	TransactorAddress         string
+	TransactorIdentity        string
 	RegistryAddress           string
 	HermesID                  string
 	ChannelImplAddress        string
@@ -43,6 +44,7 @@ var TestnetDefinition = NetworkDefinition{
 	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
+	TransactorIdentity:        "0x0828d0386c1122e565f07dd28c7d1340ed5b3315",
 	RegistryAddress:           "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
 	ChannelImplAddress:        "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
 	HermesID:                  "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
@@ -67,6 +69,7 @@ var BetanetDefinition = NetworkDefinition{
 	BrokerAddresses:           []string{"nats://betanet-broker.mysterium.network"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
+	TransactorIdentity:        "0x45b224f0cd64ed5179502da42ed4e32228485b3b",
 	RegistryAddress:           "0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2",
 	ChannelImplAddress:        "0xc49B987fB8701a41ae65Cf934a811FeA15bCC6E4",
 	HermesID:                  "0xD5d2f5729D4581dfacEBedF46C7014DeFda43585",

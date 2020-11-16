@@ -138,6 +138,7 @@ func GetOptions() *Options {
 			NodeType:      config.GetString(config.FlagLocationNodeType),
 		},
 		Transactor: OptionsTransactor{
+			Identity:                        config.GetString(config.FlagTransactorIdentity),
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			RegistryAddress:                 config.GetString(config.FlagTransactorRegistryAddress),
 			ChannelImplementation:           config.GetString(config.FlagTransactorChannelImplementation),
