@@ -49,20 +49,66 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	return &service.ConfigParams{SessionServiceConfig: "http://localhost:12345", SessionDestroyCallback: func() {}}, nil
 }
 
-// Serve starts service - does block
+// Serve starts service - does block.
 func (m *Manager) Serve(instance *service.Instance) error {
-	http.HandleFunc("/msg/", m.handler.brokerMsgHandle)
-	http.HandleFunc("/poll/init/", m.handler.brokerPollInitHandle)
-	http.HandleFunc("/poll/ack/", m.handler.brokerPollAckHandle)
+	if !isPublicallyAccessible(m.listenPort) {
+		log.Warn().Msg("Broker service start failed")
+		return fmt.Errorf("failed to serve broker service, public port is not accessible")
+	}
 
-	log.Info().Msg("Broker service started successfully")
-	return http.ListenAndServe(m.listenAddr, nil)
+	h, err := newBrokerHandler("00000000-0000-0000-0000-000000000000")
+	if err != nil {
+		return fmt.Errorf("failed to create new broker handler: %w", err)
+	}
+
+	http.HandleFunc("/00000000-0000-0000-0000-000000000000/", h.brokerHandle)
+
+	log.Info().Msgf("Broker service started successfully at: %d", m.listenPort)
+
+	addr := fmt.Sprintf(":%d", m.listenPort)
+
+	return http.ListenAndServe(addr, nil)
 }
 
-// Stop stops service
+// Stop stops service.
 func (m *Manager) Stop() error {
 	log.Info().Msg("broker service stopped")
 	return nil
+}
+
+func isPublicallyAccessible(port int) bool {
+	ln, err := net.ListenTCP("tcp", &net.TCPAddr{
+		IP:   net.IP{0, 0, 0, 0},
+		Port: port,
+	})
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to listen TCP address for %d", port)
+	}
+
+	defer ln.Close()
+
+	url := fmt.Sprintf("https://ports.yougetsignal.com/check-port.php?portNumber=%d", port)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create request to check if port accessible from outside")
+		return false
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to check if port accessible from outside")
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read port checking response")
+		return false
+	}
+
+	return bytes.Contains(body, []byte("Open"))
 }
 
 // GetProposal returns the proposal for broker service for given country.
