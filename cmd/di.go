@@ -284,8 +284,31 @@ func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 		natPinger = traversal.NewNoopPinger()
 	}
 
-	di.P2PListener = p2p.NewListenerHTTP("http://localhost:12345", di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
-	di.P2PDialer = p2p.NewDialerHTTP(di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
+	brokerAddress := broker.BrokerAddress{
+		EventBus:   di.EventBus,
+		IPResolver: di.IPResolver,
+	}
+
+	di.EventBus.Subscribe(broker.AppTopicBrokerConnectionAddress, brokerAddress.SetAddress)
+	brokerConnect := func(serviceType, providerID string) string {
+		return brokerAddress.Address(serviceType, providerID, func() {
+			proposals, _ := di.ProposalRepository.Proposals(&proposal.Filter{ServiceType: broker.ServiceType})
+			for _, p := range proposals {
+				hermesID := config.GetString(config.FlagHermesID)
+
+				err := di.ConnectionManager.Connect(identity.FromAddress(providerID), common.HexToAddress(hermesID), p, connection.ConnectParams{})
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to connect to broker service")
+					continue
+				}
+
+				log.Debug().Msg("Connection for broker service established")
+				return
+			}
+		})
+	}
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper, brokerConnect)
+	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
 }
 
 func (di *Dependencies) createTequilaListener(nodeOptions node.Options) (net.Listener, error) {
@@ -345,7 +368,10 @@ func (di *Dependencies) registerNoopConnection() {
 
 func (di *Dependencies) registerBrokerConnection() {
 	broker.Bootstrap()
-	di.ConnectionRegistry.Register(broker.ServiceType, broker.NewConnection)
+	connectionFactory := func() (connection.Connection, error) {
+		return broker.NewConnection(di.EventBus)
+	}
+	di.ConnectionRegistry.Register(broker.ServiceType, connectionFactory)
 }
 
 // Shutdown stops container

@@ -39,20 +39,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Listener knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
-type Listener interface {
-	// Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
-	// to channelHandlers
-	Listen(providerID identity.Identity, serviceType string, channelHandler func(ch Channel)) (func(), error)
-
-	// GetContact returns contract which is later can be added to proposal contacts definition so consumer can
-	// know how to connect to this p2p listener.
-	GetContact() market.Contact
-}
-
-// NewListener creates new p2p communication listener which is used on provider side.
-func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper) Listener {
-	return &listener{
+// NewListenerNATS creates new p2p communication listener which is used on provider side.
+func NewListenerNATS(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper) Listener {
+	return &listenerNATS{
 		brokerConn:     brokerConn,
 		pendingConfigs: map[PublicKey]p2pConnectConfig{},
 		ipResolver:     ipResolver,
@@ -64,8 +53,8 @@ func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, veri
 	}
 }
 
-// listener implements Listener interface.
-type listener struct {
+// listenerNATS implements Listener interface.
+type listenerNATS struct {
 	portPool       port.ServicePortSupplier
 	brokerConn     nats.Connection
 	providerPinger natProviderPinger
@@ -100,22 +89,22 @@ func (c *p2pConnectConfig) peerIP() string {
 	return c.peerPublicIP
 }
 
-func (m *listener) GetContact() market.Contact {
-	return market.Contact{
-		Type:       ContactTypeNATSV1,
-		Definition: ContactDefinition{BrokerAddresses: m.brokerConn.Servers()}}
+func (l *listenerNATS) GetContacts(_, _ string) []market.Contact {
+	return []market.Contact{{
+		Type:       ContactTypeNATSv1,
+		Definition: ContactDefinition{BrokerAddresses: l.brokerConn.Servers()}}}
 }
 
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
 // to channelHandlers.
-func (m *listener) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) (func(), error) {
-	outboundIP, err := m.ipResolver.GetOutboundIP()
+func (l *listenerNATS) Listen(providerID identity.Identity, serviceType string, channelHandlers func(ch Channel)) (func(), error) {
+	outboundIP, err := l.ipResolver.GetOutboundIP()
 	if err != nil {
 		return func() {}, fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	configSub, err := m.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		if err := m.providerStartConfigExchange(providerID, msg, outboundIP); err != nil {
+	configSub, err := l.brokerConn.Subscribe(configExchangeSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+		if err := l.providerStartConfigExchange(providerID, msg, outboundIP); err != nil {
 			log.Err(err).Msg("Could not handle initial exchange")
 			return
 		}
@@ -124,8 +113,8 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		return func() {}, fmt.Errorf("could not get subscribe to config exchange topic: %w", err)
 	}
 
-	ackSub, err := m.brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
-		config, err := m.providerAckConfigExchange(msg)
+	ackSub, err := l.brokerConn.Subscribe(configExchangeACKSubject(providerID, serviceType), func(msg *nats_lib.Msg) {
+		config, err := l.providerAckConfigExchange(msg)
 		if err != nil {
 			log.Err(err).Msg("Could not handle exchange ack")
 			return
@@ -144,7 +133,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			log.Debug().Msgf("Delaying pings from consumer for %v ms", dur)
 			time.Sleep(time.Duration(dur) * time.Millisecond)
 
-			if err := m.brokerConn.Publish(reply, []byte("OK")); err != nil {
+			if err := l.brokerConn.Publish(reply, []byte("OK")); err != nil {
 				log.Err(err).Msg("Could not publish exchange ack")
 			}
 			config.tracer.EndStage(trace)
@@ -169,7 +158,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			traceDial := config.tracer.StartStage("Provider P2P dial (pinger)")
 			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v initial ttl: %v",
 				config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL)
-			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
+			conns, err := l.providerPinger.PingConsumerPeer(context.Background(), config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
@@ -194,7 +183,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		channel.launchReadSendLoops()
 
 		// Send handlers ready to consumer.
-		if err := m.providerChannelHandlersReady(providerID, serviceType); err != nil {
+		if err := l.providerChannelHandlersReady(providerID, serviceType); err != nil {
 			log.Err(err).Msg("Could not handle channel handlers ready")
 			channel.Close()
 			return
@@ -219,7 +208,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	}, nil
 }
 
-func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
+func (l *listenerNATS) providerStartConfigExchange(signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
 	tracer := trace.NewTracer("Provider whole Connect")
 
 	trace := tracer.StartStage("Provider P2P exchange")
@@ -231,7 +220,7 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	}
 
 	// Get initial peer exchange with it's public key.
-	signedMsg, err := unpackSignedMsg(m.verifier, msg.Data)
+	signedMsg, err := unpackSignedMsg(l.verifier, msg.Data)
 	if err != nil {
 		return fmt.Errorf("could not unpack signed msg: %w", err)
 	}
@@ -245,12 +234,12 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	}
 	log.Debug().Msgf("Received consumer public key %s", peerPubKey.Hex())
 
-	publicIP, localPorts, portsRelease, err := m.prepareLocalPorts(outboundIP, tracer)
+	publicIP, localPorts, portsRelease, err := l.prepareLocalPorts(outboundIP, tracer)
 	if err != nil {
 		return fmt.Errorf("could not prepare ports: %w", err)
 	}
 
-	m.setPendingConfig(p2pConnectConfig{
+	l.setPendingConfig(p2pConnectConfig{
 		publicIP:         publicIP,
 		localPorts:       localPorts,
 		publicKey:        pubKey,
@@ -275,11 +264,11 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 		ConfigCiphertext: configCiphertext,
 	}
 	log.Debug().Msgf("Sending reply with public key %s and encrypted config to consumer", exchangeMsg.PublicKey)
-	packedMsg, err := packSignedMsg(m.signer, signerID, &exchangeMsg)
+	packedMsg, err := packSignedMsg(l.signer, signerID, &exchangeMsg)
 	if err != nil {
 		return fmt.Errorf("could not pack signed message: %v", err)
 	}
-	err = m.brokerConn.Publish(msg.Reply, packedMsg)
+	err = l.brokerConn.Publish(msg.Reply, packedMsg)
 	if err != nil {
 		return fmt.Errorf("could not publish message via broker: %v", err)
 	}
@@ -290,18 +279,18 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 // required ports count for actual p2p and service connections and fallback to
 // acquiring extra ports for nat pinger if provider is behind nat, port mapping failed
 // and no manual port forwarding is enabled.
-func (m *listener) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (string, []int, []func(), error) {
+func (l *listenerNATS) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (string, []int, []func(), error) {
 	trace := tracer.StartStage("Provider P2P exchange (ports)")
 	defer tracer.EndStage(trace)
 
 	// Send reply with encrypted exchange config.
-	publicIP, err := m.ipResolver.GetPublicIP()
+	publicIP, err := l.ipResolver.GetPublicIP()
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("could not get public IP: %v", err)
 	}
 
 	// First acquire required only ports for needed n connections.
-	localPorts, err := acquireLocalPorts(m.portPool, requiredConnCount)
+	localPorts, err := acquireLocalPorts(l.portPool, requiredConnCount)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("could not acquire initial local ports: %v", err)
 	}
@@ -315,7 +304,7 @@ func (m *listener) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (s
 	var portMappingOk bool
 	var portRelease func()
 	for _, p := range localPorts {
-		portRelease, portMappingOk = m.portMapper.Map("UDP", p, "Myst node p2p port mapping")
+		portRelease, portMappingOk = l.portMapper.Map("UDP", p, "Myst node p2p port mapping")
 		if !portMappingOk {
 			break
 		}
@@ -327,12 +316,12 @@ func (m *listener) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (s
 
 	// Check if nat pinger is valid. It's considered as not valid when noop pinger is used in case
 	// manual port forwarding is specified.
-	if _, noop := m.providerPinger.(*traversal.NoopPinger); noop {
+	if _, noop := l.providerPinger.(*traversal.NoopPinger); noop {
 		return publicIP, localPorts, nil, nil
 	}
 
 	// Acquire more ports for nat pinger.
-	morePorts, err := acquireLocalPorts(m.portPool, pingMaxPorts-requiredConnCount)
+	morePorts, err := acquireLocalPorts(l.portPool, pingMaxPorts-requiredConnCount)
 	if err != nil {
 		return publicIP, nil, nil, fmt.Errorf("could not acquire more local ports: %v", err)
 	}
@@ -342,8 +331,8 @@ func (m *listener) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (s
 	return publicIP, localPorts, nil, nil
 }
 
-func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConfig, error) {
-	signedMsg, err := unpackSignedMsg(m.verifier, msg.Data)
+func (l *listenerNATS) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConfig, error) {
+	signedMsg, err := unpackSignedMsg(l.verifier, msg.Data)
 	if err != nil {
 		return nil, fmt.Errorf("could not unpack signed msg: %w", err)
 	}
@@ -356,8 +345,8 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 		return nil, err
 	}
 
-	defer m.deletePendingConfig(peerPubKey)
-	config, ok := m.pendingConfig(peerPubKey)
+	defer l.deletePendingConfig(peerPubKey)
+	config, ok := l.pendingConfig(peerPubKey)
 	if !ok {
 		return nil, fmt.Errorf("pending config not found for key %s", peerPubKey.Hex())
 	}
@@ -382,7 +371,7 @@ func (m *listener) providerAckConfigExchange(msg *nats_lib.Msg) (*p2pConnectConf
 	}, nil
 }
 
-func (m *listener) providerChannelHandlersReady(providerID identity.Identity, serviceType string) error {
+func (l *listenerNATS) providerChannelHandlersReady(providerID identity.Identity, serviceType string) error {
 	handlersReadyMsg := pb.P2PChannelHandlersReady{Value: "HANDLERS READY"}
 
 	message, err := proto.Marshal(&handlersReadyMsg)
@@ -391,24 +380,24 @@ func (m *listener) providerChannelHandlersReady(providerID identity.Identity, se
 	}
 
 	log.Debug().Msgf("Sending handlers ready message")
-	return m.brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
+	return l.brokerConn.Publish(channelHandlersReadySubject(providerID, serviceType), message)
 }
 
-func (m *listener) pendingConfig(peerPubKey PublicKey) (p2pConnectConfig, bool) {
-	m.pendingConfigsMu.Lock()
-	defer m.pendingConfigsMu.Unlock()
-	config, ok := m.pendingConfigs[peerPubKey]
+func (l *listenerNATS) pendingConfig(peerPubKey PublicKey) (p2pConnectConfig, bool) {
+	l.pendingConfigsMu.Lock()
+	defer l.pendingConfigsMu.Unlock()
+	config, ok := l.pendingConfigs[peerPubKey]
 	return config, ok
 }
 
-func (m *listener) setPendingConfig(config p2pConnectConfig) {
-	m.pendingConfigsMu.Lock()
-	defer m.pendingConfigsMu.Unlock()
-	m.pendingConfigs[config.peerPubKey] = config
+func (l *listenerNATS) setPendingConfig(config p2pConnectConfig) {
+	l.pendingConfigsMu.Lock()
+	defer l.pendingConfigsMu.Unlock()
+	l.pendingConfigs[config.peerPubKey] = config
 }
 
-func (m *listener) deletePendingConfig(peerPubKey PublicKey) {
-	m.pendingConfigsMu.Lock()
-	defer m.pendingConfigsMu.Unlock()
-	delete(m.pendingConfigs, peerPubKey)
+func (l *listenerNATS) deletePendingConfig(peerPubKey PublicKey) {
+	l.pendingConfigsMu.Lock()
+	defer l.pendingConfigsMu.Unlock()
+	delete(l.pendingConfigs, peerPubKey)
 }
