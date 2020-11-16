@@ -62,28 +62,28 @@ var TestnetDefinition = NetworkDefinition{
 	DefaultChainID: 5,
 }
 
-// BetanetDefinition defines parameters for Betanet network (currently default network)
-var BetanetDefinition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://betanet-api.mysterium.network/v1",
-	AccessPolicyOracleAddress: "https://betanet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://betanet-broker.mysterium.network"},
+// Testnet2Definition defines parameters for testnet2 network (currently default network)
+var Testnet2Definition = NetworkDefinition{
+	MysteriumAPIAddress:       "https://testnet2-api.mysterium.network/v1",
+	AccessPolicyOracleAddress: "https://testnet2-trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddresses:           []string{"nats://testnet2-broker.mysterium.network"},
 	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
-	TransactorAddress:         "https://betanet-transactor.mysterium.network/api/v1",
 	TransactorIdentity:        "0x45b224f0cd64ed5179502da42ed4e32228485b3b",
+	TransactorAddress:         "https://testnet2-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2",
 	ChannelImplAddress:        "0xc49B987fB8701a41ae65Cf934a811FeA15bCC6E4",
 	HermesID:                  "0xD5d2f5729D4581dfacEBedF46C7014DeFda43585",
-	MMNAddress:                "https://betanet.mysterium.network/",
-	MMNAPIAddress:             "https://betanet.mysterium.network/api/v1",
+	MMNAddress:                "https://testnet2.mysterium.network/",
+	MMNAPIAddress:             "https://testnet2.mysterium.network/api/v1",
 	DAIAddress:                "0xC496Bae7780C92281F19626F233b1B11f52D38A3",
 	WETHAddress:               "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
-	PilvytisAddress:           "https://betanet-pilvytis.mysterium.network/api/v1",
+	PilvytisAddress:           "https://testnet2-pilvytis.mysterium.network/api/v1",
 	DNSMap: map[string][]string{
-		"betanet-api.mysterium.network":        {"78.47.55.197"},
-		"betanet-trust.mysterium.network":      {"95.216.204.232"},
-		"betanet-broker.mysterium.network":     {"95.216.204.232"},
-		"betanet-transactor.mysterium.network": {"135.181.82.67"},
-		"betanet.mysterium.network":            {"138.201.244.63"},
+		"testnet2-api.mysterium.network":        {"78.47.55.197"},
+		"testnet2-trust.mysterium.network":      {"95.216.204.232"},
+		"testnet2-broker.mysterium.network":     {"95.216.204.232"},
+		"testnet2-transactor.mysterium.network": {"135.181.82.67"},
+		"testnet2.mysterium.network":            {"138.201.244.63"},
 	},
 	DefaultChainID: 5,
 }
@@ -105,4 +105,4 @@ var LocalnetDefinition = NetworkDefinition{
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given
-var DefaultNetwork = BetanetDefinition
+var DefaultNetwork = Testnet2Definition

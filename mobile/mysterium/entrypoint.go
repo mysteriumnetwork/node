@@ -105,19 +105,19 @@ func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
 		Betanet:                         true,
 		ExperimentNATPunching:           true,
-		MysteriumAPIAddress:             metadata.BetanetDefinition.MysteriumAPIAddress,
-		BrokerAddresses:                 metadata.BetanetDefinition.BrokerAddresses,
-		EtherClientRPC:                  metadata.BetanetDefinition.EtherClientRPC,
+		MysteriumAPIAddress:             metadata.Testnet2Definition.MysteriumAPIAddress,
+		BrokerAddresses:                 metadata.Testnet2Definition.BrokerAddresses,
+		EtherClientRPC:                  metadata.Testnet2Definition.EtherClientRPC,
 		FeedbackURL:                     "https://feedback.mysterium.network",
-		QualityOracleURL:                "https://betanet-quality.mysterium.network/api/v1",
+		QualityOracleURL:                "https://testnet2-quality.mysterium.network/api/v1",
 		IPDetectorURL:                   "https://api.ipify.org/?format=json",
-		LocationDetectorURL:             "https://betanet-location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:       metadata.BetanetDefinition.TransactorAddress,
-		TransactorRegistryAddress:       metadata.BetanetDefinition.RegistryAddress,
-		TransactorChannelImplementation: metadata.BetanetDefinition.ChannelImplAddress,
-		HermesID:                        metadata.BetanetDefinition.HermesID,
+		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:       metadata.Testnet2Definition.TransactorAddress,
+		TransactorRegistryAddress:       metadata.Testnet2Definition.RegistryAddress,
+		TransactorChannelImplementation: metadata.Testnet2Definition.ChannelImplAddress,
+		HermesID:                        metadata.Testnet2Definition.HermesID,
 		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
-		ChainID:                         metadata.BetanetDefinition.DefaultChainID,
+		ChainID:                         metadata.Testnet2Definition.DefaultChainID,
 	}
 }
 
@@ -143,8 +143,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ChainID:               options.ChainID,
 		DNSMap: map[string][]string{
 			"testnet-location.mysterium.network": {"82.196.15.9"},
-			"betanet-location.mysterium.network": {"95.216.204.232"},
-			"betanet-quality.mysterium.network":  {"116.202.100.246"},
+			"testnet2-location.mysterium.network": {"95.216.204.232"},
+			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
 			"feedback.mysterium.network":         {"116.203.17.150"},
 			"api.ipify.org": {
 				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
