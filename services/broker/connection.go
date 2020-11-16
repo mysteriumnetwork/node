@@ -19,17 +19,23 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/eventbus"
 )
 
+const AppTopicBrokerConnectionAddress = "broker_connection_address"
+
 // NewConnection creates a new broker service connection.
-func NewConnection() (connection.Connection, error) {
+func NewConnection(eventBus eventbus.EventBus) (connection.Connection, error) {
 	return &Connection{
-		stateCh: make(chan connectionstate.State, 100),
+		eventBus: eventBus,
+		stateCh:  make(chan connectionstate.State, 100),
 	}, nil
 }
 
@@ -38,6 +44,7 @@ type Connection struct {
 	isRunning        bool
 	brokerConnection sync.WaitGroup
 	stateCh          chan connectionstate.State
+	eventBus         eventbus.EventBus
 }
 
 var _ connection.Connection = &Connection{}
@@ -54,10 +61,19 @@ func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 
 // Start implements the connection.Connection interface.
 func (c *Connection) Start(ctx context.Context, params connection.ConnectOptions) error {
+	var config Config
+
+	err := json.Unmarshal(params.SessionConfig, &config)
+	if err != nil {
+		return fmt.Errorf("failed to parse session config: %w", err)
+	}
+
 	c.brokerConnection.Add(1)
 	c.isRunning = true
 	c.stateCh <- connectionstate.Connecting
 	c.stateCh <- connectionstate.Connected
+	c.eventBus.Publish(AppTopicBrokerConnectionAddress, config.URL)
+
 	return nil
 }
 
@@ -66,11 +82,14 @@ func (c *Connection) Wait() error {
 	if c.isRunning {
 		c.brokerConnection.Wait()
 	}
+
 	return nil
 }
 
 // Stop implements the connection.Connection interface.
 func (c *Connection) Stop() {
+	c.eventBus.Publish(AppTopicBrokerConnectionAddress, "")
+
 	if !c.isRunning {
 		return
 	}
@@ -82,7 +101,7 @@ func (c *Connection) Stop() {
 	close(c.stateCh)
 }
 
-// GetConfig returns the consumer configuration for session creation
+// GetConfig returns the consumer configuration for session creation.
 func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 	return nil, nil
 }
