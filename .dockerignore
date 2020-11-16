@@ -1,2 +1,7 @@
 .git/
 vendor
+build/docker-images
+build/e2e
+build/myst
+build/myst_supervisor
+build/package
