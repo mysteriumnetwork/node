@@ -171,7 +171,7 @@ func (di *Dependencies) bootstrapServiceBroker(nodeOptions node.Options) {
 				return nil, market.ServiceProposal{}, err
 			}
 
-			return broker.NewManager(":12345"), broker.GetProposal(loc), nil
+			return broker.NewManager(config.GetInt(config.FlagBrokerPort), di.EventBus), broker.GetProposal(loc), nil
 		},
 	)
 }

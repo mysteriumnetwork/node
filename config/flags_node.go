@@ -151,6 +151,12 @@ var (
 		),
 		Value: "https://betanet-quality.mysterium.network/api/v1",
 	}
+	// FlagBrokerPort port for listening incoming broker requests.
+	FlagBrokerPort = cli.IntFlag{
+		Name:  "broker.port",
+		Usage: "Port for listening incoming broker requests",
+		Value: 42222,
+	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
 		Name:  "tequilapi.address",
@@ -260,6 +266,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagOpenvpnBinary,
 		&FlagQualityType,
 		&FlagQualityAddress,
+		&FlagBrokerPort,
 		&FlagTequilapiAddress,
 		&FlagTequilapiPort,
 		&FlagTequilapiUsername,
@@ -308,6 +315,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
 	Current.ParseStringFlag(ctx, FlagQualityType)
+	Current.ParseIntFlag(ctx, FlagBrokerPort)
 	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
 	Current.ParseStringFlag(ctx, FlagTequilapiUsername)
