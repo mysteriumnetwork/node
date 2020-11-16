@@ -31,36 +31,43 @@ var (
 )
 
 const (
-	// ContactTypeNATSV1 is p2p contact type that uses NATS service.
-	ContactTypeNATSV1 = "nats/p2p/v1"
+	// ContactTypeNATSv1 is p2p contact type that uses NATS service.
+	ContactTypeNATSv1 = "nats/p2p/v1"
 
-	// ContactTypeHTTPV1 is p2p contact type that uses builtin broker.
-	ContactTypeHTTPV1 = "broker/p2p/v1"
+	// ContactTypeHTTPv1 is p2p contact type that uses builtin broker.
+	ContactTypeHTTPv1 = "broker/p2p/v1"
 )
 
 // ContactDefinition represents p2p contact which contains NATS broker addresses for connection.
 type ContactDefinition struct {
+	Type            string   `json:`
 	BrokerAddresses []string `json:"broker_addresses"`
 }
 
 // ParseContact tries to parse p2p contact from given contacts list.
-func ParseContact(contacts market.ContactList) (ContactDefinition, error) {
+func ParseContact(contacts market.ContactList) (list []ContactDefinition, err error) {
 	for _, c := range contacts {
-		if c.Type == ContactTypeNATSV1 || c.Type == ContactTypeHTTPV1 {
+		if c.Type == ContactTypeNATSv1 || c.Type == ContactTypeHTTPv1 {
 			def, ok := c.Definition.(ContactDefinition)
 			if !ok {
-				return ContactDefinition{}, fmt.Errorf("invalid p2p contact definition: %#v", c.Definition)
+				return nil, fmt.Errorf("invalid p2p contact definition: %#v", c.Definition)
 			}
-			return def, nil
+			def.Type = c.Type
+			list = append(list, def)
 		}
 	}
-	return ContactDefinition{}, ErrContactNotFound
+
+	if len(list) > 0 {
+		return list, nil
+	}
+
+	return nil, ErrContactNotFound
 }
 
 // RegisterContactUnserializer registers global proposal contact unserializer.
 func RegisterContactUnserializer() {
 	market.RegisterContactUnserializer(
-		ContactTypeNATSV1,
+		ContactTypeNATSv1,
 		func(rawDefinition *json.RawMessage) (market.ContactDefinition, error) {
 			var contact ContactDefinition
 			err := json.Unmarshal(*rawDefinition, &contact)
@@ -68,7 +75,7 @@ func RegisterContactUnserializer() {
 		},
 	)
 	market.RegisterContactUnserializer(
-		ContactTypeHTTPV1,
+		ContactTypeHTTPv1,
 		func(rawDefinition *json.RawMessage) (market.ContactDefinition, error) {
 			var contact ContactDefinition
 			err := json.Unmarshal(*rawDefinition, &contact)

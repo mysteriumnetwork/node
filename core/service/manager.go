@@ -118,7 +118,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		proposal.SetAccessPolicies(&policies)
 	}
 
-	proposal.SetProviderContacts(providerID, market.ContactList{manager.p2pListener.GetContact()})
+	proposal.SetProviderContacts(providerID, manager.p2pListener.GetContacts(serviceType, providerID.Address))
 
 	id, err = generateID()
 	if err != nil {
