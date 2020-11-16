@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/broker"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/wireguard"
@@ -50,6 +51,11 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 		opts.PaymentPricePerGB = getPrice(config.FlagNoopPriceGB, config.FlagPaymentPricePerGB)
 		opts.PaymentPricePerMinute = getPrice(config.FlagNoopPriceMinute, config.FlagPaymentPricePerMinute)
 		opts.AccessPolicyList = getPolicies(config.FlagNoopAccessPolicies, config.FlagAccessPolicyList)
+	case broker.ServiceType:
+		opts.PaymentPricePerGB = getPrice(config.FlagBrokerPriceGB, config.FlagPaymentPricePerGB)
+		opts.PaymentPricePerMinute = getPrice(config.FlagBrokerPriceMinute, config.FlagPaymentPricePerMinute)
+		opts.AccessPolicyList = getPolicies(config.FlagBrokerAccessPolicies, config.FlagAccessPolicyList)
+
 	}
 	return opts, nil
 }
