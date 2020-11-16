@@ -18,9 +18,12 @@
 package broker
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/jcuga/golongpoll"
 	"github.com/rs/zerolog/log"
@@ -28,24 +31,84 @@ import (
 
 type handler struct {
 	lp *golongpoll.LongpollManager
+	id string
+
+	mu     sync.Mutex
+	rx, tx uint64
 }
 
-func newP2PHandler() *handler {
+type readCloserCounter struct {
+	rc    io.ReadCloser
+	count func(n int)
+}
+
+func (r *readCloserCounter) Read(p []byte) (n int, err error) {
+	n, err = r.rc.Read(p)
+	r.count(n)
+
+	return n, err
+}
+
+func (r *readCloserCounter) Close() error {
+	return r.rc.Close()
+}
+
+func newBrokerHandler(id string) (*handler, error) {
 	manager, err := golongpoll.StartLongpoll(golongpoll.Options{
 		LoggingEnabled: true,
 	})
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to start longpoll")
 	}
 
 	return &handler{
 		lp: manager,
+		id: id,
+	}, nil
+}
+
+func (h *handler) countRx(rc io.ReadCloser) *readCloserCounter {
+	return &readCloserCounter{
+		rc: rc,
+		count: func(n int) {
+			h.mu.Lock()
+			defer h.mu.Unlock()
+
+			h.rx += uint64(n)
+		},
 	}
 }
 
-func (h *handler) brokerMsgHandle(w http.ResponseWriter, req *http.Request) {
+func (h *handler) brokerHandle(w http.ResponseWriter, req *http.Request) {
+	path := strings.SplitN(req.URL.Path, "/", 5)
+	if len(path) < 4 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	id := path[1]
+	serviceType := path[2]
+	t := path[3]
+
+	if id != h.id {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	req.Body = h.countRx(req.Body)
+
+	switch t {
+	case "msg":
+		h.brokerMsgHandle(serviceType, w, req)
+	case "init":
+		h.brokerInitHandle(serviceType, w, req)
+	case "ack":
+		h.brokerAckHandle(serviceType, w, req)
+	}
+}
+
+func (h *handler) brokerMsgHandle(serviceType string, w http.ResponseWriter, req *http.Request) {
 	log.Info().Msgf("Received broker message for: %s", req.URL.RequestURI())
-	id := strings.TrimPrefix(req.URL.Path, "/msg/")
 
 	t, ok := req.URL.Query()["type"]
 	if !ok || len(t[0]) < 1 {
@@ -61,41 +124,46 @@ func (h *handler) brokerMsgHandle(w http.ResponseWriter, req *http.Request) {
 	switch t[0] {
 	case "init":
 		log.Info().Msgf("Received broker message for init: %s", req.URL.Path)
-		h.lp.Publish(id+"_init", msg)
+		h.lp.Publish(h.id+serviceType+"_init", msg)
 
 		q := req.URL.Query()
 		q.Add("timeout", "120")
-		q.Add("category", id+"_push")
+		q.Add("category", h.id+serviceType+"_push")
 		req.URL.RawQuery = q.Encode()
 
 		h.lp.SubscriptionHandler(w, req)
 
 	case "push":
 		log.Info().Msgf("Received broker message for push: %s", req.URL.Path)
-		h.lp.Publish(id+"_push", msg)
+		h.lp.Publish(h.id+serviceType+"_push", msg)
 
 	case "ack":
 		log.Info().Msgf("Received broker message for ack: %s", req.URL.Path)
-		h.lp.Publish(id+"_ack", msg)
+		h.lp.Publish(h.id+serviceType+"_ack", msg)
 	}
 }
 
-func (h *handler) brokerPollInitHandle(w http.ResponseWriter, req *http.Request) {
-	id := strings.TrimPrefix(req.URL.Path, "/poll/init/")
+func (h *handler) brokerInitHandle(serviceType string, w http.ResponseWriter, req *http.Request) {
 	q := req.URL.Query()
 	q.Add("timeout", "120")
-	q.Add("category", id+"_init")
+	q.Add("category", h.id+serviceType+"_init")
 	req.URL.RawQuery = q.Encode()
 
 	h.lp.SubscriptionHandler(w, req)
 }
 
-func (h *handler) brokerPollAckHandle(w http.ResponseWriter, req *http.Request) {
-	id := strings.TrimPrefix(req.URL.Path, "/poll/ack/")
+func (h *handler) brokerAckHandle(serviceType string, w http.ResponseWriter, req *http.Request) {
 	q := req.URL.Query()
 	q.Add("timeout", "120")
-	q.Add("category", id+"_ack")
+	q.Add("category", h.id+serviceType+"_ack")
 	req.URL.RawQuery = q.Encode()
 
 	h.lp.SubscriptionHandler(w, req)
+}
+
+func (h *handler) stats() (rx, tx uint64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	return h.rx, h.tx
 }

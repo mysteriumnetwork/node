@@ -18,35 +18,70 @@
 package broker
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"time"
 
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/rs/zerolog/log"
 )
 
+type Config struct {
+	URL string `json:"url"`
+}
+
 // NewManager creates new instance of broker service.
-func NewManager(addr string) *Manager {
+func NewManager(port int, eventBus eventbus.Publisher) *Manager {
 	return &Manager{
-		listenAddr: addr,
-		handler:    newP2PHandler(),
+		listenPort: port,
+		eventBus:   eventBus,
 	}
 }
 
 // Manager represents entrypoint for broker service.
 type Manager struct {
-	listenAddr string
-	handler    *handler
+	listenPort int
+	eventBus   eventbus.Publisher
 }
 
 // ProvideConfig provides the session configuration.
 func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, _ *net.UDPConn) (*service.ConfigParams, error) {
 	out, err := sessionConfig.MarshalJSON()
 	log.Info().Err(err).Msgf("New broker service session: %s (%s)", sessionID, string(out))
-	return &service.ConfigParams{SessionServiceConfig: "http://localhost:12345", SessionDestroyCallback: func() {}}, nil
+
+	h, err := newBrokerHandler(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new broker handler: %w", err)
+	}
+
+	statsPublisher := newStatsPublisher(m.eventBus, time.Second)
+	go statsPublisher.start(sessionID, h)
+
+	http.HandleFunc("/"+sessionID+"/", h.brokerHandle)
+
+	client := requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout)
+	resolver := ip.NewResolver(client, "0.0.0.0", "https://api.ipify.org/?format=json")
+
+	ip, err := resolver.GetPublicIP()
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("http://%s:%d/%s", ip, config.GetInt(config.FlagBrokerPort), sessionID)
+
+	return &service.ConfigParams{SessionServiceConfig: Config{URL: url}, SessionDestroyCallback: func() {
+		statsPublisher.stop()
+	}}, nil
 }
 
 // Serve starts service - does block.
