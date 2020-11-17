@@ -73,7 +73,7 @@ var (
 	activeProviderID      = identity.FromAddress("fake-node-1")
 	hermesID              = common.HexToAddress("hermes")
 	activeProviderContact = market.Contact{
-		Type:       p2p.ContactTypeV1,
+		Type:       p2p.ContactTypeNATSv1,
 		Definition: p2p.ContactDefinition{},
 	}
 	activeServiceType = "fake-service"
@@ -681,7 +681,7 @@ type mockP2PDialer struct {
 	ch *mockP2PChannel
 }
 
-func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition, tracer *trace.Tracer) (p2p.Channel, error) {
+func (m mockP2PDialer) Dial(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, serviceType string, contactDef []p2p.ContactDefinition, tracer *trace.Tracer) (p2p.Channel, error) {
 	return m.ch, nil
 }
 

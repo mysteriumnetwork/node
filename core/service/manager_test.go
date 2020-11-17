@@ -148,7 +148,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 type mockP2PListener struct {
 }
 
-func (m mockP2PListener) GetContacts() []market.Contact {
+func (m mockP2PListener) GetContacts(_, _ string) []market.Contact {
 	return []market.Contact{}
 }
 

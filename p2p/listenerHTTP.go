@@ -53,7 +53,7 @@ var errPendingConfigNotFound = errors.New("pending config not found")
 
 type addressProvider func(serviceType, providerID string) string
 
-// NewListener creates new p2p communication listener which is used on provider side.
+// NewListenerHTTP creates new p2p communication listener which is used on provider side.
 func NewListenerHTTP(signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper, addressProvider addressProvider) Listener {
 	return &listenerHTTP{
 		addressProvider: addressProvider,

@@ -39,7 +39,7 @@ type Listener interface {
 	GetContacts(serviceType, providerID string) []market.Contact
 }
 
-func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper, address address) Listener {
+func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper, addressProvider addressProvider) Listener {
 	return &listener{
 		nats: &listenerNATS{
 			brokerConn:     brokerConn,
@@ -52,14 +52,14 @@ func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, veri
 			portMapper:     portMapper,
 		},
 		http: &listenerHTTP{
-			addressf:       address,
-			pendingConfigs: map[PublicKey]p2pConnectConfig{},
-			ipResolver:     ipResolver,
-			signer:         signer,
-			verifier:       verifier,
-			portPool:       portPool,
-			providerPinger: providerPinger,
-			portMapper:     portMapper,
+			addressProvider: addressProvider,
+			pendingConfigs:  map[PublicKey]p2pConnectConfig{},
+			ipResolver:      ipResolver,
+			signer:          signer,
+			verifier:        verifier,
+			portPool:        portPool,
+			providerPinger:  providerPinger,
+			portMapper:      portMapper,
 		},
 	}
 }

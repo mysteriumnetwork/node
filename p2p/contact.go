@@ -40,7 +40,7 @@ const (
 
 // ContactDefinition represents p2p contact which contains NATS broker addresses for connection.
 type ContactDefinition struct {
-	Type            string   `json:`
+	Type            string   `json:"type"`
 	BrokerAddresses []string `json:"broker_addresses"`
 }
 

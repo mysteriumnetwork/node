@@ -43,7 +43,7 @@ const (
 	MsgTypeAck  = "ack"
 )
 
-// NewDialer creates new p2p communication dialer which is used on consumer side.
+// NewDialerHTTP creates new p2p communication dialer which is used on consumer side.
 func NewDialerHTTP(signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, consumerPinger natConsumerPinger, portPool port.ServicePortSupplier) *dialerHTTP {
 	return &dialerHTTP{
 		ipResolver:     ipResolver,
