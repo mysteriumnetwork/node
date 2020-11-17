@@ -76,7 +76,7 @@ func ReleaseDebianPPASnapshot() error {
 	})
 }
 
-// ReleaseDebianPPA releases to node-betanet PPA.
+// ReleaseDebianPPA releases to node-testnet2 PPA.
 func ReleaseDebianPPA() error {
 	err := env.EnsureEnvVars(
 		env.TagBuild,
@@ -92,7 +92,7 @@ func ReleaseDebianPPA() error {
 	}
 
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:  "node-betanet",
+		repository:  "node-testnet2",
 		version:     ppaVersion(env.Str(env.BuildVersion)),
 		buildNumber: env.Str(env.BuildNumber),
 	})

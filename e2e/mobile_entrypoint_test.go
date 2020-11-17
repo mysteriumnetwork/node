@@ -35,7 +35,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &mysterium.MobileNodeOptions{
-		Betanet:                         true,
+		Testnet2:                        true,
 		ExperimentNATPunching:           true,
 		MysteriumAPIAddress:             "http://mysterium-api:8001/v1",
 		BrokerAddresses:                 []string{"broker"},
@@ -43,7 +43,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		FeedbackURL:                     "TODO",
 		QualityOracleURL:                "http://morqa:8085/api/v1",
 		IPDetectorURL:                   "http://ipify:3000/?format=json",
-		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
+		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:       "http://transactor:8888/api/v1",
 		TransactorRegistryAddress:       registryAddress,
 		TransactorChannelImplementation: channelImplementation,

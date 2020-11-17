@@ -30,9 +30,9 @@ Install latest stable testnet release:
 sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
 
-Install latest betanet release:
+Install latest testnet2 release:
 ```bash
-NETWORK=betanet sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
+NETWORK=testnet2 sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
 
 Or install latest snapshot (development build):

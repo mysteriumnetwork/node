@@ -460,7 +460,7 @@ services:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     volumes:
-      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/betanet/keystore
+      - ./e2e/myst-consumer/keystore:/var/lib/mysterium-node/testnet2/keystore
     depends_on:
       - broker
       - mysterium-api
@@ -520,7 +520,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/betanet/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/testnet2/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s

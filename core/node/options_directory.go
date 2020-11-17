@@ -43,10 +43,10 @@ type OptionsDirectory struct {
 // GetOptionsDirectory retrieves directory configuration from app configuration.
 func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
-	networkSubdir := "betanet" // Matches DefaultNetworkDefinition
+	networkSubdir := "testnet2" // Matches DefaultNetworkDefinition
 	switch {
-	case network.Betanet:
-		networkSubdir = "betanet"
+	case network.Testnet2:
+		networkSubdir = "testnet2"
 	case network.Testnet:
 		networkSubdir = "" // Leave testnet files intact before it's merged into master
 	case network.Localnet:
