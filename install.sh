@@ -18,9 +18,9 @@ if [[ "$SNAPSHOT" == "true" ]]; then
     PPA="ppa:mysteriumnetwork/node-dev"
     PPA_URL="http://ppa.launchpad.net/mysteriumnetwork/node-dev/ubuntu"
     PPA_FINGER="ECCB6A56B22C536D"
-elif [[ "$NETWORK" == "betanet" ]]; then
-    PPA="ppa:mysteriumnetwork/node-betanet"
-    PPA_URL="http://ppa.launchpad.net/mysteriumnetwork/node-betanet/ubuntu"
+elif [[ "$NETWORK" == "testnet2" ]]; then
+    PPA="ppa:mysteriumnetwork/node-testnet2"
+    PPA_URL="http://ppa.launchpad.net/mysteriumnetwork/node-testnet2/ubuntu"
     PPA_FINGER="ECCB6A56B22C536D"
 else
     PPA="ppa:mysteriumnetwork/node"

@@ -169,11 +169,11 @@ func ReleaseDockerTag() error {
 		releasables = []dockerReleasable{
 			{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{
 				env.Str(env.BuildVersion) + "-alpine",
-				"betanet",
+				"testnet2",
 			}},
 			{partialLocalName: "tequilapi:", repository: "mysteriumnetwork/documentation", tags: []string{
 				env.Str(env.BuildVersion),
-				"betanet",
+				"testnet2",
 			}},
 		}
 	}
