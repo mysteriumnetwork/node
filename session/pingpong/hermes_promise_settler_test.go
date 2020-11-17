@@ -376,6 +376,10 @@ func (mt *mockTransactor) FetchRegistrationStatus(id string) ([]registry.Transac
 	return []registry.TransactorStatusResponse{mt.statusToReturn}, mt.statusError
 }
 
+func (mt *mockTransactor) FetchRegistrationFees(chainID int64) (registry.FeesResponse, error) {
+	return mt.feesToReturn, mt.feesError
+}
+
 type settlementHistoryStorageMock struct{}
 
 func (shsm *settlementHistoryStorageMock) Store(_ SettlementHistoryEntry) error {

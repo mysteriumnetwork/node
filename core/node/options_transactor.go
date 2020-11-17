@@ -24,6 +24,7 @@ import (
 
 // OptionsTransactor describes possible parameters for interaction with transactor
 type OptionsTransactor struct {
+	Identity                        string
 	TransactorEndpointAddress       string
 	RegistryAddress                 string
 	ChannelImplementation           string

@@ -476,6 +476,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
 		common.HexToAddress(nodeOptions.Hermes.HermesID),
+		common.HexToAddress(nodeOptions.Transactor.Identity),
 		di.BCHelper,
 		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
