@@ -160,10 +160,10 @@ type ConnectionCreateRequest struct {
 func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
-		errs.ForField("consumer_id").AddError("required", "Field is required")
+		errs.ForField("consumer_id").Required()
 	}
 	if len(cr.ProviderID) == 0 {
-		errs.ForField("provider_id").AddError("required", "Field is required")
+		errs.ForField("provider_id").Required()
 	}
 	return errs
 }

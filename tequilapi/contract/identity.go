@@ -20,6 +20,7 @@ package contract
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -80,7 +81,7 @@ type IdentityCreateRequest struct {
 func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -95,7 +96,7 @@ type IdentityUnlockRequest struct {
 func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -111,7 +112,7 @@ type IdentityCurrentRequest struct {
 func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -127,6 +128,25 @@ type IdentityRegisterRequest struct {
 	Fee *big.Int `json:"fee,omitempty"`
 	// Token: referral token, if the user has one
 	ReferralToken *string `json:"token,omitempty"`
+}
+
+// Validate validates fields in request
+func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+
+	if irr.Beneficiary != "" && !common.IsHexAddress(irr.Beneficiary) {
+		errors.ForField("beneficiary").Invalid(irr.Beneficiary + " - is not a valid ethereum wallet address")
+	}
+
+	if irr.ReferralToken == nil {
+		if irr.Stake == nil {
+			errors.ForField("stake").Required()
+		} else if irr.Stake.Cmp(big.NewInt(0)) == -1 {
+			errors.ForField("stake").Invalid("Must be positive")
+		}
+	}
+
+	return errors
 }
 
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity

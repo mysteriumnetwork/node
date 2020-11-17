@@ -31,10 +31,10 @@ type MMNApiKeyRequest struct {
 func (r MMNApiKeyRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(r.ApiKey) == 0 {
-		errs.ForField("api_key").AddError("required", "API key is required")
+		errs.ForField("api_key").Required()
 	}
 	if len(r.ApiKey) < 40 {
-		errs.ForField("api_key").AddError("invalid", "Invalid API key")
+		errs.ForField("api_key").Invalid("Invalid API key")
 	}
 	return errs
 }

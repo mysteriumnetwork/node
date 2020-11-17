@@ -45,6 +45,16 @@ func (fel *FieldErrorList) AddError(code string, message string) {
 	fel.Add(&FieldError{code, message})
 }
 
+// Required convenience function
+func (fel *FieldErrorList) Required() {
+	fel.Add(&FieldError{"required", "Field is required"})
+}
+
+// Invalid convenience function
+func (fel *FieldErrorList) Invalid(message string) {
+	fel.Add(&FieldError{"invalid", message})
+}
+
 // HasErrors return true if at least one field errors exist
 func (fel *FieldErrorList) HasErrors() bool {
 	return len(fel.list) > 0
@@ -63,6 +73,14 @@ type FieldErrorMap struct {
 // NewErrorMap returns new map of field names to error list
 func NewErrorMap() *FieldErrorMap {
 	return &FieldErrorMap{make(map[string]*FieldErrorList)}
+}
+
+// NewSingleErrorMap a convenience constructor for a single error
+func NewSingleErrorMap(key string, err *FieldError) *FieldErrorMap {
+	em := NewErrorMap()
+	em.errorMap[key] = &FieldErrorList{}
+	em.errorMap[key].Add(err)
+	return em
 }
 
 // ForField returns a list of errors for specified field name

@@ -234,12 +234,13 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
-	if req.Stake == nil {
-		req.Stake = new(big.Int)
+	if errorMap := req.Validate(); errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
 	}
 
-	// set stake to referal reward if registering provider with token
-	if req.ReferralToken != nil && req.Stake.Cmp(new(big.Int)) > 0 {
+	// set stake to referral reward if registering provider with token
+	if req.ReferralToken != nil {
 		reward, err := te.transactor.GetTokenReward(*req.ReferralToken)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to get referral token info %w", err), http.StatusBadRequest)
