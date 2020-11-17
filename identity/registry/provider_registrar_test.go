@@ -133,6 +133,42 @@ func Test_Provider_Registrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func Test_Provider_Registrar_Does_NotRegisterWithNoBounty_Testnet2(t *testing.T) {
+	mt := mockTransactor{
+		bountyResult: false,
+	}
+	mrsp := mockRegistrationStatusProvider{
+		status: Unregistered,
+	}
+	cfg := ProviderRegistrarConfig{
+		IsTestnet2: true,
+	}
+	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+
+	mockEvent := queuedEvent{
+		event: servicestate.AppEventServiceStatus{
+			Status:     "Running",
+			ProviderID: "0xsuchIDManyWow",
+		},
+		retries: 0,
+	}
+	done := make(chan struct{})
+
+	go func() {
+		err := registrar.start()
+		assert.Nil(t, err)
+		done <- struct{}{}
+	}()
+
+	registrar.consumeServiceEvent(mockEvent.event)
+
+	registrar.stop()
+	<-done
+
+	_, ok := registrar.registeredIdentities[mockEvent.event.ProviderID]
+	assert.True(t, ok)
+}
+
 func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{

@@ -167,6 +167,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 
 	cfg := registry.ProviderRegistrarConfig{
+		IsTestnet2:          nodeOptions.OptionsNetwork.Testnet2,
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
