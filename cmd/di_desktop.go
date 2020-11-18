@@ -307,7 +307,7 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
 		if err != nil {
 			return err
 		}
-		bindAddress = ",127.0.0.1"
+		bindAddress = bindAddress + ",127.0.0.1"
 	}
 	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
 	return nil
