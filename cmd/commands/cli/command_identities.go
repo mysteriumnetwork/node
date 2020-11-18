@@ -196,7 +196,13 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		return
 	}
 
-	info("Registration successful, you can now connect.")
+	msg := "Registration started to finish it topup the identities channel"
+	if config.GetBool(config.FlagTestnet2) || config.GetBool(config.FlagTestnet) {
+		msg = "Registration successful, try to connect."
+	}
+
+	info(msg)
+	info(fmt.Sprintf("To explore additional inforamtion about the identity use: %s", usageGetIdentity))
 }
 
 const usageSettle = "settle <providerIdentity>"
