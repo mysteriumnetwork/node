@@ -60,6 +60,7 @@ type queuedEvent struct {
 
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
+	IsTestnet2          bool
 	MaxRetries          int
 	Stake               *big.Int
 	DelayBetweenRetries time.Duration
@@ -169,18 +170,20 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 }
 
 func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
-	eligible, err := pr.txer.CheckIfRegistrationBountyEligible(identity.FromAddress(qe.event.ProviderID))
-	if err != nil {
-		log.Error().Err(err).Msgf("eligibility for registration check failed for %q", qe.event.ProviderID)
-		return errors.Wrap(err, "could not check eligibility for auto-registration")
+	if !pr.cfg.IsTestnet2 {
+		eligible, err := pr.txer.CheckIfRegistrationBountyEligible(identity.FromAddress(qe.event.ProviderID))
+		if err != nil {
+			log.Error().Err(err).Msgf("eligibility for registration check failed for %q", qe.event.ProviderID)
+			return errors.Wrap(err, "could not check eligibility for auto-registration")
+		}
+
+		if !eligible {
+			log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", qe.event.ProviderID)
+			return nil
+		}
 	}
 
-	if !eligible {
-		log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", qe.event.ProviderID)
-		return nil
-	}
-
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "", pr.chainID(), nil)
+	err := pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "", pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")

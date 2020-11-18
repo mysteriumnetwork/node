@@ -255,7 +255,7 @@ func TestConsumerBalanceTracker_Handles_FreeRegistration(t *testing.T) {
 	updates <- &bindings.MystTokenTransfer{
 		From:  transactorID,
 		To:    channel,
-		Value: fees,
+		Value: new(big.Int).Set(fees),
 	}
 
 	bounty = new(big.Int).Add(bounty, fees)
@@ -266,7 +266,7 @@ func TestConsumerBalanceTracker_Handles_FreeRegistration(t *testing.T) {
 	updates <- &bindings.MystTokenTransfer{
 		From:  common.HexToAddress("0x000000002"),
 		To:    channel,
-		Value: fees,
+		Value: new(big.Int).Set(fees),
 	}
 
 	assert.Eventually(t, func() bool {
