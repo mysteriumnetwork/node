@@ -178,6 +178,7 @@ type Dependencies struct {
 
 	MMN         *mmn.MMN
 	PilvytisAPI *pilvytis.API
+	Pilvytis    *pilvytis.Service
 }
 
 // Bootstrap initiates all container dependencies
@@ -378,6 +379,9 @@ func (di *Dependencies) Shutdown() (err error) {
 	}
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
+	}
+	if di.Pilvytis != nil {
+		di.Pilvytis.Stop()
 	}
 	if di.BrokerConnection != nil {
 		di.BrokerConnection.Close()
@@ -839,6 +843,9 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 
 func (di *Dependencies) bootstrapPilvytis(options node.Options) {
 	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory)
+	statusTracker := pilvytis.NewStatusTracker(di.PilvytisAPI, di.IdentityManager, di.EventBus, 30*time.Second)
+	di.Pilvytis = pilvytis.NewService(di.PilvytisAPI, di.IdentityManager, statusTracker)
+	di.Pilvytis.Start()
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
