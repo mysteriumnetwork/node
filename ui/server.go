@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -28,7 +29,6 @@ import (
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/ui/discovery"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,7 +36,7 @@ const tequilapiUrlPrefix = "/tequilapi"
 
 // Server represents our web UI server
 type Server struct {
-	srv       *http.Server
+	srvs      []*http.Server
 	discovery discovery.LANDiscovery
 }
 
@@ -71,6 +71,7 @@ var corsConfig = cors.Config{
 }
 
 // NewServer creates a new instance of the server for the given port
+// you can chain addresses with ',' i.e. "192.168.0.1,127.0.0.1"
 func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiPort int, authenticator jwtAuthenticator, httpClient *requests.HTTPClient) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -80,19 +81,25 @@ func NewServer(bindAddress string, port int, tequilapiAddress string, tequilapiP
 
 	r.StaticFS("/", godvpnweb.Assets)
 
-	srv := &http.Server{
-		Addr:    fmt.Sprintf("%v:%v", bindAddress, port),
-		Handler: r,
+	addrs := strings.Split(bindAddress, ",")
+
+	var srvs []*http.Server
+	for _, addr := range addrs {
+		s := &http.Server{
+			Addr:    fmt.Sprintf("%v:%v", addr, port),
+			Handler: r,
+		}
+		srvs = append(srvs, s)
 	}
 
 	return &Server{
-		srv:       srv,
+		srvs:      srvs,
 		discovery: discovery.NewLANDiscoveryService(port, httpClient),
 	}
 }
 
-// Serve starts the server
-func (s *Server) Serve() error {
+// Serve starts servers
+func (s *Server) Serve() {
 	go func() {
 		err := s.discovery.Start()
 		if err != nil {
@@ -100,16 +107,20 @@ func (s *Server) Serve() error {
 		}
 	}()
 
-	err := s.srv.ListenAndServe()
-	if err != http.ErrServerClosed {
-		return errors.Wrap(err, "UI server crashed")
+	for _, srv := range s.srvs {
+		go startListen(srv)
 	}
-
-	log.Info().Msgf("UI started on: %s", s.srv.Addr)
-	return nil
 }
 
-// Stop stops the server
+func startListen(s *http.Server) {
+	log.Info().Msgf("UI starting on: %s", s.Addr)
+	err := s.ListenAndServe()
+	if err != http.ErrServerClosed {
+		log.Err(err).Msg("UI server crashed")
+	}
+}
+
+// Stop stops servers
 func (s *Server) Stop() {
 	err := s.discovery.Stop()
 	if err != nil {
@@ -119,6 +130,8 @@ func (s *Server) Stop() {
 	// give the server a few seconds to shut down properly in case a request is waiting somewhere
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	err = s.srv.Shutdown(ctx)
-	log.Info().Err(err).Msg("Server stopped")
+	for _, srv := range s.srvs {
+		err = srv.Shutdown(ctx)
+		log.Info().Err(err).Msg("Server stopped")
+	}
 }

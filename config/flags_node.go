@@ -190,7 +190,7 @@ var (
 	// FlagUIAddress IP address of interface to listen for incoming connections.
 	FlagUIAddress = cli.StringFlag{
 		Name:  "ui.address",
-		Usage: "IP address to bind Web UI to (by default, local LAN IP)",
+		Usage: "IP address to bind Web UI to. Address can be comma delimited: '192.168.1.10,192.168.1.20'. (default - 127.0.0.1 and local LAN IP)",
 		Value: "",
 	}
 	// FlagUIPort runs web UI on the specified port.

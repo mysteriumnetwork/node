@@ -35,26 +35,36 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 }
 
 func Test_Server_ServesHTML(t *testing.T) {
+	// given
 	s := NewServer("localhost", 55555, "localhost", 55554, &jwtAuth{}, requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout))
 	s.discovery = &mockDiscovery{}
-	serverError := make(chan error)
-	go func() {
-		err := s.Serve()
-		serverError <- err
-	}()
-
+	s.Serve()
 	time.Sleep(time.Millisecond * 100)
 
-	resp, err := http.Get("http://:55555/")
+	// when
+	nilResp, err := http.Get("http://:55555/")
 	assert.Nil(t, err)
+	defer nilResp.Body.Close()
 
-	defer resp.Body.Close()
-
-	_, err = html.Parse(resp.Body)
+	// then
+	root, err := html.Parse(nilResp.Body)
 	assert.Nil(t, err)
+	body := hasBody(root)
+	assert.True(t, body)
 
 	s.Stop()
-	assert.Nil(t, <-serverError)
+}
+
+func hasBody(n *html.Node) bool {
+	fs := n.FirstChild
+	if fs == nil {
+		return false
+	}
+	if fs.Type == html.ElementNode && n.Data == "body" {
+		return true
+	}
+
+	return hasBody(fs.NextSibling)
 }
 
 type mockDiscovery struct{}
