@@ -78,7 +78,7 @@ func (c *cliApp) currencies(args []string) {
 	info(fmt.Sprintf("Supported currencies: %s", strings.Join(resp, ", ")))
 }
 
-const usageOrderCreate = "create [identity] [amount] [pay currency] [use lightning network]"
+const usageOrderCreate = "create <identity> <amount> <pay currency> [use lightning network]"
 
 func (c *cliApp) orderCreate(args []string) {
 	if len(args) > 4 || len(args) < 3 {
@@ -92,10 +92,19 @@ func (c *cliApp) orderCreate(args []string) {
 		return
 	}
 
+	ln := false
+	if len(args) == 4 {
+		b, err := strconv.ParseBool(args[3])
+		if err != nil {
+			warn("[use lightning network]: only true/false allowed")
+		}
+		ln = b
+	}
+
 	resp, err := c.tequilapi.OrderCreate(identity.FromAddress(args[0]), contract.OrderRequest{
 		MystAmount:       f,
 		PayCurrency:      args[2],
-		LightningNetwork: len(args) == 4,
+		LightningNetwork: ln,
 	})
 	if err != nil {
 		warn(errors.Wrap(err, "could not create an order"))
@@ -104,7 +113,7 @@ func (c *cliApp) orderCreate(args []string) {
 	printOrder(resp)
 }
 
-const usageOrderGet = "get [identity] [orderID]"
+const usageOrderGet = "get <identity> <orderID>"
 
 func (c *cliApp) orderGet(args []string) {
 	if len(args) != 2 {
@@ -125,7 +134,7 @@ func (c *cliApp) orderGet(args []string) {
 	printOrder(resp)
 }
 
-const usageOrderGetAll = "get-all [identity]"
+const usageOrderGetAll = "get-all <identity>"
 
 func (c *cliApp) orderGetAll(args []string) {
 	if len(args) != 1 {
