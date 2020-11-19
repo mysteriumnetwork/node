@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -73,6 +74,7 @@ type MobileNode struct {
 	identityRegistry             registry.IdentityRegistry
 	identityChannelCalculator    *pingpong.ChannelAddressCalculator
 	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
+	pilvytis                     *pilvytis.Service
 	registryAddress              string
 	channelImplementationAddress string
 	chainID                      int64
@@ -98,6 +100,7 @@ type MobileNodeOptions struct {
 	HermesID                        string
 	MystSCAddress                   string
 	ChainID                         int64
+	PilvytisAddress                 string
 }
 
 // DefaultNodeOptions returns default options.
@@ -118,6 +121,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		HermesID:                        metadata.Testnet2Definition.HermesID,
 		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
 		ChainID:                         metadata.Testnet2Definition.DefaultChainID,
+		PilvytisAddress:                 metadata.Testnet2Definition.PilvytisAddress,
 	}
 }
 
@@ -217,8 +221,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			SettlementTimeout:              time.Hour * 2,
 			MystSCAddress:                  options.MystSCAddress,
 		},
-		Consumer: true,
-		P2PPorts: port.UnspecifiedRange(),
+		Consumer:        true,
+		P2PPorts:        port.UnspecifiedRange(),
+		PilvytisAddress: options.PilvytisAddress,
 	}
 
 	err := di.Bootstrap(nodeOptions)
@@ -250,6 +255,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.MysteriumAPI,
 			di.QualityClient,
 		),
+		pilvytis:  di.Pilvytis,
 		startTime: time.Now(),
 		chainID:   nodeOptions.OptionsNetwork.ChainID,
 	}
@@ -614,4 +620,55 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 			BuildNumber: metadata.BuildNumber,
 		},
 	}
+}
+
+// OrderStatusChangedCallback is a callback when order status changes.
+type OrderStatusChangedCallback interface {
+	OnChange(orderID uint64, status string)
+}
+
+// RegisterOrderStatusChangeCallback registers OrderStatusChanged callback.
+func (mb *MobileNode) RegisterOrderStatusChangeCallback(cb OrderStatusChangedCallback) {
+	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderStatusChanged, func(e pilvytis.AppEventOrderStatusChanged) {
+		cb.OnChange(e.ID, string(e.Status))
+	})
+}
+
+// CreateOrderRequest a request to create an order.
+type CreateOrderRequest struct {
+	IdentityAddress string
+	MystAmount      float64
+	PayCurrency     string
+	Lightning       bool
+}
+
+// CreateOrder creates a payment order.
+func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) (*pilvytis.OrderResponse, error) {
+	return mb.pilvytis.CreateOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
+}
+
+// GetOrderRequest a request to get an order.
+type GetOrderRequest struct {
+	IdentityAddress string
+	ID              uint64
+}
+
+// GetOrder gets an order by ID.
+func (mb *MobileNode) GetOrder(req *GetOrderRequest) (*pilvytis.OrderResponse, error) {
+	return mb.pilvytis.GetOrder(identity.FromAddress(req.IdentityAddress), req.ID)
+}
+
+// ListOrdersRequest a request to list orders.
+type ListOrdersRequest struct {
+	IdentityAddress string
+}
+
+// ListOrders lists all payment orders.
+func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]pilvytis.OrderResponse, error) {
+	return mb.pilvytis.ListOrders(identity.FromAddress(req.IdentityAddress))
+}
+
+// Currencies lists supported payment currencies.
+func (mb *MobileNode) Currencies() ([]string, error) {
+	return mb.pilvytis.Currencies()
 }

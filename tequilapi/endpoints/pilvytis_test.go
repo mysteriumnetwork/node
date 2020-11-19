@@ -40,20 +40,20 @@ type mockPilvytis struct {
 	resp       pilvytis.OrderResponse
 }
 
-func (mock *mockPilvytis) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (pilvytis.OrderResponse, error) {
+func (mock *mockPilvytis) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (*pilvytis.OrderResponse, error) {
 	if i.Address != mock.identity {
-		return pilvytis.OrderResponse{}, errors.New("wrong identity")
+		return nil, errors.New("wrong identity")
 	}
 
-	return mock.resp, nil
+	return &mock.resp, nil
 }
 
-func (mock *mockPilvytis) GetPaymentOrder(i identity.Identity, oid uint64) (pilvytis.OrderResponse, error) {
+func (mock *mockPilvytis) GetPaymentOrder(i identity.Identity, oid uint64) (*pilvytis.OrderResponse, error) {
 	if i.Address != mock.identity {
-		return pilvytis.OrderResponse{}, errors.New("wrong identity")
+		return nil, errors.New("wrong identity")
 	}
 
-	return mock.resp, nil
+	return &mock.resp, nil
 }
 
 func (mock *mockPilvytis) GetPaymentOrders(i identity.Identity) ([]pilvytis.OrderResponse, error) {

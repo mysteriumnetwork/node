@@ -46,11 +46,35 @@ func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory) 
 	}
 }
 
+// OrderStatus is a Coingate order status.
+type OrderStatus string
+
+// OrderStatus values.
+const (
+	OrderStatusNew        OrderStatus = "new"
+	OrderStatusPending    OrderStatus = "pending"
+	OrderStatusConfirming OrderStatus = "confirming"
+	OrderStatusPaid       OrderStatus = "paid"
+	OrderStatusInvalid    OrderStatus = "invalid"
+	OrderStatusExpired    OrderStatus = "expired"
+	OrderStatusCanceled   OrderStatus = "canceled"
+	OrderStatusRefunded   OrderStatus = "refunded"
+)
+
+// Incomplete tells if the order is incomplete and its status needs to be tracked for updates.
+func (o OrderStatus) Incomplete() bool {
+	switch o {
+	case OrderStatusNew, OrderStatusPending, OrderStatusConfirming:
+		return true
+	}
+	return false
+}
+
 // OrderResponse is returned from the pilvytis order endpoints.
 type OrderResponse struct {
-	ID       uint64 `json:"id"`
-	Status   string `json:"status"`
-	Identity string `json:"identity"`
+	ID       uint64      `json:"id"`
+	Status   OrderStatus `json:"status"`
+	Identity string      `json:"identity"`
 
 	MystAmount    float64  `json:"myst_amount"`
 	PriceAmount   *float64 `json:"price_amount"`
@@ -75,7 +99,7 @@ type orderRequest struct {
 }
 
 // CreatePaymentOrder creates a new payment order in the API service.
-func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (OrderResponse, error) {
+func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
 	payload := orderRequest{
 		MystAmount:       mystAmount,
 		PayCurrency:      payCurrency,
@@ -84,23 +108,23 @@ func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCu
 
 	req, err := requests.NewSignedPostRequest(a.url, orderEndpoint, payload, a.signer(id))
 	if err != nil {
-		return OrderResponse{}, err
+		return nil, err
 	}
 
 	var resp OrderResponse
-	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
 }
 
 // GetPaymentOrder returns a payment order by ID from the API
 // service that belongs to a given identity.
-func (a *API) GetPaymentOrder(id identity.Identity, oid uint64) (OrderResponse, error) {
+func (a *API) GetPaymentOrder(id identity.Identity, oid uint64) (*OrderResponse, error) {
 	req, err := requests.NewSignedGetRequest(a.url, fmt.Sprintf("%s/%d", orderEndpoint, oid), a.signer(id))
 	if err != nil {
-		return OrderResponse{}, err
+		return nil, err
 	}
 
 	var resp OrderResponse
-	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
 }
 
 // GetPaymentOrders returns a list of payment orders from the API service made by a given identity.

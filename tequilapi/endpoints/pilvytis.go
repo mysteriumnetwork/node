@@ -31,8 +31,8 @@ import (
 )
 
 type api interface {
-	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (pilvytis.OrderResponse, error)
-	GetPaymentOrder(id identity.Identity, oid uint64) (pilvytis.OrderResponse, error)
+	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
+	GetPaymentOrder(id identity.Identity, oid uint64) (*pilvytis.OrderResponse, error)
 	GetPaymentOrders(id identity.Identity) ([]pilvytis.OrderResponse, error)
 	GetPaymentOrderCurrencies() ([]string, error)
 }
@@ -91,7 +91,7 @@ func (e *pilvytisEndpoint) CreatePaymentOrder(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrderResponse(resp), w)
+	utils.WriteAsJSON(contract.NewOrderResponse(*resp), w)
 }
 
 // GetPaymentOrder returns a payment order which maches a given ID and identity.
@@ -139,7 +139,7 @@ func (e *pilvytisEndpoint) GetPaymentOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrderResponse(resp), w)
+	utils.WriteAsJSON(contract.NewOrderResponse(*resp), w)
 }
 
 // GetPaymentOrder returns a payment order which maches a given ID and identity.
