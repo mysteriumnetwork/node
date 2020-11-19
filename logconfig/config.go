@@ -28,6 +28,7 @@ import (
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/logconfig/rollingwriter"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -60,6 +61,30 @@ func Bootstrap() {
 	openvpn.UseLogger(zerologOpenvpnLogger{})
 	logger := makeLogger(consoleWriter())
 	setGlobalLogger(&logger)
+}
+
+// ConfigureUI configures the logger for user interface CLI
+// apps, disabling log writting to the os stdout and
+// only writting to a file which is given in the opts.
+func ConfigureUI(opts *LogOptions) error {
+	CurrentLogOptions = *opts
+	if opts.Filepath == "" {
+		return errors.New("can't write logs to a file: no path given")
+	}
+
+	rollingWriter, err := rollingwriter.NewRollingWriter(opts.Filepath)
+	if err != nil {
+		return err
+	}
+
+	logger := makeLogger(rollingWriter.Writer)
+	setGlobalLogger(&logger)
+	if err := rollingWriter.CleanObsoleteLogs(); err != nil {
+		return err
+	}
+
+	log.Logger = log.Logger.Level(opts.LogLevel)
+	return nil
 }
 
 // Configure configures logger using app config (console + file, level).

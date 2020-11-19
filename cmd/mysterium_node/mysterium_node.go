@@ -19,6 +19,8 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"sync"
 
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
@@ -29,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
@@ -68,16 +71,19 @@ func NewCommand() (*cli.App, error) {
 		versionCommand.Run(ctx)
 	}
 
-	app := cli.NewApp()
+	app, err := newApp()
+	if err != nil {
+		return nil, err
+	}
+
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
 	app.Authors = []*cli.Author{
 		{Name: `The "MysteriumNetwork/node" Authors`, Email: "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	if err := config.RegisterFlagsNode(&app.Flags); err != nil {
-		return nil, err
-	}
+	app.Before = readyOnceFunc()
+
 	app.Commands = []*cli.Command{
 		versionCommand,
 		licenseCommand,
@@ -88,4 +94,53 @@ func NewCommand() (*cli.App, error) {
 	}
 
 	return app, nil
+}
+
+func newApp() (*cli.App, error) {
+	app := cli.NewApp()
+	return app, config.RegisterFlagsNode(&app.Flags)
+}
+
+// uiCommands is a map which consists of all
+// commands are used directly by a user.
+var uiCommands = map[string]struct{}{
+	command_cli.CliCommandName: {},
+}
+
+// readyOnceFunc returns a func which is only run once and can
+// be executed to preconfigure global settings used in the app.
+func readyOnceFunc() cli.BeforeFunc {
+	var once sync.Once
+	return func(ctx *cli.Context) error {
+		once.Do(func() {
+			cmd := ctx.Args().First()
+			if _, ok := uiCommands[cmd]; !ok {
+				// If the command is not meant for user
+				// interaction, skip.
+				return
+			}
+
+			logDir := ctx.String(config.FlagLogDir.Name)
+			if logDir == "" {
+				// Dont configure UI logger if we have
+				// no log dir.
+				return
+			}
+
+			level, err := zerolog.ParseLevel(ctx.String(config.FlagLogLevel.Name))
+			if err != nil {
+				level = zerolog.DebugLevel
+			}
+
+			err = logconfig.ConfigureUI(&logconfig.LogOptions{
+				LogLevel: level,
+				LogHTTP:  false,
+				Filepath: filepath.Join(logDir, cmd),
+			})
+			if err != nil {
+				log.Error().Err(err).Msg("configuring logger for ui")
+			}
+		})
+		return nil
+	}
 }
