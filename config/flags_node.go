@@ -130,6 +130,12 @@ var (
 		}(),
 		Value: zerolog.DebugLevel.String(),
 	}
+	// FlagVerbose enables verbose logging.
+	FlagVerbose = cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "If provided loggin becomes more verbose",
+		Value: false,
+	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
 	FlagOpenvpnBinary = cli.StringFlag{
 		Name:  "openvpn.binary",
@@ -257,6 +263,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
+		&FlagVerbose,
 		&FlagOpenvpnBinary,
 		&FlagQualityType,
 		&FlagQualityAddress,
@@ -304,6 +311,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
+	Current.ParseBoolFlag(ctx, FlagVerbose)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
