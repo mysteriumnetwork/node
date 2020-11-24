@@ -14,7 +14,6 @@ require (
 	github.com/chzyer/logex v1.1.10 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1 // indirect
-	github.com/davecgh/go-spew v1.1.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20200620013148-b91950f658ec // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
@@ -34,7 +33,7 @@ require (
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/klauspost/pgzip v1.2.4 // indirect
-	github.com/koron/go-ssdp v0.0.0-20191105050749-2e1c40ed0b5d
+	github.com/koron/go-ssdp v0.0.2
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lib/pq v1.7.0 // indirect
 	github.com/libp2p/go-libp2p v0.5.2
@@ -77,7 +76,7 @@ require (
 	go.etcd.io/bbolt v1.3.4
 	go.mongodb.org/mongo-driver v1.1.1
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
