@@ -105,6 +105,7 @@ func GetOptions() *Options {
 				"50.19.252.36",
 				"174.129.214.20",
 			},
+			"badupnp.benjojo.co.uk": {"104.22.70.70", "104.22.71.70", "172.67.25.154"},
 		},
 	}
 	return &Options{
