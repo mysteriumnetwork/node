@@ -34,7 +34,7 @@ func TestStatusTracker(t *testing.T) {
 		Status: OrderStatusNew,
 	}}}
 	bus := mocks.NewEventBus()
-	tracker := NewStatusTracker(mockAPI, mockIdentityProvider{}, bus, 2*time.Second)
+	tracker := NewStatusTracker(mockAPI, mockIdentityProvider{}, bus, time.Millisecond*2)
 	defer tracker.Pause()
 
 	// when
@@ -44,7 +44,7 @@ func TestStatusTracker(t *testing.T) {
 		Status: OrderStatusConfirming,
 	}})
 	// then
-	assert.Eventually(t, EventPublished(bus, 1, OrderStatusConfirming), 5*time.Second, 500*time.Millisecond)
+	assert.Eventually(t, EventPublished(bus, 1, OrderStatusConfirming), time.Millisecond*500, 5*time.Millisecond)
 
 	// when
 	tracker.Pause()
@@ -53,12 +53,12 @@ func TestStatusTracker(t *testing.T) {
 		Status: OrderStatusPaid,
 	}})
 	// then
-	assert.Never(t, EventPublished(bus, 1, OrderStatusPaid), 5*time.Second, 500*time.Millisecond)
+	assert.Never(t, EventPublished(bus, 1, OrderStatusPaid), time.Millisecond*500, 5*time.Millisecond)
 
 	// when
 	tracker.Track()
 	// then
-	assert.Eventually(t, EventPublished(bus, 1, OrderStatusPaid), 5*time.Second, 500*time.Millisecond)
+	assert.Eventually(t, EventPublished(bus, 1, OrderStatusPaid), time.Millisecond*500, 5*time.Millisecond)
 
 	// when
 	mockAPI.returns([]OrderResponse{{
@@ -70,7 +70,7 @@ func TestStatusTracker(t *testing.T) {
 	}})
 	tracker.Track()
 	// then
-	assert.Eventually(t, EventPublished(bus, 2, OrderStatusPaid), 5*time.Second, 500*time.Millisecond)
+	assert.Eventually(t, EventPublished(bus, 2, OrderStatusPaid), time.Millisecond*500, 5*time.Millisecond)
 }
 
 type mockAPI struct {
