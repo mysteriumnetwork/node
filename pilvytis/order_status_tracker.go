@@ -18,6 +18,7 @@
 package pilvytis
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -112,12 +113,12 @@ func (t *StatusTracker) Pause() {
 }
 
 func (t *StatusTracker) update() error {
-	log.Info().Msg("Updating order statuses")
+	log.Trace().Msg("Updating order statuses")
 	keepTracking := false
 	for _, id := range t.identityProvider.GetIdentities() {
 		newOrders, err := t.api.GetPaymentOrders(id)
 		if err != nil {
-			log.Warn().Str("identity", id.Address).Msg("Could not update orders")
+			t.logOrderStatusError(id, err)
 			keepTracking = true
 			continue
 		}
@@ -136,4 +137,13 @@ func (t *StatusTracker) update() error {
 		go t.Pause()
 	}
 	return nil
+}
+
+func (t *StatusTracker) logOrderStatusError(id identity.Identity, err error) {
+	switch {
+	case strings.Contains(err.Error(), "authentication needed: password or unlock"):
+		log.Trace().Err(err).Str("identity", id.Address).Msg("Could not update orders")
+	default:
+		log.Err(err).Str("identity", id.Address).Msg("Could not update orders")
+	}
 }
