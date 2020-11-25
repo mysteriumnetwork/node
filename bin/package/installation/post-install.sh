@@ -71,7 +71,7 @@ printf "Creating directories...\n" \
 if [ ! -d "$OS_DIR_DATA/testnet2" ]; then
     printf "Migrating data to testnet2 directories...\n" \
         && mkdir $OS_DIR_DATA/testnet2 \
-        && cp -r $OS_DIR_DATA/db $OS_DIR_DATA/keystore $OS_DIR_DATA/testnet2 \
+        && cp -r $OS_DIR_DATA/keystore $OS_DIR_DATA/testnet2 \
         && chown -R $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA/testnet2
 fi
 
