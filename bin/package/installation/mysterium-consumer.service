@@ -1,0 +1,25 @@
+[Unit]
+Description=Consumer client for Mysterium - decentralised VPN Network
+Documentation=https://mysterium.network/
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+User=mysterium-node
+Group=mysterium-node
+
+RuntimeDirectory=mysterium-node
+RuntimeDirectoryMode=0750
+LogsDirectory=mysterium-node
+
+EnvironmentFile=-/etc/default/mysterium-node
+ExecStart=/usr/bin/myst $CONF_DIR $SCRIPT_DIR $DATA_DIR $RUN_DIR $DAEMON_OPTS daemon
+KillMode=process
+TimeoutStopSec=10
+SendSIGKILL=yes
+Restart=on-failure
+RestartSec=5
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

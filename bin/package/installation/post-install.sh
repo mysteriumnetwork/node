@@ -23,7 +23,8 @@ function install_initd {
 
 function install_systemd {
     printf "Installing systemd script '$OS_DIR_SYSTEMD/mysterium-node.service'..\n" \
-        && cp -f $OS_DIR_INSTALLATION/systemd.service $OS_DIR_SYSTEMD/mysterium-node.service \
+        && cp -f $OS_DIR_INSTALLATION/mysterium-node.service $OS_DIR_SYSTEMD/mysterium-node.service \
+        && cp -f $OS_DIR_INSTALLATION/mysterium-consumer.service $OS_DIR_SYSTEMD/mysterium-consumer.service \
         && systemctl enable systemd-networkd.service \
         && systemctl enable mysterium-node \
         && systemctl restart mysterium-node
