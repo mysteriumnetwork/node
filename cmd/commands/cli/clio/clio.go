@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cli
+package clio
 
 import (
 	"fmt"
@@ -26,32 +26,44 @@ const warningColor = "\033[31m"
 const successColor = "\033[32m"
 const infoColor = "\033[93m"
 
-func status(label string, items ...interface{}) {
+// Status prints a message with a given status.
+func Status(label string, items ...interface{}) {
 	fmt.Printf(statusColor+"[%s] \033[0m", label)
 	fmt.Println(items...)
 }
 
-func warn(items ...interface{}) {
+// Warn prints a warning.
+func Warn(items ...interface{}) {
 	fmt.Printf(warningColor + "[WARNING] \033[0m")
 	fmt.Println(items...)
 }
 
-func warnf(format string, items ...interface{}) {
+// Warnf prints a warning using fmt.Printf.
+func Warnf(format string, items ...interface{}) {
 	fmt.Printf(warningColor + "[WARNING] \033[0m")
 	fmt.Printf(format, items...)
 }
 
-func success(items ...interface{}) {
+// Success prints a success message.
+func Success(items ...interface{}) {
 	fmt.Printf(successColor + "[SUCCESS] \033[0m")
 	fmt.Println(items...)
 }
 
-func info(items ...interface{}) {
+// Info prints an information message.
+func Info(items ...interface{}) {
 	fmt.Printf(infoColor + "[INFO] \033[0m")
 	fmt.Println(items...)
 }
 
-func infof(format string, items ...interface{}) {
+// Error prints an error message
+func Error(items ...interface{}) {
+	fmt.Printf(warningColor + "[ERROR] \033[0m")
+	fmt.Println(items...)
+}
+
+// Infof prints an information message using fmt.Printf.
+func Infof(format string, items ...interface{}) {
 	fmt.Printf(infoColor + "[INFO] \033[0m")
 	fmt.Printf(format, items...)
 }
