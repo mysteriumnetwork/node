@@ -7,7 +7,7 @@
 # Short-Description: Start the Mysterium VPN node process
 ### END INIT INFO
 
-# If you modify this, please make sure to also edit systemd.service
+# If you modify this, please make sure to also edit mysterium-node.service
 
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
