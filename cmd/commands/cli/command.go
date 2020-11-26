@@ -314,7 +314,7 @@ func (c *cliApp) serviceSessions() {
 func (c *cliApp) serviceGet(id string) {
 	service, err := c.tequilapi.Service(id)
 	if err != nil {
-		clio.Info("Failed to get service clio.Info: ", err)
+		clio.Info("Failed to get service info: ", err)
 		return
 	}
 
