@@ -432,7 +432,9 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	mintMyst(t, topUpAmount, common.HexToAddress(chid))
 
 	err = tequilapi.RegisterIdentity(id, id, providerStake, fees.Registration, nil)
-	assert.NoError(t, err)
+	if !assert.Contains(t, err.Error(), "server response invalid: 409 Conflict") {
+		assert.NoError(t, err)
+	}
 
 	assert.Eventually(t, func() bool {
 		idStatus, _ := tequilapi.Identity(id)
