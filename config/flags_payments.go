@@ -77,7 +77,7 @@ var (
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-max",
 		Usage: "Sets the maximum price of the service per minute. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "200000000000000",
+		Value: "690000000000000", // 0.00069 MYSTT
 	}
 	// FlagPaymentsConsumerPricePerMinuteLowerBound sets the lower price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.StringFlag{
@@ -89,7 +89,7 @@ var (
 	FlagPaymentsConsumerPricePerGBUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-pergib-max",
 		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "300000000000000000",
+		Value: "3000000000000000000", // 3 MYSTT
 	}
 	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBLowerBound = cli.StringFlag{
