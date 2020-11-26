@@ -183,7 +183,7 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 		}
 	}
 
-	err := pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, big.NewInt(0), "", pr.chainID(), nil)
+	err := pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, nil, "", pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
