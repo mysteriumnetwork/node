@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 )
@@ -36,7 +37,7 @@ func (c *cliApp) stake(argsString string) {
 	}, "\n")
 
 	if len(argsString) == 0 {
-		info(usage)
+		clio.Info(usage)
 		return
 	}
 
@@ -50,7 +51,7 @@ func (c *cliApp) stake(argsString string) {
 	case "decrease":
 		c.decreaseStake(actionArgs)
 	default:
-		warnf("Unknown sub-command '%s'\n", argsString)
+		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
 	}
 }
@@ -60,37 +61,37 @@ const usageDecreaseStake = "decrease <identity> <amount>"
 
 func (c *cliApp) decreaseStake(args []string) {
 	if len(args) != 2 {
-		info("Usage: " + usageDecreaseStake)
+		clio.Info("Usage: " + usageDecreaseStake)
 		return
 	}
 
 	res, ok := new(big.Int).SetString(args[1], 10)
 	if !ok {
-		warn("could not parse amount")
+		clio.Warn("could not parse amount")
 		return
 	}
 
 	fees, err := c.tequilapi.GetTransactorFees()
 	if err != nil {
-		warn("could not get transactor fee: ", err)
+		clio.Warn("could not get transactor fee: ", err)
 		return
 	}
 
 	err = c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), res, fees.DecreaseStake)
 	if err != nil {
-		warn("could not decrease stake: ", err)
+		clio.Warn("could not decrease stake: ", err)
 		return
 	}
 }
 
 func (c *cliApp) increaseStake(args []string) {
 	if len(args) != 1 {
-		info("Usage: " + usageIncreaseStake)
+		clio.Info("Usage: " + usageIncreaseStake)
 		return
 	}
 
 	accountantID := config.GetString(config.FlagHermesID)
-	info("Waiting for settlement to complete")
+	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
 	go func() {
@@ -102,17 +103,17 @@ func (c *cliApp) increaseStake(args []string) {
 		select {
 		case <-timeout:
 			fmt.Println()
-			warn("Settlement timed out")
+			clio.Warn("Settlement timed out")
 			return
 		case <-time.After(time.Millisecond * 500):
 			fmt.Print(".")
 		case err := <-errChan:
 			fmt.Println()
 			if err != nil {
-				warn("settlement failed: ", err.Error())
+				clio.Warn("settlement failed: ", err.Error())
 				return
 			}
-			info("settlement succeeded")
+			clio.Info("settlement succeeded")
 			return
 		}
 	}
