@@ -55,7 +55,7 @@ func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	return &OptionsDirectory{
 		Data:     dataDir,
 		Storage:  filepath.Join(dataDir, networkSubdir, "db"),
-		Keystore: filepath.Join(dataDir, networkSubdir, "keystore"),
+		Keystore: filepath.Join(dataDir, "keystore"),
 		Script:   config.GetString(config.FlagScriptDir),
 		Runtime:  config.GetString(config.FlagRuntimeDir),
 	}

@@ -37,6 +37,7 @@ var (
 	FlagTestnet2 = cli.BoolFlag{
 		Name:  "testnet2",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
+		Value: true,
 	}
 	// FlagAPIAddress Mysterium API URL
 	FlagAPIAddress = cli.StringFlag{
