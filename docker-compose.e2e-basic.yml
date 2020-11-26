@@ -210,7 +210,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/testnet2/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -245,8 +245,8 @@ services:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
     volumes:
-      - ./e2e/myst-consumer/keystore/remember.json:/var/lib/mysterium-node/testnet2/keystore/remember.json
-      - ./e2e/myst-consumer/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3:/var/lib/mysterium-node/testnet2/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
+      - ./e2e/myst-consumer/keystore/remember.json:/var/lib/mysterium-node/keystore/remember.json
+      - ./e2e/myst-consumer/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3:/var/lib/mysterium-node/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
     depends_on:
       - broker
       - mysterium-api
