@@ -62,6 +62,12 @@ func Bootstrap() {
 	setGlobalLogger(&logger)
 }
 
+// SetLogLevel sets global log level to the given one.
+func SetLogLevel(level zerolog.Level) {
+	CurrentLogOptions.LogLevel = level
+	log.Logger = log.Logger.Level(level)
+}
+
 // Configure configures logger using app config (console + file, level).
 func Configure(opts *LogOptions) {
 	CurrentLogOptions = *opts

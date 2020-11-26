@@ -44,7 +44,8 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
-const cliCommandName = "cli"
+// CommandName is the name which is used to call this command
+const CommandName = "cli"
 
 const serviceHelp = `service <action> [args]
 	start	<ProviderID> <ServiceType> [options]
@@ -58,7 +59,7 @@ const serviceHelp = `service <action> [args]
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
-		Name:   cliCommandName,
+		Name:   CommandName,
 		Usage:  "Starts a CLI client with a Tequilapi",
 		Before: clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
