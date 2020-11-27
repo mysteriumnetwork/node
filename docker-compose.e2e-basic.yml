@@ -77,7 +77,7 @@ services:
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
 
   transactor:
-    image: mysteriumnetwork/transactor:v4-alpha
+    image: mysteriumnetwork/transactor:0.6.1
     environment:
       PORT: 8888
     expose:
@@ -115,7 +115,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   hermes:
-    image: mysteriumnetwork/hermes:v4-alpha
+    image: mysteriumnetwork/hermes:0.6.0
     environment:
       PORT: 8889
     expose:
