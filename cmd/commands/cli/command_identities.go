@@ -107,7 +107,7 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 		clio.Warn(err)
 		return
 	}
-	clio.Info("Registration clio.Status:", identityStatus.RegistrationStatus)
+	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
 	clio.Info("Channel address:", identityStatus.ChannelAddress)
 	clio.Info(fmt.Sprintf("Balance: %s", money.NewMoney(identityStatus.Balance, money.CurrencyMyst)))
 	clio.Info(fmt.Sprintf("Earnings: %s", money.NewMoney(identityStatus.Earnings, money.CurrencyMyst)))
