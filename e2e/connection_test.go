@@ -62,8 +62,8 @@ var ethSigner func(signer types.Signer, address common.Address, tx *types.Transa
 var transactorMongo *Mongo
 
 var (
-	providerStake, _            = big.NewInt(0).SetString("12000000000000000000", 10)
-	balanceAfterRegistration, _ = big.NewInt(0).SetString("1900000000000000000", 10)
+	providerStake, _            = big.NewInt(0).SetString("50000000000000000000", 10)
+	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
 	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
 )
 
@@ -123,7 +123,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	tequilapiProvider := newTequilapiProvider()
 	t.Run("Provider has a registered identity", func(t *testing.T) {
-		providerRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
+		providerIsRegistered(t, tequilapiProvider, providerID)
 	})
 
 	t.Run("Consumer Creates And Registers Identity", func(t *testing.T) {
@@ -224,8 +224,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		feeSum := big.NewInt(0).Add(big.NewInt(0).Add(fees.Settlement, hermesFee), fees.Settlement)
 		expected := new(big.Int).Sub(totalEarnings, feeSum)
-
-		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerID))
+		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerStatus.ChannelAddress))
 		assert.NoError(t, err)
 
 		diff := new(big.Int).Sub(balance, expected)
@@ -417,6 +416,23 @@ func mintMyst(t *testing.T, amount *big.Int, chid common.Address) {
 	assert.NoError(t, err)
 }
 
+func providerIsRegistered(t *testing.T, tequilapi *tequilapi_client.Client, id string) {
+	assert.Eventually(t, func() bool {
+		idStatus, _ := tequilapi.Identity(id)
+		return "Registered" == idStatus.RegistrationStatus
+	}, time.Second*30, time.Millisecond*500)
+
+	// once we're registered, check some other information
+	idStatus, err := tequilapi.Identity(id)
+	assert.NoError(t, err)
+	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
+	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
+	assert.Equal(t, new(big.Int), idStatus.Balance)
+	assert.Equal(t, providerStake, idStatus.Stake)
+	assert.Zero(t, idStatus.Earnings.Uint64())
+	assert.Zero(t, idStatus.EarningsTotal.Uint64())
+}
+
 func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
@@ -436,23 +452,13 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 		assert.NoError(t, err)
 	}
 
-	assert.Eventually(t, func() bool {
-		idStatus, _ := tequilapi.Identity(id)
-		return "Registered" == idStatus.RegistrationStatus
-	}, time.Second*30, time.Millisecond*500)
-
-	// once we're registered, check some other information
-	idStatus, err := tequilapi.Identity(id)
-	assert.NoError(t, err)
-	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
-	assert.Equal(t, new(big.Int), idStatus.Balance)
-	assert.Equal(t, providerStake, idStatus.Stake)
-	assert.Zero(t, idStatus.Earnings.Uint64())
-	assert.Zero(t, idStatus.EarningsTotal.Uint64())
+	providerIsRegistered(t, tequilapi, id)
 }
 
 func topUpConsumer(t *testing.T, id string, hermesID common.Address, registrationFee *big.Int) {
+	// TODO: once free registration is a thing of the past, remove this return
+	return
+
 	chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
 	assert.NoError(t, err)
 
@@ -481,8 +487,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	expectedBalance := new(big.Int).Sub(new(big.Int).Mul(registrationFee, big.NewInt(20)), registrationFee)
-	assert.Equal(t, expectedBalance, idStatus.Balance)
+	assert.Equal(t, balanceAfterRegistration, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }

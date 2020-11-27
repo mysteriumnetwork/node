@@ -92,6 +92,7 @@ services:
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -chain1RPCEndpoint ws://ganache:8545
       -chain1ChainID 5
+      -freeRegistration=true
       -chain1SettlementFee 1000
       -chain1StakeDecreaseFee 1
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
