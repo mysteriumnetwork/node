@@ -116,7 +116,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   hermes:
-    image: mysteriumnetwork/hermes:v4-alpha
+    image: mysteriumnetwork/hermes:0.6.0
     environment:
       PORT: 8889
     expose:
