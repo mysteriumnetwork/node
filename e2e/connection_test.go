@@ -459,12 +459,12 @@ func topUpConsumer(t *testing.T, id string, hermesID common.Address, registratio
 	// TODO: once free registration is a thing of the past, remove this return
 	return
 
-	chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
-	assert.NoError(t, err)
+	// chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
+	// assert.NoError(t, err)
 
-	// add some balance for fees + consuming service
-	amountToTopUp := big.NewInt(0).Mul(registrationFee, big.NewInt(20))
-	mintMyst(t, amountToTopUp, common.HexToAddress(chid))
+	// // add some balance for fees + consuming service
+	// amountToTopUp := big.NewInt(0).Mul(registrationFee, big.NewInt(20))
+	// mintMyst(t, amountToTopUp, common.HexToAddress(chid))
 }
 
 func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
