@@ -19,6 +19,7 @@ package connection
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -26,7 +27,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
@@ -100,6 +103,14 @@ func NewCommand() *cli.Command {
 				Usage: "Disconnect from your current connection",
 				Action: func(ctx *cli.Context) error {
 					cmd.down()
+					return nil
+				},
+			},
+			{
+				Name:  "info",
+				Usage: "Show information about your connection",
+				Action: func(ctx *cli.Context) error {
+					cmd.info()
 					return nil
 				},
 			},
@@ -209,4 +220,49 @@ func (c *command) up(ctx *cli.Context) {
 	}
 
 	clio.Success("Connected")
+}
+
+func (c *command) info() {
+	inf := newConnInfo()
+
+	id, err := c.tequilapi.CurrentIdentity("", "")
+	if err == nil {
+		inf.set(infIdentity, id.Address)
+	}
+
+	status, err := c.tequilapi.ConnectionStatus()
+	if err == nil {
+		if status.Status == string(connectionstate.Connected) {
+			inf.isConnected = true
+			inf.set(infProposal, status.Proposal.String())
+		}
+
+		inf.set(infStatus, status.Status)
+		inf.set(infSessionID, status.SessionID)
+	}
+
+	ip, err := c.tequilapi.ConnectionIP()
+	if err == nil {
+		inf.set(infIP, ip.IP)
+	}
+
+	location, err := c.tequilapi.ConnectionLocation()
+	if err == nil {
+		inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+	}
+
+	if status.Status != string(connectionstate.Connected) {
+		inf.printAll()
+		return
+	}
+
+	statistics, err := c.tequilapi.ConnectionStatistics()
+	if err == nil {
+		inf.set(infDuration, fmt.Sprint(time.Duration(statistics.Duration)*time.Second))
+		inf.set(infTransferred, fmt.Sprintf("%s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
+		inf.set(infThroughput, fmt.Sprintf("%s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
+		inf.set(infSpent, money.NewMoney(statistics.TokensSpent, money.CurrencyMyst).String())
+	}
+
+	inf.printAll()
 }
