@@ -43,7 +43,6 @@ package config
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/spf13/cast"
@@ -156,12 +155,6 @@ func mergeMaps(
 			if itgt != nil {
 				itgt[sk] = sv
 			}
-			continue
-		}
-
-		svType := reflect.TypeOf(sv)
-		tvType := reflect.TypeOf(tv)
-		if svType != tvType {
 			continue
 		}
 
