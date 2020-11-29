@@ -202,7 +202,7 @@ func (c *command) up(ctx *cli.Context) {
 	}
 
 	if identityStatus.RegistrationStatus != registry.Registered.String() {
-		clio.Warn("Your identity is not registered, please execute `myst register` first")
+		clio.Warn("Your identity is not registered, please execute `myst account register` first")
 		return
 	}
 

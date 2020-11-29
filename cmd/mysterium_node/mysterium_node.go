@@ -21,11 +21,11 @@ import (
 	"os"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/cmd/commands/account"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	"github.com/mysteriumnetwork/node/cmd/commands/connection"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
-	"github.com/mysteriumnetwork/node/cmd/commands/register"
 	"github.com/mysteriumnetwork/node/cmd/commands/reset"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
@@ -49,7 +49,7 @@ var (
 	serviceCommand    = service.NewCommand(licenseCommand.Name)
 	cliCommand        = command_cli.NewCommand()
 	resetCommand      = reset.NewCommand()
-	registerCommand   = register.NewCommand()
+	accountCommand    = account.NewCommand()
 	connectionCommand = connection.NewCommand()
 )
 
@@ -94,7 +94,7 @@ func NewCommand() (*cli.App, error) {
 		daemonCommand,
 		cliCommand,
 		resetCommand,
-		registerCommand,
+		accountCommand,
 		connectionCommand,
 	}
 
@@ -110,7 +110,7 @@ func newApp() (*cli.App, error) {
 // commands are used directly by a user.
 var uiCommands = map[string]struct{}{
 	command_cli.CommandName: {},
-	register.CommandName:    {},
+	account.CommandName:     {},
 	connection.CommandName:  {},
 }
 
