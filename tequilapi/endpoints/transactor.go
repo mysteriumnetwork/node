@@ -61,15 +61,23 @@ type settlementHistoryProvider interface {
 
 type transactorEndpoint struct {
 	transactor                Transactor
+	identityRegistry          identityRegistry
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
 	hermesAddress             common.Address
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
-func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesID common.Address) *transactorEndpoint {
+func NewTransactorEndpoint(
+	transactor Transactor,
+	identityRegistry identityRegistry,
+	promiseSettler promiseSettler,
+	settlementHistoryProvider settlementHistoryProvider,
+	hermesID common.Address,
+) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
+		identityRegistry:          identityRegistry,
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
 		hermesAddress:             hermesID,
@@ -224,7 +232,8 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	identity := params.ByName("id")
+	id := identity.FromAddress(params.ByName("id"))
+	chainID := config.GetInt64(config.FlagChainID)
 
 	req := &contract.IdentityRegisterRequest{}
 
@@ -239,6 +248,19 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
+	registrationStatus, err := te.identityRegistry.GetRegistrationStatus(chainID, id)
+	if err != nil {
+		log.Err(err).Stack().Msgf("could not check registration status for ID: %s, %+v", id.Address, req)
+		utils.SendError(resp, errors.Wrap(err, "could not check registration status"), http.StatusInternalServerError)
+		return
+	}
+	switch registrationStatus {
+	case registry.InProgress, registry.Registered:
+		log.Info().Msgf("identity %q registration is in status %s, aborting...", id.Address, registrationStatus)
+		utils.SendErrorMessage(resp, "Identity already registered", http.StatusConflict)
+		return
+	}
+
 	// set stake to referral reward if registering provider with token
 	if req.ReferralToken != nil {
 		reward, err := te.transactor.GetTokenReward(*req.ReferralToken)
@@ -249,9 +271,9 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		req.Stake = reward.Reward
 	}
 
-	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, config.GetInt64(config.FlagChainID), req.ReferralToken)
+	err = te.transactor.RegisterIdentity(id.Address, req.Stake, req.Fee, req.Beneficiary, chainID, req.ReferralToken)
 	if err != nil {
-		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
+		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
 	}
@@ -424,8 +446,8 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
-	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
+func AddRoutesForTransactor(router *httprouter.Router, identityRegistry identityRegistry, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
+	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, hermesAddress)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)

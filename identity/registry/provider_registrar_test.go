@@ -215,10 +215,6 @@ type mockTransactor struct {
 	bountyResult  bool
 }
 
-func (mt *mockTransactor) FetchRegistrationFees() (FeesResponse, error) {
-	return mt.feesToReturn, mt.feesError
-}
-
 func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error {
 	return mt.registerError
 }
