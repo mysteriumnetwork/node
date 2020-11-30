@@ -158,6 +158,21 @@ func Test_ProposalFilter_FiltersByProviderID(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 }
 
+func Test_ProposalFilter_FiltersByLocationCountry(t *testing.T) {
+	filter := &Filter{
+		LocationCountry: "DE",
+	}
+	assert.False(t, filter.Matches(proposalEmpty))
+	assert.True(t, filter.Matches(proposalProvider1Streaming))
+	assert.False(t, filter.Matches(proposalProvider2Streaming))
+
+	filter = &Filter{
+		LocationCountry: "XXX",
+	}
+	assert.False(t, filter.Matches(proposalProvider1Streaming))
+	assert.False(t, filter.Matches(proposalProvider2Streaming))
+}
+
 func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
 	filter := &Filter{
 		ServiceType: serviceTypeNoop,
