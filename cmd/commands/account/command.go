@@ -103,12 +103,36 @@ func NewCommand() *cli.Command {
 					return nil
 				},
 			},
+			{
+				Name:      "set-identity",
+				Usage:     "Sets a new identity for your account which will be used in commands that require it",
+				ArgsUsage: "[IdentityAddress]",
+				Action: func(ctx *cli.Context) error {
+					cmd.setIdentity(ctx)
+					return nil
+				},
+			},
 		},
 	}
 }
 
 type command struct {
 	tequilapi *tequilapi_client.Client
+}
+
+func (c *command) setIdentity(ctx *cli.Context) {
+	givenID := ctx.Args().First()
+	if givenID == "" {
+		clio.Warn("No identity provided")
+		return
+	}
+
+	if _, err := c.tequilapi.CurrentIdentity(givenID, ""); err != nil {
+		clio.Error("Failed to set identity as default")
+		return
+	}
+
+	clio.Success(fmt.Sprintf("Identity %s set as default", givenID))
 }
 
 func (c *command) info(ctx *cli.Context) {
