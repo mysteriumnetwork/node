@@ -18,11 +18,20 @@
 package connection
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 
 	"github.com/urfave/cli/v2"
 )
@@ -39,6 +48,12 @@ var (
 	flagLocationType = cli.StringFlag{
 		Name:  "location-type",
 		Usage: "Node location types to filter by eg.'hosting', 'residential', 'mobile' etc.",
+	}
+
+	flagProviderID = cli.StringFlag{
+		Name:  "provider-identity",
+		Usage: "Provider identity to which a new connection will be established",
+		Value: "",
 	}
 )
 
@@ -74,6 +89,31 @@ func NewCommand() *cli.Command {
 					return nil
 				},
 			},
+			{
+				Name:  "up",
+				Usage: "Create a new connection",
+				Flags: []cli.Flag{&flagProviderID},
+				Action: func(ctx *cli.Context) error {
+					cmd.up(ctx)
+					return nil
+				},
+			},
+			{
+				Name:  "down",
+				Usage: "Disconnect from your current connection",
+				Action: func(ctx *cli.Context) error {
+					cmd.down()
+					return nil
+				},
+			},
+			{
+				Name:  "info",
+				Usage: "Show information about your connection",
+				Action: func(ctx *cli.Context) error {
+					cmd.info()
+					return nil
+				},
+			},
 		},
 	}
 }
@@ -105,4 +145,124 @@ func (c *command) proposals(ctx *cli.Context) {
 	for _, p := range proposals {
 		printProposal(&p)
 	}
+}
+
+func (c *command) down() {
+	status, err := c.tequilapi.ConnectionStatus()
+	if err != nil {
+		clio.Warn("Could not get connection status")
+		return
+	}
+
+	if status.Status != string(connectionstate.NotConnected) {
+		if err := c.tequilapi.ConnectionDestroy(); err != nil {
+			clio.Warn(err)
+			return
+		}
+	}
+
+	clio.Success("Disconnected")
+}
+
+func (c *command) up(ctx *cli.Context) {
+	status, err := c.tequilapi.ConnectionStatus()
+	if err != nil {
+		clio.Warn("Could not get connection status")
+		return
+	}
+
+	switch connectionstate.State(status.Status) {
+	case
+		connectionstate.Connected,
+		connectionstate.Connecting,
+		connectionstate.Disconnecting,
+		connectionstate.Reconnecting:
+
+		msg := fmt.Sprintf("You can't create a new connection, you're in state '%s'", status.Status)
+		clio.Warn(msg)
+		return
+	}
+
+	providerID := ctx.String(flagProviderID.Name)
+	if providerID == "" {
+		clio.Warn("ProviderID must be specified")
+		return
+	}
+
+	id, err := c.tequilapi.CurrentIdentity("", "")
+	if err != nil {
+		clio.Error("Failed to get your identity")
+		return
+	}
+
+	identityStatus, err := c.tequilapi.Identity(id.Address)
+	if err != nil {
+		clio.Warn("Failed to get identity status")
+		return
+	}
+
+	if identityStatus.RegistrationStatus != registry.Registered.String() {
+		clio.Warn("Your identity is not registered, please execute `myst register` first")
+		return
+	}
+
+	clio.Status("CONNECTING", "Creating connection from:", id.Address, "to:", providerID)
+
+	connectOptions := contract.ConnectOptions{
+		DNS:               connection.DNSOptionAuto,
+		DisableKillSwitch: false,
+	}
+	hermesID := config.GetString(config.FlagHermesID)
+	_, err = c.tequilapi.ConnectionCreate(id.Address, providerID, hermesID, serviceWireguard, connectOptions)
+	if err != nil {
+		clio.Error("Failed to create a new connection")
+		return
+	}
+
+	clio.Success("Connected")
+}
+
+func (c *command) info() {
+	inf := newConnInfo()
+
+	id, err := c.tequilapi.CurrentIdentity("", "")
+	if err == nil {
+		inf.set(infIdentity, id.Address)
+	}
+
+	status, err := c.tequilapi.ConnectionStatus()
+	if err == nil {
+		if status.Status == string(connectionstate.Connected) {
+			inf.isConnected = true
+			inf.set(infProposal, status.Proposal.String())
+		}
+
+		inf.set(infStatus, status.Status)
+		inf.set(infSessionID, status.SessionID)
+	}
+
+	ip, err := c.tequilapi.ConnectionIP()
+	if err == nil {
+		inf.set(infIP, ip.IP)
+	}
+
+	location, err := c.tequilapi.ConnectionLocation()
+	if err == nil {
+		inf.set(infLocation, fmt.Sprintf("%s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+	}
+
+	if status.Status != string(connectionstate.Connected) {
+		inf.printAll()
+		return
+	}
+
+	statistics, err := c.tequilapi.ConnectionStatistics()
+	if err == nil {
+		inf.set(infDuration, fmt.Sprint(time.Duration(statistics.Duration)*time.Second))
+		inf.set(infTransferred, fmt.Sprintf("%s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
+		inf.set(infThroughput, fmt.Sprintf("%s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
+		inf.set(infSpent, money.NewMoney(statistics.TokensSpent, money.CurrencyMyst).String())
+	}
+
+	inf.printAll()
 }
