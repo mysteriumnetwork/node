@@ -1,0 +1,285 @@
+/*
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package account
+
+import (
+	"errors"
+	"fmt"
+	"math/big"
+	"strings"
+
+	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/money"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
+
+	"github.com/urfave/cli/v2"
+)
+
+// CommandName is the name of the main command.
+const CommandName = "account"
+
+var (
+	flagAmount = cli.Float64Flag{
+		Name:  "amount",
+		Usage: "Amount of MYST you want to top up in to your account",
+	}
+
+	flagCurrency = cli.StringFlag{
+		Name:  "currency",
+		Usage: "Currency you want to use when paying for your top up",
+	}
+
+	flagLastTopup = cli.BoolFlag{
+		Name:  "last-topup",
+		Usage: "Include last top up information",
+	}
+)
+
+// NewCommand function creates license command.
+func NewCommand() *cli.Command {
+	var cmd *command
+
+	return &cli.Command{
+		Name:        CommandName,
+		Usage:       "Manage your account",
+		Description: "Using account subcommands you can manage your account details and get information about it",
+		Before: func(ctx *cli.Context) error {
+			if err := clicontext.LoadUserConfigQuietly(ctx); err != nil {
+				return err
+			}
+			config.ParseFlagsNode(ctx)
+			nodeOptions := node.GetOptions()
+
+			tc := tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort)
+			cmd = &command{tequilapi: tc}
+
+			return nil
+		},
+		Subcommands: []*cli.Command{
+			{
+				Name:  "register",
+				Usage: "Submit a registration request",
+				Action: func(ctx *cli.Context) error {
+					cmd.register()
+					return nil
+				},
+			},
+			{
+				Name:  "topup",
+				Usage: "Create a new top up for your account",
+				Flags: []cli.Flag{&flagAmount, &flagCurrency},
+				Action: func(ctx *cli.Context) error {
+					cmd.topup(ctx)
+					return nil
+				},
+			},
+			{
+				Name:  "info",
+				Usage: "Display information about identity account currently in use",
+				Flags: []cli.Flag{&flagLastTopup},
+				Action: func(ctx *cli.Context) error {
+					cmd.info(ctx)
+					return nil
+				},
+			},
+			{
+				Name:      "set-identity",
+				Usage:     "Sets a new identity for your account which will be used in commands that require it",
+				ArgsUsage: "[IdentityAddress]",
+				Action: func(ctx *cli.Context) error {
+					cmd.setIdentity(ctx)
+					return nil
+				},
+			},
+		},
+	}
+}
+
+type command struct {
+	tequilapi *tequilapi_client.Client
+}
+
+func (c *command) setIdentity(ctx *cli.Context) {
+	givenID := ctx.Args().First()
+	if givenID == "" {
+		clio.Warn("No identity provided")
+		return
+	}
+
+	if _, err := c.tequilapi.CurrentIdentity(givenID, ""); err != nil {
+		clio.Error("Failed to set identity as default")
+		return
+	}
+
+	clio.Success(fmt.Sprintf("Identity %s set as default", givenID))
+}
+
+func (c *command) info(ctx *cli.Context) {
+	id, err := c.tequilapi.CurrentIdentity("", "")
+	if err != nil {
+		clio.Error("Failed to display information: could not get current identity")
+		return
+	}
+
+	clio.Status("SECTION", "General account information:")
+	c.infoGeneral(id.Address)
+
+	if ctx.Bool(flagLastTopup.Name) {
+		clio.Status("SECTION", "Last topup information:")
+		c.infoTopUp(id.Address)
+	}
+}
+
+func (c *command) topup(ctx *cli.Context) {
+	id, err := c.tequilapi.CurrentIdentity("", "")
+	if err != nil {
+		clio.Warn("Could not get your identity")
+		return
+	}
+
+	ok, err := c.identityIsUnregistered(id.Address)
+	if err != nil {
+		clio.Error(err.Error())
+		return
+	}
+
+	if ok {
+		clio.Warn("Please register your identity registration")
+		return
+	}
+
+	currencies, err := c.tequilapi.OrderCurrencies()
+	if err != nil {
+		clio.Error("Could not get a list of supported currencies")
+		return
+	}
+
+	currency := ctx.String(flagCurrency.Name)
+	if !contains(currency, currencies) {
+		clio.Warn("Given currency cannot be used")
+		clio.Info("Supported currencies are:", strings.Join(currencies, ", "))
+		return
+	}
+
+	amount := ctx.Float64(flagAmount.Name)
+	if amount <= 0 {
+		clio.Warn("Top up Amount is required and must be greater than 0")
+		return
+	}
+
+	resp, err := c.tequilapi.OrderCreate(identity.FromAddress(id.Address), contract.OrderRequest{
+		MystAmount:       amount,
+		PayCurrency:      currency,
+		LightningNetwork: false,
+	})
+
+	if err != nil {
+		clio.Error("Failed to create an top up request, make sure your requested amount is equal or more than 0.0001 BTC")
+		return
+	}
+
+	clio.Info(fmt.Sprintf("New top up request for identity %s has been created: ", id.Address))
+	printOrder(resp)
+}
+
+func (c *command) register() {
+	id, err := c.tequilapi.CurrentIdentity("", "")
+	if err != nil {
+		clio.Warn("Could not get or create identity")
+		return
+	}
+
+	ok, err := c.identityIsUnregistered(id.Address)
+	if err != nil {
+		clio.Error(err.Error())
+		return
+	}
+	if !ok {
+		clio.Infof("Already have an identity: %s\n", id.Address)
+		return
+	}
+
+	if err := c.tequilapi.Unlock(id.Address, ""); err != nil {
+		clio.Warn("Failed to unlock the identity")
+		return
+	}
+
+	c.registerIdentity(id.Address)
+}
+
+func (c *command) registerIdentity(identity string) {
+	fees, err := c.tequilapi.GetTransactorFees()
+	if err != nil {
+		clio.Error("Failed to get fees for registration")
+		return
+	}
+
+	err = c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), fees.Registration, nil)
+	if err != nil {
+		clio.Error("Failed to register the identity")
+		return
+	}
+
+	msg := "Registration started. Topup the identities channel to finish it."
+	if config.GetBool(config.FlagTestnet2) || config.GetBool(config.FlagTestnet) {
+		msg = "Registration successful, try to connect."
+	}
+	clio.Success(msg)
+}
+
+func (c *command) identityIsUnregistered(identityAddress string) (bool, error) {
+	identityStatus, err := c.tequilapi.Identity(identityAddress)
+	if err != nil {
+		return false, errors.New("Failed to get identity status")
+	}
+
+	return identityStatus.RegistrationStatus == registry.Unregistered.String(), nil
+}
+
+func (c *command) infoGeneral(identityAddress string) {
+	identityStatus, err := c.tequilapi.Identity(identityAddress)
+	if err != nil {
+		clio.Error("Failed to display general account information: failed to fetch data")
+		return
+	}
+
+	clio.Info("Using identity:", identityAddress)
+	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
+	clio.Info("Channel address:", identityStatus.ChannelAddress)
+	clio.Info(fmt.Sprintf("Balance: %s", money.NewMoney(identityStatus.Balance, money.CurrencyMyst)))
+}
+
+func (c *command) infoTopUp(identityAddress string) {
+	resp, err := c.tequilapi.OrderGetAll(identity.FromAddress(identityAddress))
+	if err != nil {
+		clio.Error("Failed to get topup information")
+		return
+	}
+
+	if len(resp) == 0 {
+		clio.Info("You have no topup requests")
+		return
+	}
+	printOrder(resp[len(resp)-1])
+}
