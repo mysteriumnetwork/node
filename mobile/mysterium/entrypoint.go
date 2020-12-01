@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 	"path/filepath"
 	"time"
@@ -624,13 +625,13 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 
 // OrderStatusChangedCallback is a callback when order status changes.
 type OrderStatusChangedCallback interface {
-	OnChange(orderID uint64, status string)
+	OnChange(orderID int64, status string)
 }
 
 // RegisterOrderStatusChangeCallback registers OrderStatusChanged callback.
 func (mb *MobileNode) RegisterOrderStatusChangeCallback(cb OrderStatusChangedCallback) {
 	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderStatusChanged, func(e pilvytis.AppEventOrderStatusChanged) {
-		cb.OnChange(e.ID, string(e.Status))
+		cb.OnChange(int64(e.ID), string(e.Status))
 	})
 }
 
@@ -642,20 +643,64 @@ type CreateOrderRequest struct {
 	Lightning       bool
 }
 
+type OrderResponse struct {
+	ID              int64   `json:"id"`
+	IdentityAddress string  `json:"identity_address"`
+	Status          string  `json:"status"`
+	MystAmount      float64 `json:"myst_amount"`
+	PayCurrency     string  `json:"pay_currency"`
+	PayAmount       float64 `json:"pay_amount"`
+	PaymentAddress  string  `json:"payment_address"`
+}
+
+func newOrderResponse(order pilvytis.OrderResponse) OrderResponse {
+	return OrderResponse{
+		ID:              int64(order.ID),
+		IdentityAddress: order.Identity,
+		Status:          string(order.Status),
+		MystAmount:      order.MystAmount,
+		PayCurrency:     strVal(order.PayCurrency),
+		PayAmount:       floatVal(order.PayAmount),
+		PaymentAddress:  order.PaymentAddress,
+	}
+}
+
+func strVal(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func floatVal(f *float64) float64 {
+	if f == nil {
+		return 0
+	}
+	return *f
+}
+
 // CreateOrder creates a payment order.
-func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) (*pilvytis.OrderResponse, error) {
-	return mb.pilvytis.CreateOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
+func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) ([]byte, error) {
+	order, err := mb.pilvytis.CreateOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(newOrderResponse(*order))
 }
 
 // GetOrderRequest a request to get an order.
 type GetOrderRequest struct {
 	IdentityAddress string
-	ID              uint64
+	ID              int64
 }
 
 // GetOrder gets an order by ID.
-func (mb *MobileNode) GetOrder(req *GetOrderRequest) (*pilvytis.OrderResponse, error) {
-	return mb.pilvytis.GetOrder(identity.FromAddress(req.IdentityAddress), req.ID)
+func (mb *MobileNode) GetOrder(req *GetOrderRequest) ([]byte, error) {
+	order, err := mb.pilvytis.GetOrder(identity.FromAddress(req.IdentityAddress), uint64(req.ID))
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(newOrderResponse(*order))
 }
 
 // ListOrdersRequest a request to list orders.
@@ -664,11 +709,23 @@ type ListOrdersRequest struct {
 }
 
 // ListOrders lists all payment orders.
-func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]pilvytis.OrderResponse, error) {
-	return mb.pilvytis.ListOrders(identity.FromAddress(req.IdentityAddress))
+func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]byte, error) {
+	orders, err := mb.pilvytis.ListOrders(identity.FromAddress(req.IdentityAddress))
+	if err != nil {
+		return nil, err
+	}
+	res := make([]OrderResponse, len(orders))
+	for i := range orders {
+		res[i] = newOrderResponse(orders[i])
+	}
+	return json.Marshal(orders)
 }
 
 // Currencies lists supported payment currencies.
-func (mb *MobileNode) Currencies() ([]string, error) {
-	return mb.pilvytis.Currencies()
+func (mb *MobileNode) Currencies() ([]byte, error) {
+	currencies, err := mb.pilvytis.Currencies()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(currencies)
 }
