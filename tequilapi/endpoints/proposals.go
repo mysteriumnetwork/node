@@ -72,6 +72,14 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     name: fetch_metrics
 //     description: if set to true, fetches the connection success metrics for nodes. False by default.
 //     type: boolean
+//   - in: query
+//     name: location_type
+//     description: If given will filter proposals by node location type.
+//     type: string
+//   - in: query
+//     name: location_country
+//     description: If given will filter proposals by node location country.
+//     type: string
 // responses:
 //   200:
 //     description: List of proposals
@@ -109,6 +117,8 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		ServiceType:         req.URL.Query().Get("service_type"),
 		AccessPolicyID:      req.URL.Query().Get("access_policy_id"),
 		AccessPolicySource:  req.URL.Query().Get("access_policy_source"),
+		LocationType:        req.URL.Query().Get("location_type"),
+		LocationCountry:     req.URL.Query().Get("location_country"),
 		LowerGBPriceBound:   lowerGBPriceBound,
 		UpperGBPriceBound:   upperGBPriceBound,
 		LowerTimePriceBound: lowerTimePriceBound,

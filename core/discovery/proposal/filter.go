@@ -30,6 +30,7 @@ type Filter struct {
 	ProviderID          string
 	ServiceType         string
 	LocationType        string
+	LocationCountry     string
 	AccessPolicyID      string
 	AccessPolicySource  string
 	UpperTimePriceBound *big.Int
@@ -56,6 +57,9 @@ func (filter *Filter) Matches(proposal market.ServiceProposal) bool {
 	}
 	if filter.LocationType != "" {
 		conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.LocationType))
+	}
+	if filter.LocationCountry != "" {
+		conditions = append(conditions, reducer.Equal(reducer.LocationCountry, filter.LocationCountry))
 	}
 	if filter.AccessPolicyID != "" || filter.AccessPolicySource != "" {
 		conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicyID, filter.AccessPolicySource))
@@ -87,5 +91,9 @@ func (filter *Filter) ToAPIQuery() mysterium.ProposalsQuery {
 	if filter.ServiceType == "" {
 		query.ServiceType = "all"
 	}
+	if filter.LocationType != "" {
+		query.NodeType = filter.LocationType
+	}
+
 	return query
 }

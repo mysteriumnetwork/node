@@ -1368,6 +1368,18 @@
             "description": "if set to true, fetches the connection success metrics for nodes. False by default.",
             "name": "fetch_metrics",
             "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "If given will filter proposals by node location type.",
+            "name": "location_type",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "If given will filter proposals by node location country.",
+            "name": "location_country",
+            "in": "query"
           }
         ],
         "responses": {

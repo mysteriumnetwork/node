@@ -313,6 +313,15 @@ func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDT
 	return client.proposals(queryParams)
 }
 
+// ProposalsByLocationAndService fetches proposals by given service and node location types.
+func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("service_type", serviceType)
+	queryParams.Add("location_type", locationType)
+	queryParams.Add("location_country", locationCountry)
+	return client.proposals(queryParams)
+}
+
 // Proposals returns all available proposals for services
 func (client *Client) Proposals() ([]contract.ProposalDTO, error) {
 	return client.proposals(url.Values{})

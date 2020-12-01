@@ -67,14 +67,6 @@ printf "Creating directories...\n" \
     && mkdir -p $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA \
     && chown $DAEMON_USER:$DAEMON_GROUP $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA
 
-# TODO remove this migration block when all nodes migration to the testnet2.
-if [ ! -d "$OS_DIR_DATA/testnet2" ]; then
-    printf "Migrating data to testnet2 directories...\n" \
-        && mkdir $OS_DIR_DATA/testnet2 \
-        && cp -r $OS_DIR_DATA/keystore $OS_DIR_DATA/testnet2 \
-        && chown -R $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA/testnet2
-fi
-
 printf "Setting required capabilities...\n" \
     && setcap cap_net_admin+ep /usr/bin/myst
 

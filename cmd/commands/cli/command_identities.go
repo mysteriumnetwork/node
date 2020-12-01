@@ -167,7 +167,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	var address = actionArgs[0]
-	var stake *big.Int
+	stake := new(big.Int).SetInt64(0)
 	if len(actionArgs) >= 2 {
 		s, ok := new(big.Int).SetString(actionArgs[1], 10)
 		if !ok {
@@ -203,7 +203,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	clio.Info(msg)
-	clio.Info(fmt.Sprintf("To explore additional inforamtion about the identity use: %s", usageGetIdentity))
+	clio.Info(fmt.Sprintf("To explore additional information about the identity use: %s", usageGetIdentity))
 }
 
 const usageSettle = "settle <providerIdentity>"

@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
+	"github.com/mysteriumnetwork/node/cmd/commands/connection"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/register"
@@ -41,14 +42,15 @@ var (
 		"run command 'license --warranty'",
 		"run command 'license --conditions'",
 	)
-	versionSummary  = metadata.VersionAsSummary(licenseCopyright)
-	daemonCommand   = daemon.NewCommand()
-	versionCommand  = version.NewCommand(versionSummary)
-	licenseCommand  = license.NewCommand(licenseCopyright)
-	serviceCommand  = service.NewCommand(licenseCommand.Name)
-	cliCommand      = command_cli.NewCommand()
-	resetCommand    = reset.NewCommand()
-	registerCommand = register.NewCommand()
+	versionSummary    = metadata.VersionAsSummary(licenseCopyright)
+	daemonCommand     = daemon.NewCommand()
+	versionCommand    = version.NewCommand(versionSummary)
+	licenseCommand    = license.NewCommand(licenseCopyright)
+	serviceCommand    = service.NewCommand(licenseCommand.Name)
+	cliCommand        = command_cli.NewCommand()
+	resetCommand      = reset.NewCommand()
+	registerCommand   = register.NewCommand()
+	connectionCommand = connection.NewCommand()
 )
 
 func main() {
@@ -93,6 +95,7 @@ func NewCommand() (*cli.App, error) {
 		cliCommand,
 		resetCommand,
 		registerCommand,
+		connectionCommand,
 	}
 
 	return app, nil
@@ -108,6 +111,7 @@ func newApp() (*cli.App, error) {
 var uiCommands = map[string]struct{}{
 	command_cli.CommandName: {},
 	register.CommandName:    {},
+	connection.CommandName:  {},
 }
 
 // configureLogging returns a func which configures global
