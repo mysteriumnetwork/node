@@ -165,8 +165,25 @@ services:
       public1:
         ipv4_address: 172.31.0.207
 
+  http-mock:
+    image: mockserver/mockserver:mockserver-5.11.2
+    dns: 172.30.0.254
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
+    ports:
+      - 9999:1080
+    networks:
+      public0:
+        ipv4_address: 172.30.0.211
+      public1:
+        ipv4_address: 172.31.0.211
+
+
   transactor:
-    image: mysteriumnetwork/transactor:0.6.1
+    image: mysteriumnetwork/transactor:0.7.0
     environment:
       PORT: 8888
     expose:
@@ -180,11 +197,12 @@ services:
       - ganache
       - redis
       - mongodb
+      - http-mock
     command: >
+      -overrideGasStation=true
+      -geckoUrl=http://http-mock:1080/gecko
       -chain1RPCEndpoint ws://ganache:8545
       -chain1ChainID 5
-      -chain1SettlementFee 1000
-      -chain1StakeDecreaseFee 1
       -stakeAmount 62000000000000000000
       -topUpAmount 7000000000000000000
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
@@ -208,7 +226,7 @@ services:
         ipv4_address: 172.31.0.203
 
   hermes:
-    image: mysteriumnetwork/hermes:v4-alpha
+    image: mysteriumnetwork/hermes:0.6.0
     environment:
       PORT: 8889
     expose:
@@ -326,7 +344,7 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:v4-alpha
+    image: mysteriumnetwork/hermes:0.6.0
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0

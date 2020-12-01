@@ -242,10 +242,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), big.NewInt(100), fees.DecreaseStake)
+		decrease := new(big.Int).Mul(fees.DecreaseStake, big.NewInt(3))
+		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), decrease, fees.DecreaseStake)
 		assert.NoError(t, err)
 
-		expected := new(big.Int).Sub(initialStake, big.NewInt(100))
+		expected := new(big.Int).Sub(initialStake, decrease)
 		var lastStatus *big.Int
 		assert.Eventually(t, func() bool {
 			providerStatus, err := tequilapiProvider.Identity(providerID)
@@ -362,7 +363,7 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised
 		return promised.Cmp(consumerSpending) == 0
-	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v", consumerSpending, lastHermes, serviceType, hermesURL))
+	}, time.Second*20, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v, consumer ID %v", consumerSpending, lastHermes, serviceType, hermesURL, consumerID))
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
@@ -607,6 +608,14 @@ func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Cli
 
 func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected *big.Int) *big.Int {
 	// Before settlement
+	assert.Eventually(t, func() bool {
+		providerStatus, err := tequilapi.Identity(id)
+		if err != nil {
+			return false
+		}
+		return earningsExpected.Cmp(providerStatus.Earnings) == 0
+	}, time.Second*5, time.Millisecond*250)
+
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.True(t, providerStatus.Balance.Cmp(new(big.Int)) == 0)
