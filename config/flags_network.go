@@ -36,7 +36,7 @@ var (
 	// FlagTestnet2 uses testnet2 network.
 	FlagTestnet2 = cli.BoolFlag{
 		Name:  "testnet2",
-		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
+		Usage: "Defines testnet2 configuration",
 		Value: true,
 	}
 	// FlagAPIAddress Mysterium API URL
@@ -48,7 +48,7 @@ var (
 	// FlagChainID chain id to use
 	FlagChainID = cli.Int64Flag{
 		Name:  "chain-id",
-		Usage: "the chain id to use",
+		Usage: "The chain ID to use",
 		Value: metadata.DefaultNetwork.DefaultChainID,
 	}
 	// FlagBrokerAddress message broker URI.
