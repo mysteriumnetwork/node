@@ -302,6 +302,10 @@ func (mpcsp *mockProviderChannelStatusProvider) GetHermesFee(chainID int64, herm
 	return mpcsp.feeToReturn, mpcsp.feeError
 }
 
+func (mpcsp *mockProviderChannelStatusProvider) GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error) {
+	return common.Address{}, nil
+}
+
 var cfg = HermesPromiseSettlerConfig{
 	HermesAddress:        common.HexToAddress("0x9a8B6d979e188fA3DeAa93A470C3537362FdaE92"),
 	Threshold:            0.1,

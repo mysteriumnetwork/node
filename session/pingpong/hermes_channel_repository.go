@@ -41,6 +41,7 @@ type promiseProvider interface {
 
 type channelProvider interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
 
 // HermesChannelRepository is fetches HermesChannel models from blockchain.
@@ -48,17 +49,19 @@ type HermesChannelRepository struct {
 	promiseProvider promiseProvider
 	channelProvider channelProvider
 	publisher       eventbus.Publisher
+	registryAddress common.Address
 
 	channels map[int64][]HermesChannel
 	lock     sync.RWMutex
 }
 
 // NewHermesChannelRepository returns a new instance of HermesChannelRepository.
-func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher) *HermesChannelRepository {
+func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, registryAddress common.Address) *HermesChannelRepository {
 	return &HermesChannelRepository{
 		promiseProvider: promiseProvider,
 		channelProvider: channelProvider,
 		publisher:       publisher,
+		registryAddress: registryAddress,
 
 		channels: make(map[int64][]HermesChannel, 0),
 	}
@@ -199,6 +202,13 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 	}
 
 	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
+	benef, err := hcr.channelProvider.GetBeneficiary(chainID, hcr.registryAddress, id.ToCommonAddress())
+	if err != nil {
+		return HermesChannel{}, fmt.Errorf("could not get provider beneficiary for %v, hermes %v: %w", id, hermesID.Hex(), err)
+	}
+
+	hermesChannel.Beneficiary = benef
+
 	hcr.updateChannel(chainID, hermesChannel)
 
 	return hermesChannel, nil

@@ -36,7 +36,7 @@ func TestHermesChannelRepository_Fetch_returns_errors(t *testing.T) {
 	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), common.Address{})
 
 	// when
 	channelStatusProvider.channelReturnError = errMock
@@ -74,7 +74,7 @@ func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 	}
 
 	// when
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), common.Address{})
 	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
@@ -105,7 +105,7 @@ func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) 
 	}
 
 	// when
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), common.Address{})
 	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
@@ -140,7 +140,7 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	publisher := mocks.NewEventBus()
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher)
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, common.Address{})
 
 	// when
 	promiseProvider.toReturn = expectedPromise1
