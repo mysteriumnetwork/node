@@ -179,7 +179,13 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 }
 
 func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
-	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(di.HermesPromiseStorage, di.BCHelper, di.EventBus)
+	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(
+		di.HermesPromiseStorage,
+		di.BCHelper,
+		di.EventBus,
+		common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+	)
+
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
 		log.Error().Err(err).Msg("Failed to subscribe channel repository")
 		return errors.Wrap(err, "could not subscribe channel repository to relevant events")
