@@ -75,9 +75,14 @@ services:
     command: >
       -swaggerHost=trust
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
+  
+  http-mock:
+    image: mockserver/mockserver:mockserver-5.11.2
+    ports:
+      - 9999:1080
 
   transactor:
-    image: mysteriumnetwork/transactor:0.6.1
+    image: mysteriumnetwork/transactor:0.7.0
     environment:
       PORT: 8888
     expose:
@@ -86,15 +91,16 @@ services:
       - ganache
       - mongodb
       - redis
+      - http-mock
     command: >
+      -geckoUrl=http://http-mock:1080/gecko
+      -overrideGasStation=true
       -stakeAmount 62000000000000000000
       -topUpAmount 7000000000000000000
       -mystSCAddress 0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665
       -chain1RPCEndpoint ws://ganache:8545
       -chain1ChainID 5
       -freeRegistration=true
-      -chain1SettlementFee 1000
-      -chain1StakeDecreaseFee 1
       -registry 0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
@@ -116,7 +122,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   hermes:
-    image: mysteriumnetwork/hermes:v4-alpha
+    image: mysteriumnetwork/hermes:0.6.0
     environment:
       PORT: 8889
     expose:
@@ -146,7 +152,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   hermes2:
-    image: mysteriumnetwork/hermes:v4-alpha
+    image: mysteriumnetwork/hermes:0.6.0
     environment:
       PORT: 8889
     expose:

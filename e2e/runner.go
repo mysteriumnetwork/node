@@ -18,7 +18,10 @@
 package e2e
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -133,6 +136,11 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "starting mysterium-api failed!")
 	}
 
+	log.Info().Msg("Starting httpmock")
+	if err := r.compose("up", "-d", "http-mock"); err != nil {
+		return errors.Wrap(err, "starting http-mock failed!")
+	}
+
 	log.Info().Msg("Force rebuilding go runner")
 	if err := r.compose("build", "go-runner"); err != nil {
 		return fmt.Errorf("could not build go runner %w", err)
@@ -147,6 +155,11 @@ func (r *Runner) Init() error {
 		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
+	}
+
+	log.Info().Msg("Seeding http mock")
+	if err := seedHTTPMock(); err != nil {
+		return fmt.Errorf("could not seed http mock %w", err)
 	}
 
 	log.Info().Msg("Starting transactor")
@@ -197,4 +210,75 @@ func (r *Runner) stopProviderConsumerNodes(providerHost string, services []strin
 		return errors.Wrap(err, "stopping containers failed!")
 	}
 	return nil
+}
+
+func seedHTTPMock() error {
+	url := "http://localhost:9999/expectation"
+	method := "PUT"
+
+	client := &http.Client{
+		Timeout: time.Second * 5,
+	}
+
+	for _, v := range httpMockExpectations {
+		marshaled, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		req, err := http.NewRequest(method, url, bytes.NewReader(marshaled))
+		if err != nil {
+			return err
+		}
+
+		req.Header.Add("Content-Type", "application/json")
+		_, err = client.Do(req)
+		return err
+	}
+
+	return nil
+}
+
+var httpMockExpectations = []HTTPMockExpectation{
+	{
+		HTTPRequest: HTTPRequest{
+			Method: "GET",
+			Path:   "/gecko/simple/price",
+		},
+		HTTPResponse: HTTPResponse{
+			StatusCode: http.StatusOK,
+			Headers: []Headers{
+				{
+					Name:   "Content-Type",
+					Values: []string{"application/json"},
+				},
+			},
+			Body: `{"mysterium":{"usd":1,"eur":1},"matic-network":{"usd":0.5,"eur":0.5},"ethereum":{"usd":0.00001,"eur":0.00001}}`,
+		},
+	},
+}
+
+// HTTPMockExpectation the expectation payload.
+type HTTPMockExpectation struct {
+	HTTPRequest  HTTPRequest  `json:"httpRequest"`
+	HTTPResponse HTTPResponse `json:"httpResponse"`
+}
+
+// HTTPRequest the http request properties for http mock.
+type HTTPRequest struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
+}
+
+// Headers the http response headers for http mock.
+type Headers struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
+}
+
+// HTTPResponse the http response for http mock.
+type HTTPResponse struct {
+	StatusCode int       `json:"statusCode"`
+	Headers    []Headers `json:"headers"`
+	Body       string    `json:"body"`
 }
