@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -63,6 +64,7 @@ func NewCommand() *cli.Command {
 		Name:   CommandName,
 		Usage:  "Starts a CLI client with a Tequilapi",
 		Before: clicontext.LoadUserConfigQuietly,
+		Flags:  []cli.Flag{&config.FlagAgreedTermsConditions},
 		Action: func(ctx *cli.Context) error {
 			config.ParseFlagsNode(ctx)
 			nodeOptions := node.GetOptions()
@@ -72,7 +74,7 @@ func NewCommand() *cli.Command {
 			}
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
-			return describeQuit(cmdCLI.Run(ctx.Args()))
+			return describeQuit(cmdCLI.Run(ctx))
 		},
 	}
 }
@@ -106,17 +108,55 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --conditions'",
 ))
 
-// Run runs CLI interface synchronously, in the same thread while blocking it
-func (c *cliApp) Run(args cli.Args) (err error) {
-	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
-	c.fetchedProposals = c.fetchProposals()
-
-	if args.Len() > 0 {
-		c.handleActions(strings.Join(args.Slice(), " "))
+func (c *cliApp) handleTOS(ctx *cli.Context) error {
+	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
+		c.acceptTOS(ctx)
 		return nil
 	}
 
-	fmt.Println(versionSummary)
+	agreedC := config.Current.GetBool(contract.TermsConsumerAgreed)
+	if !agreedC {
+		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+	}
+
+	agreedP := config.Current.GetBool(contract.TermsProviderAgreed)
+	if !agreedP {
+		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+	}
+
+	version := config.Current.GetString(contract.TermsVersion)
+	if version != metadata.CurrentTermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	}
+
+	return nil
+}
+
+func (c *cliApp) acceptTOS(ctx *cli.Context) {
+	t := true
+	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
+		AgreedConsumer: &t,
+		AgreedProvider: &t,
+		AgreedVersion:  metadata.CurrentTermsVersion,
+	}); err != nil {
+		clio.Info("Failed to save terms of use agreement, you will have to re-agree on next launch")
+	}
+}
+
+// Run runs CLI interface synchronously, in the same thread while blocking it
+func (c *cliApp) Run(ctx *cli.Context) (err error) {
+	if err := c.handleTOS(ctx); err != nil {
+		clio.PrintTOSError(err)
+		return nil
+	}
+
+	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
+	c.fetchedProposals = c.fetchProposals()
+
+	if ctx.Args().Len() > 0 {
+		c.handleActions(strings.Join(ctx.Args().Slice(), " "))
+		return nil
+	}
 
 	c.reader, err = readline.NewEx(&readline.Config{
 		Prompt:          fmt.Sprintf(redColor, "» "),

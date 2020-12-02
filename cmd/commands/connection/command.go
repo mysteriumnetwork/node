@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -85,8 +87,9 @@ func NewCommand() *cli.Command {
 			},
 			{
 				Name:      "up",
-				Usage:     "Create a new connection",
 				ArgsUsage: "[ProviderIdentityAddress]",
+				Usage:     "Create a new connection",
+				Flags:     []cli.Flag{&config.FlagAgreedTermsConditions},
 				Action: func(ctx *cli.Context) error {
 					cmd.up(ctx)
 					return nil
@@ -158,7 +161,41 @@ func (c *command) down() {
 	clio.Success("Disconnected")
 }
 
+func (c *command) handleTOS(ctx *cli.Context) error {
+	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
+		c.acceptTOS(ctx)
+		return nil
+	}
+
+	agreed := config.Current.GetBool(contract.TermsConsumerAgreed)
+	if !agreed {
+		return errors.New("You must agree with consumer terms of use in order to use this command")
+	}
+
+	version := config.Current.GetString(contract.TermsVersion)
+	if version != metadata.CurrentTermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	}
+
+	return nil
+}
+
+func (c *command) acceptTOS(ctx *cli.Context) {
+	t := true
+	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
+		AgreedConsumer: &t,
+		AgreedVersion:  metadata.CurrentTermsVersion,
+	}); err != nil {
+		clio.Info("Failed to save terms of use agreement, you will have to re-agree on next launch")
+	}
+}
+
 func (c *command) up(ctx *cli.Context) {
+	if err := c.handleTOS(ctx); err != nil {
+		clio.PrintTOSError(err)
+		return
+	}
+
 	status, err := c.tequilapi.ConnectionStatus()
 	if err != nil {
 		clio.Warn("Could not get connection status")

@@ -593,6 +593,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
 	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.Exchange, di.PilvytisAPI)
 	tequilapi_endpoints.AddRoutesForPilvytis(router, di.PilvytisAPI)
+	tequilapi_endpoints.AddRoutesForTerms(router)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}

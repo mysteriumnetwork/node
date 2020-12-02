@@ -711,3 +711,14 @@ func (client *Client) OrderCurrencies() ([]string, error) {
 	var res []string
 	return res, parseResponseJSON(resp, &res)
 }
+
+// UpdateTerms takes a TermsRequest and sends it as an update
+// for the terms of use.
+func (client *Client) UpdateTerms(obj contract.TermsRequest) error {
+	resp, err := client.http.Post("terms", obj)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}

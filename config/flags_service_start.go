@@ -34,10 +34,11 @@ var (
 		Usage: "Used to unlock keystore's identity",
 		Value: "",
 	}
+
 	// FlagAgreedTermsConditions agree with terms & conditions.
 	FlagAgreedTermsConditions = cli.BoolFlag{
 		Name:  "agreed-terms-and-conditions",
-		Usage: "Agree with terms & conditions",
+		Usage: "Agree with terms & conditions for consumer, provider or both depending on the command executed",
 	}
 
 	// FlagAccessPolicyList a comma-separated list of access policies that determines allowed identities to use the service.
