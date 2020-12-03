@@ -151,8 +151,9 @@ func NewSettlementDTO(settlement pingpong.SettlementHistoryEntry) SettlementDTO 
 		HermesID:       settlement.HermesID.Hex(),
 		ChannelAddress: settlement.ChannelAddress.Hex(),
 		Beneficiary:    settlement.Beneficiary.Hex(),
-		Amount:         settlement.Amount.Uint64(),
+		Amount:         settlement.Amount,
 		SettledAt:      settlement.Time.Format(time.RFC3339),
+		Fees:           settlement.Fees,
 	}
 }
 
@@ -175,10 +176,13 @@ type SettlementDTO struct {
 	Beneficiary string `json:"beneficiary"`
 
 	// example: 500000
-	Amount uint64 `json:"amount"`
+	Amount *big.Int `json:"amount"`
 
 	// example: 2019-06-06T11:04:43.910035Z
 	SettledAt string `json:"settled_at"`
+
+	// example: 500000
+	Fees *big.Int `json:"fees"`
 }
 
 // SettleRequest represents the request to settle hermes promises
