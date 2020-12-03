@@ -103,7 +103,7 @@ func EventPublished(bus *mocks.EventBus, orderID uint64, status OrderStatus) fun
 		if pop == nil {
 			return false
 		}
-		evt, ok := pop.(AppEventOrderStatusChanged)
+		evt, ok := pop.(AppEventOrderUpdated)
 		return ok && evt.ID == orderID && evt.Status == status
 	}
 }
