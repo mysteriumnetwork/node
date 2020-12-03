@@ -17,10 +17,10 @@
 
 package pilvytis
 
-// AppTopicOrderStatusChanged is an topic when payment order status changes.
-const AppTopicOrderStatusChanged = "order_status_changed"
+// AppTopicOrderUpdated is an topic when the payment order is updated.
+const AppTopicOrderUpdated = "order_updated"
 
-// AppEventOrderStatusChanged is an order status changed event payload.
-type AppEventOrderStatusChanged struct {
+// AppEventOrderUpdated is the event payload for AppTopicOrderUpdated topic.
+type AppEventOrderUpdated struct {
 	OrderSummary
 }
