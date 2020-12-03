@@ -213,11 +213,13 @@ func Test_SettleHistory(t *testing.T) {
 				Time:        time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC),
 				Beneficiary: common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),
 				Amount:      big.NewInt(123),
+				Fees:        big.NewInt(20),
 			},
 			{
 				TxHash: common.HexToHash("0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a"),
 				Time:   time.Date(2020, 6, 7, 8, 9, 10, 0, time.UTC),
 				Amount: big.NewInt(456),
+				Fees:   big.NewInt(50),
 			},
 		}}
 
@@ -246,7 +248,8 @@ func Test_SettleHistory(t *testing.T) {
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary":"0x4443189b9B945dD38e7bfB6167F9909451582EE5",
 						"amount": 123,
-						"settled_at": "2020-01-02T03:04:05Z"
+						"settled_at": "2020-01-02T03:04:05Z",
+						"fees": 20
 					},
 					{
 						"tx_hash": "0x9eea5c4da8a67929d5dd5d8b6dedb3bd44e7bd3ec299f8972f3212db8afb938a",
@@ -255,7 +258,8 @@ func Test_SettleHistory(t *testing.T) {
 						"channel_address": "0x0000000000000000000000000000000000000000",
 						"beneficiary": "0x0000000000000000000000000000000000000000",
 						"amount": 456,
-						"settled_at": "2020-06-07T08:09:10Z"
+						"settled_at": "2020-06-07T08:09:10Z",
+						"fees": 50
 					}
 				],
 				"page": 1,

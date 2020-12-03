@@ -2943,6 +2943,11 @@
       "type": "object",
       "title": "PaymentChannelDTO represents represents opened payment channel between identity and hermes.",
       "properties": {
+        "beneficiary": {
+          "description": "Beneficiary - eth wallet address",
+          "type": "string",
+          "x-go-name": "Beneficiary"
+        },
         "earnings": {
           "$ref": "#/definitions/Int"
         },
@@ -3589,10 +3594,7 @@
       "title": "SettlementDTO represents the settlement object.",
       "properties": {
         "amount": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "Amount",
-          "example": 500000
+          "$ref": "#/definitions/Int"
         },
         "beneficiary": {
           "type": "string",
@@ -3603,6 +3605,9 @@
           "type": "string",
           "x-go-name": "ChannelAddress",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "fees": {
+          "$ref": "#/definitions/Int"
         },
         "hermes_id": {
           "type": "string",
