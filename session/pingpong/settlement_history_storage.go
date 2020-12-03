@@ -53,6 +53,7 @@ type SettlementHistoryEntry struct {
 	Beneficiary    common.Address
 	Amount         *big.Int
 	TotalSettled   *big.Int
+	Fees           *big.Int
 }
 
 const settlementHistoryBucket = "settlement-history"

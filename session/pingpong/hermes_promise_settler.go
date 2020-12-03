@@ -442,6 +442,7 @@ func (aps *hermesPromiseSettler) settle(
 				Promise:        promise,
 				Beneficiary:    beneficiary,
 				Amount:         info.AmountSentToBeneficiary,
+				Fees:           info.Fees,
 				TotalSettled:   ch.channel.Settled,
 			}
 
