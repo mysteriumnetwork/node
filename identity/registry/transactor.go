@@ -409,11 +409,12 @@ type SettleWithBeneficiaryRequest struct {
 	Signature   string   `json:"signature"`
 	ProviderID  string   `json:"providerID"`
 	ChainID     int64    `json:"chainID"`
+	Registry    string   `json:"registry"`
 }
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
 func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, promise pc.Promise) error {
-	signedReq, err := t.fillSetBeneficiaryRequest(promise.ChainID, id, beneficiary)
+	signedReq, err := t.fillSetBeneficiaryRequest(promise.ChainID, id, beneficiary, t.registryAddress)
 	if err != nil {
 		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
 	}
@@ -426,12 +427,15 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 			TransactorFee: promise.Fee,
 			Preimage:      hex.EncodeToString(promise.R),
 			Signature:     hex.EncodeToString(promise.Signature),
+			ChainID:       promise.ChainID,
+			ProviderID:    id,
 		},
 		Beneficiary: signedReq.Beneficiary,
 		Nonce:       signedReq.Nonce,
 		Signature:   signedReq.Signature,
 		ProviderID:  id,
 		ChainID:     promise.ChainID,
+		Registry:    t.registryAddress,
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
@@ -442,7 +446,7 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
+func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary, registry string) (pc.SetBeneficiaryRequest, error) {
 	ch, err := t.bc.GetProviderChannel(chainID, common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
 	if err != nil {
 		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
@@ -450,6 +454,7 @@ func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary st
 
 	regReq := pc.SetBeneficiaryRequest{
 		ChainID:     chainID,
+		Registry:    registry,
 		Beneficiary: strings.ToLower(beneficiary),
 		Identity:    id,
 		Nonce:       new(big.Int).Add(ch.LastUsedNonce, big.NewInt(1)),
