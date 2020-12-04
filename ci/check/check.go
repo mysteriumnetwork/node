@@ -100,7 +100,7 @@ func CheckDNSMaps() error {
 
 	}
 
-	if len(ipMissmatches) >= 0 {
+	if len(ipMissmatches) > 0 {
 		for _, v := range ipMissmatches {
 			fmt.Println(v)
 		}
