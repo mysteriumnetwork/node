@@ -122,7 +122,7 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
 
   hermes:
-    image: mysteriumnetwork/hermes:0.6.0
+    image: mysteriumnetwork/hermes:0.6.1
     environment:
       PORT: 8889
     expose:
@@ -152,7 +152,7 @@ services:
       - ./e2e/blockchain/keystore:/keystore
 
   hermes2:
-    image: mysteriumnetwork/hermes:0.6.0
+    image: mysteriumnetwork/hermes:0.6.1
     environment:
       PORT: 8889
     expose:

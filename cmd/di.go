@@ -456,6 +456,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.BCHelper,
 	)
 
+	hermesURL, err := di.HermesURLGetter.GetHermesURL(common.HexToAddress(nodeOptions.Hermes.HermesID))
+	if err != nil {
+		return err
+	}
+
+	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
@@ -470,12 +477,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		nodeOptions.Transactor.RegistryAddress,
 	)
 
-	hermesURL, err := di.HermesURLGetter.GetHermesURL(common.HexToAddress(nodeOptions.Hermes.HermesID))
-	if err != nil {
-		return err
-	}
-
-	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
 		common.HexToAddress(nodeOptions.Payments.MystSCAddress),

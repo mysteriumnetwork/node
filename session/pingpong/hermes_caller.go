@@ -145,6 +145,26 @@ func (ac *HermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error
 	}, boff)
 }
 
+// SetPromiseFeeRequest represents the payload for changing a promise fee.
+type SetPromiseFeeRequest struct {
+	HermesPromise crypto.Promise `json:"hermes_promise"`
+	NewFee        *big.Int       `json:"new_fee"`
+}
+
+// UpdatePromiseFee calls hermes to update its promise with new fee.
+func (ac *HermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error) {
+	req, err := requests.NewPostRequest(ac.hermesBaseURI, "change_promise_fee", SetPromiseFeeRequest{
+		HermesPromise: promise,
+		NewFee:        newFee,
+	})
+	if err != nil {
+		return crypto.Promise{}, fmt.Errorf("could not form change promise fee request: %w", err)
+	}
+
+	res := crypto.Promise{}
+	return res, ac.doRequest(req, &res)
+}
+
 // RevealObject represents the reveal request object.
 type RevealObject struct {
 	R           string
