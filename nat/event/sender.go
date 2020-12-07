@@ -18,8 +18,6 @@
 package event
 
 import (
-	"fmt"
-
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
