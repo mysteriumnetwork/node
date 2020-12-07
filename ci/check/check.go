@@ -35,7 +35,7 @@ import (
 func Check() {
 	mg.Deps(CheckGenerate)
 	mg.Deps(CheckSwagger)
-	mg.Deps(CheckGoImports, CheckGoLint, CheckGoVet, CheckCopyright)
+	mg.Deps(CheckGoImports, CheckDNSMaps, CheckGoLint, CheckGoVet, CheckCopyright)
 }
 
 // CheckCopyright checks for copyright headers in files.
