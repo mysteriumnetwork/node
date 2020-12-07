@@ -708,8 +708,8 @@ github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N
 github.com/mysteriumnetwork/go-wondershaper v1.0.1/go.mod h1:pWWNkO73g3vPSVb+6O+GzjG8lqv4ByNHR6thSG7WmtY=
 github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e h1:r8M+wZRiCNEX9KX2GugOiAzomEYcoOhq+F/dEgqc/Jo=
 github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e/go.mod h1:izNxG4qVO/POwdPoBfECCvgl4YHRrL6VKopeqj3gNew=
-github.com/mysteriumnetwork/metrics v0.0.5-0.20201207043926-66f57245b519 h1:n/7cDGNx49WbqMHN5dkX568xEj2MQ4yXNqImOMfXYws=
-github.com/mysteriumnetwork/metrics v0.0.5-0.20201207043926-66f57245b519/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
+github.com/mysteriumnetwork/metrics v0.0.5 h1:mVeq0IPqN0tea3v9a4mGRKEXYBV2rdixCiAIuWzZhzA=
+github.com/mysteriumnetwork/metrics v0.0.5/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v0.0.14-0.20201207082756-32a074b1cc0b h1:KUPsrC3Yv3aPI9EbWf4yisoXN0NpHEqHLRDXSR+jIxY=
 github.com/mysteriumnetwork/payments v0.0.14-0.20201207082756-32a074b1cc0b/go.mod h1:MCMOdwUZuk+GXNfnNVCSNXXQF3ioix5895msg1NIbmE=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=
