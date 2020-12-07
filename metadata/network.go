@@ -83,7 +83,7 @@ var Testnet2Definition = NetworkDefinition{
 		"testnet2-trust.mysterium.network":      {"95.216.204.232"},
 		"testnet2-broker.mysterium.network":     {"95.216.204.232"},
 		"testnet2-transactor.mysterium.network": {"135.181.82.67"},
-		"testnet2.mysterium.network":            {"138.201.244.63"},
+		"testnet2.mysterium.network":            {"138.201.174.94"},
 	},
 	DefaultChainID: 5,
 }
