@@ -44,7 +44,8 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	}
 	ks := identity.NewMockKeystore()
 
-	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	fac := &mockHermesCallerFactory{}
+	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 	settler.currentState[mockID] = settlementState{}
 
 	// check if existing gets skipped
@@ -103,7 +104,9 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 		},
 	}
 	ks := identity.NewMockKeystore()
-	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	fac := &mockHermesCallerFactory{}
+
+	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
@@ -138,7 +141,9 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 		},
 	}
 	ks := identity.NewMockKeystore()
-	settler := NewHermesPromiseSettler(&mockTransactor{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	fac := &mockHermesCallerFactory{}
+
+	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
@@ -220,7 +225,8 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 		},
 	}
 
-	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	fac := &mockHermesCallerFactory{}
+	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	settler.handleNodeStart()
 
@@ -360,7 +366,7 @@ type mockTransactor struct {
 	statusError    error
 }
 
-func (mt *mockTransactor) FetchSettleFees() (registry.FeesResponse, error) {
+func (mt *mockTransactor) FetchSettleFees(chainID int64) (registry.FeesResponse, error) {
 	return mt.feesToReturn, mt.feesError
 }
 

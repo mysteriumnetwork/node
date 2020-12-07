@@ -51,6 +51,7 @@ type feeProvider interface {
 type HermesHTTPRequester interface {
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
+	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
 }
 
 type encryption interface {

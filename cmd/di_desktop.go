@@ -199,6 +199,10 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 
 	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesURLGetter,
 		di.HermesChannelRepository,
 		di.BCHelper,
 		di.IdentityRegistry,

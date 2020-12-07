@@ -77,7 +77,7 @@ type FeesResponse struct {
 
 // IsValid returns false if the fee has already expired and should be re-requested
 func (fr FeesResponse) IsValid() bool {
-	return time.Now().After(fr.ValidUntil)
+	return time.Now().UTC().Before(fr.ValidUntil.UTC())
 }
 
 // IdentityRegistrationRequest represents the identity registration request body

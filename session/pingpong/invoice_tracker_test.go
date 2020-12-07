@@ -67,6 +67,10 @@ func (mac *mockHermesCaller) RevealR(r string, provider string, agreementID *big
 	return mac.errToReturn
 }
 
+func (mac *mockHermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error) {
+	return promise, nil
+}
+
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
