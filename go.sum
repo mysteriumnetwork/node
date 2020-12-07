@@ -700,10 +700,6 @@ github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c h1:8LI4spVF
 github.com/mysteriumnetwork/go-ci v0.0.0-20200121125840-b99aac3d815c/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
 github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4 h1:t18FszkN3GHd3lE95/5I6YlrvhiQCdWP58JOeVfhi1E=
 github.com/mysteriumnetwork/go-ci v0.0.0-20200415074834-39fc864b0ed4/go.mod h1:GlJmsQDFyRmV9psEs/Mt/humLALu8xmZ7blXQ6Rc9Rs=
-github.com/mysteriumnetwork/go-dvpn-web v0.1.9 h1:D8XnCVxvHx52S05KakAOaA8IpKdXfYGTcRT4rroSPW8=
-github.com/mysteriumnetwork/go-dvpn-web v0.1.9/go.mod h1:UzedvEQ35xwJRKE7oMSnwxQU1xAhLh4XCqTnT/0Yi6c=
-github.com/mysteriumnetwork/go-dvpn-web v0.1.10 h1:hbo8WzFNi58RL0dM1CNuhnmGj6f4U2BdMkWjOgQP6aE=
-github.com/mysteriumnetwork/go-dvpn-web v0.1.10/go.mod h1:UzedvEQ35xwJRKE7oMSnwxQU1xAhLh4XCqTnT/0Yi6c=
 github.com/mysteriumnetwork/go-dvpn-web v0.1.11 h1:3RmiZOsl03Iw/wnLqW/onhvQEQd62ltv7fSoWSLW9SU=
 github.com/mysteriumnetwork/go-dvpn-web v0.1.11/go.mod h1:UzedvEQ35xwJRKE7oMSnwxQU1xAhLh4XCqTnT/0Yi6c=
 github.com/mysteriumnetwork/go-openvpn v0.0.23 h1:6BKoTwU9CpJL/Na9M9a0uaelAaVIo/XZPDpElfzFjxM=
@@ -712,10 +708,8 @@ github.com/mysteriumnetwork/go-wondershaper v1.0.1 h1:vHfeQ5siADk7AOlbEBe6FLRu8N
 github.com/mysteriumnetwork/go-wondershaper v1.0.1/go.mod h1:pWWNkO73g3vPSVb+6O+GzjG8lqv4ByNHR6thSG7WmtY=
 github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e h1:r8M+wZRiCNEX9KX2GugOiAzomEYcoOhq+F/dEgqc/Jo=
 github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e/go.mod h1:izNxG4qVO/POwdPoBfECCvgl4YHRrL6VKopeqj3gNew=
-github.com/mysteriumnetwork/metrics v0.0.5-0.20201026112405-be03dbdf8962 h1:TZ7JeOLdfTz2zrWxrBdURloKPL6CXpPSq/ArpV2Ejo0=
-github.com/mysteriumnetwork/metrics v0.0.5-0.20201026112405-be03dbdf8962/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
-github.com/mysteriumnetwork/payments v0.0.14-0.20201104103245-25c66ae989dd h1:ga3LbYurPGCQNjJN2/G+kVhnKl59URltNvurvdtRh4g=
-github.com/mysteriumnetwork/payments v0.0.14-0.20201104103245-25c66ae989dd/go.mod h1:MCMOdwUZuk+GXNfnNVCSNXXQF3ioix5895msg1NIbmE=
+github.com/mysteriumnetwork/metrics v0.0.5 h1:mVeq0IPqN0tea3v9a4mGRKEXYBV2rdixCiAIuWzZhzA=
+github.com/mysteriumnetwork/metrics v0.0.5/go.mod h1:QQHdm9M0p42hESbtM0dxyeooH66QTGtXAArz8qsi4Ds=
 github.com/mysteriumnetwork/payments v0.0.14-0.20201207082756-32a074b1cc0b h1:KUPsrC3Yv3aPI9EbWf4yisoXN0NpHEqHLRDXSR+jIxY=
 github.com/mysteriumnetwork/payments v0.0.14-0.20201207082756-32a074b1cc0b/go.mod h1:MCMOdwUZuk+GXNfnNVCSNXXQF3ioix5895msg1NIbmE=
 github.com/naoina/go-stringutil v0.1.0/go.mod h1:XJ2SJL9jCtBh+P9q5btrd/Ylo8XwT/h1USek5+NqSA0=

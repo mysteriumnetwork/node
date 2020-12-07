@@ -50,7 +50,7 @@ var (
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
-	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumerPeer(ctx context.Context, id string, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	BindServicePort(key string, port int)
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
@@ -109,7 +109,7 @@ func (p *Pinger) Stop() {
 // PingConsumerPeer pings remote peer with a defined configuration
 // and notifies peer which connections will be used.
 // It returns n connections if possible or error.
-func (p *Pinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
+func (p *Pinger) PingConsumerPeer(ctx context.Context, id string, ip string, localPorts, remotePorts []int, initialTTL int, n int) ([]*net.UDPConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.pingConfig.Timeout)
 	defer cancel()
 
@@ -153,11 +153,12 @@ func (p *Pinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, re
 	for {
 		select {
 		case <-ctx.Done():
+			p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, ctx.Err()))
 			return nil, fmt.Errorf("ping failed: %w", ctx.Err())
 		case ping := <-pingsCh:
 			pings = append(pings, ping)
 			if len(pings) == n {
-				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
+				p.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, StageName))
 				return sortedConns(pings), nil
 			}
 		}

@@ -169,7 +169,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 			traceDial := config.tracer.StartStage("Provider P2P dial (pinger)")
 			log.Debug().Msgf("Pinging consumer with IP %s using ports %v:%v initial ttl: %v",
 				config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL)
-			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
+			conns, err := m.providerPinger.PingConsumerPeer(context.Background(), providerID.Address, config.peerIP(), config.localPorts, config.peerPorts, providerInitialTTL, requiredConnCount)
 			if err != nil {
 				log.Err(err).Msg("Could not ping peer")
 				return
@@ -219,7 +219,7 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 	}, nil
 }
 
-func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
+func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg *nats_lib.Msg, outboundIP string) error {
 	tracer := trace.NewTracer("Provider whole Connect")
 
 	trace := tracer.StartStage("Provider P2P exchange")
@@ -245,7 +245,7 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 	}
 	log.Debug().Msgf("Received consumer public key %s", peerPubKey.Hex())
 
-	publicIP, localPorts, portsRelease, err := m.prepareLocalPorts(outboundIP, tracer)
+	publicIP, localPorts, portsRelease, err := m.prepareLocalPorts(providerID.Address, outboundIP, tracer)
 	if err != nil {
 		return fmt.Errorf("could not prepare ports: %w", err)
 	}
@@ -275,7 +275,7 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 		ConfigCiphertext: configCiphertext,
 	}
 	log.Debug().Msgf("Sending reply with public key %s and encrypted config to consumer", exchangeMsg.PublicKey)
-	packedMsg, err := packSignedMsg(m.signer, signerID, &exchangeMsg)
+	packedMsg, err := packSignedMsg(m.signer, providerID, &exchangeMsg)
 	if err != nil {
 		return fmt.Errorf("could not pack signed message: %v", err)
 	}
@@ -290,7 +290,7 @@ func (m *listener) providerStartConfigExchange(signerID identity.Identity, msg *
 // required ports count for actual p2p and service connections and fallback to
 // acquiring extra ports for nat pinger if provider is behind nat, port mapping failed
 // and no manual port forwarding is enabled.
-func (m *listener) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (string, []int, []func(), error) {
+func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer) (string, []int, []func(), error) {
 	trace := tracer.StartStage("Provider P2P exchange (ports)")
 	defer tracer.EndStage(trace)
 
@@ -315,7 +315,7 @@ func (m *listener) prepareLocalPorts(outboundIP string, tracer *trace.Tracer) (s
 	var portMappingOk bool
 	var portRelease func()
 	for _, p := range localPorts {
-		portRelease, portMappingOk = m.portMapper.Map("UDP", p, "Myst node p2p port mapping")
+		portRelease, portMappingOk = m.portMapper.Map(id, "UDP", p, "Myst node p2p port mapping")
 		if !portMappingOk {
 			break
 		}

@@ -135,7 +135,7 @@ type mockProviderNATPinger struct {
 	conns []*net.UDPConn
 }
 
-func (m *mockProviderNATPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (m *mockProviderNATPinger) PingConsumerPeer(ctx context.Context, id, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return m.conns, nil
 }
 
@@ -151,6 +151,6 @@ type mockPortMapper struct {
 	enabled bool
 }
 
-func (m mockPortMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
+func (m mockPortMapper) Map(id, protocol string, port int, name string) (release func(), ok bool) {
 	return func() {}, m.enabled
 }
