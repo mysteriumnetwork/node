@@ -91,6 +91,7 @@ type appInfo struct {
 }
 
 type natMappingContext struct {
+	ID           string              `json:"id"`
 	Stage        string              `json:"stage"`
 	Successful   bool                `json:"successful"`
 	ErrorMessage *string             `json:"error_message"`
@@ -307,8 +308,9 @@ func (sender *Sender) sendTraceEvent(stage trace.Event) {
 }
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
-func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) {
+func (sender *Sender) SendNATMappingSuccessEvent(id, stage string, gateways []map[string]string) {
 	sender.sendEvent(natMappingEventName, natMappingContext{
+		ID:         id,
 		Stage:      stage,
 		Successful: true,
 		Gateways:   gateways,
@@ -316,9 +318,10 @@ func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[st
 }
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
-func (sender *Sender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) {
+func (sender *Sender) SendNATMappingFailEvent(id, stage string, gateways []map[string]string, err error) {
 	errorMessage := err.Error()
 	sender.sendEvent(natMappingEventName, natMappingContext{
+		ID:           id,
 		Stage:        stage,
 		Successful:   false,
 		ErrorMessage: &errorMessage,

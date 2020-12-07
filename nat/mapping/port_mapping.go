@@ -52,7 +52,7 @@ type PortMapper interface {
 	// Map maps port for given protocol. It returns release func which
 	// must be called when port no longer needed and ok which is true if
 	// port mapping was successful.
-	Map(protocol string, port int, name string) (release func(), ok bool)
+	Map(id, protocol string, port int, name string) (release func(), ok bool)
 }
 
 // NewPortMapper returns port mapper instance.
@@ -68,11 +68,11 @@ type portMapper struct {
 	publisher eventbus.Publisher
 }
 
-func (p *portMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
+func (p *portMapper) Map(id, protocol string, port int, name string) (release func(), ok bool) {
 	if !p.routerIPPublic() {
 		err := errors.New("failed to find router public IP")
 		log.Info().Err(err).Msg("Port mapping is useless, skipping it.")
-		p.notify(err)
+		p.notify(id, err)
 
 		return nil, false
 	}
@@ -80,7 +80,7 @@ func (p *portMapper) Map(protocol string, port int, name string) (release func()
 	// Try add mapping first to determine if it is supported and
 	// if permanent lease only is supported.
 	permanent, err := p.addMapping(protocol, port, port, name)
-	p.notify(err)
+	p.notify(id, err)
 	if err != nil {
 		return nil, false
 	}
@@ -98,7 +98,7 @@ func (p *portMapper) Map(protocol string, port int, name string) (release func()
 				return
 			case <-time.After(p.config.MapUpdateInterval):
 				_, err := p.addMapping(protocol, port, port, name)
-				p.notify(err)
+				p.notify(id, err)
 			}
 		}
 	}()
@@ -128,11 +128,11 @@ func (p *portMapper) routerIPPublic() bool {
 	return true
 }
 
-func (p *portMapper) notify(err error) {
+func (p *portMapper) notify(id string, err error) {
 	if err != nil {
-		p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, err))
+		p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, err))
 	} else {
-		p.publisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(StageName))
+		p.publisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, StageName))
 	}
 }
 

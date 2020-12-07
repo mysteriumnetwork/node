@@ -34,13 +34,13 @@ type Tracker struct {
 }
 
 // BuildSuccessfulEvent returns new event for successful NAT traversal
-func BuildSuccessfulEvent(stage string) Event {
-	return Event{Stage: stage, Successful: true}
+func BuildSuccessfulEvent(id, stage string) Event {
+	return Event{ID: id, Stage: stage, Successful: true}
 }
 
 // BuildFailureEvent returns new event for failed NAT traversal
-func BuildFailureEvent(stage string, err error) Event {
-	return Event{Stage: stage, Successful: false, Error: err}
+func BuildFailureEvent(id, stage string, err error) Event {
+	return Event{ID: id, Stage: stage, Successful: false, Error: err}
 }
 
 // NewTracker returns a new instance of event tracker
@@ -82,6 +82,7 @@ func (et *Tracker) WaitForEvent() Event {
 
 // Event represents a NAT traversal related event
 type Event struct {
+	ID         string `json:"id"`
 	Stage      string `json:"stage"`
 	Successful bool   `json:"successful"`
 	Error      error  `json:"error,omitempty"`

@@ -36,8 +36,8 @@ type noopPortMapper struct {
 	publisher eventbus.Publisher
 }
 
-func (p *noopPortMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
-	p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(StageName, errors.New("noop mapping")))
+func (p *noopPortMapper) Map(id, protocol string, port int, name string) (release func(), ok bool) {
+	p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, errors.New("noop mapping")))
 	log.Debug().Msgf("Noop port mapping requested: %d", port)
 
 	return func() {

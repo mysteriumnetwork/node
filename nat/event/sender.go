@@ -18,6 +18,8 @@
 package event
 
 import (
+	"fmt"
+
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
@@ -32,8 +34,8 @@ type Sender struct {
 }
 
 type metricsSender interface {
-	SendNATMappingSuccessEvent(stage string, gateways []map[string]string)
-	SendNATMappingFailEvent(stage string, gateways []map[string]string, err error)
+	SendNATMappingSuccessEvent(id, stage string, gateways []map[string]string)
+	SendNATMappingFailEvent(id, stage string, gateways []map[string]string, err error)
 }
 
 type ipResolver func() (string, error)
@@ -60,6 +62,7 @@ func (es *Sender) consumeNATEvent(event Event) {
 		log.Warn().Err(err).Msg("Resolving public IP failed")
 		return
 	}
+
 	if publicIP == es.lastIp && es.matchesLastEvent(event) {
 		return
 	}
@@ -72,9 +75,9 @@ func (es *Sender) consumeNATEvent(event Event) {
 
 func (es *Sender) sendNATEvent(event Event) {
 	if event.Successful {
-		es.metricsSender.SendNATMappingSuccessEvent(event.Stage, es.gatewayLoader())
+		es.metricsSender.SendNATMappingSuccessEvent(event.ID, event.Stage, es.gatewayLoader())
 	} else {
-		es.metricsSender.SendNATMappingFailEvent(event.Stage, es.gatewayLoader(), event.Error)
+		es.metricsSender.SendNATMappingFailEvent(event.ID, event.Stage, es.gatewayLoader(), event.Error)
 	}
 }
 
