@@ -18,12 +18,14 @@
 package quality
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/market"
 )
+
+var errEventNotImplemented = errors.New("event not implemented")
 
 // NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA
 func NewMORQATransport(morqaClient *MysteriumMORQA) *morqaTransport {
@@ -41,7 +43,7 @@ func (transport *morqaTransport) SendEvent(event Event) error {
 		return transport.morqaClient.SendMetric(id, metric)
 	}
 
-	return fmt.Errorf("event not implemented")
+	return errEventNotImplemented
 }
 
 func mapEventToMetric(event Event) (string, *metrics.Event) {
@@ -60,9 +62,34 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 		return traceEventToMetricsEvent(event.Context.(sessionTraceContext), event.Application)
 	case registerIdentity:
 		return identityRegistrationEvent(event.Context.(registrationEvent), event.Application)
+	case natMappingEventName:
+		return natMappingEvent(event.Context.(natMappingContext), event.Application)
 	}
 
 	return "", nil
+}
+
+func natMappingEvent(context natMappingContext, info appInfo) (string, *metrics.Event) {
+	var errMsg string
+	if context.ErrorMessage != nil {
+		errMsg = *context.ErrorMessage
+	}
+
+	return context.ID, &metrics.Event{
+		IsProvider: true,
+		Metric: &metrics.Event_NatMappingPayload{
+			NatMappingPayload: &metrics.NatMappingPayload{
+				Stage:      context.Stage,
+				Successful: context.Successful,
+				Err:        errMsg,
+				Version: &metrics.VersionPayload{
+					Version: info.Version,
+					Os:      info.OS,
+					Arch:    info.Arch,
+				},
+			},
+		},
+	}
 }
 
 func identityRegistrationEvent(data registrationEvent, info appInfo) (string, *metrics.Event) {
@@ -153,6 +180,7 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 
 func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (string, *metrics.Event) {
 	location := ctx.ServiceDefinition.GetLocation()
+
 	return ctx.ProviderID, &metrics.Event{
 		IsProvider: true,
 		Metric: &metrics.Event_ProposalPayload{
