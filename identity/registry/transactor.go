@@ -41,6 +41,7 @@ const AppTopicTransactorRegistration = "transactor_identity_registration"
 
 type channelProvider interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetLastRegistryNonce(chainID int64, registry common.Address) (*big.Int, error)
 }
 
 // Transactor allows for convenient calls to the transactor service
@@ -447,9 +448,9 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 }
 
 func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary, registry string) (pc.SetBeneficiaryRequest, error) {
-	ch, err := t.bc.GetProviderChannel(chainID, common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
+	nonce, err := t.bc.GetLastRegistryNonce(chainID, common.HexToAddress(registry))
 	if err != nil {
-		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get last registry nonce: %w", err)
 	}
 
 	regReq := pc.SetBeneficiaryRequest{
@@ -457,7 +458,7 @@ func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary, r
 		Registry:    registry,
 		Beneficiary: strings.ToLower(beneficiary),
 		Identity:    id,
-		Nonce:       new(big.Int).Add(ch.LastUsedNonce, big.NewInt(1)),
+		Nonce:       new(big.Int).Add(nonce, big.NewInt(1)),
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
