@@ -27,7 +27,7 @@ import (
 
 var errEventNotImplemented = errors.New("event not implemented")
 
-// NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA
+// NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA.
 func NewMORQATransport(morqaClient *MysteriumMORQA) *morqaTransport {
 	return &morqaTransport{
 		morqaClient: morqaClient,
@@ -64,9 +64,32 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 		return identityRegistrationEvent(event.Context.(registrationEvent), event.Application)
 	case natMappingEventName:
 		return natMappingEvent(event.Context.(natMappingContext), event.Application)
+	case connectionEvent:
+		return connectionEventToMetricsEvent(event.Context.(ConnectionEvent), event.Application)
 	}
 
 	return "", nil
+}
+
+func connectionEventToMetricsEvent(context ConnectionEvent, info appInfo) (string, *metrics.Event) {
+	return context.ConsumerID, &metrics.Event{
+		IsProvider: false,
+		Metric: &metrics.Event_ConnectionEvent{
+			ConnectionEvent: &metrics.ConnectionEvent{
+				ServiceType: context.ServiceType,
+				ProviderId:  context.ProviderID,
+				ConsumerId:  context.ConsumerID,
+				HermesId:    context.HermesID,
+				Stage:       context.Stage,
+				Error:       context.Error,
+				Version: &metrics.VersionPayload{
+					Version: info.Version,
+					Os:      info.OS,
+					Arch:    info.Arch,
+				},
+			},
+		},
+	}
 }
 
 func natMappingEvent(context natMappingContext, info appInfo) (string, *metrics.Event) {

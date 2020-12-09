@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -166,6 +167,17 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 		errs.ForField("provider_id").Required()
 	}
 	return errs
+}
+
+func (cr ConnectionCreateRequest) Event(stage string, errMsg string) quality.ConnectionEvent {
+	return quality.ConnectionEvent{
+		ServiceType: cr.ServiceType,
+		ProviderID:  cr.ProviderID,
+		ConsumerID:  cr.ConsumerID,
+		HermesID:    cr.HermesID,
+		Error:       errMsg,
+		Stage:       stage,
+	}
 }
 
 // ConnectOptions holds tequilapi connect options
