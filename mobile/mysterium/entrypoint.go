@@ -674,6 +674,7 @@ type OrderResponse struct {
 	PayCurrency     *string  `json:"pay_currency,omitempty"`
 	PayAmount       *float64 `json:"pay_amount,omitempty"`
 	PaymentAddress  string   `json:"payment_address"`
+	PaymentURL      string   `json:"payment_url"`
 }
 
 func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
@@ -689,6 +690,7 @@ func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
 		PayCurrency:     order.PayCurrency,
 		PayAmount:       order.PayAmount,
 		PaymentAddress:  order.PaymentAddress,
+		PaymentURL:      order.PaymentURL,
 	}
 	return response, nil
 }
