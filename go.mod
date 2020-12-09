@@ -22,9 +22,12 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-gonic/gin v1.4.0
-	github.com/go-openapi/strfmt v0.19.3
+	github.com/go-openapi/strfmt v0.19.11
+	github.com/go-openapi/validate v0.20.0 // indirect
+	github.com/go-swagger/go-swagger v0.25.0 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/protobuf v1.4.2
+	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/gateway v1.0.6
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
@@ -34,11 +37,12 @@ require (
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/klauspost/pgzip v1.2.4 // indirect
 	github.com/koron/go-ssdp v0.0.2
-	github.com/kr/pretty v0.2.0 // indirect
+	github.com/kr/pretty v0.2.1 // indirect
 	github.com/lib/pq v1.7.0 // indirect
 	github.com/libp2p/go-libp2p v0.5.2
 	github.com/libp2p/go-libp2p-core v0.3.0
 	github.com/magefile/mage v1.10.0
+	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
@@ -57,16 +61,19 @@ require (
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
 	github.com/oschwald/geoip2-golang v1.1.0
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
+	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/zerolog v1.17.2
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
 	github.com/songgao/water v0.0.0-20190112225332-f6122f5b2fbd
-	github.com/spf13/cast v1.3.0
+	github.com/spf13/afero v1.5.0 // indirect
+	github.com/spf13/cast v1.3.1
+	github.com/spf13/viper v1.7.1 // indirect
 	github.com/status-im/keycard-go v0.0.0-20191114114615-9d48af884d5b // indirect
-	github.com/stretchr/testify v1.4.1-0.20200130210847-518a1491c713
+	github.com/stretchr/testify v1.6.1
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/vcraescu/go-paginator v0.0.0-20200304054438-86d84f27c0b3
@@ -74,12 +81,16 @@ require (
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xtaci/kcp-go/v5 v5.5.8
 	go.etcd.io/bbolt v1.3.4
-	go.mongodb.org/mongo-driver v1.1.1
+	go.mongodb.org/mongo-driver v1.4.4
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/net v0.0.0-20200904194848-62affa334b73
-	golang.org/x/sys v0.0.0-20200824131525-c12d262b63d8
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
+	golang.org/x/mod v0.4.0 // indirect
+	golang.org/x/net v0.0.0-20201207224615-747e23833adb
+	golang.org/x/sys v0.0.0-20201207223542-d4d67f95c62d
+	golang.org/x/tools v0.0.0-20201208233053-a543418bbed2 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/protobuf v1.25.0
+	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 )
