@@ -155,7 +155,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	cr, err := toConnectionRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stagePraseRequest, err.Error()))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(stagePraseRequest, err.Error()))
 		return
 	}
 
