@@ -25,23 +25,55 @@ import (
 )
 
 func Test_uploadURL(t *testing.T) {
-	// given
-	repositoryURL, _ := url.Parse("https://api.bintray.com/content/mysteriumnetwork/maven")
-	r := releaseOpts{groupId: "network.mysterium", artifactId: "mobile-node", version: "0.10.0"}
-	b := bintrayOpts{repositoryURL: repositoryURL}
-	// when
-	result := uploadURL(r, b, "build/package/Mysterium.aar")
-	// then
-	assert.Equal(t, "https://api.bintray.com/content/mysteriumnetwork/maven/network/mysterium/mobile-node/0.10.0/mobile-node-0.10.0.aar", result.String())
-}
-
-func Test_publishURL(t *testing.T) {
-	// given
-	repositoryURL, _ := url.Parse("https://api.bintray.com/content/mysteriumnetwork/maven")
-	r := releaseOpts{groupId: "network.mysterium", artifactId: "mobile-node", version: "0.10.0"}
-	b := bintrayOpts{repositoryURL: repositoryURL}
-	// when
-	result := publishURL(r, b)
-	// then
-	assert.Equal(t, "https://api.bintray.com/content/mysteriumnetwork/maven/network.mysterium:mobile-node/0.10.0/publish", result.String())
+	tests := []struct {
+		name              string
+		file              string
+		releaseOpts       releaseOpts
+		repositoryURL     string
+		expectedUploadURL string
+	}{
+		{
+			name: "artifact",
+			file: "build/package/Mysterium.aar",
+			releaseOpts: releaseOpts{
+				groupId:    "network.mysterium",
+				artifactId: "mobile-node",
+				version:    "0.40.4-pre",
+			},
+			repositoryURL:     "https://maven.mysterium.network/releases",
+			expectedUploadURL: "https://maven.mysterium.network/releases/network/mysterium/mobile-node/0.40.4-pre/mobile-node-0.40.4-pre.aar",
+		},
+		{
+			name: "pom artifact",
+			file: "build/package/mvn.pom",
+			releaseOpts: releaseOpts{
+				groupId:    "network.mysterium",
+				artifactId: "mobile-node",
+				version:    "0.40.4-pre",
+			},
+			repositoryURL:     "https://maven.mysterium.network/releases",
+			expectedUploadURL: "https://maven.mysterium.network/releases/network/mysterium/mobile-node/0.40.4-pre/mobile-node-0.40.4-pre.pom",
+		},
+		{
+			name: "snapshot artifact",
+			file: "build/package/Mysterium.aar",
+			releaseOpts: releaseOpts{
+				groupId:    "network.mysterium",
+				artifactId: "mobile-node",
+				version:    "0.40.4-11111",
+			},
+			repositoryURL:     "https://maven.mysterium.network/snapshots",
+			expectedUploadURL: "https://maven.mysterium.network/snapshots/network/mysterium/mobile-node/0.40.4-11111/mobile-node-0.40.4-11111.aar",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// given
+			repositoryURL, _ := url.Parse(test.repositoryURL)
+			// when
+			result := uploadURL(test.releaseOpts, repositoryOpts{repositoryURL: repositoryURL}, test.file)
+			// then
+			assert.Equal(t, test.expectedUploadURL, result.String())
+		})
+	}
 }
