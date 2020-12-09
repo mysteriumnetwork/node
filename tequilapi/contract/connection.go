@@ -157,7 +157,7 @@ type ConnectionCreateRequest struct {
 	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
 }
 
-// Validate validates fields in request
+// Validate validates fields in request.
 func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
@@ -169,6 +169,7 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	return errs
 }
 
+// Event creates a quality connection event to be send as a quality metric.
 func (cr ConnectionCreateRequest) Event(stage string, errMsg string) quality.ConnectionEvent {
 	return quality.ConnectionEvent{
 		ServiceType: cr.ServiceType,
