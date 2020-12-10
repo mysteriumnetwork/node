@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -67,8 +68,8 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 		}, {
 			name:              "Provider behind NAT with manual port forwarding and noop pinger",
 			ipResolver:        ip.NewResolverMockMultiple("127.0.0.1", "1.1.1.1"),
-			natProviderPinger: traversal.NewNoopPinger(),
-			natConsumerPinger: traversal.NewNoopPinger(),
+			natProviderPinger: traversal.NewNoopPinger(eventbus.New()),
+			natConsumerPinger: traversal.NewNoopPinger(eventbus.New()),
 			portMapper:        &mockPortMapper{enabled: false},
 		},
 	}
