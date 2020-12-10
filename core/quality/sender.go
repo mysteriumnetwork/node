@@ -40,6 +40,7 @@ import (
 
 const (
 	appName             = "myst"
+	connectionEvent     = "connection_event"
 	sessionDataName     = "session_data"
 	sessionTokensName   = "session_tokens"
 	sessionEventName    = "session_event"
@@ -137,43 +138,27 @@ type sessionContext struct {
 
 // Subscribe subscribes to relevant events of event bus.
 func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionState, sender.sendConnStateEvent); err != nil {
-		return err
+	subscription := map[string]interface{}{
+		AppTopicConnectionEvents:                     sender.sendConnectionEvent,
+		connectionstate.AppTopicConnectionState:      sender.sendConnStateEvent,
+		connectionstate.AppTopicConnectionSession:    sender.sendSessionEvent,
+		connectionstate.AppTopicConnectionStatistics: sender.sendSessionData,
+		discovery.AppTopicProposalAnnounce:           sender.sendProposalEvent,
+		identity.AppTopicIdentityUnlock:              sender.sendUnlockEvent,
+		location.LocUpdateEvent:                      sender.cacheLocationData,
+		pingpongEvent.AppTopicInvoicePaid:            sender.sendSessionEarning,
+		registry.AppTopicIdentityRegistration:        sender.sendRegistrationEvent,
+		sessionEvent.AppTopicSession:                 sender.sendServiceSessionEvent,
+		trace.AppTopicTraceEvent:                     sender.sendTraceEvent,
 	}
 
-	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
-		return err
+	for topic, fn := range subscription {
+		if err := bus.SubscribeAsync(topic, fn); err != nil {
+			return err
+		}
 	}
 
-	if err := bus.SubscribeAsync(sessionEvent.AppTopicSession, sender.sendServiceSessionEvent); err != nil {
-		return err
-	}
-
-	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
-		return err
-	}
-
-	if err := bus.SubscribeAsync(pingpongEvent.AppTopicInvoicePaid, sender.sendSessionEarning); err != nil {
-		return err
-	}
-
-	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
-		return err
-	}
-
-	if err := bus.SubscribeAsync(trace.AppTopicTraceEvent, sender.sendTraceEvent); err != nil {
-		return err
-	}
-
-	if err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, sender.sendRegistrationEvent); err != nil {
-		return err
-	}
-
-	if err := bus.SubscribeAsync(location.LocUpdateEvent, sender.cacheLocationData); err != nil {
-		return err
-	}
-
-	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, sender.sendUnlockEvent)
+	return nil
 }
 
 func (sender *Sender) cacheLocationData(l locationstate.Location) {
@@ -186,8 +171,14 @@ func (sender *Sender) cacheLocationData(l locationstate.Location) {
 func (sender *Sender) getCachedLocationData() (l locationstate.Location) {
 	sender.sessionsMu.RLock()
 	defer sender.sessionsMu.RUnlock()
+
 	l = sender.location
+
 	return
+}
+
+func (sender *Sender) sendConnectionEvent(e ConnectionEvent) {
+	sender.sendEvent(connectionEvent, e)
 }
 
 // sendSessionData sends transferred information about session.
@@ -256,6 +247,7 @@ func (sender *Sender) sendSessionEvent(e connectionstate.AppEventConnectionSessi
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
+
 	sessionContext := sender.toSessionContext(e.SessionInfo)
 
 	switch e.Status {
@@ -320,6 +312,7 @@ func (sender *Sender) SendNATMappingSuccessEvent(id, stage string, gateways []ma
 // SendNATMappingFailEvent sends event about failed NAT mapping
 func (sender *Sender) SendNATMappingFailEvent(id, stage string, gateways []map[string]string, err error) {
 	errorMessage := err.Error()
+
 	sender.sendEvent(natMappingEventName, natMappingContext{
 		ID:           id,
 		Stage:        stage,

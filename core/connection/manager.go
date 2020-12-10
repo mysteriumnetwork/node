@@ -779,11 +779,6 @@ func (m *connectionManager) publishStateEvent(state connectionstate.State) {
 }
 
 func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {
-	// TODO: Remove this check once all provider migrates to p2p.
-	if channel == nil {
-		return
-	}
-
 	// Register handler for handling p2p keep alive pings from provider.
 	channel.Handle(p2p.TopicKeepAlive, func(c p2p.Context) error {
 		var ping pb.P2PKeepAlivePing

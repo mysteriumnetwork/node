@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -156,7 +157,7 @@ type ConnectionCreateRequest struct {
 	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
 }
 
-// Validate validates fields in request
+// Validate validates fields in request.
 func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
@@ -166,6 +167,18 @@ func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 		errs.ForField("provider_id").Required()
 	}
 	return errs
+}
+
+// Event creates a quality connection event to be send as a quality metric.
+func (cr ConnectionCreateRequest) Event(stage string, errMsg string) quality.ConnectionEvent {
+	return quality.ConnectionEvent{
+		ServiceType: cr.ServiceType,
+		ProviderID:  cr.ProviderID,
+		ConsumerID:  cr.ConsumerID,
+		HermesID:    cr.HermesID,
+		Error:       errMsg,
+		Stage:       stage,
+	}
 }
 
 // ConnectOptions holds tequilapi connect options
