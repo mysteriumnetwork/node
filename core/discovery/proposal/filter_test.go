@@ -66,7 +66,7 @@ var (
 	}
 	proposalTimeExpensive = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(9999999999999), money.CurrencyMyst),
+			price: money.New(big.NewInt(9999999999999), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Minute,
 			},
@@ -74,7 +74,7 @@ var (
 	}
 	proposalTimeCheap = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(0), money.CurrencyMyst),
+			price: money.New(big.NewInt(0), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Minute,
 			},
@@ -82,7 +82,7 @@ var (
 	}
 	proposalTimeExact = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(1000000), money.CurrencyMyst),
+			price: money.New(big.NewInt(1000000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Minute,
 			},
@@ -90,7 +90,7 @@ var (
 	}
 	proposalBytesExpensive = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(7000001), money.CurrencyMyst),
+			price: money.New(big.NewInt(7000001), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: bytesInGibibyte,
 			},
@@ -98,7 +98,7 @@ var (
 	}
 	proposalBytesCheap = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(0), money.CurrencyMyst),
+			price: money.New(big.NewInt(0), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: bytesInGibibyte,
 			},
@@ -106,7 +106,7 @@ var (
 	}
 	proposalBytesExact = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(7000000), money.CurrencyMyst),
+			price: money.New(big.NewInt(7000000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: bytesInGibibyte,
 			},
@@ -114,7 +114,7 @@ var (
 	}
 	proposalBytesExactInParts = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
+			price: money.New(big.NewInt(50000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: 7669584,
 			},
@@ -122,7 +122,7 @@ var (
 	}
 	proposalSupported = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
+			price: money.New(big.NewInt(50000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: 7669584,
 			},

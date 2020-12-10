@@ -261,7 +261,7 @@ func (c *command) info() {
 		inf.set(infDuration, fmt.Sprint(time.Duration(statistics.Duration)*time.Second))
 		inf.set(infTransferred, fmt.Sprintf("%s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
 		inf.set(infThroughput, fmt.Sprintf("%s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
-		inf.set(infSpent, money.NewMoney(statistics.TokensSpent, money.CurrencyMyst).String())
+		inf.set(infSpent, money.New(statistics.TokensSpent).String())
 	}
 
 	inf.printAll()

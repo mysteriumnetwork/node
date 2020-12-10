@@ -74,6 +74,6 @@ func (c Connection) String() string {
 		datasize.FromBytes(c.Statistics.BytesSent),
 		c.Throughput.Down,
 		c.Throughput.Up,
-		money.NewMoney(c.Invoice.AgreementTotal, money.CurrencyMyst),
+		money.New(c.Invoice.AgreementTotal),
 	)
 }

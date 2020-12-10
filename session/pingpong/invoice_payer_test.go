@@ -84,7 +84,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 		EventBus:                  mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -137,7 +137,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -272,7 +272,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -319,7 +319,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				},
 				proposal: market.ServiceProposal{
 					PaymentMethod: &mockPaymentMethod{
-						price: money.NewMoney(big.NewInt(100000), money.CurrencyMyst),
+						price: money.New(big.NewInt(100000), money.CurrencyMyst),
 						rate:  market.PaymentRate{PerTime: time.Minute},
 					},
 				},
@@ -341,7 +341,7 @@ func TestInvoicePayer_isInvoiceOK(t *testing.T) {
 				},
 				proposal: market.ServiceProposal{
 					PaymentMethod: &mockPaymentMethod{
-						price: money.NewMoney(big.NewInt(100000), money.CurrencyMyst),
+						price: money.New(big.NewInt(100000), money.CurrencyMyst),
 						rate:  market.PaymentRate{PerTime: time.Minute},
 					},
 				},
