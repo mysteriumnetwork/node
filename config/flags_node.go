@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -230,6 +231,14 @@ var (
 		Usage: "Run in consumer mode only.",
 		Value: false,
 	}
+
+	// FlagDefaultCurrency sets the default currency used in node
+	FlagDefaultCurrency = cli.StringFlag{
+		Name:   "default-currency",
+		Usage:  "Default currency used in node and apps that depend on it",
+		Value:  metadata.DefaultNetwork.DefaultCurrency,
+		Hidden: true, // Users are not meant to touch or see this.
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -279,6 +288,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagVendorID,
 		&FlagP2PListenPorts,
 		&FlagConsumer,
+		&FlagDefaultCurrency,
 	)
 
 	return nil
@@ -328,6 +338,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 	Current.ParseBoolFlag(ctx, FlagConsumer)
+	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }
