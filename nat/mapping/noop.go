@@ -18,8 +18,6 @@
 package mapping
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/rs/zerolog/log"
@@ -37,7 +35,7 @@ type noopPortMapper struct {
 }
 
 func (p *noopPortMapper) Map(id, protocol string, port int, name string) (release func(), ok bool) {
-	p.publisher.Publish(event.AppTopicTraversal, event.BuildFailureEvent(id, StageName, errors.New("noop mapping")))
+	p.publisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, "noop_mapping"))
 	log.Debug().Msgf("Noop port mapping requested: %d", port)
 
 	return func() {

@@ -281,7 +281,7 @@ func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 	if p2pPorts.IsSpecified() {
 		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
 		portPool = port.NewFixedRangePool(*p2pPorts)
-		natPinger = traversal.NewNoopPinger()
+		natPinger = traversal.NewNoopPinger(di.EventBus)
 	}
 
 	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)

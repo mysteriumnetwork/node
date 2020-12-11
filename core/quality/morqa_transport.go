@@ -144,9 +144,14 @@ func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Eve
 }
 
 func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event) {
-	return ctx.Consumer, &metrics.Event{
-		TargetId:   ctx.Provider,
-		IsProvider: false,
+	sender, target := ctx.Consumer, ctx.Provider
+	if ctx.IsProvider {
+		sender, target = ctx.Provider, ctx.Consumer
+	}
+
+	return sender, &metrics.Event{
+		TargetId:   target,
+		IsProvider: ctx.IsProvider,
 		Metric: &metrics.Event_SessionEventPayload{
 			SessionEventPayload: &metrics.SessionEventPayload{
 				Event: ctx.Event,
@@ -155,7 +160,7 @@ func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event
 					ServiceType:     ctx.ServiceType,
 					ProviderCountry: ctx.ProviderCountry,
 					ConsumerCountry: ctx.ConsumerCountry,
-					AccountantId:    ctx.AccountantID,
+					HermesId:        ctx.AccountantID,
 				},
 			},
 		},
@@ -163,9 +168,14 @@ func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event
 }
 
 func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) {
-	return ctx.Consumer, &metrics.Event{
-		TargetId:   ctx.Provider,
-		IsProvider: false,
+	sender, target := ctx.Consumer, ctx.Provider
+	if ctx.IsProvider {
+		sender, target = ctx.Provider, ctx.Consumer
+	}
+
+	return sender, &metrics.Event{
+		TargetId:   target,
+		IsProvider: ctx.IsProvider,
 		Metric: &metrics.Event_SessionStatisticsPayload{
 			SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
 				BytesSent:     ctx.Tx,
@@ -175,7 +185,7 @@ func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) 
 					ServiceType:     ctx.ServiceType,
 					ProviderCountry: ctx.ProviderCountry,
 					ConsumerCountry: ctx.ConsumerCountry,
-					AccountantId:    ctx.AccountantID,
+					HermesId:        ctx.AccountantID,
 				},
 			},
 		},
@@ -194,7 +204,7 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 					ServiceType:     ctx.ServiceType,
 					ProviderCountry: ctx.ProviderCountry,
 					ConsumerCountry: ctx.ConsumerCountry,
-					AccountantId:    ctx.AccountantID,
+					HermesId:        ctx.AccountantID,
 				},
 			},
 		},
@@ -241,7 +251,7 @@ func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *m
 					ServiceType:     ctx.ServiceType,
 					ProviderCountry: ctx.ProviderCountry,
 					ConsumerCountry: ctx.ConsumerCountry,
-					AccountantId:    ctx.AccountantID,
+					HermesId:        ctx.AccountantID,
 				},
 				Version: &metrics.VersionPayload{
 					Version: info.Version,

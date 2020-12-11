@@ -33,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
@@ -100,12 +101,14 @@ type natMappingContext struct {
 }
 
 type sessionEventContext struct {
-	Event string
+	IsProvider bool
+	Event      string
 	sessionContext
 }
 
 type sessionDataContext struct {
-	Rx, Tx uint64
+	IsProvider bool
+	Rx, Tx     uint64
 	sessionContext
 }
 
@@ -150,6 +153,7 @@ func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
 		registry.AppTopicIdentityRegistration:        sender.sendRegistrationEvent,
 		sessionEvent.AppTopicSession:                 sender.sendServiceSessionEvent,
 		trace.AppTopicTraceEvent:                     sender.sendTraceEvent,
+		sevent.AppTopicDataTransferred:               sender.sendServiceDataStatistics,
 	}
 
 	for topic, fn := range subscription {
@@ -181,6 +185,21 @@ func (sender *Sender) sendConnectionEvent(e ConnectionEvent) {
 	sender.sendEvent(connectionEvent, e)
 }
 
+func (sender *Sender) sendServiceDataStatistics(e sevent.AppEventDataTransferred) {
+	session, err := sender.recoverSessionContext(e.ID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Can't recover session context")
+		return
+	}
+
+	sender.sendEvent(sessionDataName, sessionDataContext{
+		IsProvider:     true,
+		Rx:             e.Up,
+		Tx:             e.Down,
+		sessionContext: session,
+	})
+}
+
 // sendSessionData sends transferred information about session.
 func (sender *Sender) sendSessionData(e connectionstate.AppEventConnectionStatistics) {
 	if e.SessionInfo.SessionID == "" {
@@ -188,6 +207,7 @@ func (sender *Sender) sendSessionData(e connectionstate.AppEventConnectionStatis
 	}
 
 	sender.sendEvent(sessionDataName, sessionDataContext{
+		IsProvider:     false,
 		Rx:             e.Stats.BytesReceived,
 		Tx:             e.Stats.BytesSent,
 		sessionContext: sender.toSessionContext(e.SessionInfo),
@@ -240,6 +260,12 @@ func (sender *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
 	case sessionEvent.RemovedStatus:
 		sender.forgetSessionContext(sessionContext)
 	}
+
+	sender.sendEvent(sessionEventName, sessionEventContext{
+		IsProvider:     true,
+		Event:          string(e.Status),
+		sessionContext: sessionContext,
+	})
 }
 
 // sendSessionEvent sends session update events.
@@ -254,11 +280,13 @@ func (sender *Sender) sendSessionEvent(e connectionstate.AppEventConnectionSessi
 	case connectionstate.SessionCreatedStatus:
 		sender.rememberSessionContext(sessionContext)
 		sender.sendEvent(sessionEventName, sessionEventContext{
+			IsProvider:     false,
 			Event:          e.Status,
 			sessionContext: sessionContext,
 		})
 	case connectionstate.SessionEndedStatus:
 		sender.sendEvent(sessionEventName, sessionEventContext{
+			IsProvider:     false,
 			Event:          e.Status,
 			sessionContext: sessionContext,
 		})
