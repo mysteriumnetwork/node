@@ -68,3 +68,13 @@ func TypeJSONParser(serviceType string) (ServiceOptionsParser, error) {
 	}
 	return parser, nil
 }
+
+// IsTypeValid returns true if a given string is valid service type.
+func IsTypeValid(s string) bool {
+	for _, v := range Types() {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

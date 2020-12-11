@@ -335,6 +335,11 @@ func (c *cliApp) connect(argsString string) {
 
 	consumerID, providerID, serviceType := args[0], args[1], args[2]
 
+	if !services.IsTypeValid(serviceType) {
+		clio.Warn(fmt.Sprintf("Invalid service type, expected one of: %s", strings.Join(services.Types(), ",")))
+		return
+	}
+
 	var disableKillSwitch bool
 	var dns connection.DNSOption
 	var err error
@@ -364,22 +369,18 @@ func (c *cliApp) connect(argsString string) {
 		DisableKillSwitch: disableKillSwitch,
 	}
 
-	if consumerID == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
-		if err != nil {
-			clio.Warn(err)
-			return
-		}
-		consumerID = id.Address
-		clio.Success("New identity created:", consumerID)
-	}
-
 	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
 	hermesID := config.GetString(config.FlagHermesID)
+
+	// Dont throw an error here incase user identity has a password on it
+	// or we failed to randomly unlock it. We can still try to connect
+	// if identity it locked, it will notify us anyway.
+	_ = c.tequilapi.Unlock(consumerID, "")
+
 	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, hermesID, serviceType, connectOptions)
 	if err != nil {
-		clio.Warn(err)
+		clio.Error(err)
 		return
 	}
 
