@@ -75,7 +75,7 @@ func NewPaymentMethod(pricePerGB, pricePerMinute *big.Int) PaymentMethod {
 	}
 
 	return PaymentMethod{
-		Price:    money.NewMoney(accuracy, money.CurrencyMyst),
+		Price:    money.New(accuracy),
 		Duration: time.Duration(pricePerMinute.Int64()),
 		Type:     PaymentForDataWithTime,
 		Bytes:    pricePerGB.Uint64(),

@@ -267,7 +267,7 @@ func (c *command) infoGeneral(identityAddress string) {
 	clio.Info("Using identity:", identityAddress)
 	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
 	clio.Info("Channel address:", identityStatus.ChannelAddress)
-	clio.Info(fmt.Sprintf("Balance: %s", money.NewMoney(identityStatus.Balance, money.CurrencyMyst)))
+	clio.Info(fmt.Sprintf("Balance: %s", money.New(identityStatus.Balance)))
 }
 
 func (c *command) infoTopUp(identityAddress string) {

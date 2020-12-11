@@ -35,7 +35,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "not free if only time payment is set",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 			want: false,
@@ -43,7 +43,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "not free if only byte payment is set",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 1},
 			},
 			want: false,
@@ -51,7 +51,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "not free if time + byte payment is set",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 1, PerTime: time.Minute},
 			},
 			want: false,
@@ -64,7 +64,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "free if both zero",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 0, PerTime: 0},
 			},
 			want: true,
@@ -72,7 +72,7 @@ func Test_isServiceFree(t *testing.T) {
 		{
 			name: "free if price zero",
 			method: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(0), money.CurrencyMyst),
+				price: money.New(big.NewInt(0), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerByte: 1, PerTime: 2},
 			},
 			want: true,
@@ -106,7 +106,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(big.NewInt(0), money.CurrencyMyst),
+					price: money.New(big.NewInt(0), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 1, PerTime: 2},
 				},
 			},
@@ -120,7 +120,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
+					price: money.New(big.NewInt(50000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Minute},
 				},
 			},
@@ -134,7 +134,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 100, Down: 100,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
+					price: money.New(big.NewInt(50000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 0, PerTime: time.Second},
 				},
 			},
@@ -148,7 +148,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 1000000000 / 2, Down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(big.NewInt(7000000), money.CurrencyMyst),
+					price: money.New(big.NewInt(7000000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 1000000000, PerTime: 0},
 				},
 			},
@@ -162,7 +162,7 @@ func Test_CalculatePaymentAmount(t *testing.T) {
 					Up: 1000000000 / 2, Down: 1000000000 / 2,
 				},
 				method: &mockPaymentMethod{
-					price: money.NewMoney(big.NewInt(50000), money.CurrencyMyst),
+					price: money.New(big.NewInt(50000), money.CurrencyMyst),
 					rate:  market.PaymentRate{PerByte: 7142857, PerTime: time.Minute},
 				},
 			},

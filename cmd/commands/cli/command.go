@@ -306,7 +306,7 @@ func (c *cliApp) serviceSessions() {
 			"ID: "+session.ID,
 			"ConsumerID: "+session.ConsumerID,
 			fmt.Sprintf("Data: %s/%s", datasize.FromBytes(session.BytesReceived).String(), datasize.FromBytes(session.BytesSent).String()),
-			fmt.Sprintf("Tokens: %s", money.NewMoney(session.Tokens, money.CurrencyMyst)),
+			fmt.Sprintf("Tokens: %s", money.New(session.Tokens)),
 		)
 	}
 }
@@ -496,7 +496,7 @@ func (c *cliApp) status() {
 			clio.Info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)*time.Second))
 			clio.Info(fmt.Sprintf("Data: %s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
 			clio.Info(fmt.Sprintf("Throughput: %s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
-			clio.Info(fmt.Sprintf("Spent: %s", money.NewMoney(statistics.TokensSpent, money.CurrencyMyst)))
+			clio.Info(fmt.Sprintf("Spent: %s", money.New(statistics.TokensSpent)))
 		}
 	}
 }

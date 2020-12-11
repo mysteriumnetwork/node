@@ -51,14 +51,14 @@ func aproxPricePerMinute(pm contract.PaymentMethodDTO) money.Money {
 	s := time.Duration(pm.Rate.PerSeconds) * time.Second
 	min := new(big.Float).SetFloat64(s.Minutes())
 	if min.Cmp(big.NewFloat(0)) == 0 {
-		return money.NewMoney(new(big.Int).SetInt64(0), pm.Price.Currency)
+		return money.New(new(big.Int).SetInt64(0), pm.Price.Currency)
 	}
 
 	price := new(big.Float).SetInt(pm.Price.Amount)
 	perMinute := new(big.Float).Quo(price, min)
 	perMinuteRounded, _ := perMinute.Int(nil)
 
-	return money.NewMoney(perMinuteRounded, pm.Price.Currency)
+	return money.New(perMinuteRounded, pm.Price.Currency)
 }
 
 func aproxPricePerGB(pm contract.PaymentMethodDTO) money.Money {
@@ -67,11 +67,11 @@ func aproxPricePerGB(pm contract.PaymentMethodDTO) money.Money {
 		new(big.Float).SetUint64(datasize.GiB.Bytes()),
 	)
 	if gb.Cmp(big.NewFloat(0)) == 0 {
-		return money.NewMoney(new(big.Int).SetInt64(0), pm.Price.Currency)
+		return money.New(new(big.Int).SetInt64(0), pm.Price.Currency)
 	}
 
 	price := new(big.Float).SetInt(pm.Price.Amount)
 	perGB := new(big.Float).Quo(price, gb)
 	perGBRounded, _ := perGB.Int(nil)
-	return money.NewMoney(perGBRounded, pm.Price.Currency)
+	return money.New(perGBRounded, pm.Price.Currency)
 }
