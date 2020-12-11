@@ -45,7 +45,7 @@ const (
 	StageRegistrationInProgress = "registration_in_progress"
 	// StageRegistrationRegistered describes registration registered status event.
 	StageRegistrationRegistered = "registration_registered"
-	// StageRegistrationRegistered describes registration unknown status event.
+	// StageRegistrationUnknown describes registration unknown status event.
 	StageRegistrationUnknown = "registration_unknown"
 )
 

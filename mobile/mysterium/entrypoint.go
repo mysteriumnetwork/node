@@ -21,43 +21,43 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/core/quality"
-	"github.com/mysteriumnetwork/node/core/state"
-	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/pilvytis"
-	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
-	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/mysteriumnetwork/payments/crypto"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/rs/zerolog"
-
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// MobileNode represents node object tuned for mobile devices
+// MobileNode represents node object tuned for mobile device.
 type MobileNode struct {
 	shutdown                     func() error
 	node                         *cmd.Node
@@ -127,13 +127,14 @@ func DefaultNodeOptions() *MobileNodeOptions {
 	}
 }
 
-// NewNode function creates new Node
+// NewNode function creates new Node.
 func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	if appPath == "" {
 		return nil, errors.New("node app path is required")
 	}
+
 	dataDir := filepath.Join(appPath, ".mysterium")
 	currentDir := appPath
 
@@ -230,11 +231,11 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	err := di.Bootstrap(nodeOptions)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not bootstrap dependencies")
+		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
 	}
 
 	mobileNode := &MobileNode{
-		shutdown:                     func() error { return di.Shutdown() },
+		shutdown:                     di.Shutdown,
 		node:                         di.Node,
 		stateKeeper:                  di.StateKeeper,
 		connectionManager:            di.ConnectionManager,
@@ -261,6 +262,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		startTime: time.Now(),
 		chainID:   nodeOptions.OptionsNetwork.ChainID,
 	}
+
 	return mobileNode, nil
 }
 
@@ -285,7 +287,7 @@ type GetLocationResponse struct {
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
 	loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get location")
+		return nil, fmt.Errorf("could not get location: %w", err)
 	}
 
 	return &GetLocationResponse{
@@ -304,6 +306,7 @@ type GetStatusResponse struct {
 // GetStatus returns current connection state and provider info if connected to VPN.
 func (mb *MobileNode) GetStatus() *GetStatusResponse {
 	status := mb.connectionManager.Status()
+
 	return &GetStatusResponse{
 		State:       string(status.State),
 		ProviderID:  status.Proposal.ProviderID,
@@ -431,6 +434,7 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 
 	qualityEvent.Stage = quality.StageConnectionOK
 	mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
+
 	return &ConnectResponse{}
 }
 
@@ -440,8 +444,10 @@ func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
 		if err := mb.Disconnect(); err != nil {
 			log.Err(err).Msg("Failed to disconnect previous session")
 		}
+
 		return mb.Connect(req)
 	}
+
 	if req.ForceReconnect {
 		log.Info().Msg("Forcing immediate reconnect")
 		return reconnect()
@@ -449,20 +455,23 @@ func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
+
 	if err := mb.connectionManager.CheckChannel(ctx); err != nil {
 		log.Info().Msgf("Forcing reconnect after failed channel: %s", err)
 		return reconnect()
 	}
 
 	log.Info().Msg("Reconnect is not needed - p2p channel is alive")
+
 	return &ConnectResponse{}
 }
 
 // Disconnect disconnects or cancels current connection.
 func (mb *MobileNode) Disconnect() error {
 	if err := mb.connectionManager.Disconnect(); err != nil {
-		return errors.Wrap(err, "could not disconnect")
+		return fmt.Errorf("could not disconnect: %w", err)
 	}
+
 	return nil
 }
 
@@ -485,19 +494,20 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 	if req == nil {
 		req = &GetIdentityRequest{}
 	}
+
 	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, mb.chainID)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not unlock identity")
+		return nil, fmt.Errorf("could not unlock identity: %w", err)
 	}
 
 	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(id)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate channel address")
+		return nil, fmt.Errorf("could not generate channel address: %w", err)
 	}
 
 	status, err := mb.identityRegistry.GetRegistrationStatus(mb.chainID, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get identity registration status")
+		return nil, fmt.Errorf("could not get identity registration status: %w", err)
 	}
 
 	return &GetIdentityResponse{
@@ -516,7 +526,7 @@ type GetIdentityRegistrationFeesResponse struct {
 func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFeesResponse, error) {
 	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get registration fees")
+		return nil, fmt.Errorf("could not get registration fees: %w", err)
 	}
 
 	fee := crypto.BigMystToFloat(fees.Fee)
@@ -534,17 +544,19 @@ type RegisterIdentityRequest struct {
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
-		return errors.Wrap(err, "could not get registration fees")
+		return fmt.Errorf("could not get registration fees: %w", err)
 	}
 
 	var token *string
 	if req.Token != "" {
 		token = &req.Token
 	}
+
 	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", mb.chainID, token)
 	if err != nil {
-		return errors.Wrap(err, "could not register identity")
+		return fmt.Errorf("could not register identity: %w", err)
 	}
+
 	return nil
 }
 
@@ -562,6 +574,7 @@ type GetBalanceResponse struct {
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	balance := mb.consumerBalanceTracker.GetBalance(mb.chainID, identity.FromAddress(req.IdentityAddress))
 	b := crypto.BigMystToFloat(balance)
+
 	return &GetBalanceResponse{Balance: b}, nil
 }
 
@@ -577,35 +590,39 @@ func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
 		Email:       req.Email,
 		Description: req.Description,
 	}
+
 	result, err := mb.feedbackReporter.NewIssue(report)
 	if err != nil {
-		return errors.Wrap(err, "could not create user report")
+		return fmt.Errorf("could not create user report: %w", err)
 	}
 
 	if !result.Success {
 		return errors.New("user report sent but got error response")
 	}
+
 	return nil
 }
 
-// Shutdown function stops running mobile node
+// Shutdown function stops running mobile node.
 func (mb *MobileNode) Shutdown() error {
 	return mb.shutdown()
 }
 
-// WaitUntilDies function returns when node stops
+// WaitUntilDies function returns when node stops.
 func (mb *MobileNode) WaitUntilDies() error {
 	return mb.node.Wait()
 }
 
-// OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
+// OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one.
 func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
+
 	factory := func() (connection.Connection, error) {
 		opts := wireGuardOptions{
 			statsUpdateInterval: 1 * time.Second,
 			handshakeTimeout:    1 * time.Minute,
 		}
+
 		return NewWireGuardConnection(
 			opts,
 			newWireguardDevice(wgTunnelSetup),
@@ -616,7 +633,7 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
 }
 
-// HealthCheckData represents node health check info
+// HealthCheckData represents node health check info.
 type HealthCheckData struct {
 	Uptime    string     `json:"uptime"`
 	Version   string     `json:"version"`
@@ -702,6 +719,7 @@ func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	response := &OrderResponse{
 		ID:              id,
 		IdentityAddress: order.Identity,
@@ -712,6 +730,7 @@ func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
 		PaymentAddress:  order.PaymentAddress,
 		PaymentURL:      order.PaymentURL,
 	}
+
 	return response, nil
 }
 
@@ -721,10 +740,12 @@ func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	res, err := newOrderResponse(*order)
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(res)
 }
 
@@ -740,10 +761,12 @@ func (mb *MobileNode) GetOrder(req *GetOrderRequest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	res, err := newOrderResponse(*order)
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(res)
 }
 
@@ -758,14 +781,18 @@ func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	res := make([]OrderResponse, len(orders))
+
 	for i := range orders {
 		orderRes, err := newOrderResponse(orders[i])
 		if err != nil {
 			return nil, err
 		}
+
 		res[i] = *orderRes
 	}
+
 	return json.Marshal(orders)
 }
 
@@ -775,6 +802,7 @@ func (mb *MobileNode) Currencies() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(currencies)
 }
 
