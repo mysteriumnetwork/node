@@ -139,6 +139,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	currentDir := appPath
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
+	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 
 	network := node.OptionsNetwork{
 		Testnet2:              options.Testnet2,
@@ -264,6 +265,11 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	return mobileNode, nil
+}
+
+// GetDefaultCurrency returns the current default currency set.
+func (mb *MobileNode) GetDefaultCurrency() string {
+	return config.Current.GetString(config.FlagDefaultCurrency.Name)
 }
 
 // GetProposals returns service proposals from API or cache. Proposals returned as JSON byte array since
