@@ -42,23 +42,6 @@ const (
 	// statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
 	// operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 	statusConnectCancelled = 499
-
-	stagePraseRequest    = "parse_request"
-	stageValidateRequest = "validate_request"
-
-	stageNoProposal  = "no_proposal"
-	stageGetProposal = "get_proposal"
-
-	stageConnectionOK            = "connection_ok"
-	stageConnectionCanceled      = "connection_canceled"
-	stageConnectionAlreadyExists = "connection_already_exists"
-	stageConnectionUnknownError  = "connection_unknown_error"
-
-	stageRegistrationGetStatus    = "registration_get_status"
-	stageRegistrationUnregistered = "registration_unregistered"
-	stageRegistrationInProgress   = "registration_in_progress"
-	stageRegistrationRegistered   = "registration_registered"
-	stageRegistrationUnknown      = "registration_unknown"
 )
 
 var (
@@ -155,7 +138,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	cr, err := toConnectionRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(stagePraseRequest, err.Error()))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(quality.StagePraseRequest, err.Error()))
 		return
 	}
 
@@ -163,7 +146,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		if out, err := errorMap.MarshalJSON(); err != nil {
 			log.Error().Err(err).Msg("Failed to marshal error map")
 		} else {
-			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageValidateRequest, string(out)))
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageValidateRequest, string(out)))
 		}
 
 		utils.SendValidationErrorMessage(resp, errorMap)
@@ -173,7 +156,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	consumerID := identity.FromAddress(cr.ConsumerID)
 	status, err := ce.identityRegistry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), consumerID)
 	if err != nil {
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageRegistrationGetStatus, err.Error()))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationGetStatus, err.Error()))
 		log.Error().Err(err).Stack().Msg("could not check registration status")
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -181,18 +164,18 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 
 	switch status {
 	case registry.Unregistered, registry.RegistrationError:
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageRegistrationUnregistered, ""))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnregistered, ""))
 		log.Error().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
 		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
 	case registry.InProgress:
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageRegistrationInProgress, ""))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationInProgress, ""))
 		log.Info().Msgf("identity %q registration is in progress, continuing...", cr.ConsumerID)
 	case registry.Registered:
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageRegistrationRegistered, ""))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationRegistered, ""))
 		log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
 	default:
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageRegistrationUnknown, ""))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnknown, ""))
 		log.Error().Msgf("identity %q has unknown status, aborting...", cr.ConsumerID)
 		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q has unknown status. aborting", cr.ConsumerID), http.StatusExpectationFailed)
 		return
@@ -204,13 +187,13 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		ServiceType: cr.ServiceType,
 	})
 	if err != nil {
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageGetProposal, err.Error()))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageGetProposal, err.Error()))
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
 	if proposal == nil {
-		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageNoProposal, errNoProposal.Error()))
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageNoProposal, errNoProposal.Error()))
 		utils.SendError(resp, errNoProposal, http.StatusBadRequest)
 		return
 	}
@@ -220,20 +203,20 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	if err != nil {
 		switch err {
 		case connection.ErrAlreadyExists:
-			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageConnectionAlreadyExists, err.Error()))
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionAlreadyExists, err.Error()))
 			utils.SendError(resp, err, http.StatusConflict)
 		case connection.ErrConnectionCancelled:
-			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageConnectionCanceled, err.Error()))
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionCanceled, err.Error()))
 			utils.SendError(resp, err, statusConnectCancelled)
 		default:
-			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageConnectionUnknownError, err.Error()))
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionUnknownError, err.Error()))
 			log.Error().Err(err).Msg("Failed to connect")
 			utils.SendError(resp, err, http.StatusInternalServerError)
 		}
 		return
 	}
 
-	ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(stageConnectionOK, ""))
+	ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionOK, ""))
 	resp.WriteHeader(http.StatusCreated)
 	ce.Status(resp, req, params)
 }

@@ -20,6 +20,7 @@ package mysterium
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math/big"
 	"path/filepath"
 	"strconv"
@@ -29,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -36,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/rs/zerolog"
@@ -389,7 +390,18 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})
+
+	qualityEvent := quality.ConnectionEvent{
+		ServiceType: req.ServiceType,
+		ConsumerID:  req.IdentityAddress,
+		ProviderID:  req.ProviderID,
+	}
+
 	if err != nil {
+		qualityEvent.Stage = quality.StageGetProposal
+		qualityEvent.Error = err.Error()
+		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
+
 		return &ConnectResponse{
 			ErrorCode:    connectErrInvalidProposal,
 			ErrorMessage: err.Error(),
@@ -401,16 +413,24 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		DNS:               connection.DNSOptionAuto,
 	}
 	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.hermes, *proposal, connectOptions); err != nil {
-		if err == connection.ErrInsufficientBalance {
+		qualityEvent.Stage = quality.StageConnectionUnknownError
+		qualityEvent.Error = err.Error()
+		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
+
+		if errors.Is(err, connection.ErrInsufficientBalance) {
 			return &ConnectResponse{
 				ErrorCode: connectErrInsufficientBalance,
 			}
 		}
+
 		return &ConnectResponse{
 			ErrorCode:    connectErrUnknown,
 			ErrorMessage: err.Error(),
 		}
 	}
+
+	qualityEvent.Stage = quality.StageConnectionOK
+	mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
 	return &ConnectResponse{}
 }
 
