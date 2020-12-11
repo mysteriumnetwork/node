@@ -35,6 +35,7 @@ type NetworkDefinition struct {
 	PilvytisAddress           string
 	DNSMap                    map[string][]string
 	DefaultChainID            int64
+	DefaultCurrency           string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -59,7 +60,8 @@ var TestnetDefinition = NetworkDefinition{
 		"testnet-transactor.mysterium.network": {"116.203.17.150"},
 		"my.mysterium.network":                 {"168.119.183.173"},
 	},
-	DefaultChainID: 5,
+	DefaultChainID:  5,
+	DefaultCurrency: "MYSTT",
 }
 
 // Testnet2Definition defines parameters for testnet2 network (currently default network)
@@ -85,7 +87,8 @@ var Testnet2Definition = NetworkDefinition{
 		"testnet2-transactor.mysterium.network": {"135.181.82.67"},
 		"testnet2.mysterium.network":            {"138.201.174.94"},
 	},
-	DefaultChainID: 5,
+	DefaultChainID:  5,
+	DefaultCurrency: "MYSTT",
 }
 
 // LocalnetDefinition defines parameters for local network

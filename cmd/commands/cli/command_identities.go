@@ -109,9 +109,9 @@ func (c *cliApp) getIdentity(actionArgs []string) {
 	}
 	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
 	clio.Info("Channel address:", identityStatus.ChannelAddress)
-	clio.Info(fmt.Sprintf("Balance: %s", money.NewMoney(identityStatus.Balance, money.CurrencyMyst)))
-	clio.Info(fmt.Sprintf("Earnings: %s", money.NewMoney(identityStatus.Earnings, money.CurrencyMyst)))
-	clio.Info(fmt.Sprintf("Earnings total: %s", money.NewMoney(identityStatus.EarningsTotal, money.CurrencyMyst)))
+	clio.Info(fmt.Sprintf("Balance: %s", money.New(identityStatus.Balance)))
+	clio.Info(fmt.Sprintf("Earnings: %s", money.New(identityStatus.Earnings)))
+	clio.Info(fmt.Sprintf("Earnings total: %s", money.New(identityStatus.EarningsTotal)))
 }
 
 const usageNewIdentity = "new [passphrase]"

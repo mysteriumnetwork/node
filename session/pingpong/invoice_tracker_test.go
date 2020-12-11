@@ -94,7 +94,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -147,7 +147,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -202,7 +202,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -255,7 +255,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -315,7 +315,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(1000000000000), money.CurrencyMyst),
+				price: money.New(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -371,7 +371,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(1000000000000), money.CurrencyMyst),
+				price: money.New(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -463,7 +463,7 @@ func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate: market.PaymentRate{
 					PerTime: time.Minute,
 					PerByte: 1,
@@ -494,7 +494,7 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(big.NewInt(10), money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate: market.PaymentRate{
 					PerTime: time.Minute,
 					PerByte: 1,

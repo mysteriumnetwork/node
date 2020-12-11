@@ -28,4 +28,7 @@ var MystSize = big.NewInt(1_000_000_000_000_000_000)
 const (
 	// CurrencyMyst is the myst token currency representation
 	CurrencyMyst = Currency("MYST")
+
+	// CurrencyMystt is the test myst token currency representation
+	CurrencyMystt = Currency("MYSTT")
 )
