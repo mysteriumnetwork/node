@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -32,7 +34,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/trace"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
@@ -65,7 +66,8 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			natProviderPinger: &mockProviderNATPinger{},
 			natConsumerPinger: &mockConsumerNATPinger{},
 			portMapper:        &mockPortMapper{enabled: true},
-		}, {
+		},
+		{
 			name:              "Provider behind NAT with manual port forwarding and noop pinger",
 			ipResolver:        ip.NewResolverMockMultiple("127.0.0.1", "1.1.1.1"),
 			natProviderPinger: traversal.NewNoopPinger(eventbus.New()),
@@ -87,7 +89,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			portPool := port.NewPool()
 
 			// Provider starts listening.
-			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper)
+			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper, eventbus.New())
 			_, err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 				ch.Handle("test", func(c Context) error {
 					return c.OkWithReply(&Message{Data: []byte("pong")})
