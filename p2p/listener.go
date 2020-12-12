@@ -24,19 +24,21 @@ import (
 	"sync"
 	"time"
 
+	nats_lib "github.com/nats-io/nats.go"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/pb"
 	"github.com/mysteriumnetwork/node/trace"
-
-	nats_lib "github.com/nats-io/nats.go"
-	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
 )
 
 // Listener knows how to exchange p2p keys and encrypted configuration and creates ready to use p2p channels.
@@ -51,7 +53,7 @@ type Listener interface {
 }
 
 // NewListener creates new p2p communication listener which is used on provider side.
-func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper) Listener {
+func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, verifier identity.Verifier, ipResolver ip.Resolver, providerPinger natProviderPinger, portPool port.ServicePortSupplier, portMapper mapping.PortMapper, eventBus eventbus.EventBus) Listener {
 	return &listener{
 		brokerConn:     brokerConn,
 		pendingConfigs: map[PublicKey]p2pConnectConfig{},
@@ -61,11 +63,13 @@ func NewListener(brokerConn nats.Connection, signer identity.SignerFactory, veri
 		portPool:       portPool,
 		providerPinger: providerPinger,
 		portMapper:     portMapper,
+		eventBus:       eventBus,
 	}
 }
 
 // listener implements Listener interface.
 type listener struct {
+	eventBus       eventbus.EventBus
 	portPool       port.ServicePortSupplier
 	brokerConn     nats.Connection
 	providerPinger natProviderPinger
@@ -103,7 +107,8 @@ func (c *p2pConnectConfig) peerIP() string {
 func (m *listener) GetContact() market.Contact {
 	return market.Contact{
 		Type:       ContactTypeV1,
-		Definition: ContactDefinition{BrokerAddresses: m.brokerConn.Servers()}}
+		Definition: ContactDefinition{BrokerAddresses: m.brokerConn.Servers()},
+	}
 }
 
 // Listen listens for incoming peer connections to establish new p2p channels. Establishes p2p channel and passes it
@@ -201,7 +206,6 @@ func (m *listener) Listen(providerID identity.Identity, serviceType string, chan
 		}
 		config.tracer.EndStage(traceAck)
 	})
-
 	if err != nil {
 		if err := configSub.Unsubscribe(); err != nil {
 			log.Err(err).Msg("Failed to unsubscribe from config exchange topic")
@@ -268,7 +272,7 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	}
 	configCiphertext, err := encryptConnConfigMsg(&config, privateKey, peerPubKey)
 	if err != nil {
-		return fmt.Errorf("could not encrypt config msg: %v", err)
+		return fmt.Errorf("could not encrypt config msg: %w", err)
 	}
 	exchangeMsg := pb.P2PConfigExchangeMsg{
 		PublicKey:        pubKey.Hex(),
@@ -277,11 +281,11 @@ func (m *listener) providerStartConfigExchange(providerID identity.Identity, msg
 	log.Debug().Msgf("Sending reply with public key %s and encrypted config to consumer", exchangeMsg.PublicKey)
 	packedMsg, err := packSignedMsg(m.signer, providerID, &exchangeMsg)
 	if err != nil {
-		return fmt.Errorf("could not pack signed message: %v", err)
+		return fmt.Errorf("could not pack signed message: %w", err)
 	}
 	err = m.brokerConn.Publish(msg.Reply, packedMsg)
 	if err != nil {
-		return fmt.Errorf("could not publish message via broker: %v", err)
+		return fmt.Errorf("could not publish message via broker: %w", err)
 	}
 	return nil
 }
@@ -297,16 +301,18 @@ func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer
 	// Send reply with encrypted exchange config.
 	publicIP, err := m.ipResolver.GetPublicIP()
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("could not get public IP: %v", err)
+		return "", nil, nil, fmt.Errorf("could not get public IP: %w", err)
 	}
 
 	// First acquire required only ports for needed n connections.
 	localPorts, err := acquireLocalPorts(m.portPool, requiredConnCount)
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("could not acquire initial local ports: %v", err)
+		return "", nil, nil, fmt.Errorf("could not acquire initial local ports: %w", err)
 	}
+
 	// Return these ports if provider is not behind NAT.
 	if outboundIP == publicIP {
+		m.eventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, "public_ip"))
 		return publicIP, localPorts, nil, nil
 	}
 
@@ -314,13 +320,16 @@ func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer
 	var portsRelease []func()
 	var portMappingOk bool
 	var portRelease func()
+
 	for _, p := range localPorts {
 		portRelease, portMappingOk = m.portMapper.Map(id, "UDP", p, "Myst node p2p port mapping")
 		if !portMappingOk {
 			break
 		}
+
 		portsRelease = append(portsRelease, portRelease)
 	}
+
 	if portMappingOk {
 		return publicIP, localPorts, portsRelease, nil
 	}
@@ -334,11 +343,13 @@ func (m *listener) prepareLocalPorts(id, outboundIP string, tracer *trace.Tracer
 	// Acquire more ports for nat pinger.
 	morePorts, err := acquireLocalPorts(m.portPool, pingMaxPorts-requiredConnCount)
 	if err != nil {
-		return publicIP, nil, nil, fmt.Errorf("could not acquire more local ports: %v", err)
+		return publicIP, nil, nil, fmt.Errorf("could not acquire more local ports: %w", err)
 	}
+
 	for _, p := range morePorts {
 		localPorts = append(localPorts, p)
 	}
+
 	return publicIP, localPorts, nil, nil
 }
 

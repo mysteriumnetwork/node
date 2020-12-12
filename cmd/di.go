@@ -29,10 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/discovery"
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
@@ -42,6 +40,8 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -66,12 +66,14 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/mmn"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -83,11 +85,8 @@ import (
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-
 	paymentClient "github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/uniswap"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // UIServer represents our web server
@@ -284,7 +283,7 @@ func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 		natPinger = traversal.NewNoopPinger(di.EventBus)
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
 	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
 }
 
@@ -733,7 +732,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
-
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
