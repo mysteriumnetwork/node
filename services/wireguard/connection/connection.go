@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -32,8 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // Options represents connection options.
@@ -171,12 +172,6 @@ func (c *Connection) startConn(conf wgcfg.DeviceConfig) (wg.ConnectionEndpoint, 
 	}
 
 	return conn, nil
-}
-
-// Wait blocks until wireguard connection not stopped.
-func (c *Connection) Wait() error {
-	<-c.done
-	return nil
 }
 
 // GetConfig returns the consumer configuration for session creation
