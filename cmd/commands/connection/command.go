@@ -49,12 +49,6 @@ var (
 		Name:  "location-type",
 		Usage: "Node location types to filter by eg.'hosting', 'residential', 'mobile' etc.",
 	}
-
-	flagProviderID = cli.StringFlag{
-		Name:  "provider-identity",
-		Usage: "Provider identity to which a new connection will be established",
-		Value: "",
-	}
 )
 
 const serviceWireguard = "wireguard"
@@ -90,9 +84,9 @@ func NewCommand() *cli.Command {
 				},
 			},
 			{
-				Name:  "up",
-				Usage: "Create a new connection",
-				Flags: []cli.Flag{&flagProviderID},
+				Name:      "up",
+				Usage:     "Create a new connection",
+				ArgsUsage: "[ProviderIdentityAddress]",
 				Action: func(ctx *cli.Context) error {
 					cmd.up(ctx)
 					return nil
@@ -183,9 +177,9 @@ func (c *command) up(ctx *cli.Context) {
 		return
 	}
 
-	providerID := ctx.String(flagProviderID.Name)
+	providerID := ctx.Args().First()
 	if providerID == "" {
-		clio.Warn("ProviderID must be specified")
+		clio.Warn("First argument must be provider identity address")
 		return
 	}
 
