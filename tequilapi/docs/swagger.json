@@ -1939,6 +1939,59 @@
         }
       }
     },
+    "/terms": {
+      "get": {
+        "description": "Return an object with the current terms config",
+        "tags": [
+          "Terms"
+        ],
+        "summary": "Get terms",
+        "operationId": "getTerms",
+        "responses": {
+          "200": {
+            "description": "Terms object",
+            "schema": {
+              "$ref": "#/definitions/TermsResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Takes the given data and tries to update terms agreement config.",
+        "tags": [
+          "Terms"
+        ],
+        "summary": "Update terms agreement",
+        "operationId": "updateTerms",
+        "parameters": [
+          {
+            "description": "Required data to update terms",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/TermsRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/transactor/fees": {
       "get": {
         "description": "Returns fees applied by Transactor",
@@ -3676,6 +3729,55 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TotalPages"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TermsRequest": {
+      "type": "object",
+      "title": "TermsRequest object is accepted by terms endpoints.",
+      "properties": {
+        "agreed_consumer": {
+          "type": "boolean",
+          "x-go-name": "AgreedConsumer",
+          "example": false
+        },
+        "agreed_provider": {
+          "type": "boolean",
+          "x-go-name": "AgreedProvider",
+          "example": false
+        },
+        "agreed_version": {
+          "type": "string",
+          "x-go-name": "AgreedVersion",
+          "example": "0.0.27"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TermsResponse": {
+      "type": "object",
+      "title": "TermsResponse object is returned by terms endpoints.",
+      "properties": {
+        "agreed_consumer": {
+          "type": "boolean",
+          "x-go-name": "AgreedConsumer",
+          "example": false
+        },
+        "agreed_provider": {
+          "type": "boolean",
+          "x-go-name": "AgreedProvider",
+          "example": false
+        },
+        "agreed_version": {
+          "type": "string",
+          "x-go-name": "AgreedVersion",
+          "example": "0.0.27"
+        },
+        "current_version": {
+          "type": "string",
+          "x-go-name": "CurrentVersion",
+          "example": "0.0.27"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

@@ -17,6 +17,10 @@
 
 package metadata
 
+// CurrentTermsVersion is the version which has to be agreed
+// with when confirming TOS agreements.
+const CurrentTermsVersion = "0.0.27"
+
 const termsAndConditions = `
                        MYSTERIUM NETWORK OPEN ALPHA
                                TERMS OF USE
