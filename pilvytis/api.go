@@ -35,6 +35,7 @@ type API struct {
 const (
 	orderEndpoint    = "payment/orders"
 	currencyEndpoint = "payment/currencies"
+	exchangeEndpoint = "payment/exchange-rate"
 )
 
 // NewAPI returns a new API instance.
@@ -146,5 +147,16 @@ func (a *API) GetPaymentOrderCurrencies() ([]string, error) {
 	}
 
 	var resp []string
+	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+}
+
+// GetMystExchangeRate returns the exchange rate for myst to other currencies.
+func (a *API) GetMystExchangeRate() (map[string]float64, error) {
+	req, err := requests.NewGetRequest(a.url, exchangeEndpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp map[string]float64
 	return resp, a.req.DoRequestAndParseResponse(req, &resp)
 }

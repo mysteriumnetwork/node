@@ -464,6 +464,7 @@
         ],
         "summary": "Returns the dai price in myst",
         "operationId": "DaiToMyst",
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Dai price in myst",
@@ -480,17 +481,26 @@
         }
       }
     },
-    "/exchange/myst/dai": {
+    "/exchange/myst/{currency}": {
       "get": {
-        "description": "Returns the myst price in dai",
+        "description": "Returns the myst price in the given currency (dai is deprecated)",
         "tags": [
           "Exchange"
         ],
-        "summary": "Returns the myst price in dai",
-        "operationId": "MystToDai",
+        "summary": "Returns the myst price in the given currency",
+        "operationId": "ExchangeMyst",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Currency to which myst is converted",
+            "name": "currency",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Myst price in dai",
+            "description": "Myst price in given currency",
             "schema": {
               "$ref": "#/definitions/CurrencyExchangeDTO"
             }
