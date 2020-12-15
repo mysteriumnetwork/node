@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
@@ -181,6 +182,6 @@ func printOrder(o contract.OrderResponse) {
 	clio.Info(fmt.Sprintf("Price: %s %s", fUnknown(o.PriceAmount), o.PriceCurrency))
 	clio.Info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
 	clio.Info(fmt.Sprintf("Receive: %s %s", fUnknown(o.ReceiveAmount), o.ReceiveCurrency))
-	clio.Info(fmt.Sprintf("Myst amount: %f", o.MystAmount))
+	clio.Info(fmt.Sprintf("Receive %s amount: %f", config.GetString(config.FlagDefaultCurrency), o.MystAmount))
 	clio.Info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
 }
