@@ -19,7 +19,6 @@ package noop
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -35,9 +34,8 @@ func NewConnection() (connection.Connection, error) {
 
 // Connection which does no real tunneling
 type Connection struct {
-	isRunning      bool
-	noopConnection sync.WaitGroup
-	stateCh        chan connectionstate.State
+	isRunning bool
+	stateCh   chan connectionstate.State
 }
 
 var _ connection.Connection = &Connection{}
@@ -54,21 +52,12 @@ func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 
 // Start implements the connection.Connection interface
 func (c *Connection) Start(ctx context.Context, params connection.ConnectOptions) error {
-	c.noopConnection.Add(1)
 	c.isRunning = true
 
 	c.stateCh <- connectionstate.Connecting
 
 	time.Sleep(5 * time.Second)
 	c.stateCh <- connectionstate.Connected
-	return nil
-}
-
-// Wait implements the connection.Connection interface
-func (c *Connection) Wait() error {
-	if c.isRunning {
-		c.noopConnection.Wait()
-	}
 	return nil
 }
 
@@ -82,7 +71,6 @@ func (c *Connection) Stop() {
 	c.stateCh <- connectionstate.Disconnecting
 	time.Sleep(2 * time.Second)
 	c.stateCh <- connectionstate.NotConnected
-	c.noopConnection.Done()
 	close(c.stateCh)
 }
 

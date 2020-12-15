@@ -30,9 +30,8 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/location"
-
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -573,7 +572,6 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	})
 
 	go m.consumeConnectionStates(conn.State())
-	go m.connectionWaiter(conn)
 
 	// Clear IP cache so session IP check can report that IP has really changed.
 	m.clearIPCache()
@@ -690,17 +688,6 @@ func (m *connectionManager) disconnect() {
 	m.cleanAfterDisconnect()
 }
 
-func (m *connectionManager) connectionWaiter(connection Connection) {
-	err := connection.Wait()
-	if err != nil {
-		log.Warn().Err(err).Msg("Connection exited with error")
-	} else {
-		log.Info().Msg("Connection exited")
-	}
-
-	logDisconnectError(m.Disconnect())
-}
-
 func (m *connectionManager) waitForConnectedState(stateChannel <-chan connectionstate.State) error {
 	log.Debug().Msg("waiting for connected state")
 	for {
@@ -731,9 +718,6 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan connecti
 	for state := range stateChannel {
 		m.onStateChanged(state)
 	}
-
-	log.Debug().Msg("State updater stopCalled")
-	logDisconnectError(m.Disconnect())
 }
 
 func (m *connectionManager) onStateChanged(state connectionstate.State) {
@@ -765,7 +749,9 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: traffic block rule")
 		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
+
 		removeRule()
+
 		return nil
 	})
 	return nil

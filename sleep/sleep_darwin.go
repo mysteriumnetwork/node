@@ -22,24 +22,28 @@ package sleep
 // void NotifySleep();
 // #include "darwin.h"
 import "C"
+
 import (
 	"github.com/rs/zerolog/log"
 )
 
-//Start starts events notifier
+// Start starts events notifier
 func (n *Notifier) Start() {
 	log.Debug().Msg("Register for sleep events")
+
 	go C.registerNotifications()
-	go func() {
-		for {
-			e := <-eventChannel
+
+	for {
+		select {
+		case e := <-eventChannel:
 			n.eventBus.Publish(AppTopicSleepNotification, e)
+		case <-n.stop:
+			break
 		}
-	}()
-	<-n.stop
+	}
 }
 
-//Stop stops events notifier
+// Stop stops events notifier
 func (n *Notifier) Stop() {
 	n.stopOnce.Do(func() {
 		log.Debug().Msg("Unregister sleep events")

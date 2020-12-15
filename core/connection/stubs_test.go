@@ -45,7 +45,7 @@ type connectionFactoryFake struct {
 }
 
 func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection, error) {
-	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
+	// each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
 	if c.mockError != nil {
 		return nil, c.mockError
 	}
@@ -62,7 +62,7 @@ func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection
 		if state == reconnectingState {
 			c.mockConnection.stateChannel <- connectionstate.Reconnecting
 		}
-		//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+		// this is the last state - close channel (according to best practices of go - channel writer controls channel)
 		if state == processExited {
 			close(c.mockConnection.stateChannel)
 		}
@@ -120,11 +120,6 @@ func (foc *connectionMock) Start(ctx context.Context, connectionParams ConnectOp
 	for _, fakeState := range foc.onStartReportStates {
 		foc.reportState(fakeState)
 	}
-	return nil
-}
-
-func (foc *connectionMock) Wait() error {
-	foc.fakeProcess.Wait()
 	return nil
 }
 

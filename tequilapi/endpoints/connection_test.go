@@ -28,6 +28,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -37,8 +40,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockConnectionManager struct {
@@ -76,10 +77,6 @@ func (cm *mockConnectionManager) CheckChannel(context.Context) error {
 
 func (cm *mockConnectionManager) Reconnect() {
 	return
-}
-
-func (cm *mockConnectionManager) Wait() error {
-	return nil
 }
 
 func mockRepositoryWithProposal(providerID, serviceType string) *mockProposalRepository {
