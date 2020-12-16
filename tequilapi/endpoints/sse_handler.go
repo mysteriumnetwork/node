@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/session/pingpong"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
@@ -223,6 +225,12 @@ type consumerStateRes struct {
 func mapState(event stateEvent.State) stateRes {
 	identitiesRes := make([]contract.IdentityDTO, len(event.Identities))
 	for idx, identity := range event.Identities {
+		stake := new(big.Int)
+
+		if channel := identityChannel(identity.Address, event.ProviderChannels); channel != nil {
+			stake = channel.Channel.Stake
+		}
+
 		identitiesRes[idx] = contract.IdentityDTO{
 			Address:            identity.Address,
 			RegistrationStatus: identity.RegistrationStatus.String(),
@@ -230,7 +238,7 @@ func mapState(event stateEvent.State) stateRes {
 			Balance:            identity.Balance,
 			Earnings:           identity.Earnings,
 			EarningsTotal:      identity.EarningsTotal,
-			Stake:              new(big.Int),
+			Stake:              stake,
 		}
 	}
 
@@ -258,6 +266,16 @@ func mapState(event stateEvent.State) stateRes {
 		Channels:   channelsRes,
 	}
 	return res
+}
+
+func identityChannel(address string, channels []pingpong.HermesChannel) *pingpong.HermesChannel {
+	for idx := range channels {
+		if channels[idx].Identity.Address == address {
+			return &channels[idx]
+		}
+	}
+
+	return nil
 }
 
 // ConsumeStateEvent consumes the state change event
