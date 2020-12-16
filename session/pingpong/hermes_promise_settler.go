@@ -481,7 +481,7 @@ func (aps *hermesPromiseSettler) settle(
 				Beneficiary:    beneficiary,
 				Amount:         info.AmountSentToBeneficiary,
 				Fees:           info.Fees,
-				TotalSettled:   ch.channel.Settled,
+				TotalSettled:   ch.Channel.Settled,
 			}
 
 			err = aps.settlementHistoryStorage.Store(she)
@@ -571,7 +571,7 @@ func (ss settlementState) needsSettling(threshold float64, channel HermesChannel
 		return false
 	}
 
-	if channel.channel.Stake.Cmp(big.NewInt(0)) == 0 {
+	if channel.Channel.Stake.Cmp(big.NewInt(0)) == 0 {
 		// if starting with zero stake, only settle one myst or more.
 		if channel.UnsettledBalance().Cmp(big.NewInt(0).SetUint64(crypto.Myst)) == -1 {
 			return false

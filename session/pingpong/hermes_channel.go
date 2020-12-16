@@ -31,7 +31,7 @@ func NewHermesChannel(channelID string, id identity.Identity, hermesID common.Ad
 		ChannelID:   channelID,
 		Identity:    id,
 		HermesID:    hermesID,
-		channel:     channel,
+		Channel:     channel,
 		lastPromise: promise,
 	}
 }
@@ -41,7 +41,7 @@ type HermesChannel struct {
 	ChannelID   string
 	Identity    identity.Identity
 	HermesID    common.Address
-	channel     client.ProviderChannel
+	Channel     client.ProviderChannel
 	lastPromise HermesPromise
 	Beneficiary common.Address
 }
@@ -57,8 +57,8 @@ func (hc HermesChannel) LifetimeBalance() *big.Int {
 // UnsettledBalance returns current unsettled earnings.
 func (hc HermesChannel) UnsettledBalance() *big.Int {
 	settled := new(big.Int)
-	if hc.channel.Settled != nil {
-		settled = hc.channel.Settled
+	if hc.Channel.Settled != nil {
+		settled = hc.Channel.Settled
 	}
 
 	lastPromise := new(big.Int)
@@ -71,13 +71,13 @@ func (hc HermesChannel) UnsettledBalance() *big.Int {
 
 func (hc HermesChannel) availableBalance() *big.Int {
 	balance := new(big.Int)
-	if hc.channel.Stake != nil {
-		balance = hc.channel.Stake
+	if hc.Channel.Stake != nil {
+		balance = hc.Channel.Stake
 	}
 
 	settled := new(big.Int)
-	if hc.channel.Settled != nil {
-		settled = hc.channel.Settled
+	if hc.Channel.Settled != nil {
+		settled = hc.Channel.Settled
 	}
 
 	return new(big.Int).Add(balance, settled)

@@ -28,7 +28,7 @@ import (
 
 func TestHermesChannel_balance(t *testing.T) {
 	channel := HermesChannel{
-		channel: client.ProviderChannel{
+		Channel: client.ProviderChannel{
 			Stake:   big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
@@ -41,7 +41,7 @@ func TestHermesChannel_balance(t *testing.T) {
 	assert.Equal(t, big.NewInt(5), channel.UnsettledBalance())
 
 	channel = HermesChannel{
-		channel: client.ProviderChannel{
+		Channel: client.ProviderChannel{
 			Stake:   big.NewInt(100),
 			Settled: big.NewInt(10),
 		},
