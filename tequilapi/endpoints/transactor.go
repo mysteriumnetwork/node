@@ -373,6 +373,15 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
+	if req.TransactorFee == nil {
+		fees, err := te.transactor.FetchStakeDecreaseFee(chainID)
+		if err != nil {
+			utils.SendError(resp, errors.Wrap(err, "failed get stake decrease fee"), http.StatusInternalServerError)
+			return
+		}
+		req.TransactorFee = fees.Fee
+	}
+
 	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, req.TransactorFee)
 	if err != nil {
 		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
