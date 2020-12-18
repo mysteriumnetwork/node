@@ -1340,6 +1340,30 @@
         }
       }
     },
+    "/payment-order-options": {
+      "get": {
+        "description": "Includes minimum amount of myst required when topping up and suggested amounts",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get payment order options",
+        "operationId": "GetPaymentOrderOptions",
+        "responses": {
+          "200": {
+            "description": "PaymentOrderOptions object",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderOptions"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/proposals": {
       "get": {
         "description": "Returns list of proposals filtered by provider id",
@@ -3049,6 +3073,26 @@
         "type": {
           "type": "string",
           "x-go-name": "Type"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "PaymentOrderOptions": {
+      "description": "PaymentOrderOptions represents pilvytis payment order options",
+      "type": "object",
+      "properties": {
+        "minimum": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Minimum"
+        },
+        "suggested": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "x-go-name": "Suggested"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
