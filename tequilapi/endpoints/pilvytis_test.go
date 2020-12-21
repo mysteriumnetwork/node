@@ -68,6 +68,17 @@ func (mock *mockPilvytis) GetPaymentOrderCurrencies() ([]string, error) {
 	return mock.currencies, nil
 }
 
+func (mock *mockPilvytis) GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error) {
+	return &pilvytis.PaymentOrderOptions{
+		Minimum: 16.7,
+		Suggested: []float64{
+			20,
+			40,
+			100,
+		},
+	}, nil
+}
+
 func newMockPilvytisResp(id int, identity, priceC, payC string, recvAmount float64) pilvytis.OrderResponse {
 	f := 1.0
 	return pilvytis.OrderResponse{
@@ -239,5 +250,31 @@ func TestGetCurrency(t *testing.T) {
 		`["BTC"]`,
 		resp.Body.String(),
 	)
+}
 
+func TestGetPaymentOrderOptions(t *testing.T) {
+	mock := &mockPilvytis{}
+	handler := NewPilvytisEndpoint(mock).GetPaymentOrderOptions
+
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/payment-order-options",
+		nil,
+	)
+	assert.NoError(t, err)
+
+	handler(resp, req, httprouter.Params{})
+	assert.Equal(t, 200, resp.Code)
+	assert.JSONEq(t,
+		`{
+			"minimum": 16.7,
+			"suggested": [
+				20,
+				40,
+				100
+			]
+		}`,
+		resp.Body.String(),
+	)
 }

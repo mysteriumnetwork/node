@@ -33,9 +33,10 @@ type API struct {
 }
 
 const (
-	orderEndpoint    = "payment/orders"
-	currencyEndpoint = "payment/currencies"
-	exchangeEndpoint = "payment/exchange-rate"
+	orderEndpoint        = "payment/orders"
+	currencyEndpoint     = "payment/currencies"
+	orderOptionsEndpoint = "payment/order-options"
+	exchangeEndpoint     = "payment/exchange-rate"
 )
 
 // NewAPI returns a new API instance.
@@ -148,6 +149,23 @@ func (a *API) GetPaymentOrderCurrencies() ([]string, error) {
 
 	var resp []string
 	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+}
+
+// GetPaymentOrderOptions return payment order options
+func (a *API) GetPaymentOrderOptions() (*PaymentOrderOptions, error) {
+	req, err := requests.NewGetRequest(a.url, orderOptionsEndpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp PaymentOrderOptions
+	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
+}
+
+// PaymentOrderOptions represents pilvytis payment order options
+type PaymentOrderOptions struct {
+	Minimum   float64   `json:"minimum"`
+	Suggested []float64 `json:"suggested"`
 }
 
 // GetMystExchangeRate returns the exchange rate for myst to other currencies.
