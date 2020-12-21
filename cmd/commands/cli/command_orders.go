@@ -93,6 +93,24 @@ func (c *cliApp) orderCreate(args []string) {
 		clio.Warn("could not parse amount")
 		return
 	}
+	if f <= 0 {
+		clio.Warn(fmt.Sprintf("Top up amount is required and must be greater than 0"))
+		return
+	}
+
+	options, err := c.tequilapi.PaymentOptions()
+	if err != nil {
+		clio.Info("Failed to get payment options, wont check minimum possible amount to topup")
+	}
+
+	if options.Minimum != 0 && f <= options.Minimum {
+		msg := fmt.Sprintf(
+			"Top up amount must be greater than %v%s",
+			options.Minimum,
+			config.GetString(config.FlagDefaultCurrency))
+		clio.Warn(msg)
+		return
+	}
 
 	ln := false
 	if len(args) == 4 {

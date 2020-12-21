@@ -712,6 +712,18 @@ func (client *Client) OrderCurrencies() ([]string, error) {
 	return res, parseResponseJSON(resp, &res)
 }
 
+// PaymentOptions returns payment option suggestions from pilvytis.
+func (client *Client) PaymentOptions() (contract.PaymentOrderOptions, error) {
+	resp, err := client.http.Get("payment-order-options", nil)
+	if err != nil {
+		return contract.PaymentOrderOptions{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.PaymentOrderOptions
+	return res, parseResponseJSON(resp, &res)
+}
+
 // UpdateTerms takes a TermsRequest and sends it as an update
 // for the terms of use.
 func (client *Client) UpdateTerms(obj contract.TermsRequest) error {

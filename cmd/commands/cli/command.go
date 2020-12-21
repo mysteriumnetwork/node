@@ -110,7 +110,7 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 
 func (c *cliApp) handleTOS(ctx *cli.Context) error {
 	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
-		c.acceptTOS(ctx)
+		c.acceptTOS()
 		return nil
 	}
 
@@ -132,7 +132,7 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 	return nil
 }
 
-func (c *cliApp) acceptTOS(ctx *cli.Context) {
+func (c *cliApp) acceptTOS() {
 	t := true
 	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
 		AgreedConsumer: &t,
