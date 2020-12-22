@@ -102,6 +102,7 @@ type cliApp struct {
 const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
+const youMustAgree = "You must agree with provider and consumer terms of use in order to use this command"
 
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
@@ -110,18 +111,18 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 
 func (c *cliApp) handleTOS(ctx *cli.Context) error {
 	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
-		c.acceptTOS(ctx)
+		c.acceptTOS()
 		return nil
 	}
 
 	agreedC := config.Current.GetBool(contract.TermsConsumerAgreed)
 	if !agreedC {
-		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+		return errors.New(youMustAgree)
 	}
 
 	agreedP := config.Current.GetBool(contract.TermsProviderAgreed)
 	if !agreedP {
-		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+		return errors.New(youMustAgree)
 	}
 
 	version := config.Current.GetString(contract.TermsVersion)
@@ -132,13 +133,19 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 	return nil
 }
 
-func (c *cliApp) acceptTOS(ctx *cli.Context) {
+func (c *cliApp) acceptTOS() {
 	t := true
-	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
+	req := contract.TermsRequest{
 		AgreedConsumer: &t,
 		AgreedProvider: &t,
 		AgreedVersion:  metadata.CurrentTermsVersion,
-	}); err != nil {
+	}
+
+	for k, v := range req.ToMap() {
+		config.Current.SetUser(k, v)
+	}
+
+	if err := config.Current.SaveUserConfig(); err != nil {
 		clio.Info("Failed to save terms of use agreement, you will have to re-agree on next launch")
 	}
 }

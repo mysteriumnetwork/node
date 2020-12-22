@@ -76,15 +76,15 @@ func NewTermsResp() *TermsResponse {
 // ToMap turns a TermsRequest in to an iterable map which
 // can be mapped directly to a user config.
 func (t *TermsRequest) ToMap() map[string]interface{} {
-	give := map[string]interface{}{}
+	m := map[string]interface{}{}
 	if t.AgreedConsumer != nil {
-		give[TermsConsumerAgreed] = *t.AgreedConsumer
+		m[TermsConsumerAgreed] = *t.AgreedConsumer
 	}
 
 	if t.AgreedProvider != nil {
-		give[TermsProviderAgreed] = *t.AgreedProvider
+		m[TermsProviderAgreed] = *t.AgreedProvider
 	}
-	give[TermsVersion] = t.AgreedVersion
+	m[TermsVersion] = t.AgreedVersion
 
-	return give
+	return m
 }
