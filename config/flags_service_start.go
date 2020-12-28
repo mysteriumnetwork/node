@@ -74,6 +74,7 @@ func RegisterFlagsServiceStart(flags *[]cli.Flag) {
 	)
 }
 
+// TODO cli refactor
 // ParseFlagsServiceStart parses service start CLI flags and registers values to the configuration
 func ParseFlagsServiceStart(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagIdentity)

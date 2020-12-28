@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/node"
+
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -34,9 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
@@ -61,22 +61,42 @@ const serviceHelp = `service <action> [args]
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
-		Name:   CommandName,
-		Usage:  "Starts a CLI client with a Tequilapi",
-		Before: clicontext.LoadUserConfigQuietly,
-		Flags:  []cli.Flag{&config.FlagAgreedTermsConditions},
+		Name:  CommandName,
+		Usage: "Starts a CLI client with a Tequilapi",
+		//Before: clicontext.LoadUserConfigQuietly,
+		Flags: []cli.Flag{&config.FlagAgreedTermsConditions},
 		Action: func(ctx *cli.Context) error {
 			config.ParseFlagsNode(ctx)
 			nodeOptions := node.GetOptions()
-			cmdCLI := &cliApp{
-				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
-				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+			fmt.Println(nodeOptions)
+			client, err := initTequilapiClinet()
+			if err != nil {
+				return err
 			}
+
+			// fix (has to mutate by testnet & stuff)
+			dataDir := rConfig.GetStringByFlag(config.FlagDataDir)
+			cmdCLI := &cliApp{
+				historyFile: filepath.Join(dataDir, ".cli_history"),
+				tequilapi:   client,
+			}
+
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
 			return describeQuit(cmdCLI.Run(ctx))
 		},
 	}
+}
+
+func initTequilapiClinet() (*tequilapi_client.Client, error) {
+	client := tequilapi_client.NewClient(defaultTequilApiAddress, defaultTequilApiPort)
+
+	err := refreshRemoteConfig(client)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
 func describeQuit(err error) error {
@@ -114,17 +134,17 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 		return nil
 	}
 
-	agreedC := config.Current.GetBool(contract.TermsConsumerAgreed)
+	agreedC := rConfig.GetBool(contract.TermsConsumerAgreed)
 	if !agreedC {
 		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
 	}
 
-	agreedP := config.Current.GetBool(contract.TermsProviderAgreed)
+	agreedP := rConfig.GetBool(contract.TermsProviderAgreed)
 	if !agreedP {
 		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
 	}
 
-	version := config.Current.GetString(contract.TermsVersion)
+	version := rConfig.GetString(contract.TermsVersion)
 	if version != metadata.CurrentTermsVersion {
 		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
 	}
@@ -411,7 +431,7 @@ func (c *cliApp) connect(argsString string) {
 
 	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	hermesID := config.GetString(config.FlagHermesID)
+	hermesID := rConfig.GetStringByFlag(config.FlagHermesID)
 
 	// Dont throw an error here incase user identity has a password on it
 	// or we failed to randomly unlock it. We can still try to connect
@@ -472,7 +492,7 @@ func (c *cliApp) payout(argsString string) {
 func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
-	var profileUrl = config.GetString(config.FlagMMNAddress) + "user/profile"
+	var profileUrl = rConfig.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
 	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
@@ -605,10 +625,10 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		clio.Warn(err)

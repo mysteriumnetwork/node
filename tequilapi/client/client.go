@@ -18,7 +18,9 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -733,4 +735,25 @@ func (client *Client) UpdateTerms(obj contract.TermsRequest) error {
 	}
 	defer resp.Body.Close()
 	return nil
+}
+
+// FetchConfig - fetches current config
+func (client *Client) FetchConfig() (map[string]interface{}, error) {
+	resp, err := client.http.Get("config", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var unmarshaled map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &unmarshaled)
+
+	config := unmarshaled["data"].(map[string]interface{})
+
+	return config, err
 }
