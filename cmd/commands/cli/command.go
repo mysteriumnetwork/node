@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/node"
-
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -63,18 +61,17 @@ func NewCommand() *cli.Command {
 	return &cli.Command{
 		Name:  CommandName,
 		Usage: "Starts a CLI client with a Tequilapi",
-		//Before: clicontext.LoadUserConfigQuietly,
-		Flags: []cli.Flag{&config.FlagAgreedTermsConditions},
+		Flags: []cli.Flag{&config.FlagAgreedTermsConditions, &config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Action: func(ctx *cli.Context) error {
-			config.ParseFlagsNode(ctx)
-			nodeOptions := node.GetOptions()
-			fmt.Println(nodeOptions)
-			client, err := initTequilapiClinet()
+
+			client, err := initClientAndConfig(
+				tequilAPIAddress(ctx),
+				tequilAPIPort(ctx),
+			)
 			if err != nil {
 				return err
 			}
 
-			// fix (has to mutate by testnet & stuff)
 			dataDir := rConfig.GetStringByFlag(config.FlagDataDir)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(dataDir, ".cli_history"),
@@ -88,11 +85,12 @@ func NewCommand() *cli.Command {
 	}
 }
 
-func initTequilapiClinet() (*tequilapi_client.Client, error) {
-	client := tequilapi_client.NewClient(defaultTequilApiAddress, defaultTequilApiPort)
+func initClientAndConfig(address string, port int) (*tequilapi_client.Client, error) {
+	client := tequilapi_client.NewClient(address, port)
 
 	err := refreshRemoteConfig(client)
 	if err != nil {
+		clio.Error("failed to connect to node via url:", address+":"+fmt.Sprint(port))
 		return nil, err
 	}
 
@@ -123,6 +121,8 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
+var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
+
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
 	"type 'license --conditions'",
@@ -135,13 +135,14 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 	}
 
 	agreedC := rConfig.GetBool(contract.TermsConsumerAgreed)
+
 	if !agreedC {
-		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+		return errTermsNotAgreed
 	}
 
 	agreedP := rConfig.GetBool(contract.TermsProviderAgreed)
 	if !agreedP {
-		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+		return errTermsNotAgreed
 	}
 
 	version := rConfig.GetString(contract.TermsVersion)
