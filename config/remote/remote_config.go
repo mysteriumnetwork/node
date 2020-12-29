@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cli
+package remoteconfig
 
 import (
 	"math/big"
@@ -31,7 +31,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var rConfig = newRemoteConfig()
+// Config - to be used in cli, account, connections or any similar action that requires a backing node
+var Config = newRemoteConfig()
 
 type remoteConfig struct {
 	config map[string]interface{}
@@ -41,12 +42,13 @@ func newRemoteConfig() *remoteConfig {
 	return &remoteConfig{}
 }
 
-func refreshRemoteConfig(client *client.Client) error {
+// RefreshRemoteConfig - will fetch latest config with provided client.Client
+func RefreshRemoteConfig(client *client.Client) error {
 	config, err := client.FetchConfig()
 	if err != nil {
 		return err
 	}
-	rConfig.config = config
+	Config.config = config
 	return nil
 }
 
@@ -109,7 +111,8 @@ func (rc *remoteConfig) GetInt64(key string) int64 {
 	return cast.ToInt64(rc.Get(key))
 }
 
-func tequilAPIAddress(ctx *cli.Context) string {
+// TequilAPIAddress - wil resolve default tequilapi address or from flag if one is provided
+func TequilAPIAddress(ctx *cli.Context) string {
 	flag := config.FlagTequilapiAddress
 
 	if ctx.IsSet(flag.Name) {
@@ -119,7 +122,8 @@ func tequilAPIAddress(ctx *cli.Context) string {
 	return flag.Value
 }
 
-func tequilAPIPort(ctx *cli.Context) int {
+// TequilAPIPort - wil resolve default tequilapi port or from flag if one is provided
+func TequilAPIPort(ctx *cli.Context) int {
 	flag := config.FlagTequilapiPort
 
 	if ctx.IsSet(flag.Name) {

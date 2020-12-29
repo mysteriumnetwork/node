@@ -27,6 +27,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/cmd/commands"
+
+	remote_config "github.com/mysteriumnetwork/node/config/remote"
+
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -64,15 +68,12 @@ func NewCommand() *cli.Command {
 		Flags: []cli.Flag{&config.FlagAgreedTermsConditions, &config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Action: func(ctx *cli.Context) error {
 
-			client, err := initClientAndConfig(
-				tequilAPIAddress(ctx),
-				tequilAPIPort(ctx),
-			)
+			client, err := commands.InitClientAndConfig(ctx)
 			if err != nil {
 				return err
 			}
 
-			dataDir := rConfig.GetStringByFlag(config.FlagDataDir)
+			dataDir := remote_config.Config.GetStringByFlag(config.FlagDataDir)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(dataDir, ".cli_history"),
 				tequilapi:   client,
@@ -83,18 +84,6 @@ func NewCommand() *cli.Command {
 			return describeQuit(cmdCLI.Run(ctx))
 		},
 	}
-}
-
-func initClientAndConfig(address string, port int) (*tequilapi_client.Client, error) {
-	client := tequilapi_client.NewClient(address, port)
-
-	err := refreshRemoteConfig(client)
-	if err != nil {
-		clio.Error("failed to connect to node via url:", address+":"+fmt.Sprint(port))
-		return nil, err
-	}
-
-	return client, nil
 }
 
 func describeQuit(err error) error {
@@ -134,18 +123,18 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 		return nil
 	}
 
-	agreedC := rConfig.GetBool(contract.TermsConsumerAgreed)
+	agreedC := remote_config.Config.GetBool(contract.TermsConsumerAgreed)
 
 	if !agreedC {
 		return errTermsNotAgreed
 	}
 
-	agreedP := rConfig.GetBool(contract.TermsProviderAgreed)
+	agreedP := remote_config.Config.GetBool(contract.TermsProviderAgreed)
 	if !agreedP {
 		return errTermsNotAgreed
 	}
 
-	version := rConfig.GetString(contract.TermsVersion)
+	version := remote_config.Config.GetString(contract.TermsVersion)
 	if version != metadata.CurrentTermsVersion {
 		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
 	}
@@ -432,7 +421,7 @@ func (c *cliApp) connect(argsString string) {
 
 	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	hermesID := rConfig.GetStringByFlag(config.FlagHermesID)
+	hermesID := remote_config.Config.GetStringByFlag(config.FlagHermesID)
 
 	// Dont throw an error here incase user identity has a password on it
 	// or we failed to randomly unlock it. We can still try to connect
@@ -493,7 +482,7 @@ func (c *cliApp) payout(argsString string) {
 func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
-	var profileUrl = rConfig.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
+	var profileUrl = remote_config.Config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
 	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
@@ -626,10 +615,10 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := rConfig.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		clio.Warn(err)
