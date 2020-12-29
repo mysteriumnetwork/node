@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	remote_config "github.com/mysteriumnetwork/node/config/remote"
+
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
@@ -90,7 +92,7 @@ func (c *cliApp) increaseStake(args []string) {
 		return
 	}
 
-	accountantID := rConfig.GetStringByFlag(config.FlagHermesID)
+	accountantID := remote_config.Config.GetStringByFlag(config.FlagHermesID)
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 

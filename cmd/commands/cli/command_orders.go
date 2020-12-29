@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 
+	remote_config "github.com/mysteriumnetwork/node/config/remote"
+
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
@@ -200,6 +202,6 @@ func printOrder(o contract.OrderResponse) {
 	clio.Info(fmt.Sprintf("Price: %s %s", fUnknown(o.PriceAmount), o.PriceCurrency))
 	clio.Info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
 	clio.Info(fmt.Sprintf("Receive: %s %s", fUnknown(o.ReceiveAmount), o.ReceiveCurrency))
-	clio.Info(fmt.Sprintf("Receive %s amount: %f", rConfig.GetStringByFlag(config.FlagDefaultCurrency), o.MystAmount))
+	clio.Info(fmt.Sprintf("Receive %s amount: %f", remote_config.Config.GetStringByFlag(config.FlagDefaultCurrency), o.MystAmount))
 	clio.Info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
 }
