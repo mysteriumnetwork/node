@@ -165,7 +165,7 @@ func (c *command) topup(ctx *cli.Context) {
 	}
 
 	if ok {
-		clio.Warn("Please register your identity registration")
+		clio.Warn("Your identity is not registered, please execute `myst account register` first")
 		return
 	}
 
@@ -184,7 +184,21 @@ func (c *command) topup(ctx *cli.Context) {
 
 	amount := ctx.Float64(flagAmount.Name)
 	if amount <= 0 {
-		clio.Warn("Top up Amount is required and must be greater than 0")
+		clio.Warn("Top up amount is required and must be greater than 0")
+		return
+	}
+
+	options, err := c.tequilapi.PaymentOptions()
+	if err != nil {
+		clio.Info("Failed to get payment options, wont check minimum possible amount to topup")
+	}
+
+	if options.Minimum != 0 && amount <= options.Minimum {
+		msg := fmt.Sprintf(
+			"Top up amount must be greater than %v%s",
+			options.Minimum,
+			config.GetString(config.FlagDefaultCurrency))
+		clio.Warn(msg)
 		return
 	}
 

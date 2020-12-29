@@ -163,7 +163,7 @@ func (c *command) down() {
 
 func (c *command) handleTOS(ctx *cli.Context) error {
 	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
-		c.acceptTOS(ctx)
+		c.acceptTOS()
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func (c *command) handleTOS(ctx *cli.Context) error {
 	return nil
 }
 
-func (c *command) acceptTOS(ctx *cli.Context) {
+func (c *command) acceptTOS() {
 	t := true
 	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
 		AgreedConsumer: &t,
