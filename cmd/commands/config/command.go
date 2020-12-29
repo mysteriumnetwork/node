@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
 
 	"github.com/urfave/cli/v2"
 )
@@ -39,22 +39,17 @@ func NewCommand() *cli.Command {
 		Name:        CommandName,
 		Usage:       "Manage your node config",
 		Description: "Using config subcommands you can view and manage your current node config",
+		Flags:       []cli.Flag{&config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Before: func(ctx *cli.Context) error {
-			if err := clicontext.LoadUserConfigQuietly(ctx); err != nil {
-				return err
-			}
-
-			config.ParseFlagsServiceStart(ctx)
-			config.ParseFlagsServiceOpenvpn(ctx)
-			config.ParseFlagsServiceWireguard(ctx)
-			config.ParseFlagsServiceNoop(ctx)
-			config.ParseFlagsNode(ctx)
-			return nil
+			var err error
+			cmd.tc, err = clio.NewTequilApiClient(ctx)
+			return err
 		},
 		Subcommands: []*cli.Command{
 			{
+
 				Name:  "show",
-				Usage: "Show current config",
+				Usage: "Show current node config",
 				Action: func(ctx *cli.Context) error {
 					cmd.show()
 					return nil
@@ -64,11 +59,19 @@ func NewCommand() *cli.Command {
 	}
 }
 
-type command struct{}
+type command struct {
+	tc *client.Client
+}
 
 func (c *command) show() {
+	config, err := c.tc.FetchConfig()
+	if err != nil {
+		clio.Error("Failed to fetch current config")
+		return
+	}
+
 	dest := map[string]string{}
-	squishMap(config.Current.GetConfig(), dest)
+	squishMap(config, dest)
 
 	if len(dest) == 0 {
 		clio.Error("Config is empty or impossible to parse")
