@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	remote_config "github.com/mysteriumnetwork/node/config/remote"
+	"github.com/mysteriumnetwork/node/config/remote"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -132,7 +132,7 @@ func (c *cliApp) orderCreate(args []string) {
 		clio.Warn(errors.Wrap(err, "could not create an order"))
 		return
 	}
-	printOrder(resp)
+	printOrder(resp, nil)
 }
 
 const usageOrderGet = "get <identity> <orderID>"
@@ -153,7 +153,7 @@ func (c *cliApp) orderGet(args []string) {
 		clio.Warn(errors.Wrap(err, "could not get an order"))
 		return
 	}
-	printOrder(resp)
+	printOrder(resp, c.config)
 }
 
 const usageOrderGetAll = "get-all <identity>"
@@ -183,7 +183,7 @@ func (c *cliApp) orderGetAll(args []string) {
 	)
 }
 
-func printOrder(o contract.OrderResponse) {
+func printOrder(o contract.OrderResponse, rc *remote.Config) {
 	strUnknown := func(s *string) string {
 		if s == nil {
 			return "unknown"
@@ -202,6 +202,6 @@ func printOrder(o contract.OrderResponse) {
 	clio.Info(fmt.Sprintf("Price: %s %s", fUnknown(o.PriceAmount), o.PriceCurrency))
 	clio.Info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
 	clio.Info(fmt.Sprintf("Receive: %s %s", fUnknown(o.ReceiveAmount), o.ReceiveCurrency))
-	clio.Info(fmt.Sprintf("Receive %s amount: %f", remote_config.Config.GetStringByFlag(config.FlagDefaultCurrency), o.MystAmount))
+	clio.Info(fmt.Sprintf("Receive %s amount: %f", rc.GetStringByFlag(config.FlagDefaultCurrency), o.MystAmount))
 	clio.Info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
 }

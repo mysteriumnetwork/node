@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package remoteconfig
+package remote
 
 import (
 	"math/big"
@@ -31,29 +31,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Config - to be used in cli, account, connections or any similar action that requires a backing node
-var Config = newRemoteConfig()
-
-type remoteConfig struct {
+// Config - remote config struct
+type Config struct {
+	client *client.Client
 	config map[string]interface{}
 }
 
-func newRemoteConfig() *remoteConfig {
-	return &remoteConfig{}
+// NewRemoteConfig - new remote config instance
+func NewRemoteConfig(client *client.Client) (*Config, error) {
+	cfg := &Config{
+		client: client,
+	}
+	return cfg, cfg.RefreshRemoteConfig()
 }
 
-// RefreshRemoteConfig - will fetch latest config with provided client.Client
-func RefreshRemoteConfig(client *client.Client) error {
-	config, err := client.FetchConfig()
+// RefreshRemoteConfig - will fetch latest config
+func (rc *Config) RefreshRemoteConfig() error {
+	config, err := rc.client.FetchConfig()
 	if err != nil {
 		return err
 	}
-	Config.config = config
+	rc.config = config
 	return nil
 }
 
 // Get returns stored remote config value as-is.
-func (rc *remoteConfig) Get(key string) interface{} {
+func (rc *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
 	value := config.SearchMap(rc.config, segments)
 	log.Debug().Msgf("Returning remote config value %v:%v", key, value)
@@ -61,74 +64,52 @@ func (rc *remoteConfig) Get(key string) interface{} {
 }
 
 // GetStringByFlag shorthand for getting current configuration value for cli.BoolFlag.
-func (rc *remoteConfig) GetStringByFlag(flag cli.StringFlag) string {
+func (rc *Config) GetStringByFlag(flag cli.StringFlag) string {
 	return rc.GetString(flag.Name)
 }
 
 // GetString returns config value as string.
-func (rc *remoteConfig) GetString(key string) string {
+func (rc *Config) GetString(key string) string {
 	return cast.ToString(rc.Get(key))
 }
 
 // GetBoolByFlag shorthand for getting current configuration value for cli.BoolFlag.
-func (rc *remoteConfig) GetBoolByFlag(flag cli.BoolFlag) bool {
+func (rc *Config) GetBoolByFlag(flag cli.BoolFlag) bool {
 	return rc.GetBool(flag.Name)
 }
 
 // GetBool returns config value as bool.
-func (rc *remoteConfig) GetBool(key string) bool {
+func (rc *Config) GetBool(key string) bool {
 	return cast.ToBool(rc.Get(key))
 }
 
 // GetBigIntByFlag shorthand for getting and parsing a configuration value for cli.StringFlag that's a big.Int.
-func (rc *remoteConfig) GetBigIntByFlag(flag cli.StringFlag) *big.Int {
+func (rc *Config) GetBigIntByFlag(flag cli.StringFlag) *big.Int {
 	return rc.GetBigInt(flag.Name)
 }
 
 // GetBigInt returns config value as big.Int.
-func (rc *remoteConfig) GetBigInt(key string) *big.Int {
+func (rc *Config) GetBigInt(key string) *big.Int {
 	b, _ := new(big.Int).SetString(rc.GetString(key), 10)
 	return b
 }
 
 // GetStringSliceByFlag shorthand for getting and parsing a configuration value for cli.StringFlag that's a []string.
-func (rc *remoteConfig) GetStringSliceByFlag(flag cli.StringSliceFlag) []string {
+func (rc *Config) GetStringSliceByFlag(flag cli.StringSliceFlag) []string {
 	return rc.GetStringSlice(flag.Name)
 }
 
 // GetStringSlice returns config value as []string.
-func (rc *remoteConfig) GetStringSlice(key string) []string {
+func (rc *Config) GetStringSlice(key string) []string {
 	return cast.ToStringSlice(rc.Get(key))
 }
 
 // GetInt64ByFlag shorthand for getting and parsing a configuration value for cli.StringFlag that's a int64.
-func (rc *remoteConfig) GetInt64ByFlag(flag cli.Int64Flag) int64 {
+func (rc *Config) GetInt64ByFlag(flag cli.Int64Flag) int64 {
 	return rc.GetInt64(flag.Name)
 }
 
 // GetInt64 returns config value as int64.
-func (rc *remoteConfig) GetInt64(key string) int64 {
+func (rc *Config) GetInt64(key string) int64 {
 	return cast.ToInt64(rc.Get(key))
-}
-
-// TequilAPIAddress - wil resolve default tequilapi address or from flag if one is provided
-func TequilAPIAddress(ctx *cli.Context) string {
-	flag := config.FlagTequilapiAddress
-
-	if ctx.IsSet(flag.Name) {
-		return ctx.String(flag.Name)
-	}
-
-	return flag.Value
-}
-
-// TequilAPIPort - wil resolve default tequilapi port or from flag if one is provided
-func TequilAPIPort(ctx *cli.Context) int {
-	flag := config.FlagTequilapiPort
-
-	if ctx.IsSet(flag.Name) {
-		return ctx.Int(flag.Name)
-	}
-
-	return flag.Value
 }

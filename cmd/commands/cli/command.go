@@ -27,9 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/cmd/commands"
-
-	remote_config "github.com/mysteriumnetwork/node/config/remote"
+	"github.com/mysteriumnetwork/node/config/remote"
 
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
@@ -68,16 +66,17 @@ func NewCommand() *cli.Command {
 		Flags: []cli.Flag{&config.FlagAgreedTermsConditions, &config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Action: func(ctx *cli.Context) error {
 
-			client, err := commands.InitClientAndConfig(ctx)
+			client, err := clio.NewTequilApiClient(ctx)
 			if err != nil {
 				return err
 			}
 
-			dataDir := remote_config.Config.GetStringByFlag(config.FlagDataDir)
-			cmdCLI := &cliApp{
-				historyFile: filepath.Join(dataDir, ".cli_history"),
-				tequilapi:   client,
+			cfg, err := remote.NewRemoteConfig(client)
+			if err != nil {
+				return err
 			}
+
+			cmdCLI := newCliApp(cfg, client)
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
@@ -95,8 +94,18 @@ func describeQuit(err error) error {
 	return err
 }
 
+func newCliApp(rc *remote.Config, client *tequilapi_client.Client) *cliApp {
+	dataDir := rc.GetStringByFlag(config.FlagDataDir)
+	return &cliApp{
+		config:      rc,
+		tequilapi:   client,
+		historyFile: filepath.Join(dataDir, ".cli_history"),
+	}
+}
+
 // cliApp describes CLI based Mysterium UI
 type cliApp struct {
+	config           *remote.Config
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
 	fetchedProposals []contract.ProposalDTO
@@ -123,18 +132,18 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 		return nil
 	}
 
-	agreedC := remote_config.Config.GetBool(contract.TermsConsumerAgreed)
+	agreedC := c.config.GetBool(contract.TermsConsumerAgreed)
 
 	if !agreedC {
 		return errTermsNotAgreed
 	}
 
-	agreedP := remote_config.Config.GetBool(contract.TermsProviderAgreed)
+	agreedP := c.config.GetBool(contract.TermsProviderAgreed)
 	if !agreedP {
 		return errTermsNotAgreed
 	}
 
-	version := remote_config.Config.GetString(contract.TermsVersion)
+	version := c.config.GetString(contract.TermsVersion)
 	if version != metadata.CurrentTermsVersion {
 		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
 	}
@@ -421,7 +430,7 @@ func (c *cliApp) connect(argsString string) {
 
 	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	hermesID := remote_config.Config.GetStringByFlag(config.FlagHermesID)
+	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
 
 	// Dont throw an error here incase user identity has a password on it
 	// or we failed to randomly unlock it. We can still try to connect
@@ -482,7 +491,7 @@ func (c *cliApp) payout(argsString string) {
 func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
-	var profileUrl = remote_config.Config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
+	var profileUrl = c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
 	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
@@ -615,10 +624,10 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := remote_config.Config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		clio.Warn(err)

@@ -23,7 +23,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/mysteriumnetwork/node/cmd/commands"
+	"github.com/urfave/cli/v2"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
@@ -32,8 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-
-	"github.com/urfave/cli/v2"
 )
 
 // CommandName is the name of the main command.
@@ -65,7 +63,7 @@ func NewCommand() *cli.Command {
 		Usage:       "Manage your account",
 		Description: "Using account subcommands you can manage your account details and get information about it",
 		Before: func(ctx *cli.Context) error {
-			tc, err := commands.InitClientAndConfig(ctx)
+			tc, err := clio.NewTequilApiClient(ctx)
 			if err != nil {
 				return err
 			}
