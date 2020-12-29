@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package cli
 
 import (
@@ -12,11 +29,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/rs/zerolog/log"
-)
-
-const (
-	defaultTequilApiAddress = "localhost"
-	defaultTequilApiPort    = 4050
 )
 
 var rConfig = newRemoteConfig()
@@ -75,4 +87,44 @@ func (rc *remoteConfig) GetBigIntByFlag(flag cli.StringFlag) *big.Int {
 func (rc *remoteConfig) GetBigInt(key string) *big.Int {
 	b, _ := new(big.Int).SetString(rc.GetString(key), 10)
 	return b
+}
+
+// GetStringSliceByFlag shorthand for getting and parsing a configuration value for cli.StringFlag that's a []string.
+func (rc *remoteConfig) GetStringSliceByFlag(flag cli.StringSliceFlag) []string {
+	return rc.GetStringSlice(flag.Name)
+}
+
+// GetStringSlice returns config value as []string.
+func (rc *remoteConfig) GetStringSlice(key string) []string {
+	return cast.ToStringSlice(rc.Get(key))
+}
+
+// GetInt64ByFlag shorthand for getting and parsing a configuration value for cli.StringFlag that's a int64.
+func (rc *remoteConfig) GetInt64ByFlag(flag cli.Int64Flag) int64 {
+	return rc.GetInt64(flag.Name)
+}
+
+// GetInt64 returns config value as int64.
+func (rc *remoteConfig) GetInt64(key string) int64 {
+	return cast.ToInt64(rc.Get(key))
+}
+
+func tequilAPIAddress(ctx *cli.Context) string {
+	flag := config.FlagTequilapiAddress
+
+	if ctx.IsSet(flag.Name) {
+		return ctx.String(flag.Name)
+	}
+
+	return flag.Value
+}
+
+func tequilAPIPort(ctx *cli.Context) int {
+	flag := config.FlagTequilapiPort
+
+	if ctx.IsSet(flag.Name) {
+		return ctx.Int(flag.Name)
+	}
+
+	return flag.Value
 }

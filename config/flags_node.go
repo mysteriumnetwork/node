@@ -134,7 +134,7 @@ var (
 	// FlagVerbose enables verbose logging.
 	FlagVerbose = cli.BoolFlag{
 		Name:  "verbose",
-		Usage: "If provided loggin becomes more verbose",
+		Usage: "Enable verbose logging",
 		Value: false,
 	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
