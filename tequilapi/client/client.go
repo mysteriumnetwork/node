@@ -745,6 +745,10 @@ func (client *Client) FetchConfig() (map[string]interface{}, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("fetching config failed with status: %d", resp.StatusCode)
+	}
+
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -752,8 +756,15 @@ func (client *Client) FetchConfig() (map[string]interface{}, error) {
 
 	var unmarshaled map[string]interface{}
 	err = json.Unmarshal(bodyBytes, &unmarshaled)
+	if err != nil {
+		return nil, err
+	}
 
-	config := unmarshaled["data"].(map[string]interface{})
+	data, ok := unmarshaled["data"]
+	if !ok {
+		return nil, errors.New("no field named 'data' found in config")
+	}
 
+	config := data.(map[string]interface{})
 	return config, err
 }

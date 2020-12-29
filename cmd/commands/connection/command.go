@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mysteriumnetwork/node/cmd/commands"
-
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -64,7 +62,7 @@ func NewCommand() *cli.Command {
 		Usage:       "Manage your connection",
 		Description: "Using the connection subcommands you can manage your connection or get additional information about it",
 		Before: func(ctx *cli.Context) error {
-			tc, err := commands.InitClientAndConfig(ctx)
+			tc, err := clio.NewTequilApiClient(ctx)
 			if err != nil {
 				return err
 			}

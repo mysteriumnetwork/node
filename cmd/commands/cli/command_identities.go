@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	remote_config "github.com/mysteriumnetwork/node/config/remote"
-
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
@@ -200,7 +198,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if config.GetBool(config.FlagTestnet2) || remote_config.Config.GetBoolByFlag(config.FlagTestnet) {
+	if config.GetBool(config.FlagTestnet2) || c.config.GetBoolByFlag(config.FlagTestnet) {
 		msg = "Registration successful, try to connect."
 	}
 
@@ -223,7 +221,7 @@ func (c *cliApp) settle(args []string) {
 		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
 		return
 	}
-	hermesID := remote_config.Config.GetStringByFlag(config.FlagHermesID)
+	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
@@ -280,7 +278,7 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 
 	address := actionArgs[0]
 	beneficiary := actionArgs[1]
-	hermesID := remote_config.Config.GetStringByFlag(config.FlagHermesID)
+	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
 
 	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
 	if err != nil {
