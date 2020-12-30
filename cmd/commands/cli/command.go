@@ -71,7 +71,7 @@ func NewCommand() *cli.Command {
 				return err
 			}
 
-			cfg, err := remote.NewRemoteConfig(client)
+			cfg, err := remote.NewConfig(client)
 			if err != nil {
 				return err
 			}

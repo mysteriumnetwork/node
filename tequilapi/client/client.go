@@ -18,9 +18,7 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -749,18 +747,13 @@ func (client *Client) FetchConfig() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("fetching config failed with status: %d", resp.StatusCode)
 	}
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	var res map[string]interface{}
+	err = parseResponseJSON(resp, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	var unmarshaled map[string]interface{}
-	err = json.Unmarshal(bodyBytes, &unmarshaled)
-	if err != nil {
-		return nil, err
-	}
-
-	data, ok := unmarshaled["data"]
+	data, ok := res["data"]
 	if !ok {
 		return nil, errors.New("no field named 'data' found in config")
 	}

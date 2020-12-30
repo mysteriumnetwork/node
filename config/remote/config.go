@@ -37,8 +37,8 @@ type Config struct {
 	config map[string]interface{}
 }
 
-// NewRemoteConfig - new remote config instance
-func NewRemoteConfig(client *client.Client) (*Config, error) {
+// NewConfig - new remote config instance
+func NewConfig(client *client.Client) (*Config, error) {
 	cfg := &Config{
 		client: client,
 	}

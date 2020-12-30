@@ -34,7 +34,7 @@ func NewTequilApiClient(ctx *cli.Context) (*tequilapi_client.Client, error) {
 
 	_, err := client.Healthcheck()
 	if err != nil {
-		Error("failed to connect to node via url:", address+":"+fmt.Sprint(port))
+		Error(fmt.Sprintf("failed to connect to node via url: %s:%d", address, port))
 		return nil, err
 	}
 	return client, nil
