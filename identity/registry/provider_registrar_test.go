@@ -23,15 +23,20 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+var fakeSignerFactory = func(id identity.Identity) identity.Signer {
+	return &fakeSigner{}
+}
 
 func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
 
 	done := make(chan struct{})
 
@@ -48,7 +53,7 @@ func Test_Provider_Registrar_needsHandling(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
 
 	mockEvent := queuedEvent{
 		event:   servicestate.AppEventServiceStatus{},
@@ -73,7 +78,7 @@ func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -107,7 +112,7 @@ func Test_Provider_Registrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -143,7 +148,7 @@ func Test_Provider_Registrar_Does_NotRegisterWithNoBounty_Testnet2(t *testing.T)
 	cfg := ProviderRegistrarConfig{
 		IsTestnet2: true,
 	}
-	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -177,7 +182,7 @@ func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	cfg := ProviderRegistrarConfig{
 		MaxRetries: 5,
 	}
-	registrar := NewProviderRegistrar(&mt, &mrsp, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -221,4 +226,17 @@ func (mt *mockTransactor) RegisterIdentity(id string, stake, fee *big.Int, benef
 
 func (mt *mockTransactor) CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error) {
 	return mt.bountyResult, mt.bountyError
+}
+
+type mockAPI struct{}
+
+func (ma *mockAPI) GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error) {
+	return &mysterium.PayoutInfoResponse{EthAddress: id.Address}, nil
+}
+
+type fakeSigner struct {
+}
+
+func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
+	return identity.SignatureBase64("deadbeef"), nil
 }

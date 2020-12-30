@@ -174,7 +174,7 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 		HermesAddress:       common.HexToAddress(nodeOptions.Hermes.HermesID),
 		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.MysteriumAPI, di.SignerFactory, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
