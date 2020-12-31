@@ -734,3 +734,30 @@ func (client *Client) UpdateTerms(obj contract.TermsRequest) error {
 	defer resp.Body.Close()
 	return nil
 }
+
+// FetchConfig - fetches current config
+func (client *Client) FetchConfig() (map[string]interface{}, error) {
+	resp, err := client.http.Get("config", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("fetching config failed with status: %d", resp.StatusCode)
+	}
+
+	var res map[string]interface{}
+	err = parseResponseJSON(resp, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	data, ok := res["data"]
+	if !ok {
+		return nil, errors.New("no field named 'data' found in config")
+	}
+
+	config := data.(map[string]interface{})
+	return config, err
+}

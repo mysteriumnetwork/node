@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config/remote"
+
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -34,9 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
@@ -61,17 +61,23 @@ const serviceHelp = `service <action> [args]
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
-		Name:   CommandName,
-		Usage:  "Starts a CLI client with a Tequilapi",
-		Before: clicontext.LoadUserConfigQuietly,
-		Flags:  []cli.Flag{&config.FlagAgreedTermsConditions},
+		Name:  CommandName,
+		Usage: "Starts a CLI client with a Tequilapi",
+		Flags: []cli.Flag{&config.FlagAgreedTermsConditions, &config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Action: func(ctx *cli.Context) error {
-			config.ParseFlagsNode(ctx)
-			nodeOptions := node.GetOptions()
-			cmdCLI := &cliApp{
-				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
-				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+
+			client, err := clio.NewTequilApiClient(ctx)
+			if err != nil {
+				return err
 			}
+
+			cfg, err := remote.NewConfig(client)
+			if err != nil {
+				return err
+			}
+
+			cmdCLI := newCliApp(cfg, client)
+
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
 			return describeQuit(cmdCLI.Run(ctx))
@@ -88,8 +94,18 @@ func describeQuit(err error) error {
 	return err
 }
 
+func newCliApp(rc *remote.Config, client *tequilapi_client.Client) *cliApp {
+	dataDir := rc.GetStringByFlag(config.FlagDataDir)
+	return &cliApp{
+		config:      rc,
+		tequilapi:   client,
+		historyFile: filepath.Join(dataDir, ".cli_history"),
+	}
+}
+
 // cliApp describes CLI based Mysterium UI
 type cliApp struct {
+	config           *remote.Config
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
 	fetchedProposals []contract.ProposalDTO
@@ -103,6 +119,8 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
+var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
+
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
 	"type 'license --conditions'",
@@ -114,17 +132,18 @@ func (c *cliApp) handleTOS(ctx *cli.Context) error {
 		return nil
 	}
 
-	agreedC := config.Current.GetBool(contract.TermsConsumerAgreed)
+	agreedC := c.config.GetBool(contract.TermsConsumerAgreed)
+
 	if !agreedC {
-		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+		return errTermsNotAgreed
 	}
 
-	agreedP := config.Current.GetBool(contract.TermsProviderAgreed)
+	agreedP := c.config.GetBool(contract.TermsProviderAgreed)
 	if !agreedP {
-		return errors.New("You must agree with provider and consumer terms of use in order to use this command")
+		return errTermsNotAgreed
 	}
 
-	version := config.Current.GetString(contract.TermsVersion)
+	version := c.config.GetString(contract.TermsVersion)
 	if version != metadata.CurrentTermsVersion {
 		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
 	}
@@ -411,7 +430,7 @@ func (c *cliApp) connect(argsString string) {
 
 	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	hermesID := config.GetString(config.FlagHermesID)
+	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
 
 	// Dont throw an error here incase user identity has a password on it
 	// or we failed to randomly unlock it. We can still try to connect
@@ -472,7 +491,7 @@ func (c *cliApp) payout(argsString string) {
 func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
-	var profileUrl = config.GetString(config.FlagMMNAddress) + "user/profile"
+	var profileUrl = c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
 	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
@@ -605,10 +624,10 @@ func (c *cliApp) proposals(filter string) {
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
 		clio.Warn(err)

@@ -90,7 +90,7 @@ func (c *cliApp) increaseStake(args []string) {
 		return
 	}
 
-	accountantID := config.GetString(config.FlagHermesID)
+	accountantID := c.config.GetStringByFlag(config.FlagHermesID)
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 

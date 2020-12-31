@@ -182,17 +182,17 @@ func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
 // Get returns stored config value as-is.
 func (cfg *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
-	cliValue := cfg.searchMap(cfg.cli, segments)
+	cliValue := SearchMap(cfg.cli, segments)
 	if cliValue != nil {
 		log.Debug().Msgf("Returning CLI value %v:%v", key, cliValue)
 		return cliValue
 	}
-	userValue := cfg.searchMap(cfg.user, segments)
+	userValue := SearchMap(cfg.user, segments)
 	if userValue != nil {
 		log.Debug().Msgf("Returning user config value %v:%v", key, userValue)
 		return userValue
 	}
-	defaultValue := cfg.searchMap(cfg.defaults, segments)
+	defaultValue := SearchMap(cfg.defaults, segments)
 	log.Debug().Msgf("Returning default value %v:%v", key, defaultValue)
 	return defaultValue
 }

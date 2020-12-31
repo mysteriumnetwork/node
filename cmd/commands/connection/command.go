@@ -24,10 +24,8 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -64,15 +62,12 @@ func NewCommand() *cli.Command {
 		Usage:       "Manage your connection",
 		Description: "Using the connection subcommands you can manage your connection or get additional information about it",
 		Before: func(ctx *cli.Context) error {
-			if err := clicontext.LoadUserConfigQuietly(ctx); err != nil {
+			tc, err := clio.NewTequilApiClient(ctx)
+			if err != nil {
 				return err
 			}
-			config.ParseFlagsNode(ctx)
-			nodeOptions := node.GetOptions()
 
-			tc := tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort)
 			cmd = &command{tequilapi: tc}
-
 			return nil
 		},
 		Subcommands: []*cli.Command{
