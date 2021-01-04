@@ -19,13 +19,14 @@ package requests
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -120,11 +121,29 @@ func ParseResponseJSON(response *http.Response, dto interface{}) error {
 	return nil
 }
 
+// ErrorHTTP represent HTTP error with metadata.
+type ErrorHTTP struct {
+	Code     int
+	Status   string
+	Url      *url.URL
+	response []byte
+}
+
+// Error returns string equivalent for error.
+func (e *ErrorHTTP) Error() string {
+	return fmt.Sprintf("server response invalid: %s (%s)%s", e.Status, e.Url, e.response)
+}
+
 // ParseResponseError parses http.Response error.
 func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		body, _ := ioutil.ReadAll(response.Body)
-		return errors.Errorf("server response invalid: %s (%s)%s", response.Status, response.Request.URL, body)
+		return &ErrorHTTP{
+			Code:     response.StatusCode,
+			Status:   response.Status,
+			Url:      response.Request.URL,
+			response: body,
+		}
 	}
 
 	return nil
