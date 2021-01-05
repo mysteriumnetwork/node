@@ -67,7 +67,7 @@ func TestE2EBasic() error {
 	composeFiles := []string{
 		"./docker-compose.e2e-basic.yml",
 	}
-	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
+	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard,hermes2")
 	defer cleanup()
 	if err := runner.Init(); err != nil {
 		return err
@@ -84,7 +84,7 @@ func TestE2ENAT() error {
 	composeFiles := []string{
 		"./docker-compose.e2e-traversal.yml",
 	}
-	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_nat_test", "wireguard,openvpn")
+	runner, cleanup := e2e.NewRunner(composeFiles, "node_e2e_nat_test", "wireguard,openvpn,noop,hermes2")
 	defer cleanup()
 	if err := runner.Init(); err != nil {
 		return err

@@ -47,11 +47,12 @@ func NewInvoiceSender(ch p2p.ChannelSender) *InvoiceSender {
 // Send sends the given invoice.
 func (is *InvoiceSender) Send(invoice crypto.Invoice) error {
 	pInvoice := &pb.Invoice{
-		AgreementID:    invoice.AgreementID,
-		AgreementTotal: invoice.AgreementTotal,
-		TransactorFee:  invoice.TransactorFee,
+		AgreementID:    invoice.AgreementID.Text(bigIntBase),
+		AgreementTotal: invoice.AgreementTotal.Text(bigIntBase),
+		TransactorFee:  invoice.TransactorFee.Text(bigIntBase),
 		Hashlock:       invoice.Hashlock,
 		Provider:       invoice.Provider,
+		ChainID:        invoice.ChainID,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentInvoice, pInvoice.String())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

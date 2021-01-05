@@ -29,6 +29,7 @@ import (
 )
 
 type configProvider interface {
+	GetConfig() map[string]interface{}
 	GetDefaultConfig() map[string]interface{}
 	GetUserConfig() map[string]interface{}
 	SetUser(key string, value interface{})
@@ -50,14 +51,33 @@ func newConfigAPI(config configProvider) *configAPI {
 	return &configAPI{config: config}
 }
 
+// GetConfig returns current configuration
+// swagger:operation GET /config Configuration getConfig
+// ---
+// summary: Returns current configuration values
+// description: Returns default configuration
+// responses:
+//   200:
+//     description: Currently active configuration
+//     schema:
+//       "$ref": "#/definitions/configPayload"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (api *configAPI) GetConfig(writer http.ResponseWriter, httpReq *http.Request, params httprouter.Params) {
+	res := configPayload{Data: api.config.GetConfig()}
+	utils.WriteAsJSON(res, writer)
+}
+
 // GetDefaultConfig returns default configuration
-// swagger:operation GET /user/default Configuration getDefaultConfig
+// swagger:operation GET /config/default Configuration getDefaultConfig
 // ---
 // summary: Returns default configuration
 // description: Returns default configuration
 // responses:
 //   200:
-//     description: Default configuration
+//     description: Default configuration values
 //     schema:
 //       "$ref": "#/definitions/configPayload"
 //   500:
@@ -70,13 +90,13 @@ func (api *configAPI) GetDefaultConfig(writer http.ResponseWriter, httpReq *http
 }
 
 // GetUserConfig returns current user configuration
-// swagger:operation GET /user/config Configuration getUserConfig
+// swagger:operation GET /config/user Configuration getUserConfig
 // ---
 // summary: Returns current user configuration
 // description: Returns current user configuration
 // responses:
 //   200:
-//     description: User configuration
+//     description: User set configuration values
 //     schema:
 //       "$ref": "#/definitions/configPayload"
 //   500:
@@ -89,7 +109,7 @@ func (api *configAPI) GetUserConfig(writer http.ResponseWriter, httpReq *http.Re
 }
 
 // SetUserConfig sets and returns current configuration
-// swagger:operation POST /user/config Configuration serUserConfig
+// swagger:operation POST /config/user Configuration serUserConfig
 // ---
 // summary: Sets and returns user configuration
 // description: For keys present in the payload, it will set or remove the user config values (if the key is null). Changes are persisted to the config file.
@@ -148,6 +168,7 @@ func AddRoutesForConfig(
 	router *httprouter.Router,
 ) {
 	api := newConfigAPI(config.Current)
+	router.GET("/config", api.GetConfig)
 	router.GET("/config/default", api.GetDefaultConfig)
 	router.GET("/config/user", api.GetUserConfig)
 	router.POST("/config/user", api.SetUserConfig)

@@ -4,27 +4,31 @@ package pb;
 option go_package = ".;pb";
 
 message Invoice {
-  uint64 AgreementID = 1;
-  uint64 AgreementTotal = 2;
-  uint64 TransactorFee = 3;
+  string AgreementID = 1;
+  string AgreementTotal = 2;
+  string TransactorFee = 3;
   string Hashlock = 4;
   string Provider = 5;
+	int64 ChainID = 6;   
 }
 
 message ExchangeMessage {
   Promise Promise = 1;
-  uint64 AgreementID = 2;
-  uint64 AgreementTotal = 3;
+  string AgreementID = 2;
+  string AgreementTotal = 3;
   string Provider = 4;
   string Signature = 5;
   string HermesID = 6;
+  int64 ChainID = 7;   
 }
 
 message Promise {
   bytes ChannelID = 1;
-  uint64 Amount = 2;
-  uint64 Fee = 3;
+  string Amount = 2;
+  string Fee = 3;
   bytes Hashlock = 4;
   bytes R = 5;
-  bytes Signature = 6;
+	int64 ChainID = 6;   
+  bytes Signature = 7;
 }
+

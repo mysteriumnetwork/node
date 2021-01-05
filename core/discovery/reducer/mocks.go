@@ -18,6 +18,7 @@
 package reducer
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/datasize"
@@ -61,7 +62,7 @@ var (
 	}
 	proposalTimeExpensive = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(9999999999999, money.CurrencyMyst),
+			price: money.New(big.NewInt(9999999999999), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Minute,
 			},
@@ -69,7 +70,7 @@ var (
 	}
 	proposalTimeCheap = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(0, money.CurrencyMyst),
+			price: money.New(big.NewInt(0), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Minute,
 			},
@@ -77,7 +78,7 @@ var (
 	}
 	proposalTimeExact = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(1000000, money.CurrencyMyst),
+			price: money.New(big.NewInt(1000000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Minute,
 			},
@@ -85,7 +86,7 @@ var (
 	}
 	proposalTimeExactSeconds = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(1000000/60, money.CurrencyMyst),
+			price: money.New(big.NewInt(1000000/60), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Second,
 			},
@@ -93,7 +94,7 @@ var (
 	}
 	proposalTimeExpensiveSeconds = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(17000, money.CurrencyMyst),
+			price: money.New(big.NewInt(17000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerTime: time.Second,
 			},
@@ -101,7 +102,7 @@ var (
 	}
 	proposalBytesExpensive = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(7000001, money.CurrencyMyst),
+			price: money.New(big.NewInt(7000001), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: datasize.GiB.Bytes(),
 			},
@@ -109,7 +110,7 @@ var (
 	}
 	proposalBytesCheap = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(0, money.CurrencyMyst),
+			price: money.New(big.NewInt(0), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: datasize.GiB.Bytes(),
 			},
@@ -117,7 +118,7 @@ var (
 	}
 	proposalBytesExact = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(7000000, money.CurrencyMyst),
+			price: money.New(big.NewInt(7000000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: datasize.GiB.Bytes(),
 			},
@@ -125,7 +126,7 @@ var (
 	}
 	proposalBytesExactInParts = market.ServiceProposal{
 		PaymentMethod: &mockPaymentMethod{
-			price: money.NewMoney(50000, money.CurrencyMyst),
+			price: money.New(big.NewInt(50000), money.CurrencyMyst),
 			rate: market.PaymentRate{
 				PerByte: 7669584,
 			},

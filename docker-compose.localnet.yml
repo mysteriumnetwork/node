@@ -177,7 +177,7 @@ services:
       public1:
         ipv4_address: 172.31.0.203
 
-  accountant:
+  hermes:
     image: mysteriumnetwork/accountant:0.2
     environment:
       PORT: 8889
@@ -199,9 +199,9 @@ services:
       -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -chImplementation 0x599d43715DF3070f83355D9D90AE62c159E62A75
       -keystoreDir /keystore
-      -accountantAddress 0x5AF60161f779DaeFFC5b14A6464d9820D206A04a
-      -MongoUser accountant
-      -MongoPass accountant
+      -hermesAddress 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -MongoUser hermes
+      -MongoPass hermes
       -MongoHost "mongodb:27017"
       -MongoReplSet ""
     volumes:
@@ -218,9 +218,9 @@ services:
     environment:
       - MONGO_INITDB_ROOT_PASSWORD=root
       - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_DATABASE=accountant
-      - MONGO_NON_ROOT_USERNAME=accountant
-      - MONGO_NON_ROOT_PASSWORD=accountant
+      - MONGO_INITDB_DATABASE=hermes
+      - MONGO_NON_ROOT_USERNAME=hermes
+      - MONGO_NON_ROOT_PASSWORD=hermes
     dns: 172.30.0.254
     networks:
       public0:
@@ -246,10 +246,12 @@ services:
       - mysterium-api
       - ipify
       - transactor
-      - accountant
+      - hermes
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 4050
     volumes:
@@ -272,10 +274,12 @@ services:
       - mysterium-api
       - ipify
       - transactor
-      - accountant
+      - hermes
       - morqa
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun
     expose:
       - 1194
       - 4050

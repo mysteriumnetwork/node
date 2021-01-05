@@ -23,7 +23,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/mobile/mysterium"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,21 +35,22 @@ func TestMobileNodeConsumer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &mysterium.MobileNodeOptions{
-		Testnet:                         true,
+		Testnet2:                        true,
 		ExperimentNATPunching:           true,
 		MysteriumAPIAddress:             "http://mysterium-api:8001/v1",
-		BrokerAddress:                   "broker",
+		BrokerAddresses:                 []string{"broker"},
 		EtherClientRPC:                  "ws://ganache:8545",
 		FeedbackURL:                     "TODO",
 		QualityOracleURL:                "http://morqa:8085/api/v1",
 		IPDetectorURL:                   "http://ipify:3000/?format=json",
-		LocationDetectorURL:             "https://testnet-location.mysterium.network/api/v1/location",
+		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:       "http://transactor:8888/api/v1",
-		TransactorRegistryAddress:       "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
-		TransactorChannelImplementation: "0x599d43715DF3070f83355D9D90AE62c159E62A75",
-		AccountantEndpointAddress:       "http://accountant:8889/api/v1",
-		AccountantID:                    "0x7621a5E6EC206309f8E703A653f03F7C8a3097a8",
-		MystSCAddress:                   "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665",
+		TransactorRegistryAddress:       registryAddress,
+		TransactorChannelImplementation: channelImplementation,
+		HermesEndpointAddress:           "http://hermes:8889/api/v1",
+		HermesID:                        hermesID,
+		MystSCAddress:                   mystAddress,
+		ChainID:                         5,
 	}
 
 	node, err := mysterium.NewNode(dir, options)
@@ -64,19 +67,21 @@ func TestMobileNodeConsumer(t *testing.T) {
 	t.Run("Test identity registration", func(t *testing.T) {
 		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 		require.NoError(t, err)
+
 		require.NotNil(t, identity)
 		require.Equal(t, "Unregistered", identity.RegistrationStatus)
 
+		topUpConsumer(t, identity.IdentityAddress, common.HexToAddress(options.HermesID), registrationFee)
+
 		err = node.RegisterIdentity(&mysterium.RegisterIdentityRequest{
 			IdentityAddress: identity.IdentityAddress,
-			Fee:             10000000,
 		})
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool {
 			identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
 			require.NoError(t, err)
-			return identity.RegistrationStatus == "RegisteredConsumer"
+			return identity.RegistrationStatus == "Registered"
 		}, 15*time.Second, 1*time.Second)
 	})
 
@@ -86,7 +91,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 
 		balance, err := node.GetBalance(&mysterium.GetBalanceRequest{IdentityAddress: identity.IdentityAddress})
 		require.NoError(t, err)
-		require.Equal(t, int64(690000000), balance.Balance)
+		require.Equal(t, crypto.BigMystToFloat(balanceAfterRegistration), balance.Balance)
 	})
 
 	t.Run("Test shutdown", func(t *testing.T) {

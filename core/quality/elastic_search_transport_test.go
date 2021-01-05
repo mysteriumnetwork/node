@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const bindAllAddress = "0.0.0.0"
+var httpClient = requests.NewHTTPClient("0.0.0.0", 1*time.Second)
 
 func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 	invoked := false
@@ -58,7 +58,7 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 	app := appInfo{Name: "test app", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}
 	event := Event{Application: app}
 
-	transport := NewElasticSearchTransport(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL, time.Second)
+	transport := NewElasticSearchTransport(httpClient, server.URL, time.Second)
 	transport.SendEvent(event)
 
 	assert.True(t, invoked)
@@ -72,7 +72,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewElasticSearchTransport(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL, time.Second)
+	transport := NewElasticSearchTransport(httpClient, server.URL, time.Second)
 	transport.SendEvent(Event{})
 
 	assert.True(t, invoked)
@@ -85,7 +85,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewElasticSearchTransport(requests.NewHTTPClient(bindAllAddress, requests.DefaultTimeout), server.URL, time.Second)
+	transport := NewElasticSearchTransport(httpClient, server.URL, time.Second)
 	transport.SendEvent(Event{})
 
 	assert.True(t, invoked)

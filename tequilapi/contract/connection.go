@@ -18,9 +18,13 @@
 package contract
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -28,15 +32,15 @@ import (
 
 var emptyAddress = common.Address{}
 
-// NewConnectionStatusDTO maps to API connection status.
-func NewConnectionStatusDTO(session connection.Status) ConnectionStatusDTO {
-	response := ConnectionStatusDTO{
+// NewConnectionInfoDTO maps to API connection status.
+func NewConnectionInfoDTO(session connectionstate.Status) ConnectionInfoDTO {
+	response := ConnectionInfoDTO{
 		Status:     string(session.State),
 		ConsumerID: session.ConsumerID.Address,
 		SessionID:  string(session.SessionID),
 	}
-	if session.AccountantID != emptyAddress {
-		response.AccountantAddress = session.AccountantID.Hex()
+	if session.HermesID != emptyAddress {
+		response.HermesID = session.HermesID.Hex()
 	}
 	// None exists, for not started connection
 	if session.Proposal.ProviderID != "" {
@@ -46,9 +50,9 @@ func NewConnectionStatusDTO(session connection.Status) ConnectionStatusDTO {
 	return response
 }
 
-// ConnectionStatusDTO holds partial consumer connection details.
-// swagger:model ConnectionStatusDTO
-type ConnectionStatusDTO struct {
+// ConnectionInfoDTO holds partial consumer connection details.
+// swagger:model ConnectionInfoDTO
+type ConnectionInfoDTO struct {
 	// example: Connected
 	Status string `json:"status"`
 
@@ -56,7 +60,7 @@ type ConnectionStatusDTO struct {
 	ConsumerID string `json:"consumer_id,omitempty"`
 
 	// example: 0x00
-	AccountantAddress string `json:"accountant_address,omitempty"`
+	HermesID string `json:"hermes_id,omitempty"`
 
 	// example: {"id":1,"provider_id":"0x71ccbdee7f6afe85a5bc7106323518518cd23b94","servcie_type":"openvpn","service_definition":{"location_originate":{"asn":"","country":"CA"}}}
 	Proposal *ProposalDTO `json:"proposal,omitempty"`
@@ -66,9 +70,9 @@ type ConnectionStatusDTO struct {
 }
 
 // NewConnectionDTO maps to API connection.
-func NewConnectionDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
+func NewConnectionDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionDTO {
 	dto := ConnectionDTO{
-		ConnectionStatusDTO: NewConnectionStatusDTO(session),
+		ConnectionInfoDTO: NewConnectionInfoDTO(session),
 	}
 	if !statistics.At.IsZero() {
 		statsDto := NewConnectionStatisticsDTO(session, statistics, throughput, invoice)
@@ -80,19 +84,23 @@ func NewConnectionDTO(session connection.Status, statistics connection.Statistic
 // ConnectionDTO holds full consumer connection details.
 // swagger:model ConnectionDTO
 type ConnectionDTO struct {
-	ConnectionStatusDTO
+	ConnectionInfoDTO
 	Statistics *ConnectionStatisticsDTO `json:"statistics,omitempty"`
 }
 
 // NewConnectionStatisticsDTO maps to API connection stats.
-func NewConnectionStatisticsDTO(session connection.Status, statistics connection.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+func NewConnectionStatisticsDTO(session connectionstate.Status, statistics connectionstate.Statistics, throughput bandwidth.Throughput, invoice crypto.Invoice) ConnectionStatisticsDTO {
+	agreementTotal := new(big.Int)
+	if invoice.AgreementTotal != nil {
+		agreementTotal = invoice.AgreementTotal
+	}
 	return ConnectionStatisticsDTO{
 		Duration:           int(session.Duration().Seconds()),
 		BytesSent:          statistics.BytesSent,
 		BytesReceived:      statistics.BytesReceived,
 		ThroughputSent:     datasize.BitSize(throughput.Up).Bits(),
 		ThroughputReceived: datasize.BitSize(throughput.Down).Bits(),
-		TokensSpent:        invoice.AgreementTotal,
+		TokensSpent:        agreementTotal,
 	}
 }
 
@@ -118,7 +126,7 @@ type ConnectionStatisticsDTO struct {
 	Duration int `json:"duration"`
 
 	// example: 500000
-	TokensSpent uint64 `json:"tokens_spent"`
+	TokensSpent *big.Int `json:"tokens_spent"`
 }
 
 // ConnectionCreateRequest request used to start a connection.
@@ -134,10 +142,9 @@ type ConnectionCreateRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"provider_id"`
 
-	// accountant identity
-	// required: true
+	// hermes identity
 	// example: 0x0000000000000000000000000000000000000003
-	AccountantID string `json:"accountant_id"`
+	HermesID string `json:"hermes_id"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
@@ -150,19 +157,28 @@ type ConnectionCreateRequest struct {
 	ConnectOptions ConnectOptions `json:"connect_options,omitempty"`
 }
 
-// Validate validates fields in request
+// Validate validates fields in request.
 func (cr ConnectionCreateRequest) Validate() *validation.FieldErrorMap {
 	errs := validation.NewErrorMap()
 	if len(cr.ConsumerID) == 0 {
-		errs.ForField("consumer_id").AddError("required", "Field is required")
+		errs.ForField("consumer_id").Required()
 	}
 	if len(cr.ProviderID) == 0 {
-		errs.ForField("provider_id").AddError("required", "Field is required")
-	}
-	if len(cr.AccountantID) == 0 {
-		errs.ForField("accountant_id").AddError("required", "Field is required")
+		errs.ForField("provider_id").Required()
 	}
 	return errs
+}
+
+// Event creates a quality connection event to be send as a quality metric.
+func (cr ConnectionCreateRequest) Event(stage string, errMsg string) quality.ConnectionEvent {
+	return quality.ConnectionEvent{
+		ServiceType: cr.ServiceType,
+		ProviderID:  cr.ProviderID,
+		ConsumerID:  cr.ConsumerID,
+		HermesID:    cr.HermesID,
+		Error:       errMsg,
+		Stage:       stage,
+	}
 }
 
 // ConnectOptions holds tequilapi connect options

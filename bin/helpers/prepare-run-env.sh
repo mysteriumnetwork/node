@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-source bin/helpers/functions.sh
-
 function setDefaultRoute {
     GW=$1;
     ip route del default

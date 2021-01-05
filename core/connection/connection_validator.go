@@ -18,16 +18,19 @@
 package connection
 
 import (
+	"math/big"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
 
 type consumerBalanceGetter interface {
-	GetBalance(ID identity.Identity) uint64
+	GetBalance(chainID int64, id identity.Identity) *big.Int
+	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
 
 type unlockChecker interface {
-	IsUnlocked(ID string) bool
+	IsUnlocked(id string) bool
 }
 
 // Validator validates pre connection conditions.
@@ -45,14 +48,19 @@ func NewValidator(consumerBalanceGetter consumerBalanceGetter, unlockChecker unl
 }
 
 // validateBalance checks if consumer has enough money for given proposal.
-func (v *Validator) validateBalance(consumerID identity.Identity, proposal market.ServiceProposal) bool {
+func (v *Validator) validateBalance(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) bool {
 	if proposal.PaymentMethodType == "" || proposal.PaymentMethod == nil {
 		return true
 	}
 
 	proposalPrice := proposal.PaymentMethod.GetPrice()
-	balance := v.consumerBalanceGetter.GetBalance(consumerID)
-	return balance >= proposalPrice.Amount
+	balance := v.consumerBalanceGetter.GetBalance(chainID, consumerID)
+	if balance.Cmp(proposalPrice.Amount) >= 0 {
+		return true
+	}
+
+	balance = v.consumerBalanceGetter.ForceBalanceUpdate(chainID, consumerID)
+	return balance.Cmp(proposalPrice.Amount) >= 0
 }
 
 // isUnlocked checks if the identity is unlocked or not.
@@ -61,12 +69,12 @@ func (v *Validator) isUnlocked(consumerID identity.Identity) bool {
 }
 
 // Validate checks whether the pre-connection conditions are fulfilled.
-func (v *Validator) Validate(consumerID identity.Identity, proposal market.ServiceProposal) error {
+func (v *Validator) Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error {
 	if !v.isUnlocked(consumerID) {
 		return ErrUnlockRequired
 	}
 
-	if !v.validateBalance(consumerID, proposal) {
+	if !v.validateBalance(chainID, consumerID, proposal) {
 		return ErrInsufficientBalance
 	}
 

@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,6 +37,10 @@ var (
 	serviceType      = "the-very-awesome-test-service-type"
 	mockPolicyOracle = policy.NewOracle(requests.NewHTTPClient("0.0.0.0", requests.DefaultTimeout), "http://policy.localhost/", 1*time.Minute)
 )
+
+func init() {
+	netutil.LogNetworkStats = func() {}
+}
 
 func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	registry := NewRegistry()
@@ -112,7 +117,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 
 	var serviceID ID
 	for k := range services {
-		serviceID = services[k].id
+		serviceID = services[k].ID
 	}
 
 	err = manager.Stop(id)
@@ -147,6 +152,6 @@ func (m mockP2PListener) GetContact() market.Contact {
 	return market.Contact{}
 }
 
-func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) error {
-	return nil
+func (m mockP2PListener) Listen(providerID identity.Identity, serviceType string, channelHandler func(ch p2p.Channel)) (func(), error) {
+	return func() {}, nil
 }

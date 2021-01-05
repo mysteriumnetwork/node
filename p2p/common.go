@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -38,7 +39,7 @@ const (
 )
 
 type brokerConnector interface {
-	Connect(serverURIs ...string) (nats.Connection, error)
+	Connect(serverURIs ...*url.URL) (nats.Connection, error)
 }
 
 type natConsumerPinger interface {
@@ -46,7 +47,7 @@ type natConsumerPinger interface {
 }
 
 type natProviderPinger interface {
-	PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
+	PingConsumerPeer(ctx context.Context, id string, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 }
 
 func configExchangeSubject(providerID identity.Identity, serviceType string) string {

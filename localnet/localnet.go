@@ -143,9 +143,9 @@ func (r *runner) startAppContainers() error {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
 
-	log.Info().Msg("starting accountant")
-	if err := r.compose("up", "-d", "accountant"); err != nil {
-		return errors.Wrap(err, "starting accountant failed!")
+	log.Info().Msg("starting hermes")
+	if err := r.compose("up", "-d", "hermes"); err != nil {
+		return errors.Wrap(err, "starting hermes failed!")
 	}
 
 	return nil

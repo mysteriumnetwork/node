@@ -21,17 +21,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 type httpClientInterface interface {
+	SetToken(token string)
 	Get(path string, values url.Values) (*http.Response, error)
 	Post(path string, payload interface{}) (*http.Response, error)
 	Put(path string, payload interface{}) (*http.Response, error)
@@ -51,9 +54,14 @@ func newHTTPClient(baseURL string, ua string) *httpClient {
 }
 
 type httpClient struct {
-	http    httpRequestInterface
-	baseURL string
-	ua      string
+	http      httpRequestInterface
+	authToken string
+	baseURL   string
+	ua        string
+}
+
+func (client *httpClient) SetToken(token string) {
+	client.authToken = token
 }
 
 func (client *httpClient) Get(path string, values url.Values) (*http.Response, error) {
@@ -100,9 +108,11 @@ func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []
 	request.Header.Set("User-Agent", client.ua)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
+	if client.authToken != "" {
+		request.Header.Set("Authorization", "Bearer "+client.authToken)
+	}
 
 	response, err := client.http.Do(request)
-
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return response, err
@@ -140,15 +150,19 @@ func parseResponseError(response *http.Response) error {
 }
 
 func parseResponseJSON(response *http.Response, dto interface{}) error {
-	responseJSON, err := ioutil.ReadAll(response.Body)
-	if err != nil {
+	b := bytes.NewBuffer(make([]byte, 0))
+	reader := io.TeeReader(response.Body, b)
+
+	if err := json.NewDecoder(reader).Decode(dto); err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(responseJSON, dto)
-	if err != nil {
-		return err
-	}
+	defer response.Body.Close()
 
-	return response.Body.Close()
+	// NopCloser returns a ReadCloser with a no-op Close method wrapping the provided Reader r.
+	// parseResponseError "empties" the contents of an errored response
+	// this way the response can be read and parsed again further down the line
+	response.Body = ioutil.NopCloser(b)
+
+	return nil
 }

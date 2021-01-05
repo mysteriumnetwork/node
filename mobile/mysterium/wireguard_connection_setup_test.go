@@ -25,11 +25,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestConnectionStartStop(t *testing.T) {
@@ -38,13 +40,13 @@ func TestConnectionStartStop(t *testing.T) {
 	// Start connection.
 	sessionConfig, _ := json.Marshal(newServiceConfig())
 	err := conn.Start(context.Background(), connection.ConnectOptions{
-		DNS:           "1.2.3.4",
+		Params:        connection.ConnectParams{DNS: "1.2.3.4"},
 		SessionConfig: sessionConfig,
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, connection.Connecting, <-conn.State())
-	assert.Equal(t, connection.Connected, <-conn.State())
+	assert.Equal(t, connectionstate.Connecting, <-conn.State())
+	assert.Equal(t, connectionstate.Connected, <-conn.State())
 	stats, err := conn.Statistics()
 	assert.NoError(t, err)
 	assert.EqualValues(t, 10, stats.BytesSent)
@@ -54,7 +56,6 @@ func TestConnectionStartStop(t *testing.T) {
 	go func() {
 		conn.Stop()
 	}()
-	err = conn.Wait()
 	assert.NoError(t, err)
 }
 
@@ -66,9 +67,9 @@ func TestConnectionStopAfterHandshakeError(t *testing.T) {
 
 	err := conn.Start(context.Background(), connection.ConnectOptions{SessionConfig: sessionConfig})
 	assert.Error(t, handshakeTimeoutErr, err)
-	assert.Equal(t, connection.Connecting, <-conn.State())
-	assert.Equal(t, connection.Disconnecting, <-conn.State())
-	assert.Equal(t, connection.NotConnected, <-conn.State())
+	assert.Equal(t, connectionstate.Connecting, <-conn.State())
+	assert.Equal(t, connectionstate.Disconnecting, <-conn.State())
+	assert.Equal(t, connectionstate.NotConnected, <-conn.State())
 }
 
 func TestConnectionStopOnceAfterHandshakeErrorAndStopCall(t *testing.T) {
@@ -87,9 +88,9 @@ func TestConnectionStopOnceAfterHandshakeErrorAndStopCall(t *testing.T) {
 	<-stopCh
 
 	assert.Error(t, handshakeTimeoutErr, err)
-	assert.Equal(t, connection.Connecting, <-conn.State())
-	assert.Equal(t, connection.Disconnecting, <-conn.State())
-	assert.Equal(t, connection.NotConnected, <-conn.State())
+	assert.Equal(t, connectionstate.Connecting, <-conn.State())
+	assert.Equal(t, connectionstate.Disconnecting, <-conn.State())
+	assert.Equal(t, connectionstate.NotConnected, <-conn.State())
 }
 
 func newConn(t *testing.T) *wireguardConnection {

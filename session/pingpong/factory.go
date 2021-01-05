@@ -18,10 +18,14 @@
 package pingpong
 
 import (
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -45,27 +49,36 @@ const (
 	// InvoiceSendPeriod is how often the provider will send invoice messages to the consumer
 	InvoiceSendPeriod = time.Second * 60
 
-	// DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
-	DefaultAccountantFailureCount uint64 = 10
-
-	gb       = 1024 * 1024 * 1024
-	accuracy = 50000
+	// DefaultHermesFailureCount defines how many times we're allowed to fail to reach hermes in a row before announcing the failure.
+	DefaultHermesFailureCount uint64 = 10
 )
 
+var gb = big.NewInt(1024 * 1024 * 1024)
+var accuracy = big.NewInt(500000000000000)
+
 // NewPaymentMethod returns the the default payment method of time + bytes.
-func NewPaymentMethod(pricePerGB, pricePerMinute uint64) PaymentMethod {
-	if pricePerGB > 0 {
-		pricePerGB = gb * accuracy / pricePerGB
+func NewPaymentMethod(pricePerGB, pricePerMinute *big.Int) PaymentMethod {
+	if pricePerGB == nil {
+		pricePerGB = new(big.Int)
 	}
-	if pricePerMinute > 0 {
-		pricePerMinute = uint64(time.Minute) * accuracy / pricePerMinute
+	if pricePerMinute == nil {
+		pricePerMinute = new(big.Int)
+	}
+
+	if pricePerGB.Cmp(big.NewInt(0)) > 0 {
+		mul := new(big.Int).Mul(gb, accuracy)
+		pricePerGB = new(big.Int).Div(mul, pricePerGB)
+	}
+	if pricePerMinute.Cmp(big.NewInt(0)) > 0 {
+		mul := new(big.Int).Mul(big.NewInt(int64(time.Minute)), accuracy)
+		pricePerMinute = new(big.Int).Div(mul, pricePerMinute)
 	}
 
 	return PaymentMethod{
-		Price:    money.NewMoney(accuracy, money.CurrencyMyst),
-		Duration: time.Duration(pricePerMinute),
+		Price:    money.New(accuracy),
+		Duration: time.Duration(pricePerMinute.Int64()),
 		Type:     PaymentForDataWithTime,
-		Bytes:    pricePerGB,
+		Bytes:    pricePerGB.Uint64(),
 	}
 }
 
@@ -99,20 +112,16 @@ func InvoiceFactoryCreator(
 	invoiceStorage providerInvoiceStorage,
 	registryAddress string,
 	channelImplementationAddress string,
-	maxAccountantFailureCount uint64,
-	maxAllowedAccountantFee uint16,
-	maxUnpaidInvoiceValue uint64,
+	maxHermesFailureCount uint64,
+	maxAllowedHermesFee uint16,
+	maxUnpaidInvoiceValue *big.Int,
 	blockchainHelper bcHelper,
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
-	providersAccountant common.Address,
-) func(identity.Identity, identity.Identity, common.Address, string) (session.PaymentEngine, error) {
-	return func(providerID, consumerID identity.Identity, accountantID common.Address, sessionID string) (session.PaymentEngine, error) {
-		exchangeChan, err := exchangeMessageReceiver(channel)
-		if err != nil {
-			return nil, err
-		}
+	providersHermes common.Address,
+) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
+	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
 		deps := InvoiceTrackerDeps{
 			Proposal:                   proposal,
@@ -124,20 +133,19 @@ func InvoiceFactoryCreator(
 			ChargePeriodLeeway:         2 * time.Minute,
 			ExchangeMessageChan:        exchangeChan,
 			ExchangeMessageWaitTimeout: promiseTimeout,
-			FirstInvoiceSendTimeout:    10 * time.Second,
-			FirstInvoiceSendDuration:   1 * time.Second,
 			ProviderID:                 providerID,
-			ConsumersAccountantID:      accountantID,
-			ProvidersAccountantID:      providersAccountant,
+			ConsumersHermesID:          hermesID,
+			ProvidersHermesID:          providersHermes,
 			Registry:                   registryAddress,
-			MaxAccountantFailureCount:  maxAccountantFailureCount,
-			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
+			MaxHermesFailureCount:      maxHermesFailureCount,
+			MaxAllowedHermesFee:        maxAllowedHermesFee,
 			BlockchainHelper:           blockchainHelper,
 			EventBus:                   eventBus,
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
-			ChannelAddressCalculator:   NewChannelAddressCalculator(accountantID.Hex(), channelImplementationAddress, registryAddress),
+			ChannelAddressCalculator:   NewChannelAddressCalculator(hermesID.Hex(), channelImplementationAddress, registryAddress),
 			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
+			ChainID:                    chainID,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -152,8 +160,8 @@ func ExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string,
 	eventBus eventbus.EventBus,
-	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
-	return func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
+	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 		invoices, err := invoiceReceiver(channel)
 		if err != nil {
 			return nil, err
@@ -168,10 +176,11 @@ func ExchangeFactoryFunc(
 			Identity:                  consumer,
 			Peer:                      provider,
 			Proposal:                  proposal,
-			ChannelAddressCalculator:  NewChannelAddressCalculator(accountant.Hex(), channelImplementation, registryAddress),
+			ChannelAddressCalculator:  NewChannelAddressCalculator(hermes.Hex(), channelImplementation, registryAddress),
 			EventBus:                  eventBus,
-			AccountantAddress:         accountant,
+			HermesAddress:             hermes,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),
+			ChainID:                   config.GetInt64(config.FlagChainID),
 		}
 		return NewInvoicePayer(deps), nil
 	}
@@ -187,12 +196,26 @@ func invoiceReceiver(channel p2p.ChannelHandler) (chan crypto.Invoice, error) {
 		}
 		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentInvoice, msg.String())
 
+		agreementID, ok := new(big.Int).SetString(msg.GetAgreementID(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementID of value %v", agreementID)
+		}
+		agreementTotal, ok := new(big.Int).SetString(msg.GetAgreementTotal(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
+		}
+		transactorFee, ok := new(big.Int).SetString(msg.GetTransactorFee(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field transactorFee of value %v", transactorFee)
+		}
+
 		invoices <- crypto.Invoice{
-			AgreementID:    msg.GetAgreementID(),
-			AgreementTotal: msg.GetAgreementTotal(),
-			TransactorFee:  msg.GetTransactorFee(),
+			AgreementID:    agreementID,
+			AgreementTotal: agreementTotal,
+			TransactorFee:  transactorFee,
 			Hashlock:       msg.GetHashlock(),
 			Provider:       msg.GetProvider(),
+			ChainID:        msg.GetChainID(),
 		}
 
 		return nil

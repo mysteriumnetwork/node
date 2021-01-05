@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 func TestCache_needsRefresh(t *testing.T) {
@@ -63,6 +63,7 @@ func TestCache_needsRefresh(t *testing.T) {
 			c := &Cache{
 				lastFetched: tt.fields.lastFetched,
 				expiry:      tt.fields.expiry,
+				pub:         mockPublisher{},
 			}
 			if got := c.needsRefresh(); got != tt.want {
 				t.Errorf("Cache.needsRefresh() = %v, want %v", got, tt.want)
@@ -76,18 +77,23 @@ type mockResolver struct {
 	errToReturn error
 }
 
-func (mr *mockResolver) DetectLocation() (Location, error) {
+func (mr *mockResolver) DetectLocation() (locationstate.Location, error) {
 	mr.called = true
-	return Location{}, mr.errToReturn
+	return locationstate.Location{}, mr.errToReturn
 }
+
+type mockPublisher struct{}
+
+func (mp mockPublisher) Publish(topic string, data interface{}) {}
 
 func TestCacheHandlesConnection_Connected(t *testing.T) {
 	r := &mockResolver{}
 	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
+		pub:              mockPublisher{},
 	}
-	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.Connected})
+	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.Connected})
 	assert.True(t, r.called)
 }
 
@@ -96,8 +102,9 @@ func TestCacheHandlesConnection_NotConnected(t *testing.T) {
 	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
+		pub:              mockPublisher{},
 	}
-	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.NotConnected})
+	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.NotConnected})
 	assert.True(t, r.called)
 }
 
@@ -106,7 +113,8 @@ func TestCacheIgnoresOther(t *testing.T) {
 	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
+		pub:              mockPublisher{},
 	}
-	c.HandleConnectionEvent(connection.AppEventConnectionState{State: connection.Reconnecting})
+	c.HandleConnectionEvent(connectionstate.AppEventConnectionState{State: connectionstate.Reconnecting})
 	assert.False(t, r.called)
 }

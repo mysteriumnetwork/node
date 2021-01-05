@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
@@ -67,6 +68,9 @@ type ChannelHandler interface {
 type Channel interface {
 	ChannelSender
 	ChannelHandler
+
+	// Tracer returns tracer which tracks channel establishment
+	Tracer() *trace.Tracer
 
 	// ServiceConn returns UDP connection which can be used for services.
 	ServiceConn() *net.UDPConn
@@ -135,6 +139,8 @@ type channel struct {
 
 	// tr is transport containing network related connections for p2p to work.
 	tr *transport
+
+	tracer *trace.Tracer
 
 	// serviceConn is separate connection which is created outside of p2p channel when
 	// performing initial NAT hole punching or manual conn. It is here just because it's more easy
@@ -225,12 +231,14 @@ func newChannel(remoteConn *net.UDPConn, privateKey PrivateKey, peerPubKey Publi
 		remoteAlive:      make(chan struct{}, 1),
 	}
 
+	return &c, nil
+}
+
+func (c *channel) launchReadSendLoops() {
 	go c.remoteReadLoop()
 	go c.remoteSendLoop()
 	go c.localReadLoop()
 	go c.localSendLoop()
-
-	return &c, nil
 }
 
 // remoteReadLoop reads from remote conn and writes to local KCP UDP conn.
@@ -260,14 +268,12 @@ func (c *channel) remoteReadLoop() {
 			close(c.remoteAlive)
 		})
 
-		// Check if peer port changed.
+		// Check if peer address changed.
 		if addr, ok := addr.(*net.UDPAddr); ok {
-			if addr.IP.Equal(latestPeerAddr.IP) {
-				if addr.Port != latestPeerAddr.Port {
-					log.Debug().Msgf("Peer port changed from %d to %d", latestPeerAddr.Port, addr.Port)
-					c.peer.updateAddr(addr)
-					latestPeerAddr = addr
-				}
+			if !addr.IP.Equal(latestPeerAddr.IP) || addr.Port != latestPeerAddr.Port {
+				log.Debug().Msgf("Peer address changed from %v to %v", latestPeerAddr, addr)
+				c.peer.updateAddr(addr)
+				latestPeerAddr = addr
 			}
 		}
 
@@ -401,6 +407,7 @@ func (c *channel) handleRequest(msg *transportMsg) {
 	if err != nil {
 		log.Err(err).Msgf("Handler %q internal error", msg.topic)
 		resMsg.statusCode = statusCodeInternalErr
+		resMsg.msg = err.Error()
 	} else if ctx.publicError != nil {
 		log.Err(ctx.publicError).Msgf("Handler %q public error", msg.topic)
 		resMsg.statusCode = statusCodePublicErr
@@ -412,6 +419,11 @@ func (c *channel) handleRequest(msg *transportMsg) {
 		}
 	}
 	c.sendQueue <- &resMsg
+}
+
+// Tracer returns tracer which tracks channel establishment
+func (c *channel) Tracer() *trace.Tracer {
+	return c.tracer
 }
 
 // ServiceConn returns UDP connection which can be used for services.
@@ -441,6 +453,14 @@ func (c *channel) Close() error {
 
 		if err := c.tr.session.Close(); err != nil {
 			closeErr = fmt.Errorf("could not close p2p transport session: %w", err)
+		}
+
+		if c.serviceConn != nil {
+			if err := c.serviceConn.Close(); err != nil {
+				if errors.Is(err, errors.New("use of closed network connection")) { // Have to check this error as a string match https://github.com/golang/go/issues/4373
+					closeErr = fmt.Errorf("could not close p2p service connection: %w", err)
+				}
+			}
 		}
 	})
 
@@ -489,7 +509,7 @@ func (c *channel) sendRequest(ctx context.Context, topic string, m *Message) (*M
 			if res.statusCode == statusCodeHandlerNotFoundErr {
 				return nil, fmt.Errorf("%s: %w", string(res.data), ErrHandlerNotFound)
 			}
-			return nil, errors.New("internal peer error")
+			return nil, fmt.Errorf("peer error: %w", errors.New(res.msg))
 		}
 		return &Message{Data: res.data}, nil
 	}
@@ -510,6 +530,13 @@ func (c *channel) deleteStream(id uint64) {
 	defer c.mu.Unlock()
 
 	delete(c.streams, id)
+}
+
+func (c *channel) setTracer(tracer *trace.Tracer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.tracer = tracer
 }
 
 func (c *channel) setServiceConn(conn *net.UDPConn) {
@@ -554,21 +581,25 @@ func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
 func listenUDPSession(proxyAddr net.Addr, privateKey PrivateKey, peerPubKey PublicKey) (sess *kcp.UDPSession, localAddr *net.UDPAddr, err error) {
 	blockCrypt, err := newBlockCrypt(privateKey, peerPubKey)
 	if err != nil {
-		err = fmt.Errorf("could not create block crypt: %w", err)
-		return
+		return nil, nil, fmt.Errorf("could not create block crypt: %w", err)
 	}
+
 	localConn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP("127.0.0.1")})
 	if err != nil {
-		err = fmt.Errorf("could not create UDP conn: %w", err)
-		return
+		return nil, nil, fmt.Errorf("could not create UDP conn: %w", err)
 	}
+
 	localAddr = localConn.LocalAddr().(*net.UDPAddr)
+
 	sess, err = kcp.NewConn3(1, proxyAddr, blockCrypt, 10, 3, localConn)
 	if err != nil {
-		err = fmt.Errorf("could not create UDP session: %w", err)
+		localConn.Close()
+		return nil, nil, fmt.Errorf("could not create UDP session: %w", err)
 	}
+
 	sess.SetMtu(kcpMTUSize)
-	return
+
+	return sess, localAddr, err
 }
 
 func newBlockCrypt(privateKey PrivateKey, peerPublicKey PublicKey) (kcp.BlockCrypt, error) {

@@ -18,25 +18,17 @@
 package requests
 
 import (
-	"net"
 	"net/http"
 	"time"
 )
 
-// GetDefaultTransport returns default HTTP transport which
+// NewTransport returns default HTTP transport which
 // should be reused as it caches underlying TCP connections.
 // If connections pooling is not needed consider to set
 // DisableKeepAlives=false and MaxIdleConnsPerHost=-1.
-func GetDefaultTransport(srcIP string) *http.Transport {
-	ipAddress := net.ParseIP(srcIP)
-	localIPAddress := &net.TCPAddr{IP: ipAddress}
-
+func NewTransport(dialFunc DialContext) *http.Transport {
 	return &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout:   60 * time.Second,
-			KeepAlive: 30 * time.Second,
-			LocalAddr: localIPAddress,
-		}).DialContext,
+		DialContext:           dialFunc,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,

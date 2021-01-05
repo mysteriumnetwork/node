@@ -23,10 +23,11 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -53,17 +54,19 @@ func Test_GetProposal(t *testing.T) {
 				LocationOriginate: market.Location{Country: country},
 			},
 		},
-		GetProposal(location.Location{Country: country}),
+		GetProposal(locationstate.Location{Country: country}),
 	)
 }
 
 func Test_Manager_Stop(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
 	service := service.NewInstance(
+		identity.FromAddress("0x1"),
 		"",
-		servicestate.Running,
 		nil,
 		market.ServiceProposal{},
+		servicestate.Running,
+		nil,
 		policy.NewRepository(),
 		nil,
 	)

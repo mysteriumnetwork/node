@@ -19,26 +19,34 @@ package trace
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	// AppTopicTraceEvent represents event topic for Trace events
+	AppTopicTraceEvent = "Trace"
+)
+
 // NewTracer returns new tracer instance.
-func NewTracer() *Tracer {
-	return &Tracer{
-		stages: make(map[string]*stage),
+func NewTracer(name string) *Tracer {
+	tracer := &Tracer{
+		stages: make([]*stage, 0),
 	}
+	tracer.name = tracer.StartStage(name)
+	return tracer
 }
 
 // Tracer represents tracer which records stages durations. It can be used
 // to record stages times for tracing how long it took time.
 type Tracer struct {
+	name     string
 	mu       sync.Mutex
-	stages   map[string]*stage
+	stages   []*stage
 	finished bool
 }
 
@@ -51,16 +59,15 @@ func (t *Tracer) StartStage(key string) string {
 		log.Error().Msg("Tracer is already finished")
 		return ""
 	}
-
-	if _, ok := t.stages[key]; ok {
+	if _, ok := t.findStage(key); ok {
 		log.Error().Msgf("Stage %s was already started", key)
 		return ""
 	}
 
-	t.stages[key] = &stage{
+	t.stages = append(t.stages, &stage{
 		key:   key,
 		start: time.Now(),
-	}
+	})
 	return key
 }
 
@@ -73,37 +80,66 @@ func (t *Tracer) EndStage(key string) {
 		log.Error().Msg("Tracer is already finished")
 		return
 	}
-
-	if s, ok := t.stages[key]; ok {
-		s.end = time.Now()
-	} else {
+	s, ok := t.findStage(key)
+	if !ok {
 		log.Error().Msgf("Stage %s was not started", key)
 	}
+
+	s.end = time.Now()
 }
 
 // Finish finishes tracing and returns formatted string with stages durations.
-func (t *Tracer) Finish() string {
+func (t *Tracer) Finish(eventPublisher eventbus.Publisher, id string) string {
+	t.EndStage(t.name)
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.finished = true
 
-	// Sort stages by start time.
-	var stages []*stage
-	for _, v := range t.stages {
-		stages = append(stages, v)
-	}
-	sort.Slice(stages, func(i, j int) bool {
-		return stages[i].start.Before(stages[j].start)
-	})
-
 	var strs []string
-	for _, s := range stages {
-		strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
+	for _, s := range t.stages {
+		if s.end.After(time.Time{}) {
+			t.publishStageEvent(eventPublisher, id, *s)
+			strs = append(strs, fmt.Sprintf("%q took %s", s.key, s.end.Sub(s.start).String()))
+		} else {
+			strs = append(strs, fmt.Sprintf("%q did not start", s.key))
+		}
 	}
+
 	return strings.Join(strs, ", ")
+}
+
+func (t *Tracer) findStage(key string) (*stage, bool) {
+	for _, s := range t.stages {
+		if s.key == key {
+			return s, true
+		}
+	}
+	return nil, false
+}
+
+func (t *Tracer) publishStageEvent(eventPublisher eventbus.Publisher, id string, stage stage) {
+	if eventPublisher == nil {
+		return
+	}
+
+	eventPublisher.Publish(AppTopicTraceEvent,
+		Event{
+			ID:       id,
+			Key:      stage.key,
+			Duration: stage.end.Sub(stage.start),
+		},
+	)
 }
 
 type stage struct {
 	key        string
 	start, end time.Time
+}
+
+// Event represents a published Trace event.
+type Event struct {
+	ID       string
+	Key      string
+	Duration time.Duration
 }

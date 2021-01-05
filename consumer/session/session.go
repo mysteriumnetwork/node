@@ -18,34 +18,44 @@
 package session
 
 import (
+	"math/big"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 const (
-	// SessionStatusNew means that newly created session object is written to storage
-	SessionStatusNew = "New"
-	// SessionStatusCompleted means that session object is updated on connection disconnect event
-	SessionStatusCompleted = "Completed"
+	// StatusNew means that newly created session object is written to storage
+	StatusNew = "New"
+	// StatusCompleted means that session object is updated on connection disconnect event
+	StatusCompleted = "Completed"
+)
+
+const (
+	// DirectionConsumed marks traffic transaction where node participated as consumer.
+	DirectionConsumed = "Consumed"
+	// DirectionProvided marks traffic transaction where node participated as provider.
+	DirectionProvided = "Provided"
 )
 
 // History holds structure for saving session history
 type History struct {
 	SessionID       node_session.ID `storm:"id"`
+	Direction       string
 	ConsumerID      identity.Identity
-	AccountantID    string
+	HermesID        string
 	ProviderID      identity.Identity
 	ServiceType     string
+	ConsumerCountry string
 	ProviderCountry string
-	Started         time.Time
-	Status          string
-	Updated         time.Time
-	DataStats       connection.Statistics // is updated on disconnect event
-	Invoice         crypto.Invoice        // is updated on disconnect event
+	DataSent        uint64
+	DataReceived    uint64
+	Tokens          *big.Int
+
+	Status  string
+	Started time.Time
+	Updated time.Time
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)

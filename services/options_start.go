@@ -18,6 +18,7 @@
 package services
 
 import (
+	"math/big"
 	"strings"
 
 	"github.com/mysteriumnetwork/node/config"
@@ -53,12 +54,13 @@ func GetStartOptions(serviceType string) (opts StartOptions, err error) {
 	return opts, nil
 }
 
-func getPrice(flag cli.Float64Flag, fallback cli.Float64Flag) uint64 {
+func getPrice(flag cli.Float64Flag, fallback cli.Float64Flag) *big.Int {
 	value := config.GetFloat64(flag)
 	if value == 0 {
 		value = config.GetFloat64(fallback)
 	}
-	return uint64(value * money.MystSize)
+	res, _ := new(big.Float).Mul(big.NewFloat(value), new(big.Float).SetInt(money.MystSize)).Int(nil)
+	return res
 }
 
 func getPolicies(flag cli.StringFlag, fallback cli.StringFlag) []string {
@@ -78,8 +80,8 @@ func getPolicies(flag cli.StringFlag, fallback cli.StringFlag) []string {
 
 // StartOptions describes options shared among multiple services
 type StartOptions struct {
-	PaymentPricePerGB     uint64
-	PaymentPricePerMinute uint64
+	PaymentPricePerGB     *big.Int
+	PaymentPricePerMinute *big.Int
 	AccessPolicyList      []string
 	TypeOptions           service.Options
 }

@@ -21,21 +21,21 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	sessionExistingString = "fake-id"
-)
-
 var (
-	identityExisting = identity.FromAddress("deadbeef")
-	sessionExisting  = session.Session{
-		ID:         session.ID(sessionExistingString),
-		ConsumerID: identityExisting,
-	}
+	identityExisting   = identity.FromAddress("deadbeef")
+	sessionExisting, _ = service.NewSession(
+		&service.Instance{},
+		&pb.SessionRequest{Consumer: &pb.ConsumerInfo{Id: identityExisting.Address}},
+		trace.NewTracer(""),
+	)
+	sessionExistingString = string(sessionExisting.ID)
 )
 
 func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {

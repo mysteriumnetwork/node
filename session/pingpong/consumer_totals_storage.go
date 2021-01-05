@@ -18,6 +18,8 @@
 package pingpong
 
 import (
+	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -45,30 +47,33 @@ func NewConsumerTotalsStorage(bolt persistentStorage, bus eventbus.Publisher) *C
 }
 
 // Store stores the given amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Store(id identity.Identity, accountantID common.Address, amount uint64) error {
+func (cts *ConsumerTotalsStorage) Store(chainID int64, id identity.Identity, hermesID common.Address, amount *big.Int) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 
-	err := cts.bolt.SetValue(consumerTotalStorageBucketName, id.Address+accountantID.Hex(), amount)
+	key := cts.makeKey(chainID, id, hermesID)
+	err := cts.bolt.SetValue(consumerTotalStorageBucketName, key, amount)
 	if err != nil {
 		return err
 	}
 
 	go cts.bus.Publish(event.AppTopicGrandTotalChanged, event.AppEventGrandTotalChanged{
-		Current:      amount,
-		AccountantID: accountantID,
-		ConsumerID:   id,
+		ChainID:    chainID,
+		Current:    amount,
+		HermesID:   hermesID,
+		ConsumerID: id,
 	})
 
 	return nil
 }
 
 // Get fetches the amount as promised for the given channel.
-func (cts *ConsumerTotalsStorage) Get(id identity.Identity, accountantID common.Address) (uint64, error) {
+func (cts *ConsumerTotalsStorage) Get(chainID int64, id identity.Identity, hermesID common.Address) (*big.Int, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
-	var res uint64
-	err := cts.bolt.GetValue(consumerTotalStorageBucketName, id.Address+accountantID.Hex(), &res)
+	var res = new(big.Int)
+	key := cts.makeKey(chainID, id, hermesID)
+	err := cts.bolt.GetValue(consumerTotalStorageBucketName, key, &res)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {
@@ -78,4 +83,8 @@ func (cts *ConsumerTotalsStorage) Get(id identity.Identity, accountantID common.
 		}
 	}
 	return res, err
+}
+
+func (cts *ConsumerTotalsStorage) makeKey(chainID int64, id identity.Identity, hermesID common.Address) string {
+	return fmt.Sprintf("%d%s%s", chainID, id.Address, hermesID.Hex())
 }

@@ -23,33 +23,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
-
-// swagger:model HealthCheckDTO
-type healthCheckData struct {
-	// example: 25h53m33.540493171s
-	Uptime string `json:"uptime"`
-
-	// example: 10449
-	Process int `json:"process"`
-
-	// example: 0.0.6
-	Version   string    `json:"version"`
-	BuildInfo buildInfo `json:"build_info"`
-}
-
-// swagger:model BuildInfoDTO
-type buildInfo struct {
-	// example: <unknown>
-	Commit string `json:"commit"`
-
-	// example: <unknown>
-	Branch string `json:"branch"`
-
-	// example: dev-build
-	BuildNumber string `json:"build_number"`
-}
 
 type healthCheckEndpoint struct {
 	startTime       time.Time
@@ -84,14 +60,14 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	status := healthCheckData{
+	status := contract.HealthCheckDTO{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
 		Process: hce.processNumber,
 		Version: metadata.VersionAsString(),
-		BuildInfo: buildInfo{
-			metadata.BuildCommit,
-			metadata.BuildBranch,
-			metadata.BuildNumber,
+		BuildInfo: contract.BuildInfoDTO{
+			Commit:      metadata.BuildCommit,
+			Branch:      metadata.BuildBranch,
+			BuildNumber: metadata.BuildNumber,
 		},
 	}
 	utils.WriteAsJSON(status, writer)

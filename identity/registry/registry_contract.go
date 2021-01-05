@@ -20,9 +20,7 @@ package registry
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,31 +36,31 @@ import (
 
 type registryStorage interface {
 	Store(status StoredRegistrationStatus) error
-	Get(identity identity.Identity) (StoredRegistrationStatus, error)
+	Get(chainID int64, identity identity.Identity) (StoredRegistrationStatus, error)
 	GetAll() ([]StoredRegistrationStatus, error)
 }
 
 type contractRegistry struct {
-	accountantAddress common.Address
-	storage           registryStorage
-	stop              chan struct{}
-	once              sync.Once
-	publisher         eventbus.Publisher
-	lock              sync.Mutex
-	ethC              *paymentClient.ReconnectableEthClient
-	registryAddress   common.Address
+	hermesAddress   common.Address
+	storage         registryStorage
+	stop            chan struct{}
+	once            sync.Once
+	publisher       eventbus.Publisher
+	lock            sync.Mutex
+	ethC            *paymentClient.ReconnectableEthClient
+	registryAddress common.Address
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, accountantAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
-	log.Info().Msgf("Using registryAddress %v accountantAddress %v", registryAddress.Hex(), accountantAddress.Hex())
+func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, hermesAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
+	log.Info().Msgf("Using registryAddress %v hermesAddress %v", registryAddress.Hex(), hermesAddress.Hex())
 	return &contractRegistry{
-		accountantAddress: accountantAddress,
-		storage:           registryStorage,
-		stop:              make(chan struct{}),
-		publisher:         publisher,
-		ethC:              ethClient,
-		registryAddress:   registryAddress,
+		hermesAddress:   hermesAddress,
+		storage:         registryStorage,
+		stop:            make(chan struct{}),
+		publisher:       publisher,
+		ethC:            ethClient,
+		registryAddress: registryAddress,
 	}, nil
 }
 
@@ -80,8 +78,8 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 }
 
 // GetRegistrationStatus returns the registration status of the provided identity
-func (registry *contractRegistry) GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
-	status, err := registry.storage.Get(id)
+func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
+	status, err := registry.storage.Get(chainID, id)
 	if err == nil {
 		return status.RegistrationStatus, nil
 	}
@@ -97,6 +95,7 @@ func (registry *contractRegistry) GetRegistrationStatus(id identity.Identity) (R
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           id,
 		RegistrationStatus: statusBC,
+		ChainID:            chainID,
 	})
 	return statusBC, errors.Wrap(err, "could not store registration status")
 }
@@ -117,7 +116,7 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 	registry.lock.Lock()
 	defer registry.lock.Unlock()
 
-	status, err := registry.storage.Get(identity.FromAddress(ev.Identity))
+	status, err := registry.storage.Get(ev.ChainID, identity.FromAddress(ev.Identity))
 	if err != nil && err != ErrNotFound {
 		log.Error().Err(err).Msg("Could not get status from local db")
 		return
@@ -132,38 +131,33 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 		}
 	}
 
-	if status.RegistrationStatus == RegisteredProvider {
-		log.Info().Msgf("Identity %q already fully registered, skipping", ev.Identity)
+	if status.RegistrationStatus == Registered {
+		log.Info().Msgf("Identity %q already registered, skipping", ev.Identity)
 		return
 	}
 
 	s := InProgress
-	if ev.Stake > 0 {
-		s = Promoting
-	}
 
 	ID := identity.FromAddress(ev.Identity)
 
 	go registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-		ID:     ID,
-		Status: s,
+		ID:      ID,
+		Status:  s,
+		ChainID: ev.ChainID,
 	})
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           ID,
 		RegistrationStatus: s,
+		ChainID:            ev.ChainID,
 	})
 	if err != nil {
 		log.Error().Err(err).Stack().Msg("Could not store registration status")
 	}
 
-	registry.subscribeToRegistrationEvent(ID)
+	registry.subscribeToRegistrationEvent(ev.ChainID, ID)
 }
 
-func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity.Identity) {
-	accountantIdentities := []common.Address{
-		registry.accountantAddress,
-	}
-
+func (registry *contractRegistry) subscribeToRegistrationEvent(chainID int64, identity identity.Identity) {
 	userIdentities := []common.Address{
 		common.HexToAddress(identity.Address),
 	}
@@ -173,7 +167,7 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 	}
 
 	go func() {
-		log.Info().Msgf("Waiting on identities %s accountant %s", userIdentities[0].Hex(), accountantIdentities[0].Hex())
+		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), registry.hermesAddress.Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 
 		filterer, err := bindings.NewRegistryFilterer(registry.registryAddress, registry.ethC.Client())
@@ -182,17 +176,19 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			return
 		}
 
-		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
+		subscription, err := filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities)
 		if err != nil {
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:     identity,
-				Status: RegistrationError,
+				ID:      identity,
+				Status:  RegistrationError,
+				ChainID: chainID,
 			})
 			log.Error().Err(err).Msg("Could not register to identity events")
 
 			updateErr := registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: RegistrationError,
+				ChainID:            chainID,
 			})
 			if updateErr != nil {
 				log.Error().Err(updateErr).Msg("Could not store registration status")
@@ -206,25 +202,24 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 			return
 		case <-sink:
 			log.Info().Msgf("Received registration event for %v", identity)
-			s, err := registry.storage.Get(identity)
+			_, err := registry.storage.Get(chainID, identity)
 			if err != nil {
 				log.Error().Err(err).Msg("Could not store registration status")
 			}
 
-			status := RegisteredConsumer
-			if s.RegistrationStatus == Promoting {
-				status = RegisteredProvider
-			}
+			status := Registered
 
 			log.Debug().Msgf("Sending registration success event for %v", identity)
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:     identity,
-				Status: status,
+				ID:      identity,
+				Status:  status,
+				ChainID: chainID,
 			})
 
 			err = registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: status,
+				ChainID:            chainID,
 			})
 			if err != nil {
 				log.Error().Err(err).Msg("Could not store registration status")
@@ -236,12 +231,14 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(identity identity
 
 			log.Error().Err(err).Msg("Subscription error")
 			registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
-				ID:     identity,
-				Status: RegistrationError,
+				ID:      identity,
+				Status:  RegistrationError,
+				ChainID: chainID,
 			})
 			updateErr := registry.storage.Store(StoredRegistrationStatus{
 				Identity:           identity,
 				RegistrationStatus: RegistrationError,
+				ChainID:            chainID,
 			})
 			if updateErr != nil {
 				log.Error().Err(updateErr).Msg("could not store registration status")
@@ -265,8 +262,6 @@ func (registry *contractRegistry) handleStart() {
 	}
 }
 
-const month = time.Hour * 24 * 7 * 4
-
 func (registry *contractRegistry) loadInitialState() error {
 	registry.lock.Lock()
 	defer registry.lock.Unlock()
@@ -278,13 +273,10 @@ func (registry *contractRegistry) loadInitialState() error {
 	}
 
 	for i := range entries {
-		if time.Now().UTC().Sub(entries[i].UpdatedAt) > month {
-			log.Debug().Msgf("Skipping identity %q as it has not been updated recently", entries[i].Identity)
-			continue
-		}
 		switch entries[i].RegistrationStatus {
-		case RegistrationError, InProgress, Promoting, RegisteredConsumer:
-			err := registry.handleUnregisteredIdentityInitialLoad(entries[i].Identity)
+		case RegistrationError, InProgress:
+			entry := entries[i]
+			err := registry.handleUnregisteredIdentityInitialLoad(entry.ChainID, entry.Identity)
 			if err != nil {
 				return errors.Wrapf(err, "could not check %q registration status", entries[i].Identity)
 			}
@@ -299,7 +291,7 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentit
 	providerAddress := providerIdentity.ToCommonAddress()
 	addressBytes := [32]byte{}
 
-	addr, err := crypto.GenerateProviderChannelID(providerAddress.Hex(), registry.accountantAddress.Hex())
+	addr, err := crypto.GenerateProviderChannelID(providerAddress.Hex(), registry.hermesAddress.Hex())
 	if err != nil {
 		return addressBytes, errors.Wrap(err, "could not generate channel address")
 	}
@@ -310,14 +302,14 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentit
 	return addressBytes, nil
 }
 
-func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(id identity.Identity) error {
+func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID int64, id identity.Identity) error {
 	registered, err := registry.isRegisteredInBC(id)
 	if err != nil {
 		return errors.Wrap(err, "could not check status on blockchain")
 	}
 
 	switch registered {
-	case RegisteredConsumer, RegisteredProvider:
+	case Registered:
 		err := registry.storage.Store(StoredRegistrationStatus{
 			Identity:           id,
 			RegistrationStatus: registered,
@@ -326,7 +318,7 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(id ident
 			return errors.Wrap(err, "could not store registration status on local db")
 		}
 	default:
-		registry.subscribeToRegistrationEvent(id)
+		registry.subscribeToRegistrationEvent(chainID, id)
 	}
 	return nil
 }
@@ -344,13 +336,13 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		},
 	}
 
-	accountantContract, err := bindings.NewAccountantImplementationCaller(registry.accountantAddress, registry.ethC.Client())
+	hermesContract, err := bindings.NewHermesImplementationCaller(registry.hermesAddress, registry.ethC.Client())
 	if err != nil {
-		return RegistrationError, fmt.Errorf("could not get accountant implementation caller %w", err)
+		return RegistrationError, fmt.Errorf("could not get hermes implementation caller %w", err)
 	}
 
-	accountantSession := &bindings.AccountantImplementationCallerSession{
-		Contract: accountantContract,
+	hermesSession := &bindings.HermesImplementationCallerSession{
+		Contract: hermesContract,
 		CallOpts: bind.CallOpts{
 			Pending: false, //we want to find out true registration status - not pending transactions
 		},
@@ -372,16 +364,12 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		return RegistrationError, errors.Wrap(err, "could not get provider channel address")
 	}
 
-	providerChannel, err := accountantSession.Channels(providerAddressBytes)
+	_, err = hermesSession.Channels(providerAddressBytes)
 	if err != nil {
 		return RegistrationError, errors.Wrap(err, "could not get provider channel")
 	}
 
-	if providerChannel.Loan.Cmp(big.NewInt(0)) == 1 {
-		return RegisteredProvider, nil
-	}
-
-	return RegisteredConsumer, nil
+	return Registered, nil
 }
 
 // AppTopicEthereumClientReconnected indicates that the ethereum client has reconnected.

@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -29,10 +30,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -135,20 +137,29 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       "error": ""
     },
     "service_info": null,
-    "sessions": null,
+    "sessions": [],
+    "sessions_stats": {
+      "count": 0,
+      "count_consumers": 0,
+      "sum_bytes_received": 0,
+      "sum_bytes_sent": 0,
+      "sum_duration": 0,
+      "sum_tokens": 0
+	},
     "consumer": {
       "connection": {
         "status": ""
       }
     },
-    "identities": []
+    "identities": [],
+    "channels": []
   },
   "type": "state-change"
 }`
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState := msp.GetState()
-	changedState.NATStatus = stateEvent.NATStatus{
+	changedState.NATStatus = contract.NATStatusDTO{
 		Status: "mass panic",
 		Error:  "cookie prices rise drastically",
 	}
@@ -165,28 +176,37 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       "error": "cookie prices rise drastically"
     },
     "service_info": null,
-    "sessions": null,
+    "sessions": [],
+    "sessions_stats": {
+      "count": 0,
+      "count_consumers": 0,
+      "sum_bytes_received": 0,
+      "sum_bytes_sent": 0,
+      "sum_duration": 0,
+      "sum_tokens": 0
+	},
     "consumer": {
       "connection": {
         "status": ""
       }
     },
-    "identities": []
+    "identities": [],
+	"channels": []
   },
   "type": "state-change"
 }`
 	assert.JSONEq(t, expectJSON, msgJSON)
 
 	changedState = msp.GetState()
-	changedState.Connection.Session.State = connection.Connecting
+	changedState.Connection.Session.State = connectionstate.Connecting
 	changedState.Identities = []stateEvent.Identity{
 		{
 			Address:            "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
-			RegistrationStatus: registry.RegisteredConsumer,
+			RegistrationStatus: registry.Registered,
 			ChannelAddress:     common.HexToAddress("0x000000000000000000000000000000000000000a"),
-			Balance:            50,
-			Earnings:           1,
-			EarningsTotal:      100,
+			Balance:            big.NewInt(50),
+			Earnings:           big.NewInt(1),
+			EarningsTotal:      big.NewInt(100),
 		},
 	}
 	h.ConsumeStateEvent(changedState)
@@ -202,7 +222,15 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
       "error": ""
     },
     "service_info": null,
-    "sessions": null,
+    "sessions": [],
+    "sessions_stats": {
+      "count": 0,
+      "count_consumers": 0,
+      "sum_bytes_received": 0,
+      "sum_bytes_sent": 0,
+      "sum_duration": 0,
+      "sum_tokens": 0
+	},
     "consumer": {
       "connection": {
         "status": "Connecting"
@@ -211,13 +239,15 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
     "identities": [
       {
         "id": "0xd535eba31e9bd2d7a4e34852e6292b359e5c77f7",
-        "registration_status": "RegisteredConsumer",
+        "registration_status": "Registered",
         "channel_address": "0x000000000000000000000000000000000000000A",
         "balance": 50,
         "earnings": 1,
-        "earnings_total": 100
+		"earnings_total": 100,
+		"stake": 0
       }
-    ]
+    ],
+    "channels": []
   },
   "type": "state-change"
 }`

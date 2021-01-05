@@ -37,7 +37,7 @@ func (d *Daemon) killMyst() error {
 		return nil
 	}
 
-	log.Printf("Failed to stop node gracefully, will continue with force kill: %v", err)
+	log.Warn().Msgf("Failed to stop node gracefully, will continue with force kill: %v", err)
 	pid, err := mystPid()
 	if err != nil {
 		return fmt.Errorf("could not get myst pid: %w", err)

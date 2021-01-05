@@ -5,8 +5,8 @@
 testdataoutput
 e2e_tests.log
 tequilapi_spec.json
+/e2e/myst-consumer
 /e2e/myst-provider/db
-tequilapi.json
 e2e/myst-provider/*.log.*
 e2e/prometheus/data
 mage_output_file.go

@@ -20,10 +20,14 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/session/pingpong"
+
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -205,11 +209,13 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 }
 
 type stateRes struct {
-	NATStatus  stateEvent.NATStatus        `json:"nat_status"`
-	Services   []stateEvent.ServiceInfo    `json:"service_info"`
-	Sessions   []stateEvent.ServiceSession `json:"sessions"`
-	Consumer   consumerStateRes            `json:"consumer"`
-	Identities []contract.IdentityDTO      `json:"identities"`
+	NATStatus     contract.NATStatusDTO        `json:"nat_status"`
+	Services      []contract.ServiceInfoDTO    `json:"service_info"`
+	Sessions      []contract.SessionDTO        `json:"sessions"`
+	SessionsStats contract.SessionStatsDTO     `json:"sessions_stats"`
+	Consumer      consumerStateRes             `json:"consumer"`
+	Identities    []contract.IdentityDTO       `json:"identities"`
+	Channels      []contract.PaymentChannelDTO `json:"channels"`
 }
 
 type consumerStateRes struct {
@@ -219,6 +225,12 @@ type consumerStateRes struct {
 func mapState(event stateEvent.State) stateRes {
 	identitiesRes := make([]contract.IdentityDTO, len(event.Identities))
 	for idx, identity := range event.Identities {
+		stake := new(big.Int)
+
+		if channel := identityChannel(identity.Address, event.ProviderChannels); channel != nil {
+			stake = channel.Channel.Stake
+		}
+
 		identitiesRes[idx] = contract.IdentityDTO{
 			Address:            identity.Address,
 			RegistrationStatus: identity.RegistrationStatus.String(),
@@ -226,19 +238,44 @@ func mapState(event stateEvent.State) stateRes {
 			Balance:            identity.Balance,
 			Earnings:           identity.Earnings,
 			EarningsTotal:      identity.EarningsTotal,
+			Stake:              stake,
 		}
 	}
 
+	channelsRes := make([]contract.PaymentChannelDTO, len(event.ProviderChannels))
+	for idx, channel := range event.ProviderChannels {
+		channelsRes[idx] = contract.NewPaymentChannelDTO(channel)
+	}
+
+	sessionsRes := make([]contract.SessionDTO, len(event.Sessions))
+	sessionsStats := session.NewStats()
+	for idx, se := range event.Sessions {
+		sessionsRes[idx] = contract.NewSessionDTO(se)
+		sessionsStats.Add(se)
+	}
+
 	res := stateRes{
-		NATStatus: event.NATStatus,
-		Services:  event.Services,
-		Sessions:  event.Sessions,
+		NATStatus:     event.NATStatus,
+		Services:      event.Services,
+		Sessions:      sessionsRes,
+		SessionsStats: contract.NewSessionStatsDTO(sessionsStats),
 		Consumer: consumerStateRes{
 			Connection: contract.NewConnectionDTO(event.Connection.Session, event.Connection.Statistics, event.Connection.Throughput, event.Connection.Invoice),
 		},
 		Identities: identitiesRes,
+		Channels:   channelsRes,
 	}
 	return res
+}
+
+func identityChannel(address string, channels []pingpong.HermesChannel) *pingpong.HermesChannel {
+	for idx := range channels {
+		if channels[idx].Identity.Address == address {
+			return &channels[idx]
+		}
+	}
+
+	return nil
 }
 
 // ConsumeStateEvent consumes the state change event

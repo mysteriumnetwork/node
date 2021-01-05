@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -34,6 +35,7 @@ func TestValidator_Validate(t *testing.T) {
 	type args struct {
 		consumerID identity.Identity
 		proposal   market.ServiceProposal
+		chainID    int64
 	}
 	tests := []struct {
 		name    string
@@ -49,10 +51,12 @@ func TestValidator_Validate(t *testing.T) {
 					toReturn: true,
 				},
 				consumerBalanceGetter: &mockConsumerBalanceGetter{
-					toReturn: 99,
+					toReturn:    big.NewInt(99),
+					forceReturn: big.NewInt(99),
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.ServiceProposal{
 					ProviderID:        activeProviderID.Address,
@@ -60,7 +64,35 @@ func TestValidator_Validate(t *testing.T) {
 					ServiceType:       activeServiceType,
 					ServiceDefinition: &fakeServiceDefinition{},
 					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   100,
+						Amount:   big.NewInt(100),
+						Currency: "MYSTT",
+					}},
+					PaymentMethodType: "PER_MINUTE",
+				},
+			},
+		},
+		{
+			name:    "resync balance on insufficient balance",
+			wantErr: nil,
+			fields: fields{
+				unlockChecker: &mockUnlockChecker{
+					toReturn: true,
+				},
+				consumerBalanceGetter: &mockConsumerBalanceGetter{
+					toReturn:    big.NewInt(99),
+					forceReturn: big.NewInt(100),
+				},
+			},
+			args: args{
+				chainID:    1,
+				consumerID: identity.FromAddress("whatever"),
+				proposal: market.ServiceProposal{
+					ProviderID:        activeProviderID.Address,
+					ProviderContacts:  []market.Contact{activeProviderContact},
+					ServiceType:       activeServiceType,
+					ServiceDefinition: &fakeServiceDefinition{},
+					PaymentMethod: &mockPaymentMethod{price: money.Money{
+						Amount:   big.NewInt(100),
 						Currency: "MYSTT",
 					}},
 					PaymentMethodType: "PER_MINUTE",
@@ -76,6 +108,7 @@ func TestValidator_Validate(t *testing.T) {
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 			},
 		},
@@ -87,10 +120,11 @@ func TestValidator_Validate(t *testing.T) {
 					toReturn: true,
 				},
 				consumerBalanceGetter: &mockConsumerBalanceGetter{
-					toReturn: 101,
+					toReturn: big.NewInt(101),
 				},
 			},
 			args: args{
+				chainID:    1,
 				consumerID: identity.FromAddress("whatever"),
 				proposal: market.ServiceProposal{
 					ProviderID:        activeProviderID.Address,
@@ -98,7 +132,7 @@ func TestValidator_Validate(t *testing.T) {
 					ServiceType:       activeServiceType,
 					ServiceDefinition: &fakeServiceDefinition{},
 					PaymentMethod: &mockPaymentMethod{price: money.Money{
-						Amount:   100,
+						Amount:   big.NewInt(100),
 						Currency: "MYSTT",
 					}},
 					PaymentMethodType: "PER_MINUTE",
@@ -112,7 +146,7 @@ func TestValidator_Validate(t *testing.T) {
 				consumerBalanceGetter: tt.fields.consumerBalanceGetter,
 				unlockChecker:         tt.fields.unlockChecker,
 			}
-			err := v.Validate(tt.args.consumerID, tt.args.proposal)
+			err := v.Validate(tt.args.chainID, tt.args.consumerID, tt.args.proposal)
 			if tt.wantErr != nil {
 				assert.EqualError(t, err, tt.wantErr.Error(), tt.name)
 			} else {
@@ -131,9 +165,14 @@ func (muc *mockUnlockChecker) IsUnlocked(id string) bool {
 }
 
 type mockConsumerBalanceGetter struct {
-	toReturn uint64
+	toReturn    *big.Int
+	forceReturn *big.Int
 }
 
-func (mcbg *mockConsumerBalanceGetter) GetBalance(id identity.Identity) uint64 {
+func (mcbg *mockConsumerBalanceGetter) GetBalance(chainID int64, id identity.Identity) *big.Int {
 	return mcbg.toReturn
+}
+
+func (mcbg *mockConsumerBalanceGetter) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
+	return mcbg.forceReturn
 }

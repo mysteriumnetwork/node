@@ -34,6 +34,6 @@ func (i IdentityRegistry) Subscribe(_ eventbus.Subscriber) error {
 }
 
 // GetRegistrationStatus returns a pre-defined RegistrationStatus.
-func (i IdentityRegistry) GetRegistrationStatus(identity.Identity) (registry.RegistrationStatus, error) {
+func (i IdentityRegistry) GetRegistrationStatus(_ int64, _ identity.Identity) (registry.RegistrationStatus, error) {
 	return i.Status, nil
 }

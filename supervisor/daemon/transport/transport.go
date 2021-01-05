@@ -24,5 +24,6 @@ type handlerFunc func(conn io.ReadWriter)
 
 // Options for transport.
 type Options struct {
+	Uid        string
 	WinService bool
 }

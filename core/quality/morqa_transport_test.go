@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -45,13 +45,15 @@ var (
 
 func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	var events metrics.Batch
+
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		body, _ := ioutil.ReadAll(request.Body)
-		proto.Unmarshal(body, &events)
+		_ = proto.Unmarshal(body, &events)
 		response.WriteHeader(http.StatusAccepted)
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
+	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
+
 	go morqa.Start()
 	defer morqa.Stop()
 
@@ -61,9 +63,10 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
-		morqa.sendMetrics()
+		_ = morqa.sendMetrics()
+
 		return len(events.Events) > 0
-	}, time.Second, time.Millisecond)
+	}, 2*time.Second, 10*time.Millisecond)
 
 	assert.Exactly(
 		t,
@@ -84,12 +87,12 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 func TestMORQAT_sendMetrics_HandlesErrorsWithMessages(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"message": "invalid payload given"
 		}`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
+	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
 	morqa.addMetric(&metrics.Event{})
 	err := morqa.sendMetrics()
 
@@ -102,7 +105,7 @@ func TestMORQAT_sendMetrics_HandlesErrorsWithMessages(t *testing.T) {
 func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"message": "validation problems",
 			"errors": {
 				"field": [ {"code": "required", "message": "Field is required"} ]
@@ -110,7 +113,7 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 		}`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
+	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
 	morqa.addMetric(&metrics.Event{})
 	err := morqa.sendMetrics()
 
@@ -122,7 +125,7 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 
 func TestMORQA_ProposalsMetrics(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{ "connects": [{
+		_, _ = w.Write([]byte(`{ "connects": [{
 			"proposalId": { "providerId": "0x61400b27616f3ce15a86e4cd12c27c7a4d1c545c", "serviceType": "openvpn" },
 			"connectCount": { "success": 39, "fail": 1, "timeout": 1 }
 		}, {
@@ -134,8 +137,8 @@ func TestMORQA_ProposalsMetrics(t *testing.T) {
 		}] }`))
 	}))
 
-	morqa := NewMorqaClient(bindAllAddress, server.URL, signerFactory, 1*time.Second)
-	metrics := morqa.ProposalsMetrics()
+	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
+	proposalMetrics := morqa.ProposalsMetrics()
 
 	assert.Equal(t,
 		[]ConnectMetric{
@@ -150,7 +153,8 @@ func TestMORQA_ProposalsMetrics(t *testing.T) {
 			{
 				ProposalID:   ProposalID{ProviderID: "0x093285d0a05ad5d9a05e0dae1eb69e7437fa02c6", ServiceType: "openvpn"},
 				ConnectCount: ConnectCount{Success: 0, Fail: 27, Timeout: 0},
-			}},
-		metrics,
+			},
+		},
+		proposalMetrics,
 	)
 }

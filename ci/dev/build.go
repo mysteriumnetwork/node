@@ -66,5 +66,5 @@ func Wireguard() error {
 func CLI() error {
 	mg.Deps(packages.Build)
 
-	return sh.RunV("build/myst/myst", "cli")
+	return sh.RunV("build/myst/myst", "cli", "--agreed-terms-and-conditions")
 }

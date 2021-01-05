@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Exec actives given args
+// Exec executes given args
 var Exec = defaultExec
 
 func defaultExec(args ...string) ([]string, error) {

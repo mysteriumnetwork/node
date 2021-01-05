@@ -39,15 +39,17 @@ import (
 var (
 	mockServiceID             = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 	mockAccessPolicyServiceID = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c9")
+	mockProviderID            = identity.FromAddress("0xproviderid")
+	mockServiceType           = "testprotocol"
 	mockServiceOptions        = fancyServiceOptions{
 		Foo: "bar",
 	}
 	mockAccessPolicyEndpoint = "https://some.domain/api/v1/lists/"
 	mockProposal             = market.ServiceProposal{
 		ID:                1,
-		ServiceType:       "testprotocol",
+		ServiceType:       mockServiceType,
 		ServiceDefinition: TestServiceDefinition{},
-		ProviderID:        "0xProviderId",
+		ProviderID:        mockProviderID.Address,
 		PaymentMethodType: mocks.DefaultPaymentMethodType,
 		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
@@ -74,14 +76,14 @@ var (
 		ID:                1,
 		ServiceType:       serviceTypeWithAccessPolicy,
 		ServiceDefinition: TestServiceDefinition{},
-		ProviderID:        "0xProviderId",
+		ProviderID:        mockProviderID.Address,
 		AccessPolicies:    &ap,
 		PaymentMethodType: mocks.DefaultPaymentMethodType,
 		PaymentMethod:     mocks.DefaultPaymentMethod(),
 	}
-	mockServiceRunning                 = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposal, nil, nil)
-	mockServiceStopped                 = service.NewInstance(mockServiceOptions, servicestate.NotRunning, nil, mockProposal, nil, nil)
-	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, servicestate.Running, nil, mockProposalWithAccessPolicy, nil, nil)
+	mockServiceRunning                 = service.NewInstance(mockProviderID, mockServiceType, mockServiceOptions, mockProposal, servicestate.Running, nil, nil, nil)
+	mockServiceStopped                 = service.NewInstance(mockProviderID, mockServiceType, mockServiceOptions, mockProposal, servicestate.NotRunning, nil, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockProviderID, serviceTypeWithAccessPolicy, mockServiceOptions, mockProposalWithAccessPolicy, servicestate.Running, nil, nil, nil)
 )
 
 type fancyServiceOptions struct {
@@ -143,13 +145,13 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			http.StatusOK,
 			`[{
 				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
-				"provider_id": "0xProviderId",
+				"provider_id": "0xproviderid",
 				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
 					"id": 1,
-					"provider_id": "0xProviderId",
+					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"service_definition": {
 						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
@@ -165,7 +167,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 							"per_bytes":7669584
 						}
 					}
-				}
+				},
+				"connection_statistics": {"attempted":0, "successful":0}
 			}]`,
 		},
 		{
@@ -175,13 +178,13 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			http.StatusCreated,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-				"provider_id": "0xProviderId",
+				"provider_id": "0xproviderid",
 				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
 					"id": 1,
-					"provider_id": "0xProviderId",
+					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"service_definition": {
 						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
@@ -197,7 +200,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 							"per_bytes":7669584
 						}
 					}
-				}
+				},
+				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
 		},
 		{
@@ -207,13 +211,13 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			http.StatusOK,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-				"provider_id": "0xProviderId",
+				"provider_id": "0xproviderid",
 				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
 					"id": 1,
-					"provider_id": "0xProviderId",
+					"provider_id": "0xproviderid",
 					"service_type": "testprotocol",
 					"service_definition": {
 						"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
@@ -229,7 +233,8 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 							"per_bytes":7669584
 						}
 					}
-				}
+				},
+				"connection_statistics": {"attempted":0, "successful":0}
 			}`,
 		},
 		{
@@ -351,7 +356,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(`{
 			"type": "testprotocol",
-			"provider_id": "0xProviderId",
+			"provider_id": "0xproviderid",
 			"options": {}
 		}`),
 	)
@@ -391,13 +396,13 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		t,
 		`{
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-			"provider_id": "0xProviderId",
+			"provider_id": "0xproviderid",
 			"type": "testprotocol",
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,
-				"provider_id": "0xProviderId",
+				"provider_id": "0xproviderid",
 				"service_type": "testprotocol",
 				"service_definition": {
 					"location_originate": {
@@ -417,7 +422,8 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 						"per_bytes":7669584
 					}
 				}
-			}
+			},
+			"connection_statistics": {"attempted":0, "successful":0}
 		}`,
 		resp.Body.String(),
 	)
@@ -484,13 +490,13 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		t,
 		`{
 			"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c9",
-			"provider_id": "0xProviderId",
+			"provider_id": "0xproviderid",
 			"type": "mockAccessPolicyService",
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,
-				"provider_id": "0xProviderId",
+				"provider_id": "0xproviderid",
 				"service_type": "mockAccessPolicyService",
 				"service_definition": {
 					"location_originate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
@@ -524,7 +530,8 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 						"source": "https://some.domain/api/v1/lists/12312312332132"
 					}
 				]
-			}
+			},
+			"connection_statistics": {"attempted":0, "successful":0}
 		}`,
 		resp.Body.String(),
 	)

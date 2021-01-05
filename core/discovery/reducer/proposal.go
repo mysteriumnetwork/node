@@ -18,7 +18,7 @@
 package reducer
 
 import (
-	"math"
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/datasize"
@@ -68,45 +68,44 @@ func LocationType(proposal market.ServiceProposal) interface{} {
 }
 
 // PriceMinute checks if the price per minute is below the given value
-func PriceMinute(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+func PriceMinute(lowerBound, upperBound *big.Int) func(market.ServiceProposal) bool {
 	return pricePerTime(lowerBound, upperBound, time.Minute)
 }
 
 // PriceGiB checks if the price per GiB is below the given value
-func PriceGiB(lowerBound, upperBound uint64) func(market.ServiceProposal) bool {
+func PriceGiB(lowerBound, upperBound *big.Int) func(market.ServiceProposal) bool {
 	return pricePerDataTransfer(lowerBound, upperBound, datasize.GiB.Bytes())
 }
 
-func pricePerTime(lowerBound, upperBound uint64, duration time.Duration) func(market.ServiceProposal) bool {
+func pricePerTime(lowerBound, upperBound *big.Int, duration time.Duration) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		if proposal.PaymentMethod != nil {
 			price := proposal.PaymentMethod.GetPrice().Amount
 			rate := proposal.PaymentMethod.GetRate().PerTime
 			if rate == 0 {
-				return lowerBound == 0
+				return lowerBound.Cmp(big.NewInt(0)) == 0
 			}
 
-			chunks := float64(duration) / float64(rate)
-			totalPrice := uint64(math.Round(chunks * float64(price)))
-			return totalPrice >= lowerBound && totalPrice <= upperBound
+			chunks := big.NewFloat(float64(duration) / float64(rate))
+			totalPrice, _ := new(big.Float).Mul(chunks, new(big.Float).SetInt(price)).Int(nil)
+			return totalPrice.Cmp(lowerBound) >= 0 && totalPrice.Cmp(upperBound) <= 0
 		}
 		return true
 	}
 }
 
-func pricePerDataTransfer(lowerBound, upperBound uint64, chunk uint64) func(market.ServiceProposal) bool {
+func pricePerDataTransfer(lowerBound, upperBound *big.Int, chunk uint64) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		if proposal.PaymentMethod != nil {
 			price := proposal.PaymentMethod.GetPrice().Amount
 			rate := proposal.PaymentMethod.GetRate().PerByte
 			if rate == 0 {
-				return lowerBound == 0
+				return lowerBound.Cmp(big.NewInt(0)) == 0
 			}
 
-			chunks := float64(chunk) / float64(rate)
-			totalPrice := uint64(math.Round(chunks * float64(price)))
-
-			return totalPrice >= lowerBound && totalPrice <= upperBound
+			chunks := big.NewFloat(float64(chunk) / float64(rate))
+			totalPrice, _ := new(big.Float).Mul(chunks, new(big.Float).SetInt(price)).Int(nil)
+			return totalPrice.Cmp(lowerBound) >= 0 && totalPrice.Cmp(upperBound) <= 0
 		}
 		return true
 	}

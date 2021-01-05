@@ -36,10 +36,3 @@ const (
 	// StatusConnectionFailed indicates unknown session connection error.
 	StatusConnectionFailed StatusCode = 2003
 )
-
-// StatusMessage is a contract for message broker.
-type StatusMessage struct {
-	SessionID  string     `json:"sessionID"`
-	StatusCode StatusCode `json:"statusCode"`
-	Message    string     `json:"message"`
-}

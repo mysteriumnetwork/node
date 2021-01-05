@@ -17,29 +17,25 @@
 
 package noop
 
-import "sync"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 // Server doesn't do much really
 type Server struct {
-	iSimulateWork chan error
-	once          sync.Once
 }
 
 // NewServer returns a new noop server
 func NewServer() *Server {
-	return &Server{
-		iSimulateWork: make(chan error),
-	}
+	return &Server{}
 }
 
 // Serve blocks
-func (s *Server) Serve() error {
-	return <-s.iSimulateWork
+func (s *Server) Serve() {
+	log.Debug().Msg("Start: NOOP UI server")
 }
 
 // Stop stops the blocking of serve
 func (s *Server) Stop() {
-	s.once.Do(func() {
-		close(s.iSimulateWork)
-	})
+	log.Debug().Msg("Stop: NOOP UI server")
 }

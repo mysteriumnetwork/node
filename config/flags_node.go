@@ -22,11 +22,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
-
-	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -36,8 +35,8 @@ var (
 	// FlagDiscoveryType proposal discovery adapter.
 	FlagDiscoveryType = cli.StringSliceFlag{
 		Name:  "discovery.type",
-		Usage: `Proposal discovery adapter(s) separated by comma Options: { "api", "broker", "api,broker" }`,
-		Value: cli.NewStringSlice("api", "broker"),
+		Usage: `Proposal discovery adapter(s) separated by comma. Options: { "api", "broker", "api,broker,dht" }`,
+		Value: cli.NewStringSlice("api", "broker", "dht"),
 	}
 	// FlagDiscoveryPingInterval proposal ping interval in seconds.
 	FlagDiscoveryPingInterval = cli.DurationFlag{
@@ -51,10 +50,35 @@ var (
 		Usage: `Proposal fetch interval { "30s", "3m", "1h20m30s" }`,
 		Value: 180 * time.Second,
 	}
+	// FlagDHTAddress IP address of interface to listen for DHT connections.
+	FlagDHTAddress = cli.StringFlag{
+		Name:  "discovery.dht.address",
+		Usage: "IP address to bind DHT to",
+		Value: "0.0.0.0",
+	}
+	// FlagDHTPort listens DHT connections on the specified port.
+	FlagDHTPort = cli.IntFlag{
+		Name:  "discovery.dht.port",
+		Usage: "The port to bind DHT to (by default, random port will be used)",
+		Value: 0,
+	}
+	// FlagDHTProtocol protocol for DHT to use.
+	FlagDHTProtocol = cli.StringFlag{
+		Name:  "discovery.dht.proto",
+		Usage: "Protocol to use with DHT. Options: { udp, tcp }",
+		Value: "tcp",
+	}
+	// FlagDHTBootstrapPeers DHT bootstrap peer nodes list.
+	FlagDHTBootstrapPeers = cli.StringSliceFlag{
+		Name:  "discovery.dht.peers",
+		Usage: `Peer URL(s) for DHT bootstrap (e.g. /ip4/127.0.0.1/tcp/1234/p2p/QmNUZRp1zrk8i8TpfyeDZ9Yg3C4PjZ5o61yao3YhyY1TE8") separated by comma. They will tell us about the other nodes in the network.`,
+		Value: cli.NewStringSlice(),
+	}
+
 	// FlagBindAddress IP address to bind to.
 	FlagBindAddress = cli.StringFlag{
 		Name:  "bind.address",
-		Usage: "IP address to bind to",
+		Usage: "IP address to bind provided services to",
 		Value: "0.0.0.0",
 	}
 	// FlagFeedbackURL URL of Feedback API.
@@ -107,17 +131,11 @@ var (
 		}(),
 		Value: zerolog.DebugLevel.String(),
 	}
-	// FlagMMNAddress URL Of my.mysterium.network API.
-	FlagMMNAddress = cli.StringFlag{
-		Name:  "mymysterium.url",
-		Usage: "URL of my.mysterium.network API",
-		Value: metadata.DefaultNetwork.MMNAddress,
-	}
-	// FlagMMNEnabled registers node to my.mysterium.network.
-	FlagMMNEnabled = cli.BoolFlag{
-		Name:  "mymysterium.enabled",
-		Usage: "Enables my.mysterium.network integration",
-		Value: true,
+	// FlagVerbose enables verbose logging.
+	FlagVerbose = cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "Enable verbose logging",
+		Value: false,
 	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
 	FlagOpenvpnBinary = cli.StringFlag{
@@ -138,19 +156,31 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			FlagQualityType.Name,
 		),
-		Value: "https://quality.mysterium.network/api/v1",
+		Value: "https://testnet2-quality.mysterium.network/api/v1",
 	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
 		Name:  "tequilapi.address",
-		Usage: "IP address of interface to listen for incoming connections",
+		Usage: "IP address to bind API to",
 		Value: "127.0.0.1",
 	}
 	// FlagTequilapiPort port for listening for incoming API requests.
 	FlagTequilapiPort = cli.IntFlag{
 		Name:  "tequilapi.port",
-		Usage: "Port for listening incoming api requests",
+		Usage: "Port for listening incoming API requests",
 		Value: 4050,
+	}
+	// FlagTequilapiUsername username for API authentication.
+	FlagTequilapiUsername = cli.StringFlag{
+		Name:  "tequilapi.auth.username",
+		Usage: "Default username for API authentication",
+		Value: "myst",
+	}
+	// FlagTequilapiPassword username for API authentication.
+	FlagTequilapiPassword = cli.StringFlag{
+		Name:  "tequilapi.auth.password",
+		Usage: "Default password for API authentication",
+		Value: "mystberry",
 	}
 	// FlagPProfEnable enables pprof via TequilAPI.
 	FlagPProfEnable = cli.BoolFlag{
@@ -164,10 +194,16 @@ var (
 		Usage: "Enables the Web UI",
 		Value: true,
 	}
+	// FlagUIAddress IP address of interface to listen for incoming connections.
+	FlagUIAddress = cli.StringFlag{
+		Name:  "ui.address",
+		Usage: "IP address to bind Web UI to. Address can be comma delimited: '192.168.1.10,192.168.1.20'. (default - 127.0.0.1 and local LAN IP)",
+		Value: "",
+	}
 	// FlagUIPort runs web UI on the specified port.
 	FlagUIPort = cli.IntFlag{
 		Name:  "ui.port",
-		Usage: "the port to run ui on",
+		Usage: "The port to run Web UI on",
 		Value: 4449,
 	}
 	// FlagUserMode allows to run node under current user without sudo.
@@ -195,6 +231,22 @@ var (
 		Usage: "Run in consumer mode only.",
 		Value: false,
 	}
+
+	// FlagDefaultCurrency sets the default currency used in node
+	FlagDefaultCurrency = cli.StringFlag{
+		Name:   "default-currency",
+		Usage:  "Default currency used in node and apps that depend on it",
+		Value:  metadata.DefaultNetwork.DefaultCurrency,
+		Hidden: true, // Users are not meant to touch or see this.
+	}
+
+	// FlagDocsURL sets the URL which leads to node documentation.
+	FlagDocsURL = cli.StringFlag{
+		Name:   "docs-url",
+		Usage:  "URL leading to node documentation",
+		Value:  "https://docs-v2.mysterium.network",
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -206,15 +258,21 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsLocation(flags)
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsTransactor(flags)
-	RegisterFlagsAccountant(flags)
+	RegisterFlagsHermes(flags)
 	RegisterFlagsPayments(flags)
 	RegisterFlagsPolicy(flags)
+	RegisterFlagsMMN(flags)
+	RegisterFlagsPilvytis(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
 		&FlagDiscoveryType,
 		&FlagDiscoveryPingInterval,
 		&FlagDiscoveryFetchInterval,
+		&FlagDHTAddress,
+		&FlagDHTPort,
+		&FlagDHTProtocol,
+		&FlagDHTBootstrapPeers,
 		&FlagFeedbackURL,
 		&FlagFirewallKillSwitch,
 		&FlagFirewallProtectedNetworks,
@@ -222,20 +280,24 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
-		&FlagMMNAddress,
-		&FlagMMNEnabled,
+		&FlagVerbose,
 		&FlagOpenvpnBinary,
 		&FlagQualityType,
 		&FlagQualityAddress,
 		&FlagTequilapiAddress,
 		&FlagTequilapiPort,
+		&FlagTequilapiUsername,
+		&FlagTequilapiPassword,
 		&FlagPProfEnable,
 		&FlagUIEnable,
+		&FlagUIAddress,
 		&FlagUIPort,
 		&FlagUserMode,
 		&FlagVendorID,
 		&FlagP2PListenPorts,
 		&FlagConsumer,
+		&FlagDefaultCurrency,
+		&FlagDocsURL,
 	)
 
 	return nil
@@ -248,35 +310,45 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsLocation(ctx)
 	ParseFlagsNetwork(ctx)
 	ParseFlagsTransactor(ctx)
-	ParseFlagsAccountant(ctx)
+	ParseFlagsHermes(ctx)
 	ParseFlagsPayments(ctx)
 	ParseFlagsPolicy(ctx)
+	ParseFlagsMMN(ctx)
+	ParseFlagPilvytis(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryPingInterval)
 	Current.ParseDurationFlag(ctx, FlagDiscoveryFetchInterval)
+	Current.ParseStringFlag(ctx, FlagDHTAddress)
+	Current.ParseIntFlag(ctx, FlagDHTPort)
+	Current.ParseStringFlag(ctx, FlagDHTProtocol)
+	Current.ParseStringSliceFlag(ctx, FlagDHTBootstrapPeers)
 	Current.ParseStringFlag(ctx, FlagFeedbackURL)
 	Current.ParseBoolFlag(ctx, FlagFirewallKillSwitch)
 	Current.ParseStringFlag(ctx, FlagFirewallProtectedNetworks)
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
+	Current.ParseBoolFlag(ctx, FlagVerbose)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
-	Current.ParseStringFlag(ctx, FlagMMNAddress)
-	Current.ParseBoolFlag(ctx, FlagMMNEnabled)
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
 	Current.ParseStringFlag(ctx, FlagQualityType)
 	Current.ParseStringFlag(ctx, FlagTequilapiAddress)
 	Current.ParseIntFlag(ctx, FlagTequilapiPort)
+	Current.ParseStringFlag(ctx, FlagTequilapiUsername)
+	Current.ParseStringFlag(ctx, FlagTequilapiPassword)
 	Current.ParseBoolFlag(ctx, FlagPProfEnable)
 	Current.ParseBoolFlag(ctx, FlagUIEnable)
+	Current.ParseStringFlag(ctx, FlagUIAddress)
 	Current.ParseIntFlag(ctx, FlagUIPort)
 	Current.ParseBoolFlag(ctx, FlagUserMode)
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 	Current.ParseBoolFlag(ctx, FlagConsumer)
+	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
+	Current.ParseStringFlag(ctx, FlagDocsURL)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

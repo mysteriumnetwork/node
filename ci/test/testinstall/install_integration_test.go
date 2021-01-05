@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	installURL  = "https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh"
 	installFile = "install.sh"
 )
 
@@ -46,11 +45,9 @@ func TestInstall(t *testing.T) {
 	images := []string{
 		"debian-buster",
 		"debian-stretch",
-		"ubuntu-xenial",
 		"ubuntu-bionic",
-		// "ubuntu-eoan",
-		// TODO enable it once we will have this version published. Now it fails with the following error:
-		// E: The repository 'http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu eoan Release' does not have a Release file
+		"ubuntu-focal",
+		"ubuntu-groovy",
 	}
 	for _, img := range images {
 		t.Run(img, func(t *testing.T) {
@@ -97,13 +94,13 @@ func testImage(t *testing.T, image string) {
 		fmt.Println(line)
 		containerId = strings.TrimSpace(line)[0:12]
 	}
-	defer func() {
-		_ = sh.RunV("docker", "kill", containerId)
-	}()
+
+	defer sh.RunV("docker", "kill", containerId)
+
 	failIf(scanner.Err())
 	assert.NotEmpty(containerId)
 
-	err = sh.RunV("docker", "exec", containerId, "curl", "-o", installFile, installURL)
+	err = sh.RunV("docker", "cp", "../../../"+installFile, containerId+":/")
 	failIf(err)
 	err = sh.RunV("docker", "exec", containerId, "bash", installFile)
 	failIf(err)

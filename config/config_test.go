@@ -32,9 +32,8 @@ import (
 func TestUserConfig_Load(t *testing.T) {
 	// given
 	configFileName := NewTempFileName(t)
-	defer func() {
-		_ = os.Remove(configFileName)
-	}()
+	defer os.Remove(configFileName)
+
 	toml := `
 		[openvpn]
 		port = 31338
@@ -57,9 +56,8 @@ func TestUserConfig_Load(t *testing.T) {
 func TestUserConfig_Save(t *testing.T) {
 	// given
 	configFileName := NewTempFileName(t)
-	defer func() {
-		_ = os.Remove(configFileName)
-	}()
+	defer os.Remove(configFileName)
+
 	cfg := NewConfig()
 	err := cfg.LoadUserConfig(configFileName)
 	assert.NoError(t, err)
@@ -145,6 +143,28 @@ func TestConfig_ParseStringSliceFlag(t *testing.T) {
 	}
 }
 
+// this can happen when updating config via tequilapi - json unmarshal
+// translates json number to float64 by default if target type is interface{}
+func TestSimilarTypeMerge(t *testing.T) {
+	// given
+	cfg := NewConfig()
+	cfg.SetDefault("openvpn.port", 1001)
+
+	// when
+	cfg.SetUser("openvpn.port", 55.00)
+
+	// then
+	assert.Equal(t, 55, cfg.GetInt("openvpn.port"))
+
+	actual, ok := cfg.GetConfig()["openvpn"]
+	assert.True(t, ok)
+
+	actual, ok = actual.(map[string]interface{})["port"]
+	assert.True(t, ok)
+
+	assert.Equal(t, 55.0, actual)
+}
+
 func TestUserConfig_Get(t *testing.T) {
 	cfg := NewConfig()
 
@@ -162,6 +182,54 @@ func TestUserConfig_Get(t *testing.T) {
 	cfg.SetCLI("openvpn.port", 1003)
 	// then
 	assert.Equal(t, 1003, cfg.Get("openvpn.port"))
+}
+
+func TestUserConfig_GetConfig(t *testing.T) {
+	cfg := NewConfig()
+
+	// when
+	cfg.SetDefault("enabled", false)
+	cfg.SetDefault("openvpn.port", 1001)
+	// then
+	assert.Equal(
+		t,
+		map[string]interface{}{
+			"enabled": false,
+			"openvpn": map[string]interface{}{
+				"port": 1001,
+			},
+		},
+		cfg.GetConfig(),
+	)
+
+	// when
+	cfg.SetUser("openvpn.port", 1002)
+	// then
+	assert.Equal(
+		t,
+		map[string]interface{}{
+			"enabled": false,
+			"openvpn": map[string]interface{}{
+				"port": 1002,
+			},
+		},
+		cfg.GetConfig(),
+	)
+
+	// when
+	cfg.SetCLI("enabled", true)
+	cfg.SetCLI("openvpn.port", 1003)
+	// then
+	assert.Equal(
+		t,
+		map[string]interface{}{
+			"enabled": true,
+			"openvpn": map[string]interface{}{
+				"port": 1003,
+			},
+		},
+		cfg.GetConfig(),
+	)
 }
 
 func must(t *testing.T, err error) {

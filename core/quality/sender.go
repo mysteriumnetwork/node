@@ -19,25 +19,34 @@ package quality
 
 import (
 	"fmt"
+	"math/big"
 	"runtime"
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
+	sevent "github.com/mysteriumnetwork/node/session/event"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 )
 
 const (
 	appName             = "myst"
+	connectionEvent     = "connection_event"
 	sessionDataName     = "session_data"
 	sessionTokensName   = "session_tokens"
 	sessionEventName    = "session_event"
+	traceEventName      = "trace_event"
+	registerIdentity    = "register_identity"
 	unlockEventName     = "unlock"
 	proposalEventName   = "proposal_event"
 	natMappingEventName = "nat_mapping"
@@ -49,12 +58,10 @@ type Transport interface {
 }
 
 // NewSender creates metrics sender with appropriate transport
-func NewSender(transport Transport, appVersion string, manager connection.Manager, locationResolver location.OriginResolver) *Sender {
+func NewSender(transport Transport, appVersion string) *Sender {
 	return &Sender{
 		Transport:  transport,
 		AppVersion: appVersion,
-		connection: manager,
-		location:   locationResolver,
 
 		sessionsActive: make(map[string]sessionContext),
 	}
@@ -64,11 +71,10 @@ func NewSender(transport Transport, appVersion string, manager connection.Manage
 type Sender struct {
 	Transport  Transport
 	AppVersion string
-	connection connection.Manager
-	location   location.OriginResolver
 
 	sessionsMu     sync.RWMutex
 	sessionsActive map[string]sessionContext
+	location       locationstate.Location
 }
 
 // Event contains data about event, which is sent using transport
@@ -87,6 +93,7 @@ type appInfo struct {
 }
 
 type natMappingContext struct {
+	ID           string              `json:"id"`
 	Stage        string              `json:"stage"`
 	Successful   bool                `json:"successful"`
 	ErrorMessage *string             `json:"error_message"`
@@ -94,17 +101,31 @@ type natMappingContext struct {
 }
 
 type sessionEventContext struct {
-	Event string
+	IsProvider bool
+	Event      string
 	sessionContext
 }
 
 type sessionDataContext struct {
-	Rx, Tx uint64
+	IsProvider bool
+	Rx, Tx     uint64
 	sessionContext
 }
 
 type sessionTokensContext struct {
-	Tokens uint64
+	Tokens *big.Int
+	sessionContext
+}
+
+type registrationEvent struct {
+	Identity string
+	Status   string
+	Country  string
+}
+
+type sessionTraceContext struct {
+	Duration time.Duration
+	Stage    string
 	sessionContext
 }
 
@@ -120,32 +141,73 @@ type sessionContext struct {
 
 // Subscribe subscribes to relevant events of event bus.
 func (sender *Sender) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionState, sender.sendConnStateEvent); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, sender.sendSessionEvent); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionStatistics, sender.sendSessionData); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(pingpongEvent.AppTopicInvoicePaid, sender.sendSessionEarning); err != nil {
-		return err
-	}
-	if err := bus.SubscribeAsync(discovery.AppTopicProposalAnnounce, sender.sendProposalEvent); err != nil {
-		return err
+	subscription := map[string]interface{}{
+		AppTopicConnectionEvents:                     sender.sendConnectionEvent,
+		connectionstate.AppTopicConnectionState:      sender.sendConnStateEvent,
+		connectionstate.AppTopicConnectionSession:    sender.sendSessionEvent,
+		connectionstate.AppTopicConnectionStatistics: sender.sendSessionData,
+		discovery.AppTopicProposalAnnounce:           sender.sendProposalEvent,
+		identity.AppTopicIdentityUnlock:              sender.sendUnlockEvent,
+		location.LocUpdateEvent:                      sender.cacheLocationData,
+		pingpongEvent.AppTopicInvoicePaid:            sender.sendSessionEarning,
+		registry.AppTopicIdentityRegistration:        sender.sendRegistrationEvent,
+		sessionEvent.AppTopicSession:                 sender.sendServiceSessionEvent,
+		trace.AppTopicTraceEvent:                     sender.sendTraceEvent,
+		sevent.AppTopicDataTransferred:               sender.sendServiceDataStatistics,
 	}
 
-	return bus.SubscribeAsync(identity.AppTopicIdentityUnlock, sender.sendUnlockEvent)
+	for topic, fn := range subscription {
+		if err := bus.SubscribeAsync(topic, fn); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (sender *Sender) cacheLocationData(l locationstate.Location) {
+	sender.sessionsMu.RLock()
+	defer sender.sessionsMu.RUnlock()
+
+	sender.location = l
+}
+
+func (sender *Sender) getCachedLocationData() (l locationstate.Location) {
+	sender.sessionsMu.RLock()
+	defer sender.sessionsMu.RUnlock()
+
+	l = sender.location
+
+	return
+}
+
+func (sender *Sender) sendConnectionEvent(e ConnectionEvent) {
+	sender.sendEvent(connectionEvent, e)
+}
+
+func (sender *Sender) sendServiceDataStatistics(e sevent.AppEventDataTransferred) {
+	session, err := sender.recoverSessionContext(e.ID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Can't recover session context")
+		return
+	}
+
+	sender.sendEvent(sessionDataName, sessionDataContext{
+		IsProvider:     true,
+		Rx:             e.Up,
+		Tx:             e.Down,
+		sessionContext: session,
+	})
 }
 
 // sendSessionData sends transferred information about session.
-func (sender *Sender) sendSessionData(e connection.AppEventConnectionStatistics) {
+func (sender *Sender) sendSessionData(e connectionstate.AppEventConnectionStatistics) {
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
 
 	sender.sendEvent(sessionDataName, sessionDataContext{
+		IsProvider:     false,
 		Rx:             e.Stats.BytesReceived,
 		Tx:             e.Stats.BytesSent,
 		sessionContext: sender.toSessionContext(e.SessionInfo),
@@ -166,7 +228,7 @@ func (sender *Sender) sendSessionEarning(e pingpongEvent.AppEventInvoicePaid) {
 }
 
 // sendConnStateEvent sends session update events.
-func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
+func (sender *Sender) sendConnStateEvent(e connectionstate.AppEventConnectionState) {
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
@@ -177,22 +239,54 @@ func (sender *Sender) sendConnStateEvent(e connection.AppEventConnectionState) {
 	})
 }
 
+func (sender *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
+	if e.Session.ID == "" {
+		return
+	}
+
+	sessionContext := sessionContext{
+		ID:              e.Session.ID,
+		Consumer:        e.Session.ConsumerID.Address,
+		Provider:        e.Session.Proposal.ProviderID,
+		ServiceType:     e.Session.Proposal.ServiceType,
+		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
+		ConsumerCountry: e.Session.ConsumerLocation.Country,
+		AccountantID:    e.Session.HermesID.Hex(),
+	}
+
+	switch e.Status {
+	case sessionEvent.CreatedStatus:
+		sender.rememberSessionContext(sessionContext)
+	case sessionEvent.RemovedStatus:
+		sender.forgetSessionContext(sessionContext)
+	}
+
+	sender.sendEvent(sessionEventName, sessionEventContext{
+		IsProvider:     true,
+		Event:          string(e.Status),
+		sessionContext: sessionContext,
+	})
+}
+
 // sendSessionEvent sends session update events.
-func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
+func (sender *Sender) sendSessionEvent(e connectionstate.AppEventConnectionSession) {
 	if e.SessionInfo.SessionID == "" {
 		return
 	}
+
 	sessionContext := sender.toSessionContext(e.SessionInfo)
 
 	switch e.Status {
-	case connection.SessionCreatedStatus:
+	case connectionstate.SessionCreatedStatus:
 		sender.rememberSessionContext(sessionContext)
 		sender.sendEvent(sessionEventName, sessionEventContext{
+			IsProvider:     false,
 			Event:          e.Status,
 			sessionContext: sessionContext,
 		})
-	case connection.SessionEndedStatus:
+	case connectionstate.SessionEndedStatus:
 		sender.sendEvent(sessionEventName, sessionEventContext{
+			IsProvider:     false,
 			Event:          e.Status,
 			sessionContext: sessionContext,
 		})
@@ -201,8 +295,8 @@ func (sender *Sender) sendSessionEvent(e connection.AppEventConnectionSession) {
 }
 
 // sendUnlockEvent sends startup event
-func (sender *Sender) sendUnlockEvent(id string) {
-	sender.sendEvent(unlockEventName, id)
+func (sender *Sender) sendUnlockEvent(ev identity.AppEventIdentityUnlock) {
+	sender.sendEvent(unlockEventName, ev.ID.Address)
 }
 
 // sendProposalEvent sends provider proposal event.
@@ -210,9 +304,33 @@ func (sender *Sender) sendProposalEvent(p market.ServiceProposal) {
 	sender.sendEvent(proposalEventName, p)
 }
 
+func (sender *Sender) sendRegistrationEvent(r registry.AppEventIdentityRegistration) {
+	l := sender.getCachedLocationData()
+	sender.sendEvent(registerIdentity, registrationEvent{
+		Identity: r.ID.Address,
+		Status:   r.Status.String(),
+		Country:  l.Country,
+	})
+}
+
+func (sender *Sender) sendTraceEvent(stage trace.Event) {
+	session, err := sender.recoverSessionContext(stage.ID)
+	if err != nil {
+		log.Warn().Err(err).Msg("Can't recover session context")
+		return
+	}
+
+	sender.sendEvent(traceEventName, sessionTraceContext{
+		Duration:       stage.Duration,
+		Stage:          stage.Key,
+		sessionContext: session,
+	})
+}
+
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
-func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) {
+func (sender *Sender) SendNATMappingSuccessEvent(id, stage string, gateways []map[string]string) {
 	sender.sendEvent(natMappingEventName, natMappingContext{
+		ID:         id,
 		Stage:      stage,
 		Successful: true,
 		Gateways:   gateways,
@@ -220,9 +338,11 @@ func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[st
 }
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
-func (sender *Sender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) {
+func (sender *Sender) SendNATMappingFailEvent(id, stage string, gateways []map[string]string, err error) {
 	errorMessage := err.Error()
+
 	sender.sendEvent(natMappingEventName, natMappingContext{
+		ID:           id,
 		Stage:        stage,
 		Successful:   false,
 		ErrorMessage: &errorMessage,
@@ -269,26 +389,18 @@ func (sender *Sender) recoverSessionContext(sessionID string) (sessionContext, e
 	if !found {
 		return sessionContext{}, fmt.Errorf("unknown session: %s", sessionID)
 	}
+
 	return context, nil
 }
 
-func (sender *Sender) toSessionContext(session connection.Status) sessionContext {
+func (sender *Sender) toSessionContext(session connectionstate.Status) sessionContext {
 	return sessionContext{
 		ID:              string(session.SessionID),
 		Consumer:        session.ConsumerID.Address,
 		Provider:        session.Proposal.ProviderID,
 		ServiceType:     session.Proposal.ServiceType,
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
-		ConsumerCountry: sender.originCountry(),
-		AccountantID:    session.AccountantID.Hex(),
+		ConsumerCountry: session.ConsumerLocation.Country,
+		AccountantID:    session.HermesID.Hex(),
 	}
-}
-
-func (sender *Sender) originCountry() string {
-	origin, err := sender.location.GetOrigin()
-	if err != nil {
-		log.Warn().Msg("Failed to get consumer origin country")
-		return ""
-	}
-	return origin.Country
 }

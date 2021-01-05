@@ -28,27 +28,20 @@ import (
 // NewProposalDTO maps to API service proposal.
 func NewProposalDTO(p market.ServiceProposal) ProposalDTO {
 	return ProposalDTO{
-		ID:          p.ID,
-		ProviderID:  p.ProviderID,
-		ServiceType: p.ServiceType,
-		ServiceDefinition: ServiceDefinitionDTO{
-			LocationOriginate: ServiceLocationDTO{
-				Continent: p.ServiceDefinition.GetLocation().Continent,
-				Country:   p.ServiceDefinition.GetLocation().Country,
-				City:      p.ServiceDefinition.GetLocation().City,
-
-				ASN:      p.ServiceDefinition.GetLocation().ASN,
-				ISP:      p.ServiceDefinition.GetLocation().ISP,
-				NodeType: p.ServiceDefinition.GetLocation().NodeType,
-			},
-		},
-		AccessPolicies: p.AccessPolicies,
-		PaymentMethod:  NewPaymentMethodDTO(p.PaymentMethod),
+		ID:                p.ID,
+		ProviderID:        p.ProviderID,
+		ServiceType:       p.ServiceType,
+		ServiceDefinition: NewServiceDefinitionDTO(p.ServiceDefinition),
+		AccessPolicies:    p.AccessPolicies,
+		PaymentMethod:     NewPaymentMethodDTO(p.PaymentMethod),
 	}
 }
 
 // NewPaymentMethodDTO maps to API payment method.
 func NewPaymentMethodDTO(m market.PaymentMethod) PaymentMethodDTO {
+	if m == nil {
+		return PaymentMethodDTO{}
+	}
 	return PaymentMethodDTO{
 		Type:  m.GetType(),
 		Price: m.GetPrice(),
@@ -57,6 +50,35 @@ func NewPaymentMethodDTO(m market.PaymentMethod) PaymentMethodDTO {
 			PerBytes:   m.GetRate().PerByte,
 		},
 	}
+}
+
+// NewServiceDefinitionDTO maps to API service definition.
+func NewServiceDefinitionDTO(s market.ServiceDefinition) ServiceDefinitionDTO {
+	if s == nil {
+		return ServiceDefinitionDTO{}
+	}
+	return ServiceDefinitionDTO{
+		LocationOriginate: NewServiceLocationsDTO(s.GetLocation()),
+	}
+}
+
+// NewServiceLocationsDTO maps to API service location.
+func NewServiceLocationsDTO(l market.Location) ServiceLocationDTO {
+	return ServiceLocationDTO{
+		Continent: l.Continent,
+		Country:   l.Country,
+		City:      l.City,
+
+		ASN:      l.ASN,
+		ISP:      l.ISP,
+		NodeType: l.NodeType,
+	}
+}
+
+// ListProposalsResponse holds list of proposals.
+// swagger:model ListProposalsResponse
+type ListProposalsResponse struct {
+	Proposals []ProposalDTO `json:"proposals"`
 }
 
 // ProposalDTO holds service proposal details.
@@ -78,7 +100,7 @@ type ProposalDTO struct {
 	ServiceDefinition ServiceDefinitionDTO `json:"service_definition"`
 
 	// Metrics of the service
-	Metrics *ProposalMetricsDTO `json:"metrics,omitempty"`
+	Metrics *QualityMetricsDTO `json:"metrics,omitempty"`
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
@@ -116,13 +138,6 @@ type ServiceLocationDTO struct {
 	NodeType string `json:"node_type,omitempty"`
 }
 
-// ProposalMetricsDTO holds proposal quality metrics from Quality Oracle.
-// swagger:model ProposalMetricsDTO
-type ProposalMetricsDTO struct {
-	ConnectCount     quality.ConnectCount `json:"connect_count"`
-	MonitoringFailed bool                 `json:"monitoring_failed"`
-}
-
 // PaymentMethodDTO holds payment method details.
 // swagger:model PaymentMethodDTO
 type PaymentMethodDTO struct {
@@ -138,16 +153,59 @@ type PaymentRateDTO struct {
 	PerBytes   uint64 `json:"per_bytes"`
 }
 
-// ProposalsQualityMetricsResponse holds all quality metrics.
-// swagger:model QualityMetricsDTO
-type ProposalsQualityMetricsResponse struct {
-	Metrics []QualityMetricsResponse `json:"metrics"`
+// NewProposalMetricsResponse maps to API proposal metrics.
+func NewProposalMetricsResponse(metrics []quality.ConnectMetric) ProposalMetricsResponse {
+	var res []ProposalMetrics
+	for _, m := range metrics {
+		res = append(res, ProposalMetrics{
+			ProviderID:        m.ProposalID.ProviderID,
+			ServiceType:       m.ProposalID.ServiceType,
+			QualityMetricsDTO: NewQualityMetricsDTO(m),
+		})
+	}
+
+	return ProposalMetricsResponse{
+		Metrics: res,
+	}
 }
 
-// QualityMetricsResponse holds quality metrics per service.
-// swagger:model QualityMetricsResponse
-type QualityMetricsResponse struct {
+// ProposalMetricsResponse holds all quality metrics.
+// swagger:model ProposalMetricsResponse
+type ProposalMetricsResponse struct {
+	Metrics []ProposalMetrics `json:"metrics"`
+}
+
+// ProposalMetrics holds quality metrics per service.
+// swagger:model ProposalMetrics
+type ProposalMetrics struct {
 	ProviderID  string `json:"provider_id"`
 	ServiceType string `json:"service_type"`
-	ProposalMetricsDTO
+	QualityMetricsDTO
+}
+
+// NewQualityMetricsDTO maps to API quality metrics.
+func NewQualityMetricsDTO(m quality.ConnectMetric) QualityMetricsDTO {
+	return QualityMetricsDTO{
+		MonitoringFailed: m.MonitoringFailed,
+		ConnectCount: QualityMetricConnectsDTO{
+			Success: m.ConnectCount.Success,
+			Timeout: m.ConnectCount.Timeout,
+			Fail:    m.ConnectCount.Fail,
+		},
+	}
+}
+
+// QualityMetricsDTO holds proposal quality metrics from Quality Oracle.
+// swagger:model QualityMetricsDTO
+type QualityMetricsDTO struct {
+	ConnectCount     QualityMetricConnectsDTO `json:"connect_count"`
+	MonitoringFailed bool                     `json:"monitoring_failed"`
+}
+
+// QualityMetricConnectsDTO represents the metric for connect stats.
+// swagger:model QualityMetricConnectsDTO
+type QualityMetricConnectsDTO struct {
+	Success int `json:"success" example:"100" format:"int64"`
+	Fail    int `json:"fail" example:"50" format:"int64"`
+	Timeout int `json:"timeout" example:"10" format:"int64"`
 }

@@ -33,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/rs/zerolog/log"
 
-	"github.com/mysteriumnetwork/node/supervisor/config"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/transport"
 	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard"
 	"github.com/mysteriumnetwork/node/utils/netutil"
@@ -41,13 +40,12 @@ import (
 
 // Daemon - supervisor process.
 type Daemon struct {
-	cfg     *config.Config
 	monitor *wireguard.Monitor
 }
 
 // New creates a new daemon.
-func New(cfg *config.Config) Daemon {
-	return Daemon{cfg: cfg, monitor: wireguard.NewMonitor()}
+func New() Daemon {
+	return Daemon{monitor: wireguard.NewMonitor()}
 }
 
 // Start supervisor daemon. Blocks.

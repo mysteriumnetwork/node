@@ -67,11 +67,10 @@ type Options struct {
 	logconfig.LogOptions
 	OptionsNetwork
 	Discovery  OptionsDiscovery
-	MMN        OptionsMMN
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
-	Accountant OptionsAccountant
+	Hermes     OptionsHermes
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall
@@ -80,39 +79,53 @@ type Options struct {
 
 	Consumer bool
 
-	P2PPorts *port.Range
+	P2PPorts        *port.Range
+	PilvytisAddress string
 }
 
 // GetOptions retrieves node options from the app configuration.
 func GetOptions() *Options {
+	network := OptionsNetwork{
+		Testnet:               config.GetBool(config.FlagTestnet),
+		Localnet:              config.GetBool(config.FlagLocalnet),
+		Testnet2:              config.GetBool(config.FlagTestnet2),
+		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
+		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
+		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
+		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
+		ChainID:               config.GetInt64(config.FlagChainID),
+		DNSMap: map[string][]string{
+			"testnet-location.mysterium.network":  {"82.196.15.9"},
+			"testnet2-location.mysterium.network": {"95.216.204.232"},
+			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
+			"feedback.mysterium.network":          {"116.203.17.150"},
+			"api.ipify.org": {
+				"54.204.14.42", "54.225.153.147", "54.235.83.248", "54.243.161.145",
+				"23.21.109.69", "23.21.126.66",
+				"50.19.252.36",
+				"174.129.214.20",
+			},
+			"badupnp.benjojo.co.uk": {"104.22.70.70", "104.22.71.70", "172.67.25.154"},
+		},
+	}
 	return &Options{
-		Directories:      *GetOptionsDirectory(),
+		Directories:      *GetOptionsDirectory(&network),
 		TequilapiAddress: config.GetString(config.FlagTequilapiAddress),
 		TequilapiPort:    config.GetInt(config.FlagTequilapiPort),
 		TequilapiEnabled: true,
 		BindAddress:      config.GetString(config.FlagBindAddress),
 		UI: OptionsUI{
-			UIEnabled: config.GetBool(config.FlagUIEnable),
-			UIPort:    config.GetInt(config.FlagUIPort),
+			UIEnabled:     config.GetBool(config.FlagUIEnable),
+			UIBindAddress: config.GetString(config.FlagUIAddress),
+			UIPort:        config.GetInt(config.FlagUIPort),
 		},
 		FeedbackURL: config.GetString(config.FlagFeedbackURL),
 		Keystore: OptionsKeystore{
 			UseLightweight: config.GetBool(config.FlagKeystoreLightweight),
 		},
-		LogOptions: *GetLogOptions(),
-		OptionsNetwork: OptionsNetwork{
-			Testnet:               config.GetBool(config.FlagTestnet),
-			Localnet:              config.GetBool(config.FlagLocalnet),
-			ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
-			MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
-			BrokerAddress:         config.GetString(config.FlagBrokerAddress),
-			EtherClientRPC:        config.GetString(config.FlagEtherRPC),
-		},
-		Discovery: *GetDiscoveryOptions(),
-		MMN: OptionsMMN{
-			Address: config.GetString(config.FlagMMNAddress),
-			Enabled: config.GetBool(config.FlagMMNEnabled),
-		},
+		LogOptions:     *GetLogOptions(),
+		OptionsNetwork: network,
+		Discovery:      *GetDiscoveryOptions(),
 		Quality: OptionsQuality{
 			Type:    QualityType(config.GetString(config.FlagQualityType)),
 			Address: config.GetString(config.FlagQualityAddress),
@@ -126,30 +139,32 @@ func GetOptions() *Options {
 			NodeType:      config.GetString(config.FlagLocationNodeType),
 		},
 		Transactor: OptionsTransactor{
+			Identity:                        config.GetString(config.FlagTransactorIdentity),
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
 			RegistryAddress:                 config.GetString(config.FlagTransactorRegistryAddress),
 			ChannelImplementation:           config.GetString(config.FlagTransactorChannelImplementation),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
-			ProviderRegistrationStake:       config.GetUInt64(config.FlagTransactorProviderRegistrationStake),
+			ProviderRegistrationStake:       config.GetBigInt(config.FlagTransactorProviderRegistrationStake),
 		},
 		Payments: OptionsPayments{
-			MaxAllowedPaymentPercentile:        config.GetInt(config.FlagPaymentsMaxAccountantFee),
-			BCTimeout:                          config.GetDuration(config.FlagPaymentsBCTimeout),
-			AccountantPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsAccountantPromiseSettleThreshold),
-			SettlementTimeout:                  config.GetDuration(config.FlagPaymentsAccountantPromiseSettleTimeout),
-			MystSCAddress:                      config.GetString(config.FlagPaymentsMystSCAddress),
-			ConsumerUpperGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound),
-			ConsumerLowerGBPriceBound:          config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound),
-			ConsumerUpperMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
-			ConsumerLowerMinutePriceBound:      config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
-			ConsumerDataLeewayMegabytes:        config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
-			ProviderInvoiceFrequency:           config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
-			MaxUnpaidInvoiceValue:              config.GetUInt64(config.FlagPaymentsMaxUnpaidInvoiceValue),
+			MaxAllowedPaymentPercentile:    config.GetInt(config.FlagPaymentsMaxHermesFee),
+			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
+			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
+			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
+			MystSCAddress:                  config.GetString(config.FlagPaymentsMystSCAddress),
+			WethAddress:                    config.GetString(config.FlagPaymentsWethAddress),
+			DaiAddress:                     config.GetString(config.FlagPaymentsDaiAddress),
+			ConsumerUpperGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound),
+			ConsumerLowerGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound),
+			ConsumerUpperMinutePriceBound:  config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
+			ConsumerLowerMinutePriceBound:  config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteLowerBound),
+			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
+			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
+			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
 		},
-		Accountant: OptionsAccountant{
-			AccountantID:              config.GetString(config.FlagAccountantID),
-			AccountantEndpointAddress: config.GetString(config.FlagAccountantAddress),
+		Hermes: OptionsHermes{
+			HermesID: config.GetString(config.FlagHermesID),
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
 			BinaryPath: config.GetString(config.FlagOpenvpnBinary),
@@ -157,8 +172,9 @@ func GetOptions() *Options {
 		Firewall: OptionsFirewall{
 			BlockAlways: config.GetBool(config.FlagFirewallKillSwitch),
 		},
-		P2PPorts: getP2PListenPorts(),
-		Consumer: config.GetBool(config.FlagConsumer),
+		P2PPorts:        getP2PListenPorts(),
+		Consumer:        config.GetBool(config.FlagConsumer),
+		PilvytisAddress: config.GetString(config.FlagPilvytisAddress),
 	}
 }
 
@@ -193,6 +209,17 @@ func GetDiscoveryOptions() *OptionsDiscovery {
 		PingInterval:  config.GetDuration(config.FlagDiscoveryPingInterval),
 		FetchEnabled:  true,
 		FetchInterval: config.GetDuration(config.FlagDiscoveryFetchInterval),
+		DHT:           *GetDHTOptions(),
+	}
+}
+
+// GetDHTOptions retrieves DHT options from the app configuration.
+func GetDHTOptions() *OptionsDHT {
+	return &OptionsDHT{
+		Address:        config.GetString(config.FlagDHTAddress),
+		Port:           config.GetInt(config.FlagDHTPort),
+		Protocol:       config.GetString(config.FlagDHTProtocol),
+		BootstrapPeers: config.GetStringSlice(config.FlagDHTBootstrapPeers),
 	}
 }
 

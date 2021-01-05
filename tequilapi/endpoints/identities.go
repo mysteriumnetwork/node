@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,15 +38,16 @@ import (
 )
 
 type balanceProvider interface {
-	ForceBalanceUpdate(id identity.Identity) uint64
+	ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int
 }
 
 type earningsProvider interface {
-	GetEarnings(id identity.Identity) pingpong_event.Earnings
+	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
 }
 
 type providerChannel interface {
-	GetProviderChannel(accountantAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
+	GetProviderChannel(chainID int64, hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
+	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
 
 type identitiesAPI struct {
@@ -56,6 +58,7 @@ type identitiesAPI struct {
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
 	bc                providerChannel
+	transactor        Transactor
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -121,7 +124,9 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 	if req.Address != nil {
 		idAddress = *req.Address
 	}
-	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase)
+
+	chainID := config.GetInt64(config.FlagChainID)
+	id, err := endpoint.selector.UseOrCreate(idAddress, *req.Passphrase, chainID)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -232,7 +237,8 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, httpReq *http.Re
 		return
 	}
 
-	err = endpoint.idm.Unlock(id.Address, *req.Passphrase)
+	chainID := config.GetInt64(config.FlagChainID)
+	err = endpoint.idm.Unlock(chainID, id.Address, *req.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
@@ -267,7 +273,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -279,8 +285,19 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(id)
-	settlement := endpoint.earningsProvider.GetEarnings(id)
+	var stake = new(big.Int)
+	if regStatus == registry.Registered {
+
+		data, err := endpoint.bc.GetProviderChannel(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
+		if err != nil {
+			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
+			return
+		}
+		stake = data.Stake
+	}
+
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(config.GetInt64(config.FlagChainID), id)
+	settlement := endpoint.earningsProvider.GetEarnings(config.GetInt64(config.FlagChainID), id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
@@ -288,6 +305,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		Balance:            balance,
 		Earnings:           settlement.UnsettledBalance,
 		EarningsTotal:      settlement.LifetimeBalance,
+		Stake:              stake,
 	}
 	utils.WriteAsJSON(status, resp)
 }
@@ -306,7 +324,7 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 //   200:
 //     description: Status retrieved
 //     schema:
-//       "$ref": "#/definitions/RegistrationDataDTO"
+//       "$ref": "#/definitions/IdentityRegistrationResponseDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -319,7 +337,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(id)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
@@ -346,23 +364,52 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //   200:
 //     description: Beneficiary retrieved
 //     schema:
-//       "$ref": "#/definitions/IdentityBeneficiaryDTO"
+//       "$ref": "#/definitions/IdentityBeneficiaryResponseDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bc.GetProviderChannel(common.HexToAddress(config.GetString(config.FlagAccountantID)), common.HexToAddress(address), false)
+	data, err := endpoint.bc.GetBeneficiary(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagTransactorRegistryAddress)), common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
 	}
 
-	registrationDataDTO := &contract.IdentityBeneficiaryResponce{
-		Beneficiary: data.Beneficiary.String(),
+	registrationDataDTO := &contract.IdentityBeneficiaryResponse{
+		Beneficiary: data.Hex(),
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
+}
+
+// swagger:operation GET /identities/{id}/referral Referral
+// ---
+// summary: Gets referral token
+// description: Gets a referral token for the given identity if a campaign exists
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get a token
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Token response
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	identity := params.ByName("id")
+	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(identity))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	utils.WriteAsJSON(contract.ReferralTokenResponse{
+		Token: tkn,
+	}, resp)
 }
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
@@ -375,6 +422,7 @@ func AddRoutesForIdentities(
 	channelAddressCalculator *pingpong.ChannelAddressCalculator,
 	earningsProvider earningsProvider,
 	bc providerChannel,
+	transactor Transactor,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:               idm,
@@ -384,6 +432,7 @@ func AddRoutesForIdentities(
 		channelCalculator: channelAddressCalculator,
 		earningsProvider:  earningsProvider,
 		bc:                bc,
+		transactor:        transactor,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
@@ -401,4 +450,5 @@ func AddRoutesForIdentities(
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
+	router.GET("/identities/:id/referral", idmEnd.GetReferralToken)
 }

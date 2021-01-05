@@ -1,6 +1,6 @@
 FROM redocly/redoc AS docs
 
-COPY tequilapi.json /usr/share/nginx/html/tequilapi.json
+COPY tequilapi/docs/swagger.json /usr/share/nginx/html/tequilapi.json
 
 ENV SPEC_URL='/tequilapi.json'
 

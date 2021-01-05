@@ -40,7 +40,7 @@ type CreateRequest struct {
 type ConsumerInfo struct {
 	// TODO Should not use internal structures for transport
 	IssuerID       identity.Identity `json:"issuerID"`
-	AccountantID   identity.Identity `json:"accountantID"`
+	HermesID       identity.Identity `json:"hermesID"`
 	PaymentVersion PaymentVersion    `json:"paymentVersion"`
 }
 

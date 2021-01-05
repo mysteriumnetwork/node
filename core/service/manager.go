@@ -19,7 +19,6 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/core/policy"
@@ -27,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/utils/netutil"
 	"github.com/pkg/errors"
@@ -47,7 +45,7 @@ var (
 type Service interface {
 	Serve(instance *Instance) error
 	Stop() error
-	session.ConfigProvider
+	ConfigProvider
 }
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
@@ -70,7 +68,7 @@ func NewManager(
 	eventPublisher Publisher,
 	policyOracle *policy.Oracle,
 	p2pListener p2p.Listener,
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager,
+	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager,
 	statusStorage connectivity.StatusStorage,
 ) *Manager {
 	return &Manager{
@@ -95,7 +93,7 @@ type Manager struct {
 	policyOracle     *policy.Oracle
 
 	p2pListener    p2p.Listener
-	sessionManager func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager
+	sessionManager func(service *Instance, channel p2p.Channel) *SessionManager
 	statusStorage  connectivity.StatusStorage
 }
 
@@ -131,11 +129,13 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery.Start(providerID, proposal)
 
 	instance := &Instance{
-		id:             id,
+		ID:             id,
+		ProviderID:     providerID,
+		Type:           serviceType,
 		state:          servicestate.Starting,
-		options:        options,
+		Options:        options,
 		service:        service,
-		proposal:       proposal,
+		Proposal:       proposal,
 		policies:       policyRules,
 		discovery:      discovery,
 		eventPublisher: manager.eventPublisher,
@@ -143,17 +143,15 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	channelHandlers := func(ch p2p.Channel) {
 		instance.addP2PChannel(ch)
-		mng := manager.sessionManager(proposal, string(id), ch)
-		subscribeSessionCreate(mng, ch, service)
-		subscribeSessionStatus(mng, ch, manager.statusStorage)
+		mng := manager.sessionManager(instance, ch)
+		subscribeSessionCreate(mng, ch)
+		subscribeSessionStatus(ch, manager.statusStorage)
 		subscribeSessionAcknowledge(mng, ch)
-		subscribeSessionDestroy(mng, ch, func() {
-			// Give some time for channel to finish sending last message.
-			time.Sleep(10 * time.Second)
-			instance.closeP2PChannel(ch)
-		})
+		subscribeSessionDestroy(mng, ch)
+		subscribeSessionPayments(mng, ch)
 	}
-	if err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers); err != nil {
+	stopP2PListener, err := manager.p2pListener.Listen(providerID, serviceType, channelHandlers)
+	if err != nil {
 		return id, fmt.Errorf("could not subscribe to p2p channels: %w", err)
 	}
 
@@ -167,7 +165,8 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 			log.Error().Err(serveErr).Msg("Service serve failed")
 		}
 
-		// TODO: fix https://github.com/mysteriumnetwork/node/issues/855
+		stopP2PListener()
+
 		stopErr := manager.servicePool.Stop(id)
 		if stopErr != nil {
 			log.Error().Err(stopErr).Msg("Service stop failed")

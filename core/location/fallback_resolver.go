@@ -18,6 +18,7 @@
 package location
 
 import (
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -38,7 +39,7 @@ func NewFallbackResolver(resolvers []Resolver) *FallbackResolver {
 }
 
 // DetectLocation allows us to detect our current location
-func (fr *FallbackResolver) DetectLocation() (Location, error) {
+func (fr *FallbackResolver) DetectLocation() (locationstate.Location, error) {
 	log.Debug().Msg("Detecting with fallback resolver")
 	for _, v := range fr.LocationResolvers {
 		loc, err := v.DetectLocation()
@@ -48,5 +49,5 @@ func (fr *FallbackResolver) DetectLocation() (Location, error) {
 			return loc, err
 		}
 	}
-	return Location{}, ErrLocationResolutionFailed
+	return locationstate.Location{}, ErrLocationResolutionFailed
 }

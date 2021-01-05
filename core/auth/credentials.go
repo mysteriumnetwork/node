@@ -18,31 +18,33 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/storage"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Storage for Credentials
+// Storage for Credentials.
 type Storage interface {
 	GetValue(bucket string, key interface{}, to interface{}) error
 	SetValue(bucket string, key interface{}, to interface{}) error
 }
 
-const (
-	username            = "myst"
-	initialPassword     = "mystberry"
-	credentialsDBBucket = "app-credentials"
-)
+const credentialsDBBucket = "app-credentials"
 
-// Credentials verifies/sets user credentials for web UI
+// ErrBadCredentials represents an error when validating wrong credentials.
+var ErrBadCredentials = errors.New("bad credentials")
+
+// Credentials verifies/sets user credentials for web UI.
 type Credentials struct {
 	username, password string
 	db                 Storage
 }
 
-// NewCredentials instance
+// NewCredentials instance.
 func NewCredentials(username, password string, db Storage) *Credentials {
 	return &Credentials{
 		username: username,
@@ -51,47 +53,58 @@ func NewCredentials(username, password string, db Storage) *Credentials {
 	}
 }
 
-// Validate username and password against stored Credentials
+// Validate username and password against stored Credentials.
 func (credentials *Credentials) Validate() (err error) {
-	var storedHash string
-	storedHash, err = credentials.loadOrInitialize()
+	if credentials.username != config.FlagTequilapiUsername.Value {
+		return ErrBadCredentials
+	}
+
+	storedHash, err := credentials.loadOrInitialize()
 	if err != nil {
-		return errors.Wrap(err, "could not load credentials")
+		return fmt.Errorf("could not load credentials: %w", err)
 	}
-	if credentials.username != username {
-		return errors.New("bad credentials")
-	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(credentials.password))
 	if err != nil {
-		return errors.Wrap(err, "bad credentials")
+		return fmt.Errorf("bad credentials: %w", err)
 	}
+
 	return nil
 }
 
 func (credentials *Credentials) loadOrInitialize() (s string, err error) {
 	var storedHash string
-	err = credentials.db.GetValue(credentialsDBBucket, username, &storedHash)
-	if err == storage.ErrNotFound {
-		log.Info().Msg("Credentials not found, initializing to default")
-		err = NewCredentials(username, initialPassword, credentials.db).Set()
-		if err != nil {
-			return "", errors.Wrap(err, "failed to set initial credentials")
-		}
-		err = credentials.db.GetValue(credentialsDBBucket, username, &storedHash)
+
+	err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
+	if !errors.Is(err, storage.ErrNotFound) {
+		return storedHash, err
 	}
+
+	log.Info().Msg("Credentials not found, initializing to default")
+
+	err = NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, credentials.db).Set()
+	if err != nil {
+		return "", fmt.Errorf("failed to set initial credentials: %w", err)
+	}
+
+	err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
+
 	return storedHash, err
 }
 
-// Set new credentials
+// Set new credentials.
 func (credentials *Credentials) Set() (err error) {
 	var passwordHash []byte
+
 	passwordHash, err = bcrypt.GenerateFromPassword([]byte(credentials.password), bcrypt.DefaultCost)
 	if err != nil {
-		return errors.Wrap(err, "unable to generate password hash")
+		return fmt.Errorf("unable to generate password hash: %w", err)
 	}
+
 	err = credentials.db.SetValue(credentialsDBBucket, credentials.username, string(passwordHash))
 	if err != nil {
-		return errors.Wrap(err, "unable to set credentials")
+		return fmt.Errorf("unable to set credentials: %w", err)
 	}
+
 	return nil
 }

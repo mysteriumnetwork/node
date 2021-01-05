@@ -18,14 +18,15 @@
 package endpoints
 
 import (
+	"math/big"
 	"net/http"
-	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/pkg/errors"
 )
 
 // QualityFinder allows to fetch proposal quality data
@@ -71,6 +72,14 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     name: fetch_metrics
 //     description: if set to true, fetches the connection success metrics for nodes. False by default.
 //     type: boolean
+//   - in: query
+//     name: location_type
+//     description: If given will filter proposals by node location type.
+//     type: string
+//   - in: query
+//     name: location_country
+//     description: If given will filter proposals by node location country.
+//     type: string
 // responses:
 //   200:
 //     description: List of proposals
@@ -108,6 +117,8 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		ServiceType:         req.URL.Query().Get("service_type"),
 		AccessPolicyID:      req.URL.Query().Get("access_policy_id"),
 		AccessPolicySource:  req.URL.Query().Get("access_policy_source"),
+		LocationType:        req.URL.Query().Get("location_type"),
+		LocationCountry:     req.URL.Query().Get("location_country"),
 		LowerGBPriceBound:   lowerGBPriceBound,
 		UpperGBPriceBound:   upperGBPriceBound,
 		LowerTimePriceBound: lowerTimePriceBound,
@@ -143,19 +154,22 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 //   200:
 //     description: List of quality metrics
 //     schema:
-//       "$ref": "#/definitions/QualityMetricsDTO"
+//       "$ref": "#/definitions/ProposalMetricsResponse"
 func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	metrics := pe.qualityProvider.ProposalsMetrics()
-	utils.WriteAsJSON(mapQualityMetrics(metrics), resp)
+	utils.WriteAsJSON(contract.NewProposalMetricsResponse(metrics), resp)
 }
 
-func parsePriceBound(req *http.Request, key string) (*uint64, error) {
+func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
 	bound := req.URL.Query().Get(key)
 	if bound == "" {
 		return nil, nil
 	}
-	upperPriceBound, err := strconv.ParseUint(req.URL.Query().Get(key), 10, 64)
-	return &upperPriceBound, err
+	upperPriceBound, ok := new(big.Int).SetString(req.URL.Query().Get(key), 10)
+	if !ok {
+		return upperPriceBound, errors.New("could not parse price bound")
+	}
+	return upperPriceBound, nil
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
@@ -175,32 +189,8 @@ func addProposalMetrics(proposals []contract.ProposalDTO, metrics []quality.Conn
 
 	for i, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			proposals[i].Metrics = &contract.ProposalMetricsDTO{
-				ConnectCount:     mc.ConnectCount,
-				MonitoringFailed: mc.MonitoringFailed,
-			}
+			proposalMetrics := contract.NewQualityMetricsDTO(mc)
+			proposals[i].Metrics = &proposalMetrics
 		}
-	}
-}
-
-func mapQualityMetrics(metrics []quality.ConnectMetric) contract.ProposalsQualityMetricsResponse {
-	var res []contract.QualityMetricsResponse
-	for _, m := range metrics {
-		res = append(res, contract.QualityMetricsResponse{
-			ProviderID:  m.ProposalID.ProviderID,
-			ServiceType: m.ProposalID.ServiceType,
-			ProposalMetricsDTO: contract.ProposalMetricsDTO{
-				MonitoringFailed: m.MonitoringFailed,
-				ConnectCount: quality.ConnectCount{
-					Success: m.ConnectCount.Success,
-					Timeout: m.ConnectCount.Timeout,
-					Fail:    m.ConnectCount.Fail,
-				},
-			},
-		})
-	}
-
-	return contract.ProposalsQualityMetricsResponse{
-		Metrics: res,
 	}
 }

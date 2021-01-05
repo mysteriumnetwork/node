@@ -20,30 +20,45 @@ package license
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
 
-// NewCommand function creates license command
+var (
+	// FlagShowWarranty allows to print license warranty.
+	FlagShowWarranty = cli.BoolFlag{
+		Name:  "warranty",
+		Usage: "Show details of license warranty",
+	}
+	// FlagShowConditions allows to print license conditions.
+	FlagShowConditions = cli.BoolFlag{
+		Name:  "conditions",
+		Usage: "Show details of license conditions",
+	}
+)
+
+// NewCommand function creates license command.
 func NewCommand(licenseCopyright string) *cli.Command {
 	return &cli.Command{
 		Name:      "license",
 		Usage:     "Show license",
 		ArgsUsage: " ",
-		Flags:     []cli.Flag{&config.LicenseWarrantyFlag, &config.LicenseConditionsFlag},
+		Flags:     []cli.Flag{&FlagShowWarranty, &FlagShowConditions},
 		Action: func(ctx *cli.Context) error {
-			if ctx.IsSet(config.LicenseWarrantyFlag.Name) {
+			if ctx.Bool(FlagShowWarranty.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseWarranty)
+
 				return err
 			}
 
-			if ctx.IsSet(config.LicenseConditionsFlag.Name) {
+			if ctx.Bool(FlagShowConditions.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseConditions)
+
 				return err
 			}
 
 			_, err := fmt.Fprintln(ctx.App.Writer, licenseCopyright)
+
 			return err
 		},
 	}

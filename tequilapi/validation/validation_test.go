@@ -46,5 +46,4 @@ func TestErrorsListRenderedInJSON(t *testing.T) {
 		}`,
 		string(v),
 	)
-
 }

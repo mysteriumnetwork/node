@@ -17,55 +17,5 @@
 
 package session
 
-import (
-	"time"
-
-	"github.com/gofrs/uuid"
-	"github.com/mysteriumnetwork/node/identity"
-)
-
 // ID represents session id type.
 type ID string
-
-// PaymentEngine is responsible for interacting with the consumer in regard to payments.
-type PaymentEngine interface {
-	Start() error
-	WaitFirstInvoice(time.Duration) error
-	Stop()
-}
-
-// DataTransferred represents the data transferred on each session.
-type DataTransferred struct {
-	Up, Down uint64
-}
-
-// Session structure holds all required information about current session between service consumer and provider.
-type Session struct {
-	ID              ID
-	ConsumerID      identity.Identity
-	ServiceID       string
-	ServiceType     string
-	CreatedAt       time.Time
-	DataTransferred DataTransferred
-	TokensEarned    uint64
-	Last            bool
-	done            chan struct{}
-}
-
-// Done returns readonly done channel.
-func (s *Session) Done() <-chan struct{} {
-	return s.done
-}
-
-// NewSession creates a blank new session with an ID.
-func NewSession() (*Session, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return nil, err
-	}
-	return &Session{ID: ID(uid.String())}, nil
-}
-
-// ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
-// should be serializable to json format.
-type ServiceConfiguration interface{}

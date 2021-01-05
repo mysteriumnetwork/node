@@ -19,7 +19,6 @@ package pingpong
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/mysteriumnetwork/node/p2p"
@@ -27,6 +26,8 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
+
+const bigIntBase int = 10
 
 // ExchangeRequest structure represents message from service consumer to send a an exchange message.
 type ExchangeRequest struct {
@@ -50,17 +51,19 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	pMessage := &pb.ExchangeMessage{
 		Promise: &pb.Promise{
 			ChannelID: em.Promise.ChannelID,
-			Amount:    em.Promise.Amount,
-			Fee:       em.Promise.Fee,
+			Amount:    em.Promise.Amount.Text(bigIntBase),
+			Fee:       em.Promise.Fee.Text(bigIntBase),
 			Hashlock:  em.Promise.Hashlock,
 			R:         em.Promise.R,
 			Signature: em.Promise.Signature,
+			ChainID:   em.Promise.ChainID,
 		},
-		AgreementID:    em.AgreementID,
-		AgreementTotal: em.AgreementTotal,
+		AgreementID:    em.AgreementID.Text(bigIntBase),
+		AgreementTotal: em.AgreementTotal.Text(bigIntBase),
 		Provider:       em.Provider,
 		Signature:      em.Signature,
 		HermesID:       em.HermesID,
+		ChainID:        em.ChainID,
 	}
 	log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicPaymentMessage, pMessage.String())
 
@@ -68,36 +71,4 @@ func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	defer cancel()
 	_, err := es.ch.Send(ctx, p2p.TopicPaymentMessage, p2p.ProtoMessage(pMessage))
 	return err
-}
-
-func exchangeMessageReceiver(channel p2p.ChannelHandler) (chan crypto.ExchangeMessage, error) {
-	exchangeChan := make(chan crypto.ExchangeMessage, 1)
-
-	channel.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
-		var msg pb.ExchangeMessage
-		if err := c.Request().UnmarshalProto(&msg); err != nil {
-			return fmt.Errorf("could not unmarshal exchange message proto: %w", err)
-		}
-		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
-
-		exchangeChan <- crypto.ExchangeMessage{
-			Promise: crypto.Promise{
-				ChannelID: msg.GetPromise().GetChannelID(),
-				Amount:    msg.GetPromise().GetAmount(),
-				Fee:       msg.GetPromise().GetFee(),
-				Hashlock:  msg.GetPromise().GetHashlock(),
-				R:         msg.GetPromise().GetR(),
-				Signature: msg.GetPromise().GetSignature(),
-			},
-			AgreementID:    msg.GetAgreementID(),
-			AgreementTotal: msg.GetAgreementTotal(),
-			Provider:       msg.GetProvider(),
-			Signature:      msg.GetSignature(),
-			HermesID:       msg.GetHermesID(),
-		}
-
-		return nil
-	})
-
-	return exchangeChan, nil
 }

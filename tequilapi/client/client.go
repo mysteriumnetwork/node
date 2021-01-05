@@ -19,13 +19,15 @@ package client
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/url"
 
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // NewClient returns a new instance of Client
@@ -41,6 +43,62 @@ func NewClient(ip string, port int) *Client {
 // Client is able perform remote requests to Tequilapi server
 type Client struct {
 	http httpClientInterface
+}
+
+// AuthAuthenticate authenticates user and issues auth token
+func (client *Client) AuthAuthenticate(request contract.AuthRequest) (res contract.AuthResponse, err error) {
+	response, err := client.http.Post("/auth/authenticate", request)
+	if err != nil {
+		return res, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	if err != nil {
+		return res, err
+	}
+
+	client.http.SetToken(res.Token)
+	return res, nil
+}
+
+// AuthLogin authenticates user and sets cookie with issued auth token
+func (client *Client) AuthLogin(request contract.AuthRequest) (res contract.AuthResponse, err error) {
+	response, err := client.http.Post("/auth/login", request)
+	if err != nil {
+		return res, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &res)
+	if err != nil {
+		return res, err
+	}
+
+	client.http.SetToken(res.Token)
+	return res, nil
+}
+
+// AuthLogout Clears authentication cookie
+func (client *Client) AuthLogout() error {
+	response, err := client.http.Delete("/auth/logout", nil)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// AuthChangePassword changes user password
+func (client *Client) AuthChangePassword(request contract.ChangePasswordRequest) error {
+	response, err := client.http.Put("/auth/password", request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
 }
 
 // GetIdentities returns a list of client identities
@@ -85,36 +143,35 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id contract.
 }
 
 // Identity returns identity status with current balance
-func (client *Client) Identity(identityAddress string) (contract.IdentityDTO, error) {
+func (client *Client) Identity(identityAddress string) (id contract.IdentityDTO, err error) {
 	path := fmt.Sprintf("identities/%s", identityAddress)
 
 	response, err := client.http.Get(path, nil)
 	if err != nil {
-		return contract.IdentityDTO{}, err
+		return id, err
 	}
 	defer response.Body.Close()
 
-	res := contract.IdentityDTO{}
-	err = parseResponseJSON(response, &res)
-	return res, err
+	err = parseResponseJSON(response, &id)
+	return id, err
 }
 
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
+func (client *Client) IdentityRegistrationStatus(address string) (contract.IdentityRegistrationResponse, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
 	if err != nil {
-		return RegistrationDataDTO{}, err
+		return contract.IdentityRegistrationResponse{}, err
 	}
 	defer response.Body.Close()
 
-	status := RegistrationDataDTO{}
+	status := contract.IdentityRegistrationResponse{}
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
 
 // GetTransactorFees returns the transactor fees
-func (client *Client) GetTransactorFees() (Fees, error) {
-	fees := Fees{}
+func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
+	fees := contract.FeesDTO{}
 
 	res, err := client.http.Get("transactor/fees", nil)
 	if err != nil {
@@ -127,11 +184,12 @@ func (client *Client) GetTransactorFees() (Fees, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
-	payload := registry.IdentityRegistrationRequestDTO{
-		Stake:       stake,
-		Fee:         fee,
-		Beneficiary: beneficiary,
+func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int, token *string) error {
+	payload := contract.IdentityRegisterRequest{
+		Stake:         stake,
+		Fee:           fee,
+		Beneficiary:   beneficiary,
+		ReferralToken: token,
 	}
 
 	response, err := client.http.Post("identities/"+address+"/register", payload)
@@ -147,36 +205,17 @@ func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee u
 	return nil
 }
 
-// TopUp tops up identity
-func (client *Client) TopUp(identity string) error {
-	payload := registry.TopUpRequest{
-		Identity: identity,
-	}
-
-	response, err := client.http.Post("transactor/topup", payload)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("expected 202 got %v", response.StatusCode)
-	}
-
-	return nil
-}
-
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionStatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, hermesID, serviceType string, options contract.ConnectOptions) (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Put("connection", contract.ConnectionCreateRequest{
 		ConsumerID:     consumerID,
 		ProviderID:     providerID,
-		AccountantID:   accountantID,
+		HermesID:       hermesID,
 		ServiceType:    serviceType,
 		ConnectOptions: options,
 	})
 	if err != nil {
-		return contract.ConnectionStatusDTO{}, err
+		return contract.ConnectionInfoDTO{}, err
 	}
 	defer response.Body.Close()
 
@@ -196,48 +235,43 @@ func (client *Client) ConnectionDestroy() (err error) {
 }
 
 // ConnectionStatistics returns statistics about current connection
-func (client *Client) ConnectionStatistics() (contract.ConnectionStatisticsDTO, error) {
+func (client *Client) ConnectionStatistics() (statistics contract.ConnectionStatisticsDTO, err error) {
 	response, err := client.http.Get("connection/statistics", url.Values{})
 	if err != nil {
-		return contract.ConnectionStatisticsDTO{}, err
+		return statistics, err
 	}
 	defer response.Body.Close()
 
-	var statistics contract.ConnectionStatisticsDTO
 	err = parseResponseJSON(response, &statistics)
 	return statistics, err
 }
 
 // ConnectionStatus returns connection status
-func (client *Client) ConnectionStatus() (contract.ConnectionStatusDTO, error) {
+func (client *Client) ConnectionStatus() (status contract.ConnectionInfoDTO, err error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
-		return contract.ConnectionStatusDTO{}, err
+		return status, err
 	}
 	defer response.Body.Close()
 
-	var status contract.ConnectionStatusDTO
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
 
 // ConnectionIP returns public ip
-func (client *Client) ConnectionIP() (string, error) {
+func (client *Client) ConnectionIP() (ip contract.IPDTO, err error) {
 	response, err := client.http.Get("connection/ip", url.Values{})
 	if err != nil {
-		return "", err
+		return ip, err
 	}
 	defer response.Body.Close()
 
-	var ipData struct {
-		IP string `json:"ip"`
-	}
-	err = parseResponseJSON(response, &ipData)
-	return ipData.IP, err
+	err = parseResponseJSON(response, &ip)
+	return ip, err
 }
 
 // ConnectionLocation returns current location
-func (client *Client) ConnectionLocation() (location LocationDTO, err error) {
+func (client *Client) ConnectionLocation() (location contract.LocationDTO, err error) {
 	response, err := client.http.Get("connection/location", url.Values{})
 	if err != nil {
 		return location, err
@@ -249,7 +283,7 @@ func (client *Client) ConnectionLocation() (location LocationDTO, err error) {
 }
 
 // Healthcheck returns a healthcheck info
-func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
+func (client *Client) Healthcheck() (healthcheck contract.HealthCheckDTO, err error) {
 	response, err := client.http.Get("healthcheck", url.Values{})
 	if err != nil {
 		return
@@ -261,7 +295,7 @@ func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 }
 
 // OriginLocation returns original location
-func (client *Client) OriginLocation() (location LocationDTO, err error) {
+func (client *Client) OriginLocation() (location contract.LocationDTO, err error) {
 	response, err := client.http.Get("location", url.Values{})
 	if err != nil {
 		return location, err
@@ -276,6 +310,15 @@ func (client *Client) OriginLocation() (location LocationDTO, err error) {
 func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
 	queryParams.Add("service_type", serviceType)
+	return client.proposals(queryParams)
+}
+
+// ProposalsByLocationAndService fetches proposals by given service and node location types.
+func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("service_type", serviceType)
+	queryParams.Add("location_type", locationType)
+	queryParams.Add("location_country", locationCountry)
 	return client.proposals(queryParams)
 }
 
@@ -297,7 +340,7 @@ func (client *Client) proposals(query url.Values) ([]contract.ProposalDTO, error
 }
 
 // ProposalsByPrice returns all available proposals within the given price range
-func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB uint64) ([]contract.ProposalDTO, error) {
+func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB *big.Int) ([]contract.ProposalDTO, error) {
 	values := url.Values{}
 	values.Add("upper_time_price_bound", fmt.Sprintf("%v", upperTime))
 	values.Add("lower_time_price_bound", fmt.Sprintf("%v", lowerTime))
@@ -308,9 +351,12 @@ func (client *Client) ProposalsByPrice(lowerTime, upperTime, lowerGB, upperGB ui
 
 // Unlock allows using identity in following commands
 func (client *Client) Unlock(identity, passphrase string) error {
-	path := fmt.Sprintf("identities/%s/unlock", identity)
+	payload := contract.IdentityUnlockRequest{
+		Passphrase: &passphrase,
+	}
 
-	response, err := client.http.Put(path, contract.IdentityUnlockRequest{Passphrase: &passphrase})
+	path := fmt.Sprintf("identities/%s/unlock", identity)
+	response, err := client.http.Put(path, payload)
 	if err != nil {
 		return err
 	}
@@ -349,10 +395,9 @@ func (client *Client) Stop() error {
 	return nil
 }
 
-// ConnectionSessions returns all sessions from history
-func (client *Client) ConnectionSessions() (ConnectionSessionListDTO, error) {
-	sessions := ConnectionSessionListDTO{}
-	response, err := client.http.Get("connection-sessions", url.Values{})
+// Sessions returns all sessions from history
+func (client *Client) Sessions() (sessions contract.SessionListResponse, err error) {
+	response, err := client.http.Get("sessions", url.Values{})
 	if err != nil {
 		return sessions, err
 	}
@@ -362,22 +407,22 @@ func (client *Client) ConnectionSessions() (ConnectionSessionListDTO, error) {
 	return sessions, err
 }
 
-// ConnectionSessionsByType returns sessions from history filtered by type
-func (client *Client) ConnectionSessionsByType(serviceType string) (ConnectionSessionListDTO, error) {
-	sessions, err := client.ConnectionSessions()
+// SessionsByServiceType returns sessions from history filtered by type
+func (client *Client) SessionsByServiceType(serviceType string) (contract.SessionListResponse, error) {
+	sessions, err := client.Sessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
-// ConnectionSessionsByStatus returns sessions from history filtered by their status
-func (client *Client) ConnectionSessionsByStatus(status string) (ConnectionSessionListDTO, error) {
-	sessions, err := client.ConnectionSessions()
+// SessionsByStatus returns sessions from history filtered by their status
+func (client *Client) SessionsByStatus(status string) (contract.SessionListResponse, error) {
+	sessions, err := client.Sessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
 }
 
 // Services returns all running services
-func (client *Client) Services() (services ServiceListDTO, err error) {
+func (client *Client) Services() (services contract.ServiceListResponse, err error) {
 	response, err := client.http.Get("services", url.Values{})
 	if err != nil {
 		return services, err
@@ -389,7 +434,7 @@ func (client *Client) Services() (services ServiceListDTO, err error) {
 }
 
 // Service returns a service information by the requested id
-func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
+func (client *Client) Service(id string) (service contract.ServiceInfoDTO, err error) {
 	response, err := client.http.Get("services/"+id, url.Values{})
 	if err != nil {
 		return service, err
@@ -401,7 +446,7 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(request contract.ServiceStartRequest) (service contract.ServiceInfoDTO, err error) {
 	response, err := client.http.Post("services", request)
 	if err != nil {
 		return service, err
@@ -425,9 +470,7 @@ func (client *Client) ServiceStop(id string) error {
 }
 
 // NATStatus returns status of NAT traversal
-func (client *Client) NATStatus() (NATStatusDTO, error) {
-	status := NATStatusDTO{}
-
+func (client *Client) NATStatus() (status contract.NATStatusDTO, err error) {
 	response, err := client.http.Get("nat/status", nil)
 	if err != nil {
 		return status, err
@@ -438,50 +481,37 @@ func (client *Client) NATStatus() (NATStatusDTO, error) {
 	return status, err
 }
 
-// ServiceSessions returns all currently running sessions
-func (client *Client) ServiceSessions() (ServiceSessionListDTO, error) {
-	sessions := ServiceSessionListDTO{}
-	response, err := client.http.Get("service-sessions", url.Values{})
-	if err != nil {
-		return sessions, err
-	}
-	defer response.Body.Close()
-
-	err = parseResponseJSON(response, &sessions)
-	return sessions, err
-}
-
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
+func filterSessionsByType(serviceType string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
-	for _, s := range sessions.Sessions {
+	for _, s := range sessions.Items {
 		if s.ServiceType == serviceType {
-			sessions.Sessions[matches] = s
+			sessions.Items[matches] = s
 			matches++
 		}
 	}
-	sessions.Sessions = sessions.Sessions[:matches]
+	sessions.Items = sessions.Items[:matches]
 	return sessions
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
+func filterSessionsByStatus(status string, sessions contract.SessionListResponse) contract.SessionListResponse {
 	matches := 0
-	for _, s := range sessions.Sessions {
+	for _, s := range sessions.Items {
 		if s.Status == status {
-			sessions.Sessions[matches] = s
+			sessions.Items[matches] = s
 			matches++
 		}
 	}
-	sessions.Sessions = sessions.Sessions[:matches]
+	sessions.Items = sessions.Items[:matches]
 	return sessions
 }
 
-// Settle requests the settling of accountant promises
-func (client *Client) Settle(providerID, accountantID identity.Identity, waitForBlockchain bool) error {
-	settleRequest := SettleRequest{
-		ProviderID:   providerID.Address,
-		AccountantID: accountantID.Address,
+// Settle requests the settling of hermes promises
+func (client *Client) Settle(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
+	settleRequest := contract.SettleRequest{
+		ProviderID: providerID.Address,
+		HermesID:   hermesID.Address,
 	}
 
 	path := "transactor/settle/"
@@ -503,12 +533,60 @@ func (client *Client) Settle(providerID, accountantID identity.Identity, waitFor
 	return nil
 }
 
+// SettleIntoStake requests the settling of accountant promises into a stake increase
+func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, waitForBlockchain bool) error {
+	settleRequest := contract.SettleRequest{
+		ProviderID: providerID.Address,
+		HermesID:   hermesID.Address,
+	}
+
+	path := "transactor/stake/increase/"
+	if waitForBlockchain {
+		path += "sync"
+	} else {
+		path += "async"
+	}
+
+	response, err := client.http.Post(path, settleRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not settle promise")
+	}
+	return nil
+}
+
+// DecreaseStake requests the decrease of stake via the transactor.
+func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
+	decreaseRequest := contract.DecreaseStakeRequest{
+		ID:            ID.Address,
+		Amount:        amount,
+		TransactorFee: transactorFee,
+	}
+
+	path := "transactor/stake/decrease"
+
+	response, err := client.http.Post(path, decreaseRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not decrease stake")
+	}
+	return nil
+}
+
 // SettleWithBeneficiary set new beneficiary address for the provided identity.
-func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID string) error {
-	payload := SettleWithBeneficiaryRequest{
-		SettleRequest: SettleRequest{
-			ProviderID:   address,
-			AccountantID: accountantID,
+func (client *Client) SettleWithBeneficiary(address, beneficiary, hermesID string) error {
+	payload := contract.SettleWithBeneficiaryRequest{
+		SettleRequest: contract.SettleRequest{
+			ProviderID: address,
+			HermesID:   hermesID,
 		},
 		Beneficiary: beneficiary,
 	}
@@ -526,13 +604,160 @@ func (client *Client) SettleWithBeneficiary(address, beneficiary, accountantID s
 }
 
 // Beneficiary gets beneficiary address for the provided identity.
-func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponce, err error) {
+func (client *Client) Beneficiary(address string) (res contract.IdentityBeneficiaryResponse, err error) {
 	response, err := client.http.Get("identities/"+address+"/beneficiary", nil)
 	if err != nil {
-		return contract.IdentityBeneficiaryResponce{}, err
+		return contract.IdentityBeneficiaryResponse{}, err
 	}
 	defer response.Body.Close()
 
 	err = parseResponseJSON(response, &res)
 	return res, err
+}
+
+// SetMMNApiKey sets MMN's API key in config and registers node to MMN
+func (client *Client) SetMMNApiKey(data contract.MMNApiKeyRequest) error {
+	response, err := client.http.Post("mmn/api-key", data)
+
+	// non 200 status codes return a generic error and we can't use it, instead
+	// the response contains validation JSON which we can use to extract the error
+	if err != nil && response == nil {
+		return err
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode == 200 {
+		return nil
+	}
+
+	// TODO this should probably be wrapped and moved into the validation package
+	type validationResponse struct {
+		Message string                              `json:"message"`
+		Errors  map[string][]*validation.FieldError `json:"errors"`
+	}
+	res := validationResponse{}
+	err = parseResponseJSON(response, &res)
+	if err != nil {
+		return err
+	}
+
+	if res.Errors != nil && res.Errors["api_key"] != nil && res.Errors["api_key"][0] != nil {
+		return errors.New((res.Errors["api_key"][0]).Message)
+	}
+
+	return nil
+}
+
+// IdentityReferralCode returns a referral token for the given identity.
+func (client *Client) IdentityReferralCode(identity string) (contract.ReferralTokenResponse, error) {
+	response, err := client.http.Get(fmt.Sprintf("identities/%v/referral", identity), nil)
+	if err != nil {
+		return contract.ReferralTokenResponse{}, err
+	}
+	defer response.Body.Close()
+
+	res := contract.ReferralTokenResponse{}
+	err = parseResponseJSON(response, &res)
+	return res, err
+}
+
+// OrderCreate creates a new order for currency exchange in pilvytis
+func (client *Client) OrderCreate(id identity.Identity, order contract.OrderRequest) (contract.OrderResponse, error) {
+	resp, err := client.http.Post(fmt.Sprintf("identities/%s/payment-order", id.Address), order)
+	if err != nil {
+		return contract.OrderResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.OrderResponse
+	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderGet returns a single order istance given it's ID.
+func (client *Client) OrderGet(address identity.Identity, orderID uint64) (contract.OrderResponse, error) {
+	path := fmt.Sprintf("identities/%s/payment-order/%d", address.Address, orderID)
+	resp, err := client.http.Get(path, nil)
+	if err != nil {
+		return contract.OrderResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.OrderResponse
+	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderGetAll returns all order istances for a given identity
+func (client *Client) OrderGetAll(id identity.Identity) ([]contract.OrderResponse, error) {
+	path := fmt.Sprintf("identities/%s/payment-order", id.Address)
+	resp, err := client.http.Get(path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var res []contract.OrderResponse
+	return res, parseResponseJSON(resp, &res)
+}
+
+// OrderCurrencies returns all possible order currencies
+func (client *Client) OrderCurrencies() ([]string, error) {
+	resp, err := client.http.Get("payment-order-currencies", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var res []string
+	return res, parseResponseJSON(resp, &res)
+}
+
+// PaymentOptions returns payment option suggestions from pilvytis.
+func (client *Client) PaymentOptions() (contract.PaymentOrderOptions, error) {
+	resp, err := client.http.Get("payment-order-options", nil)
+	if err != nil {
+		return contract.PaymentOrderOptions{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.PaymentOrderOptions
+	return res, parseResponseJSON(resp, &res)
+}
+
+// UpdateTerms takes a TermsRequest and sends it as an update
+// for the terms of use.
+func (client *Client) UpdateTerms(obj contract.TermsRequest) error {
+	resp, err := client.http.Post("terms", obj)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// FetchConfig - fetches current config
+func (client *Client) FetchConfig() (map[string]interface{}, error) {
+	resp, err := client.http.Get("config", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("fetching config failed with status: %d", resp.StatusCode)
+	}
+
+	var res map[string]interface{}
+	err = parseResponseJSON(resp, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	data, ok := res["data"]
+	if !ok {
+		return nil, errors.New("no field named 'data' found in config")
+	}
+
+	config := data.(map[string]interface{})
+	return config, err
 }

@@ -17,6 +17,8 @@
 
 package contract
 
+import "math/big"
+
 // ServiceStartRequest request used to start a service.
 // swagger:model ServiceStartRequestDTO
 type ServiceStartRequest struct {
@@ -47,12 +49,48 @@ type ServiceStartRequest struct {
 // ServicePaymentMethod payment parameters for service start.
 // swagger:model ServicePaymentMethod
 type ServicePaymentMethod struct {
-	PriceGB     uint64 `json:"price_gb"`
-	PriceMinute uint64 `json:"price_minute"`
+	PriceGB     *big.Int `json:"price_gb"`
+	PriceMinute *big.Int `json:"price_minute"`
 }
 
 // ServiceAccessPolicies represents the access controls for service start
 // swagger:model ServiceAccessPolicies
 type ServiceAccessPolicies struct {
 	IDs []string `json:"ids"`
+}
+
+// ServiceListResponse represents a list of running services on the node.
+// swagger:model ServiceListResponse
+type ServiceListResponse []ServiceInfoDTO
+
+// ServiceInfoDTO represents running service information.
+// swagger:model ServiceInfoDTO
+type ServiceInfoDTO struct {
+	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+	ID string `json:"id"`
+
+	// provider identity
+	// example: 0x0000000000000000000000000000000000000002
+	ProviderID string `json:"provider_id"`
+
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// example: openvpn
+	Type string `json:"type"`
+
+	// options with which service was started. Every service has a unique list of allowed options.
+	// example: {"port": 1123, "protocol": "udp"}
+	Options interface{} `json:"options"`
+
+	// example: Running
+	Status string `json:"status"`
+
+	Proposal ProposalDTO `json:"proposal"`
+
+	ConnectionStatistics ServiceStatisticsDTO `json:"connection_statistics"`
+}
+
+// ServiceStatisticsDTO shows the successful and attempted connection count
+type ServiceStatisticsDTO struct {
+	Attempted  int `json:"attempted"`
+	Successful int `json:"successful"`
 }

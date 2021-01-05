@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/rs/zerolog/log"
@@ -42,22 +42,22 @@ func NewTracker(publisher publisher) *Tracker {
 type Tracker struct {
 	publisher publisher
 
-	previous connection.Statistics
+	previous connectionstate.Statistics
 	lock     sync.RWMutex
 }
 
 // Subscribe subscribes to relevant events of event bus.
 func (t *Tracker) Subscribe(bus eventbus.Subscriber) error {
-	if err := bus.SubscribeAsync(connection.AppTopicConnectionSession, t.consumeSessionEvent); err != nil {
+	if err := bus.SubscribeAsync(connectionstate.AppTopicConnectionSession, t.consumeSessionEvent); err != nil {
 		return err
 	}
-	return bus.SubscribeAsync(connection.AppTopicConnectionStatistics, t.consumeStatisticsEvent)
+	return bus.SubscribeAsync(connectionstate.AppTopicConnectionStatistics, t.consumeStatisticsEvent)
 }
 
 const consumeCooldown = 500 * time.Millisecond
 
 // consumeStatisticsEvent handles the connection statistics changes
-func (t *Tracker) consumeStatisticsEvent(evt connection.AppEventConnectionStatistics) {
+func (t *Tracker) consumeStatisticsEvent(evt connectionstate.AppEventConnectionStatistics) {
 	t.lock.Lock()
 	defer func() {
 		t.lock.Unlock()
@@ -89,11 +89,11 @@ func (t *Tracker) consumeStatisticsEvent(evt connection.AppEventConnectionStatis
 }
 
 // consumeSessionEvent handles the session state changes
-func (t *Tracker) consumeSessionEvent(sessionEvent connection.AppEventConnectionSession) {
+func (t *Tracker) consumeSessionEvent(sessionEvent connectionstate.AppEventConnectionSession) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	switch sessionEvent.Status {
-	case connection.SessionEndedStatus, connection.SessionCreatedStatus:
-		t.previous = connection.Statistics{}
+	case connectionstate.SessionEndedStatus, connectionstate.SessionCreatedStatus:
+		t.previous = connectionstate.Statistics{}
 	}
 }

@@ -19,6 +19,7 @@ package noop
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/money"
@@ -27,7 +28,7 @@ import (
 )
 
 func Test_PaymentMethod_Serialize(t *testing.T) {
-	price := money.NewMoney(50000000, money.CurrencyMyst)
+	price := money.New(big.NewInt(50000000), money.CurrencyMyst)
 
 	var tests = []struct {
 		model        pingpong.PaymentMethod
@@ -67,7 +68,7 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 }
 
 func Test_PaymentMethod_Unserialize(t *testing.T) {
-	price := money.NewMoney(50000000, money.CurrencyMyst)
+	price := money.New(big.NewInt(50000000), money.CurrencyMyst)
 
 	var tests = []struct {
 		json          string

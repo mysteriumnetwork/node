@@ -41,14 +41,19 @@ SOFTWARE.
 
 package config
 
-import "github.com/spf13/cast"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/spf13/cast"
+)
 
 // Contains snippets from https://github.com/spf13/viper
 
-// searchMap recursively searches for a value for path in source map.
+// SearchMap recursively searches for a value for path in source map.
 // Returns nil if not found.
 // Note: This assumes that the path entries and map keys are lower cased.
-func (cfg *Config) searchMap(source map[string]interface{}, path []string) interface{} {
+func SearchMap(source map[string]interface{}, path []string) interface{} {
 	if len(path) == 0 {
 		return source
 	}
@@ -63,11 +68,11 @@ func (cfg *Config) searchMap(source map[string]interface{}, path []string) inter
 		// Nested case
 		switch next.(type) {
 		case map[interface{}]interface{}:
-			return cfg.searchMap(cast.ToStringMap(next), path[1:])
+			return SearchMap(cast.ToStringMap(next), path[1:])
 		case map[string]interface{}:
 			// Type assertion is safe here since it is only reached
 			// if the type of `next` is the same as the type being asserted
-			return cfg.searchMap(next.(map[string]interface{}), path[1:])
+			return SearchMap(next.(map[string]interface{}), path[1:])
 		default:
 			// got a value but nested key expected, return "nil" for not found
 			return nil
@@ -105,4 +110,67 @@ func deepSearch(m map[string]interface{}, path []string) map[string]interface{} 
 		m = m3
 	}
 	return m
+}
+
+func keyExists(k string, m map[string]interface{}) string {
+	lk := strings.ToLower(k)
+	for mk := range m {
+		lmk := strings.ToLower(mk)
+		if lmk == lk {
+			return mk
+		}
+	}
+	return ""
+}
+
+func castToMapStringInterface(
+	src map[interface{}]interface{}) map[string]interface{} {
+	tgt := map[string]interface{}{}
+	for k, v := range src {
+		tgt[fmt.Sprintf("%v", k)] = v
+	}
+	return tgt
+}
+
+// mergeMaps merges two maps. The `itgt` parameter is for handling go-yaml's
+// insistence on parsing nested structures as `map[interface{}]interface{}`
+// instead of using a `string` as the key for nest structures beyond one level
+// deep. Both map types are supported as there is a go-yaml fork that uses
+// `map[string]interface{}` instead.
+func mergeMaps(
+	src, tgt map[string]interface{}, itgt map[interface{}]interface{}) {
+	for sk, sv := range src {
+		tk := keyExists(sk, tgt)
+		if tk == "" {
+			tgt[sk] = sv
+			if itgt != nil {
+				itgt[sk] = sv
+			}
+			continue
+		}
+
+		tv, ok := tgt[tk]
+		if !ok {
+			tgt[sk] = sv
+			if itgt != nil {
+				itgt[sk] = sv
+			}
+			continue
+		}
+
+		switch ttv := tv.(type) {
+		case map[interface{}]interface{}:
+			tsv := sv.(map[interface{}]interface{})
+			ssv := castToMapStringInterface(tsv)
+			stv := castToMapStringInterface(ttv)
+			mergeMaps(ssv, stv, ttv)
+		case map[string]interface{}:
+			mergeMaps(sv.(map[string]interface{}), ttv, nil)
+		default:
+			tgt[tk] = sv
+			if itgt != nil {
+				itgt[tk] = sv
+			}
+		}
+	}
 }

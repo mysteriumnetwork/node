@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -39,61 +40,57 @@ func TestSettlementHistoryStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer bolt.Close()
 
-	storage := NewSettlementHistoryStorage(bolt, 3)
+	storage := NewSettlementHistoryStorage(bolt)
 
-	accountantID := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
+	hermesAddress := common.HexToAddress("0x3313189b9b945DD38E7bfB6167F9909451582eE5")
 	providerID := identity.FromAddress("0x79bb2a1c5E0075005F084a66A44D5e930A88eC86")
-	entry := SettlementHistoryEntry{
-		TxHash:       common.BigToHash(big.NewInt(123123123)),
+	entry1 := SettlementHistoryEntry{
+		TxHash:       common.BigToHash(big.NewInt(1)),
+		ProviderID:   providerID,
+		HermesID:     hermesAddress,
+		Time:         time.Date(2020, 1, 1, 1, 0, 0, 0, time.UTC),
 		Promise:      crypto.Promise{},
 		Beneficiary:  common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),
 		Amount:       big.NewInt(123),
 		TotalSettled: big.NewInt(321),
 	}
+	entry2 := SettlementHistoryEntry{
+		TxHash:       common.BigToHash(big.NewInt(2)),
+		ProviderID:   providerID,
+		HermesID:     hermesAddress,
+		Time:         time.Date(2020, 1, 1, 2, 0, 0, 0, time.UTC),
+		Promise:      crypto.Promise{},
+		Beneficiary:  common.HexToAddress("0x4443189b9b945DD38E7bfB6167F9909451582eE5"),
+		Amount:       big.NewInt(456),
+		TotalSettled: big.NewInt(654),
+	}
 
-	t.Run("Returns not found if no results exist", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
-		assert.EqualError(t, err, errBoltNotFound)
+	t.Run("Returns empty list if no results exist", func(t *testing.T) {
+		entries, err := storage.List(SettlementHistoryFilter{})
+		assert.NoError(t, err)
 		assert.Len(t, entries, 0)
+		assert.EqualValues(t, []SettlementHistoryEntry{}, entries)
 	})
 
 	t.Run("Inserts a history entry successfully", func(t *testing.T) {
-		err := storage.Store(providerID, accountantID, entry)
+		err := storage.Store(entry1)
 		assert.NoError(t, err)
 	})
 
 	t.Run("Fetches the inserted entry", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
+		entries, err := storage.List(SettlementHistoryFilter{})
 		assert.NoError(t, err)
 		assert.Len(t, entries, 1)
-
-		assert.NotEqual(t, entry.Time, entries[0].Time)
-		copy := entry
-		copy.Time = entries[0].Time
-		assert.EqualValues(t, copy, entries[0])
-	})
-
-	t.Run("Overrides old values if limit exceeded", func(t *testing.T) {
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
-		assert.NoError(t, err)
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
-		assert.NoError(t, err)
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
-		assert.NoError(t, err)
-		err = storage.Store(providerID, accountantID, SettlementHistoryEntry{})
-		assert.NoError(t, err)
-
-		entries, err := storage.Get(providerID, accountantID)
-		assert.NoError(t, err)
-		assert.Len(t, entries, 3)
+		assert.EqualValues(t, []SettlementHistoryEntry{entry1}, entries)
 	})
 
 	t.Run("Returns sorted results", func(t *testing.T) {
-		entries, err := storage.Get(providerID, accountantID)
+		err := storage.Store(entry2)
 		assert.NoError(t, err)
-		assert.Len(t, entries, 3)
 
-		assert.True(t, entries[0].Time.After(entries[1].Time))
-		assert.True(t, entries[1].Time.After(entries[2].Time))
+		entries, err := storage.List(SettlementHistoryFilter{})
+		assert.NoError(t, err)
+		assert.Len(t, entries, 2)
+		assert.EqualValues(t, []SettlementHistoryEntry{entry2, entry1}, entries)
 	})
 }

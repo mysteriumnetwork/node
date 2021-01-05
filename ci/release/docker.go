@@ -161,9 +161,6 @@ func ReleaseDockerTag() error {
 			{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{
 				env.Str(env.BuildVersion) + "-alpine",
 			}},
-			{partialLocalName: "myst:ubuntu", repository: "mysteriumnetwork/myst", tags: []string{
-				env.Str(env.BuildVersion) + "-ubuntu",
-			}},
 			{partialLocalName: "tequilapi:", repository: "mysteriumnetwork/documentation", tags: []string{
 				env.Str(env.BuildVersion),
 			}},
@@ -174,10 +171,6 @@ func ReleaseDockerTag() error {
 				env.Str(env.BuildVersion) + "-alpine",
 				"latest-alpine",
 				"latest",
-			}},
-			{partialLocalName: "myst:ubuntu", repository: "mysteriumnetwork/myst", tags: []string{
-				env.Str(env.BuildVersion) + "-ubuntu",
-				"latest-ubuntu",
 			}},
 			{partialLocalName: "tequilapi:", repository: "mysteriumnetwork/documentation", tags: []string{
 				env.Str(env.BuildVersion),

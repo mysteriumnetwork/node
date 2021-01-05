@@ -34,7 +34,8 @@ var (
 	signerAccount = accounts.Account{
 		Address: common.HexToAddress("53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"),
 	}
-	signerKey, _ = crypto.HexToECDSA("6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657")
+	signerChainID int64 = 1
+	signerKey, _        = crypto.HexToECDSA("6f88637b68ee88816e73f663aef709d7009836c98ae91ef31e3dfac7be3a1657")
 )
 
 func TestSigningMessageWithUnlockedAccount(t *testing.T) {
@@ -44,7 +45,7 @@ func TestSigningMessageWithUnlockedAccount(t *testing.T) {
 	}
 
 	manager := NewIdentityManager(ks, eventbus.New())
-	err := manager.Unlock(signerAddress, "")
+	err := manager.Unlock(signerChainID, signerAddress, "")
 	assert.NoError(t, err)
 
 	signer := NewSigner(ks, FromAddress(signerAddress))

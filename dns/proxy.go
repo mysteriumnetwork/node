@@ -35,10 +35,12 @@ type Proxy struct {
 func NewProxy(lhost string, lport int, handler dns.Handler) *Proxy {
 	return &Proxy{
 		server: &dns.Server{
-			Addr:      net.JoinHostPort(lhost, strconv.Itoa(lport)),
-			Net:       "udp",
-			ReusePort: true,
-			Handler:   handler,
+			Addr:         net.JoinHostPort(lhost, strconv.Itoa(lport)),
+			Net:          "udp",
+			ReadTimeout:  dnsTimeout,
+			WriteTimeout: dnsTimeout,
+			ReusePort:    true,
+			Handler:      handler,
 		},
 	}
 }

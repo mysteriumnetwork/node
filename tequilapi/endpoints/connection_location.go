@@ -23,41 +23,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// swagger:model LocationDTO
-type locationResponse struct {
-	// IP address
-	// example: 1.2.3.4
-	IP string `json:"ip"`
-	// Autonomous system number
-	// example: 62179
-	ASN int `json:"asn"`
-	// Internet Service Provider name
-	// example: Telia Lietuva, AB
-	ISP string `json:"isp"`
-
-	// Continent
-	// example: EU
-	Continent string `json:"continent"`
-	// Node Country
-	// example: LT
-	Country string `json:"country"`
-	// Node City
-	// example: Vilnius
-	City string `json:"city"`
-
-	// User type (data_center, residential, etc.)
-	// example: residential
-	UserType string `json:"user_type"`
-	// User type (DEPRECATED)
-	// example: residential
-	NodeType string `json:"node_type"`
-}
-
-func locationToRes(l location.Location) locationResponse {
-	return locationResponse{
+func locationToRes(l locationstate.Location) contract.LocationDTO {
+	return contract.LocationDTO{
 		IP:        l.IP,
 		ASN:       l.ASN,
 		ISP:       l.ISP,
@@ -114,7 +86,7 @@ func (le *ConnectionLocationEndpoint) GetConnectionIP(writer http.ResponseWriter
 		return
 	}
 
-	response := ipResponse{
+	response := contract.IPDTO{
 		IP: ipAddress,
 	}
 	utils.WriteAsJSON(response, writer)
@@ -159,11 +131,7 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	originLocation, err := le.locationOriginResolver.GetOrigin()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
-		return
-	}
+	originLocation := le.locationOriginResolver.GetOrigin()
 
 	utils.WriteAsJSON(locationToRes(originLocation), writer)
 }

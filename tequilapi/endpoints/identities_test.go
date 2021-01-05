@@ -25,6 +25,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/mocks"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +44,7 @@ var (
 type selectorFake struct {
 }
 
-func (hf *selectorFake) UseOrCreate(address, _ string) (identity.Identity, error) {
+func (hf *selectorFake) UseOrCreate(address, _ string, _ int64) (identity.Identity, error) {
 	if len(address) > 0 {
 		return identity.Identity{Address: address}, nil
 	}
@@ -94,6 +97,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 
 	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+	assert.Equal(t, int64(0), mockIdm.LastUnlockChainID)
 }
 
 func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
@@ -160,6 +164,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	assert.Equal(t, "0x000000000000000000000000000000000000000a", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+	assert.Equal(t, int64(0), mockIdm.LastUnlockChainID)
 }
 
 func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
@@ -244,4 +249,26 @@ func TestListIdentities(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
+}
+
+func Test_ReferralTokenGet(t *testing.T) {
+	router := httprouter.New()
+
+	server := newTestTransactorServer(http.StatusAccepted, `{"token":"yay-free-myst"}`)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
+	endpoint := &identitiesAPI{transactor: tr}
+	router.GET("/identities/:id/referral", endpoint.GetReferralToken)
+
+	tokenRequest := `{"identity": "0x0"}`
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/identities/0x0/referral",
+		bytes.NewBufferString(tokenRequest),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(t, `{"token":"yay-free-myst"}`, resp.Body.String())
 }

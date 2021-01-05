@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -26,12 +27,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config/remote"
+
 	"github.com/chzyer/readline"
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
+
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
@@ -39,11 +44,10 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
 )
 
-const cliCommandName = "cli"
+// CommandName is the name which is used to call this command
+const CommandName = "cli"
 
 const serviceHelp = `service <action> [args]
 	start	<ProviderID> <ServiceType> [options]
@@ -57,19 +61,26 @@ const serviceHelp = `service <action> [args]
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
-		Name:   cliCommandName,
-		Usage:  "Starts a CLI client with a Tequilapi",
-		Before: clicontext.LoadUserConfigQuietly,
+		Name:  CommandName,
+		Usage: "Starts a CLI client with a Tequilapi",
+		Flags: []cli.Flag{&config.FlagAgreedTermsConditions, &config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Action: func(ctx *cli.Context) error {
-			config.ParseFlagsNode(ctx)
-			nodeOptions := node.GetOptions()
-			cmdCLI := &cliApp{
-				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
-				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+
+			client, err := clio.NewTequilApiClient(ctx)
+			if err != nil {
+				return err
 			}
+
+			cfg, err := remote.NewConfig(client)
+			if err != nil {
+				return err
+			}
+
+			cmdCLI := newCliApp(cfg, client)
+
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
-			return describeQuit(cmdCLI.Run(ctx.Args()))
+			return describeQuit(cmdCLI.Run(ctx))
 		},
 	}
 }
@@ -83,8 +94,18 @@ func describeQuit(err error) error {
 	return err
 }
 
+func newCliApp(rc *remote.Config, client *tequilapi_client.Client) *cliApp {
+	dataDir := rc.GetStringByFlag(config.FlagDataDir)
+	return &cliApp{
+		config:      rc,
+		tequilapi:   client,
+		historyFile: filepath.Join(dataDir, ".cli_history"),
+	}
+}
+
 // cliApp describes CLI based Mysterium UI
 type cliApp struct {
+	config           *remote.Config
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
 	fetchedProposals []contract.ProposalDTO
@@ -98,22 +119,63 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
+var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
+
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
 	"type 'license --conditions'",
 ))
 
-// Run runs CLI interface synchronously, in the same thread while blocking it
-func (c *cliApp) Run(args cli.Args) (err error) {
-	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
-	c.fetchedProposals = c.fetchProposals()
-
-	if args.Len() > 0 {
-		c.handleActions(strings.Join(args.Slice(), " "))
+func (c *cliApp) handleTOS(ctx *cli.Context) error {
+	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
+		c.acceptTOS()
 		return nil
 	}
 
-	fmt.Println(versionSummary)
+	agreedC := c.config.GetBool(contract.TermsConsumerAgreed)
+
+	if !agreedC {
+		return errTermsNotAgreed
+	}
+
+	agreedP := c.config.GetBool(contract.TermsProviderAgreed)
+	if !agreedP {
+		return errTermsNotAgreed
+	}
+
+	version := c.config.GetString(contract.TermsVersion)
+	if version != metadata.CurrentTermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	}
+
+	return nil
+}
+
+func (c *cliApp) acceptTOS() {
+	t := true
+	if err := c.tequilapi.UpdateTerms(contract.TermsRequest{
+		AgreedConsumer: &t,
+		AgreedProvider: &t,
+		AgreedVersion:  metadata.CurrentTermsVersion,
+	}); err != nil {
+		clio.Info("Failed to save terms of use agreement, you will have to re-agree on next launch")
+	}
+}
+
+// Run runs CLI interface synchronously, in the same thread while blocking it
+func (c *cliApp) Run(ctx *cli.Context) (err error) {
+	if err := c.handleTOS(ctx); err != nil {
+		clio.PrintTOSError(err)
+		return nil
+	}
+
+	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
+	c.fetchedProposals = c.fetchProposals()
+
+	if ctx.Args().Len() > 0 {
+		c.handleActions(strings.Join(ctx.Args().Slice(), " "))
+		return nil
+	}
 
 	c.reader, err = readline.NewEx(&readline.Config{
 		Prompt:          fmt.Sprintf(redColor, "» "),
@@ -171,11 +233,14 @@ func (c *cliApp) handleActions(line string) {
 	}{
 		{"connect", c.connect},
 		{"identities", c.identities},
+		{"order", c.order},
 		{"payout", c.payout},
 		{"version", c.version},
 		{"license", c.license},
 		{"proposals", c.proposals},
 		{"service", c.service},
+		{"stake", c.stake},
+		{"mmn", c.mmnApiKey},
 	}
 
 	for _, cmd := range staticCmds {
@@ -230,7 +295,7 @@ func (c *cliApp) service(argsString string) {
 	case "sessions":
 		c.serviceSessions()
 	default:
-		info(fmt.Sprintf("Unknown action provided: %s", action))
+		clio.Info(fmt.Sprintf("Unknown action provided: %s", action))
 		fmt.Println(serviceHelp)
 	}
 }
@@ -238,7 +303,7 @@ func (c *cliApp) service(argsString string) {
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 	serviceOpts, err := parseStartFlags(serviceType, args...)
 	if err != nil {
-		info("Failed to parse service options:", err)
+		clio.Info("Failed to parse service options:", err)
 		return
 	}
 
@@ -253,11 +318,11 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		Options:        serviceOpts.TypeOptions,
 	})
 	if err != nil {
-		info("Failed to start service: ", err)
+		clio.Info("Failed to start service: ", err)
 		return
 	}
 
-	status(service.Status,
+	clio.Status(service.Status,
 		"ID: "+service.ID,
 		"ProviderID: "+service.Proposal.ProviderID,
 		"Type: "+service.Proposal.ServiceType)
@@ -265,22 +330,22 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 
 func (c *cliApp) serviceStop(id string) {
 	if err := c.tequilapi.ServiceStop(id); err != nil {
-		info("Failed to stop service: ", err)
+		clio.Info("Failed to stop service: ", err)
 		return
 	}
 
-	status("Stopping", "ID: "+id)
+	clio.Status("Stopping", "ID: "+id)
 }
 
 func (c *cliApp) serviceList() {
 	services, err := c.tequilapi.Services()
 	if err != nil {
-		info("Failed to get a list of services: ", err)
+		clio.Info("Failed to get a list of services: ", err)
 		return
 	}
 
 	for _, service := range services {
-		status(service.Status,
+		clio.Status(service.Status,
 			"ID: "+service.ID,
 			"ProviderID: "+service.Proposal.ProviderID,
 			"Type: "+service.Proposal.ServiceType)
@@ -288,26 +353,31 @@ func (c *cliApp) serviceList() {
 }
 
 func (c *cliApp) serviceSessions() {
-	sessions, err := c.tequilapi.ServiceSessions()
+	sessions, err := c.tequilapi.Sessions()
 	if err != nil {
-		info("Failed to get a list of sessions: ", err)
+		clio.Info("Failed to get a list of sessions: ", err)
 		return
 	}
 
-	status("Current sessions", len(sessions.Sessions))
-	for _, session := range sessions.Sessions {
-		status("ID: "+session.ID, "ConsumerID: "+session.ConsumerID)
+	clio.Status("Current sessions", len(sessions.Items))
+	for _, session := range sessions.Items {
+		clio.Status(
+			"ID: "+session.ID,
+			"ConsumerID: "+session.ConsumerID,
+			fmt.Sprintf("Data: %s/%s", datasize.FromBytes(session.BytesReceived).String(), datasize.FromBytes(session.BytesSent).String()),
+			fmt.Sprintf("Tokens: %s", money.New(session.Tokens)),
+		)
 	}
 }
 
 func (c *cliApp) serviceGet(id string) {
 	service, err := c.tequilapi.Service(id)
 	if err != nil {
-		info("Failed to get service info: ", err)
+		clio.Info("Failed to get service info: ", err)
 		return
 	}
 
-	status(service.Status,
+	clio.Status(service.Status,
 		"ID: "+service.ID,
 		"ProviderID: "+service.Proposal.ProviderID,
 		"Type: "+service.Proposal.ServiceType)
@@ -318,11 +388,16 @@ func (c *cliApp) connect(argsString string) {
 
 	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [dns=auto|provider|system|1.1.1.1] [disable-kill-switch]"
 	if len(args) < 3 {
-		info(helpMsg)
+		clio.Info(helpMsg)
 		return
 	}
 
 	consumerID, providerID, serviceType := args[0], args[1], args[2]
+
+	if !services.IsTypeValid(serviceType) {
+		clio.Warn(fmt.Sprintf("Invalid service type, expected one of: %s", strings.Join(services.Types(), ",")))
+		return
+	}
 
 	var disableKillSwitch bool
 	var dns connection.DNSOption
@@ -332,8 +407,8 @@ func (c *cliApp) connect(argsString string) {
 			kv := strings.Split(arg, "=")
 			dns, err = connection.NewDNSOption(kv[1])
 			if err != nil {
-				warn("Invalid value: ", err)
-				info(helpMsg)
+				clio.Warn("Invalid value: ", err)
+				clio.Info(helpMsg)
 				return
 			}
 			continue
@@ -342,8 +417,8 @@ func (c *cliApp) connect(argsString string) {
 		case "disable-kill-switch":
 			disableKillSwitch = true
 		default:
-			warn("Unexpected arg:", arg)
-			info(helpMsg)
+			clio.Warn("Unexpected arg:", arg)
+			clio.Info(helpMsg)
 			return
 		}
 	}
@@ -353,28 +428,24 @@ func (c *cliApp) connect(argsString string) {
 		DisableKillSwitch: disableKillSwitch,
 	}
 
-	if consumerID == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
-		if err != nil {
-			warn(err)
-			return
-		}
-		consumerID = id.Address
-		success("New identity created:", consumerID)
-	}
+	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	status("CONNECTING", "from:", consumerID, "to:", providerID)
+	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
 
-	accountantID := config.GetString(config.FlagAccountantID)
-	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, accountantID, serviceType, connectOptions)
+	// Dont throw an error here incase user identity has a password on it
+	// or we failed to randomly unlock it. We can still try to connect
+	// if identity it locked, it will notify us anyway.
+	_ = c.tequilapi.Unlock(consumerID, "")
+
+	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, hermesID, serviceType, connectOptions)
 	if err != nil {
-		warn(err)
+		clio.Error(err)
 		return
 	}
 
 	c.currentConsumerID = consumerID
 
-	success("Connected.")
+	clio.Success("Connected.")
 }
 
 func (c *cliApp) payout(argsString string) {
@@ -382,7 +453,7 @@ func (c *cliApp) payout(argsString string) {
 
 	const usage = "payout command:\n    set"
 	if len(args) == 0 {
-		info(usage)
+		clio.Info(usage)
 		return
 	}
 
@@ -391,7 +462,7 @@ func (c *cliApp) payout(argsString string) {
 	case "set":
 		payoutSignature := "payout set <identity> <ethAddress>"
 		if len(args) < 2 {
-			info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
+			clio.Info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
 			return
 		}
 
@@ -399,68 +470,93 @@ func (c *cliApp) payout(argsString string) {
 		if len(args) > 2 {
 			identity, ethAddress = args[1], args[2]
 		} else {
-			info("Please type in identity and Ethereum address.\n", payoutSignature)
+			clio.Info("Please type in identity and Ethereum address.\n", payoutSignature)
 			return
 		}
 
 		err := c.tequilapi.Payout(identity, ethAddress)
 		if err != nil {
-			warn(err)
+			clio.Warn(err)
 			return
 		}
 
-		success(fmt.Sprintf("Payout address %s registered.", ethAddress))
+		clio.Success(fmt.Sprintf("Payout address %s registered.", ethAddress))
 	default:
-		warnf("Unknown sub-command '%s'\n", action)
+		clio.Warnf("Unknown sub-command '%s'\n", action)
 		fmt.Println(usage)
 		return
 	}
 }
 
+func (c *cliApp) mmnApiKey(argsString string) {
+	args := strings.Fields(argsString)
+
+	var profileUrl = c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
+	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
+
+	if len(args) == 0 {
+		clio.Info(usage)
+		return
+	}
+
+	apiKey := args[0]
+
+	err := c.tequilapi.SetMMNApiKey(contract.MMNApiKeyRequest{
+		ApiKey: apiKey,
+	})
+
+	if err != nil {
+		clio.Warn(err)
+		return
+	}
+
+	clio.Success(fmt.Sprint("MMN API key configured."))
+}
+
 func (c *cliApp) disconnect() {
 	err := c.tequilapi.ConnectionDestroy()
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return
 	}
 	c.currentConsumerID = ""
-	success("Disconnected.")
+	clio.Success("Disconnected.")
 }
 
 func (c *cliApp) status() {
 	status, err := c.tequilapi.ConnectionStatus()
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 	} else {
-		info("Status:", status.Status)
-		info("SID:", status.SessionID)
+		clio.Info("Status:", status.Status)
+		clio.Info("SID:", status.SessionID)
 	}
 
 	ip, err := c.tequilapi.ConnectionIP()
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 	} else {
-		info("IP:", ip)
+		clio.Info("IP:", ip.IP)
 	}
 
 	location, err := c.tequilapi.ConnectionLocation()
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 	} else {
-		info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+		clio.Info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
 	}
 
 	if status.Status == statusConnected {
-		info("Proposal:", status.Proposal)
+		clio.Info("Proposal:", status.Proposal)
 
 		statistics, err := c.tequilapi.ConnectionStatistics()
 		if err != nil {
-			warn(err)
+			clio.Warn(err)
 		} else {
-			info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)*time.Second))
-			info(fmt.Sprintf("Data: %s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
-			info(fmt.Sprintf("Throughput: %s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
-			info(fmt.Sprintf("Spent: %s", money.NewMoney(statistics.TokensSpent, money.CurrencyMyst)))
+			clio.Info(fmt.Sprintf("Connection duration: %s", time.Duration(statistics.Duration)*time.Second))
+			clio.Info(fmt.Sprintf("Data: %s/%s", datasize.FromBytes(statistics.BytesReceived), datasize.FromBytes(statistics.BytesSent)))
+			clio.Info(fmt.Sprintf("Throughput: %s/%s", datasize.BitSpeed(statistics.ThroughputReceived), datasize.BitSpeed(statistics.ThroughputSent)))
+			clio.Info(fmt.Sprintf("Spent: %s", money.New(statistics.TokensSpent)))
 		}
 	}
 }
@@ -468,28 +564,28 @@ func (c *cliApp) status() {
 func (c *cliApp) healthcheck() {
 	healthcheck, err := c.tequilapi.Healthcheck()
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return
 	}
 
-	info(fmt.Sprintf("Uptime: %v", healthcheck.Uptime))
-	info(fmt.Sprintf("Process: %v", healthcheck.Process))
-	info(fmt.Sprintf("Version: %v", healthcheck.Version))
+	clio.Info(fmt.Sprintf("Uptime: %v", healthcheck.Uptime))
+	clio.Info(fmt.Sprintf("Process: %v", healthcheck.Process))
+	clio.Info(fmt.Sprintf("Version: %v", healthcheck.Version))
 	buildString := metadata.FormatString(healthcheck.BuildInfo.Commit, healthcheck.BuildInfo.Branch, healthcheck.BuildInfo.BuildNumber)
-	info(buildString)
+	clio.Info(buildString)
 }
 
 func (c *cliApp) natStatus() {
 	status, err := c.tequilapi.NATStatus()
 	if err != nil {
-		warn("Failed to retrieve NAT traversal status:", err)
+		clio.Warn("Failed to retrieve NAT traversal status:", err)
 		return
 	}
 
 	if status.Error == "" {
-		infof("NAT traversal status: %q\n", status.Status)
+		clio.Infof("NAT traversal status: %q\n", status.Status)
 	} else {
-		infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
+		clio.Infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
 	}
 }
 
@@ -501,7 +597,7 @@ func (c *cliApp) proposals(filter string) {
 	if filter != "" {
 		filterMsg = fmt.Sprintf("(filter: '%s')", filter)
 	}
-	info(fmt.Sprintf("Found %v proposals %s", len(proposals), filterMsg))
+	clio.Info(fmt.Sprintf("Found %v proposals %s", len(proposals), filterMsg))
 
 	for _, proposal := range proposals {
 		country := proposal.ServiceDefinition.LocationOriginate.Country
@@ -522,19 +618,19 @@ func (c *cliApp) proposals(filter string) {
 			strings.Contains(proposal.ProviderID, filter) ||
 			strings.Contains(country, filter) {
 
-			info(msg)
+			clio.Info(msg)
 		}
 	}
 }
 
 func (c *cliApp) fetchProposals() []contract.ProposalDTO {
-	upperTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
-	lowerTimeBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
-	upperGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBUpperBound)
-	lowerGBBound := config.GetUInt64(config.FlagPaymentsConsumerPricePerGBLowerBound)
+	upperTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteUpperBound)
+	lowerTimeBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerMinuteLowerBound)
+	upperGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBUpperBound)
+	lowerGBBound := c.config.GetBigIntByFlag(config.FlagPaymentsConsumerPricePerGBLowerBound)
 	proposals, err := c.tequilapi.ProposalsByPrice(lowerTimeBound, upperTimeBound, lowerGBBound, upperGBBound)
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return []contract.ProposalDTO{}
 	}
 	return proposals
@@ -543,15 +639,15 @@ func (c *cliApp) fetchProposals() []contract.ProposalDTO {
 func (c *cliApp) location() {
 	location, err := c.tequilapi.OriginLocation()
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return
 	}
 
-	info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+	clio.Info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
 }
 
 func (c *cliApp) help() {
-	info("Mysterium CLI commands:")
+	clio.Info("Mysterium CLI commands:")
 	fmt.Println(c.completer.Tree("  "))
 }
 
@@ -564,9 +660,9 @@ func (c *cliApp) quit() {
 func (c *cliApp) stopClient() {
 	err := c.tequilapi.Stop()
 	if err != nil {
-		warn("Cannot stop client:", err)
+		clio.Warn("Cannot stop client:", err)
 	}
-	success("Client stopped")
+	clio.Success("Client stopped")
 }
 
 func (c *cliApp) version(argsString string) {
@@ -579,7 +675,7 @@ func (c *cliApp) license(argsString string) {
 	} else if argsString == "conditions" {
 		fmt.Print(metadata.LicenseConditions)
 	} else {
-		info("identities command:\n    warranty\n    conditions")
+		clio.Info("identities command:\n    warranty\n    conditions")
 	}
 }
 
@@ -588,7 +684,7 @@ func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []st
 		var identities []string
 		ids, err := tequilapi.GetIdentities()
 		if err != nil {
-			warn(err)
+			clio.Warn(err)
 			return identities
 		}
 		for _, id := range ids {
@@ -649,16 +745,28 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("new"),
 			readline.PcItem("unlock", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("register", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
-			readline.PcItem("topup", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("beneficiary", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("settle", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("referralcode", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 		),
 		readline.PcItem("status"),
+		readline.PcItem(
+			"stake",
+			readline.PcItem("increase"),
+			readline.PcItem("decrease"),
+		),
+		readline.PcItem("orders",
+			readline.PcItem("create"),
+			readline.PcItem("get"),
+			readline.PcItem("get-all"),
+			readline.PcItem("currencies"),
+		),
 		readline.PcItem("healthcheck"),
 		readline.PcItem("nat"),
 		readline.PcItem("proposals"),
 		readline.PcItem("location"),
 		readline.PcItem("disconnect"),
+		readline.PcItem("mmn"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
 		readline.PcItem("stop"),

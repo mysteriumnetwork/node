@@ -18,87 +18,36 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pb"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
-	"github.com/mysteriumnetwork/node/trace"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
 )
 
-func subscribeSessionCreate(mng *session.Manager, ch p2p.Channel, service Service) {
+func subscribeSessionCreate(mng *SessionManager, ch p2p.Channel) {
 	ch.Handle(p2p.TopicSessionCreate, func(c p2p.Context) error {
-		tracer := trace.NewTracer()
-		sessionCreateTrace := tracer.StartStage("Whole session create")
-
-		defer func() {
-			tracer.EndStage(sessionCreateTrace)
-			traceResult := tracer.Finish()
-			log.Debug().Msgf("Provider connection trace: %s", traceResult)
-		}()
-
-		sessionStartTrace := tracer.StartStage("Session start")
-		var sr pb.SessionRequest
-		if err := c.Request().UnmarshalProto(&sr); err != nil {
+		var request pb.SessionRequest
+		if err := c.Request().UnmarshalProto(&request); err != nil {
 			return err
 		}
-		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, sr.String())
+		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicSessionCreate, request.String())
 
-		consumerID := identity.FromAddress(sr.GetConsumer().GetId())
-		consumerConfig := sr.GetConfig()
-		consumerInfo := session.ConsumerInfo{
-			IssuerID:       consumerID,
-			AccountantID:   identity.FromAddress(sr.GetConsumer().GetAccountantID()),
-			PaymentVersion: session.PaymentVersion(sr.GetConsumer().GetPaymentVersion()),
-		}
-
-		paymentVersion := string(session.PaymentVersionV3)
-		session, err := session.NewSession()
+		response, err := mng.Start(&request)
 		if err != nil {
-			return fmt.Errorf("cannot create new session: %w", err)
+			return fmt.Errorf("cannot start session: %s: %w", response.ID, err)
 		}
 
-		err = mng.Start(session, consumerID, consumerInfo, int(sr.GetProposalID()))
-		if err != nil {
-			return fmt.Errorf("cannot start session %s: %w", string(session.ID), err)
-		}
-		tracer.EndStage(sessionStartTrace)
-
-		provideConfigTrace := tracer.StartStage("Provide config")
-		config, err := service.ProvideConfig(string(session.ID), consumerConfig, ch.ServiceConn())
-		if err != nil {
-			return fmt.Errorf("cannot get provider config for session %s: %w", string(session.ID), err)
-		}
-		tracer.EndStage(provideConfigTrace)
-
-		if config.SessionDestroyCallback != nil {
-			go func() {
-				<-session.Done()
-				config.SessionDestroyCallback()
-			}()
-		}
-
-		data, err := json.Marshal(config.SessionServiceConfig)
-		if err != nil {
-			return fmt.Errorf("cannot pack session %s service config: %w", string(session.ID), err)
-		}
-
-		pc := p2p.ProtoMessage(&pb.SessionResponse{
-			ID:          string(session.ID),
-			PaymentInfo: paymentVersion,
-			Config:      data,
-		})
-
-		return c.OkWithReply(pc)
+		return c.OkWithReply(p2p.ProtoMessage(&response))
 	})
 }
 
-func subscribeSessionStatus(mng *session.Manager, ch p2p.ChannelHandler, statusStorage connectivity.StatusStorage) {
+func subscribeSessionStatus(ch p2p.ChannelHandler, statusStorage connectivity.StatusStorage) {
 	ch.Handle(p2p.TopicSessionStatus, func(c p2p.Context) error {
 		var ss pb.SessionStatus
 		if err := c.Request().UnmarshalProto(&ss); err != nil {
@@ -119,7 +68,7 @@ func subscribeSessionStatus(mng *session.Manager, ch p2p.ChannelHandler, statusS
 	})
 }
 
-func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done func()) {
+func subscribeSessionDestroy(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicSessionDestroy, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
@@ -135,15 +84,13 @@ func subscribeSessionDestroy(mng *session.Manager, ch p2p.ChannelHandler, done f
 			if err != nil {
 				log.Err(err).Msgf("Could not destroy session %s: %v", sessionID, err)
 			}
-
-			done()
 		}()
 
 		return c.OK()
 	})
 }
 
-func subscribeSessionAcknowledge(mng *session.Manager, ch p2p.ChannelHandler) {
+func subscribeSessionAcknowledge(mng *SessionManager, ch p2p.ChannelHandler) {
 	ch.Handle(p2p.TopicSessionAcknowledge, func(c p2p.Context) error {
 		var si pb.SessionInfo
 		if err := c.Request().UnmarshalProto(&si); err != nil {
@@ -159,5 +106,57 @@ func subscribeSessionAcknowledge(mng *session.Manager, ch p2p.ChannelHandler) {
 		}
 
 		return c.OK()
+	})
+}
+
+const bigIntBase int = 10
+
+func subscribeSessionPayments(mng *SessionManager, ch p2p.ChannelHandler) {
+	ch.Handle(p2p.TopicPaymentMessage, func(c p2p.Context) error {
+		var msg pb.ExchangeMessage
+		if err := c.Request().UnmarshalProto(&msg); err != nil {
+			return fmt.Errorf("could not unmarshal exchange message proto: %w", err)
+		}
+		log.Debug().Msgf("Received P2P message for %q: %s", p2p.TopicPaymentMessage, msg.String())
+
+		amount, ok := new(big.Int).SetString(msg.GetPromise().GetAmount(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field amount of value %v", amount)
+		}
+
+		fee, ok := new(big.Int).SetString(msg.GetPromise().GetFee(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field fee of value %v", fee)
+		}
+
+		agreementID, ok := new(big.Int).SetString(msg.GetAgreementID(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementID of value %v", agreementID)
+		}
+
+		agreementTotal, ok := new(big.Int).SetString(msg.GetAgreementTotal(), bigIntBase)
+		if !ok {
+			return fmt.Errorf("could not unmarshal field agreementTotal of value %v", agreementTotal)
+		}
+
+		mng.paymentEngineChan <- crypto.ExchangeMessage{
+			Promise: crypto.Promise{
+				ChannelID: msg.GetPromise().GetChannelID(),
+				Amount:    amount,
+				Fee:       fee,
+				Hashlock:  msg.GetPromise().GetHashlock(),
+				R:         msg.GetPromise().GetR(),
+				Signature: msg.GetPromise().GetSignature(),
+				ChainID:   msg.GetPromise().GetChainID(),
+			},
+			AgreementID:    agreementID,
+			AgreementTotal: agreementTotal,
+			Provider:       msg.GetProvider(),
+			Signature:      msg.GetSignature(),
+			HermesID:       msg.GetHermesID(),
+			ChainID:        msg.GetChainID(),
+		}
+
+		return nil
 	})
 }

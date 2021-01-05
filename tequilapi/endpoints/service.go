@@ -33,34 +33,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// swagger:model ServiceListDTO
-type serviceList []serviceInfo
-
-// swagger:model ServiceInfoDTO
-type serviceInfo struct {
-	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-	ID string `json:"id"`
-
-	// provider identity
-	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
-
-	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// example: openvpn
-	Type string `json:"type"`
-
-	// options with which service was started. Every service has a unique list of allowed options.
-	// example: {"port": 1123, "protocol": "udp"}
-	Options interface{} `json:"options"`
-
-	// example: Running
-	Status string `json:"status"`
-
-	Proposal contract.ProposalDTO `json:"proposal"`
-
-	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
-}
-
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
@@ -83,7 +55,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 }
 
 // ServiceList provides a list of running services on the node.
-// swagger:operation GET /services Service serviceList
+// swagger:operation GET /services Service ServiceListResponse
 // ---
 // summary: List of services
 // description: ServiceList provides a list of running services on the node.
@@ -91,7 +63,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //   200:
 //     description: List of running services
 //     schema:
-//       "$ref": "#/definitions/ServiceListDTO"
+//       "$ref": "#/definitions/ServiceListResponse"
 func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	instances := se.serviceManager.List()
 
@@ -234,8 +206,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 
 func (se *ServiceEndpoint) isAlreadyRunning(sr contract.ServiceStartRequest) bool {
 	for _, instance := range se.serviceManager.List() {
-		proposal := instance.Proposal()
-		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.Type {
+		if instance.ProviderID.Address == sr.ProviderID && instance.Type == sr.Type {
 			return true
 		}
 	}
@@ -315,20 +286,19 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 	return options
 }
 
-func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
-	proposal := instance.Proposal()
-	return serviceInfo{
+func toServiceInfoResponse(id service.ID, instance *service.Instance) contract.ServiceInfoDTO {
+	return contract.ServiceInfoDTO{
 		ID:         string(id),
-		ProviderID: proposal.ProviderID,
-		Type:       proposal.ServiceType,
-		Options:    instance.Options(),
+		ProviderID: instance.ProviderID.Address,
+		Type:       instance.Type,
+		Options:    instance.Options,
 		Status:     string(instance.State()),
-		Proposal:   contract.NewProposalDTO(instance.Proposal()),
+		Proposal:   contract.NewProposalDTO(instance.Proposal),
 	}
 }
 
-func toServiceListResponse(instances map[service.ID]*service.Instance) serviceList {
-	res := make([]serviceInfo, 0)
+func toServiceListResponse(instances map[service.ID]*service.Instance) contract.ServiceListResponse {
+	res := make([]contract.ServiceInfoDTO, 0)
 	for id, instance := range instances {
 		res = append(res, toServiceInfoResponse(id, instance))
 	}

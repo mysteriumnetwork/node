@@ -27,17 +27,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/tun"
+
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun"
 )
 
 const (
@@ -72,7 +74,7 @@ func NewWireGuardConnection(opts wireGuardOptions, device wireguardDevice, ipRes
 
 	return &wireguardConnection{
 		done:            make(chan struct{}),
-		stateCh:         make(chan connection.State, 100),
+		stateCh:         make(chan connectionstate.State, 100),
 		opts:            opts,
 		device:          device,
 		privateKey:      privateKey,
@@ -85,7 +87,7 @@ type wireguardConnection struct {
 	ports           []int
 	closeOnce       sync.Once
 	done            chan struct{}
-	stateCh         chan connection.State
+	stateCh         chan connectionstate.State
 	opts            wireGuardOptions
 	privateKey      string
 	device          wireguardDevice
@@ -95,16 +97,16 @@ type wireguardConnection struct {
 
 var _ connection.Connection = &wireguardConnection{}
 
-func (c *wireguardConnection) State() <-chan connection.State {
+func (c *wireguardConnection) State() <-chan connectionstate.State {
 	return c.stateCh
 }
 
-func (c *wireguardConnection) Statistics() (connection.Statistics, error) {
+func (c *wireguardConnection) Statistics() (connectionstate.Statistics, error) {
 	stats, err := c.device.Stats()
 	if err != nil {
-		return connection.Statistics{}, err
+		return connectionstate.Statistics{}, err
 	}
-	return connection.Statistics{
+	return connectionstate.Statistics{
 		At:            time.Now(),
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
@@ -118,7 +120,7 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 		return errors.Wrap(err, "could not parse wireguard session config")
 	}
 
-	c.stateCh <- connection.Connecting
+	c.stateCh <- connectionstate.Connecting
 
 	defer func() {
 		if err != nil {
@@ -141,20 +143,15 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 	}
 
 	log.Debug().Msg("Connected successfully")
-	c.stateCh <- connection.Connected
-	return nil
-}
-
-func (c *wireguardConnection) Wait() error {
-	<-c.done
+	c.stateCh <- connectionstate.Connected
 	return nil
 }
 
 func (c *wireguardConnection) Stop() {
 	c.closeOnce.Do(func() {
-		c.stateCh <- connection.Disconnecting
+		c.stateCh <- connectionstate.Disconnecting
 		c.device.Stop()
-		c.stateCh <- connection.NotConnected
+		c.stateCh <- connectionstate.NotConnected
 
 		close(c.stateCh)
 		close(c.done)
@@ -299,7 +296,7 @@ func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, co
 	log.Info().Msgf("Tun value is: %d", fd)
 	tunDevice, err := newDeviceFromFd(fd)
 	if err == nil {
-		//non-fatal
+		// non-fatal
 		name, nameErr := tunDevice.Name()
 		log.Info().Err(nameErr).Msg("Name value: " + name)
 	}

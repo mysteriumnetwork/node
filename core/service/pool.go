@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/policy"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/utils"
@@ -31,11 +32,6 @@ import (
 
 // ID represent unique identifier of the running service.
 type ID string
-
-// RunnableService represents a runnable service
-type RunnableService interface {
-	Stop() error
-}
 
 // Pool is responsible for supervising running instances
 type Pool struct {
@@ -62,7 +58,7 @@ func (p *Pool) Add(instance *Instance) {
 	p.Lock()
 	defer p.Unlock()
 
-	p.instances[instance.id] = instance
+	p.instances[instance.ID] = instance
 }
 
 // Del removes a service from running instances pool
@@ -123,31 +119,37 @@ func (p *Pool) Instance(id ID) *Instance {
 
 // NewInstance creates new instance of the service.
 func NewInstance(
+	providerID identity.Identity,
+	serviceType string,
 	options Options,
-	state servicestate.State,
-	service RunnableService,
 	proposal market.ServiceProposal,
+	state servicestate.State,
+	service Service,
 	policies *policy.Repository,
 	discovery Discovery,
 ) *Instance {
 	return &Instance{
-		options:   options,
-		state:     state,
-		service:   service,
-		proposal:  proposal,
-		policies:  policies,
-		discovery: discovery,
+		ProviderID: providerID,
+		Type:       serviceType,
+		Options:    options,
+		Proposal:   proposal,
+		state:      state,
+		service:    service,
+		policies:   policies,
+		discovery:  discovery,
 	}
 }
 
 // Instance represents a run service
 type Instance struct {
-	id              ID
+	ID              ID
 	state           servicestate.State
 	stateLock       sync.RWMutex
-	options         Options
-	service         RunnableService
-	proposal        market.ServiceProposal
+	ProviderID      identity.Identity
+	Type            string
+	Options         Options
+	service         Service
+	Proposal        market.ServiceProposal
 	policies        *policy.Repository
 	discovery       Discovery
 	eventPublisher  Publisher
@@ -155,14 +157,9 @@ type Instance struct {
 	p2pChannels     []p2p.Channel
 }
 
-// Options returns options used to start service
-func (i *Instance) Options() Options {
-	return i.options
-}
-
-// Proposal returns service proposal of the running service instance.
-func (i *Instance) Proposal() market.ServiceProposal {
-	return i.proposal
+// Service returns the running service implementation.
+func (i *Instance) Service() Service {
+	return i.service
 }
 
 // Policies returns service policies of the running service instance.
@@ -230,9 +227,9 @@ func (i *Instance) stop() error {
 // toEvent returns an event representation of the instance
 func (i *Instance) toEvent() servicestate.AppEventServiceStatus {
 	return servicestate.AppEventServiceStatus{
-		ID:         string(i.id),
-		ProviderID: i.proposal.ProviderID,
-		Type:       i.proposal.ServiceType,
+		ID:         string(i.ID),
+		ProviderID: i.Proposal.ProviderID,
+		Type:       i.Proposal.ServiceType,
 		Status:     string(i.state),
 	}
 }

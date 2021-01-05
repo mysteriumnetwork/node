@@ -23,7 +23,8 @@ function install_initd {
 
 function install_systemd {
     printf "Installing systemd script '$OS_DIR_SYSTEMD/mysterium-node.service'..\n" \
-        && cp -f $OS_DIR_INSTALLATION/systemd.service $OS_DIR_SYSTEMD/mysterium-node.service \
+        && cp -f $OS_DIR_INSTALLATION/mysterium-node.service $OS_DIR_SYSTEMD/mysterium-node.service \
+        && cp -f $OS_DIR_INSTALLATION/mysterium-consumer.service $OS_DIR_SYSTEMD/mysterium-consumer.service \
         && systemctl enable systemd-networkd.service \
         && systemctl enable mysterium-node \
         && systemctl restart mysterium-node
@@ -69,17 +70,22 @@ printf "Creating directories...\n" \
 printf "Setting required capabilities...\n" \
     && setcap cap_net_admin+ep /usr/bin/myst
 
-# Remove legacy symlink, if it exists
-if [[ -L $OS_DIR_INITD/mysterium-node ]]; then
-    rm -f $OS_DIR_INITD/mysterium-node
+ensure_paths
+
+# Add defaults file, if it doesn't exist
+if [[ ! -f $DAEMON_DEFAULT ]]; then
+    cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
 fi
+
+printf "\nInstallation successfully finished.\n" \
+    && printf "Usage: service mysterium-node restart\n"
 
 # Distribution-specific logic
 if [[ -f /etc/redhat-release ]]; then
     # RHEL-variant logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-    	install_systemd
+    	install_systemd || echo "got an error, ignoring - probably systemd-spawn issue"
     else
 	    # Assuming sysv
 	    install_initd
@@ -89,7 +95,7 @@ elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-    	install_systemd
+    	install_systemd || echo "got an error, ignoring - probably systemd-spawn issue"
     else
 	    # Assuming sysv
     	install_initd
@@ -103,28 +109,3 @@ elif [[ -f /etc/os-release ]]; then
     	install_chkconfig
     fi
 fi
-
-ensure_paths
-
-# Add defaults file, if it doesn't exist
-if [[ ! -f $DAEMON_DEFAULT ]]; then
-    cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
-else
-    # TODO remove these hacks when all nodes updates
-    sed -i -e 's/SERVICE_OPTS="openvpn"/SERVICE_OPTS="openvpn,wireguard"/g' /etc/default/mysterium-node
-    sed -i -e 's/--tequilapi.address=0.0.0.0/--tequilapi.address=127.0.0.1/g' /etc/default/mysterium-node
-    # Append script-dir for existing installations only if missing
-    sed -i -e '/^\(SCRIPT_DIR=\).*/{s//\1\"--script-dir=\/etc\/mysterium-node\"/;:a;n;ba;q}' \
-           -e '$aSCRIPT_DIR="--script-dir=/etc/mysterium-node"' /etc/default/mysterium-node
-fi
-
-# TODO: remove me when all nodes updates
-printf "Ensuring that sudoers config is consistent...\n" \
-    && sed -i -e 's| /sbin/iptables/| /usr/sbin/iptables|g' /etc/sudoers.d/mysterium-node
-
-# Cleanup old log files (before log file rolling has been fixed)
-printf "Cleaning legacy log files...\n" \
-    && rm -rf /var/lib/mysterium-node/.mysterium.log*
-
-printf "\nInstallation successfully finished.\n" \
-    && printf "Usage: service mysterium-node restart\n"

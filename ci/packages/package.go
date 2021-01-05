@@ -175,6 +175,10 @@ func PackageAndroid() error {
 	if err != nil {
 		return err
 	}
+
+	buildVersion := env.Str(env.BuildVersion)
+	log.Info().Msgf("Package Android SDK version: %s", buildVersion)
+
 	pomFileOut, err := os.Create("build/package/mvn.pom")
 	if err != nil {
 		return err
@@ -184,11 +188,12 @@ func PackageAndroid() error {
 	err = pomTemplate.Execute(pomFileOut, struct {
 		BuildVersion string
 	}{
-		BuildVersion: env.Str(env.BuildVersion),
+		BuildVersion: buildVersion,
 	})
 	if err != nil {
 		return err
 	}
+
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
@@ -204,21 +209,6 @@ func PackageDockerAlpine() error {
 	return env.IfRelease(storage.UploadDockerImages)
 }
 
-// PackageDockerUbuntu builds and stores docker ubuntu image
-func PackageDockerUbuntu() error {
-	logconfig.Bootstrap()
-	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
-		return err
-	}
-	if err := sh.RunV("bin/package_docker_ubuntu", env.Str(env.BuildVersion)); err != nil {
-		return err
-	}
-	if err := saveDockerImage("myst:ubuntu", "build/docker-images/myst_ubuntu.tgz"); err != nil {
-		return err
-	}
-	return env.IfRelease(storage.UploadDockerImages)
-}
-
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
 func PackageDockerSwaggerRedoc() error {
 	logconfig.Bootstrap()
@@ -226,9 +216,6 @@ func PackageDockerSwaggerRedoc() error {
 		return err
 	}
 
-	if err := sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models"); err != nil {
-		return err
-	}
 	if err := sh.RunV("bin/package_docker_docs"); err != nil {
 		return err
 	}
@@ -236,7 +223,7 @@ func PackageDockerSwaggerRedoc() error {
 		return err
 	}
 	return env.IfRelease(func() error {
-		if err := storage.UploadSingleArtifact("tequilapi.json"); err != nil {
+		if err := storage.UploadSingleArtifact("tequilapi/docs/swagger.json"); err != nil {
 			return err
 		}
 		if err := storage.UploadDockerImages(); err != nil {

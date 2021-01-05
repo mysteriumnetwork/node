@@ -19,21 +19,32 @@ package node
 
 import "time"
 
-// DiscoveryType identifies proposal discovery provider
+// DiscoveryType identifies proposal discovery provider.
 type DiscoveryType string
 
 const (
-	// DiscoveryTypeAPI defines type which discovers proposals through Mysterium API
+	// DiscoveryTypeAPI defines type which discovers proposals through Mysterium API.
 	DiscoveryTypeAPI = DiscoveryType("api")
-	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
+	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication).
 	DiscoveryTypeBroker = DiscoveryType("broker")
+	// DiscoveryTypeDHT defines type which discovers proposals through DHT (Distributed Hash Table).
+	DiscoveryTypeDHT = DiscoveryType("dht")
 )
 
-// OptionsDiscovery describes possible parameters of discovery configuration
+// OptionsDiscovery describes possible parameters of discovery configuration.
 type OptionsDiscovery struct {
 	Types         []DiscoveryType
 	Address       string
 	PingInterval  time.Duration
 	FetchEnabled  bool
 	FetchInterval time.Duration
+	DHT           OptionsDHT
+}
+
+// OptionsDHT describes possible parameters of DHT configuration.
+type OptionsDHT struct {
+	Address        string
+	Port           int
+	Protocol       string
+	BootstrapPeers []string
 }

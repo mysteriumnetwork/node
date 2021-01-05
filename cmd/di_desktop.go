@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -42,11 +43,11 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
@@ -133,7 +134,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			transportOptions,
 			loc.Country,
 			di.IPResolver,
-			di.ServiceSessionStorage,
+			di.ServiceSessions,
 			di.NATService,
 			di.NATTracker,
 			portPool,
@@ -166,38 +167,59 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 
 	cfg := registry.ProviderRegistrarConfig{
+		IsTestnet2:          nodeOptions.OptionsNetwork.Testnet2,
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
-		AccountantAddress:   common.HexToAddress(nodeOptions.Accountant.AccountantID),
+		HermesAddress:       common.HexToAddress(nodeOptions.Hermes.HermesID),
 		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.MysteriumAPI, di.SignerFactory, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
-func (di *Dependencies) bootstrapAccountantPromiseSettler(nodeOptions node.Options) error {
+func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
+	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(
+		di.HermesPromiseStorage,
+		di.BCHelper,
+		di.EventBus,
+		common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+	)
+
+	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
+		log.Error().Err(err).Msg("Failed to subscribe channel repository")
+		return errors.Wrap(err, "could not subscribe channel repository to relevant events")
+	}
+
 	if nodeOptions.Consumer {
-		log.Debug().Msg("Skipping accountant promise settler for consumer mode")
-		di.AccountantPromiseSettler = &pingpong_noop.NoopAccountantPromiseSettler{}
+		log.Debug().Msg("Skipping hermes promise settler for consumer mode")
+		di.HermesPromiseSettler = &pingpong_noop.NoopHermesPromiseSettler{}
 		return nil
 	}
 
-	di.AccountantPromiseSettler = pingpong.NewAccountantPromiseSettler(
-		di.EventBus,
+	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
-		di.AccountantPromiseStorage,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesURLGetter,
+		di.HermesChannelRepository,
 		di.BCHelper,
 		di.IdentityRegistry,
 		di.Keystore,
 		di.SettlementHistoryStorage,
-		pingpong.AccountantPromiseSettlerConfig{
-			AccountantAddress:    common.HexToAddress(nodeOptions.Accountant.AccountantID),
-			Threshold:            nodeOptions.Payments.AccountantPromiseSettlingThreshold,
+		pingpong.HermesPromiseSettlerConfig{
+			HermesAddress:        common.HexToAddress(nodeOptions.Hermes.HermesID),
+			Threshold:            nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 		},
 	)
-	return di.AccountantPromiseSettler.Subscribe()
+	if err := settler.Subscribe(di.EventBus); err != nil {
+		return errors.Wrap(err, "could not subscribe promise settler to relevant events")
+	}
+
+	di.HermesPromiseSettler = settler
+	return nil
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
@@ -208,11 +230,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 	di.ServiceRegistry = service.NewRegistry()
 
-	storage := session.NewEventBasedStorage(di.EventBus, session.NewStorageMemory())
-	if err := storage.Subscribe(); err != nil {
-		return errors.Wrap(err, "could not subscribe session to node events")
-	}
-	di.ServiceSessionStorage = storage
+	di.ServiceSessions = service.NewSessionPool(di.EventBus)
 
 	di.PolicyOracle = policy.NewOracle(
 		di.HTTPClient,
@@ -221,30 +239,29 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
-	newP2PSessionHandler := func(proposal market.ServiceProposal, serviceID string, channel p2p.Channel) *session.Manager {
+	newP2PSessionHandler := func(serviceInstance *service.Instance, channel p2p.Channel) *service.SessionManager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
-			pingpong.DefaultAccountantFailureCount,
+			pingpong.DefaultHermesFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
 			di.BCHelper,
 			di.EventBus,
-			proposal,
-			di.AccountantPromiseHandler,
-			common.HexToAddress(nodeOptions.Accountant.AccountantID),
+			serviceInstance.Proposal,
+			di.HermesPromiseHandler,
+			common.HexToAddress(nodeOptions.Hermes.HermesID),
 		)
-		return session.NewManager(
-			proposal,
-			di.ServiceSessionStorage,
+		return service.NewSessionManager(
+			serviceInstance,
+			di.ServiceSessions,
 			paymentEngineFactory,
 			di.NATTracker,
-			serviceID,
 			di.EventBus,
 			channel,
-			session.DefaultConfig(),
+			service.DefaultConfig(),
 		)
 	}
 
@@ -258,9 +275,9 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		di.SessionConnectivityStatusStorage,
 	)
 
-	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
+	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessions}
 	if err := di.EventBus.Subscribe(servicestate.AppTopicServiceStatus, serviceCleaner.HandleServiceStatus); err != nil {
-		log.Error().Msg("Failed to subscribe service cleaner")
+		log.Error().Err(err).Msg("Failed to subscribe service cleaner")
 	}
 
 	return nil
@@ -289,30 +306,27 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
 }
 
-func (di *Dependencies) bootstrapUIServer(options node.Options) {
-	if options.UI.UIEnabled {
-		di.UIServer = ui.NewServer(options.BindAddress, options.UI.UIPort, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
-		return
+func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
+	if !options.UI.UIEnabled {
+		di.UIServer = uinoop.NewServer()
+		return nil
 	}
 
-	di.UIServer = uinoop.NewServer()
+	bindAddress := options.UI.UIBindAddress
+	if bindAddress == "" {
+		bindAddress, err = di.IPResolver.GetOutboundIP()
+		if err != nil {
+			return err
+		}
+		bindAddress = bindAddress + ",127.0.0.1"
+	}
+	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
+	return nil
 }
 
-func (di *Dependencies) bootstrapMMN(options node.Options) {
-	if !options.MMN.Enabled {
-		return
-	}
+func (di *Dependencies) bootstrapMMN() error {
+	client := mmn.NewClient(di.HTTPClient, config.GetString(config.FlagMMNAPIAddress), di.SignerFactory)
 
-	collector := mmn.NewCollector(di.IPResolver)
-	if err := collector.CollectEnvironmentInformation(); err != nil {
-		log.Error().Msgf("Failed to collect environment information for MMN: %v", err)
-		return
-	}
-
-	client := mmn.NewClient(di.HTTPClient, options.MMN.Address, di.SignerFactory)
-	m := mmn.NewMMN(collector, client)
-
-	if err := m.Subscribe(di.EventBus); err != nil {
-		log.Error().Msgf("Failed to subscribe to events for MMN: %v", err)
-	}
+	di.MMN = mmn.NewMMN(di.IPResolver, client)
+	return di.MMN.Subscribe(di.EventBus)
 }

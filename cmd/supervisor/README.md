@@ -25,6 +25,6 @@ myst_supervisor -help
 
 ## Logs
 
-On Windows logs could be found at `C:\Windows\System32\config\systemprofile\AppData\Local\MystSupervisor\myst_supervisor.log`
+On Windows logs could be found at `C:\ProgramData\MystSupervisor\myst_supervisor.log`
 
 On macOS logs could be found at `/var/log/myst_supervisor.log`

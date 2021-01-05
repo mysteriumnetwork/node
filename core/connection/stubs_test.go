@@ -20,51 +20,9 @@ package connection
 import (
 	"context"
 	"sync"
+
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 )
-
-// StubPublisherEvent represents the event in publishers history
-type StubPublisherEvent struct {
-	calledWithTopic string
-	calledWithData  interface{}
-}
-
-// StubPublisher acts as a publisher
-type StubPublisher struct {
-	publishHistory []StubPublisherEvent
-	lock           sync.Mutex
-}
-
-// NewStubPublisher returns a stub publisher
-func NewStubPublisher() *StubPublisher {
-	return &StubPublisher{
-		publishHistory: make([]StubPublisherEvent, 0),
-	}
-}
-
-// Publish adds the given event to the publish history
-func (sp *StubPublisher) Publish(topic string, data interface{}) {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-	event := StubPublisherEvent{
-		calledWithTopic: topic,
-		calledWithData:  data,
-	}
-	sp.publishHistory = append(sp.publishHistory, event)
-}
-
-// Clear clears the event history
-func (sp *StubPublisher) Clear() {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-	sp.publishHistory = make([]StubPublisherEvent, 0)
-}
-
-// GetEventHistory fetches the event history
-func (sp *StubPublisher) GetEventHistory() []StubPublisherEvent {
-	sp.lock.Lock()
-	defer sp.lock.Unlock()
-	return sp.publishHistory
-}
 
 type fakeState string
 
@@ -87,24 +45,24 @@ type connectionFactoryFake struct {
 }
 
 func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection, error) {
-	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
+	// each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
 	if c.mockError != nil {
 		return nil, c.mockError
 	}
 
-	c.mockConnection.stateChannel = make(chan State, 100)
+	c.mockConnection.stateChannel = make(chan connectionstate.State, 100)
 
 	stateCallback := func(state fakeState) {
 		if state == connectedState {
-			c.mockConnection.stateChannel <- Connected
+			c.mockConnection.stateChannel <- connectionstate.Connected
 		}
 		if state == exitingState {
-			c.mockConnection.stateChannel <- Disconnecting
+			c.mockConnection.stateChannel <- connectionstate.Disconnecting
 		}
 		if state == reconnectingState {
-			c.mockConnection.stateChannel <- Reconnecting
+			c.mockConnection.stateChannel <- connectionstate.Reconnecting
 		}
-		//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+		// this is the last state - close channel (according to best practices of go - channel writer controls channel)
 		if state == processExited {
 			close(c.mockConnection.stateChannel)
 		}
@@ -127,22 +85,22 @@ func (c *connectionFactoryFake) CreateConnection(serviceType string) (Connection
 }
 
 type connectionMock struct {
-	stateChannel        chan State
+	stateChannel        chan connectionstate.State
 	onStartReturnError  error
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
 	stateCallback       func(state fakeState)
-	onStartReportStats  Statistics
+	onStartReportStats  connectionstate.Statistics
 	fakeProcess         sync.WaitGroup
 	stopBlock           chan struct{}
 	sync.RWMutex
 }
 
-func (foc *connectionMock) State() <-chan State {
+func (foc *connectionMock) State() <-chan connectionstate.State {
 	return foc.stateChannel
 }
 
-func (foc *connectionMock) Statistics() (Statistics, error) {
+func (foc *connectionMock) Statistics() (connectionstate.Statistics, error) {
 	return foc.onStartReportStats, nil
 }
 
@@ -162,11 +120,6 @@ func (foc *connectionMock) Start(ctx context.Context, connectionParams ConnectOp
 	for _, fakeState := range foc.onStartReportStates {
 		foc.reportState(fakeState)
 	}
-	return nil
-}
-
-func (foc *connectionMock) Wait() error {
-	foc.fakeProcess.Wait()
 	return nil
 }
 

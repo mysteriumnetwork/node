@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -44,13 +45,6 @@ const (
 	ProposalUnregistered
 	StatusUndefined
 )
-
-// ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
-type ProposalRegistry interface {
-	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
-	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
-	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
-}
 
 // Discovery structure holds discovery service state
 type Discovery struct {
@@ -171,7 +165,7 @@ func (d *Discovery) handleRegistrationEvent(rep registry.AppEventIdentityRegistr
 	}
 
 	switch rep.Status {
-	case registry.RegisteredProvider:
+	case registry.Registered:
 		log.Info().Msg("Identity registered, proceeding with proposal registration")
 		d.changeStatus(RegisterProposal)
 	case registry.RegistrationError:
@@ -227,14 +221,15 @@ func (d *Discovery) unregisterProposal() {
 
 func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
-	status, err := d.identityRegistry.GetRegistrationStatus(d.ownIdentity)
+	chainID := config.GetInt64(config.FlagChainID)
+	status, err := d.identityRegistry.GetRegistrationStatus(chainID, d.ownIdentity)
 	if err != nil {
 		log.Error().Err(err).Msg("Checking identity registration failed")
 		d.changeStatus(IdentityRegisterFailed)
 		return
 	}
 	switch status {
-	case identity_registry.RegisteredProvider:
+	case identity_registry.Registered:
 		d.changeStatus(RegisterProposal)
 	default:
 		log.Info().Msgf("Identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)

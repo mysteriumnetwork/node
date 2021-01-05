@@ -33,17 +33,29 @@ var (
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
 	}
+	// FlagTestnet2 uses testnet2 network.
+	FlagTestnet2 = cli.BoolFlag{
+		Name:  "testnet2",
+		Usage: "Defines testnet2 configuration",
+		Value: true,
+	}
 	// FlagAPIAddress Mysterium API URL
 	FlagAPIAddress = cli.StringFlag{
 		Name:  "api.address",
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	}
+	// FlagChainID chain id to use
+	FlagChainID = cli.Int64Flag{
+		Name:  "chain-id",
+		Usage: "The chain ID to use",
+		Value: metadata.DefaultNetwork.DefaultChainID,
+	}
 	// FlagBrokerAddress message broker URI.
-	FlagBrokerAddress = cli.StringFlag{
+	FlagBrokerAddress = cli.StringSliceFlag{
 		Name:  "broker-address",
 		Usage: "URI of message broker",
-		Value: metadata.DefaultNetwork.BrokerAddress,
+		Value: cli.NewStringSlice(metadata.DefaultNetwork.BrokerAddresses...),
 	}
 	// FlagEtherRPC URL or IPC socket to connect to Ethereum node.
 	FlagEtherRPC = cli.StringFlag{
@@ -90,6 +102,8 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagEtherRPC,
 		&FlagIncomingFirewall,
 		&FlagOutgoingFirewall,
+		&FlagTestnet2,
+		&FlagChainID,
 	)
 }
 
@@ -97,11 +111,13 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagTestnet)
 	Current.ParseBoolFlag(ctx, FlagLocalnet)
+	Current.ParseBoolFlag(ctx, FlagTestnet2)
 	Current.ParseStringFlag(ctx, FlagAPIAddress)
-	Current.ParseStringFlag(ctx, FlagBrokerAddress)
+	Current.ParseStringSliceFlag(ctx, FlagBrokerAddress)
 	Current.ParseStringFlag(ctx, FlagEtherRPC)
 	Current.ParseBoolFlag(ctx, FlagPortMapping)
 	Current.ParseBoolFlag(ctx, FlagNATPunching)
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
+	Current.ParseInt64Flag(ctx, FlagChainID)
 }

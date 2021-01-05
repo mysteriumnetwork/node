@@ -20,14 +20,14 @@ package discovery
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	locationLTTelia = location.Location{
+	locationLTTelia = locationstate.Location{
 		Continent: "EU",
 		Country:   "LT",
 		City:      "Vilnius",

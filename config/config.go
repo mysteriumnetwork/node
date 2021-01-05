@@ -19,6 +19,7 @@ package config
 
 import (
 	"io/ioutil"
+	"math/big"
 	"strings"
 	"time"
 
@@ -117,6 +118,15 @@ func (cfg *Config) GetUserConfig() map[string]interface{} {
 	return cfg.user
 }
 
+// GetConfig returns current configuration.
+func (cfg *Config) GetConfig() map[string]interface{} {
+	config := make(map[string]interface{})
+	mergeMaps(cfg.defaults, config, nil)
+	mergeMaps(cfg.user, config, nil)
+	mergeMaps(cfg.cli, config, nil)
+	return config
+}
+
 // SetDefault sets default value for key.
 func (cfg *Config) SetDefault(key string, value interface{}) {
 	cfg.set(&cfg.defaults, key, value)
@@ -172,17 +182,17 @@ func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
 // Get returns stored config value as-is.
 func (cfg *Config) Get(key string) interface{} {
 	segments := strings.Split(strings.ToLower(key), ".")
-	cliValue := cfg.searchMap(cfg.cli, segments)
+	cliValue := SearchMap(cfg.cli, segments)
 	if cliValue != nil {
 		log.Debug().Msgf("Returning CLI value %v:%v", key, cliValue)
 		return cliValue
 	}
-	userValue := cfg.searchMap(cfg.user, segments)
+	userValue := SearchMap(cfg.user, segments)
 	if userValue != nil {
 		log.Debug().Msgf("Returning user config value %v:%v", key, userValue)
 		return userValue
 	}
-	defaultValue := cfg.searchMap(cfg.defaults, segments)
+	defaultValue := SearchMap(cfg.defaults, segments)
 	log.Debug().Msgf("Returning default value %v:%v", key, defaultValue)
 	return defaultValue
 }
@@ -195,6 +205,11 @@ func (cfg *Config) GetBool(key string) bool {
 // GetInt returns config value as int.
 func (cfg *Config) GetInt(key string) int {
 	return cast.ToInt(cfg.Get(key))
+}
+
+// GetInt64 returns config value as int64.
+func (cfg *Config) GetInt64(key string) int64 {
+	return cast.ToInt64(cfg.Get(key))
 }
 
 // GetUInt64 returns config value as uint64.
@@ -256,6 +271,17 @@ func (cfg *Config) ParseUInt64Flag(ctx *cli.Context, flag cli.Uint64Flag) {
 	}
 }
 
+// ParseInt64Flag parses a cli.Int64Flag from command's context and
+// sets default and CLI values to the application configuration.
+func (cfg *Config) ParseInt64Flag(ctx *cli.Context, flag cli.Int64Flag) {
+	cfg.SetDefault(flag.Name, flag.Value)
+	if ctx.IsSet(flag.Name) {
+		cfg.SetCLI(flag.Name, ctx.Int64(flag.Name))
+	} else {
+		cfg.RemoveCLI(flag.Name)
+	}
+}
+
 // ParseFloat64Flag parses a cli.Float64Flag from command's context and
 // sets default and CLI values to the application configuration.
 func (cfg *Config) ParseFloat64Flag(ctx *cli.Context, flag cli.Float64Flag) {
@@ -310,6 +336,11 @@ func GetInt(flag cli.IntFlag) int {
 	return Current.GetInt(flag.Name)
 }
 
+// GetInt64 shorthand for getting current configuration value for cli.IntFlag.
+func GetInt64(flag cli.Int64Flag) int64 {
+	return Current.GetInt64(flag.Name)
+}
+
 // GetString shorthand for getting current configuration value for cli.StringFlag.
 func GetString(flag cli.StringFlag) string {
 	return Current.GetString(flag.Name)
@@ -328,6 +359,12 @@ func GetDuration(flag cli.DurationFlag) time.Duration {
 // GetUInt64 shorthand for getting current configuration value for cli.Uint64Flag.
 func GetUInt64(flag cli.Uint64Flag) uint64 {
 	return Current.GetUInt64(flag.Name)
+}
+
+// GetBigInt shorthand for getting and parsing a configuration value for cli.StringFlag that's a big.Int.
+func GetBigInt(flag cli.StringFlag) *big.Int {
+	b, _ := new(big.Int).SetString(Current.GetString(flag.Name), 10)
+	return b
 }
 
 // GetFloat64 shorthand for getting current configuration value for cli.Uint64Flag.

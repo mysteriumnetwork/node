@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat"
 	natevent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
 )
 
@@ -55,7 +54,7 @@ func NewManager(
 type Manager struct{}
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*session.ConfigParams, error) {
+func (manager *Manager) ProvideConfig(_ string, _ json.RawMessage, _ *net.UDPConn) (*service.ConfigParams, error) {
 	return nil, errors.New("not implemented")
 }
 

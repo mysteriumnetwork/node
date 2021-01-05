@@ -21,12 +21,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -36,12 +41,10 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/trace"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 const (
-	p2pDialTimeout = 30 * time.Second
+	p2pDialTimeout = 60 * time.Second
 )
 
 var (
@@ -106,21 +109,22 @@ type PaymentIssuer interface {
 }
 
 type validator interface {
-	Validate(consumerID identity.Identity, proposal market.ServiceProposal) error
+	Validate(chainID int64, consumerID identity.Identity, proposal market.ServiceProposal) error
 }
 
 // TimeGetter function returns current time
 type TimeGetter func() time.Time
 
 // PaymentEngineFactory creates a new payment issuer from the given params
-type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, accountant common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
+type PaymentEngineFactory func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (PaymentIssuer, error)
 
 type connectionManager struct {
 	// These are passed on creation.
 	paymentEngineFactory PaymentEngineFactory
 	newConnection        Creator
-	eventPublisher       eventbus.Publisher
+	eventBus             eventbus.EventBus
 	ipResolver           ip.Resolver
+	locationResolver     location.OriginResolver
 	config               Config
 	statsReportInterval  time.Duration
 	validator            validator
@@ -130,23 +134,28 @@ type connectionManager struct {
 	// These are populated by Connect at runtime.
 	ctx                    context.Context
 	ctxLock                sync.RWMutex
-	status                 Status
+	status                 connectionstate.Status
 	statusLock             sync.RWMutex
 	cleanupLock            sync.Mutex
 	cleanup                []func() error
 	cleanupAfterDisconnect []func() error
+	cleanupFinished        chan struct{}
+	cleanupFinishedLock    sync.Mutex
 	acknowledge            func()
 	cancel                 func()
+	channel                p2p.Channel
 
-	discoLock sync.Mutex
+	discoLock      sync.Mutex
+	connectOptions ConnectOptions
 }
 
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
-	eventPublisher eventbus.Publisher,
+	eventBus eventbus.EventBus,
 	ipResolver ip.Resolver,
+	locationResolver location.OriginResolver,
 	config Config,
 	statsReportInterval time.Duration,
 	validator validator,
@@ -154,11 +163,13 @@ func NewManager(
 ) *connectionManager {
 	return &connectionManager{
 		newConnection:        connectionCreator,
-		status:               Status{State: NotConnected},
-		eventPublisher:       eventPublisher,
+		status:               connectionstate.Status{State: connectionstate.NotConnected},
+		eventBus:             eventBus,
 		paymentEngineFactory: paymentEngineFactory,
 		cleanup:              make([]func() error, 0),
+		cleanupFinished:      make(chan struct{}, 1),
 		ipResolver:           ipResolver,
+		locationResolver:     locationResolver,
 		config:               config,
 		statsReportInterval:  statsReportInterval,
 		validator:            validator,
@@ -167,21 +178,31 @@ func NewManager(
 	}
 }
 
-func (m *connectionManager) Connect(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
-	tracer := trace.NewTracer()
-	connectTrace := tracer.StartStage("Whole Connect")
+func (m *connectionManager) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
 
+func (m *connectionManager) Connect(consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, params ConnectParams) (err error) {
+	var sessionID session.ID
+
+	tracer := trace.NewTracer("Consumer whole Connect")
 	defer func() {
-		tracer.EndStage(connectTrace)
-		traceResult := tracer.Finish()
+		traceResult := tracer.Finish(m.eventBus, string(sessionID))
 		log.Debug().Msgf("Consumer connection trace: %s", traceResult)
 	}()
 
-	if m.Status().State != NotConnected {
+	// make sure cache is cleared when connect terminates at any stage as part of disconnect
+	// we assume that IPResolver might be used / cache IP before connect
+	m.addCleanup(func() error {
+		m.clearIPCache()
+		return nil
+	})
+
+	if m.Status().State != connectionstate.NotConnected {
 		return ErrAlreadyExists
 	}
 
-	err = m.validator.Validate(consumerID, proposal)
+	err = m.validator.Validate(m.chainID(), consumerID, proposal)
 	if err != nil {
 		return err
 	}
@@ -190,7 +211,7 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.ctxLock.Unlock()
 
-	m.statusConnecting(consumerID, accountantID, proposal)
+	m.statusConnecting(consumerID, hermesID, proposal)
 	defer func() {
 		if err != nil {
 			log.Err(err).Msg("Connect failed, disconnecting")
@@ -200,82 +221,65 @@ func (m *connectionManager) Connect(consumerID identity.Identity, accountantID c
 
 	providerID := identity.FromAddress(proposal.ProviderID)
 
-	p2pChannelTrace := tracer.StartStage("P2P channel creation")
-	contact, err := p2p.ParseContact(proposal.ProviderContacts)
+	err = m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal, tracer)
 	if err != nil {
-		return fmt.Errorf("provider does not support p2p communication: %w", err)
+		return fmt.Errorf("could not create p2p channel during connect: %w", err)
 	}
 
-	channel, err := m.createP2PChannel(m.currentCtx(), consumerID, providerID, proposal.ServiceType, contact)
-	if err != nil {
-		return fmt.Errorf("could not create p2p channel: %w", err)
-	}
-	tracer.EndStage(p2pChannelTrace)
-
-	sessionCreateTrace := tracer.StartStage("Session creation")
 	connection, err := m.newConnection(proposal.ServiceType)
 	if err != nil {
 		return err
 	}
 
-	var serviceConn, channelConn *net.UDPConn
-	var sessionDTO session.CreateResponse
-
-	paymentSession, err := m.launchPayments(channel, consumerID, providerID, accountantID, proposal)
+	paymentSession, err := m.paymentLoop(m.channel, consumerID, providerID, hermesID, proposal)
 	if err != nil {
 		return err
 	}
 
-	sessionDTO, err = m.createP2PSession(m.currentCtx(), connection, channel, consumerID, accountantID, proposal)
-	serviceConn = channel.ServiceConn()
-	channelConn = channel.Conn()
+	sessionDTO, err := m.createP2PSession(m.currentCtx(), connection, m.channel, consumerID, hermesID, proposal, tracer)
+	sessionID = session.ID(sessionDTO.GetID())
 	if err != nil {
-		m.sendSessionStatus(channel, consumerID, sessionDTO.Session.ID, connectivity.StatusSessionEstablishmentFailed, err)
+		m.sendSessionStatus(m.channel, consumerID, sessionID, connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
-	paymentSession.SetSessionID(string(sessionDTO.Session.ID))
-	tracer.EndStage(sessionCreateTrace)
+	traceStart := tracer.StartStage("Consumer session creation (start)")
+	go m.keepAliveLoop(m.channel, sessionID)
+	m.setStatus(func(status *connectionstate.Status) {
+		status.SessionID = sessionID
+	})
+	m.publishSessionCreate(sessionID)
+	paymentSession.SetSessionID(string(sessionID))
+	tracer.EndStage(traceStart)
 
-	connectionTrace := tracer.StartStage("Start connection")
-	originalPublicIP := m.getPublicIP()
 	// Try to establish connection with peer.
-	err = m.startConnection(m.currentCtx(), connection, params.DisableKillSwitch, ConnectOptions{
-		SessionID:       sessionDTO.Session.ID,
-		SessionConfig:   sessionDTO.Session.Config,
-		DNS:             params.DNS,
+	m.connectOptions = ConnectOptions{
+		SessionID:       sessionID,
+		SessionConfig:   sessionDTO.GetConfig(),
+		Params:          params,
 		ConsumerID:      consumerID,
 		ProviderID:      providerID,
 		Proposal:        proposal,
-		ProviderNATConn: serviceConn,
-		ChannelConn:     channelConn,
-	})
-	tracer.EndStage(connectionTrace)
-
+		ProviderNATConn: m.channel.ServiceConn(),
+		ChannelConn:     m.channel.Conn(),
+		HermesID:        hermesID,
+	}
+	err = m.startConnection(m.currentCtx(), connection, m.connectOptions, tracer)
 	if err != nil {
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
 		m.addCleanupAfterDisconnect(func() error {
-			return m.sendSessionStatus(channel, consumerID, sessionDTO.Session.ID, connectivity.StatusConnectionFailed, err)
+			return m.sendSessionStatus(m.channel, consumerID, sessionID, connectivity.StatusConnectionFailed, err)
 		})
-		m.publishStateEvent(StateConnectionFailed)
+		m.publishStateEvent(connectionstate.StateConnectionFailed)
 
 		log.Info().Err(err).Msg("Cancelling connection initiation: ")
 		m.Cancel()
 		return err
 	}
 
-	m.clearIPCache()
-	m.addCleanup(func() error {
-		m.clearIPCache()
-		return nil
-	})
-
-	go m.keepAliveLoop(channel, sessionDTO.Session.ID)
-	go m.checkSessionIP(channel, consumerID, sessionDTO.Session.ID, originalPublicIP)
-
-	return err
+	return nil
 }
 
 func (m *connectionManager) clearIPCache() {
@@ -288,7 +292,7 @@ func (m *connectionManager) clearIPCache() {
 func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID identity.Identity, sessionID session.ID, originalPublicIP string) {
 	for i := 1; i <= m.config.IPCheck.MaxAttempts; i++ {
 		// Skip check if not connected. This may happen when context was canceled via Disconnect.
-		if m.Status().State != Connected {
+		if m.Status().State != connectionstate.Connected {
 			return
 		}
 
@@ -302,7 +306,7 @@ func (m *connectionManager) checkSessionIP(channel p2p.Channel, consumerID ident
 		// Notify peer and quality oracle that ip is not changed after tunnel connection was established.
 		if i == m.config.IPCheck.MaxAttempts {
 			m.sendSessionStatus(channel, consumerID, sessionID, connectivity.StatusSessionIPNotChanged, nil)
-			m.publishStateEvent(StateIPNotChanged)
+			m.publishStateEvent(connectionstate.StateIPNotChanged)
 			return
 		}
 
@@ -345,8 +349,8 @@ func (m *connectionManager) getPublicIP() string {
 	return currentPublicIP
 }
 
-func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, providerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
-	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, accountantID, proposal)
+func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, providerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal) (PaymentIssuer, error) {
+	payments, err := m.paymentEngineFactory(channel, consumerID, providerID, hermesID, proposal)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +361,16 @@ func (m *connectionManager) launchPayments(channel p2p.Channel, consumerID, prov
 		return nil
 	})
 
-	go m.payForService(payments)
+	go func() {
+		err := payments.Start()
+		if err != nil {
+			log.Error().Err(err).Msg("Payment error")
+			err = m.Disconnect()
+			if err != nil {
+				log.Error().Err(err).Msg("Could not disconnect gracefully")
+			}
+		}
+	}()
 	return payments, nil
 }
 
@@ -389,13 +402,22 @@ func (m *connectionManager) cleanAfterDisconnect() {
 	m.cleanupAfterDisconnect = nil
 }
 
-func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, serviceType string, contactDef p2p.ContactDefinition) (p2p.Channel, error) {
+func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, providerID identity.Identity, proposal market.ServiceProposal, tracer *trace.Tracer) error {
+	trace := tracer.StartStage("Consumer P2P channel creation")
+	defer tracer.EndStage(trace)
+
+	contactDef, err := p2p.ParseContact(proposal.ProviderContacts)
+	if err != nil {
+		return fmt.Errorf("provider does not support p2p communication: %w", err)
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, p2pDialTimeout)
 	defer cancel()
 
-	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, serviceType, contactDef)
+	// TODO register all handlers before channel read/write loops
+	channel, err := m.p2pDialer.Dial(timeoutCtx, consumerID, providerID, proposal.ServiceType, contactDef, tracer)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("p2p dialer failed: %w", err)
 	}
 	m.addCleanupAfterDisconnect(func() error {
 		log.Trace().Msg("Cleaning: closing P2P communication channel")
@@ -403,7 +425,9 @@ func (m *connectionManager) createP2PChannel(ctx context.Context, consumerID, pr
 
 		return channel.Close()
 	})
-	return channel, nil
+
+	m.channel = channel
+	return nil
 }
 
 func (m *connectionManager) addCleanupAfterDisconnect(fn func() error) {
@@ -418,22 +442,28 @@ func (m *connectionManager) addCleanup(fn func() error) {
 	m.cleanup = append(m.cleanup, fn)
 }
 
-func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) (session.CreateResponse, error) {
+func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, p2pChannel p2p.ChannelSender, consumerID identity.Identity, hermesID common.Address, proposal market.ServiceProposal, tracer *trace.Tracer) (*pb.SessionResponse, error) {
+	trace := tracer.StartStage("Consumer session creation")
+	defer tracer.EndStage(trace)
+
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
-		return session.CreateResponse{}, fmt.Errorf("could not get session config: %w", err)
+		return nil, fmt.Errorf("could not get session config: %w", err)
 	}
 
 	config, err := json.Marshal(sessionCreateConfig)
 	if err != nil {
-		return session.CreateResponse{}, fmt.Errorf("could not marshal session config: %w", err)
+		return nil, fmt.Errorf("could not marshal session config: %w", err)
 	}
 
 	sessionRequest := &pb.SessionRequest{
 		Consumer: &pb.ConsumerInfo{
 			Id:             consumerID.Address,
-			AccountantID:   accountantID.Hex(),
-			PaymentVersion: string(session.PaymentVersionV3),
+			HermesID:       hermesID.Hex(),
+			PaymentVersion: "v3",
+			Location: &pb.LocationInfo{
+				Country: m.Status().ConsumerLocation.Country,
+			},
 		},
 		ProposalID: int64(proposal.ID),
 		Config:     config,
@@ -443,13 +473,13 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 	defer cancel()
 	res, err := p2pChannel.Send(ctx, p2p.TopicSessionCreate, p2p.ProtoMessage(sessionRequest))
 	if err != nil {
-		return session.CreateResponse{}, fmt.Errorf("could not send p2p session create request: %w", err)
+		return nil, fmt.Errorf("could not send p2p session create request: %w", err)
 	}
 
 	var sessionResponse pb.SessionResponse
 	err = res.UnmarshalProto(&sessionResponse)
 	if err != nil {
-		return session.CreateResponse{}, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
+		return nil, fmt.Errorf("could not unmarshal session reply to proto: %w", err)
 	}
 	log.Info().Msgf("Provider's session config: %s", string(sessionResponse.Config))
 
@@ -476,7 +506,7 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 		}
 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionDestroy, sessionDestroy.String())
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 		_, err := p2pChannel.Send(ctx, p2p.TopicSessionDestroy, p2p.ProtoMessage(sessionDestroy))
 		if err != nil {
@@ -486,40 +516,32 @@ func (m *connectionManager) createP2PSession(ctx context.Context, c Connection, 
 		return nil
 	})
 
-	sessionID := session.ID(sessionResponse.GetID())
-	m.publishSessionCreate(sessionID)
-
-	return session.CreateResponse{
-		Session: session.SessionDto{
-			ID:     sessionID,
-			Config: sessionResponse.GetConfig(),
-		},
-		PaymentInfo: session.PaymentInfo{Supports: sessionResponse.GetPaymentInfo()},
-	}, nil
+	return &sessionResponse, nil
 }
 
 func (m *connectionManager) publishSessionCreate(sessionID session.ID) {
-	m.setStatus(func(status *Status) {
-		status.SessionID = sessionID
-	})
-
-	m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
-		Status:      SessionCreatedStatus,
+	m.eventBus.Publish(connectionstate.AppTopicConnectionSession, connectionstate.AppEventConnectionSession{
+		Status:      connectionstate.SessionCreatedStatus,
 		SessionInfo: m.Status(),
 	})
 
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: publishing session ended status")
 		defer log.Trace().Msg("Cleaning: publishing session ended status DONE")
-		m.eventPublisher.Publish(AppTopicConnectionSession, AppEventConnectionSession{
-			Status:      SessionEndedStatus,
+		m.eventBus.Publish(connectionstate.AppTopicConnectionSession, connectionstate.AppEventConnectionSession{
+			Status:      connectionstate.SessionEndedStatus,
 			SessionInfo: m.Status(),
 		})
 		return nil
 	})
 }
 
-func (m *connectionManager) startConnection(ctx context.Context, conn Connection, disableKillSwitch bool, connectOptions ConnectOptions) (err error) {
+func (m *connectionManager) startConnection(ctx context.Context, conn Connection, connectOptions ConnectOptions, tracer *trace.Tracer) (err error) {
+	trace := tracer.StartStage("Consumer start connection")
+	defer tracer.EndStage(trace)
+
+	originalPublicIP := m.getPublicIP()
+
 	if err = conn.Start(ctx, connectOptions); err != nil {
 		return err
 	}
@@ -530,7 +552,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return nil
 	})
 
-	err = m.setupTrafficBlock(disableKillSwitch)
+	err = m.setupTrafficBlock(connectOptions.Params.DisableKillSwitch)
 	if err != nil {
 		return err
 	}
@@ -540,7 +562,7 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 		return err
 	}
 
-	statsPublisher := newStatsPublisher(m.eventPublisher, m.statsReportInterval)
+	statsPublisher := newStatsPublisher(m.eventBus, m.statsReportInterval)
 	go statsPublisher.start(m, conn)
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: stopping statistics publisher")
@@ -550,18 +572,23 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	})
 
 	go m.consumeConnectionStates(conn.State())
-	go m.connectionWaiter(conn)
+
+	// Clear IP cache so session IP check can report that IP has really changed.
+	m.clearIPCache()
+
+	go m.checkSessionIP(m.channel, connectOptions.ConsumerID, connectOptions.SessionID, originalPublicIP)
+
 	return nil
 }
 
-func (m *connectionManager) Status() Status {
+func (m *connectionManager) Status() connectionstate.Status {
 	m.statusLock.RLock()
 	defer m.statusLock.RUnlock()
 
 	return m.status
 }
 
-func (m *connectionManager) setStatus(delta func(status *Status)) {
+func (m *connectionManager) setStatus(delta func(status *connectionstate.Status)) {
 	m.statusLock.Lock()
 	stateWas := m.status.State
 
@@ -577,44 +604,45 @@ func (m *connectionManager) setStatus(delta func(status *Status)) {
 }
 
 func (m *connectionManager) statusConnecting(consumerID identity.Identity, accountantID common.Address, proposal market.ServiceProposal) {
-	m.setStatus(func(status *Status) {
-		*status = Status{
-			StartedAt:    m.timeGetter(),
-			ConsumerID:   consumerID,
-			AccountantID: accountantID,
-			Proposal:     proposal,
-			State:        Connecting,
+	m.setStatus(func(status *connectionstate.Status) {
+		*status = connectionstate.Status{
+			StartedAt:        m.timeGetter(),
+			ConsumerID:       consumerID,
+			ConsumerLocation: m.locationResolver.GetOrigin(),
+			HermesID:         accountantID,
+			Proposal:         proposal,
+			State:            connectionstate.Connecting,
 		}
 	})
 }
 
 func (m *connectionManager) statusConnected() {
-	m.setStatus(func(status *Status) {
-		status.State = Connected
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Connected
 	})
 }
 
 func (m *connectionManager) statusReconnecting() {
-	m.setStatus(func(status *Status) {
-		status.State = Reconnecting
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Reconnecting
 	})
 }
 
 func (m *connectionManager) statusNotConnected() {
-	m.setStatus(func(status *Status) {
-		status.State = NotConnected
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.NotConnected
 	})
 }
 
 func (m *connectionManager) statusDisconnecting() {
-	m.setStatus(func(status *Status) {
-		status.State = Disconnecting
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Disconnecting
 	})
 }
 
 func (m *connectionManager) statusCanceled() {
-	m.setStatus(func(status *Status) {
-		status.State = Canceled
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.Canceled
 	})
 }
 
@@ -624,7 +652,7 @@ func (m *connectionManager) Cancel() {
 }
 
 func (m *connectionManager) Disconnect() error {
-	if m.Status().State == NotConnected {
+	if m.Status().State == connectionstate.NotConnected {
 		return ErrNoConnection
 	}
 
@@ -634,9 +662,21 @@ func (m *connectionManager) Disconnect() error {
 	return nil
 }
 
+func (m *connectionManager) CheckChannel(ctx context.Context) error {
+	if err := m.sendKeepAlivePing(ctx, m.channel, m.Status().SessionID); err != nil {
+		return fmt.Errorf("keep alive ping failed: %w", err)
+	}
+	return nil
+}
+
 func (m *connectionManager) disconnect() {
 	m.discoLock.Lock()
 	defer m.discoLock.Unlock()
+
+	m.cleanupFinishedLock.Lock()
+	defer m.cleanupFinishedLock.Unlock()
+	m.cleanupFinished = make(chan struct{})
+	defer close(m.cleanupFinished)
 
 	m.ctxLock.Lock()
 	m.cancel()
@@ -648,29 +688,7 @@ func (m *connectionManager) disconnect() {
 	m.cleanAfterDisconnect()
 }
 
-func (m *connectionManager) payForService(payments PaymentIssuer) {
-	err := payments.Start()
-	if err != nil {
-		log.Error().Err(err).Msg("Payment error")
-		err = m.Disconnect()
-		if err != nil {
-			log.Error().Err(err).Msg("Could not disconnect gracefully")
-		}
-	}
-}
-
-func (m *connectionManager) connectionWaiter(connection Connection) {
-	err := connection.Wait()
-	if err != nil {
-		log.Warn().Err(err).Msg("Connection exited with error")
-	} else {
-		log.Info().Msg("Connection exited")
-	}
-
-	logDisconnectError(m.Disconnect())
-}
-
-func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) error {
+func (m *connectionManager) waitForConnectedState(stateChannel <-chan connectionstate.State) error {
 	log.Debug().Msg("waiting for connected state")
 	for {
 		select {
@@ -680,7 +698,7 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) err
 			}
 
 			switch state {
-			case Connected:
+			case connectionstate.Connected:
 				log.Debug().Msg("Connected started event received")
 				if m.acknowledge != nil {
 					go m.acknowledge()
@@ -696,23 +714,20 @@ func (m *connectionManager) waitForConnectedState(stateChannel <-chan State) err
 	}
 }
 
-func (m *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
+func (m *connectionManager) consumeConnectionStates(stateChannel <-chan connectionstate.State) {
 	for state := range stateChannel {
 		m.onStateChanged(state)
 	}
-
-	log.Debug().Msg("State updater stopCalled")
-	logDisconnectError(m.Disconnect())
 }
 
-func (m *connectionManager) onStateChanged(state State) {
+func (m *connectionManager) onStateChanged(state connectionstate.State) {
 	log.Debug().Msgf("Connection state received: %s", state)
 
-	// React just to certains stains from connection. Because disconnect happens in connectionWaiter
+	// React just to certain stains from connection. Because disconnect happens in connectionWaiter
 	switch state {
-	case Connected:
+	case connectionstate.Connected:
 		m.statusConnected()
-	case Reconnecting:
+	case connectionstate.Reconnecting:
 		m.statusReconnecting()
 	}
 }
@@ -734,25 +749,22 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: traffic block rule")
 		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
+
 		removeRule()
+
 		return nil
 	})
 	return nil
 }
 
-func (m *connectionManager) publishStateEvent(state State) {
-	go m.eventPublisher.Publish(AppTopicConnectionState, AppEventConnectionState{
+func (m *connectionManager) publishStateEvent(state connectionstate.State) {
+	m.eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
 		State:       state,
 		SessionInfo: m.Status(),
 	})
 }
 
 func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {
-	// TODO: Remove this check once all provider migrates to p2p.
-	if channel == nil {
-		return
-	}
-
 	// Register handler for handling p2p keep alive pings from provider.
 	channel.Handle(p2p.TopicKeepAlive, func(c p2p.Context) error {
 		var ping pb.P2PKeepAlivePing
@@ -772,24 +784,25 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 			log.Debug().Msgf("Stopping p2p keepalive: %v", m.currentCtx().Err())
 			return
 		case <-time.After(m.config.KeepAlive.SendInterval):
-			if err := m.sendKeepAlivePing(channel, sessionID); err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
+			if err := m.sendKeepAlivePing(ctx, channel, sessionID); err != nil {
 				log.Err(err).Msgf("Failed to send p2p keepalive ping. SessionID=%s", sessionID)
 				errCount++
 				if errCount == m.config.KeepAlive.MaxSendErrCount {
 					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
 					m.Disconnect()
+					cancel()
 					return
 				}
 			} else {
 				errCount = 0
 			}
+			cancel()
 		}
 	}
 }
 
-func (m *connectionManager) sendKeepAlivePing(channel p2p.Channel, sessionID session.ID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), m.config.KeepAlive.SendTimeout)
-	defer cancel()
+func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.Channel, sessionID session.ID) error {
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
@@ -802,6 +815,22 @@ func (m *connectionManager) currentCtx() context.Context {
 	defer m.ctxLock.RUnlock()
 
 	return m.ctx
+}
+
+func (m *connectionManager) Reconnect() {
+	err := m.Disconnect()
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to disconnect stale session")
+	}
+	log.Info().Msg("Waiting for previous session to cleanup")
+
+	m.cleanupFinishedLock.Lock()
+	defer m.cleanupFinishedLock.Unlock()
+	<-m.cleanupFinished
+	err = m.Connect(m.connectOptions.ConsumerID, m.connectOptions.HermesID, m.connectOptions.Proposal, m.connectOptions.Params)
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to reconnect")
+	}
 }
 
 func logDisconnectError(err error) {

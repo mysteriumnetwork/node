@@ -17,8 +17,7 @@
 
 package node
 
-// OptionsAccountant describes possible parameters for interaction with Accountant
-type OptionsAccountant struct {
-	AccountantEndpointAddress string
-	AccountantID              string
+// OptionsHermes describes possible parameters for interaction with Hermes
+type OptionsHermes struct {
+	HermesID string
 }

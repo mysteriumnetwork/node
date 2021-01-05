@@ -24,12 +24,14 @@ import (
 	stdErr "errors"
 	"fmt"
 	"math"
+	"math/big"
 	"math/rand"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -44,8 +46,8 @@ import (
 // ErrConsumerPromiseValidationFailed represents an error where consumer tries to cheat us with incorrect promises.
 var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue promise for the correct amount")
 
-// ErrAccountantFeeTooLarge indicates that we do not allow accountants with such high fees
-var ErrAccountantFeeTooLarge = errors.New("accountants fee exceeds")
+// ErrHermesFeeTooLarge indicates that we do not allow hermess with such high fees
+var ErrHermesFeeTooLarge = errors.New("hermess fee exceeds")
 
 // ErrInvoiceExpired shows that the given invoice has already expired
 var ErrInvoiceExpired = errors.New("invoice expired")
@@ -56,16 +58,13 @@ var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 // ErrInvoiceSendMaxFailCountReached indicates that we did not sent an exchange message in time.
 var ErrInvoiceSendMaxFailCountReached = errors.New("did not sent a new exchange message")
 
-// ErrFirstInvoiceSendTimeout indicates that first invoice was not sent.
-var ErrFirstInvoiceSendTimeout = errors.New("did not sent first invoice")
-
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature.
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
 // ErrConsumerNotRegistered represents the error that the consumer is not registered
 var ErrConsumerNotRegistered = errors.New("consumer not registered")
 
-const providerFirstInvoiceValue = 1
+var providerFirstInvoiceValue = big.NewInt(1)
 
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
@@ -73,14 +72,14 @@ type PeerInvoiceSender interface {
 }
 
 type bcHelper interface {
-	GetAccountantFee(accountantAddress common.Address) (uint16, error)
+	GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error)
 }
 
 type providerInvoiceStorage interface {
 	Get(providerIdentity, consumerIdentity identity.Identity) (crypto.Invoice, error)
 	Store(providerIdentity, consumerIdentity identity.Identity, invoice crypto.Invoice) error
-	StoreR(providerIdentity identity.Identity, agreementID uint64, r string) error
-	GetR(providerID identity.Identity, agreementID uint64) (string, error)
+	StoreR(providerIdentity identity.Identity, agreementID *big.Int, r string) error
+	GetR(providerID identity.Identity, agreementID *big.Int) (string, error)
 }
 
 type promiseHandler interface {
@@ -104,11 +103,11 @@ func (dt DataTransferred) sum() uint64 {
 
 // InvoiceTracker keeps tab of invoices and sends them to the consumer.
 type InvoiceTracker struct {
-	stop                       chan struct{}
-	promiseErrors              chan error
-	invoiceChannel             chan bool
-	accountantFailureCount     uint64
-	accountantFailureCountLock sync.Mutex
+	stop                   chan struct{}
+	promiseErrors          chan error
+	invoiceChannel         chan bool
+	hermesFailureCount     uint64
+	hermesFailureCountLock sync.Mutex
 
 	notReceivedExchangeMessageCount uint64
 	notSentExchangeMessageCount     uint64
@@ -118,7 +117,7 @@ type InvoiceTracker struct {
 	maxNotSentExchangeMessages     uint64
 	once                           sync.Once
 	rnd                            *rand.Rand
-	agreementID                    uint64
+	agreementID                    *big.Int
 	firstInvoicePaid               bool
 	invoicesSent                   map[string]sentInvoice
 	invoiceLock                    sync.Mutex
@@ -146,26 +145,33 @@ type InvoiceTrackerDeps struct {
 	ChargePeriod               time.Duration
 	ExchangeMessageChan        chan crypto.ExchangeMessage
 	ExchangeMessageWaitTimeout time.Duration
-	FirstInvoiceSendDuration   time.Duration
-	FirstInvoiceSendTimeout    time.Duration
 	ProviderID                 identity.Identity
-	ConsumersAccountantID      common.Address
-	ProvidersAccountantID      common.Address
+	ConsumersHermesID          common.Address
+	ProvidersHermesID          common.Address
 	Registry                   string
-	MaxAccountantFailureCount  uint64
-	MaxAllowedAccountantFee    uint16
+	MaxHermesFailureCount      uint64
+	MaxAllowedHermesFee        uint16
 	BlockchainHelper           bcHelper
 	EventBus                   eventbus.EventBus
 	ChannelAddressCalculator   channelAddressCalculator
 	SessionID                  string
 	PromiseHandler             promiseHandler
-	MaxNotPaidInvoice          uint64
+	MaxNotPaidInvoice          *big.Int
+	ChainID                    int64
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
 func NewInvoiceTracker(
 	itd InvoiceTrackerDeps) *InvoiceTracker {
 	return &InvoiceTracker{
+		lastExchangeMessage: crypto.ExchangeMessage{
+			Promise: crypto.Promise{
+				Amount: new(big.Int),
+				Fee:    new(big.Int),
+			},
+			AgreementID:    new(big.Int),
+			AgreementTotal: new(big.Int),
+		},
 		stop:                           make(chan struct{}),
 		deps:                           itd,
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
@@ -228,7 +234,9 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 
 func (it *InvoiceTracker) generateAgreementID() {
 	it.rnd.Seed(time.Now().UnixNano())
-	it.agreementID = it.rnd.Uint64()
+	agreementID := make([]byte, 32)
+	it.rnd.Read(agreementID)
+	it.agreementID = new(big.Int).SetBytes(agreementID)
 }
 
 func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error {
@@ -248,7 +256,7 @@ func (it *InvoiceTracker) handleExchangeMessage(em crypto.ExchangeMessage) error
 	it.resetNotReceivedExchangeMessageCount()
 	it.resetNotSentExchangeMessageCount()
 
-	// incase of zero payment, we'll just skip going to the accountant
+	// incase of zero payment, we'll just skip going to the hermes
 	if isServiceFree(it.deps.Proposal.PaymentMethod) {
 		return nil
 	}
@@ -272,18 +280,14 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	if !bytes.EqualFold(it.deps.ConsumersAccountantID.Bytes(), it.deps.ProvidersAccountantID.Bytes()) {
-		return fmt.Errorf("consumer wants to work with an unsupported accountant(%q) while provider expects %q", it.deps.ConsumersAccountantID.Hex(), it.deps.ProvidersAccountantID.Hex())
-	}
-
-	fee, err := it.deps.BlockchainHelper.GetAccountantFee(it.deps.ConsumersAccountantID)
+	fee, err := it.deps.BlockchainHelper.GetHermesFee(it.deps.ChainID, it.deps.ConsumersHermesID)
 	if err != nil {
-		return errors.Wrap(err, "could not get accountants fee")
+		return errors.Wrap(err, "could not get hermess fee")
 	}
 
-	if fee > it.deps.MaxAllowedAccountantFee {
-		log.Error().Msgf("Accountant fee too large, asking for %v where %v is the limit", fee, it.deps.MaxAllowedAccountantFee)
-		return ErrAccountantFeeTooLarge
+	if fee > it.deps.MaxAllowedHermesFee {
+		log.Error().Msgf("Hermes fee too large, asking for %v where %v is the limit", fee, it.deps.MaxAllowedHermesFee)
+		return ErrHermesFeeTooLarge
 	}
 
 	it.generateAgreementID()
@@ -293,7 +297,7 @@ func (it *InvoiceTracker) Start() error {
 		emErrors <- it.listenForExchangeMessages()
 	}()
 
-	err = it.sendFirstInvoice()
+	err = it.sendInvoice(true)
 	if err != nil {
 		return fmt.Errorf("could not send first invoice: %w", err)
 	}
@@ -306,7 +310,12 @@ func (it *InvoiceTracker) Start() error {
 		case critical := <-it.invoiceChannel:
 			err := it.sendInvoice(critical)
 			if err != nil {
-				return fmt.Errorf("sending of invoice failed: %w", err)
+				if stdErr.Is(err, p2p.ErrSendTimeout) {
+					log.Warn().Err(err).Msg("Marking invoice as not sent")
+					it.markExchangeMessageNotSent()
+				} else {
+					return fmt.Errorf("sending of invoice failed: %w", err)
+				}
 			}
 		case err := <-it.criticalInvoiceErrors:
 			return err
@@ -315,7 +324,7 @@ func (it *InvoiceTracker) Start() error {
 				return errors.Wrap(emErr, "failed to get exchange message")
 			}
 		case pErr := <-it.promiseErrors:
-			err := it.handleAccountantError(pErr)
+			err := it.handleHermesError(pErr)
 			if err != nil {
 				return fmt.Errorf("could not request promise %w", err)
 			}
@@ -334,7 +343,7 @@ func (it *InvoiceTracker) sendInvoicesWhenNeeded(interval time.Duration) {
 			shouldBe := CalculatePaymentAmount(currentlyElapsed, it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 			lastEM := it.getLastExchangeMessage()
 			diff := safeSub(shouldBe, lastEM.AgreementTotal)
-			if diff >= it.deps.MaxNotPaidInvoice && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
+			if diff.Cmp(it.deps.MaxNotPaidInvoice) >= 0 && currentlyElapsed-it.lastInvoiceSent > it.invoiceDebounceRate {
 				it.lastInvoiceSent = it.deps.TimeTracker.Elapsed()
 				it.invoiceChannel <- true
 			} else if currentlyElapsed-it.lastInvoiceSent > it.deps.ChargePeriod {
@@ -359,9 +368,7 @@ func (it *InvoiceTracker) WaitFirstInvoice(wait time.Duration) error {
 				return nil
 			}
 		case <-timeout:
-			// TODO uncomment this error return when all consumers will be able to pay for the first invoice before session start.
-			// return fmt.Errorf("failed waiting for first invoice")
-			return nil
+			return fmt.Errorf("failed waiting for first invoice")
 		case <-it.stop:
 			return nil
 		}
@@ -428,6 +435,10 @@ func (it *InvoiceTracker) getLastExchangeMessage() crypto.ExchangeMessage {
 	return it.lastExchangeMessage
 }
 
+func (it *InvoiceTracker) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
+
 func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	if it.getNotSentExchangeMessageCount() >= it.maxNotSentExchangeMessages {
 		return ErrInvoiceSendMaxFailCountReached
@@ -440,29 +451,24 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 	shouldBe := CalculatePaymentAmount(it.deps.TimeTracker.Elapsed(), it.getDataTransferred(), it.deps.Proposal.PaymentMethod)
 
 	lastEm := it.getLastExchangeMessage()
-	if lastEm.AgreementTotal == 0 && shouldBe > 0 {
+	if lastEm.AgreementTotal.Cmp(big.NewInt(0)) == 0 && shouldBe.Cmp(big.NewInt(0)) == 1 {
 		// The first invoice should have minimal static value.
 		shouldBe = providerFirstInvoiceValue
 		log.Debug().Msgf("Being lenient for the first payment, asking for %v", shouldBe)
 	}
 
 	r := it.generateR()
-	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, 0, r)
+	invoice := crypto.CreateInvoice(it.agreementID, shouldBe, new(big.Int), r, it.chainID())
 	invoice.Provider = it.deps.ProviderID.Address
 	err := it.deps.PeerInvoiceSender.Send(invoice)
 	if err != nil {
-		if stdErr.Is(err, p2p.ErrSendTimeout) {
-			log.Warn().Err(err).Msg("Marking invoice as not sent")
-			it.markExchangeMessageNotSent()
-			return nil
-		}
 		return err
 	}
 
 	it.markInvoiceSent(sentInvoice{
 		invoice:    invoice,
 		r:          r,
-		isCritical: true,
+		isCritical: isCritical,
 	})
 
 	hlock, err := hex.DecodeString(invoice.Hashlock)
@@ -474,24 +480,6 @@ func (it *InvoiceTracker) sendInvoice(isCritical bool) error {
 
 	err = it.deps.InvoiceStorage.Store(it.deps.ProviderID, it.deps.Peer, invoice)
 	return errors.Wrap(err, "could not store invoice")
-}
-
-func (it *InvoiceTracker) sendFirstInvoice() error {
-	timeout := time.After(it.deps.FirstInvoiceSendTimeout)
-	for {
-		select {
-		case <-it.stop:
-			return nil
-		case <-timeout:
-			return ErrFirstInvoiceSendTimeout
-		case <-time.After(it.deps.FirstInvoiceSendDuration):
-			err := it.sendInvoice(true)
-			if stdErr.Is(err, p2p.ErrHandlerNotFound) {
-				continue
-			}
-			return err
-		}
-	}
 }
 
 func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
@@ -516,72 +504,73 @@ func (it *InvoiceTracker) waitForInvoicePayment(hlock []byte) {
 	}
 }
 
-func (it *InvoiceTracker) handleAccountantError(err error) error {
+func (it *InvoiceTracker) handleHermesError(err error) error {
 	if err == nil {
-		it.resetAccountantFailureCount()
+		it.resetHermesFailureCount()
 		return nil
 	}
 
 	switch {
 	case
-		stdErr.Is(err, ErrAccountantHashlockMissmatch),
-		stdErr.Is(err, ErrAccountantPreviousRNotRevealed),
-		stdErr.Is(err, ErrAccountantInternal),
-		stdErr.Is(err, ErrAccountantNotFound),
-		stdErr.Is(err, ErrAccountantMalformedJSON),
+		stdErr.Is(err, ErrHermesHashlockMissmatch),
+		stdErr.Is(err, ErrHermesPreviousRNotRevealed),
+		stdErr.Is(err, ErrHermesInternal),
+		stdErr.Is(err, ErrHermesNotFound),
+		stdErr.Is(err, ErrHermesMalformedJSON),
 		stdErr.Is(err, ErrTooManyRequests):
 		// these are ignorable, we'll eventually fail
-		if it.incrementAccountantFailureCount() > it.deps.MaxAccountantFailureCount {
+		if it.incrementHermesFailureCount() > it.deps.MaxHermesFailureCount {
 			return err
 		}
-		log.Warn().Err(err).Msg("accountant error, will retry")
+		log.Warn().Err(err).Msg("hermes error, will retry")
 		return nil
 	case
-		stdErr.Is(err, ErrAccountantInvalidSignature),
-		stdErr.Is(err, ErrAccountantPaymentValueTooLow),
-		stdErr.Is(err, ErrAccountantPromiseValueTooLow),
-		stdErr.Is(err, ErrAccountantOverspend),
+		stdErr.Is(err, ErrHermesInvalidSignature),
+		stdErr.Is(err, ErrHermesPaymentValueTooLow),
+		stdErr.Is(err, ErrHermesPromiseValueTooLow),
+		stdErr.Is(err, ErrHermesOverspend),
 		stdErr.Is(err, ErrConsumerUnregistered):
 		// these are critical, return and cancel session
 		return err
 	// under normal use, this should not occur. If it does, we should drop sessions until we settle because we're not getting paid.
-	case stdErr.Is(err, ErrAccountantProviderBalanceExhausted):
+	case stdErr.Is(err, ErrHermesProviderBalanceExhausted):
 		it.deps.EventBus.Publish(
 			event.AppTopicSettlementRequest,
 			event.AppEventSettlementRequest{
-				AccountantID: it.deps.ProvidersAccountantID,
-				ProviderID:   it.deps.ProviderID,
+				ChainID:    it.chainID(),
+				HermesID:   it.deps.ProvidersHermesID,
+				ProviderID: it.deps.ProviderID,
 			},
 		)
 		return err
 	default:
-		log.Err(err).Msgf("unknown accountant error encountered")
+		log.Err(err).Msgf("unknown hermes error encountered")
 		return err
 	}
 }
 
-func (it *InvoiceTracker) incrementAccountantFailureCount() uint64 {
-	it.accountantFailureCountLock.Lock()
-	defer it.accountantFailureCountLock.Unlock()
-	it.accountantFailureCount++
-	log.Trace().Msgf("accountant error count %v/%v", it.accountantFailureCount, it.deps.MaxAccountantFailureCount)
-	return it.accountantFailureCount
+func (it *InvoiceTracker) incrementHermesFailureCount() uint64 {
+	it.hermesFailureCountLock.Lock()
+	defer it.hermesFailureCountLock.Unlock()
+	it.hermesFailureCount++
+	log.Trace().Msgf("hermes error count %v/%v", it.hermesFailureCount, it.deps.MaxHermesFailureCount)
+	return it.hermesFailureCount
 }
 
-func (it *InvoiceTracker) resetAccountantFailureCount() {
-	it.accountantFailureCountLock.Lock()
-	defer it.accountantFailureCountLock.Unlock()
-	it.accountantFailureCount = 0
+func (it *InvoiceTracker) resetHermesFailureCount() {
+	it.hermesFailureCountLock.Lock()
+	defer it.hermesFailureCountLock.Unlock()
+	it.hermesFailureCount = 0
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
-	if em.HermesID != "" && !strings.EqualFold(em.HermesID, it.deps.ProvidersAccountantID.Hex()) {
-		return fmt.Errorf("invalid hermesID sent in exchange message. Expected %v, got %v", it.deps.ProvidersAccountantID.Hex(), em.HermesID)
-	}
-
 	peerAddr := common.HexToAddress(it.deps.Peer.Address)
 	if res := em.IsMessageValid(peerAddr); !res {
 		return ErrExchangeValidationFailed
+	}
+
+	if em.ChainID != it.chainID() {
+		return fmt.Errorf("Invalid chain id in exchange message: expected %v, got %v", it.chainID(), em.ChainID)
 	}
 
 	signer, err := em.Promise.RecoverSigner()
@@ -594,7 +583,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	lastEm := it.getLastExchangeMessage()
-	if em.Promise.Amount < lastEm.Promise.Amount {
+	if em.Promise.Amount.Cmp(lastEm.Promise.Amount) == -1 {
 		log.Warn().Msgf("Consumer sent an invalid amount. Expected < %v, got %v", lastEm.Promise.Amount, em.Promise.Amount)
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}

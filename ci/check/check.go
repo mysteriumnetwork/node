@@ -18,23 +18,29 @@
 package check
 
 import (
+	"errors"
 	"fmt"
+	"net"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/commands"
 	"github.com/mysteriumnetwork/go-ci/util"
+	"github.com/mysteriumnetwork/node/ci/packages"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 // Check performs commons checks.
 func Check() {
+	mg.Deps(CheckGenerate)
 	mg.Deps(CheckSwagger)
-	mg.Deps(CheckGoImports, CheckGoLint, CheckGoVet, CheckCopyright)
+	mg.Deps(CheckGoImports, CheckDNSMaps, CheckGoLint, CheckGoVet, CheckCopyright)
 }
 
 // CheckCopyright checks for copyright headers in files.
 func CheckCopyright() error {
-	return commands.CopyrightD(".", "pb")
+	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets")
 }
 
 // CheckGoLint reports linting errors in the solution.
@@ -49,37 +55,107 @@ func CheckGoVet() error {
 
 // CheckGoImports checks for issues with go imports.
 func CheckGoImports() error {
-	return commands.GoImportsD(".", "pb")
+	return commands.GoImportsD(".", "pb", "tequilapi/endpoints/assets")
 }
 
-// CheckSwagger checks whether swagger spec at "tequilapi.json" is valid against swagger specification 2.0.
+// CheckSwagger checks whether swagger spec at "tequilapi/docs/swagger.json" is valid against swagger specification 2.0.
 func CheckSwagger() error {
-	mg.Deps(GetSwagger)
-
-	err := sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models")
-	if err != nil {
-		fmt.Println("could not generate swagger spec")
-		return err
-	}
-
-	if err := sh.RunV("swagger", "validate", "tequilapi.json"); err != nil {
-		fmt.Println("could not validate swagger spec")
-		return err
+	if err := sh.RunV("swagger", "validate", "tequilapi/docs/swagger.json"); err != nil {
+		return fmt.Errorf("could not validate swagger spec: %w", err)
 	}
 	return nil
 }
 
-// GetSwagger installs swagger tool.
-func GetSwagger() error {
-	path, _ := util.GetGoBinaryPath("swagger")
-	if path != "" {
-		fmt.Println("Tool 'swagger' already installed")
-		return nil
+// CheckDNSMaps checks if the given dns maps in the metadata configuration actually point to the given IPS.
+func CheckDNSMaps() error {
+	ipMissmatches := make([]string, 0)
+
+	valuesToCheck := make(map[string][]string, 0)
+	for k, v := range metadata.TestnetDefinition.DNSMap {
+		valuesToCheck[k] = v
 	}
-	err := sh.RunV("go", "get", "-u", "github.com/go-swagger/go-swagger/cmd/swagger")
-	if err != nil {
-		fmt.Println("could not go get swagger")
-		return err
+
+	for k, v := range metadata.Testnet2Definition.DNSMap {
+		valuesToCheck[k] = v
 	}
+
+	for k, v := range valuesToCheck {
+		ips, err := net.LookupIP(k)
+		if err != nil {
+			return err
+		}
+
+		for _, ip := range v {
+			found := false
+			for i := range ips {
+				if ips[i].String() == ip {
+					found = true
+					break
+				}
+			}
+			if !found {
+				ipMissmatches = append(ipMissmatches, fmt.Sprintf("ip: %v, host: %v", ip, k))
+			}
+		}
+
+	}
+
+	if len(ipMissmatches) > 0 {
+		for _, v := range ipMissmatches {
+			fmt.Println(v)
+		}
+		return errors.New("IP missmatches found in DNS hosts")
+	}
+
 	return nil
+}
+
+var checkGenerateExcludes = []string{
+	"tequilapi/endpoints/assets/docs.go",
+}
+
+// CheckGenerate checks whether dynamic project parts are updated properly.
+func CheckGenerate() error {
+	filesBefore, err := getUncommittedFiles()
+	fmt.Println("Uncommitted files (before):")
+	fmt.Println(filesBefore)
+	fmt.Println()
+
+	mg.Deps(packages.Generate)
+
+	filesAfter, err := getUncommittedFiles()
+	if err != nil {
+		return fmt.Errorf("could retrieve changed files: %w", err)
+	}
+	fmt.Println("Uncommitted files (after):")
+	fmt.Println(filesAfter)
+	fmt.Println()
+
+	if len(filesBefore) != len(filesAfter) {
+		fmt.Println(`Files below needs review with "mage generate"`)
+		return errors.New("not all dynamic files are up-to-date")
+	}
+
+	fmt.Println("Dynamic files are up-to-date")
+	return nil
+}
+
+func getUncommittedFiles() ([]string, error) {
+	filesAll, err := sh.Output("git", "diff", "HEAD", "--name-only")
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve changed files: %w", err)
+	}
+
+	files := make([]string, 0)
+	for _, file := range strings.Split(filesAll, "\n") {
+		if file == "" {
+			continue
+		}
+		if util.IsPathExcluded(checkGenerateExcludes, file) {
+			continue
+		}
+		files = append(files, file)
+	}
+
+	return files, nil
 }

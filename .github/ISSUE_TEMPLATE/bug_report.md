@@ -26,7 +26,8 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
  - Node version: [e.g. 0.19.1]
  - OS: [e.g. raspbian buster, debian 10]
- - Docker: if running on docker, specify docker version and image tag
+ - Desktop app version (if applicable): [e.g. 2.0.4]
+ - Docker (if applicable): specify docker version and image tag
 
 **Additional context**
 Add any other context about the problem here.

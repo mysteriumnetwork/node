@@ -19,13 +19,14 @@ package requests
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -33,19 +34,25 @@ const (
 	DefaultTimeout = 20 * time.Second
 )
 
-// NewHTTPClient creates a new HTTP client.
-func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
+// NewHTTPClientWithTransport creates a new HTTP client with custom transport.
+func NewHTTPClientWithTransport(transport *http.Transport, timeout time.Duration) *HTTPClient {
 	c := &HTTPClient{
 		clientFactory: func() *http.Client {
 			return &http.Client{
 				Timeout:   timeout,
-				Transport: GetDefaultTransport(srcIP),
+				Transport: transport,
 			}
 		},
 	}
 	// Create initial clean before any HTTP request is made.
 	c.client = c.clientFactory()
+
 	return c
+}
+
+// NewHTTPClient creates a new HTTP client.
+func NewHTTPClient(srcIP string, timeout time.Duration) *HTTPClient {
+	return NewHTTPClientWithTransport(NewTransport(NewDialer(srcIP).DialContext), timeout)
 }
 
 // HTTPClient describes a client for performing HTTP requests.
@@ -89,14 +96,6 @@ func (c *HTTPClient) DoRequestAndParseResponse(req *http.Request, resp interface
 	return ParseResponseJSON(response, &resp)
 }
 
-// Reconnect creates new instance of underlying HTTP client.
-func (c *HTTPClient) Reconnect() {
-	c.clientMu.Lock()
-	defer c.clientMu.Unlock()
-	c.client.CloseIdleConnections()
-	c.client = c.clientFactory()
-}
-
 func (c *HTTPClient) resolveClient() *http.Client {
 	c.clientMu.Lock()
 	defer c.clientMu.Unlock()
@@ -122,11 +121,29 @@ func ParseResponseJSON(response *http.Response, dto interface{}) error {
 	return nil
 }
 
+// ErrorHTTP represent HTTP error with metadata.
+type ErrorHTTP struct {
+	Code     int
+	Status   string
+	Url      *url.URL
+	response []byte
+}
+
+// Error returns string equivalent for error.
+func (e *ErrorHTTP) Error() string {
+	return fmt.Sprintf("server response invalid: %s (%s)%s", e.Status, e.Url, e.response)
+}
+
 // ParseResponseError parses http.Response error.
 func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		body, _ := ioutil.ReadAll(response.Body)
-		return errors.Errorf("server response invalid: %s (%s)%s", response.Status, response.Request.URL, body)
+		return &ErrorHTTP{
+			Code:     response.StatusCode,
+			Status:   response.Status,
+			Url:      response.Request.URL,
+			response: body,
+		}
 	}
 
 	return nil

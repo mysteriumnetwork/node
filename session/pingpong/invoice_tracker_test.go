@@ -19,9 +19,8 @@ package pingpong
 
 import (
 	"encoding/hex"
-	stdErrors "errors"
-	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -33,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/mbtime"
 	"github.com/mysteriumnetwork/payments/crypto"
@@ -42,7 +40,7 @@ import (
 )
 
 const mockRegistryAddress = "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7"
-const mockAccountantAddress = "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c"
+const mockHermesAddress = "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c"
 const mockChannelImplementation = "0xa26b684d8dBa935DD34544FBd3Ab4d7FDe1C4D07"
 
 type MockPeerInvoiceSender struct {
@@ -57,16 +55,20 @@ func (mpis *MockPeerInvoiceSender) Send(invoice crypto.Invoice) error {
 	return mpis.mockError
 }
 
-type mockAccountantCaller struct {
+type mockHermesCaller struct {
 	errToReturn error
 }
 
-func (mac *mockAccountantCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
+func (mac *mockHermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
 	return crypto.Promise{}, mac.errToReturn
 }
 
-func (mac *mockAccountantCaller) RevealR(r string, provider string, agreementID uint64) error {
+func (mac *mockHermesCaller) RevealR(r string, provider string, agreementID *big.Int) error {
 	return mac.errToReturn
+}
+
+func (mac *mockHermesCaller) UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error) {
+	return promise, nil
 }
 
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
@@ -92,7 +94,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -104,12 +106,10 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -147,7 +147,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -159,11 +159,11 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
-		MaxAllowedAccountantFee:    1500,
+		MaxAllowedHermesFee:        1500,
 		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -174,10 +174,10 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 	}()
 
 	err = invoiceTracker.Start()
-	assert.Equal(t, ErrAccountantFeeTooLarge, err)
+	assert.Equal(t, ErrHermesFeeTooLarge, err)
 }
 
-func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
+func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -198,11 +198,11 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	mockErr := errors.New("explosions everywhere")
 	tracker := session.NewTracker(mbtime.Now)
 	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	NewAccountantPromiseStorage(bolt)
+	NewHermesPromiseStorage(bolt)
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -215,8 +215,8 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
@@ -229,7 +229,7 @@ func Test_InvoiceTracker_Start_BubblesAccountantCheckError(t *testing.T) {
 	}()
 
 	err = invoiceTracker.Start()
-	assert.Equal(t, errors.Wrap(mockErr, "could not get accountants fee").Error(), err.Error())
+	assert.Equal(t, errors.Wrap(mockErr, "could not get hermess fee").Error(), err.Error())
 }
 
 func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
@@ -255,7 +255,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -265,13 +265,11 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Millisecond,
 		ChargePeriodLeeway:         15 * time.Minute,
-		FirstInvoiceSendDuration:   time.Millisecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
@@ -317,7 +315,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				price: money.New(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -327,13 +325,11 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
@@ -345,68 +341,12 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.True(t, invoice.AgreementTotal > 0)
+	assert.True(t, invoice.AgreementTotal.Cmp(new(big.Int)) > 0)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 
 	invoiceTracker.Stop()
 	assert.NoError(t, <-errChan)
-}
-
-func Test_InvoiceTracker_SendsFirstInvoice_Return_Timeout_Err(t *testing.T) {
-	dir, err := ioutil.TempDir("", "invoice_tracker_test")
-	assert.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	ks := identity.NewMockKeystore()
-	acc, err := ks.NewAccount("")
-	assert.Nil(t, err)
-	mockSender := &MockPeerInvoiceSender{
-		mockError: p2p.ErrSendTimeout,
-	}
-
-	exchangeMessageChan := make(chan crypto.ExchangeMessage)
-	bolt, err := boltdb.NewStorage(dir)
-	assert.Nil(t, err)
-	defer bolt.Close()
-
-	tracker := session.NewTracker(mbtime.Now)
-	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
-	deps := InvoiceTrackerDeps{
-		Proposal: market.ServiceProposal{
-			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(1000000000000, money.CurrencyMyst),
-				rate:  market.PaymentRate{PerTime: time.Minute},
-			},
-		},
-		Peer:                       identity.FromAddress("some peer"),
-		PeerInvoiceSender:          mockSender,
-		InvoiceStorage:             invoiceStorage,
-		TimeTracker:                &tracker,
-		ChargePeriod:               time.Nanosecond,
-		ChargePeriodLeeway:         5 * time.Nanosecond,
-		FirstInvoiceSendDuration:   time.Millisecond,
-		FirstInvoiceSendTimeout:    time.Nanosecond,
-		ExchangeMessageChan:        exchangeMessageChan,
-		ExchangeMessageWaitTimeout: time.Second,
-		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
-		EventBus:                   mocks.NewEventBus(),
-	}
-	invoiceTracker := NewInvoiceTracker(deps)
-	defer invoiceTracker.Stop()
-
-	errChan := make(chan error)
-	go func() { errChan <- invoiceTracker.Start() }()
-
-	err = <-errChan
-
-	if !stdErrors.Is(err, ErrFirstInvoiceSendTimeout) {
-		t.Fatalf("expected err %v, got: %v", ErrFirstInvoiceSendTimeout, err)
-	}
 }
 
 func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
@@ -431,7 +371,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	deps := InvoiceTrackerDeps{
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(1000000000000, money.CurrencyMyst),
+				price: money.New(big.NewInt(1000000000000), money.CurrencyMyst),
 				rate:  market.PaymentRate{PerTime: time.Minute},
 			},
 		},
@@ -441,13 +381,11 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Minute,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
@@ -459,7 +397,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.Equal(t, uint64(providerFirstInvoiceValue), invoice.AgreementTotal)
+	assert.Equal(t, providerFirstInvoiceValue, invoice.AgreementTotal)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 
@@ -493,13 +431,11 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		TimeTracker:                &tracker,
 		ChargePeriod:               time.Nanosecond,
 		ChargePeriodLeeway:         15 * time.Second,
-		FirstInvoiceSendDuration:   time.Nanosecond,
-		FirstInvoiceSendTimeout:    time.Minute,
 		ExchangeMessageChan:        exchangeMessageChan,
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
-		ConsumersAccountantID:      acc.Address,
-		ProvidersAccountantID:      acc.Address,
+		ConsumersHermesID:          acc.Address,
+		ProvidersHermesID:          acc.Address,
 		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
@@ -511,7 +447,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.Equal(t, uint64(0), invoice.AgreementTotal)
+	assert.Equal(t, big.NewInt(0), invoice.AgreementTotal)
 	assert.Len(t, invoice.Hashlock, 64)
 	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 
@@ -527,14 +463,14 @@ func Test_sendsInvoiceIfThresholdReached(t *testing.T) {
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate: market.PaymentRate{
 					PerTime: time.Minute,
 					PerByte: 1,
 				},
 			},
 		},
-		MaxNotPaidInvoice: 100,
+		MaxNotPaidInvoice: big.NewInt(100),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	invoiceTracker.dataTransferred = DataTransferred{
@@ -558,14 +494,14 @@ func Test_sendsInvoiceIfTimePassed(t *testing.T) {
 		EventBus:    mocks.NewEventBus(),
 		Proposal: market.ServiceProposal{
 			PaymentMethod: &mockPaymentMethod{
-				price: money.NewMoney(10, money.CurrencyMyst),
+				price: money.New(big.NewInt(10), money.CurrencyMyst),
 				rate: market.PaymentRate{
 					PerTime: time.Minute,
 					PerByte: 1,
 				},
 			},
 		},
-		MaxNotPaidInvoice: 100,
+		MaxNotPaidInvoice: big.NewInt(100),
 		ChargePeriod:      time.Millisecond,
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -591,7 +527,7 @@ func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
 	assert.Equal(t, uint64(360), res)
 }
 
-func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice, channel string) (crypto.ExchangeMessage, string) {
+func generateExchangeMessage(t *testing.T, amount *big.Int, invoice crypto.Invoice, channel string) (crypto.ExchangeMessage, string) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(dir)
@@ -604,12 +540,12 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 	assert.Nil(t, err)
 
 	if channel == "" {
-		addr, err := crypto.GenerateChannelAddress(acc.Address.Hex(), mockAccountantAddress, mockRegistryAddress, mockChannelImplementation)
+		addr, err := crypto.GenerateChannelAddress(acc.Address.Hex(), mockHermesAddress, mockRegistryAddress, mockChannelImplementation)
 		assert.Nil(t, err)
 		channel = addr
 	}
 
-	em, err := crypto.CreateExchangeMessage(invoice, amount, channel, "", ks, acc.Address)
+	em, err := crypto.CreateExchangeMessage(1, invoice, amount, channel, "", ks, acc.Address)
 	assert.Nil(t, err)
 	if em != nil {
 		return *em, acc.Address.Hex()
@@ -626,19 +562,18 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 	assert.Nil(t, err)
 	defer bolt.Close()
 
-	msg1, addr1 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
-	msg2, addr2 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
-	msg3, addr3 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "")
+	msg1, addr1 := generateExchangeMessage(t, big.NewInt(10), crypto.Invoice{AgreementTotal: big.NewInt(10), AgreementID: new(big.Int), TransactorFee: new(big.Int)}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
+	msg2, addr2 := generateExchangeMessage(t, big.NewInt(10), crypto.Invoice{AgreementTotal: big.NewInt(10), AgreementID: new(big.Int), TransactorFee: new(big.Int), Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
+	msg3, addr3 := generateExchangeMessage(t, big.NewInt(10), crypto.Invoice{AgreementTotal: big.NewInt(10), AgreementID: new(big.Int), TransactorFee: new(big.Int), Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "")
 	type fields struct {
 		peer                       identity.Identity
 		exchangeMessageChan        chan crypto.ExchangeMessage
 		exchangeMessageWaitTimeout time.Duration
-		accountantFailureCount     uint64
-		accountantPromiseStorage   accountantPromiseStorage
-		accountantID               common.Address
-		AgreementID                uint64
+		hermesFailureCount         uint64
+		hermesPromiseStorage       hermesPromiseStorage
+		hermesID                   common.Address
+		AgreementID                *big.Int
 		lastExchangeMessage        crypto.ExchangeMessage
-		accountantCaller           accountantCaller
 		invoicesSent               map[string]sentInvoice
 		channelImplementation      string
 		registryAddress            string
@@ -656,6 +591,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				peer:                       identity.FromAddress(addr1),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 			},
 			em: &crypto.ExchangeMessage{},
 		},
@@ -666,6 +609,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				peer:                       identity.FromAddress(addr1),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 			},
 			em: &msg1,
 		},
@@ -676,6 +627,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				peer:                       identity.FromAddress(addr2),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 			},
 			em: &msg2,
 		},
@@ -685,12 +644,19 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 			fields: fields{
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
-				accountantCaller:           &mockAccountantCaller{},
-				accountantPromiseStorage:   &mockAccountantPromiseStorage{},
+				hermesPromiseStorage:       &mockHermesPromiseStorage{},
 				peer:                       identity.FromAddress(addr3),
 				registryAddress:            mockRegistryAddress,
 				channelImplementation:      mockChannelImplementation,
-				accountantID:               common.HexToAddress(mockAccountantAddress),
+				hermesID:                   common.HexToAddress(mockHermesAddress),
+				lastExchangeMessage: crypto.ExchangeMessage{
+					Promise: crypto.Promise{
+						Amount: new(big.Int),
+						Fee:    new(big.Int),
+					},
+					AgreementID:    new(big.Int),
+					AgreementTotal: new(big.Int),
+				},
 				invoicesSent: map[string]sentInvoice{
 					hex.EncodeToString(msg3.Promise.Hashlock): sentInvoice{
 						invoice: crypto.Invoice{
@@ -708,19 +674,19 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				Peer:                       tt.fields.peer,
 				ExchangeMessageChan:        tt.fields.exchangeMessageChan,
 				ExchangeMessageWaitTimeout: tt.fields.exchangeMessageWaitTimeout,
-				ConsumersAccountantID:      tt.fields.accountantID,
-				ProvidersAccountantID:      tt.fields.accountantID,
+				ConsumersHermesID:          tt.fields.hermesID,
+				ProvidersHermesID:          tt.fields.hermesID,
 				Registry:                   tt.fields.registryAddress,
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
-				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.accountantID.Hex(), tt.fields.channelImplementation, tt.fields.registryAddress),
+				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.hermesID.Hex(), tt.fields.channelImplementation, tt.fields.registryAddress),
 			}
 			it := &InvoiceTracker{
-				accountantFailureCount: tt.fields.accountantFailureCount,
-				lastExchangeMessage:    tt.fields.lastExchangeMessage,
-				agreementID:            tt.fields.AgreementID,
-				deps:                   deps,
-				invoicesSent:           tt.fields.invoicesSent,
+				hermesFailureCount:  tt.fields.hermesFailureCount,
+				lastExchangeMessage: tt.fields.lastExchangeMessage,
+				agreementID:         tt.fields.AgreementID,
+				deps:                deps,
+				invoicesSent:        tt.fields.invoicesSent,
 			}
 			if err := it.handleExchangeMessage(*tt.em); (err != nil) != tt.wantErr {
 				t.Errorf("InvoiceTracker.receiveExchangeMessageOrTimeout() error = %v, wantErr %v", err, tt.wantErr)
@@ -729,25 +695,12 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 	}
 }
 
-func Test_InvoiceTracker_RejectsInvalidAccountant(t *testing.T) {
-	tracker := session.NewTracker(mbtime.Now)
-	deps := InvoiceTrackerDeps{
-		EventBus:              mocks.NewEventBus(),
-		TimeTracker:           &tracker,
-		ConsumersAccountantID: common.HexToAddress("0x1"),
-		ProvidersAccountantID: common.HexToAddress("0x0"),
-	}
-	invoiceTracker := NewInvoiceTracker(deps)
-	err := invoiceTracker.Start()
-	assert.EqualError(t, err, fmt.Errorf("consumer wants to work with an unsupported accountant(%q) while provider expects %q", common.HexToAddress("0x1").Hex(), common.HexToAddress("0x0").Hex()).Error())
-}
-
-func TestInvoiceTracker_handleAccountantError(t *testing.T) {
+func TestInvoiceTracker_handleHermesError(t *testing.T) {
 	tests := []struct {
-		name                      string
-		maxAccountantFailureCount uint64
-		err                       error
-		wantErr                   error
+		name                  string
+		maxHermesFailureCount uint64
+		err                   error
+		wantErr               error
 	}{
 		{
 			name:    "ignores nil errors",
@@ -756,52 +709,52 @@ func TestInvoiceTracker_handleAccountantError(t *testing.T) {
 		},
 		{
 			name:    "handles wrapped errors",
-			wantErr: ErrAccountantInternal,
-			err:     errors.Wrap(ErrAccountantInternal, "pita bread"),
+			wantErr: ErrHermesInternal,
+			err:     errors.Wrap(ErrHermesInternal, "pita bread"),
 		},
 		{
 			name:    "bubbles internal on failure exceeded",
-			wantErr: ErrAccountantInternal,
-			err:     ErrAccountantInternal,
+			wantErr: ErrHermesInternal,
+			err:     ErrHermesInternal,
 		},
 		{
-			name:                      "returns nil on internal not exceeding limit",
-			wantErr:                   nil,
-			maxAccountantFailureCount: 1,
-			err:                       ErrAccountantInternal,
+			name:                  "returns nil on internal not exceeding limit",
+			wantErr:               nil,
+			maxHermesFailureCount: 1,
+			err:                   ErrHermesInternal,
 		},
 		{
 			name:    "bubbles hashlock missmatch on failure exceeded",
-			wantErr: ErrAccountantHashlockMissmatch,
-			err:     ErrAccountantHashlockMissmatch,
+			wantErr: ErrHermesHashlockMissmatch,
+			err:     ErrHermesHashlockMissmatch,
 		},
 		{
-			name:                      "returns nil on hashlock missmatch not exceeding limit",
-			wantErr:                   nil,
-			maxAccountantFailureCount: 1,
-			err:                       ErrAccountantHashlockMissmatch,
+			name:                  "returns nil on hashlock missmatch not exceeding limit",
+			wantErr:               nil,
+			maxHermesFailureCount: 1,
+			err:                   ErrHermesHashlockMissmatch,
 		},
 		{
-			name:                      "returns unknown error",
-			wantErr:                   errors.New("unknown error"),
-			maxAccountantFailureCount: 100,
-			err:                       errors.New("unknown error"),
+			name:                  "returns unknown error",
+			wantErr:               errors.New("unknown error"),
+			maxHermesFailureCount: 100,
+			err:                   errors.New("unknown error"),
 		},
 		{
-			name:                      "returns overspend",
-			maxAccountantFailureCount: 100,
-			wantErr:                   ErrAccountantOverspend,
-			err:                       ErrAccountantOverspend,
+			name:                  "returns overspend",
+			maxHermesFailureCount: 100,
+			wantErr:               ErrHermesOverspend,
+			err:                   ErrHermesOverspend,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			it := &InvoiceTracker{
 				deps: InvoiceTrackerDeps{
-					MaxAccountantFailureCount: tt.maxAccountantFailureCount,
+					MaxHermesFailureCount: tt.maxHermesFailureCount,
 				},
 			}
-			err := it.handleAccountantError(tt.err)
+			err := it.handleHermesError(tt.err)
 			if tt.wantErr == nil {
 				assert.NoError(t, err, tt.name)
 			} else {
@@ -842,17 +795,21 @@ func (me *mockEncryptor) Encrypt(addr common.Address, plaintext []byte) ([]byte,
 	return plaintext, me.errToReturn
 }
 
-type mockAccountantPromiseStorage struct {
-	toReturn    AccountantPromise
+type mockHermesPromiseStorage struct {
+	toReturn    HermesPromise
 	errToReturn error
 }
 
-func (maps *mockAccountantPromiseStorage) Store(_ identity.Identity, _ common.Address, _ AccountantPromise) error {
+func (maps *mockHermesPromiseStorage) Store(_ HermesPromise) error {
 	return maps.errToReturn
 }
 
-func (maps *mockAccountantPromiseStorage) Get(_ identity.Identity, _ common.Address) (AccountantPromise, error) {
+func (maps *mockHermesPromiseStorage) Get(chainID int64, _ string) (HermesPromise, error) {
 	return maps.toReturn, maps.errToReturn
+}
+
+func (maps *mockHermesPromiseStorage) List(_ HermesPromiseFilter) ([]HermesPromise, error) {
+	return []HermesPromise{maps.toReturn}, maps.errToReturn
 }
 
 type mockBlockchainHelper struct {
@@ -863,7 +820,7 @@ type mockBlockchainHelper struct {
 	isRegisteredError error
 }
 
-func (mbh *mockBlockchainHelper) GetAccountantFee(accountantAddress common.Address) (uint16, error) {
+func (mbh *mockBlockchainHelper) GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error) {
 	return mbh.feeToReturn, mbh.errorToReturn
 }
 
@@ -923,7 +880,7 @@ func TestInvoiceTracker_validateExchangeMessage(t *testing.T) {
 			wantErr: true,
 			fields: fields{
 				deps: InvoiceTrackerDeps{
-					ProvidersAccountantID: common.HexToAddress("0x0"),
+					ProvidersHermesID: common.HexToAddress("0x0"),
 				},
 			},
 		},

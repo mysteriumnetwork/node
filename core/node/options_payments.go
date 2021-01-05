@@ -17,20 +17,25 @@
 
 package node
 
-import "time"
+import (
+	"math/big"
+	"time"
+)
 
 // OptionsPayments controls the behaviour of payments
 type OptionsPayments struct {
-	MaxAllowedPaymentPercentile        int
-	BCTimeout                          time.Duration
-	AccountantPromiseSettlingThreshold float64
-	SettlementTimeout                  time.Duration
-	MystSCAddress                      string
-	ConsumerUpperGBPriceBound          uint64
-	ConsumerLowerGBPriceBound          uint64
-	ConsumerUpperMinutePriceBound      uint64
-	ConsumerLowerMinutePriceBound      uint64
-	ConsumerDataLeewayMegabytes        uint64
-	ProviderInvoiceFrequency           time.Duration
-	MaxUnpaidInvoiceValue              uint64
+	MaxAllowedPaymentPercentile    int
+	BCTimeout                      time.Duration
+	HermesPromiseSettlingThreshold float64
+	SettlementTimeout              time.Duration
+	MystSCAddress                  string
+	WethAddress                    string
+	DaiAddress                     string
+	ConsumerUpperGBPriceBound      *big.Int
+	ConsumerLowerGBPriceBound      *big.Int
+	ConsumerUpperMinutePriceBound  *big.Int
+	ConsumerLowerMinutePriceBound  *big.Int
+	ConsumerDataLeewayMegabytes    uint64
+	ProviderInvoiceFrequency       time.Duration
+	MaxUnpaidInvoiceValue          *big.Int
 }

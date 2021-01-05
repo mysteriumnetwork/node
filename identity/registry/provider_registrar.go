@@ -18,31 +18,41 @@
 package registry
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market/mysterium"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
 type registrationStatusChecker interface {
-	GetRegistrationStatus(id identity.Identity) (RegistrationStatus, error)
+	GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error)
 }
 
 type txer interface {
-	FetchRegistrationFees() (FeesResponse, error)
-	RegisterIdentity(identity string, regReqDTO *IdentityRegistrationRequestDTO) error
+	RegisterIdentity(id string, stake, fee *big.Int, beneficiary string, chainID int64, referralToken *string) error
+	CheckIfRegistrationBountyEligible(identity identity.Identity) (bool, error)
+}
+
+type payoutStatusChecker interface {
+	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
 }
 
 // ProviderRegistrar is responsible for registering a provider once a service is started.
 type ProviderRegistrar struct {
 	registrationStatusChecker registrationStatusChecker
 	txer                      txer
+	mysteriumAPI              payoutStatusChecker
+	signerFactory             identity.SignerFactory
 	once                      sync.Once
 	stopChan                  chan struct{}
 	queue                     chan queuedEvent
@@ -58,15 +68,22 @@ type queuedEvent struct {
 
 // ProviderRegistrarConfig represents all things configurable for the provider registrar
 type ProviderRegistrarConfig struct {
+	IsTestnet2          bool
 	MaxRetries          int
-	Stake               uint64
+	Stake               *big.Int
 	DelayBetweenRetries time.Duration
-	AccountantAddress   common.Address
+	HermesAddress       common.Address
 	RegistryAddress     common.Address
 }
 
 // NewProviderRegistrar creates a new instance of provider registrar
-func NewProviderRegistrar(transactor txer, registrationStatusChecker registrationStatusChecker, prc ProviderRegistrarConfig) *ProviderRegistrar {
+func NewProviderRegistrar(
+	transactor txer,
+	registrationStatusChecker registrationStatusChecker,
+	mysteriumAPI payoutStatusChecker,
+	signerFactory identity.SignerFactory,
+	prc ProviderRegistrarConfig,
+) *ProviderRegistrar {
 	return &ProviderRegistrar{
 		stopChan:                  make(chan struct{}),
 		registrationStatusChecker: registrationStatusChecker,
@@ -74,6 +91,8 @@ func NewProviderRegistrar(transactor txer, registrationStatusChecker registratio
 		registeredIdentities:      make(map[string]struct{}),
 		cfg:                       prc,
 		txer:                      transactor,
+		mysteriumAPI:              mysteriumAPI,
+		signerFactory:             signerFactory,
 	}
 }
 
@@ -145,42 +164,63 @@ func (pr *ProviderRegistrar) delayedRequeue(qe queuedEvent) {
 	}
 }
 
+func (pr *ProviderRegistrar) chainID() int64 {
+	return config.GetInt64(config.FlagChainID)
+}
+
 func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
-	registered, err := pr.registrationStatusChecker.GetRegistrationStatus(identity.FromAddress(qe.event.ProviderID))
+	registered, err := pr.registrationStatusChecker.GetRegistrationStatus(pr.chainID(), identity.FromAddress(qe.event.ProviderID))
 	if err != nil {
 		return errors.Wrap(err, "could not check registration status on BC")
 	}
 
 	switch registered {
-	case RegisteredProvider:
+	case Registered:
 		log.Info().Msgf("Provider %q already registered on bc, skipping", qe.event.ProviderID)
 		pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 		return nil
 	default:
-		log.Info().Msgf("Provider %q not registered on BC, will register", qe.event.ProviderID)
+		log.Info().Msgf("Provider %q not registered on BC, will check if elgible for auto-registration", qe.event.ProviderID)
 		return pr.registerIdentity(qe)
 	}
 }
 
 func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
-	fees, err := pr.txer.FetchRegistrationFees()
+	id := identity.FromAddress(qe.event.ProviderID)
+
+	if !pr.cfg.IsTestnet2 {
+		eligible, err := pr.txer.CheckIfRegistrationBountyEligible(id)
+		if err != nil {
+			log.Error().Err(err).Msgf("eligibility for registration check failed for %q", id.Address)
+			return errors.Wrap(err, "could not check eligibility for auto-registration")
+		}
+
+		if !eligible {
+			log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", id.Address)
+			return nil
+		}
+	}
+
+	// This part migrates bounty payout address to BC beneficiary
+	payout, err := pr.mysteriumAPI.GetPayoutInfo(id, pr.signerFactory(id))
 	if err != nil {
-		return errors.Wrap(err, "could not fetch fees from transactor")
-	}
-	log.Info().Msgf("Fees fetched. Registration costs %v", fees.Fee)
+		if errHTTP, ok := err.(*requests.ErrorHTTP); ok && errHTTP.Code == 404 {
+			log.Info().Msgf("provider %q not have payout address for auto registration, will require manual registration", id.Address)
+			return nil
+		}
 
-	regReq := &IdentityRegistrationRequestDTO{
-		Fee:   fees.Fee,
-		Stake: pr.cfg.Stake,
+		log.Error().Err(err).Msgf("beneficiary for registration check failed for %q", id.Address)
+		return err
 	}
 
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, regReq)
+	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, nil, payout.EthAddress, pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
 	}
+
 	pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
-	log.Info().Msgf("Registration success for provider %q", qe.event.ProviderID)
+	log.Info().Msgf("Registration success for provider %q", id.Address)
 	return nil
 }
 

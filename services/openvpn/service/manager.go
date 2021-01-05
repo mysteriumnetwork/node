@@ -124,7 +124,7 @@ func (m *Manager) Serve(instance *service.Instance) (err error) {
 		return fmt.Errorf("could not get outbound IP: %w", err)
 	}
 
-	m.tlsPrimitives, err = primitiveFactory(m.country, instance.Proposal().ProviderID)
+	m.tlsPrimitives, err = primitiveFactory(m.country, instance.ProviderID.Address)
 	if err != nil {
 		return
 	}
@@ -180,7 +180,7 @@ func (m *Manager) Stop() error {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*session.ConfigParams, error) {
+func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage, conn *net.UDPConn) (*service.ConfigParams, error) {
 	if m.vpnServerPort == 0 {
 		return nil, errors.New("service port not initialized")
 	}
@@ -190,7 +190,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		return nil, fmt.Errorf("could not get public IP: %w", err)
 	}
 
-	serverIP := vpnServerIP(m.serviceOptions.Port, m.outboundIP, publicIP, m.nodeOptions.OptionsNetwork.Localnet)
+	serverIP := vpnServerIP(m.outboundIP, publicIP, m.nodeOptions.OptionsNetwork.Localnet)
 	vpnConfig := &openvpn_service.VPNConfig{
 		RemoteIP:        serverIP,
 		RemotePort:      m.vpnServerPort,
@@ -217,7 +217,7 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 		}
 	}
 
-	return &session.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy}, nil
+	return &service.ConfigParams{SessionServiceConfig: vpnConfig, SessionDestroyCallback: destroy}, nil
 }
 
 func (m *Manager) startServer() error {

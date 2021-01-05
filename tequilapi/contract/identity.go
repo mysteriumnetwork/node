@@ -18,6 +18,9 @@
 package contract
 
 import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -37,12 +40,13 @@ type IdentityDTO struct {
 	// identity in Ethereum address format
 	// required: true
 	// example: 0x0000000000000000000000000000000000000001
-	Address            string `json:"id"`
-	RegistrationStatus string `json:"registration_status"`
-	ChannelAddress     string `json:"channel_address"`
-	Balance            uint64 `json:"balance"`
-	Earnings           uint64 `json:"earnings"`
-	EarningsTotal      uint64 `json:"earnings_total"`
+	Address            string   `json:"id"`
+	RegistrationStatus string   `json:"registration_status"`
+	ChannelAddress     string   `json:"channel_address"`
+	Balance            *big.Int `json:"balance"`
+	Earnings           *big.Int `json:"earnings"`
+	EarningsTotal      *big.Int `json:"earnings_total"`
+	Stake              *big.Int `json:"stake"`
 }
 
 // NewIdentityDTO maps to API identity.
@@ -77,7 +81,7 @@ type IdentityCreateRequest struct {
 func (r IdentityCreateRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -92,7 +96,7 @@ type IdentityUnlockRequest struct {
 func (r IdentityUnlockRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
@@ -108,27 +112,53 @@ type IdentityCurrentRequest struct {
 func (r IdentityCurrentRequest) Validate() *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
 	if r.Passphrase == nil {
-		errors.ForField("passphrase").AddError("required", "Field is required")
+		errors.ForField("passphrase").Required()
 	}
 	return errors
 }
 
+// IdentityRegisterRequest represents the identity registration user input parameters
+// swagger:model IdentityRegisterRequestDTO
+type IdentityRegisterRequest struct {
+	// Stake is used by Provider, default 0
+	Stake *big.Int `json:"stake,omitempty"`
+	// Cache out address for Provider
+	Beneficiary string `json:"beneficiary,omitempty"`
+	// Fee: negotiated fee with transactor
+	Fee *big.Int `json:"fee,omitempty"`
+	// Token: referral token, if the user has one
+	ReferralToken *string `json:"referral_token,omitempty"`
+}
+
+// Validate validates fields in request
+func (irr *IdentityRegisterRequest) Validate() *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+
+	if irr.Beneficiary != "" && !common.IsHexAddress(irr.Beneficiary) {
+		errors.ForField("beneficiary").Invalid(irr.Beneficiary + " - is not a valid ethereum wallet address")
+	}
+
+	if irr.ReferralToken == nil {
+		if irr.Stake == nil {
+			errors.ForField("stake").Required()
+		} else if irr.Stake.Cmp(big.NewInt(0)) == -1 {
+			errors.ForField("stake").Invalid("Must be positive")
+		}
+	}
+
+	return errors
+}
+
 // IdentityRegistrationResponse represents registration status and needed data for registering of given identity
-// swagger:model RegistrationDataDTO
+// swagger:model IdentityRegistrationResponseDTO
 type IdentityRegistrationResponse struct {
 	Status string `json:"status"`
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
 }
 
-// ListProposalsResponse holds list of proposals.
-// swagger:model ListProposalsResponse
-type ListProposalsResponse struct {
-	Proposals []ProposalDTO `json:"proposals"`
-}
-
-// IdentityBeneficiaryResponce represents the provider beneficiary address.
-// swagger:model IdentityBeneficiaryDTO
-type IdentityBeneficiaryResponce struct {
-	Beneficiary string `json:"Beneficiary"`
+// IdentityBeneficiaryResponse represents the provider beneficiary address.
+// swagger:model IdentityBeneficiaryResponseDTO
+type IdentityBeneficiaryResponse struct {
+	Beneficiary string `json:"beneficiary"`
 }

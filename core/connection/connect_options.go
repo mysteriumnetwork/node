@@ -20,6 +20,8 @@ package connection
 import (
 	"net"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
@@ -39,8 +41,9 @@ type ConnectOptions struct {
 	ProviderID      identity.Identity
 	Proposal        market.ServiceProposal
 	SessionID       session.ID
-	DNS             DNSOption
+	Params          ConnectParams
 	SessionConfig   []byte
 	ProviderNATConn *net.UDPConn
 	ChannelConn     *net.UDPConn
+	HermesID        common.Address
 }

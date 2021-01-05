@@ -18,103 +18,85 @@
 package pingpong
 
 import (
-	"fmt"
+	"errors"
 	"math/big"
-	"sort"
-	"sync"
 	"time"
 
+	"github.com/asdine/storm/v3"
+	"github.com/asdine/storm/v3/q"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // SettlementHistoryStorage stores the settlement events for historical purposes.
 type SettlementHistoryStorage struct {
-	bolt                 persistentStorage
-	maxEntriesPerChannel int
-	lock                 sync.Mutex
+	bolt *boltdb.Bolt
 }
 
-// DefaultMaxEntriesPerChannel represents the default settlement history limit.
-const DefaultMaxEntriesPerChannel = 100
-
 // NewSettlementHistoryStorage returns a new instance of the SettlementHistoryStorage.
-func NewSettlementHistoryStorage(bolt persistentStorage, maxEntries int) *SettlementHistoryStorage {
+func NewSettlementHistoryStorage(bolt *boltdb.Bolt) *SettlementHistoryStorage {
 	return &SettlementHistoryStorage{
-		bolt:                 bolt,
-		maxEntriesPerChannel: maxEntries,
+		bolt: bolt,
 	}
 }
 
 // SettlementHistoryEntry represents a settlement history entry
 type SettlementHistoryEntry struct {
-	Time         time.Time      `json:"time,omitempty"`
-	TxHash       common.Hash    `json:"tx_hash,omitempty"`
-	Promise      crypto.Promise `json:"promise,omitempty"`
-	Beneficiary  common.Address `json:"beneficiary,omitempty"`
-	Amount       *big.Int       `json:"amount,omitempty"`
-	TotalSettled *big.Int       `json:"total_settled,omitempty"`
+	TxHash         common.Hash `storm:"id"`
+	ProviderID     identity.Identity
+	HermesID       common.Address
+	ChannelAddress common.Address
+	Time           time.Time
+	Promise        crypto.Promise
+	Beneficiary    common.Address
+	Amount         *big.Int
+	TotalSettled   *big.Int
+	Fees           *big.Int
 }
 
-const settlementHistoryBucket = "settlement_history"
+const settlementHistoryBucket = "settlement-history"
 
-// Store sotres a given settlement history entry.
-func (shs *SettlementHistoryStorage) Store(provider identity.Identity, accountant common.Address, she SettlementHistoryEntry) error {
-	shs.lock.Lock()
-	defer shs.lock.Unlock()
-	addr, err := crypto.GenerateProviderChannelID(provider.Address, accountant.Hex())
-	if err != nil {
-		return fmt.Errorf("could not generate provider channel address: %w", err)
-	}
-
-	she.Time = time.Now().UTC()
-	toStore := []SettlementHistoryEntry{she}
-	entries, err := shs.get(addr)
-	if err != nil {
-		if err.Error() == errBoltNotFound {
-			// if not found, just store and return
-			return shs.store(addr, toStore)
-		}
-		return fmt.Errorf("could not get previous settlement history: %w", err)
-	}
-
-	// sort by date
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Time.After(entries[j].Time) })
-
-	//  remove old ones if needed to prevent excessive history storage
-	if len(entries) < shs.maxEntriesPerChannel {
-		toStore = append(toStore, entries...)
-	} else if len(entries) == shs.maxEntriesPerChannel {
-		toStore = append(toStore, entries[:len(entries)-1]...)
-	} else {
-		diff := len(entries) - shs.maxEntriesPerChannel + 1
-		toStore = append(toStore, entries[:len(entries)-diff]...)
-	}
-
-	return shs.store(addr, toStore)
+// Store stores a given settlement history entry.
+func (shs *SettlementHistoryStorage) Store(she SettlementHistoryEntry) error {
+	return shs.bolt.DB().From(settlementHistoryBucket).Save(&she)
 }
 
-func (shs *SettlementHistoryStorage) store(channel string, she []SettlementHistoryEntry) error {
-	err := shs.bolt.SetValue(settlementHistoryBucket, channel, she)
-	if err != nil {
-		return fmt.Errorf("could not store settlement history: %w", err)
-	}
-	return nil
+// SettlementHistoryFilter defines all flags for filtering in settlement history storage.
+type SettlementHistoryFilter struct {
+	TimeFrom   *time.Time
+	TimeTo     *time.Time
+	ProviderID *identity.Identity
+	HermesID   *common.Address
 }
 
-// Get returns the settlement history for given provider accountant combination.
-func (shs *SettlementHistoryStorage) Get(provider identity.Identity, accountant common.Address) ([]SettlementHistoryEntry, error) {
-	shs.lock.Lock()
-	defer shs.lock.Unlock()
-	addr, err := crypto.GenerateProviderChannelID(provider.Address, accountant.Hex())
-	if err != nil {
-		return []SettlementHistoryEntry{}, fmt.Errorf("could not generate provider channel address: %w", err)
+// List retrieves stored entries.
+func (shs *SettlementHistoryStorage) List(filter SettlementHistoryFilter) (result []SettlementHistoryEntry, err error) {
+	where := make([]q.Matcher, 0)
+	if filter.TimeFrom != nil {
+		where = append(where, q.Gte("Time", filter.TimeFrom.UTC()))
 	}
-	return shs.get(addr)
-}
+	if filter.TimeTo != nil {
+		where = append(where, q.Lte("Time", filter.TimeTo.UTC()))
+	}
+	if filter.ProviderID != nil {
+		where = append(where, q.Eq("ProviderID", filter.ProviderID))
+	}
+	if filter.HermesID != nil {
+		where = append(where, q.Eq("HermesID", filter.HermesID))
+	}
 
-func (shs *SettlementHistoryStorage) get(channel string) ([]SettlementHistoryEntry, error) {
-	var res []SettlementHistoryEntry
-	return res, shs.bolt.GetValue(settlementHistoryBucket, channel, &res)
+	sq := shs.bolt.DB().
+		From(settlementHistoryBucket).
+		Select(q.And(where...)).
+		OrderBy("Time").
+		Reverse()
+
+	err = sq.Find(&result)
+	if errors.Is(err, storm.ErrNotFound) {
+		return []SettlementHistoryEntry{}, nil
+	}
+
+	return result, err
 }

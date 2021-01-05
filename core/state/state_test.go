@@ -19,26 +19,29 @@ package state
 
 import (
 	"errors"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
-	"github.com/mysteriumnetwork/node/core/state/event"
-	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
-	"github.com/mysteriumnetwork/node/session"
+	nodeSession "github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -132,40 +135,20 @@ func (slm *serviceListerMock) List() map[service.ID]*service.Instance {
 	return slm.servicesToReturn
 }
 
-type serviceSessionStorageMock struct {
-	numInteractions  int
-	sessionsToReturn []session.Session
-	lock             sync.Mutex
-}
-
-func (sssm *serviceSessionStorageMock) GetAll() []session.Session {
-	sssm.lock.Lock()
-	defer sssm.lock.Unlock()
-	sssm.numInteractions++
-	return sssm.sessionsToReturn
-}
-
-func (sssm *serviceSessionStorageMock) interactions() int {
-	sssm.lock.Lock()
-	defer sssm.lock.Unlock()
-	return sssm.numInteractions
-}
-
 func Test_ConsumesNATEvents(t *testing.T) {
 	natProvider := &natStatusProviderMock{
 		statusToReturn: mockNATStatus,
 	}
 	publisher := &mockPublisher{}
 	sl := &serviceListerMock{}
-	sessionStorage := &serviceSessionStorageMock{}
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: natProvider,
+		Publisher:         publisher,
+		ServiceLister:     sl,
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -185,79 +168,169 @@ func Test_ConsumesNATEvents(t *testing.T) {
 }
 
 func Test_ConsumesSessionEvents(t *testing.T) {
-	expected := session.Session{}
-
-	natProvider := &natStatusProviderMock{
-		statusToReturn: mockNATStatus,
-	}
-	publisher := &mockPublisher{}
-	sl := &serviceListerMock{}
-	sessionStorage := &serviceSessionStorageMock{
-		sessionsToReturn: []session.Session{
-			expected,
+	// given
+	expected := sessionEvent.SessionContext{
+		ID:         "1",
+		StartedAt:  time.Now(),
+		ConsumerID: identity.FromAddress("0x0000000000000000000000000000000000000001"),
+		HermesID:   common.HexToAddress("0x000000000000000000000000000000000000000a"),
+		Proposal: market.ServiceProposal{
+			ServiceDefinition: &StubServiceDefinition{},
 		},
 	}
 
-	duration := time.Millisecond * 3
+	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		Publisher:        eventBus,
+		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
 	}
-	keeper := NewKeeper(deps, duration)
+	keeper := NewKeeper(deps, time.Millisecond)
+	keeper.Subscribe(eventBus)
 
-	for i := 0; i < 5; i++ {
-		// shoot a few events to see if we'll debounce
-		keeper.consumeServiceSessionStateEvent(sessionEvent.Payload{})
-	}
+	// when
+	eventBus.Publish(sessionEvent.AppTopicSession, sessionEvent.AppEventSession{
+		Status:  sessionEvent.CreatedStatus,
+		Session: expected,
+	})
 
-	assert.Eventually(t, interacted(sessionStorage, 1), 2*time.Second, 10*time.Millisecond)
+	// then
+	assert.Eventually(t, func() bool {
+		return len(keeper.GetState().Sessions) == 1
+	}, 2*time.Second, 10*time.Millisecond)
+	assert.Equal(
+		t,
+		[]session.History{
+			{
+				SessionID:       nodeSession.ID(expected.ID),
+				Direction:       session.DirectionProvided,
+				ConsumerID:      expected.ConsumerID,
+				HermesID:        expected.HermesID.Hex(),
+				ProviderCountry: "MU",
+				Started:         expected.StartedAt,
+				Status:          session.StatusNew,
+				Tokens:          new(big.Int),
+			},
+		},
+		keeper.GetState().Sessions,
+	)
 
-	assert.Equal(t, string(expected.ID), keeper.GetState().Sessions[0].ID)
-	assert.Equal(t, expected.ConsumerID.Address, keeper.GetState().Sessions[0].ConsumerID)
-	assert.True(t, expected.CreatedAt.Equal(keeper.GetState().Sessions[0].CreatedAt))
+	// when
+	eventBus.Publish(sessionEvent.AppTopicSession, sessionEvent.AppEventSession{
+		Status:  sessionEvent.RemovedStatus,
+		Session: expected,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return len(keeper.GetState().Sessions) == 0
+	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
+	// given
 	myID := "test"
-	expected := event.ServiceSession{
-		ID:        myID,
-		ServiceID: myID,
+	expected := session.History{
+		SessionID: nodeSession.ID("1"),
 	}
 
-	natProvider := &natStatusProviderMock{
-		statusToReturn: mockNATStatus,
-	}
-	publisher := &mockPublisher{}
-	sl := &serviceListerMock{}
-	sessionStorage := &serviceSessionStorageMock{
-		sessionsToReturn: []session.Session{},
-	}
-
-	duration := time.Millisecond * 3
+	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		Publisher:        eventBus,
+		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
 	}
-	keeper := NewKeeper(deps, duration)
-	keeper.state.Services = []event.ServiceInfo{
+	keeper := NewKeeper(deps, time.Millisecond)
+	keeper.Subscribe(eventBus)
+	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 	}
-	keeper.state.Sessions = []event.ServiceSession{
+	keeper.state.Sessions = []session.History{
 		expected,
 	}
 
-	keeper.consumeServiceSessionStateEvent(sessionEvent.Payload{
-		Action: sessionEvent.Acknowledged,
-		ID:     string(expected.ID),
+	// when
+	eventBus.Publish(sessionEvent.AppTopicSession, sessionEvent.AppEventSession{
+		Status: sessionEvent.AcknowledgedStatus,
+		Service: sessionEvent.ServiceContext{
+			ID: myID,
+		},
+		Session: sessionEvent.SessionContext{
+			ID: string(expected.SessionID),
+		},
 	})
 
-	assert.Equal(t, 1, keeper.state.Services[0].ConnectionStatistics.Successful)
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Services[0].ConnectionStatistics.Successful == 1
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func Test_consumeServiceSessionEarningsEvent(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	deps := KeeperDeps{
+		Publisher:        eventBus,
+		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
+	}
+	keeper := NewKeeper(deps, time.Millisecond)
+	keeper.Subscribe(eventBus)
+	keeper.state.Sessions = []session.History{
+		{SessionID: nodeSession.ID("1")},
+	}
+
+	// when
+	eventBus.Publish(sessionEvent.AppTopicTokensEarned, sessionEvent.AppEventTokensEarned{
+		SessionID: "1",
+		Total:     big.NewInt(500),
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Sessions[0].Tokens.Cmp(big.NewInt(0)) != 0
+	}, 2*time.Second, 10*time.Millisecond)
+	assert.Equal(
+		t,
+		[]session.History{
+			{SessionID: nodeSession.ID("1"), Tokens: big.NewInt(500)},
+		},
+		keeper.GetState().Sessions,
+	)
+}
+
+func Test_consumeServiceSessionStatisticsEvent(t *testing.T) {
+	// given
+	eventBus := eventbus.New()
+	deps := KeeperDeps{
+		Publisher:        eventBus,
+		IdentityProvider: &mocks.IdentityProvider{},
+		EarningsProvider: &mockEarningsProvider{},
+	}
+	keeper := NewKeeper(deps, time.Millisecond)
+	keeper.Subscribe(eventBus)
+	keeper.state.Sessions = []session.History{
+		{SessionID: nodeSession.ID("1")},
+	}
+
+	// when
+	eventBus.Publish(sessionEvent.AppTopicDataTransferred, sessionEvent.AppEventDataTransferred{
+		ID:   "1",
+		Up:   1,
+		Down: 2,
+	})
+
+	// then
+	assert.Eventually(t, func() bool {
+		return keeper.GetState().Sessions[0].DataReceived != 0
+	}, 2*time.Second, 10*time.Millisecond)
+	assert.Equal(
+		t,
+		[]session.History{
+			{SessionID: nodeSession.ID("1"), DataSent: 2, DataReceived: 1},
+		},
+		keeper.GetState().Sessions,
+	)
 }
 
 func Test_ConsumesServiceEvents(t *testing.T) {
@@ -273,15 +346,14 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 			id: &expected,
 		},
 	}
-	sessionStorage := &serviceSessionStorageMock{}
 
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: natProvider,
+		Publisher:         publisher,
+		ServiceLister:     sl,
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 
@@ -294,56 +366,56 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 
 	actual := keeper.GetState().Services[0]
 	assert.Equal(t, string(id), actual.ID)
-	assert.Equal(t, expected.Proposal().ServiceType, actual.Type)
-	assert.Equal(t, expected.Proposal().ProviderID, actual.ProviderID)
-	assert.Equal(t, expected.Options(), actual.Options)
+	assert.Equal(t, expected.Type, actual.Type)
+	assert.Equal(t, expected.ProviderID.Address, actual.ProviderID)
+	assert.Equal(t, expected.Options, actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
-	assert.EqualValues(t, expected.Proposal(), actual.Proposal)
+	assert.EqualValues(t, contract.NewProposalDTO(expected.Proposal), actual.Proposal)
 }
 
 func Test_ConsumesConnectionStateEvents(t *testing.T) {
 	// given
-	expected := connection.Status{State: connection.Connected, SessionID: "1"}
+	expected := connectionstate.Status{State: connectionstate.Connected, SessionID: "1"}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:             eventBus,
-		ServiceLister:         &serviceListerMock{},
-		ServiceSessionStorage: &serviceSessionStorageMock{},
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:         eventBus,
+		ServiceLister:     &serviceListerMock{},
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Equal(t, connection.NotConnected, keeper.GetState().Connection.Session.State)
+	assert.Equal(t, connectionstate.NotConnected, keeper.GetState().Connection.Session.State)
 
 	// when
-	eventBus.Publish(connection.AppTopicConnectionState, connection.AppEventConnectionState{
+	eventBus.Publish(connectionstate.AppTopicConnectionState, connectionstate.AppEventConnectionState{
 		State:       expected.State,
 		SessionInfo: expected,
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Connection.Session.State == connection.Connected
+		return keeper.GetState().Connection.Session.State == connectionstate.Connected
 	}, 2*time.Second, 10*time.Millisecond)
 	assert.Equal(t, expected, keeper.GetState().Connection.Session)
 }
 
 func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	// given
-	expected := connection.Statistics{
+	expected := connectionstate.Statistics{
 		At:            time.Now(),
 		BytesReceived: 10 * datasize.MiB.Bytes(),
 		BytesSent:     500 * datasize.KiB.Bytes(),
 	}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:             eventBus,
-		ServiceLister:         &serviceListerMock{},
-		ServiceSessionStorage: &serviceSessionStorageMock{},
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:         eventBus,
+		ServiceLister:     &serviceListerMock{},
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -351,7 +423,7 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 	assert.True(t, keeper.GetState().Connection.Statistics.At.IsZero())
 
 	// when
-	eventBus.Publish(connection.AppTopicConnectionStatistics, connection.AppEventConnectionStatistics{
+	eventBus.Publish(connectionstate.AppTopicConnectionStatistics, connectionstate.AppEventConnectionStatistics{
 		Stats: expected,
 	})
 
@@ -364,17 +436,17 @@ func Test_ConsumesConnectionStatisticsEvents(t *testing.T) {
 func Test_ConsumesConnectionInvoiceEvents(t *testing.T) {
 	// given
 	expected := crypto.Invoice{
-		AgreementID:    1,
-		AgreementTotal: 1001,
-		TransactorFee:  10,
+		AgreementID:    big.NewInt(1),
+		AgreementTotal: big.NewInt(1001),
+		TransactorFee:  big.NewInt(10),
 	}
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:             eventBus,
-		ServiceLister:         &serviceListerMock{},
-		ServiceSessionStorage: &serviceSessionStorageMock{},
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:         eventBus,
+		ServiceLister:     &serviceListerMock{},
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
@@ -396,82 +468,93 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:             eventBus,
-		ServiceLister:         &serviceListerMock{},
-		ServiceSessionStorage: &serviceSessionStorageMock{},
+		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:         eventBus,
+		ServiceLister:     &serviceListerMock{},
 		IdentityProvider: &mocks.IdentityProvider{
 			Identities: []identity.Identity{
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredConsumer},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
-		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Zero(t, keeper.GetState().Identities[0].Balance)
+	assert.Zero(t, keeper.GetState().Identities[0].Balance.Uint64())
 
 	// when
 	eventBus.Publish(pingpongEvent.AppTopicBalanceChanged, pingpongEvent.AppEventBalanceChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Previous: 0,
-		Current:  999,
+		Previous: big.NewInt(0),
+		Current:  big.NewInt(999),
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].Balance == 999
+		return keeper.GetState().Identities[0].Balance.Cmp(big.NewInt(999)) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
 func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
+	channelsProvider := &mockEarningsProvider{
+		Channels: []pingpong.HermesChannel{
+			{ChannelID: "1"},
+		},
+	}
+
 	deps := KeeperDeps{
-		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:             eventBus,
-		ServiceLister:         &serviceListerMock{},
-		ServiceSessionStorage: &serviceSessionStorageMock{},
+		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:         eventBus,
+		ServiceLister:     &serviceListerMock{},
 		IdentityProvider: &mocks.IdentityProvider{
 			Identities: []identity.Identity{
 				{Address: "0x000000000000000000000000000000000000000a"},
 			},
 		},
-		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.RegisteredProvider},
+		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
-		BalanceProvider:           &mockBalanceProvider{Balance: 0},
-		EarningsProvider:          &mockEarningsProvider{},
+		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
+		EarningsProvider:          channelsProvider,
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
 	err := keeper.Subscribe(eventBus)
 	assert.NoError(t, err)
-	assert.Zero(t, keeper.GetState().Identities[0].Balance)
+	assert.Zero(t, keeper.GetState().Identities[0].Balance.Uint64())
+	assert.Len(t, keeper.GetState().ProviderChannels, 1)
+	assert.Equal(t, channelsProvider.Channels, keeper.GetState().ProviderChannels)
 
 	// when
+	channelsProvider.Channels = []pingpong.HermesChannel{
+		{ChannelID: "1"},
+		{ChannelID: "2"},
+	}
 	eventBus.Publish(pingpongEvent.AppTopicEarningsChanged, pingpongEvent.AppEventEarningsChanged{
 		Identity: identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
 		Previous: pingpongEvent.Earnings{},
-		Current:  pingpongEvent.Earnings{LifetimeBalance: 100, UnsettledBalance: 10},
+		Current:  pingpongEvent.Earnings{LifetimeBalance: big.NewInt(100), UnsettledBalance: big.NewInt(10)},
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].Earnings == 10 && keeper.GetState().Identities[0].EarningsTotal == 100
+		return keeper.GetState().Identities[0].Earnings.Cmp(big.NewInt(10)) == 0 && keeper.GetState().Identities[0].EarningsTotal.Cmp(big.NewInt(100)) == 0
 	}, 2*time.Second, 10*time.Millisecond)
+	assert.Len(t, keeper.GetState().ProviderChannels, 2)
+	assert.Equal(t, channelsProvider.Channels, keeper.GetState().ProviderChannels)
 }
 
 func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 	// given
 	eventBus := eventbus.New()
 	deps := KeeperDeps{
-		NATStatusProvider:     &natStatusProviderMock{statusToReturn: mockNATStatus},
-		Publisher:             eventBus,
-		ServiceLister:         &serviceListerMock{},
-		ServiceSessionStorage: &serviceSessionStorageMock{},
+		NATStatusProvider: &natStatusProviderMock{statusToReturn: mockNATStatus},
+		Publisher:         eventBus,
+		ServiceLister:     &serviceListerMock{},
 		IdentityProvider: &mocks.IdentityProvider{
 			Identities: []identity.Identity{
 				{Address: "0x000000000000000000000000000000000000000a"},
@@ -479,7 +562,7 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 		},
 		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Unregistered},
 		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
-		BalanceProvider:           &mockBalanceProvider{Balance: 0},
+		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, time.Millisecond)
@@ -490,12 +573,12 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 	// when
 	eventBus.Publish(registry.AppTopicIdentityRegistration, registry.AppEventIdentityRegistration{
 		ID:     identity.Identity{Address: "0x000000000000000000000000000000000000000a"},
-		Status: registry.RegisteredConsumer,
+		Status: registry.Registered,
 	})
 
 	// then
 	assert.Eventually(t, func() bool {
-		return keeper.GetState().Identities[0].RegistrationStatus == registry.RegisteredConsumer
+		return keeper.GetState().Identities[0].RegistrationStatus == registry.Registered
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
@@ -509,19 +592,17 @@ func Test_getServiceByID(t *testing.T) {
 		servicesToReturn: map[service.ID]*service.Instance{},
 	}
 
-	sessionStorage := &serviceSessionStorageMock{}
-
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: natProvider,
+		Publisher:         publisher,
+		ServiceLister:     sl,
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
-	keeper.state.Services = []event.ServiceInfo{
+	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 		{ID: "mock"},
 	}
@@ -532,42 +613,6 @@ func Test_getServiceByID(t *testing.T) {
 	assert.EqualValues(t, keeper.state.Services[0], s)
 
 	_, found = keeper.getServiceByID("something else")
-	assert.False(t, found)
-}
-
-func Test_getSessionByID(t *testing.T) {
-
-	natProvider := &natStatusProviderMock{
-		statusToReturn: mockNATStatus,
-	}
-	publisher := &mockPublisher{}
-	sl := &serviceListerMock{
-		servicesToReturn: map[service.ID]*service.Instance{},
-	}
-
-	sessionStorage := &serviceSessionStorageMock{}
-
-	duration := time.Millisecond * 3
-	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
-	}
-	keeper := NewKeeper(deps, duration)
-	myID := "test"
-	keeper.state.Sessions = []event.ServiceSession{
-		{ID: myID},
-		{ID: "mock"},
-	}
-
-	s, found := keeper.getSessionByID(myID)
-	assert.True(t, found)
-
-	assert.EqualValues(t, keeper.state.Sessions[0], s)
-
-	_, found = serviceByID(keeper.GetState().Services, "something else")
 	assert.False(t, found)
 }
 
@@ -585,19 +630,17 @@ func Test_incrementConnectionCount(t *testing.T) {
 		},
 	}
 
-	sessionStorage := &serviceSessionStorageMock{}
-
 	duration := time.Millisecond * 3
 	deps := KeeperDeps{
-		NATStatusProvider:     natProvider,
-		Publisher:             publisher,
-		ServiceLister:         sl,
-		ServiceSessionStorage: sessionStorage,
-		IdentityProvider:      &mocks.IdentityProvider{},
+		NATStatusProvider: natProvider,
+		Publisher:         publisher,
+		ServiceLister:     sl,
+		IdentityProvider:  &mocks.IdentityProvider{},
+		EarningsProvider:  &mockEarningsProvider{},
 	}
 	keeper := NewKeeper(deps, duration)
 	myID := "test"
-	keeper.state.Services = []event.ServiceInfo{
+	keeper.state.Services = []contract.ServiceInfoDTO{
 		{ID: myID},
 		{ID: "mock"},
 	}
@@ -624,24 +667,30 @@ func interacted(c interactionCounter, times int) func() bool {
 }
 
 type mockBalanceProvider struct {
-	Balance uint64
+	Balance *big.Int
 }
 
 // GetBalance returns a pre-defined balance.
-func (mbp *mockBalanceProvider) GetBalance(_ identity.Identity) uint64 {
+func (mbp *mockBalanceProvider) GetBalance(_ int64, _ identity.Identity) *big.Int {
 	return mbp.Balance
 }
 
 type mockEarningsProvider struct {
 	Earnings pingpongEvent.Earnings
+	Channels []pingpong.HermesChannel
+}
+
+// List retrieves identity's channels with all known hermeses.
+func (mep *mockEarningsProvider) List(chainID int64) []pingpong.HermesChannel {
+	return mep.Channels
 }
 
 // GetEarnings returns a pre-defined settlement state.
-func (mep *mockEarningsProvider) GetEarnings(_ identity.Identity) pingpongEvent.Earnings {
+func (mep *mockEarningsProvider) GetEarnings(chainID int64, _ identity.Identity) pingpongEvent.Earnings {
 	return mep.Earnings
 }
 
-func serviceByID(services []stateEvent.ServiceInfo, id string) (se stateEvent.ServiceInfo, found bool) {
+func serviceByID(services []contract.ServiceInfoDTO, id string) (se contract.ServiceInfoDTO, found bool) {
 	for i := range services {
 		if services[i].ID == id {
 			se = services[i]
@@ -650,4 +699,10 @@ func serviceByID(services []stateEvent.ServiceInfo, id string) (se stateEvent.Se
 		}
 	}
 	return
+}
+
+type StubServiceDefinition struct{}
+
+func (fs *StubServiceDefinition) GetLocation() market.Location {
+	return market.Location{Country: "MU"}
 }

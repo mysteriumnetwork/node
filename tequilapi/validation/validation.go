@@ -32,10 +32,32 @@ type FieldErrorList struct {
 	list []FieldError
 }
 
+// Add adds specified error to error field
+func (fel *FieldErrorList) Add(error *FieldError) {
+	if error == nil {
+		return
+	}
+	fel.list = append(fel.list, *error)
+}
+
 // AddError adds error to error field list with specified code and message
 func (fel *FieldErrorList) AddError(code string, message string) {
+	fel.Add(&FieldError{code, message})
+}
 
-	fel.list = append(fel.list, FieldError{code, message})
+// Required convenience function
+func (fel *FieldErrorList) Required() {
+	fel.Add(&FieldError{"required", "Field is required"})
+}
+
+// Invalid convenience function
+func (fel *FieldErrorList) Invalid(message string) {
+	fel.Add(&FieldError{"invalid", message})
+}
+
+// HasErrors return true if at least one field errors exist
+func (fel *FieldErrorList) HasErrors() bool {
+	return len(fel.list) > 0
 }
 
 // MarshalJSON implements JSON marshaller interface to represent error list as JSON
@@ -53,6 +75,14 @@ func NewErrorMap() *FieldErrorMap {
 	return &FieldErrorMap{make(map[string]*FieldErrorList)}
 }
 
+// NewSingleErrorMap a convenience constructor for a single error
+func NewSingleErrorMap(key string, err *FieldError) *FieldErrorMap {
+	em := NewErrorMap()
+	em.errorMap[key] = &FieldErrorList{}
+	em.errorMap[key].Add(err)
+	return em
+}
+
 // ForField returns a list of errors for specified field name
 func (fem *FieldErrorMap) ForField(key string) *FieldErrorList {
 	var fieldErrors *FieldErrorList
@@ -64,6 +94,13 @@ func (fem *FieldErrorMap) ForField(key string) *FieldErrorList {
 	return fieldErrors
 }
 
+// Set sets errors from another error map
+func (fem *FieldErrorMap) Set(errors *FieldErrorMap) {
+	for key, fieldErrors := range errors.errorMap {
+		fem.errorMap[key] = fieldErrors
+	}
+}
+
 // MarshalJSON implements JSON marshaller interface to represent error map as JSON
 func (fem FieldErrorMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(fem.errorMap)
@@ -71,5 +108,10 @@ func (fem FieldErrorMap) MarshalJSON() ([]byte, error) {
 
 // HasErrors return true if at least one error exist for any field
 func (fem *FieldErrorMap) HasErrors() bool {
-	return len(fem.errorMap) > 0
+	for _, fieldErrors := range fem.errorMap {
+		if fieldErrors.HasErrors() {
+			return true
+		}
+	}
+	return false
 }

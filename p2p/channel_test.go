@@ -166,7 +166,7 @@ func TestChannelFullCommunicationFlow(t *testing.T) {
 		})
 
 		_, err := consumer.Send(context.Background(), "get-error", &Message{Data: []byte("hello")})
-		assert.EqualError(t, err, "internal peer error")
+		assert.EqualError(t, err, "peer error: I don't like you")
 	})
 
 	t.Run("Test peer returns handler not found error", func(t *testing.T) {
@@ -225,6 +225,7 @@ func TestChannel_Send_To_When_Peer_Starts_Later(t *testing.T) {
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		provider, err := reopenChannel(provider.(*channel))
+
 		require.NoError(t, err)
 		provider.Handle("timeout", func(c Context) error {
 			return c.OK()
@@ -281,7 +282,12 @@ func reopenChannel(c *channel) (*channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+	ch, err := newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+	if err != nil {
+		return nil, err
+	}
+	ch.launchReadSendLoops()
+	return ch, err
 }
 
 func reopenChannelWithNewLocalAddr(c *channel) (*channel, error) {
@@ -289,7 +295,12 @@ func reopenChannelWithNewLocalAddr(c *channel) (*channel, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+	ch, err := newChannel(punchedConn, c.privateKey, c.peer.publicKey)
+	if err != nil {
+		return nil, err
+	}
+	ch.launchReadSendLoops()
+	return ch, err
 }
 
 func createTestChannels() (Channel, Channel, error) {
@@ -323,11 +334,13 @@ func createTestChannels() (Channel, Channel, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	provider.launchReadSendLoops()
 
 	consumer, err := newChannel(consumerConn, consumerPrivateKey, providerPublicKey)
 	if err != nil {
 		return nil, nil, err
 	}
+	consumer.launchReadSendLoops()
 
 	return provider, consumer, nil
 }

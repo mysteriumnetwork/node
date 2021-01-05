@@ -21,11 +21,13 @@ package node
 type OptionsNetwork struct {
 	Testnet  bool
 	Localnet bool
+	Testnet2 bool
 
 	ExperimentNATPunching bool
 
 	MysteriumAPIAddress string
-	BrokerAddress       string
-
-	EtherClientRPC string
+	BrokerAddresses     []string
+	EtherClientRPC      string
+	ChainID             int64
+	DNSMap              map[string][]string
 }
