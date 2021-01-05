@@ -239,6 +239,14 @@ var (
 		Value:  metadata.DefaultNetwork.DefaultCurrency,
 		Hidden: true, // Users are not meant to touch or see this.
 	}
+
+	// FlagDocsURL sets the URL which leads to node documentation.
+	FlagDocsURL = cli.StringFlag{
+		Name:   "docs-url",
+		Usage:  "URL leading to node documentation",
+		Value:  "https://docs-v2.mysterium.network",
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -289,6 +297,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagP2PListenPorts,
 		&FlagConsumer,
 		&FlagDefaultCurrency,
+		&FlagDocsURL,
 	)
 
 	return nil
@@ -339,6 +348,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 	Current.ParseBoolFlag(ctx, FlagConsumer)
 	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
+	Current.ParseStringFlag(ctx, FlagDocsURL)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }
