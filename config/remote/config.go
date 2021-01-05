@@ -21,24 +21,27 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/urfave/cli/v2"
-
-	"github.com/spf13/cast"
-
-	"github.com/mysteriumnetwork/node/tequilapi/client"
-
 	"github.com/mysteriumnetwork/node/config"
+
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cast"
+	"github.com/urfave/cli/v2"
 )
 
 // Config - remote config struct
 type Config struct {
-	client *client.Client
+	client Fetcher
 	config map[string]interface{}
 }
 
+// Fetcher interface represents anything that
+// is able to fetch a config.
+type Fetcher interface {
+	FetchConfig() (map[string]interface{}, error)
+}
+
 // NewConfig - new remote config instance
-func NewConfig(client *client.Client) (*Config, error) {
+func NewConfig(client Fetcher) (*Config, error) {
 	cfg := &Config{
 		client: client,
 	}

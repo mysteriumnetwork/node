@@ -116,6 +116,7 @@ var uiCommands = map[string]struct{}{
 	account.CommandName:     {},
 	connection.CommandName:  {},
 	command_cfg.CommandName: {},
+	reset.CommandName:       {},
 }
 
 // configureLogging returns a func which configures global

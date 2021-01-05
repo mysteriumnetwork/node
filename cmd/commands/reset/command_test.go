@@ -19,43 +19,65 @@ package reset
 
 import (
 	"bytes"
-	"flag"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/core/auth"
-	"github.com/mysteriumnetwork/node/core/storage/boltdb"
-	"github.com/mysteriumnetwork/node/core/storage/boltdb/boltdbtest"
 	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli/v2"
 )
 
-func TestCommandRun(t *testing.T) {
-	// given
-	tempDir := boltdbtest.CreateTempDir(t)
-	defer boltdbtest.RemoveTempDir(t, tempDir)
+func TestActionRun(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
 
 	cmdOutput := bytes.NewBufferString("")
 
+	mockusr := "musr"
+	mockpass := "mpsw"
+
+	cfg, err := remote.NewConfig(&cfgFether{
+		map[string]interface{}{
+			config.FlagDataDir.Name:           tempDir,
+			config.FlagTequilapiUsername.Name: mockusr,
+			config.FlagTequilapiPassword.Name: mockpass,
+		},
+	})
+	assert.NoError(t, err)
+
 	// when
-	config.FlagDataDir.Value = tempDir
-	config.FlagRuntimeDir.Value = tempDir
-	cmd := NewCommand()
-	err := cmd.Run(cli.NewContext(
-		&cli.App{Writer: cmdOutput},
-		flag.NewFlagSet("test", 0),
-		nil,
-	))
+	cmd := resetAction{
+		writer: cmdOutput,
+		cfg:    cfg,
+	}
 
-	// then
-	assert.NoError(t, err)
-	assert.Contains(t, cmdOutput.String(), `user password changed successfully`)
+	t.Run("test reseting tequila credentials", func(t *testing.T) {
+		cmd.resetTequilapi()
 
-	storage, err := boltdb.NewStorage(tempDir)
-	assert.NoError(t, err)
+		// then
+		assert.NoError(t, err)
+		assert.Contains(t, cmdOutput.String(), `user password changed successfully`)
 
-	defer storage.Close()
+		config.FlagTequilapiUsername.Value = mockusr
+		err = auth.
+			NewCredentialsManager(tempDir).
+			Validate(mockusr, mockpass)
+		assert.NoError(t, err)
+	})
+}
 
-	err = auth.NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, storage).Validate()
-	assert.NoError(t, err)
+type cfgFether struct {
+	cfg map[string]interface{}
+}
+
+func (c *cfgFether) FetchConfig() (map[string]interface{}, error) {
+	cfg := config.NewConfig()
+	for k, v := range c.cfg {
+		cfg.SetDefault(k, v)
+	}
+
+	return cfg.GetConfig(), nil
 }
