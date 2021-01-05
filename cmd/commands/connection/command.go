@@ -24,6 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/datasize"
@@ -61,13 +62,22 @@ func NewCommand() *cli.Command {
 		Name:        CommandName,
 		Usage:       "Manage your connection",
 		Description: "Using the connection subcommands you can manage your connection or get additional information about it",
+		Flags:       []cli.Flag{&config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Before: func(ctx *cli.Context) error {
 			tc, err := clio.NewTequilApiClient(ctx)
 			if err != nil {
 				return err
 			}
 
-			cmd = &command{tequilapi: tc}
+			cfg, err := remote.NewConfig(tc)
+			if err != nil {
+				return err
+			}
+
+			cmd = &command{
+				tequilapi: tc,
+				cfg:       cfg,
+			}
 			return nil
 		},
 		Subcommands: []*cli.Command{
@@ -112,6 +122,7 @@ func NewCommand() *cli.Command {
 
 type command struct {
 	tequilapi *tequilapi_client.Client
+	cfg       *remote.Config
 }
 
 func (c *command) proposals(ctx *cli.Context) {
@@ -162,12 +173,12 @@ func (c *command) handleTOS(ctx *cli.Context) error {
 		return nil
 	}
 
-	agreed := config.Current.GetBool(contract.TermsConsumerAgreed)
+	agreed := c.cfg.GetBool(contract.TermsConsumerAgreed)
 	if !agreed {
 		return errors.New("You must agree with consumer terms of use in order to use this command")
 	}
 
-	version := config.Current.GetString(contract.TermsVersion)
+	version := c.cfg.GetString(contract.TermsVersion)
 	if version != metadata.CurrentTermsVersion {
 		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
 	}
@@ -238,7 +249,7 @@ func (c *command) up(ctx *cli.Context) {
 		DNS:               connection.DNSOptionAuto,
 		DisableKillSwitch: false,
 	}
-	hermesID := config.GetString(config.FlagHermesID)
+	hermesID := c.cfg.GetStringByFlag(config.FlagHermesID)
 	_, err = c.tequilapi.ConnectionCreate(id.Address, providerID, hermesID, serviceWireguard, connectOptions)
 	if err != nil {
 		clio.Error("Failed to create a new connection")
