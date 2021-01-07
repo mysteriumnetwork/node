@@ -165,6 +165,7 @@ func (sc *serviceCommand) tryRememberTOS(ctx *cli.Context, errCh chan error) {
 		for i := 0; i < 5; i++ {
 			if err := sc.tequilapi.UpdateTerms(contract.TermsRequest{
 				AgreedProvider: &t,
+				AgreedConsumer: &t,
 				AgreedVersion:  metadata.CurrentTermsVersion,
 			}); err == nil {
 				return
