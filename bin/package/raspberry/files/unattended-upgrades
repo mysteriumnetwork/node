@@ -1,7 +1,7 @@
 Unattended-Upgrade::Origins-Pattern {
         "origin=Raspbian,codename=${distro_codename},label=Raspbian";
         "origin=Raspbian,codename=${distro_codename},label=Raspbian-Security";
-        "o=LP-PPA-mysteriumnetwork-node,a=bionic";
+        "o=LP-PPA-mysteriumnetwork-node";
 };
 
 Unattended-Upgrade::AutoFixInterruptedDpkg "true";

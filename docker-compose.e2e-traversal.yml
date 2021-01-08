@@ -183,7 +183,7 @@ services:
 
 
   transactor:
-    image: mysteriumnetwork/transactor:0.7.0
+    image: mysteriumnetwork/transactor:0.7.4
     environment:
       PORT: 8888
     expose:
@@ -226,7 +226,7 @@ services:
         ipv4_address: 172.31.0.203
 
   hermes:
-    image: mysteriumnetwork/hermes:0.6.1
+    image: mysteriumnetwork/hermes:0.7.0
     environment:
       PORT: 8889
     expose:
@@ -344,7 +344,7 @@ services:
         ipv4_address: 10.100.1.105
 
   hermes2:
-    image: mysteriumnetwork/hermes:0.6.1
+    image: mysteriumnetwork/hermes:0.7.0
     sysctls:
       - net.ipv4.conf.default.rp_filter=0
       - net.ipv4.conf.all.rp_filter=0
