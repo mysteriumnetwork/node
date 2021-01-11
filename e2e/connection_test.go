@@ -20,6 +20,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sync"
 	"testing"
@@ -215,7 +216,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		hermesOneEarnings := earningsByHermes[common.HexToAddress(hermesID)]
 		hermesTwoEarnings := earningsByHermes[common.HexToAddress(hermes2ID)]
 		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
-		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
+		fdiff := getDiffFloat(providerStatus.EarningsTotal, totalEarnings)
+		assert.True(t, fdiff < hundredthThou)
 
 		hic, err := bindings.NewHermesImplementationCaller(common.HexToAddress(hermesID), ethClient)
 		assert.NoError(t, err)
@@ -228,10 +230,10 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerChannelAddress))
 		assert.NoError(t, err)
 
-		diff := new(big.Int).Sub(balance, expected)
-		diff = diff.Abs(diff)
+		diff := getDiffFloat(balance, expected)
+		diff = math.Abs(diff)
 
-		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
+		assert.True(t, diff >= 0 && diff <= hundredthThou, fmt.Sprintf("got diff %v", diff))
 	})
 
 	t.Run("Provider decreases stake", func(t *testing.T) {
@@ -629,7 +631,9 @@ func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id s
 		if err != nil {
 			return false
 		}
-		return earningsExpected.Cmp(providerStatus.Earnings) == 0
+
+		fdiff := getDiffFloat(providerStatus.Earnings, earningsExpected)
+		return fdiff < hundredthThou
 	}, time.Second*5, time.Millisecond*250)
 
 	providerStatus, err := tequilapi.Identity(id)
