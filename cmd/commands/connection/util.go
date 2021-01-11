@@ -27,24 +27,27 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 )
 
-func printProposal(p *contract.ProposalDTO) {
-	fmt.Printf("| Identity: %s | Type: %s | Country: %s | Price: %s |\n",
+func proposalFormatted(p *contract.ProposalDTO) string {
+	ppm, ppgb := getPrices(p.PaymentMethod)
+	return fmt.Sprintf("| Identity: %s\t| Type: %s\t| Country: %s\t| Price: %s\t%s\t|",
 		p.ProviderID,
 		p.ServiceDefinition.LocationOriginate.NodeType,
 		p.ServiceDefinition.LocationOriginate.Country,
-		getPrice(p.PaymentMethod),
+		ppm,
+		ppgb,
 	)
 }
 
-func getPrice(pm contract.PaymentMethodDTO) string {
+func getPrices(pm contract.PaymentMethodDTO) (string, string) {
 	ppm := aproxPricePerMinute(pm)
 	ppgb := aproxPricePerGB(pm)
 	if ppm.Amount.Cmp(big.NewInt(0)) == 0 &&
 		ppgb.Amount.Cmp(big.NewInt(0)) == 0 {
-		return "Free"
+		return "Free", ""
 	}
 
-	return fmt.Sprintf("%s/min   %s/GB", ppm.String(), ppgb.String())
+	return fmt.Sprintf("%s/min", ppm.String()),
+		fmt.Sprintf("%s/GB", ppgb.String())
 }
 
 func aproxPricePerMinute(pm contract.PaymentMethodDTO) money.Money {
