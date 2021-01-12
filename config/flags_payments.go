@@ -77,7 +77,7 @@ var (
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-max",
 		Usage: "Sets the maximum price of the service per minute. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "10000000000000", // 0.0001 MYSTT
+		Value: "100000000000000", // 0.0001 MYSTT
 	}
 	// FlagPaymentsConsumerPricePerMinuteLowerBound sets the lower price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.StringFlag{
