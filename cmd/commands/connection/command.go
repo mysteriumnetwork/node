@@ -20,6 +20,8 @@ package connection
 import (
 	"errors"
 	"fmt"
+	"os"
+	"text/tabwriter"
 	"time"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
@@ -145,9 +147,11 @@ func (c *command) proposals(ctx *cli.Context) {
 	}
 
 	clio.Info("Found proposals:")
+	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
 	for _, p := range proposals {
-		printProposal(&p)
+		fmt.Fprintln(w, proposalFormatted(&p))
 	}
+	w.Flush()
 }
 
 func (c *command) down() {
