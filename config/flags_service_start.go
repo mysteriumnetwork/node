@@ -52,13 +52,13 @@ var (
 	FlagPaymentPricePerGB = cli.Float64Flag{
 		Name:  "payment.price-gb",
 		Usage: "Sets the price per GiB applied to provider service.",
-		Value: 0.3,
+		Value: 0.22,
 	}
 	// FlagPaymentPricePerMinute sets the price per minute to provided service.
 	FlagPaymentPricePerMinute = cli.Float64Flag{
 		Name:  "payment.price-minute",
 		Usage: "Sets the price per minute applied to provider service.",
-		Value: 0.0000069,
+		Value: 0.000005,
 	}
 )
 
