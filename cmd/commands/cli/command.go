@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/config/remote"
-
 	"github.com/chzyer/readline"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -36,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -65,7 +64,6 @@ func NewCommand() *cli.Command {
 		Usage: "Starts a CLI client with a Tequilapi",
 		Flags: []cli.Flag{&config.FlagAgreedTermsConditions, &config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Action: func(ctx *cli.Context) error {
-
 			client, err := clio.NewTequilApiClient(ctx)
 			if err != nil {
 				return err
@@ -115,9 +113,11 @@ type cliApp struct {
 	currentConsumerID string
 }
 
-const redColor = "\033[31m%s\033[0m"
-const identityDefaultPassphrase = ""
-const statusConnected = "Connected"
+const (
+	redColor                  = "\033[31m%s\033[0m"
+	identityDefaultPassphrase = ""
+	statusConnected           = "Connected"
+)
 
 var errTermsNotAgreed = errors.New("You must agree with provider and consumer terms of use in order to use this command")
 
@@ -234,7 +234,6 @@ func (c *cliApp) handleActions(line string) {
 		{"connect", c.connect},
 		{"identities", c.identities},
 		{"order", c.order},
-		{"payout", c.payout},
 		{"version", c.version},
 		{"license", c.license},
 		{"proposals", c.proposals},
@@ -448,51 +447,11 @@ func (c *cliApp) connect(argsString string) {
 	clio.Success("Connected.")
 }
 
-func (c *cliApp) payout(argsString string) {
-	args := strings.Fields(argsString)
-
-	const usage = "payout command:\n    set"
-	if len(args) == 0 {
-		clio.Info(usage)
-		return
-	}
-
-	action := args[0]
-	switch action {
-	case "set":
-		payoutSignature := "payout set <identity> <ethAddress>"
-		if len(args) < 2 {
-			clio.Info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
-			return
-		}
-
-		var identity, ethAddress string
-		if len(args) > 2 {
-			identity, ethAddress = args[1], args[2]
-		} else {
-			clio.Info("Please type in identity and Ethereum address.\n", payoutSignature)
-			return
-		}
-
-		err := c.tequilapi.Payout(identity, ethAddress)
-		if err != nil {
-			clio.Warn(err)
-			return
-		}
-
-		clio.Success(fmt.Sprintf("Payout address %s registered.", ethAddress))
-	default:
-		clio.Warnf("Unknown sub-command '%s'\n", action)
-		fmt.Println(usage)
-		return
-	}
-}
-
 func (c *cliApp) mmnApiKey(argsString string) {
 	args := strings.Fields(argsString)
 
-	var profileUrl = c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
-	var usage = "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
+	profileUrl := c.config.GetStringByFlag(config.FlagMMNAddress) + "user/profile"
+	usage := "Set MMN's API key and claim this node:\nmmn <api-key>\nTo get the token, visit: " + profileUrl + "\n"
 
 	if len(args) == 0 {
 		clio.Info(usage)
@@ -504,7 +463,6 @@ func (c *cliApp) mmnApiKey(argsString string) {
 	err := c.tequilapi.SetMMNApiKey(contract.MMNApiKeyRequest{
 		ApiKey: apiKey,
 	})
-
 	if err != nil {
 		clio.Warn(err)
 		return
@@ -617,7 +575,6 @@ func (c *cliApp) proposals(filter string) {
 		if filter == "" ||
 			strings.Contains(proposal.ProviderID, filter) ||
 			strings.Contains(country, filter) {
-
 			clio.Info(msg)
 		}
 	}
@@ -770,10 +727,6 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
 		readline.PcItem("stop"),
-		readline.PcItem(
-			"payout",
-			readline.PcItem("set", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
-		),
 		readline.PcItem(
 			"license",
 			readline.PcItem("warranty"),
