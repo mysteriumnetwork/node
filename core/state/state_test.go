@@ -477,7 +477,7 @@ func Test_ConsumesBalanceChangeEvent(t *testing.T) {
 			},
 		},
 		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
-		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
+		IdentityChannelCalculator: &mockChannelAddressCalculator{},
 		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
@@ -518,7 +518,7 @@ func Test_ConsumesEarningsChangeEvent(t *testing.T) {
 			},
 		},
 		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Registered},
-		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
+		IdentityChannelCalculator: &mockChannelAddressCalculator{},
 		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          channelsProvider,
 	}
@@ -561,7 +561,7 @@ func Test_ConsumesIdentityRegistrationEvent(t *testing.T) {
 			},
 		},
 		IdentityRegistry:          &mocks.IdentityRegistry{Status: registry.Unregistered},
-		IdentityChannelCalculator: pingpong.NewChannelAddressCalculator("", "", ""),
+		IdentityChannelCalculator: &mockChannelAddressCalculator{},
 		BalanceProvider:           &mockBalanceProvider{Balance: big.NewInt(0)},
 		EarningsProvider:          &mockEarningsProvider{},
 	}
@@ -705,4 +705,10 @@ type StubServiceDefinition struct{}
 
 func (fs *StubServiceDefinition) GetLocation() market.Location {
 	return market.Location{Country: "MU"}
+}
+
+type mockChannelAddressCalculator struct{}
+
+func (mcac *mockChannelAddressCalculator) GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error) {
+	return common.Address{}, nil
 }

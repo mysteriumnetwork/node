@@ -390,7 +390,6 @@ func (mpcsp *mockProviderChannelStatusProvider) CalculateHermesFee(chainID int64
 }
 
 var cfg = HermesPromiseSettlerConfig{
-	HermesAddress:        common.HexToAddress("0x9a8B6d979e188fA3DeAa93A470C3537362FdaE92"),
 	Threshold:            0.1,
 	MaxWaitForSettlement: time.Millisecond * 10,
 }

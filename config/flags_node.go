@@ -259,11 +259,11 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsLocation(flags)
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsTransactor(flags)
-	RegisterFlagsHermes(flags)
 	RegisterFlagsPayments(flags)
 	RegisterFlagsPolicy(flags)
 	RegisterFlagsMMN(flags)
 	RegisterFlagsPilvytis(flags)
+	RegisterFlagsChains(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -311,11 +311,12 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsLocation(ctx)
 	ParseFlagsNetwork(ctx)
 	ParseFlagsTransactor(ctx)
-	ParseFlagsHermes(ctx)
 	ParseFlagsPayments(ctx)
 	ParseFlagsPolicy(ctx)
 	ParseFlagsMMN(ctx)
 	ParseFlagPilvytis(ctx)
+	ParseFlagsDirectory(ctx)
+	ParseFlagsChains(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)

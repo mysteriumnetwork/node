@@ -50,12 +50,9 @@ type ConsumerBalanceTracker struct {
 	balancesLock sync.Mutex
 	balances     map[balanceKey]ConsumerBalance
 
+	addressProvider                      addressProvider
 	registry                             registrationStatusProvider
-	hermesAddress                        common.Address
-	mystSCAddress                        common.Address
-	transactorAddress                    common.Address
 	consumerBalanceChecker               consumerBalanceChecker
-	channelAddressCalculator             channelAddressCalculator
 	bus                                  eventbus.EventBus
 	consumerGrandTotalsStorage           consumerTotalsStorage
 	consumerInfoGetter                   consumerInfoGetter
@@ -72,28 +69,22 @@ type transactorRegistrationStatusProvider interface {
 // NewConsumerBalanceTracker creates a new instance
 func NewConsumerBalanceTracker(
 	publisher eventbus.EventBus,
-	mystSCAddress common.Address,
-	hermesAddress common.Address,
-	transactorAddress common.Address,
 	consumerBalanceChecker consumerBalanceChecker,
-	channelAddressCalculator channelAddressCalculator,
 	consumerGrandTotalsStorage consumerTotalsStorage,
 	consumerInfoGetter consumerInfoGetter,
 	transactorRegistrationStatusProvider transactorRegistrationStatusProvider,
 	registry registrationStatusProvider,
+	addressProvider addressProvider,
 ) *ConsumerBalanceTracker {
 	return &ConsumerBalanceTracker{
 		balances:                             make(map[balanceKey]ConsumerBalance),
 		consumerBalanceChecker:               consumerBalanceChecker,
-		mystSCAddress:                        mystSCAddress,
-		hermesAddress:                        hermesAddress,
-		transactorAddress:                    transactorAddress,
 		bus:                                  publisher,
-		channelAddressCalculator:             channelAddressCalculator,
 		consumerGrandTotalsStorage:           consumerGrandTotalsStorage,
 		consumerInfoGetter:                   consumerInfoGetter,
 		transactorRegistrationStatusProvider: transactorRegistrationStatusProvider,
 		registry:                             registry,
+		addressProvider:                      addressProvider,
 		stop:                                 make(chan struct{}),
 	}
 }
@@ -176,12 +167,19 @@ func (cbt *ConsumerBalanceTracker) handleGrandTotalChanged(ev event.AppEventGran
 }
 
 func (cbt *ConsumerBalanceTracker) getUnregisteredChannelBalance(chainID int64, id identity.Identity) *big.Int {
-	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
+	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id)
 	if err != nil {
 		log.Error().Err(err).Msg("could not compute channel address")
 		return new(big.Int)
 	}
-	balance, err := cbt.consumerBalanceChecker.GetMystBalance(chainID, cbt.mystSCAddress, addr)
+
+	myst, err := cbt.addressProvider.GetMystAddress(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get myst address")
+		return new(big.Int)
+	}
+
+	balance, err := cbt.consumerBalanceChecker.GetMystBalance(chainID, myst, addr)
 	if err != nil {
 		log.Error().Err(err).Msg("could not get myst balance on consumer channel")
 		return new(big.Int)
@@ -198,13 +196,19 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 		break
 	}
 
-	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
+	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id)
 	if err != nil {
 		log.Error().Err(err).Msg("could not compute channel address")
 		return
 	}
 
-	ev, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(chainID, addr, cbt.mystSCAddress, time.Hour*72)
+	myst, err := cbt.addressProvider.GetMystAddress(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get myst address")
+		return
+	}
+
+	ev, cancel, err := cbt.consumerBalanceChecker.SubscribeToConsumerBalanceEvent(chainID, addr, myst, time.Hour*72)
 	if err != nil {
 		log.Error().Err(err).Msg("could not subscribe to channel balance events")
 		return
@@ -266,13 +270,19 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
 	fallback := cbt.GetBalance(chainID, id)
 
-	addr, err := cbt.channelAddressCalculator.GetChannelAddress(id)
+	addr, err := cbt.addressProvider.GetChannelAddress(chainID, id)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not calculate channel address")
 		return fallback
 	}
 
-	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, cbt.mystSCAddress)
+	myst, err := cbt.addressProvider.GetMystAddress(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get myst address")
+		return new(big.Int)
+	}
+
+	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, myst)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get consumer channel")
 		// This indicates we're not registered, check for unregistered balance.
@@ -289,12 +299,18 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 		return unregisteredBalance
 	}
 
-	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, cbt.hermesAddress)
+	hermes, err := cbt.addressProvider.GetActiveHermes(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get myst address")
+		return new(big.Int)
+	}
+
+	grandTotal, err := cbt.consumerGrandTotalsStorage.Get(chainID, id, hermes)
 	if errors.Is(err, ErrNotFound) {
 		if err := cbt.recoverGrandTotalPromised(chainID, id); err != nil {
 			log.Error().Err(err).Msg("Could not recover Grand Total Promised")
 		}
-		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(chainID, id, cbt.hermesAddress)
+		grandTotal, err = cbt.consumerGrandTotalsStorage.Get(chainID, id, hermes)
 	}
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		log.Error().Err(err).Msg("Could not get consumer grand total promised")
@@ -418,7 +434,14 @@ func (cbt *ConsumerBalanceTracker) recoverGrandTotalPromised(chainID int64, iden
 	}
 
 	log.Debug().Msgf("Loaded hermes state: already promised: %v", data.LatestPromise.Amount)
-	return cbt.consumerGrandTotalsStorage.Store(chainID, identity, cbt.hermesAddress, data.LatestPromise.Amount)
+
+	hermes, err := cbt.addressProvider.GetActiveHermes(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get hermes address")
+		return err
+	}
+
+	return cbt.consumerGrandTotalsStorage.Store(chainID, identity, hermes, data.LatestPromise.Amount)
 }
 
 func (cbt *ConsumerBalanceTracker) handleStopEvent() {
@@ -510,7 +533,7 @@ func (cbt *ConsumerBalanceTracker) identityRegistrationStatus(ctx context.Contex
 // isFreeRegistrationTransaction returns true if a given transaction was received
 // because of transactor allowing free registration.
 func (cbt *ConsumerBalanceTracker) isFreeRegistrationTransaction(ctx context.Context, e *bindings.MystTokenTransfer, id identity.Identity, chainID int64) bool {
-	if e.From.Hex() != cbt.transactorAddress.Hex() {
+	if e.From.Hex() != cbt.addressProvider.GetTransactorAddress().Hex() {
 		return false
 	}
 

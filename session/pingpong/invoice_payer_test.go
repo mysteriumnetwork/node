@@ -78,7 +78,7 @@ func Test_InvoicePayer_Start_Stop(t *testing.T) {
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		Ks:                        ks,
-		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		EventBus:                  mocks.NewEventBus(),
@@ -132,7 +132,7 @@ func Test_InvoicePayer_SendsMessage(t *testing.T) {
 		EventBus:                  mocks.NewEventBus(),
 		ChainID:                   1,
 		Ks:                        ks,
-		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.ServiceProposal{
@@ -205,7 +205,7 @@ func Test_InvoicePayer_SendsMessage_OnFreeService(t *testing.T) {
 		TimeTracker:               &tracker,
 		EventBus:                  mocks.NewEventBus(),
 		Ks:                        ks,
-		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 	}
@@ -267,7 +267,7 @@ func Test_InvoicePayer_BubblesErrors(t *testing.T) {
 		ConsumerTotalsStorage:     totalsStorage,
 		TimeTracker:               &tracker,
 		Ks:                        ks,
-		ChannelAddressCalculator:  NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:           &mockAddressProvider{},
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		Proposal: market.ServiceProposal{

@@ -35,22 +35,22 @@ func TestMobileNodeConsumer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &mysterium.MobileNodeOptions{
-		Testnet2:                        true,
-		ExperimentNATPunching:           true,
-		MysteriumAPIAddress:             "http://mysterium-api:8001/v1",
-		BrokerAddresses:                 []string{"broker"},
-		EtherClientRPC:                  "ws://ganache:8545",
-		FeedbackURL:                     "TODO",
-		QualityOracleURL:                "http://morqa:8085/api/v1",
-		IPDetectorURL:                   "http://ipify:3000/?format=json",
-		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:       "http://transactor:8888/api/v1",
-		TransactorRegistryAddress:       registryAddress,
-		TransactorChannelImplementation: channelImplementation,
-		HermesEndpointAddress:           "http://hermes:8889/api/v1",
-		HermesID:                        hermesID,
-		MystSCAddress:                   mystAddress,
-		ChainID:                         5,
+		Testnet2:                       true,
+		ExperimentNATPunching:          true,
+		MysteriumAPIAddress:            "http://mysterium-api:8001/v1",
+		BrokerAddresses:                []string{"broker"},
+		EtherClientRPC:                 "ws://ganache:8545",
+		FeedbackURL:                    "TODO",
+		QualityOracleURL:               "http://morqa:8085/api/v1",
+		IPDetectorURL:                  "http://ipify:3000/?format=json",
+		LocationDetectorURL:            "https://testnet2-location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:      "http://transactor:8888/api/v1",
+		HermesEndpointAddress:          "http://hermes:8889/api/v1",
+		ChainID:                        5,
+		MystSCAddress:                  "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665",
+		RegistrySCAddress:              "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
+		HermesSCAddress:                "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8",
+		ChannelImplementationSCAddress: "0x599d43715DF3070f83355D9D90AE62c159E62A75",
 	}
 
 	node, err := mysterium.NewNode(dir, options)
@@ -71,7 +71,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		require.NotNil(t, identity)
 		require.Equal(t, "Unregistered", identity.RegistrationStatus)
 
-		topUpConsumer(t, identity.IdentityAddress, common.HexToAddress(options.HermesID), registrationFee)
+		topUpConsumer(t, identity.IdentityAddress, common.HexToAddress(hermesID), registrationFee)
 
 		err = node.RegisterIdentity(&mysterium.RegisterIdentityRequest{
 			IdentityAddress: identity.IdentityAddress,
