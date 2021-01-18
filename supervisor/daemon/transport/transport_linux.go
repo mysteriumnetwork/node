@@ -17,10 +17,56 @@
 
 package transport
 
-import "errors"
+import (
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+
+	"github.com/rs/zerolog/log"
+)
+
+const sock = "/var/run/myst.sock"
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.
-func Start(handle handlerFunc, _ Options) error {
-	return errors.New("not implemented")
+func Start(handle handlerFunc, options Options) error {
+	if err := os.RemoveAll(sock); err != nil {
+		return fmt.Errorf("could not remove sock: %w", err)
+	}
+	l, err := net.Listen("unix", sock)
+	if err != nil {
+		return fmt.Errorf("error listening: %w", err)
+	}
+	numUid, err := strconv.Atoi(options.Uid)
+	if err != nil {
+		return fmt.Errorf("failed to parse uid %s: %w", options.Uid, err)
+	}
+	if err := os.Chown(sock, numUid, -1); err != nil {
+		return fmt.Errorf("failed to chown supervisor socket to uid %s: %w", options.Uid, err)
+	}
+	if err := os.Chmod(sock, 0700); err != nil {
+		return fmt.Errorf("failed to chmod supervisor socket: %w", err)
+	}
+	defer func() {
+		if err := l.Close(); err != nil {
+			log.Err(err).Msg("Error closing listener")
+		}
+	}()
+	log.Info().Msg("Waiting for connections...")
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			return fmt.Errorf("accept error: %w", err)
+		}
+		go func() {
+			peer := conn.RemoteAddr().Network()
+			log.Debug().Msgf("Client connected: %s", peer)
+			handle(conn)
+			if err := conn.Close(); err != nil {
+				log.Err(err).Msgf("Error closing connection for: %v", peer)
+			}
+			log.Debug().Msgf("Client disconnected: %s", peer)
+		}()
+	}
 }
