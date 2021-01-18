@@ -31,6 +31,7 @@ const description = "Myst Supervisor"
 const descriptor = `
 [Unit]
 Description={{.Description}}
+Documentation=https://mysterium.network/
 
 [Service]
 PIDFile=/run/{{.Name}}.pid
@@ -42,7 +43,7 @@ Restart=on-failure
 WantedBy=multi-user.target
 `
 
-// Install installs service for linux. Not implemented yet.
+// Install installs service for linux.
 func Install(options Options) error {
 	if !options.valid() {
 		return errInvalid
@@ -58,15 +59,13 @@ func Install(options Options) error {
 	clean(dmn)
 
 	log.Info().Msg("Installing daemon")
-	output, err := dmn.Install()
+	err = execAndLog(func() (string, error) { return dmn.Install() })
 	if err != nil {
-		log.Info().Msg(output)
 		return err
 	}
 
-	output, err = dmn.Start()
+	err = execAndLog(dmn.Start)
 	if err != nil {
-		log.Info().Msg(output)
 		return err
 	}
 	return nil
@@ -101,15 +100,18 @@ func mystSupervisorDaemon(options Options) (daemon.Daemon, error) {
 }
 
 func clean(d daemon.Daemon) error {
-	output, err := d.Stop()
+	execAndLog(d.Stop)
+	return execAndLog(d.Remove)
+}
+
+func execAndLog(action func() (string, error)) error {
+	output, err := action()
 	if err != nil {
 		log.Info().Msgf("%s\t%s", output, err)
+		return err
 	}
-	output, err = d.Remove()
-	if err != nil {
-		log.Info().Msgf("%s\t%s", output, err)
-	}
-	return err
+	log.Info().Msg(output)
+	return nil
 }
 
 // Uninstall installs service for linux. Not implemented yet.
