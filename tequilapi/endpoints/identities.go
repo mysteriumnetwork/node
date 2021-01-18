@@ -401,8 +401,8 @@ func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Req
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	identity := params.ByName("id")
-	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(identity))
+	id := params.ByName("id")
+	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -410,6 +410,32 @@ func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, reques
 	utils.WriteAsJSON(contract.ReferralTokenResponse{
 		Token: tkn,
 	}, resp)
+}
+
+// swagger:operation GET /identities/{id}/referral-available Referral availability check
+// ---
+// summary: Checks if the user can obtain a referral token
+// description: Verifies user's eligibility and the presence of an applicable public campaign
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get a token
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Success
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	err := endpoint.transactor.ReferralTokenAvailable(common.HexToAddress(id))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 }
 
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
@@ -451,4 +477,5 @@ func AddRoutesForIdentities(
 	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
 	router.GET("/identities/:id/referral", idmEnd.GetReferralToken)
+	router.GET("/identities/:id/referral-available", idmEnd.ReferralTokenAvailable)
 }

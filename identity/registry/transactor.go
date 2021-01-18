@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -307,7 +308,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	return regReq, nil
 }
 
-// GetReferralToken returns the referral token
+// GetReferralToken returns the referral token.
 func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
 	req, err := t.getReferralTokenRequest(id)
 	if err != nil {
@@ -324,6 +325,17 @@ func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
 	}
 	err = t.httpClient.DoRequestAndParseResponse(request, &resp)
 	return resp.Token, err
+}
+
+// ReferralTokenAvailable checks if user is eligible to obtain a referral token.
+func (t *Transactor) ReferralTokenAvailable(id common.Address) error {
+	query := url.Values{}
+	query.Set("identity", id.String())
+	req, err := requests.NewGetRequest(t.endpointAddress, "rp/tokens-available", query)
+	if err != nil {
+		return err
+	}
+	return t.httpClient.DoRequest(req)
 }
 
 func (t *Transactor) getReferralTokenRequest(id common.Address) (pc.ReferralTokenRequest, error) {
