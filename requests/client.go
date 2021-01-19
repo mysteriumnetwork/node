@@ -20,6 +20,7 @@ package requests
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -108,17 +109,11 @@ func (c *HTTPClient) resolveClient() *http.Client {
 
 // ParseResponseJSON parses http.Response into given struct.
 func ParseResponseJSON(response *http.Response, dto interface{}) error {
-	responseJSON, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
+	err := json.NewDecoder(response.Body).Decode(dto)
+	if err == io.EOF {
+		return nil
 	}
-
-	err = json.Unmarshal(responseJSON, dto)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // ErrorHTTP represent HTTP error with metadata.
