@@ -244,7 +244,7 @@ var (
 	FlagDocsURL = cli.StringFlag{
 		Name:   "docs-url",
 		Usage:  "URL leading to node documentation",
-		Value:  "https://docs-v2.mysterium.network",
+		Value:  "https://docs.mysterium.network",
 		Hidden: true,
 	}
 )
