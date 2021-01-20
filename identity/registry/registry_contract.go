@@ -79,16 +79,16 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 
 // GetRegistrationStatus returns the registration status of the provided identity
 func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
-	status, err := registry.storage.Get(chainID, id)
-	if err == nil {
-		return status.RegistrationStatus, nil
+	storedIdentity, err := registry.storage.Get(chainID, id)
+	if err == nil && storedIdentity.RegistrationStatus != InProgress {
+		return storedIdentity.RegistrationStatus, nil
 	}
 
 	if err != ErrNotFound {
 		return Unregistered, errors.Wrap(err, "could not check status in local db")
 	}
 
-	statusBC, err := registry.isRegisteredInBC(id)
+	statusBC, err := registry.bcRegistrationStatus(id)
 	if err != nil {
 		return Unregistered, errors.Wrap(err, "could not check identity registration status on blockchain")
 	}
@@ -303,7 +303,7 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentit
 }
 
 func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID int64, id identity.Identity) error {
-	registered, err := registry.isRegisteredInBC(id)
+	registered, err := registry.bcRegistrationStatus(id)
 	if err != nil {
 		return errors.Wrap(err, "could not check status on blockchain")
 	}
@@ -323,7 +323,7 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID 
 	return nil
 }
 
-func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (RegistrationStatus, error) {
+func (registry *contractRegistry) bcRegistrationStatus(id identity.Identity) (RegistrationStatus, error) {
 	contract, err := bindings.NewRegistryCaller(registry.registryAddress, registry.ethC.Client())
 	if err != nil {
 		return RegistrationError, fmt.Errorf("could not get registry caller %w", err)
