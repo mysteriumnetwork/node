@@ -301,7 +301,7 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 
 	hermes, err := cbt.addressProvider.GetActiveHermes(chainID)
 	if err != nil {
-		log.Error().Err(err).Msg("could not get myst address")
+		log.Error().Err(err).Msg("could not get active hermes address")
 		return new(big.Int)
 	}
 

@@ -312,7 +312,7 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(hermesAddress c
 }
 
 func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID int64, id identity.Identity) error {
-	registered, err := registry.bcRegistrationStatus(chainID,id)
+	registered, err := registry.bcRegistrationStatus(chainID, id)
 	if err != nil {
 		return errors.Wrap(err, "could not check status on blockchain")
 	}

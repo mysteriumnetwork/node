@@ -224,6 +224,7 @@ func (c *cliApp) settle(args []string) {
 	hermesID, err := c.config.GetHermesID()
 	if err != nil {
 		clio.Warn("could not get hermes id: ", err)
+		return
 	}
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)

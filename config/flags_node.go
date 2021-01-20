@@ -315,7 +315,6 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsPolicy(ctx)
 	ParseFlagsMMN(ctx)
 	ParseFlagPilvytis(ctx)
-	ParseFlagsDirectory(ctx)
 	ParseFlagsChains(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
