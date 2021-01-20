@@ -22,25 +22,38 @@ import (
 	"strings"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/market"
 )
 
 var errEventNotImplemented = errors.New("event not implemented")
 
+type locationProvider interface {
+	GetOrigin() locationstate.Location
+}
+
 // NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA.
-func NewMORQATransport(morqaClient *MysteriumMORQA) *morqaTransport {
+func NewMORQATransport(morqaClient *MysteriumMORQA, lp locationProvider) *morqaTransport {
 	return &morqaTransport{
 		morqaClient: morqaClient,
+		lp:          lp,
 	}
 }
 
 type morqaTransport struct {
 	morqaClient *MysteriumMORQA
+	lp          locationProvider
 }
 
-func (transport *morqaTransport) SendEvent(event Event) error {
+func (t *morqaTransport) SendEvent(event Event) error {
 	if id, metric := mapEventToMetric(event); metric != nil {
-		return transport.morqaClient.SendMetric(id, metric)
+		metric.Version = &metrics.VersionPayload{
+			Version: event.Application.Version,
+			Os:      event.Application.OS,
+			Arch:    event.Application.Arch,
+		}
+		metric.Country = t.lp.GetOrigin().Country
+		return t.morqaClient.SendMetric(id, metric)
 	}
 
 	return errEventNotImplemented
@@ -74,19 +87,13 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 func connectionEventToMetricsEvent(context ConnectionEvent, info appInfo) (string, *metrics.Event) {
 	return context.ConsumerID, &metrics.Event{
 		IsProvider: false,
+		TargetId:   context.ProviderID,
 		Metric: &metrics.Event_ConnectionEvent{
 			ConnectionEvent: &metrics.ConnectionEvent{
 				ServiceType: context.ServiceType,
-				ProviderId:  context.ProviderID,
-				ConsumerId:  context.ConsumerID,
 				HermesId:    context.HermesID,
 				Stage:       context.Stage,
 				Error:       context.Error,
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
-				},
 			},
 		},
 	}
@@ -105,11 +112,6 @@ func natMappingEvent(context natMappingContext, info appInfo) (string, *metrics.
 				Stage:      context.Stage,
 				Successful: context.Successful,
 				Err:        errMsg,
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
-				},
 			},
 		},
 	}
@@ -119,34 +121,20 @@ func identityRegistrationEvent(data registrationEvent, info appInfo) (string, *m
 	return data.Identity, &metrics.Event{
 		Metric: &metrics.Event_RegistrationPayload{
 			RegistrationPayload: &metrics.RegistrationPayload{
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
-				},
-				Country: data.Country,
-				Status:  data.Status,
+				Status: data.Status,
 			},
 		},
 	}
 }
 
 func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Event) {
-	return id, &metrics.Event{
-		Metric: &metrics.Event_VersionPayload{
-			VersionPayload: &metrics.VersionPayload{
-				Version: info.Version,
-				Os:      info.OS,
-				Arch:    info.Arch,
-			},
-		},
-	}
+	return id, &metrics.Event{}
 }
 
 func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event) {
-	sender, target := ctx.Consumer, ctx.Provider
+	sender, target, country := ctx.Consumer, ctx.Provider, ctx.ProviderCountry
 	if ctx.IsProvider {
-		sender, target = ctx.Provider, ctx.Consumer
+		sender, target, country = ctx.Provider, ctx.Consumer, ctx.ConsumerCountry
 	}
 
 	return sender, &metrics.Event{
@@ -156,11 +144,10 @@ func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event
 			SessionEventPayload: &metrics.SessionEventPayload{
 				Event: ctx.Event,
 				Session: &metrics.SessionPayload{
-					Id:              ctx.ID,
-					ServiceType:     ctx.ServiceType,
-					ProviderCountry: ctx.ProviderCountry,
-					ConsumerCountry: ctx.ConsumerCountry,
-					HermesId:        ctx.AccountantID,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: country,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},
@@ -168,9 +155,9 @@ func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event
 }
 
 func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) {
-	sender, target := ctx.Consumer, ctx.Provider
+	sender, target, country := ctx.Consumer, ctx.Provider, ctx.ProviderCountry
 	if ctx.IsProvider {
-		sender, target = ctx.Provider, ctx.Consumer
+		sender, target, country = ctx.Provider, ctx.Consumer, ctx.ConsumerCountry
 	}
 
 	return sender, &metrics.Event{
@@ -181,11 +168,10 @@ func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) 
 				BytesSent:     ctx.Tx,
 				BytesReceived: ctx.Rx,
 				Session: &metrics.SessionPayload{
-					Id:              ctx.ID,
-					ServiceType:     ctx.ServiceType,
-					ProviderCountry: ctx.ProviderCountry,
-					ConsumerCountry: ctx.ConsumerCountry,
-					HermesId:        ctx.AccountantID,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: country,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},
@@ -200,11 +186,10 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 			SessionTokensPayload: &metrics.SessionTokensPayload{
 				Tokens: ctx.Tokens.Text(10),
 				Session: &metrics.SessionPayload{
-					Id:              ctx.ID,
-					ServiceType:     ctx.ServiceType,
-					ProviderCountry: ctx.ProviderCountry,
-					ConsumerCountry: ctx.ConsumerCountry,
-					HermesId:        ctx.AccountantID,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: ctx.ProviderCountry,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},
@@ -218,25 +203,18 @@ func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (stri
 		IsProvider: true,
 		Metric: &metrics.Event_ProposalPayload{
 			ProposalPayload: &metrics.ProposalPayload{
-				ProviderId:  ctx.ProviderID,
 				ServiceType: ctx.ServiceType,
 				NodeType:    location.NodeType,
-				Country:     location.Country,
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
-				},
 			},
 		},
 	}
 }
 
 func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *metrics.Event) {
-	sender, target, isProvider := ctx.Consumer, ctx.Provider, false
+	sender, target, isProvider, country := ctx.Consumer, ctx.Provider, false, ctx.ProviderCountry
 	// TODO Remove this workaround by generating&signing&publishing `metrics.Event` in same place
 	if strings.HasPrefix(ctx.Stage, "Provider") {
-		sender, target, isProvider = ctx.Provider, ctx.Consumer, true
+		sender, target, isProvider, country = ctx.Provider, ctx.Consumer, true, ctx.ConsumerCountry
 	}
 
 	return sender, &metrics.Event{
@@ -247,16 +225,10 @@ func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *m
 				Duration: uint64(ctx.Duration.Nanoseconds()),
 				Stage:    ctx.Stage,
 				Session: &metrics.SessionPayload{
-					Id:              ctx.ID,
-					ServiceType:     ctx.ServiceType,
-					ProviderCountry: ctx.ProviderCountry,
-					ConsumerCountry: ctx.ConsumerCountry,
-					HermesId:        ctx.AccountantID,
-				},
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: country,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},

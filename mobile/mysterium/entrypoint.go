@@ -114,7 +114,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		BrokerAddresses:                 metadata.Testnet2Definition.BrokerAddresses,
 		EtherClientRPC:                  metadata.Testnet2Definition.EtherClientRPC,
 		FeedbackURL:                     "https://feedback.mysterium.network",
-		QualityOracleURL:                "https://testnet2-quality.mysterium.network/api/v1",
+		QualityOracleURL:                "https://testnet2-quality.mysterium.network/api/v2",
 		IPDetectorURL:                   "https://testnet2-location.mysterium.network/api/v1/location",
 		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:       metadata.Testnet2Definition.TransactorAddress,

@@ -755,7 +755,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	case node.QualityTypeElastic:
 		transport = quality.NewElasticSearchTransport(di.HTTPClient, options.Address, 10*time.Second)
 	case node.QualityTypeMORQA:
-		transport = quality.NewMORQATransport(di.QualityClient)
+		transport = quality.NewMORQATransport(di.QualityClient, di.LocationResolver)
 	case node.QualityTypeNone:
 		transport = quality.NewNoopTransport()
 	default:
