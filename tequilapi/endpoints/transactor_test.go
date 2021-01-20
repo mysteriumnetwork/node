@@ -275,7 +275,7 @@ func Test_SettleHistory(t *testing.T) {
 
 		server := newTestTransactorServer(http.StatusAccepted, "")
 		defer server.Close()
-
+		// &mockBeneficiarySaver{},
 		router := httprouter.New()
 		tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
 		AddRoutesForTransactor(router, mockIdentityRegistryInstance, tr, nil, mockStorage, &mockAddressProvider{})
@@ -347,7 +347,11 @@ func (ms *mockSettler) ForceSettle(_ int64, _ identity.Identity, _ common.Addres
 	return ms.errToReturn
 }
 
-func (ms *mockSettler) SettleWithBeneficiary(_ int64, _ identity.Identity, _, _ common.Address) error {
+type mockBeneficiarySaver struct {
+	errToReturn error
+}
+
+func (ms *mockBeneficiarySaver) SettleAndSaveBeneficiary(_ identity.Identity, _ common.Address) error {
 	return ms.errToReturn
 }
 
