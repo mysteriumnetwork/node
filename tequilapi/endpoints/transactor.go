@@ -45,6 +45,7 @@ type Transactor interface {
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
 	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
 	GetReferralToken(id common.Address) (string, error)
+	ReferralTokenAvailable(id common.Address) error
 }
 
 // promiseSettler settles the given promises

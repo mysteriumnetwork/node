@@ -83,11 +83,6 @@ func TestUnknownProtocolIsNotAllowed(t *testing.T) {
 	assert.Error(t, validProtocol(vpnConfig))
 }
 
-func TestPortOutOfRangeIsNotAllowed(t *testing.T) {
-	vpnConfig := VPNConfig{RemotePort: -1}
-	assert.Error(t, validPort(vpnConfig))
-}
-
 func TestTLSPresharedKeyIsValid(t *testing.T) {
 	vpnConfig := VPNConfig{TLSPresharedKey: tlsTestKey}
 	assert.NoError(t, validTLSPresharedKey(vpnConfig))

@@ -1043,6 +1043,37 @@
         }
       }
     },
+    "/identities/{id}/referral-available": {
+      "get": {
+        "description": "Verifies user's eligibility and the presence of an applicable public campaign",
+        "tags": [
+          "Referral",
+          "availability"
+        ],
+        "summary": "Checks if the user can obtain a referral token",
+        "operationId": "check",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get a token",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/identities/{id}/register": {
       "post": {
         "description": "Registers identity on Mysterium Network smart contracts using Transactor",

@@ -241,6 +241,77 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	assert.False(t, settler.currentState[identity.FromAddress(acc1.Address.Hex())].registered)
 }
 
+func TestPromiseSettler_RejectsIfFeesExceedSettlementAmount(t *testing.T) {
+	fac := &mockHermesCallerFactory{}
+	transactorFee := big.NewInt(5000)
+	hermesFee := big.NewInt(25000)
+
+	promiseSettler := hermesPromiseSettler{
+		currentState: make(map[identity.Identity]settlementState),
+		transactor: &mockTransactor{
+			feesToReturn: registry.FeesResponse{
+				Fee: transactorFee,
+			},
+		},
+		hermesCallerFactory: fac.Get,
+		hermesURLGetter:     &mockHermesURLGetter{},
+		bc: &mockProviderChannelStatusProvider{
+			calculatedFees: hermesFee,
+		},
+	}
+
+	mockPromise := crypto.Promise{
+		Fee:    transactorFee,
+		Amount: big.NewInt(35000),
+	}
+
+	settled := big.NewInt(6000)
+
+	mockSettler := func(crypto.Promise) error { return nil }
+	err := promiseSettler.settle(mockSettler, identity.Identity{}, common.Address{}, mockPromise, common.Address{}, settled)
+	assert.Equal(t, "Settlement fees exceed earning amount. Please provide more service and try again. Current earnings: 29000, current fees: 30000", err.Error())
+}
+
+func TestPromiseSettler_AcceptsIfFeesDoNotExceedSettlementAmount(t *testing.T) {
+	fac := &mockHermesCallerFactory{}
+	transactorFee := big.NewInt(5000)
+	hermesFee := big.NewInt(20000)
+	bc := &mockProviderChannelStatusProvider{
+		calculatedFees: hermesFee,
+		sinkToReturn:   make(chan *bindings.HermesImplementationPromiseSettled),
+		subCancel:      func() {},
+	}
+	promiseSettler := hermesPromiseSettler{
+		currentState: make(map[identity.Identity]settlementState),
+		transactor: &mockTransactor{
+			feesToReturn: registry.FeesResponse{
+				Fee: transactorFee,
+			},
+		},
+		hermesCallerFactory: fac.Get,
+		hermesURLGetter:     &mockHermesURLGetter{},
+		bc:                  bc,
+		channelProvider:     &mockHermesChannelProvider{},
+		config: HermesPromiseSettlerConfig{
+			MaxWaitForSettlement: time.Millisecond * 50,
+		},
+		settlementHistoryStorage: &settlementHistoryStorageMock{},
+	}
+
+	mockPromise := crypto.Promise{
+		Fee:    transactorFee,
+		Amount: big.NewInt(35000),
+	}
+
+	settled := big.NewInt(6000)
+
+	mockSettler := func(crypto.Promise) error { return nil }
+
+	go func() { bc.sinkToReturn <- &bindings.HermesImplementationPromiseSettled{} }()
+	err := promiseSettler.settle(mockSettler, identity.Identity{}, common.Address{}, mockPromise, common.Address{}, settled)
+	assert.NoError(t, err)
+}
+
 func TestPromiseSettlerState_needsSettling(t *testing.T) {
 	s := settlementState{
 		registered: true,
@@ -294,6 +365,8 @@ type mockProviderChannelStatusProvider struct {
 	subError           error
 	feeToReturn        uint16
 	feeError           error
+	calculatedFees     *big.Int
+	calculationError   error
 }
 
 func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
@@ -310,6 +383,10 @@ func (mpcsp *mockProviderChannelStatusProvider) GetHermesFee(chainID int64, herm
 
 func (mpcsp *mockProviderChannelStatusProvider) GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error) {
 	return common.Address{}, nil
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) CalculateHermesFee(chainID int64, hermesAddress common.Address, value *big.Int) (*big.Int, error) {
+	return mpcsp.calculatedFees, mpcsp.calculationError
 }
 
 var cfg = HermesPromiseSettlerConfig{
