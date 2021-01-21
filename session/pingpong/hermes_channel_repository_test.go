@@ -36,7 +36,8 @@ func TestHermesChannelRepository_Fetch_returns_errors(t *testing.T) {
 	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), common.Address{})
+	calc := &mockAddressProvider{}
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), calc)
 
 	// when
 	channelStatusProvider.channelReturnError = errMock
@@ -73,8 +74,10 @@ func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 		channelToReturn: expectedChannelStatus,
 	}
 
+	calc := &mockAddressProvider{}
+
 	// when
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), common.Address{})
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), calc)
 	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
@@ -104,8 +107,10 @@ func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) 
 		channelToReturn: expectedChannelStatus,
 	}
 
+	calc := &mockAddressProvider{}
+
 	// when
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), common.Address{})
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), calc)
 	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
@@ -140,7 +145,10 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	publisher := mocks.NewEventBus()
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, common.Address{})
+
+	calc := &mockAddressProvider{}
+
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, calc)
 
 	// when
 	promiseProvider.toReturn = expectedPromise1

@@ -65,16 +65,18 @@ type ConnectionEndpoint struct {
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
 	proposalRepository proposal.Repository
 	identityRegistry   identityRegistry
+	addressProvider    addressProvider
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:            manager,
 		publisher:          publisher,
 		stateProvider:      stateProvider,
 		proposalRepository: proposalRepository,
 		identityRegistry:   identityRegistry,
+		addressProvider:    addressProvider,
 	}
 }
 
@@ -135,7 +137,13 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	cr, err := toConnectionRequest(req)
+	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	cr, err := toConnectionRequest(req, hermes.Hex())
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(quality.StagePraseRequest, err.Error()))
@@ -274,21 +282,21 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher) {
-	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry, publisher)
+	stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) {
+	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry, publisher, addressProvider)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)
 	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 }
 
-func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, error) {
+func toConnectionRequest(req *http.Request, defaultHermes string) (*contract.ConnectionCreateRequest, error) {
 	var connectionRequest = contract.ConnectionCreateRequest{
 		ConnectOptions: contract.ConnectOptions{
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,
 		},
-		HermesID: config.GetString(config.FlagHermesID),
+		HermesID: defaultHermes,
 	}
 	err := json.NewDecoder(req.Body).Decode(&connectionRequest)
 	if err != nil {

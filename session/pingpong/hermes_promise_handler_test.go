@@ -117,6 +117,7 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 	type fields struct {
 		deps       HermesPromiseHandlerDeps
 		providerID identity.Identity
+		chainID    int64
 		hermesID   common.Address
 	}
 	mockFactory := &mockHermesCallerFactory{}
@@ -202,7 +203,7 @@ func TestHermesPromiseHandler_recoverR(t *testing.T) {
 			it := &HermesPromiseHandler{
 				deps: tt.fields.deps,
 			}
-			if err := it.recoverR(tt.err, tt.fields.providerID, tt.fields.hermesID); (err != nil) != tt.wantErr {
+			if err := it.recoverR(tt.err, tt.fields.providerID, tt.fields.chainID, tt.fields.hermesID); (err != nil) != tt.wantErr {
 				t.Errorf("HermesPromiseHandler.recoverR() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -218,6 +219,7 @@ func TestHermesPromiseHandler_handleHermesError(t *testing.T) {
 		wantErr    error
 		providerID identity.Identity
 		hermesID   common.Address
+		chainID    int64
 		deps       HermesPromiseHandlerDeps
 	}{
 		{
@@ -256,7 +258,7 @@ func TestHermesPromiseHandler_handleHermesError(t *testing.T) {
 			aph := &HermesPromiseHandler{
 				deps: tt.deps,
 			}
-			err := aph.handleHermesError(tt.err, tt.providerID, tt.hermesID)
+			err := aph.handleHermesError(tt.err, tt.providerID, tt.chainID, tt.hermesID)
 			if tt.wantErr == nil {
 				assert.NoError(t, err, tt.name)
 			} else {
@@ -291,6 +293,6 @@ type mockHermesURLGetter struct {
 	urlToReturn string
 }
 
-func (mhug *mockHermesURLGetter) GetHermesURL(address common.Address) (string, error) {
+func (mhug *mockHermesURLGetter) GetHermesURL(chainID int64, address common.Address) (string, error) {
 	return mhug.urlToReturn, mhug.errToReturn
 }

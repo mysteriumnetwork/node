@@ -64,7 +64,7 @@ type identityProvider interface {
 }
 
 type channelAddressCalculator interface {
-	GetChannelAddress(id identity.Identity) (common.Address, error)
+	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
 }
 
 type balanceProvider interface {
@@ -153,7 +153,7 @@ func (k *Keeper) fetchIdentities() []stateEvent.Identity {
 			status = registry.Unregistered
 		}
 
-		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(id)
+		channelAddress, err := k.deps.IdentityChannelCalculator.GetChannelAddress(k.deps.ChainID, id)
 		if err != nil {
 			log.Warn().Err(err).Msgf("Could not calculate channel address for %s", id.Address)
 		}

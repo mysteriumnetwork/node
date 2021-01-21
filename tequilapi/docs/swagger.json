@@ -456,31 +456,6 @@
         }
       }
     },
-    "/exchange/dai/myst": {
-      "get": {
-        "description": "Returns the dai price in myst",
-        "tags": [
-          "Exchange"
-        ],
-        "summary": "Returns the dai price in myst",
-        "operationId": "DaiToMyst",
-        "deprecated": true,
-        "responses": {
-          "200": {
-            "description": "Dai price in myst",
-            "schema": {
-              "$ref": "#/definitions/CurrencyExchangeDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
-          }
-        }
-      }
-    },
     "/exchange/myst/{currency}": {
       "get": {
         "description": "Returns the myst price in the given currency (dai is deprecated)",

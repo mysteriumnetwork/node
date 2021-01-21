@@ -221,7 +221,11 @@ func (c *cliApp) settle(args []string) {
 		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
 		return
 	}
-	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		clio.Warn("could not get hermes id: ", err)
+		return
+	}
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
@@ -278,9 +282,12 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 
 	address := actionArgs[0]
 	beneficiary := actionArgs[1]
-	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
-
-	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		clio.Warn(errors.Wrap(err, "could not get hermes id"))
+		return
+	}
+	err = c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not set beneficiary"))
 		return

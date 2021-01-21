@@ -49,21 +49,19 @@ type HermesChannelRepository struct {
 	promiseProvider promiseProvider
 	channelProvider channelProvider
 	publisher       eventbus.Publisher
-	registryAddress common.Address
-
-	channels map[int64][]HermesChannel
-	lock     sync.RWMutex
+	addressProvider addressProvider
+	channels        map[int64][]HermesChannel
+	lock            sync.RWMutex
 }
 
 // NewHermesChannelRepository returns a new instance of HermesChannelRepository.
-func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, registryAddress common.Address) *HermesChannelRepository {
+func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, addressProvider addressProvider) *HermesChannelRepository {
 	return &HermesChannelRepository{
 		promiseProvider: promiseProvider,
 		channelProvider: channelProvider,
 		publisher:       publisher,
-		registryAddress: registryAddress,
-
-		channels: make(map[int64][]HermesChannel, 0),
+		addressProvider: addressProvider,
+		channels:        make(map[int64][]HermesChannel, 0),
 	}
 }
 
@@ -202,7 +200,12 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 	}
 
 	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
-	benef, err := hcr.channelProvider.GetBeneficiary(chainID, hcr.registryAddress, id.ToCommonAddress())
+	registry, err := hcr.addressProvider.GetRegistryAddress(chainID)
+	if err != nil {
+		return HermesChannel{}, fmt.Errorf("could not get registry address %w", err)
+	}
+
+	benef, err := hcr.channelProvider.GetBeneficiary(chainID, registry, id.ToCommonAddress())
 	if err != nil {
 		return HermesChannel{}, fmt.Errorf("could not get provider beneficiary for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}

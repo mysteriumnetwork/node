@@ -253,7 +253,11 @@ func (c *command) up(ctx *cli.Context) {
 		DNS:               connection.DNSOptionAuto,
 		DisableKillSwitch: false,
 	}
-	hermesID := c.cfg.GetStringByFlag(config.FlagHermesID)
+	hermesID, err := c.cfg.GetHermesID()
+	if err != nil {
+		clio.Error(err)
+		return
+	}
 	_, err = c.tequilapi.ConnectionCreate(id.Address, providerID, hermesID, serviceWireguard, connectOptions)
 	if err != nil {
 		clio.Error("Failed to create a new connection")

@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -72,8 +71,6 @@ type ProviderRegistrarConfig struct {
 	MaxRetries          int
 	Stake               *big.Int
 	DelayBetweenRetries time.Duration
-	HermesAddress       common.Address
-	RegistryAddress     common.Address
 }
 
 // NewProviderRegistrar creates a new instance of provider registrar
