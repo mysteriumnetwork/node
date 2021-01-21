@@ -76,19 +76,24 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 
 // GetRegistrationStatus returns the registration status of the provided identity
 func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
-	storedIdentity, err := registry.storage.Get(chainID, id)
-	if err == nil && storedIdentity.RegistrationStatus != InProgress {
-		return storedIdentity.RegistrationStatus, nil
+	ss, err := registry.storage.Get(chainID, id)
+	if err != nil && err != ErrNotFound {
+		return Unregistered, errors.Wrap(err, "could not check status in local db")
 	}
 
-	if err != ErrNotFound {
-		return Unregistered, errors.Wrap(err, "could not check status in local db")
+	if err == nil && ss.RegistrationStatus != InProgress {
+		return ss.RegistrationStatus, nil
 	}
 
 	statusBC, err := registry.bcRegistrationStatus(chainID, id)
 	if err != nil {
 		return Unregistered, errors.Wrap(err, "could not check identity registration status on blockchain")
 	}
+
+	if statusBC == Unregistered && ss.RegistrationStatus == InProgress {
+		statusBC = InProgress
+	}
+
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           id,
 		RegistrationStatus: statusBC,
