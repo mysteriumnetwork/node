@@ -48,7 +48,7 @@ require (
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
-	github.com/mysteriumnetwork/metrics v0.0.7
+	github.com/mysteriumnetwork/metrics v0.0.10
 	github.com/mysteriumnetwork/payments v0.0.14-0.20201207082756-32a074b1cc0b
 	github.com/nats-io/nats-server/v2 v2.1.7
 	github.com/nats-io/nats.go v1.10.0
@@ -83,7 +83,3 @@ require (
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 )
-
-replace github.com/mysteriumnetwork/metrics => ../metrics
-
-// This will be replaced once https://github.com/mysteriumnetwork/metrics/pull/15 merged
