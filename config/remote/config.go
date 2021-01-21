@@ -18,6 +18,7 @@
 package remote
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -115,4 +116,18 @@ func (rc *Config) GetInt64ByFlag(flag cli.Int64Flag) int64 {
 // GetInt64 returns config value as int64.
 func (rc *Config) GetInt64(key string) int64 {
 	return cast.ToInt64(rc.Get(key))
+}
+
+// GetHermesID returns the current hermes id.
+func (rc *Config) GetHermesID() (string, error) {
+	chid := rc.GetInt64ByFlag(config.FlagChainID)
+	if chid == rc.GetInt64ByFlag(config.FlagChain1ChainID) {
+		return rc.GetStringByFlag(config.FlagChain1HermesAddress), nil
+	}
+
+	if chid == rc.GetInt64ByFlag(config.FlagChain2ChainID) {
+		return rc.GetStringByFlag(config.FlagChain2HermesAddress), nil
+	}
+
+	return "", fmt.Errorf("no hermes specified for chain %v", chid)
 }

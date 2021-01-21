@@ -26,8 +26,6 @@ import (
 type OptionsTransactor struct {
 	Identity                        string
 	TransactorEndpointAddress       string
-	RegistryAddress                 string
-	ChannelImplementation           string
 	ProviderMaxRegistrationAttempts int
 	ProviderRegistrationRetryDelay  time.Duration
 	ProviderRegistrationStake       *big.Int

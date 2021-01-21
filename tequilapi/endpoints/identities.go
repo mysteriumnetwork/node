@@ -54,7 +54,7 @@ type identitiesAPI struct {
 	idm               identity.Manager
 	selector          identity_selector.Handler
 	registry          registry.IdentityRegistry
-	channelCalculator *pingpong.ChannelAddressCalculator
+	channelCalculator *pingpong.AddressProvider
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
 	bc                providerChannel
@@ -273,13 +273,14 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
+	chainID := config.GetInt64(config.FlagChainID)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(chainID, id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
 
-	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(id)
+	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(chainID, id)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
 		return
@@ -287,8 +288,13 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 
 	var stake = new(big.Int)
 	if regStatus == registry.Registered {
+		hermesID, err := endpoint.channelCalculator.GetActiveHermes(chainID)
+		if err != nil {
+			utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
+			return
+		}
 
-		data, err := endpoint.bc.GetProviderChannel(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
+		data, err := endpoint.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return
@@ -296,8 +302,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		stake = data.Stake
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(config.GetInt64(config.FlagChainID), id)
-	settlement := endpoint.earningsProvider.GetEarnings(config.GetInt64(config.FlagChainID), id)
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(chainID, id)
+	settlement := endpoint.earningsProvider.GetEarnings(chainID, id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
@@ -371,7 +377,8 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bc.GetBeneficiary(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagTransactorRegistryAddress)), common.HexToAddress(address))
+	chainID := config.GetInt64(config.FlagChainID)
+	data, err := endpoint.bc.GetBeneficiary(chainID, endpoint.channelCalculator.GetTransactorAddress(), common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
@@ -445,7 +452,7 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
 	balanceProvider balanceProvider,
-	channelAddressCalculator *pingpong.ChannelAddressCalculator,
+	channelAddressCalculator *pingpong.AddressProvider,
 	earningsProvider earningsProvider,
 	bc providerChannel,
 	transactor Transactor,

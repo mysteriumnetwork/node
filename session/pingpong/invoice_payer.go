@@ -97,7 +97,7 @@ type InvoicePayerDeps struct {
 	Identity, Peer            identity.Identity
 	Proposal                  market.ServiceProposal
 	SessionID                 string
-	ChannelAddressCalculator  channelAddressCalculator
+	AddressProvider           addressProvider
 	EventBus                  eventbus.EventBus
 	HermesAddress             common.Address
 	DataLeeway                datasize.BitSize
@@ -123,7 +123,7 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 // Start starts the message exchange tracker. Blocks.
 func (ip *InvoicePayer) Start() error {
 	log.Debug().Msg("Starting...")
-	addr, err := ip.deps.ChannelAddressCalculator.GetChannelAddress(ip.deps.Identity)
+	addr, err := ip.deps.AddressProvider.GetChannelAddress(ip.deps.ChainID, ip.deps.Identity)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}

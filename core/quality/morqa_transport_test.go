@@ -25,10 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/metrics"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 var (
@@ -57,7 +59,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 	go morqa.Start()
 	defer morqa.Stop()
 
-	transport := &morqaTransport{morqaClient: morqa}
+	transport := &morqaTransport{morqaClient: morqa, lp: &mockLocationResolver{}}
 
 	err := transport.SendEvent(eventStartup)
 	assert.NoError(t, err)
@@ -74,10 +76,8 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 			Signature:  "c2lnbmVkIg4KDHRlc3QgdmVyc2lvbg==",
 			IsProvider: false,
 			TargetId:   "",
-			Metric: &metrics.Event_VersionPayload{
-				VersionPayload: &metrics.VersionPayload{
-					Version: "test version",
-				},
+			Version: &metrics.VersionPayload{
+				Version: "test version",
 			},
 		},
 		events.Events[0],
@@ -157,4 +157,10 @@ func TestMORQA_ProposalsMetrics(t *testing.T) {
 		},
 		proposalMetrics,
 	)
+}
+
+type mockLocationResolver struct{}
+
+func (mlr *mockLocationResolver) GetOrigin() locationstate.Location {
+	return locationstate.Location{}
 }

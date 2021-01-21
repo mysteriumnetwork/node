@@ -429,7 +429,11 @@ func (c *cliApp) connect(argsString string) {
 
 	clio.Status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	hermesID := c.config.GetStringByFlag(config.FlagHermesID)
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		clio.Error(err)
+		return
+	}
 
 	// Dont throw an error here incase user identity has a password on it
 	// or we failed to randomly unlock it. We can still try to connect

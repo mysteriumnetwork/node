@@ -31,23 +31,11 @@ var (
 		Usage: "Transactor URL address",
 		Value: metadata.DefaultNetwork.TransactorAddress,
 	}
-	// FlagTransactorRegistryAddress registry contract address used for identity registration.
-	FlagTransactorRegistryAddress = cli.StringFlag{
-		Name:  "transactor.registry-address",
-		Usage: "Registry contract address used to register identity",
-		Value: metadata.DefaultNetwork.RegistryAddress,
-	}
 	// FlagTransactorIdentity is the identity of the transactor which is used.
 	FlagTransactorIdentity = cli.StringFlag{
 		Name:  "transactor.identity-address",
 		Usage: "the identity of the in use transactor",
 		Value: metadata.DefaultNetwork.TransactorIdentity,
-	}
-	// FlagTransactorChannelImplementation the channel implementation sc address used for channel address calculation.
-	FlagTransactorChannelImplementation = cli.StringFlag{
-		Name:  "transactor.channel-implementation",
-		Usage: "channel implementation address",
-		Value: metadata.DefaultNetwork.ChannelImplAddress,
 	}
 	// FlagTransactorProviderMaxRegistrationAttempts determines the number of registration attempts that the provider will attempt before giving up.
 	FlagTransactorProviderMaxRegistrationAttempts = cli.IntFlag{
@@ -74,9 +62,7 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
 		&FlagTransactorAddress,
-		&FlagTransactorRegistryAddress,
 		&FlagTransactorIdentity,
-		&FlagTransactorChannelImplementation,
 		&FlagTransactorProviderMaxRegistrationAttempts,
 		&FlagTransactorProviderRegistrationRetryDelay,
 		&FlagTransactorProviderRegistrationStake,
@@ -87,8 +73,6 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 func ParseFlagsTransactor(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagTransactorIdentity)
 	Current.ParseStringFlag(ctx, FlagTransactorAddress)
-	Current.ParseStringFlag(ctx, FlagTransactorChannelImplementation)
-	Current.ParseStringFlag(ctx, FlagTransactorRegistryAddress)
 	Current.ParseIntFlag(ctx, FlagTransactorProviderMaxRegistrationAttempts)
 	Current.ParseDurationFlag(ctx, FlagTransactorProviderRegistrationRetryDelay)
 	Current.ParseStringFlag(ctx, FlagTransactorProviderRegistrationStake)
