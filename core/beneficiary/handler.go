@@ -18,8 +18,6 @@
 package beneficiary
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -45,19 +43,16 @@ type settler interface {
 }
 
 type addressProvider interface {
-	GetChannelImplementation(chainID int64) (common.Address, error)
 	GetActiveHermes(chainID int64) (common.Address, error)
 	GetRegistryAddress(chainID int64) (common.Address, error)
+	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
 }
 
 // NewHandler returns a new beneficiary handler according to the given chain.
-func NewHandler(currentChain int64, ad addressProvider, st storage, bc multiChainBC, set settler) (Handler, error) {
-	if metadata.ChainData.IsL1(currentChain) {
-		return newL1Handler(currentChain, ad, bc, set), nil
-	}
-	if metadata.ChainData.IsL2(currentChain) {
-		return newL2Handler(currentChain, ad, st, set), nil
+func NewHandler(currentChain int64, ad addressProvider, st storage, bc multiChainBC, set settler) Handler {
+	if currentChain == metadata.DefaultNetwork.Chain1.ChainID {
+		return newL1Handler(currentChain, ad, bc, set)
 	}
 
-	return nil, fmt.Errorf("no handler for chainID %d", currentChain)
+	return newL2Handler(currentChain, ad, st, set)
 }

@@ -22,7 +22,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/crypto"
 )
 
 // l2Handler handles beneficiary in L2 chains.
@@ -50,16 +49,17 @@ func newL2Handler(chainID int64, ad addressProvider, st storage, set settler) *l
 // SettleAndSaveBeneficiary settles beneficiary set to users own payments channel address.
 // The given beneficiary is saved to the database and later retrieved from there.
 func (b *l2Handler) SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error {
-	addr, err := crypto.GenerateChannelAddress(
-		id.Address,
-		b.hermesID.Hex(),
-		b.registryAddress.Hex(),
-		b.channelImplementation.Hex(),
-	)
+	hermesID, err := b.ad.GetActiveHermes(b.chainID)
 	if err != nil {
 		return err
 	}
-	if err := b.set.SettleWithBeneficiary(b.chainID, id, common.HexToAddress(addr), b.hermesID); err != nil {
+
+	addr, err := b.ad.GetChannelAddress(b.chainID, id)
+	if err != nil {
+		return err
+	}
+
+	if err := b.set.SettleWithBeneficiary(b.chainID, id, addr, hermesID); err != nil {
 		return err
 	}
 

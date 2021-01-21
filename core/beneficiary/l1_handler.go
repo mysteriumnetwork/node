@@ -42,10 +42,20 @@ func newL1Handler(chainID int64, ad addressProvider, bc multiChainBC, set settle
 
 // SettleAndSaveBeneficiary executes a settlement transaction saving the beneficiary to the blockchain.
 func (b *l1Handler) SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error {
-	return b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, b.hermesID)
+	hermesID, err := b.ad.GetActiveHermes(b.chainID)
+	if err != nil {
+		return err
+	}
+
+	return b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, hermesID)
 }
 
 // GetBeneficiary looks up beneficiary address in the blockchain.
 func (b *l1Handler) GetBeneficiary(identity common.Address) (common.Address, error) {
-	return b.bc.GetBeneficiary(b.chainID, b.registryAddress, identity)
+	registryAddr, err := b.ad.GetRegistryAddress(b.chainID)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return b.bc.GetBeneficiary(b.chainID, registryAddr, identity)
 }

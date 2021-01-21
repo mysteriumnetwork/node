@@ -218,9 +218,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapBeneficiaryHandler(nodeOptions); err != nil {
-		return err
-	}
+	di.bootstrapBeneficiaryHandler(nodeOptions)
 
 	di.bootstrapIdentityComponents(nodeOptions)
 
@@ -928,15 +926,14 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	return nil
 }
 
-func (di *Dependencies) bootstrapBeneficiaryHandler(options node.Options) (err error) {
-	di.BeneficiaryHandler, err = beneficiary.NewHandler(
+func (di *Dependencies) bootstrapBeneficiaryHandler(options node.Options) {
+	di.BeneficiaryHandler = beneficiary.NewHandler(
 		options.ChainID,
 		di.AddressProvider,
 		di.Storage,
 		di.BCHelper,
 		di.HermesPromiseSettler,
 	)
-	return
 }
 
 func (di *Dependencies) handleConnStateChange() error {
