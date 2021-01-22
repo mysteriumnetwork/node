@@ -61,8 +61,10 @@ func (t *morqaTransport) SendEvent(event Event) error {
 
 func mapEventToMetric(event Event) (string, *metrics.Event) {
 	switch event.EventName {
+	case pingEventName:
+		return pingEventToMetricsEvent(event.Context.(pingEventContext))
 	case unlockEventName:
-		return identityUnlockToMetricsEvent(event.Context.(string), event.Application)
+		return identityUnlockToMetricsEvent(event.Context.(string))
 	case sessionEventName:
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
@@ -70,21 +72,40 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 	case sessionTokensName:
 		return sessionTokensToMetricsEvent(event.Context.(sessionTokensContext))
 	case proposalEventName:
-		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
+		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal))
 	case traceEventName:
-		return traceEventToMetricsEvent(event.Context.(sessionTraceContext), event.Application)
+		return traceEventToMetricsEvent(event.Context.(sessionTraceContext))
 	case registerIdentity:
-		return identityRegistrationEvent(event.Context.(registrationEvent), event.Application)
+		return identityRegistrationEvent(event.Context.(registrationEvent))
 	case natMappingEventName:
-		return natMappingEvent(event.Context.(natMappingContext), event.Application)
+		return natMappingEvent(event.Context.(natMappingContext))
 	case connectionEvent:
-		return connectionEventToMetricsEvent(event.Context.(ConnectionEvent), event.Application)
+		return connectionEventToMetricsEvent(event.Context.(ConnectionEvent))
 	}
 
 	return "", nil
 }
 
-func connectionEventToMetricsEvent(context ConnectionEvent, info appInfo) (string, *metrics.Event) {
+func pingEventToMetricsEvent(context pingEventContext) (string, *metrics.Event) {
+	sender, target, country := context.Consumer, context.Provider, context.ProviderCountry
+	if context.IsProvider {
+		sender, target, country = context.Provider, context.Consumer, context.ConsumerCountry
+	}
+
+	return sender, &metrics.Event{
+		IsProvider: context.IsProvider,
+		TargetId:   target,
+		Metric: &metrics.Event_PingEvent{
+			PingEvent: &metrics.PingPayload{
+				SessionId:     context.ID,
+				RemoteCountry: country,
+				Duration:      uint64(context.Duration),
+			},
+		},
+	}
+}
+
+func connectionEventToMetricsEvent(context ConnectionEvent) (string, *metrics.Event) {
 	return context.ConsumerID, &metrics.Event{
 		IsProvider: false,
 		TargetId:   context.ProviderID,
@@ -99,7 +120,7 @@ func connectionEventToMetricsEvent(context ConnectionEvent, info appInfo) (strin
 	}
 }
 
-func natMappingEvent(context natMappingContext, info appInfo) (string, *metrics.Event) {
+func natMappingEvent(context natMappingContext) (string, *metrics.Event) {
 	var errMsg string
 	if context.ErrorMessage != nil {
 		errMsg = *context.ErrorMessage
@@ -117,7 +138,7 @@ func natMappingEvent(context natMappingContext, info appInfo) (string, *metrics.
 	}
 }
 
-func identityRegistrationEvent(data registrationEvent, info appInfo) (string, *metrics.Event) {
+func identityRegistrationEvent(data registrationEvent) (string, *metrics.Event) {
 	return data.Identity, &metrics.Event{
 		Metric: &metrics.Event_RegistrationPayload{
 			RegistrationPayload: &metrics.RegistrationPayload{
@@ -127,7 +148,7 @@ func identityRegistrationEvent(data registrationEvent, info appInfo) (string, *m
 	}
 }
 
-func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Event) {
+func identityUnlockToMetricsEvent(id string) (string, *metrics.Event) {
 	return id, &metrics.Event{}
 }
 
@@ -196,7 +217,7 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 	}
 }
 
-func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (string, *metrics.Event) {
+func proposalEventToMetricsEvent(ctx market.ServiceProposal) (string, *metrics.Event) {
 	location := ctx.ServiceDefinition.GetLocation()
 
 	return ctx.ProviderID, &metrics.Event{
@@ -210,7 +231,7 @@ func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (stri
 	}
 }
 
-func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *metrics.Event) {
+func traceEventToMetricsEvent(ctx sessionTraceContext) (string, *metrics.Event) {
 	sender, target, isProvider, country := ctx.Consumer, ctx.Provider, false, ctx.ProviderCountry
 	// TODO Remove this workaround by generating&signing&publishing `metrics.Event` in same place
 	if strings.HasPrefix(ctx.Stage, "Provider") {

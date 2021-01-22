@@ -25,7 +25,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -34,8 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/mysteriumnetwork/payments/crypto"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -364,6 +366,13 @@ func (manager *SessionManager) sendKeepAlivePing(channel p2p.Channel, sessionID 
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
+
+	start := time.Now()
 	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	manager.publisher.Publish(quality.AppTopicProviderPingP2P, quality.PingEvent{
+		SessionID: string(sessionID),
+		Duration:  time.Now().Sub(start),
+	})
+
 	return err
 }

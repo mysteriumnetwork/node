@@ -83,3 +83,5 @@ require (
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 )
+
+replace github.com/mysteriumnetwork/metrics => /Users/soffokl/go/src/github.com/mysteriumnetwork/metrics/
