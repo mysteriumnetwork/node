@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,10 @@
 
 package node
 
-// OptionsHermes describes possible parameters for interaction with Hermes
-type OptionsHermes struct {
-	HermesID string
+import "github.com/mysteriumnetwork/node/metadata"
+
+// OptionsChains represents the chain options.
+type OptionsChains struct {
+	Chain1 metadata.ChainDefinition
+	Chain2 metadata.ChainDefinition
 }

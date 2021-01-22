@@ -22,10 +22,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
+
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -156,7 +157,7 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			FlagQualityType.Name,
 		),
-		Value: "https://testnet2-quality.mysterium.network/api/v1",
+		Value: "https://testnet2-quality.mysterium.network/api/v2",
 	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
@@ -218,14 +219,14 @@ var (
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
 	}
-	//FlagP2PListenPorts sets manual ports for p2p connections.
+	// FlagP2PListenPorts sets manual ports for p2p connections.
 	FlagP2PListenPorts = cli.StringFlag{
 		Name:  "p2p.listen.ports",
 		Usage: "Range of P2P listen ports (e.g. 51820:52075), value of 0:0 means disabled",
 		Value: "0:0",
 	}
 
-	//FlagConsumer sets to run as consumer only which allows to skip bootstrap for some of the dependencies.
+	// FlagConsumer sets to run as consumer only which allows to skip bootstrap for some of the dependencies.
 	FlagConsumer = cli.BoolFlag{
 		Name:  "consumer",
 		Usage: "Run in consumer mode only.",
@@ -258,11 +259,11 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsLocation(flags)
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsTransactor(flags)
-	RegisterFlagsHermes(flags)
 	RegisterFlagsPayments(flags)
 	RegisterFlagsPolicy(flags)
 	RegisterFlagsMMN(flags)
 	RegisterFlagsPilvytis(flags)
+	RegisterFlagsChains(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -310,11 +311,11 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsLocation(ctx)
 	ParseFlagsNetwork(ctx)
 	ParseFlagsTransactor(ctx)
-	ParseFlagsHermes(ctx)
 	ParseFlagsPayments(ctx)
 	ParseFlagsPolicy(ctx)
 	ParseFlagsMMN(ctx)
 	ParseFlagPilvytis(ctx)
+	ParseFlagsChains(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)

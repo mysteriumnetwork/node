@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/rs/zerolog"
@@ -70,7 +71,7 @@ type Options struct {
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
-	Hermes     OptionsHermes
+	Chains     OptionsChains
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall
@@ -141,8 +142,6 @@ func GetOptions() *Options {
 		Transactor: OptionsTransactor{
 			Identity:                        config.GetString(config.FlagTransactorIdentity),
 			TransactorEndpointAddress:       config.GetString(config.FlagTransactorAddress),
-			RegistryAddress:                 config.GetString(config.FlagTransactorRegistryAddress),
-			ChannelImplementation:           config.GetString(config.FlagTransactorChannelImplementation),
 			ProviderMaxRegistrationAttempts: config.GetInt(config.FlagTransactorProviderMaxRegistrationAttempts),
 			ProviderRegistrationRetryDelay:  config.GetDuration(config.FlagTransactorProviderRegistrationRetryDelay),
 			ProviderRegistrationStake:       config.GetBigInt(config.FlagTransactorProviderRegistrationStake),
@@ -152,9 +151,6 @@ func GetOptions() *Options {
 			BCTimeout:                      config.GetDuration(config.FlagPaymentsBCTimeout),
 			HermesPromiseSettlingThreshold: config.GetFloat64(config.FlagPaymentsHermesPromiseSettleThreshold),
 			SettlementTimeout:              config.GetDuration(config.FlagPaymentsHermesPromiseSettleTimeout),
-			MystSCAddress:                  config.GetString(config.FlagPaymentsMystSCAddress),
-			WethAddress:                    config.GetString(config.FlagPaymentsWethAddress),
-			DaiAddress:                     config.GetString(config.FlagPaymentsDaiAddress),
 			ConsumerUpperGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBUpperBound),
 			ConsumerLowerGBPriceBound:      config.GetBigInt(config.FlagPaymentsConsumerPricePerGBLowerBound),
 			ConsumerUpperMinutePriceBound:  config.GetBigInt(config.FlagPaymentsConsumerPricePerMinuteUpperBound),
@@ -163,8 +159,21 @@ func GetOptions() *Options {
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
 		},
-		Hermes: OptionsHermes{
-			HermesID: config.GetString(config.FlagHermesID),
+		Chains: OptionsChains{
+			Chain1: metadata.ChainDefinition{
+				RegistryAddress:    config.GetString(config.FlagChain1RegistryAddress),
+				HermesID:           config.GetString(config.FlagChain1HermesAddress),
+				ChannelImplAddress: config.GetString(config.FlagChain1ChannelImplementationAddress),
+				ChainID:            config.GetInt64(config.FlagChain1ChainID),
+				MystAddress:        config.GetString(config.FlagChain1MystAddress),
+			},
+			Chain2: metadata.ChainDefinition{
+				RegistryAddress:    config.GetString(config.FlagChain2RegistryAddress),
+				HermesID:           config.GetString(config.FlagChain2HermesAddress),
+				ChannelImplAddress: config.GetString(config.FlagChain2ChannelImplementationAddress),
+				ChainID:            config.GetInt64(config.FlagChain2ChainID),
+				MystAddress:        config.GetString(config.FlagChain2MystAddress),
+			},
 		},
 		Openvpn: wrapper{nodeOptions: openvpn_core.NodeOptions{
 			BinaryPath: config.GetString(config.FlagOpenvpnBinary),

@@ -110,7 +110,6 @@ type hermesPromiseSettler struct {
 
 // HermesPromiseSettlerConfig configures the hermes promise settler accordingly.
 type HermesPromiseSettlerConfig struct {
-	HermesAddress        common.Address
 	Threshold            float64
 	MaxWaitForSettlement time.Duration
 }
@@ -411,7 +410,7 @@ func (aps *hermesPromiseSettler) updatePromiseWithLatestFee(hermesID common.Addr
 		return crypto.Promise{}, fmt.Errorf("could not fetch settle fees: %w", err)
 	}
 
-	hermesCaller, err := aps.getHermesCaller(hermesID)
+	hermesCaller, err := aps.getHermesCaller(promise.ChainID, hermesID)
 	if err != nil {
 		return crypto.Promise{}, fmt.Errorf("could not fetch settle fees: %w", err)
 	}
@@ -579,8 +578,8 @@ func (aps *hermesPromiseSettler) handleNodeStart() {
 	}
 }
 
-func (aps *hermesPromiseSettler) getHermesCaller(hermesID common.Address) (HermesHTTPRequester, error) {
-	addr, err := aps.hermesURLGetter.GetHermesURL(hermesID)
+func (aps *hermesPromiseSettler) getHermesCaller(chainID int64, hermesID common.Address) (HermesHTTPRequester, error) {
+	addr, err := aps.hermesURLGetter.GetHermesURL(chainID, hermesID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get hermes URL: %w", err)
 	}

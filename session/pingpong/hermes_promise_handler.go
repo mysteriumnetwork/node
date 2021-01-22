@@ -100,7 +100,7 @@ type enqueuedRequest struct {
 }
 
 type hermesURLGetter interface {
-	GetHermesURL(address common.Address) (string, error)
+	GetHermesURL(chainID int64, address common.Address) (string, error)
 }
 
 // RequestPromise adds the request to the queue.
@@ -214,13 +214,13 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
-	hermesCaller, err := aph.getHermesCaller(hermesID)
+	hermesCaller, err := aph.getHermesCaller(er.em.ChainID, hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
 		return
 	}
 	promise, err := hermesCaller.RequestPromise(request)
-	err = aph.handleHermesError(err, providerID, hermesID)
+	err = aph.handleHermesError(err, providerID, er.em.ChainID, hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
 		return
@@ -258,15 +258,15 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	})
 
 	err = aph.revealR(ap)
-	err = aph.handleHermesError(err, providerID, hermesID)
+	err = aph.handleHermesError(err, providerID, ap.Promise.ChainID, hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("hermes reveal r error: %w", err)
 		return
 	}
 }
 
-func (aph *HermesPromiseHandler) getHermesCaller(hermesID common.Address) (HermesHTTPRequester, error) {
-	addr, err := aph.deps.HermesURLGetter.GetHermesURL(hermesID)
+func (aph *HermesPromiseHandler) getHermesCaller(chainID int64, hermesID common.Address) (HermesHTTPRequester, error) {
+	addr, err := aph.deps.HermesURLGetter.GetHermesURL(chainID, hermesID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get hermes URL: %w", err)
 	}
@@ -278,13 +278,13 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 		return nil
 	}
 
-	hermesCaller, err := aph.getHermesCaller(hermesPromise.HermesID)
+	hermesCaller, err := aph.getHermesCaller(hermesPromise.Promise.ChainID, hermesPromise.HermesID)
 	if err != nil {
 		return fmt.Errorf("could not get hermes caller: %w", err)
 	}
 
 	err = hermesCaller.RevealR(hermesPromise.R, hermesPromise.Identity.Address, hermesPromise.AgreementID)
-	handledErr := aph.handleHermesError(err, hermesPromise.Identity, hermesPromise.HermesID)
+	handledErr := aph.handleHermesError(err, hermesPromise.Identity, hermesPromise.Promise.ChainID, hermesPromise.HermesID)
 	if handledErr != nil {
 		return fmt.Errorf("could not reveal R: %w", err)
 	}
@@ -298,7 +298,7 @@ func (aph *HermesPromiseHandler) revealR(hermesPromise HermesPromise) error {
 	return nil
 }
 
-func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identity.Identity, hermesID common.Address) error {
+func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identity.Identity, chainID int64, hermesID common.Address) error {
 	if err == nil {
 		return nil
 	}
@@ -310,7 +310,7 @@ func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identit
 		if !ok {
 			return errors.New("could not cast errNeedsRecovery to hermesError")
 		}
-		recoveryErr := aph.recoverR(aer, providerID, hermesID)
+		recoveryErr := aph.recoverR(aer, providerID, chainID, hermesID)
 		if recoveryErr != nil {
 			return recoveryErr
 		}
@@ -323,7 +323,7 @@ func (aph *HermesPromiseHandler) handleHermesError(err error, providerID identit
 	}
 }
 
-func (aph *HermesPromiseHandler) recoverR(aerr hermesError, providerID identity.Identity, hermesID common.Address) error {
+func (aph *HermesPromiseHandler) recoverR(aerr hermesError, providerID identity.Identity, chainID int64, hermesID common.Address) error {
 	log.Info().Msg("Recovering R...")
 	decoded, err := hex.DecodeString(aerr.Data())
 	if err != nil {
@@ -342,7 +342,7 @@ func (aph *HermesPromiseHandler) recoverR(aerr hermesError, providerID identity.
 	}
 
 	log.Info().Msg("R recovered, will reveal...")
-	hermesCaller, err := aph.getHermesCaller(hermesID)
+	hermesCaller, err := aph.getHermesCaller(chainID, hermesID)
 	if err != nil {
 		return fmt.Errorf("could not get hermes caller: %w", err)
 	}
