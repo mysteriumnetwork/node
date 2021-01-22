@@ -76,7 +76,7 @@ func Test_Subscriber_StartSyncsNewProposals(t *testing.T) {
 	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
-	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 10*time.Millisecond)
+	repo := NewRepository(connection, NewStorage(eventbus.New()), 10*time.Millisecond, 1*time.Second)
 	err := repo.Start()
 	defer repo.Stop()
 	assert.NoError(t, err)
