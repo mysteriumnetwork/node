@@ -20,8 +20,6 @@ package cmd
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -171,8 +169,6 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
-		HermesAddress:       common.HexToAddress(nodeOptions.Hermes.HermesID),
-		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
 	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.MysteriumAPI, di.SignerFactory, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
@@ -183,7 +179,7 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.HermesPromiseStorage,
 		di.BCHelper,
 		di.EventBus,
-		common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
+		di.AddressProvider,
 	)
 
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
@@ -209,7 +205,6 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.Keystore,
 		di.SettlementHistoryStorage,
 		pingpong.HermesPromiseSettlerConfig{
-			HermesAddress:        common.HexToAddress(nodeOptions.Hermes.HermesID),
 			Threshold:            nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 		},
@@ -243,8 +238,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
-			nodeOptions.Transactor.RegistryAddress,
-			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultHermesFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
@@ -252,7 +245,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.EventBus,
 			serviceInstance.Proposal,
 			di.HermesPromiseHandler,
-			common.HexToAddress(nodeOptions.Hermes.HermesID),
+			di.AddressProvider,
 		)
 		return service.NewSessionManager(
 			serviceInstance,

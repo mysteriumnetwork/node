@@ -109,8 +109,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -160,8 +159,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		EventBus:                   mocks.NewEventBus(),
 		MaxAllowedHermesFee:        1500,
 		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
@@ -216,8 +214,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
 	}
@@ -269,8 +266,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		EventBus:                   mocks.NewEventBus(),
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 	}
@@ -329,8 +325,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
 	}
@@ -385,8 +380,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
 	}
@@ -435,8 +429,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		ExchangeMessageWaitTimeout: time.Second,
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
-		ProvidersHermesID:          acc.Address,
-		ChannelAddressCalculator:   NewChannelAddressCalculator(acc.Address.Hex(), acc.Address.Hex(), acc.Address.Hex()),
+		AddressProvider:            &mockAddressProvider{},
 		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
 		EventBus:                   mocks.NewEventBus(),
 	}
@@ -575,8 +568,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 		AgreementID                *big.Int
 		lastExchangeMessage        crypto.ExchangeMessage
 		invoicesSent               map[string]sentInvoice
-		channelImplementation      string
-		registryAddress            string
+		addressProvider            addressProvider
 	}
 	tests := []struct {
 		name    string
@@ -642,12 +634,11 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 			name:    "completes green path",
 			wantErr: false,
 			fields: fields{
+				addressProvider:            &mockAddressProvider{addrToReturn: common.BytesToAddress(msg3.Promise.ChannelID)},
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				hermesPromiseStorage:       &mockHermesPromiseStorage{},
 				peer:                       identity.FromAddress(addr3),
-				registryAddress:            mockRegistryAddress,
-				channelImplementation:      mockChannelImplementation,
 				hermesID:                   common.HexToAddress(mockHermesAddress),
 				lastExchangeMessage: crypto.ExchangeMessage{
 					Promise: crypto.Promise{
@@ -675,11 +666,9 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				ExchangeMessageChan:        tt.fields.exchangeMessageChan,
 				ExchangeMessageWaitTimeout: tt.fields.exchangeMessageWaitTimeout,
 				ConsumersHermesID:          tt.fields.hermesID,
-				ProvidersHermesID:          tt.fields.hermesID,
-				Registry:                   tt.fields.registryAddress,
 				EventBus:                   mocks.NewEventBus(),
 				InvoiceStorage:             NewProviderInvoiceStorage(NewInvoiceStorage(bolt)),
-				ChannelAddressCalculator:   NewChannelAddressCalculator(tt.fields.hermesID.Hex(), tt.fields.channelImplementation, tt.fields.registryAddress),
+				AddressProvider:            tt.fields.addressProvider,
 			}
 			it := &InvoiceTracker{
 				hermesFailureCount:  tt.fields.hermesFailureCount,
@@ -879,9 +868,7 @@ func TestInvoiceTracker_validateExchangeMessage(t *testing.T) {
 			name:    "rejects exchange message with unsupported hermes",
 			wantErr: true,
 			fields: fields{
-				deps: InvoiceTrackerDeps{
-					ProvidersHermesID: common.HexToAddress("0x0"),
-				},
+				deps: InvoiceTrackerDeps{},
 			},
 		},
 	}

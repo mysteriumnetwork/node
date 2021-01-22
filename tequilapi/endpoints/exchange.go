@@ -28,14 +28,7 @@ import (
 )
 
 type exchangeEndpoint struct {
-	e  exchange
 	me mystexchange
-}
-
-// TODO: Remove after apps upgrade
-type exchange interface {
-	DaiToMyst() (float64, error)
-	MystToDai() (float64, error)
 }
 
 type mystexchange interface {
@@ -43,9 +36,8 @@ type mystexchange interface {
 }
 
 // NewExchangeEndpoint returns a new exchange endpoint
-func NewExchangeEndpoint(ex exchange, mystex mystexchange) *exchangeEndpoint {
+func NewExchangeEndpoint(mystex mystexchange) *exchangeEndpoint {
 	return &exchangeEndpoint{
-		e:  ex,
 		me: mystex,
 	}
 }
@@ -73,27 +65,17 @@ func (e *exchangeEndpoint) ExchangeMyst(writer http.ResponseWriter, request *htt
 	var value float64
 	currency := strings.ToUpper(params.ByName("currency"))
 
-	// TODO: deprecated, remove after apps upgrade
-	if currency == "DAI" {
-		var err error
-		value, err = e.e.MystToDai()
-		if err != nil {
-			utils.SendError(writer, err, http.StatusInternalServerError)
-			return
-		}
-	} else {
-		rates, err := e.me.GetMystExchangeRate()
-		if err != nil {
-			utils.SendError(writer, err, http.StatusInternalServerError)
-			return
-		}
+	rates, err := e.me.GetMystExchangeRate()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusInternalServerError)
+		return
+	}
 
-		var ok bool
-		value, ok = rates[currency]
-		if !ok {
-			utils.SendError(writer, errors.New("currency not supported"), http.StatusNotFound)
-			return
-		}
+	var ok bool
+	value, ok = rates[currency]
+	if !ok {
+		utils.SendError(writer, errors.New("currency not supported"), http.StatusNotFound)
+		return
 	}
 
 	status := contract.CurrencyExchangeDTO{
@@ -104,38 +86,8 @@ func (e *exchangeEndpoint) ExchangeMyst(writer http.ResponseWriter, request *htt
 	utils.WriteAsJSON(status, writer)
 }
 
-// swagger:operation GET /exchange/dai/myst Exchange DaiToMyst
-// ---
-// summary: Returns the dai price in myst
-// description: Returns the dai price in myst
-// deprecated: true
-// responses:
-//   200:
-//     description: Dai price in myst
-//     schema:
-//       "$ref": "#/definitions/CurrencyExchangeDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (e *exchangeEndpoint) DaiToMyst(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	res, err := e.e.DaiToMyst()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
-		return
-	}
-
-	status := contract.CurrencyExchangeDTO{
-		Value:    res,
-		Currency: "MYST",
-	}
-
-	utils.WriteAsJSON(status, writer)
-}
-
 // AddRoutesForCurrencyExchange attaches exchange endpoints to router.
-func AddRoutesForCurrencyExchange(router *httprouter.Router, exchange exchange, mystex mystexchange) {
-	e := NewExchangeEndpoint(exchange, mystex)
+func AddRoutesForCurrencyExchange(router *httprouter.Router, mystex mystexchange) {
+	e := NewExchangeEndpoint(mystex)
 	router.GET("/exchange/myst/:currency", e.ExchangeMyst)
-	router.GET("/exchange/dai/myst", e.DaiToMyst)
 }

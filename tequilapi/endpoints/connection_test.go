@@ -103,7 +103,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	fakeState.stateToReturn.Connection.Statistics = connectionstate.Statistics{BytesSent: 1, BytesReceived: 2}
 
 	mockedProposalProvider := mockRepositoryWithProposal("node1", "noop")
-	AddRoutesForConnection(router, fakeManager, fakeState, mockedProposalProvider, mockIdentityRegistryInstance, eventbus.New())
+	AddRoutesForConnection(router, fakeManager, fakeState, mockedProposalProvider, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 
 	tests := []struct {
 		method         string
@@ -162,7 +162,7 @@ func TestStateIsReturnedFromStore(t *testing.T) {
 		},
 	}
 
-	connEndpoint := NewConnectionEndpoint(manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -182,7 +182,7 @@ func TestStateIsReturnedFromStore(t *testing.T) {
 func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	fakeManager := mockConnectionManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
@@ -201,7 +201,7 @@ func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 	fakeManager := mockConnectionManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
@@ -230,7 +230,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	fakeState.stateToReturn.Connection.Session = state
 
 	proposalProvider := mockRepositoryWithProposal("required-node", "openvpn")
-	connEndpoint := NewConnectionEndpoint(&fakeManager, fakeState, proposalProvider, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, fakeState, proposalProvider, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -267,7 +267,7 @@ func TestPutUnregisteredIdentityReturnsError(t *testing.T) {
 	mir := *mockIdentityRegistryInstance
 	mir.RegistrationStatus = registry.Unregistered
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, &mockStateProvider{}, proposalProvider, &mir, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, &mockStateProvider{}, proposalProvider, &mir, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -296,7 +296,7 @@ func TestPutFailedRegistrationCheckReturnsError(t *testing.T) {
 	mir := *mockIdentityRegistryInstance
 	mir.RegistrationCheckError = errors.New("explosions everywhere")
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, &mockStateProvider{}, proposalProvider, &mir, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, &mockStateProvider{}, proposalProvider, &mir, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -322,7 +322,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 	fakeManager := mockConnectionManager{}
 
 	mystAPI := mockRepositoryWithProposal("required-node", "noop")
-	connEndpoint := NewConnectionEndpoint(&fakeManager, &mockStateProvider{}, mystAPI, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, &mockStateProvider{}, mystAPI, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -348,7 +348,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 func TestDeleteCallsDisconnect(t *testing.T) {
 	fakeManager := mockConnectionManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(http.MethodDelete, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -366,7 +366,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	fakeState.stateToReturn.Connection.Invoice = crypto.Invoice{AgreementTotal: big.NewInt(10001)}
 
 	manager := mockConnectionManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connEndpoint := NewConnectionEndpoint(&manager, fakeState, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -389,7 +389,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager.onConnectReturn = connection.ErrAlreadyExists
 
 	mystAPI := mockRepositoryWithProposal("required-node", "openvpn")
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, mystAPI, mockIdentityRegistryInstance, eventbus.New())
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, mystAPI, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 
 	req := httptest.NewRequest(
 		http.MethodPut,
@@ -418,7 +418,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 	manager := mockConnectionManager{}
 	manager.onDisconnectReturn = connection.ErrNoConnection
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 
 	req := httptest.NewRequest(
 		http.MethodDelete,
@@ -444,7 +444,7 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
 	mockProposalProvider := mockRepositoryWithProposal("required-node", "openvpn")
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, mockProposalProvider, mockIdentityRegistryInstance, eventbus.New())
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, mockProposalProvider, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -472,7 +472,7 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	manager := mockConnectionManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New())
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, &mockProposalRepository{}, mockIdentityRegistryInstance, eventbus.New(), &mockAddressProvider{})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",

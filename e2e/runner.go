@@ -157,6 +157,8 @@ func (r *Runner) Init() error {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
 
+	time.Sleep(time.Second)
+
 	log.Info().Msg("Seeding http mock")
 	if err := seedHTTPMock(); err != nil {
 		return fmt.Errorf("could not seed http mock %w", err)

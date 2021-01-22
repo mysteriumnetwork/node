@@ -18,53 +18,52 @@
 package auth
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Storage for Credentials.
-type Storage interface {
-	GetValue(bucket string, key interface{}, to interface{}) error
-	SetValue(bucket string, key interface{}, to interface{}) error
+// CredentialsManager verifies/sets user credentials for web UI.
+type CredentialsManager struct {
+	fileLocation string
 }
 
-const credentialsDBBucket = "app-credentials"
+const passwordFile = "nodeui-pass"
 
-// ErrBadCredentials represents an error when validating wrong credentials.
-var ErrBadCredentials = errors.New("bad credentials")
+var (
+	// ErrBadCredentials represents an error when validating wrong c.
+	ErrBadCredentials = errors.New("bad credentials")
 
-// Credentials verifies/sets user credentials for web UI.
-type Credentials struct {
-	username, password string
-	db                 Storage
-}
+	passwordNotFound = errors.New("password or password file doesn't exist")
+)
 
-// NewCredentials instance.
-func NewCredentials(username, password string, db Storage) *Credentials {
-	return &Credentials{
-		username: username,
-		password: password,
-		db:       db,
+// NewCredentialsManager returns given a password file directory
+// returns a new credentials manager, which can be used to validate or alter
+// user credentials.
+func NewCredentialsManager(dataDir string) *CredentialsManager {
+	return &CredentialsManager{
+		fileLocation: filepath.Join(dataDir, passwordFile),
 	}
 }
 
-// Validate username and password against stored Credentials.
-func (credentials *Credentials) Validate() (err error) {
-	if credentials.username != config.FlagTequilapiUsername.Value {
+// Validate username and password against stored credentials.
+func (c *CredentialsManager) Validate(username, password string) error {
+	if username != config.FlagTequilapiUsername.Value {
 		return ErrBadCredentials
 	}
 
-	storedHash, err := credentials.loadOrInitialize()
+	storedHash, err := c.loadOrInitialize()
 	if err != nil {
 		return fmt.Errorf("could not load credentials: %w", err)
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(credentials.password))
+	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
 	if err != nil {
 		return fmt.Errorf("bad credentials: %w", err)
 	}
@@ -72,39 +71,61 @@ func (credentials *Credentials) Validate() (err error) {
 	return nil
 }
 
-func (credentials *Credentials) loadOrInitialize() (s string, err error) {
-	var storedHash string
-
-	err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
-	if !errors.Is(err, storage.ErrNotFound) {
-		return storedHash, err
-	}
-
-	log.Info().Msg("Credentials not found, initializing to default")
-
-	err = NewCredentials(config.FlagTequilapiUsername.Value, config.FlagTequilapiPassword.Value, credentials.db).Set()
-	if err != nil {
-		return "", fmt.Errorf("failed to set initial credentials: %w", err)
-	}
-
-	err = credentials.db.GetValue(credentialsDBBucket, config.FlagTequilapiUsername.Value, &storedHash)
-
-	return storedHash, err
-}
-
-// Set new credentials.
-func (credentials *Credentials) Set() (err error) {
-	var passwordHash []byte
-
-	passwordHash, err = bcrypt.GenerateFromPassword([]byte(credentials.password), bcrypt.DefaultCost)
+// SetPassword sets a new password for a user.
+func (c *CredentialsManager) SetPassword(password string) error {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("unable to generate password hash: %w", err)
 	}
 
-	err = credentials.db.SetValue(credentialsDBBucket, credentials.username, string(passwordHash))
-	if err != nil {
-		return fmt.Errorf("unable to set credentials: %w", err)
+	return c.setPassword(string(passwordHash))
+}
+
+func (c *CredentialsManager) loadOrInitialize() (string, error) {
+	storedHash, err := c.getPassword()
+	if !errors.Is(err, passwordNotFound) {
+		return storedHash, err
 	}
 
-	return nil
+	log.Info().Msg("CredentialsManager not found, initializing to default")
+
+	err = c.SetPassword(config.FlagTequilapiPassword.Value)
+	if err != nil {
+		return "", fmt.Errorf("failed to set initial credentials: %w", err)
+	}
+
+	return c.getPassword()
+}
+
+func (c *CredentialsManager) setPassword(passwordHash string) error {
+	f, err := os.OpenFile(c.fileLocation, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("could not open password file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(passwordHash); err != nil {
+		return fmt.Errorf("could not write the new password: %w", err)
+	}
+
+	return f.Sync()
+}
+
+func (c *CredentialsManager) getPassword() (string, error) {
+	file, err := os.Open(c.fileLocation)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", passwordNotFound
+		}
+
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	if scanner.Scan() {
+		return scanner.Text(), scanner.Err()
+	}
+
+	return "", passwordNotFound
 }

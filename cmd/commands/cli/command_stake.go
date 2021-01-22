@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
-	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
@@ -90,12 +89,16 @@ func (c *cliApp) increaseStake(args []string) {
 		return
 	}
 
-	accountantID := c.config.GetStringByFlag(config.FlagHermesID)
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		clio.Warn("could not get hermesID", hermesID)
+		return
+	}
 	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- c.tequilapi.SettleIntoStake(identity.FromAddress(args[0]), identity.FromAddress(accountantID), true)
+		errChan <- c.tequilapi.SettleIntoStake(identity.FromAddress(args[0]), identity.FromAddress(hermesID), true)
 	}()
 
 	timeout := time.After(time.Minute * 2)

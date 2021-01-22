@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -59,71 +58,68 @@ import (
 
 // MobileNode represents node object tuned for mobile device.
 type MobileNode struct {
-	shutdown                     func() error
-	node                         *cmd.Node
-	stateKeeper                  *state.Keeper
-	connectionManager            connection.Manager
-	locationResolver             *location.Cache
-	identitySelector             selector.Handler
-	signerFactory                identity.SignerFactory
-	ipResolver                   ip.Resolver
-	eventBus                     eventbus.EventBus
-	connectionRegistry           *connection.Registry
-	proposalsManager             *proposalsManager
-	hermes                       common.Address
-	feedbackReporter             *feedback.Reporter
-	transactor                   *registry.Transactor
-	identityRegistry             registry.IdentityRegistry
-	identityChannelCalculator    *pingpong.ChannelAddressCalculator
-	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
-	pilvytis                     *pilvytis.Service
-	registryAddress              string
-	channelImplementationAddress string
-	chainID                      int64
-	startTime                    time.Time
+	shutdown                  func() error
+	node                      *cmd.Node
+	stateKeeper               *state.Keeper
+	connectionManager         connection.Manager
+	locationResolver          *location.Cache
+	identitySelector          selector.Handler
+	signerFactory             identity.SignerFactory
+	ipResolver                ip.Resolver
+	eventBus                  eventbus.EventBus
+	connectionRegistry        *connection.Registry
+	proposalsManager          *proposalsManager
+	feedbackReporter          *feedback.Reporter
+	transactor                *registry.Transactor
+	identityRegistry          registry.IdentityRegistry
+	identityChannelCalculator *pingpong.AddressProvider
+	consumerBalanceTracker    *pingpong.ConsumerBalanceTracker
+	pilvytis                  *pilvytis.Service
+	chainID                   int64
+	startTime                 time.Time
 }
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Testnet2                        bool
-	Localnet                        bool
-	ExperimentNATPunching           bool
-	MysteriumAPIAddress             string
-	BrokerAddresses                 []string
-	EtherClientRPC                  string
-	FeedbackURL                     string
-	QualityOracleURL                string
-	IPDetectorURL                   string
-	LocationDetectorURL             string
-	TransactorEndpointAddress       string
-	TransactorRegistryAddress       string
-	TransactorChannelImplementation string
-	HermesEndpointAddress           string
-	HermesID                        string
-	MystSCAddress                   string
-	ChainID                         int64
-	PilvytisAddress                 string
+	Testnet2                       bool
+	Localnet                       bool
+	ExperimentNATPunching          bool
+	MysteriumAPIAddress            string
+	BrokerAddresses                []string
+	EtherClientRPC                 string
+	FeedbackURL                    string
+	QualityOracleURL               string
+	IPDetectorURL                  string
+	LocationDetectorURL            string
+	TransactorEndpointAddress      string
+	HermesEndpointAddress          string
+	ChainID                        int64
+	PilvytisAddress                string
+	MystSCAddress                  string
+	RegistrySCAddress              string
+	HermesSCAddress                string
+	ChannelImplementationSCAddress string
 }
 
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Testnet2:                        true,
-		ExperimentNATPunching:           true,
-		MysteriumAPIAddress:             metadata.Testnet2Definition.MysteriumAPIAddress,
-		BrokerAddresses:                 metadata.Testnet2Definition.BrokerAddresses,
-		EtherClientRPC:                  metadata.Testnet2Definition.EtherClientRPC,
-		FeedbackURL:                     "https://feedback.mysterium.network",
-		QualityOracleURL:                "https://testnet2-quality.mysterium.network/api/v1",
-		IPDetectorURL:                   "https://api.ipify.org/?format=json",
-		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:       metadata.Testnet2Definition.TransactorAddress,
-		TransactorRegistryAddress:       metadata.Testnet2Definition.RegistryAddress,
-		TransactorChannelImplementation: metadata.Testnet2Definition.ChannelImplAddress,
-		HermesID:                        metadata.Testnet2Definition.HermesID,
-		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
-		ChainID:                         metadata.Testnet2Definition.DefaultChainID,
-		PilvytisAddress:                 metadata.Testnet2Definition.PilvytisAddress,
+		Testnet2:                       true,
+		ExperimentNATPunching:          true,
+		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
+		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
+		EtherClientRPC:                 metadata.Testnet2Definition.EtherClientRPC,
+		FeedbackURL:                    "https://feedback.mysterium.network",
+		QualityOracleURL:               "https://testnet2-quality.mysterium.network/api/v1",
+		IPDetectorURL:                  "https://testnet2-location.mysterium.network/api/v1/location",
+		LocationDetectorURL:            "https://testnet2-location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:      metadata.Testnet2Definition.TransactorAddress,
+		ChainID:                        metadata.Testnet2Definition.DefaultChainID,
+		PilvytisAddress:                metadata.Testnet2Definition.PilvytisAddress,
+		MystSCAddress:                  metadata.Testnet2Definition.Chain1.MystAddress,
+		RegistrySCAddress:              metadata.Testnet2Definition.Chain1.RegistryAddress,
+		HermesSCAddress:                metadata.Testnet2Definition.Chain1.HermesID,
+		ChannelImplementationSCAddress: metadata.Testnet2Definition.Chain1.ChannelImplAddress,
 	}
 }
 
@@ -209,21 +205,24 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		},
 		Transactor: node.OptionsTransactor{
 			TransactorEndpointAddress:       options.TransactorEndpointAddress,
-			RegistryAddress:                 options.TransactorRegistryAddress,
-			ChannelImplementation:           options.TransactorChannelImplementation,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
 			ProviderRegistrationStake:       big.NewInt(6200000000),
-		},
-		Hermes: node.OptionsHermes{
-			HermesID: options.HermesID,
 		},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:    1500,
 			BCTimeout:                      time.Second * 30,
 			HermesPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:              time.Hour * 2,
-			MystSCAddress:                  options.MystSCAddress,
+		},
+		Chains: node.OptionsChains{
+			Chain1: metadata.ChainDefinition{
+				RegistryAddress:    options.RegistrySCAddress,
+				HermesID:           options.HermesSCAddress,
+				ChannelImplAddress: options.ChannelImplementationSCAddress,
+				MystAddress:        options.MystSCAddress,
+				ChainID:            options.ChainID,
+			},
 		},
 		Consumer:        true,
 		P2PPorts:        port.UnspecifiedRange(),
@@ -236,24 +235,21 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	mobileNode := &MobileNode{
-		shutdown:                     di.Shutdown,
-		node:                         di.Node,
-		stateKeeper:                  di.StateKeeper,
-		connectionManager:            di.ConnectionManager,
-		locationResolver:             di.LocationResolver,
-		identitySelector:             di.IdentitySelector,
-		signerFactory:                di.SignerFactory,
-		ipResolver:                   di.IPResolver,
-		eventBus:                     di.EventBus,
-		connectionRegistry:           di.ConnectionRegistry,
-		hermes:                       common.HexToAddress(nodeOptions.Hermes.HermesID),
-		feedbackReporter:             di.Reporter,
-		transactor:                   di.Transactor,
-		identityRegistry:             di.IdentityRegistry,
-		consumerBalanceTracker:       di.ConsumerBalanceTracker,
-		identityChannelCalculator:    di.ChannelAddressCalculator,
-		channelImplementationAddress: nodeOptions.Transactor.ChannelImplementation,
-		registryAddress:              nodeOptions.Transactor.RegistryAddress,
+		shutdown:                  di.Shutdown,
+		node:                      di.Node,
+		stateKeeper:               di.StateKeeper,
+		connectionManager:         di.ConnectionManager,
+		locationResolver:          di.LocationResolver,
+		identitySelector:          di.IdentitySelector,
+		signerFactory:             di.SignerFactory,
+		ipResolver:                di.IPResolver,
+		eventBus:                  di.EventBus,
+		connectionRegistry:        di.ConnectionRegistry,
+		feedbackReporter:          di.Reporter,
+		transactor:                di.Transactor,
+		identityRegistry:          di.IdentityRegistry,
+		consumerBalanceTracker:    di.ConsumerBalanceTracker,
+		identityChannelCalculator: di.AddressProvider,
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
 			di.MysteriumAPI,
@@ -421,7 +417,16 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		DisableKillSwitch: req.DisableKillSwitch,
 		DNS:               connection.DNSOptionAuto,
 	}
-	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.hermes, *proposal, connectOptions); err != nil {
+
+	hermes, err := mb.identityChannelCalculator.GetActiveHermes(mb.chainID)
+	if err != nil {
+		return &ConnectResponse{
+			ErrorCode:    connectErrUnknown,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), hermes, *proposal, connectOptions); err != nil {
 		qualityEvent.Stage = quality.StageConnectionUnknownError
 		qualityEvent.Error = err.Error()
 		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
@@ -506,7 +511,7 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 		return nil, fmt.Errorf("could not unlock identity: %w", err)
 	}
 
-	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(id)
+	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(mb.chainID, id)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate channel address: %w", err)
 	}

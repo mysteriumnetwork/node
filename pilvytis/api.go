@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
@@ -98,14 +99,18 @@ type orderRequest struct {
 	MystAmount       float64 `json:"myst_amount"`
 	PayCurrency      string  `json:"pay_currency"`
 	LightningNetwork bool    `json:"lightning_network"`
+	ChainID          int64   `json:"chain_id"`
 }
 
 // CreatePaymentOrder creates a new payment order in the API service.
 func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
+	chainID := config.Current.GetInt64(config.FlagChainID.Name)
+
 	payload := orderRequest{
 		MystAmount:       mystAmount,
 		PayCurrency:      payCurrency,
 		LightningNetwork: lightning,
+		ChainID:          chainID,
 	}
 
 	req, err := requests.NewSignedPostRequest(a.url, orderEndpoint, payload, a.signer(id))

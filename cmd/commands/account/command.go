@@ -27,6 +27,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/remote"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/money"
@@ -62,13 +63,22 @@ func NewCommand() *cli.Command {
 		Name:        CommandName,
 		Usage:       "Manage your account",
 		Description: "Using account subcommands you can manage your account details and get information about it",
+		Flags:       []cli.Flag{&config.FlagTequilapiAddress, &config.FlagTequilapiPort},
 		Before: func(ctx *cli.Context) error {
 			tc, err := clio.NewTequilApiClient(ctx)
 			if err != nil {
 				return err
 			}
 
-			cmd = &command{tequilapi: tc}
+			cfg, err := remote.NewConfig(tc)
+			if err != nil {
+				return err
+			}
+
+			cmd = &command{
+				tequilapi: tc,
+				cfg:       cfg,
+			}
 			return nil
 		},
 		Subcommands: []*cli.Command{
@@ -113,6 +123,7 @@ func NewCommand() *cli.Command {
 
 type command struct {
 	tequilapi *tequilapi_client.Client
+	cfg       *remote.Config
 }
 
 func (c *command) setIdentity(ctx *cli.Context) {
@@ -192,7 +203,7 @@ func (c *command) topup(ctx *cli.Context) {
 		msg := fmt.Sprintf(
 			"Top up amount must be greater than %v%s",
 			options.Minimum,
-			config.GetString(config.FlagDefaultCurrency))
+			c.cfg.GetStringByFlag(config.FlagDefaultCurrency))
 		clio.Warn(msg)
 		return
 	}
@@ -251,7 +262,8 @@ func (c *command) registerIdentity(identity string) {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if config.GetBool(config.FlagTestnet2) || config.GetBool(config.FlagTestnet) {
+	if c.cfg.GetBoolByFlag(config.FlagTestnet2) ||
+		c.cfg.GetBoolByFlag(config.FlagTestnet) {
 		msg = "Registration successful, try to connect."
 	}
 	clio.Success(msg)

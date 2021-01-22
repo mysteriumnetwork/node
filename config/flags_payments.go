@@ -20,7 +20,6 @@ package config
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
 
@@ -49,24 +48,6 @@ var (
 		Value: time.Hour * 2,
 		Usage: "The duration we'll wait before timing out our wait for promise settle.",
 	}
-	// FlagPaymentsMystSCAddress represents the myst smart contract address
-	FlagPaymentsMystSCAddress = cli.StringFlag{
-		Name:  "payments.mystscaddress",
-		Value: "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
-		Usage: "The address of myst token smart contract",
-	}
-	// FlagPaymentsWethAddress represents the WETH smart contract address
-	FlagPaymentsWethAddress = cli.StringFlag{
-		Name:  "payments.wethaddress",
-		Value: metadata.DefaultNetwork.WETHAddress,
-		Usage: "The address of weth token smart contract",
-	}
-	// FlagPaymentsDaiAddress represents the DAI smart contract address
-	FlagPaymentsDaiAddress = cli.StringFlag{
-		Name:  "payments.daiaddress",
-		Value: metadata.DefaultNetwork.DAIAddress,
-		Usage: "The address of dai token smart contract",
-	}
 	// FlagPaymentsProviderInvoiceFrequency determines how often the provider sends invoices.
 	FlagPaymentsProviderInvoiceFrequency = cli.DurationFlag{
 		Name:  "payments.provider.invoice-frequency",
@@ -77,7 +58,7 @@ var (
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-max",
 		Usage: "Sets the maximum price of the service per minute. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "690000000000000", // 0.00069 MYSTT
+		Value: "100000000000000", // 0.0001 MYSTT
 	}
 	// FlagPaymentsConsumerPricePerMinuteLowerBound sets the lower price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.StringFlag{
@@ -89,7 +70,7 @@ var (
 	FlagPaymentsConsumerPricePerGBUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-pergib-max",
 		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "3000000000000000000", // 3 MYSTT
+		Value: "2000000000000000000", // 2 MYSTT
 	}
 	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBLowerBound = cli.StringFlag{
@@ -119,7 +100,6 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsBCTimeout,
 		&FlagPaymentsHermesPromiseSettleThreshold,
 		&FlagPaymentsHermesPromiseSettleTimeout,
-		&FlagPaymentsMystSCAddress,
 		&FlagPaymentsProviderInvoiceFrequency,
 		&FlagPaymentsConsumerPricePerMinuteUpperBound,
 		&FlagPaymentsConsumerPricePerMinuteLowerBound,
@@ -127,8 +107,6 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsConsumerPricePerGBLowerBound,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
-		&FlagPaymentsWethAddress,
-		&FlagPaymentsDaiAddress,
 	)
 }
 
@@ -138,7 +116,6 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseDurationFlag(ctx, FlagPaymentsBCTimeout)
 	Current.ParseFloat64Flag(ctx, FlagPaymentsHermesPromiseSettleThreshold)
 	Current.ParseDurationFlag(ctx, FlagPaymentsHermesPromiseSettleTimeout)
-	Current.ParseStringFlag(ctx, FlagPaymentsMystSCAddress)
 	Current.ParseDurationFlag(ctx, FlagPaymentsProviderInvoiceFrequency)
 	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerMinuteUpperBound)
 	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerMinuteLowerBound)
@@ -146,6 +123,4 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
-	Current.ParseStringFlag(ctx, FlagPaymentsWethAddress)
-	Current.ParseStringFlag(ctx, FlagPaymentsDaiAddress)
 }

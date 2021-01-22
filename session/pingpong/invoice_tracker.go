@@ -147,13 +147,11 @@ type InvoiceTrackerDeps struct {
 	ExchangeMessageWaitTimeout time.Duration
 	ProviderID                 identity.Identity
 	ConsumersHermesID          common.Address
-	ProvidersHermesID          common.Address
-	Registry                   string
+	AddressProvider            addressProvider
 	MaxHermesFailureCount      uint64
 	MaxAllowedHermesFee        uint16
 	BlockchainHelper           bcHelper
 	EventBus                   eventbus.EventBus
-	ChannelAddressCalculator   channelAddressCalculator
 	SessionID                  string
 	PromiseHandler             promiseHandler
 	MaxNotPaidInvoice          *big.Int
@@ -534,11 +532,15 @@ func (it *InvoiceTracker) handleHermesError(err error) error {
 		return err
 	// under normal use, this should not occur. If it does, we should drop sessions until we settle because we're not getting paid.
 	case stdErr.Is(err, ErrHermesProviderBalanceExhausted):
+		hermes, err := it.deps.AddressProvider.GetActiveHermes(it.chainID())
+		if err != nil {
+			return err
+		}
 		it.deps.EventBus.Publish(
 			event.AppTopicSettlementRequest,
 			event.AppEventSettlementRequest{
 				ChainID:    it.chainID(),
-				HermesID:   it.deps.ProvidersHermesID,
+				HermesID:   hermes,
 				ProviderID: it.deps.ProviderID,
 			},
 		)
@@ -588,7 +590,17 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
-	addr, err := it.deps.ChannelAddressCalculator.GetChannelAddress(it.deps.Peer)
+	registry, err := it.deps.AddressProvider.GetRegistryAddress(em.ChainID)
+	if err != nil {
+		return errors.Wrap(err, "could not get registry address")
+	}
+
+	chimp, err := it.deps.AddressProvider.GetChannelImplementation(em.ChainID)
+	if err != nil {
+		return errors.Wrap(err, "could not get channel implementation")
+	}
+
+	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
@@ -599,7 +611,7 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 	}
 
 	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
-		log.Warn().Msgf("Consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
+		log.Warn().Msgf("Consumer sent an invalid channel address. Expected %q, got %q", addr.Hex(), hex.EncodeToString(em.Promise.ChannelID))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
 	}
 	return nil
