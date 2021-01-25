@@ -96,7 +96,7 @@ func GetOptions() *Options {
 		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
 		ChainID:               config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
-			"testnet-location.mysterium.network":  {"82.196.15.9"},
+			"testnet-location.mysterium.network":  {"95.216.204.232"},
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
 			"feedback.mysterium.network":          {"116.203.17.150"},
