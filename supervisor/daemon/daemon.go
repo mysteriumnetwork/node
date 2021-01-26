@@ -40,12 +40,13 @@ import (
 
 // Daemon - supervisor process.
 type Daemon struct {
-	monitor *wireguard.Monitor
+	monitor       *wireguard.Monitor
+	tequilapiPort uint16
 }
 
 // New creates a new daemon.
 func New() Daemon {
-	return Daemon{monitor: wireguard.NewMonitor()}
+	return Daemon{monitor: wireguard.NewMonitor(), tequilapiPort: defaultPort}
 }
 
 // Start supervisor daemon. Blocks.
@@ -105,6 +106,13 @@ func (d *Daemon) dialog(conn io.ReadWriter) {
 		case commandKill:
 			if err := d.killMyst(); err != nil {
 				log.Err(err).Msgf("%s failed", commandKill)
+				answer.err(err)
+			} else {
+				answer.ok()
+			}
+		case commandTequilapiSetPort:
+			if err := d.setTequilapiPort(cmd); err != nil {
+				log.Err(err).Msgf("%s failed", commandTequilapiSetPort)
 				answer.err(err)
 			} else {
 				answer.ok()

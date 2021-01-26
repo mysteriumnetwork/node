@@ -23,22 +23,26 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
 
-const tequilapiHost = "http://localhost:4050"
+const (
+	tequilapiHost = "http://localhost"
+	defaultPort   = 4050
+)
 
 func (d *Daemon) killMyst() error {
 	log.Info().Msg("Trying to stop node process gracefully")
-	err := gracefulStop(3 * time.Second)
+	err := gracefulStop(d.tequilapiURL(), 3*time.Second)
 	if err == nil {
 		return nil
 	}
 
 	log.Warn().Msgf("Failed to stop node gracefully, will continue with force kill: %v", err)
-	pid, err := mystPid()
+	pid, err := mystPid(d.tequilapiURL())
 	if err != nil {
 		return fmt.Errorf("could not get myst pid: %w", err)
 	}
@@ -48,9 +52,25 @@ func (d *Daemon) killMyst() error {
 	return nil
 }
 
-func gracefulStop(timeout time.Duration) error {
+func (d *Daemon) setTequilapiPort(cmd []string) error {
+	if len(cmd) < 2 {
+		return fmt.Errorf("expected 2 arguments")
+	}
+	port, err := strconv.ParseUint(cmd[1], 10, 16)
+	if err != nil {
+		return err
+	}
+	d.tequilapiPort = uint16(port)
+	return nil
+}
+
+func (d *Daemon) tequilapiURL() string {
+	return fmt.Sprintf("%s:%d", tequilapiHost, d.tequilapiPort)
+}
+
+func gracefulStop(tequilapiURL string, timeout time.Duration) error {
 	client := http.Client{Timeout: timeout}
-	resp, err := client.Post(fmt.Sprintf("%s/stop", tequilapiHost), "application/json", nil)
+	resp, err := client.Post(fmt.Sprintf("%s/stop", tequilapiURL), "application/json", nil)
 	if err != nil {
 		return fmt.Errorf("could not call stop: %w", err)
 	}
@@ -65,7 +85,7 @@ func gracefulStop(timeout time.Duration) error {
 		case <-timeoutCh:
 			return errors.New("timeout waiting for myst to exit")
 		default:
-			_, err := mystPid()
+			_, err := mystPid(tequilapiURL)
 			if err != nil {
 				return nil
 			}
@@ -94,11 +114,11 @@ func kill(proc *os.Process) error {
 	return nil
 }
 
-func mystPid() (int, error) {
+func mystPid(tequilapiURL string) (int, error) {
 	client := http.Client{
 		Timeout: 3 * time.Second,
 	}
-	resp, err := client.Get(fmt.Sprintf("%s/healthcheck", tequilapiHost))
+	resp, err := client.Get(fmt.Sprintf("%s/healthcheck", tequilapiURL))
 	if err != nil {
 		return 0, fmt.Errorf("could not call healthcheck: %w", err)
 	}
