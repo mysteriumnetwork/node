@@ -161,7 +161,8 @@ type Dependencies struct {
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
 
-	BeneficiaryHandler beneficiary.Handler
+	BeneficiarySaver    beneficiary.Saver
+	BeneficiaryProvider beneficiary.Provider
 
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
@@ -217,8 +218,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
-
-	di.bootstrapBeneficiaryHandler(nodeOptions)
 
 	di.bootstrapIdentityComponents(nodeOptions)
 
@@ -494,9 +493,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
+
+	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
@@ -589,7 +592,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForDocs(router)
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor, di.BeneficiaryHandler)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor, di.BeneficiaryProvider)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry, di.EventBus, di.AddressProvider)
 	tequilapi_endpoints.AddRoutesForSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -598,7 +601,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiaryHandler)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiarySaver)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForMMN(router, di.MMN)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
@@ -926,8 +929,17 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	return nil
 }
 
-func (di *Dependencies) bootstrapBeneficiaryHandler(options node.Options) {
-	di.BeneficiaryHandler = beneficiary.NewHandler(
+func (di *Dependencies) bootstrapBeneficiaryProvider(options node.Options) {
+	di.BeneficiaryProvider = beneficiary.NewProvider(
+		options.ChainID,
+		di.AddressProvider,
+		di.Storage,
+		di.BCHelper,
+	)
+}
+
+func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
+	di.BeneficiarySaver = beneficiary.NewSaver(
 		options.ChainID,
 		di.AddressProvider,
 		di.Storage,
