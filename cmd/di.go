@@ -206,8 +206,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapEventBus()
 
-	di.bootstrapAddressProvider(nodeOptions)
-
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
@@ -497,6 +495,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
+
+	di.bootstrapAddressProvider(nodeOptions)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
