@@ -18,11 +18,12 @@
 package daemon
 
 const (
-	commandVersion = "version"
-	commandPing    = "ping"
-	commandKill    = "kill"
-	commandBye     = "bye"
-	commandWgUp    = "wg-up"
-	commandWgDown  = "wg-down"
-	commandWgStats = "wg-stats"
+	commandVersion          = "version"
+	commandPing             = "ping"
+	commandKill             = "kill"
+	commandBye              = "bye"
+	commandWgUp             = "wg-up"
+	commandWgDown           = "wg-down"
+	commandWgStats          = "wg-stats"
+	commandTequilapiSetPort = "ta-set-port"
 )
