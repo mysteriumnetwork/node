@@ -91,6 +91,7 @@ func NewTransactorEndpoint(
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
 		addressProvider:           addressProvider,
+		bhandler:                  bhander,
 	}
 }
 
