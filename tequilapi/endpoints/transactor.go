@@ -51,13 +51,16 @@ type Transactor interface {
 // promiseSettler settles the given promises
 type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
-	SettleWithBeneficiary(chainID int64, id identity.Identity, beneficiary, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
 }
 
 type addressProvider interface {
 	GetActiveHermes(chainID int64) (common.Address, error)
+}
+
+type beneficiarySaver interface {
+	SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error
 }
 
 type settlementHistoryProvider interface {
@@ -70,6 +73,7 @@ type transactorEndpoint struct {
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
 	addressProvider           addressProvider
+	bhandler                  beneficiarySaver
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
@@ -79,6 +83,7 @@ func NewTransactorEndpoint(
 	promiseSettler promiseSettler,
 	settlementHistoryProvider settlementHistoryProvider,
 	addressProvider addressProvider,
+	bhander beneficiarySaver,
 ) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
@@ -86,6 +91,7 @@ func NewTransactorEndpoint(
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
 		addressProvider:           addressProvider,
+		bhandler:                  bhander,
 	}
 }
 
@@ -302,8 +308,7 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 		return
 	}
 
-	chainID := config.GetInt64(config.FlagChainID)
-	err = te.promiseSettler.SettleWithBeneficiary(chainID, identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.HermesID))
+	err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary))
 	if err != nil {
 		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
 		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
@@ -466,8 +471,8 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, identityRegistry identityRegistry, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, addressProvider addressProvider) {
-	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider)
+func AddRoutesForTransactor(router *httprouter.Router, identityRegistry identityRegistry, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, addressProvider addressProvider, bhandler beneficiarySaver) {
+	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bhandler)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)

@@ -33,6 +33,7 @@ type NetworkDefinition struct {
 	DNSMap                    map[string][]string
 	DefaultChainID            int64
 	DefaultCurrency           string
+	LocationAddress           string
 }
 
 // ChainDefinition defines the configuration for the chain.
@@ -71,13 +72,14 @@ var TestnetDefinition = NetworkDefinition{
 
 	DNSMap: map[string][]string{
 		"testnet-api.mysterium.network":        {"78.47.176.149"},
-		"testnet-trust.mysterium.network":      {"82.196.15.9"},
-		"testnet-broker.mysterium.network":     {"82.196.15.9"},
+		"testnet-trust.mysterium.network":      {"82.196.2.118"},
+		"testnet-broker.mysterium.network":     {"82.196.2.118"},
 		"testnet-transactor.mysterium.network": {"116.203.17.150"},
 		"my.mysterium.network":                 {"168.119.183.173"},
 	},
 	DefaultChainID:  5,
 	DefaultCurrency: "MYSTT",
+	LocationAddress: "https://testnet2-location.mysterium.network/api/v1/location",
 }
 
 // Testnet2Definition defines parameters for testnet2 network (currently default network)
@@ -114,6 +116,7 @@ var Testnet2Definition = NetworkDefinition{
 	},
 	DefaultChainID:  5,
 	DefaultCurrency: "MYSTT",
+	LocationAddress: "https://testnet2-location.mysterium.network/api/v1/location",
 }
 
 // LocalnetDefinition defines parameters for local network

@@ -45,9 +45,12 @@ type earningsProvider interface {
 	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
 }
 
+type beneficiaryProvider interface {
+	GetBeneficiary(identity common.Address) (common.Address, error)
+}
+
 type providerChannel interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
-	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
 
 type identitiesAPI struct {
@@ -59,6 +62,7 @@ type identitiesAPI struct {
 	earningsProvider  earningsProvider
 	bc                providerChannel
 	transactor        Transactor
+	bprovider         beneficiaryProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -377,8 +381,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	chainID := config.GetInt64(config.FlagChainID)
-	data, err := endpoint.bc.GetBeneficiary(chainID, endpoint.channelCalculator.GetTransactorAddress(), common.HexToAddress(address))
+	data, err := endpoint.bprovider.GetBeneficiary(common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
@@ -456,6 +459,7 @@ func AddRoutesForIdentities(
 	earningsProvider earningsProvider,
 	bc providerChannel,
 	transactor Transactor,
+	bprovider beneficiaryProvider,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:               idm,
@@ -466,6 +470,7 @@ func AddRoutesForIdentities(
 		earningsProvider:  earningsProvider,
 		bc:                bc,
 		transactor:        transactor,
+		bprovider:         bprovider,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
