@@ -22,13 +22,17 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/commands"
 	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/packages"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 // Check performs commons checks.
@@ -158,4 +162,62 @@ func getUncommittedFiles() ([]string, error) {
 	}
 
 	return files, nil
+}
+
+// CheckIPFallbacks checks if all the IP fallbacks are working correctly.
+func CheckIPFallbacks() error {
+	c := requests.NewHTTPClient("0.0.0.0", time.Second*30)
+	wg := sync.WaitGroup{}
+	wg.Add(len(ip.IPFallbackAddresses))
+
+	res := make([]fallbackResult, len(ip.IPFallbackAddresses))
+	for i, v := range ip.IPFallbackAddresses {
+		go func(idx int, url string) {
+			defer wg.Done()
+
+			r, err := ip.RequestAndParsePlainIPResponse(c, url)
+			res[idx] = fallbackResult{
+				url:      url,
+				response: r,
+				err:      err,
+			}
+		}(i, v)
+	}
+	wg.Wait()
+
+	// check that no errors are present
+	var errorsPresent bool
+	for i := range res {
+		if res[i].err != nil {
+			fmt.Printf("Unexpected error for %v: %v\n", res[i].url, res[i].err.Error())
+			errorsPresent = true
+		}
+	}
+
+	if errorsPresent {
+		return errors.New("unexpected errors present")
+	}
+
+	var initialResult = res[0].response
+	for i := range res {
+		if res[i].response != initialResult {
+			fmt.Println("Missmatch for ips!")
+
+			// print all results
+			for j := range res {
+				fmt.Printf("%v: %v\n", res[j].url, res[j].response)
+			}
+
+			return errors.New("ip missmatches found")
+		}
+	}
+
+	fmt.Println("All IPS are in order")
+	return nil
+}
+
+type fallbackResult struct {
+	url      string
+	response string
+	err      error
 }
