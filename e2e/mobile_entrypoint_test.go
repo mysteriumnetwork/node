@@ -41,7 +41,7 @@ func TestMobileNodeConsumer(t *testing.T) {
 		BrokerAddresses:                []string{"broker"},
 		EtherClientRPC:                 "ws://ganache:8545",
 		FeedbackURL:                    "TODO",
-		QualityOracleURL:               "http://morqa:8085/api/v1",
+		QualityOracleURL:               "http://morqa:8085/api/v2",
 		IPDetectorURL:                  "http://ipify:3000/?format=json",
 		LocationDetectorURL:            "https://testnet2-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:      "http://transactor:8888/api/v1",
