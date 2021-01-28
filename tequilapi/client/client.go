@@ -184,10 +184,9 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int, token *string) error {
+func (client *Client) RegisterIdentity(address, beneficiary string, stake *big.Int, token *string) error {
 	payload := contract.IdentityRegisterRequest{
 		Stake:         stake,
-		Fee:           fee,
 		Beneficiary:   beneficiary,
 		ReferralToken: token,
 	}
@@ -560,11 +559,10 @@ func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, wa
 }
 
 // DecreaseStake requests the decrease of stake via the transactor.
-func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
+func (client *Client) DecreaseStake(ID identity.Identity, amount *big.Int) error {
 	decreaseRequest := contract.DecreaseStakeRequest{
-		ID:            ID.Address,
-		Amount:        amount,
-		TransactorFee: transactorFee,
+		ID:     ID.Address,
+		Amount: amount,
 	}
 
 	path := "transactor/stake/decrease"

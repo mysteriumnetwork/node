@@ -70,13 +70,7 @@ func (c *cliApp) decreaseStake(args []string) {
 		return
 	}
 
-	fees, err := c.tequilapi.GetTransactorFees()
-	if err != nil {
-		clio.Warn("could not get transactor fee: ", err)
-		return
-	}
-
-	err = c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), res, fees.DecreaseStake)
+	err := c.tequilapi.DecreaseStake(identity.FromAddress(args[0]), res)
 	if err != nil {
 		clio.Warn("could not decrease stake: ", err)
 		return

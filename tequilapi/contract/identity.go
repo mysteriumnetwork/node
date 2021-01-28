@@ -124,8 +124,6 @@ type IdentityRegisterRequest struct {
 	Stake *big.Int `json:"stake,omitempty"`
 	// Cache out address for Provider
 	Beneficiary string `json:"beneficiary,omitempty"`
-	// Fee: negotiated fee with transactor
-	Fee *big.Int `json:"fee,omitempty"`
 	// Token: referral token, if the user has one
 	ReferralToken *string `json:"referral_token,omitempty"`
 }
