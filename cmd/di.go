@@ -804,7 +804,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
+	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL, ip.IPFallbackAddresses)
 	di.IPResolver = ip.NewCachedResolver(ipResolver, 5*time.Minute)
 
 	var resolver location.Resolver
@@ -917,7 +917,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 
 	if options.BlockAlways {
 		bindAddress := "0.0.0.0"
-		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "")
+		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "", ip.IPFallbackAddresses)
 		outboundIP, err := resolver.GetOutboundIP()
 		if err != nil {
 			return err

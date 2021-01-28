@@ -19,6 +19,7 @@ package ip
 
 import (
 	"net"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -39,14 +40,16 @@ type ResolverImpl struct {
 	bindAddress string
 	url         string
 	httpClient  *requests.HTTPClient
+	fallbacks   []string
 }
 
 // NewResolver creates new ip-detector resolver with default timeout of one minute
-func NewResolver(httpClient *requests.HTTPClient, bindAddress, url string) *ResolverImpl {
+func NewResolver(httpClient *requests.HTTPClient, bindAddress, url string, fallbacks []string) *ResolverImpl {
 	return &ResolverImpl{
 		bindAddress: bindAddress,
 		url:         url,
 		httpClient:  httpClient,
+		fallbacks:   fallbacks,
 	}
 }
 
@@ -86,18 +89,54 @@ func (r *ResolverImpl) GetPublicIP() (string, error) {
 	var ipResponse ipResponse
 
 	request, err := requests.NewGetRequest(r.url, "", nil)
-	request.Header.Set("User-Agent", apiClient)
-	request.Header.Set("Accept", "application/json")
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return "", err
 	}
+	request.Header.Set("User-Agent", apiClient)
+	request.Header.Set("Accept", "application/json")
 
 	err = r.httpClient.DoRequestAndParseResponse(request, &ipResponse)
 	if err != nil {
-		return "", err
+		log.Err(err).Msg("could not reach location service, will use fallbacks")
+		return r.findPublicIPViaFallbacks()
 	}
 
 	log.Debug().Msg("IP detected: " + ipResponse.IP)
 	return ipResponse.IP, nil
+}
+
+func (r *ResolverImpl) findPublicIPViaFallbacks() (string, error) {
+	// To prevent blocking for a long time on a service that might be dead, use the following fallback mechanic:
+	// Choose 3 fallback addresses at random and execute lookups on them in parallel.
+	// Return the first successful result or an error if such occurs.
+	// This prevents providers from not being able to provide sessions due to not having a fresh public IP address.
+	var desiredLength = 3
+	res := make(chan string, desiredLength)
+	wg := sync.WaitGroup{}
+	wg.Add(desiredLength)
+
+	go func() {
+		wg.Wait()
+		close(res)
+	}()
+
+	for _, v := range shuffleStringSlice(r.fallbacks)[:desiredLength] {
+		go func(url string) {
+			defer wg.Done()
+			r, err := RequestAndParsePlainIPResponse(r.httpClient, url)
+			if err != nil {
+				log.Err(err).Str("url", url).Msg("public ip fallback error")
+			}
+			res <- r
+		}(v)
+	}
+
+	for ip := range res {
+		if ip != "" {
+			return ip, nil
+		}
+	}
+
+	return "", errors.New("out of fallbacks")
 }
