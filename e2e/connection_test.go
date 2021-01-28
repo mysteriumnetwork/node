@@ -189,8 +189,13 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.Equal(t, new(big.Int), providerStatus.Balance)
 
 		// settle hermes 1
-		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
+		err = tequilapiProvider.SettleWithBeneficiary(providerID, providerChannelAddress, hermesID)
 		assert.NoError(t, err)
+		assert.Eventually(t, func() bool {
+			res, err := tequilapiProvider.Beneficiary(providerID)
+			assert.NoError(t, err)
+			return res.Beneficiary == providerChannelAddress
+		}, time.Second*30, time.Second/2)
 
 		// settle hermes 2
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermes2ID), true)
@@ -455,7 +460,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, providerChannelAddress, providerStake, nil, nil)
+	err = tequilapi.RegisterIdentity(id, "", providerStake, nil, nil)
 	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
 
 	assert.Eventually(t, func() bool {
