@@ -114,7 +114,7 @@ func execAndLog(action func() (string, error)) error {
 	return nil
 }
 
-// Uninstall installs service for linux. Not implemented yet.
+// Uninstall - remove supervisor daemon
 func Uninstall() error {
 	log.Info().Msg("Uninstalling Myst Supervisor daemon")
 	dmn, err := daemon.New(daemonName, description, daemon.SystemDaemon)

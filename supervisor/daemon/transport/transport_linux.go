@@ -45,7 +45,7 @@ func Start(handle handlerFunc, options Options) error {
 	if err := os.Chown(sock, numUid, -1); err != nil {
 		return fmt.Errorf("failed to chown supervisor socket to uid %s: %w", options.Uid, err)
 	}
-	if err := os.Chmod(sock, 0700); err != nil {
+	if err := os.Chmod(sock, 0766); err != nil {
 		return fmt.Errorf("failed to chmod supervisor socket: %w", err)
 	}
 	defer func() {
