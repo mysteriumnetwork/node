@@ -75,7 +75,7 @@ services:
     command: >
       -swaggerHost=trust
       -trustedIDs=0xc4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
-  
+
   http-mock:
     image: mockserver/mockserver:mockserver-5.11.2
     ports:
@@ -236,7 +236,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/
       --access-policy.fetch=1s
@@ -283,7 +283,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
 
   myst-consumer-hermes2:
@@ -319,7 +319,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
 
   myst-consumer-openvpn:
@@ -355,7 +355,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
 
   myst-consumer-wireguard:
@@ -391,7 +391,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)

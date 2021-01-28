@@ -336,7 +336,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
     dns: 172.30.0.254
     networks:
@@ -420,7 +420,7 @@ services:
       --chains.1.registry=0xbe180c8CA53F280C7BE8669596fF7939d933AA10
       --chains.1.hermes=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8
       --transactor.address=http://transactor:8888/api/v1
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       --firewall.killSwitch.always
       daemon
     dns: 172.30.0.254
@@ -465,7 +465,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
     dns: 172.30.0.254
     networks:
@@ -509,7 +509,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
     dns: 172.30.0.254
     networks:
@@ -559,7 +559,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       --payments.provider.invoice-frequency=1s
       --access-policy.address=http://trust:8080/api/v1/access-policies/
       --access-policy.fetch=1s
