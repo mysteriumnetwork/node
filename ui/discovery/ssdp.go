@@ -133,7 +133,7 @@ func (ss *ssdpServer) Stop() error {
 }
 
 func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
-	resolver := ip.NewResolver(ss.httpClient, "0.0.0.0", "")
+	resolver := ip.NewResolver(ss.httpClient, "0.0.0.0", "", ip.IPFallbackAddresses)
 
 	outIP, err := resolver.GetOutboundIP()
 	if err != nil {
