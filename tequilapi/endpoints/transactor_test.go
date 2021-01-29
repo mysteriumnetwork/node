@@ -44,7 +44,7 @@ var identityRegData = `{
 }`
 
 func Test_RegisterIdentity(t *testing.T) {
-	mockResponse := ""
+	mockResponse := `{ "fee": 1 }`
 	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
 
 	router := httprouter.New()

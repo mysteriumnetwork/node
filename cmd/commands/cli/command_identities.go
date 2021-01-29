@@ -185,13 +185,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		token = &actionArgs[3]
 	}
 
-	fees, err := c.tequilapi.GetTransactorFees()
-	if err != nil {
-		clio.Warn(err)
-		return
-	}
-
-	err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration, token)
+	err := c.tequilapi.RegisterIdentity(address, beneficiary, stake, token)
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not register identity"))
 		return

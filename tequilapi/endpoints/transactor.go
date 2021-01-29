@@ -288,7 +288,13 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		req.Stake = reward.Reward
 	}
 
-	err = te.transactor.RegisterIdentity(id.Address, req.Stake, req.Fee, req.Beneficiary, chainID, req.ReferralToken)
+	rf, err := te.transactor.FetchRegistrationFees(chainID)
+	if err != nil {
+		utils.SendError(resp, fmt.Errorf("failed to get registration fees %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	err = te.transactor.RegisterIdentity(id.Address, req.Stake, rf.Fee, req.Beneficiary, chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
@@ -389,16 +395,13 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
-	if req.TransactorFee == nil {
-		fees, err := te.transactor.FetchStakeDecreaseFee(chainID)
-		if err != nil {
-			utils.SendError(resp, errors.Wrap(err, "failed get stake decrease fee"), http.StatusInternalServerError)
-			return
-		}
-		req.TransactorFee = fees.Fee
+	fees, err := te.transactor.FetchStakeDecreaseFee(chainID)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed get stake decrease fee"), http.StatusInternalServerError)
+		return
 	}
 
-	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, req.TransactorFee)
+	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, fees.Fee)
 	if err != nil {
 		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
 		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)

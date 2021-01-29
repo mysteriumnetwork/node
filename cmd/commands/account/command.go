@@ -249,13 +249,7 @@ func (c *command) register() {
 }
 
 func (c *command) registerIdentity(identity string) {
-	fees, err := c.tequilapi.GetTransactorFees()
-	if err != nil {
-		clio.Error("Failed to get fees for registration")
-		return
-	}
-
-	err = c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), fees.Registration, nil)
+	err := c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), nil)
 	if err != nil {
 		clio.Error("Failed to register the identity")
 		return

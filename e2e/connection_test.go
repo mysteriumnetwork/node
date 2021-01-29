@@ -251,7 +251,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.NoError(t, err)
 
 		decrease := new(big.Int).Mul(fees.DecreaseStake, big.NewInt(3))
-		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), decrease, fees.DecreaseStake)
+		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), decrease)
 		assert.NoError(t, err)
 
 		expected := new(big.Int).Sub(initialStake, decrease)
@@ -322,7 +322,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), new(big.Int), nil)
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -348,7 +348,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, new(big.Int), nil)
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -460,7 +460,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	err = tequilapi.RegisterIdentity(id, "", providerStake, nil, nil)
+	err = tequilapi.RegisterIdentity(id, "", providerStake, nil)
 	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
 
 	assert.Eventually(t, func() bool {
@@ -495,10 +495,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	fees, err := tequilapi.GetTransactorFees()
-	assert.NoError(t, err)
-
-	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), fees.Registration, nil)
+	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), nil)
 	assert.NoError(t, err)
 
 	// now we check identity again
