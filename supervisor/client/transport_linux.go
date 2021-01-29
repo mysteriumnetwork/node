@@ -23,7 +23,7 @@ import (
 	"net"
 )
 
-const sock = "/var/run/myst.sock"
+const sock = "/run/myst.sock"
 
 func connect() (io.ReadWriteCloser, error) {
 	conn, err := net.Dial("unix", sock)

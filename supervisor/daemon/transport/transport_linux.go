@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const sock = "/var/run/myst.sock"
+const sock = "/run/myst.sock"
 
 // Start starts a listener on a unix domain socket.
 // Conversation is handled by the handlerFunc.

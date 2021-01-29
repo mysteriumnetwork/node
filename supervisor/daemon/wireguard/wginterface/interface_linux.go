@@ -32,7 +32,6 @@ import (
 )
 
 func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceName string, err error) {
-	log.Info().Msg("createTunnel start")
 	tunnel, err = tun.CreateTUN(requestedInterfaceName, device.DefaultMTU)
 	if err == nil {
 		interfaceName = requestedInterfaceName
@@ -41,12 +40,10 @@ func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceNa
 			interfaceName = realInterfaceName
 		}
 	}
-	log.Info().Msg("createTunnel done")
 	return tunnel, interfaceName, err
 }
 
 func newUAPIListener(interfaceName string) (listener net.Listener, err error) {
-	log.Info().Msg("newUAPIListener done")
 	log.Info().Msg("Setting interface configuration")
 	fileUAPI, err := ipc.UAPIOpen(interfaceName)
 	if err != nil {
@@ -56,12 +53,10 @@ func newUAPIListener(interfaceName string) (listener net.Listener, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not listen for UAPI wg configuration: %w", err)
 	}
-	log.Info().Msg("newUAPIListener done")
 	return uapi, nil
 }
 
 func applySocketPermissions(interfaceName string, uid string) error {
-	log.Info().Msg("applySocketPermissions start")
 	numUid, err := strconv.Atoi(uid)
 	if err != nil {
 		return fmt.Errorf("failed to parse uid %s: %w", uid, err)
@@ -71,6 +66,5 @@ func applySocketPermissions(interfaceName string, uid string) error {
 	if err != nil {
 		return fmt.Errorf("failed to chown wireguard socket to uid %s: %w", uid, err)
 	}
-	log.Info().Msg("applySocketPermissions done")
 	return nil
 }

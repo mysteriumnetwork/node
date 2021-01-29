@@ -65,10 +65,7 @@ func Install(options Options) error {
 	}
 
 	err = execAndLog(dmn.Start)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func mystSupervisorDaemon(options Options) (daemon.Daemon, error) {
@@ -77,7 +74,7 @@ func mystSupervisorDaemon(options Options) (daemon.Daemon, error) {
 		return nil, err
 	}
 
-	t, err := template.New("unit-descriptor").Parse(description)
+	t, err := template.New("unit-descriptor").Parse(descriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +89,7 @@ func mystSupervisorDaemon(options Options) (daemon.Daemon, error) {
 		return nil, err
 	}
 
-	err = dmn.SetTemplate(descriptor)
+	err = dmn.SetTemplate(buffer.String())
 	if err != nil {
 		return nil, err
 	}
@@ -107,14 +104,14 @@ func clean(d daemon.Daemon) error {
 func execAndLog(action func() (string, error)) error {
 	output, err := action()
 	if err != nil {
-		log.Info().Msgf("%s\t%s", output, err)
+		log.Error().Msgf("%s\t%s", output, err)
 		return err
 	}
 	log.Info().Msg(output)
 	return nil
 }
 
-// Uninstall - remove supervisor daemon
+// Uninstall remove supervisor daemon
 func Uninstall() error {
 	log.Info().Msg("Uninstalling Myst Supervisor daemon")
 	dmn, err := daemon.New(daemonName, description, daemon.SystemDaemon)
