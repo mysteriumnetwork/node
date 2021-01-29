@@ -35,6 +35,9 @@ const serviceName = "MysteriumVPNSupervisor"
 // Install installs service for Windows. If there is previous service instance
 // running it will be first uninstalled before installing new version.
 func Install(options Options) error {
+	if !options.valid() {
+		return errInvalid
+	}
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("could not connect to service manager: %w", err)

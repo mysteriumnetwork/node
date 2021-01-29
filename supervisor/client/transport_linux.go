@@ -18,10 +18,17 @@
 package client
 
 import (
-	"errors"
+	"fmt"
 	"io"
+	"net"
 )
 
+const sock = "/run/myst.sock"
+
 func connect() (io.ReadWriteCloser, error) {
-	return nil, errors.New("not implemented")
+	conn, err := net.Dial("unix", sock)
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to the supervisor socket %s: %w", sock, err)
+	}
+	return conn, nil
 }

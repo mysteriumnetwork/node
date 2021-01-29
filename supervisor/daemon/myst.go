@@ -60,6 +60,7 @@ func (d *Daemon) setTequilapiPort(cmd []string) error {
 	if err != nil {
 		return err
 	}
+	log.Info().Msgf("Changing tequilapi port to: %d", port)
 	d.tequilapiPort = uint16(port)
 	return nil
 }

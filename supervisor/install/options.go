@@ -17,6 +17,10 @@
 
 package install
 
+import "errors"
+
+var errInvalid = errors.New("invalid options")
+
 // Options for installation.
 type Options struct {
 	SupervisorPath string
