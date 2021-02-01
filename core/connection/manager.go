@@ -810,11 +810,16 @@ func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.C
 
 	start := time.Now()
 	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
+	if err != nil {
+		return err
+	}
+
 	m.eventBus.Publish(quality.AppTopicConsumerPingP2P, quality.PingEvent{
 		SessionID: string(sessionID),
 		Duration:  time.Now().Sub(start),
 	})
-	return err
+
+	return nil
 }
 
 func (m *connectionManager) currentCtx() context.Context {
