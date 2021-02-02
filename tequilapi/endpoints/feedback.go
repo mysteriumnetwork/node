@@ -102,7 +102,7 @@ func (api *feedbackAPI) ReportIssue(httpRes http.ResponseWriter, httpReq *http.R
 
 	if !result.Success {
 		log.Error().Stack().Err(err).Msg("Submitting an issue failed")
-		utils.SendErrorBody(httpRes, result.Errors, result.HTTPResponse.StatusCode)
+		utils.WriteAsJSON(result.Errors, httpRes, result.HTTPResponse.StatusCode)
 		return
 	}
 
