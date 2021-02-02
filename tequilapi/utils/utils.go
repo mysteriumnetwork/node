@@ -23,19 +23,28 @@ import (
 	"net/http"
 
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
+
+	"github.com/rs/zerolog/log"
 )
 
-/*
-WriteAsJSON takes value as the first argument and handles json marshaling with returning appropriate errors if needed,
-also enforces application/json and charset response headers
-*/
-func WriteAsJSON(v interface{}, writer http.ResponseWriter) {
-
+// WriteAsJSON writes a given value `v` to a given http.ResponseWritter
+// forcing `content-type application/json`. Optional httpCode parameter
+// can be given to also write a specific status code.
+func WriteAsJSON(v interface{}, writer http.ResponseWriter, httpCode ...int) {
 	writer.Header().Set("Content-type", "application/json; charset=utf-8")
 
-	writeErr := json.NewEncoder(writer).Encode(v)
-	if writeErr != nil {
+	blob, err := json.Marshal(v)
+	if err != nil {
 		http.Error(writer, "Http response write error", http.StatusInternalServerError)
+		return
+	}
+
+	if len(httpCode) > 0 {
+		writer.WriteHeader(httpCode[0])
+	}
+
+	if _, err := writer.Write(blob); err != nil {
+		log.Error().Err(err).Msg("Writing response body failed")
 	}
 }
 
@@ -52,13 +61,7 @@ func SendError(writer http.ResponseWriter, err error, httpCode int) {
 
 // SendErrorMessage generates error response with custom json message
 func SendErrorMessage(writer http.ResponseWriter, message string, httpCode int) {
-	SendErrorBody(writer, &errorMessage{message}, httpCode)
-}
-
-// SendErrorBody generates error response with custom body
-func SendErrorBody(writer http.ResponseWriter, message interface{}, httpCode int) {
-	writer.WriteHeader(httpCode)
-	WriteAsJSON(message, writer)
+	WriteAsJSON(&errorMessage{message}, writer, httpCode)
 }
 
 // swagger:model ValidationErrorDTO
@@ -70,6 +73,5 @@ type validationErrorMessage struct {
 // SendValidationErrorMessage generates error response for validation errors
 func SendValidationErrorMessage(resp http.ResponseWriter, errorMap *validation.FieldErrorMap) {
 	errorResponse := errorMessage{Message: "validation_error"}
-
-	SendErrorBody(resp, &validationErrorMessage{errorResponse, errorMap}, http.StatusUnprocessableEntity)
+	WriteAsJSON(&validationErrorMessage{errorResponse, errorMap}, resp, http.StatusUnprocessableEntity)
 }
