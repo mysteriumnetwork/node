@@ -20,6 +20,6 @@ package contract
 // CurrencyExchangeDTO the value of a given currency.
 // swagger:model CurrencyExchangeDTO
 type CurrencyExchangeDTO struct {
-	Value    float64 `json:"value"`
+	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
 }

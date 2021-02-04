@@ -2482,14 +2482,14 @@
       "type": "object",
       "title": "CurrencyExchangeDTO the value of a given currency.",
       "properties": {
+        "amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Amount"
+        },
         "currency": {
           "type": "string",
           "x-go-name": "Currency"
-        },
-        "value": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "Value"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

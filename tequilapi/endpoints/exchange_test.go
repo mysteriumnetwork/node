@@ -54,7 +54,7 @@ func Test_ExchangeMyst(t *testing.T) {
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
 
-	assert.Equal(t, me.vals["BTC"], parsedResponse.Value)
+	assert.Equal(t, me.vals["BTC"], parsedResponse.Amount)
 	assert.Equal(t, "BTC", parsedResponse.Currency)
 
 	// No such currency returns 404

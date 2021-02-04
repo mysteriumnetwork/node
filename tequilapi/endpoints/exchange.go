@@ -62,7 +62,6 @@ func NewExchangeEndpoint(mystex mystexchange) *exchangeEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (e *exchangeEndpoint) ExchangeMyst(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	var value float64
 	currency := strings.ToUpper(params.ByName("currency"))
 
 	rates, err := e.me.GetMystExchangeRate()
@@ -72,14 +71,14 @@ func (e *exchangeEndpoint) ExchangeMyst(writer http.ResponseWriter, request *htt
 	}
 
 	var ok bool
-	value, ok = rates[currency]
+	amount, ok := rates[currency]
 	if !ok {
 		utils.SendError(writer, errors.New("currency not supported"), http.StatusNotFound)
 		return
 	}
 
 	status := contract.CurrencyExchangeDTO{
-		Value:    value,
+		Amount:   amount,
 		Currency: currency,
 	}
 
