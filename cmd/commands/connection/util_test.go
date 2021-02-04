@@ -42,7 +42,7 @@ func Test_pricePerMinute(t *testing.T) {
 				},
 			},
 			expect: money.Money{
-				Amount:   new(big.Int).SetInt64(10000000000000),
+				Amount:   new(big.Int).SetInt64(600000000000000),
 				Currency: money.CurrencyMyst,
 			},
 		},
@@ -57,7 +57,7 @@ func Test_pricePerMinute(t *testing.T) {
 				},
 			},
 			expect: money.Money{
-				Amount:   new(big.Int).SetInt64(5000000000000),
+				Amount:   new(big.Int).SetInt64(300000000000000),
 				Currency: money.CurrencyMyst,
 			},
 		},
@@ -72,7 +72,7 @@ func Test_pricePerMinute(t *testing.T) {
 				},
 			},
 			expect: money.Money{
-				Amount:   new(big.Int).SetInt64(20000000000000),
+				Amount:   new(big.Int).SetInt64(1200000000000000),
 				Currency: money.CurrencyMyst,
 			},
 		},
@@ -92,7 +92,7 @@ func Test_pricePerMinute(t *testing.T) {
 			},
 		},
 	} {
-		got := aproxPricePerMinute(test.give)
+		got := aproxPricePerHour(test.give)
 		assert.Equal(t, test.expect, got)
 	}
 }
