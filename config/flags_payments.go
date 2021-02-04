@@ -20,6 +20,8 @@ package config
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/metadata"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -58,31 +60,31 @@ var (
 	FlagPaymentsConsumerPricePerMinuteUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-max",
 		Usage: "Sets the maximum price of the service per minute. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "100000000000000", // 0.0001 MYSTT
+		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerMinuteMax,
 	}
 	// FlagPaymentsConsumerPricePerMinuteLowerBound sets the lower price bound per minute to a set value.
 	FlagPaymentsConsumerPricePerMinuteLowerBound = cli.StringFlag{
 		Name:  "payments.consumer.price-perminute-min",
 		Usage: "Sets the minimum price of the service per minute. All proposals with a below above this bound will be filtered out and not visible.",
-		Value: "0",
+		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerMinuteMin,
 	}
 	// FlagPaymentsConsumerPricePerGBUpperBound sets the upper price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBUpperBound = cli.StringFlag{
 		Name:  "payments.consumer.price-pergib-max",
 		Usage: "Sets the maximum price of the service per gb. All proposals with a price above this bound will be filtered out and not visible.",
-		Value: "2000000000000000000", // 2 MYSTT
+		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerGIBMax,
 	}
 	// FlagPaymentsConsumerPricePerGBLowerBound sets the lower price bound per GiB to a set value.
 	FlagPaymentsConsumerPricePerGBLowerBound = cli.StringFlag{
 		Name:  "payments.consumer.price-pergib-min",
 		Usage: "Sets the minimum price of the service per gb. All proposals with a below above this bound will be filtered out and not visible.",
-		Value: "0",
+		Value: metadata.Testnet2Definition.Payments.Consumer.PricePerGIBMin,
 	}
 	// FlagPaymentsConsumerDataLeewayMegabytes sets the data amount the consumer agrees to pay before establishing a session
 	FlagPaymentsConsumerDataLeewayMegabytes = cli.Uint64Flag{
 		Name:  "payments.consumer.data-leeway-megabytes",
 		Usage: "sets the data amount the consumer agrees to pay before establishing a session",
-		Value: 20,
+		Value: metadata.Testnet2Definition.Payments.Consumer.DataLeewayMegabytes,
 	}
 	// FlagPaymentsMaxUnpaidInvoiceValue sets the upper limit of session payment value before forcing an invoice
 	FlagPaymentsMaxUnpaidInvoiceValue = cli.StringFlag{
