@@ -17,6 +17,8 @@
 
 package quality
 
+import "time"
+
 const (
 	// StagePraseRequest describes connection request parse event.
 	StagePraseRequest = "parse_request"
@@ -84,5 +86,19 @@ type ConnectionEvent struct {
 	Stage       string `json:"stage"`
 }
 
-// AppTopicConnectionEvents represents event bus topic for the connection events.
-const AppTopicConnectionEvents = "connection_events"
+// PingEvent represents p2p ping keepalive events.
+type PingEvent struct {
+	SessionID string        `json:"session_id"`
+	Duration  time.Duration `json:"duration"`
+}
+
+const (
+	// AppTopicConnectionEvents represents event bus topic for the connection events.
+	AppTopicConnectionEvents = "connection_events"
+
+	// AppTopicConsumerPingP2P represents event bus topic for consumer p2p pings to provider.
+	AppTopicConsumerPingP2P = "consumer_ping_p2p"
+
+	// AppTopicProviderPingP2P represents event bus topic for provider p2p pings to consumer.
+	AppTopicProviderPingP2P = "provider_ping_p2p"
+)

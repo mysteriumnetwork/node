@@ -201,9 +201,8 @@ type SettleWithBeneficiaryRequest struct {
 // DecreaseStakeRequest represents the decrease stake request
 // swagger:model DecreaseStakeRequest
 type DecreaseStakeRequest struct {
-	ID            string   `json:"id,omitempty"`
-	Amount        *big.Int `json:"amount,omitempty"`
-	TransactorFee *big.Int `json:"transactor_fee,omitempty"`
+	ID     string   `json:"id,omitempty"`
+	Amount *big.Int `json:"amount,omitempty"`
 }
 
 // ReferralTokenResponse represents a response for referral token.

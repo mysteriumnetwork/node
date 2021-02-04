@@ -20,6 +20,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,7 +29,7 @@ var (
 	FlagIPDetectorURL = cli.StringFlag{
 		Name:  "ip-detector",
 		Usage: "Address (URL form) of IP detection service",
-		Value: "https://testnet-location.mysterium.network/api/v1/location",
+		Value: metadata.DefaultNetwork.LocationAddress,
 	}
 	// FlagLocationType location detector type.
 	FlagLocationType = cli.StringFlag{
@@ -43,7 +44,7 @@ var (
 			"Address of specific location adapter given in '--%s'",
 			FlagLocationType.Name,
 		),
-		Value: "https://testnet-location.mysterium.network/api/v1/location",
+		Value: metadata.DefaultNetwork.LocationAddress,
 	}
 	// FlagLocationCountry service location country.
 	FlagLocationCountry = cli.StringFlag{

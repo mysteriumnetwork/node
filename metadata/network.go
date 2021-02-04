@@ -33,6 +33,8 @@ type NetworkDefinition struct {
 	DNSMap                    map[string][]string
 	DefaultChainID            int64
 	DefaultCurrency           string
+	LocationAddress           string
+	Payments                  Payments
 }
 
 // ChainDefinition defines the configuration for the chain.
@@ -42,6 +44,20 @@ type ChainDefinition struct {
 	ChannelImplAddress string
 	ChainID            int64
 	MystAddress        string
+}
+
+// Payments defines payments configuration
+type Payments struct {
+	Consumer Consumer
+}
+
+// Consumer defines consumer side settings
+type Consumer struct {
+	DataLeewayMegabytes uint64
+	PricePerGIBMax      string
+	PricePerGIBMin      string
+	PricePerMinuteMax   string
+	PricePerMinuteMin   string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -71,13 +87,23 @@ var TestnetDefinition = NetworkDefinition{
 
 	DNSMap: map[string][]string{
 		"testnet-api.mysterium.network":        {"78.47.176.149"},
-		"testnet-trust.mysterium.network":      {"82.196.15.9"},
-		"testnet-broker.mysterium.network":     {"82.196.15.9"},
+		"testnet-trust.mysterium.network":      {"82.196.2.118"},
+		"testnet-broker.mysterium.network":     {"82.196.2.118"},
 		"testnet-transactor.mysterium.network": {"116.203.17.150"},
 		"my.mysterium.network":                 {"168.119.183.173"},
 	},
 	DefaultChainID:  5,
 	DefaultCurrency: "MYSTT",
+	LocationAddress: "https://testnet2-location.mysterium.network/api/v1/location",
+	Payments: Payments{
+		Consumer: Consumer{
+			DataLeewayMegabytes: 20,
+			PricePerGIBMax:      "2000000000000000000", // 2 MYSTT
+			PricePerGIBMin:      "0",
+			PricePerMinuteMax:   "100000000000000", // 0.0001 MYSTT
+			PricePerMinuteMin:   "0",
+		},
+	},
 }
 
 // Testnet2Definition defines parameters for testnet2 network (currently default network)
@@ -114,6 +140,16 @@ var Testnet2Definition = NetworkDefinition{
 	},
 	DefaultChainID:  5,
 	DefaultCurrency: "MYSTT",
+	LocationAddress: "https://testnet2-location.mysterium.network/api/v1/location",
+	Payments: Payments{
+		Consumer: Consumer{
+			DataLeewayMegabytes: 20,
+			PricePerGIBMax:      "2000000000000000000", // 2 MYSTT
+			PricePerGIBMin:      "0",
+			PricePerMinuteMax:   "100000000000000", // 0.0001 MYSTT
+			PricePerMinuteMin:   "0",
+		},
+	},
 }
 
 // LocalnetDefinition defines parameters for local network

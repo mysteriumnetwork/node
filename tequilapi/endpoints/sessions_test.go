@@ -160,7 +160,7 @@ func Test_SessionsEndpoint_ListBubblesError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 	assert.Equal(t,
-		fmt.Sprintf(`{"message":%q}%v`, mockErr.Error(), "\n"),
+		fmt.Sprintf(`{"message":%q}`, mockErr.Error()),
 		resp.Body.String(),
 	)
 }

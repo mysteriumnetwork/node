@@ -48,7 +48,7 @@ require (
 	github.com/mysteriumnetwork/go-openvpn v0.0.23
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
-	github.com/mysteriumnetwork/metrics v0.0.10
+	github.com/mysteriumnetwork/metrics v0.0.11
 	github.com/mysteriumnetwork/payments v0.0.14-0.20210111115509-22bd090aad8c
 	github.com/nats-io/nats-server/v2 v2.1.7
 	github.com/nats-io/nats.go v1.10.0
@@ -59,7 +59,6 @@ require (
 	github.com/oschwald/maxminddb-golang v1.5.0 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/zerolog v1.17.2
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
@@ -67,6 +66,7 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/status-im/keycard-go v0.0.0-20191114114615-9d48af884d5b // indirect
 	github.com/stretchr/testify v1.4.1-0.20200130210847-518a1491c713
+	github.com/takama/daemon v1.0.0
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/urfave/cli/v2 v2.1.1
 	github.com/vcraescu/go-paginator v0.0.0-20200304054438-86d84f27c0b3

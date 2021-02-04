@@ -179,7 +179,7 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		di.HermesPromiseStorage,
 		di.BCHelper,
 		di.EventBus,
-		di.AddressProvider,
+		di.BeneficiaryProvider,
 	)
 
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,15 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package daemon
+package beneficiary
 
-const (
-	commandVersion          = "version"
-	commandPing             = "ping"
-	commandKill             = "kill"
-	commandBye              = "bye"
-	commandWgUp             = "wg-up"
-	commandWgDown           = "wg-down"
-	commandWgStats          = "wg-stats"
-	commandTequilapiSetPort = "ta-set-port"
-)
+import "fmt"
+
+const storageBucket = "beneficiary-bucket"
+
+func storageKey(chainID int64, identityHex string) string {
+	return fmt.Sprintf("%d|%s", chainID, identityHex)
+}

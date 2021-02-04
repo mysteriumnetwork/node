@@ -2482,14 +2482,14 @@
       "type": "object",
       "title": "CurrencyExchangeDTO the value of a given currency.",
       "properties": {
+        "amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Amount"
+        },
         "currency": {
           "type": "string",
           "x-go-name": "Currency"
-        },
-        "value": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "Value"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2509,9 +2509,6 @@
         "id": {
           "type": "string",
           "x-go-name": "ID"
-        },
-        "transactor_fee": {
-          "$ref": "#/definitions/Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2732,9 +2729,6 @@
           "description": "Cache out address for Provider",
           "type": "string",
           "x-go-name": "Beneficiary"
-        },
-        "fee": {
-          "$ref": "#/definitions/Int"
         },
         "referral_token": {
           "description": "Token: referral token, if the user has one",

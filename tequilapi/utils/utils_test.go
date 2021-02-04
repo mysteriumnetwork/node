@@ -64,21 +64,6 @@ func TestSendErrorRendersErrorMessage(t *testing.T) {
 		resp.Body.String())
 }
 
-func TestSendErrorMessageRendersErrorMessage(t *testing.T) {
-	resp := httptest.NewRecorder()
-
-	SendErrorBody(resp, errorMessage{"error_message"}, http.StatusInternalServerError)
-
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"message" : "error_message"
-		}`,
-		resp.Body.String())
-
-}
-
 func TestSendValidationErrorMessageRendersErrorMessage(t *testing.T) {
 	resp := httptest.NewRecorder()
 

@@ -41,7 +41,10 @@ type promiseProvider interface {
 
 type channelProvider interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
-	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
+}
+
+type beneficiaryProvider interface {
+	GetBeneficiary(identity common.Address) (common.Address, error)
 }
 
 // HermesChannelRepository is fetches HermesChannel models from blockchain.
@@ -49,18 +52,18 @@ type HermesChannelRepository struct {
 	promiseProvider promiseProvider
 	channelProvider channelProvider
 	publisher       eventbus.Publisher
-	addressProvider addressProvider
 	channels        map[int64][]HermesChannel
+	bprovider       beneficiaryProvider
 	lock            sync.RWMutex
 }
 
 // NewHermesChannelRepository returns a new instance of HermesChannelRepository.
-func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, addressProvider addressProvider) *HermesChannelRepository {
+func NewHermesChannelRepository(promiseProvider promiseProvider, channelProvider channelProvider, publisher eventbus.Publisher, bprovider beneficiaryProvider) *HermesChannelRepository {
 	return &HermesChannelRepository{
 		promiseProvider: promiseProvider,
 		channelProvider: channelProvider,
 		publisher:       publisher,
-		addressProvider: addressProvider,
+		bprovider:       bprovider,
 		channels:        make(map[int64][]HermesChannel, 0),
 	}
 }
@@ -200,12 +203,8 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 	}
 
 	hermesChannel := NewHermesChannel(channelID, id, hermesID, channel, promise)
-	registry, err := hcr.addressProvider.GetRegistryAddress(chainID)
-	if err != nil {
-		return HermesChannel{}, fmt.Errorf("could not get registry address %w", err)
-	}
 
-	benef, err := hcr.channelProvider.GetBeneficiary(chainID, registry, id.ToCommonAddress())
+	benef, err := hcr.bprovider.GetBeneficiary(id.ToCommonAddress())
 	if err != nil {
 		return HermesChannel{}, fmt.Errorf("could not get provider beneficiary for %v, hermes %v: %w", id, hermesID.Hex(), err)
 	}

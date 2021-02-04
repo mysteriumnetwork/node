@@ -38,6 +38,7 @@ import (
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/discovery"
@@ -159,6 +160,9 @@ type Dependencies struct {
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
+
+	BeneficiarySaver    beneficiary.Saver
+	BeneficiaryProvider beneficiary.Provider
 
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
@@ -489,9 +493,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
 		return err
 	}
+
+	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
@@ -584,7 +592,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForDocs(router)
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor, di.BeneficiaryProvider)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry, di.EventBus, di.AddressProvider)
 	tequilapi_endpoints.AddRoutesForSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -593,7 +601,7 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiarySaver)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForMMN(router, di.MMN)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
@@ -796,7 +804,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
+	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL, ip.IPFallbackAddresses)
 	di.IPResolver = ip.NewCachedResolver(ipResolver, 5*time.Minute)
 
 	var resolver location.Resolver
@@ -909,7 +917,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 
 	if options.BlockAlways {
 		bindAddress := "0.0.0.0"
-		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "")
+		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "", ip.IPFallbackAddresses)
 		outboundIP, err := resolver.GetOutboundIP()
 		if err != nil {
 			return err
@@ -919,6 +927,25 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 		return err
 	}
 	return nil
+}
+
+func (di *Dependencies) bootstrapBeneficiaryProvider(options node.Options) {
+	di.BeneficiaryProvider = beneficiary.NewProvider(
+		options.ChainID,
+		di.AddressProvider,
+		di.Storage,
+		di.BCHelper,
+	)
+}
+
+func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
+	di.BeneficiarySaver = beneficiary.NewSaver(
+		options.ChainID,
+		di.AddressProvider,
+		di.Storage,
+		di.BCHelper,
+		di.HermesPromiseSettler,
+	)
 }
 
 func (di *Dependencies) handleConnStateChange() error {

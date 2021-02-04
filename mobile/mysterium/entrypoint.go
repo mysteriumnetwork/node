@@ -101,6 +101,14 @@ type MobileNodeOptions struct {
 	ChannelImplementationSCAddress string
 }
 
+// ConsumerPaymentConfig defines consumer side payment configuration
+type ConsumerPaymentConfig struct {
+	PricePerGIBMax    string
+	PricePerGIBMin    string
+	PricePerMinuteMax string
+	PricePerMinuteMin string
+}
+
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
@@ -110,7 +118,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
 		EtherClientRPC:                 metadata.Testnet2Definition.EtherClientRPC,
 		FeedbackURL:                    "https://feedback.mysterium.network",
-		QualityOracleURL:               "https://testnet2-quality.mysterium.network/api/v1",
+		QualityOracleURL:               "https://testnet2-quality.mysterium.network/api/v2",
 		IPDetectorURL:                  "https://testnet2-location.mysterium.network/api/v1/location",
 		LocationDetectorURL:            "https://testnet2-location.mysterium.network/api/v1/location",
 		TransactorEndpointAddress:      metadata.Testnet2Definition.TransactorAddress,
@@ -136,6 +144,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMax)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMin)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerMinuteUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerMinuteMax)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerMinuteLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerMinuteMin)
 
 	network := node.OptionsNetwork{
 		Testnet2:              options.Testnet2,
@@ -146,7 +158,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		EtherClientRPC:        options.EtherClientRPC,
 		ChainID:               options.ChainID,
 		DNSMap: map[string][]string{
-			"testnet-location.mysterium.network":  {"82.196.15.9"},
+			"testnet-location.mysterium.network":  {"95.216.204.232"},
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
 			"feedback.mysterium.network":          {"116.203.17.150"},
@@ -261,6 +273,16 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	return mobileNode, nil
+}
+
+// GetConsumerPaymentConfig returns consumer payment config
+func (mb *MobileNode) GetConsumerPaymentConfig() *ConsumerPaymentConfig {
+	return &ConsumerPaymentConfig{
+		PricePerGIBMax:    config.Current.GetString(config.FlagPaymentsConsumerPricePerGBUpperBound.Name),
+		PricePerGIBMin:    config.Current.GetString(config.FlagPaymentsConsumerPricePerGBLowerBound.Name),
+		PricePerMinuteMax: config.Current.GetString(config.FlagPaymentsConsumerPricePerMinuteUpperBound.Name),
+		PricePerMinuteMin: config.Current.GetString(config.FlagPaymentsConsumerPricePerMinuteLowerBound.Name),
+	}
 }
 
 // GetDefaultCurrency returns the current default currency set.

@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -806,8 +807,19 @@ func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.C
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
+
+	start := time.Now()
 	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
-	return err
+	if err != nil {
+		return err
+	}
+
+	m.eventBus.Publish(quality.AppTopicConsumerPingP2P, quality.PingEvent{
+		SessionID: string(sessionID),
+		Duration:  time.Now().Sub(start),
+	})
+
+	return nil
 }
 
 func (m *connectionManager) currentCtx() context.Context {
