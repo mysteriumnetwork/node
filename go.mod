@@ -38,7 +38,7 @@ require (
 	github.com/lib/pq v1.7.0 // indirect
 	github.com/libp2p/go-libp2p v0.5.2
 	github.com/libp2p/go-libp2p-core v0.3.0
-	github.com/magefile/mage v1.10.0
+	github.com/magefile/mage v1.11.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/miekg/dns v1.1.29
 	github.com/multiformats/go-multiaddr v0.2.0
