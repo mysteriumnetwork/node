@@ -27,7 +27,6 @@ before_script:
   - echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin || true
 
 after_script:
-  - go run mage.go -v DockerSystemPrune
   # docker based jobs leave files owned by root
   - sudo chown -R gitlab-runner:gitlab-runner $GOPATH
 
