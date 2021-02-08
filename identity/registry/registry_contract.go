@@ -81,7 +81,7 @@ func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identi
 		return Unregistered, errors.Wrap(err, "could not check status in local db")
 	}
 
-	if err == nil && ss.RegistrationStatus != InProgress {
+	if err == nil && ss.RegistrationStatus != InProgress && ss.RegistrationStatus != RegistrationError {
 		return ss.RegistrationStatus, nil
 	}
 
@@ -139,6 +139,16 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 	}
 
 	s := InProgress
+
+	// In case we have a previous registration, force re-check the BC status
+	if status.RegistrationStatus == InProgress || status.RegistrationStatus == RegistrationError {
+		status, err := registry.GetRegistrationStatus(ev.ChainID, identity.FromAddress(ev.Identity))
+		if err != nil {
+			log.Info().Err(err).Msg("could not recheck status with bc")
+		} else if status.Registered() {
+			s = Registered
+		}
+	}
 
 	ID := identity.FromAddress(ev.Identity)
 
