@@ -19,9 +19,12 @@ package pilvytis
 
 import (
 	"fmt"
+	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
@@ -30,7 +33,12 @@ import (
 type API struct {
 	req    *requests.HTTPClient
 	signer identity.SignerFactory
+	lp     locationProvider
 	url    string
+}
+
+type locationProvider interface {
+	GetOrigin() locationstate.Location
 }
 
 const (
@@ -41,11 +49,12 @@ const (
 )
 
 // NewAPI returns a new API instance.
-func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory) *API {
+func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, lp locationProvider) *API {
 	return &API{
 		req:    hc,
 		signer: signer,
 		url:    url,
+		lp:     lp,
 	}
 }
 
@@ -119,7 +128,7 @@ func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCu
 	}
 
 	var resp OrderResponse
-	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // GetPaymentOrder returns a payment order by ID from the API
@@ -131,7 +140,7 @@ func (a *API) GetPaymentOrder(id identity.Identity, oid uint64) (*OrderResponse,
 	}
 
 	var resp OrderResponse
-	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // GetPaymentOrders returns a list of payment orders from the API service made by a given identity.
@@ -142,7 +151,7 @@ func (a *API) GetPaymentOrders(id identity.Identity) ([]OrderResponse, error) {
 	}
 
 	var resp []OrderResponse
-	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // GetPaymentOrderCurrencies returns a slice of currencies supported for payment orders
@@ -153,7 +162,7 @@ func (a *API) GetPaymentOrderCurrencies() ([]string, error) {
 	}
 
 	var resp []string
-	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // GetPaymentOrderOptions return payment order options
@@ -164,7 +173,7 @@ func (a *API) GetPaymentOrderOptions() (*PaymentOrderOptions, error) {
 	}
 
 	var resp PaymentOrderOptions
-	return &resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return &resp, a.sendRequestAndParseResp(req, &resp)
 }
 
 // PaymentOrderOptions represents pilvytis payment order options
@@ -181,5 +190,14 @@ func (a *API) GetMystExchangeRate() (map[string]float64, error) {
 	}
 
 	var resp map[string]float64
-	return resp, a.req.DoRequestAndParseResponse(req, &resp)
+	return resp, a.sendRequestAndParseResp(req, &resp)
+}
+
+func (a *API) sendRequestAndParseResp(req *http.Request, resp interface{}) error {
+	loc := a.lp.GetOrigin()
+
+	req.Header.Set("X-Origin-Country", loc.Country)
+	req.Header.Set("X-Origin-OS", runtime.GOOS)
+
+	return a.req.DoRequestAndParseResponse(req, &resp)
 }
