@@ -39,18 +39,18 @@ func proposalFormatted(p *contract.ProposalDTO) string {
 }
 
 func getPrices(pm contract.PaymentMethodDTO) (string, string) {
-	ppm := aproxPricePerMinute(pm)
+	ppm := aproxPricePerHour(pm)
 	ppgb := aproxPricePerGB(pm)
 	if ppm.Amount.Cmp(big.NewInt(0)) == 0 &&
 		ppgb.Amount.Cmp(big.NewInt(0)) == 0 {
 		return "Free", ""
 	}
 
-	return fmt.Sprintf("%s/min", ppm.String()),
+	return fmt.Sprintf("%s/hour", ppm.String()),
 		fmt.Sprintf("%s/GB", ppgb.String())
 }
 
-func aproxPricePerMinute(pm contract.PaymentMethodDTO) money.Money {
+func aproxPricePerHour(pm contract.PaymentMethodDTO) money.Money {
 	s := time.Duration(pm.Rate.PerSeconds) * time.Second
 	min := new(big.Float).SetFloat64(s.Minutes())
 	if min.Cmp(big.NewFloat(0)) == 0 {
@@ -61,7 +61,8 @@ func aproxPricePerMinute(pm contract.PaymentMethodDTO) money.Money {
 	perMinute := new(big.Float).Quo(price, min)
 	perMinuteRounded, _ := perMinute.Int(nil)
 
-	return money.New(perMinuteRounded, pm.Price.Currency)
+	perHour := new(big.Int).Mul(perMinuteRounded, new(big.Int).SetInt64(60))
+	return money.New(perHour, pm.Price.Currency)
 }
 
 func aproxPricePerGB(pm contract.PaymentMethodDTO) money.Money {
