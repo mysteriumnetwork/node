@@ -140,6 +140,16 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 
 	s := InProgress
 
+	// In case we have a previous registration, force re-check the BC status
+	if status.RegistrationStatus == InProgress || status.RegistrationStatus == RegistrationError {
+		status, err := registry.GetRegistrationStatus(ev.ChainID, identity.FromAddress(ev.Identity))
+		if err != nil {
+			log.Info().Err(err).Msg("could not recheck status with bc")
+		} else if status.Registered() {
+			s = Registered
+		}
+	}
+
 	ID := identity.FromAddress(ev.Identity)
 
 	go registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
