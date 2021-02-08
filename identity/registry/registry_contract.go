@@ -81,7 +81,7 @@ func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identi
 		return Unregistered, errors.Wrap(err, "could not check status in local db")
 	}
 
-	if err == nil && ss.RegistrationStatus != InProgress {
+	if err == nil && ss.RegistrationStatus != InProgress && ss.RegistrationStatus != RegistrationError {
 		return ss.RegistrationStatus, nil
 	}
 
