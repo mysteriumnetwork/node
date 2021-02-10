@@ -42,7 +42,6 @@ func NewDefaultValidator() *ConfigValidator {
 	return &ConfigValidator{
 		validators: []ValidateConfig{
 			validProtocol,
-			validPort,
 			validIPFormat,
 			validTLSPresharedKey,
 			validCACertificate,
@@ -68,13 +67,6 @@ func validProtocol(config VPNConfig) error {
 		return nil
 	}
 	return errors.New("invalid protocol: " + config.RemoteProtocol)
-}
-
-func validPort(config VPNConfig) error {
-	if config.RemotePort > 65535 || config.RemotePort < 1024 {
-		return errors.New("invalid port range, should fall within 1024 .. 65535 range")
-	}
-	return nil
 }
 
 func validIPFormat(config VPNConfig) error {

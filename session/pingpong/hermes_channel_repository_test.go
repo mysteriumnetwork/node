@@ -36,7 +36,8 @@ func TestHermesChannelRepository_Fetch_returns_errors(t *testing.T) {
 	hermesID = common.HexToAddress("0x00000000000000000000000000000000000000002")
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), mockBeneficiaryProvider)
 
 	// when
 	channelStatusProvider.channelReturnError = errMock
@@ -73,8 +74,9 @@ func TestHermesChannelRepository_Fetch_handles_no_promise(t *testing.T) {
 		channelToReturn: expectedChannelStatus,
 	}
 
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
 	// when
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), mockBeneficiaryProvider)
 	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
@@ -103,9 +105,10 @@ func TestHermesChannelRepository_Fetch_takes_promise_into_account(t *testing.T) 
 	channelStatusProvider := &mockProviderChannelStatusProvider{
 		channelToReturn: expectedChannelStatus,
 	}
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
 
 	// when
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus())
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, mocks.NewEventBus(), mockBeneficiaryProvider)
 	channel, err := repo.Fetch(1, id, hermesID)
 	assert.NoError(t, err)
 
@@ -140,7 +143,8 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 	promiseProvider := &mockHermesPromiseStorage{}
 	channelStatusProvider := &mockProviderChannelStatusProvider{}
 	publisher := mocks.NewEventBus()
-	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher)
+	mockBeneficiaryProvider := &mockBeneficiaryProvider{}
+	repo := NewHermesChannelRepository(promiseProvider, channelStatusProvider, publisher, mockBeneficiaryProvider)
 
 	// when
 	promiseProvider.toReturn = expectedPromise1
@@ -205,4 +209,12 @@ func TestHermesChannelRepository_Fetch_publishesEarningChanges(t *testing.T) {
 		)
 		return true
 	}, 2*time.Second, 10*time.Millisecond)
+}
+
+type mockBeneficiaryProvider struct {
+	b common.Address
+}
+
+func (ms *mockBeneficiaryProvider) GetBeneficiary(identity common.Address) (common.Address, error) {
+	return ms.b, nil
 }

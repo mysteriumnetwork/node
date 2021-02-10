@@ -28,7 +28,7 @@ import (
 )
 
 func Test_PaymentMethod_Serialize(t *testing.T) {
-	price := money.NewMoney(big.NewInt(50000000), money.CurrencyMyst)
+	price := money.New(big.NewInt(50000000), money.CurrencyMyst)
 
 	var tests = []struct {
 		model        pingpong.PaymentMethod
@@ -68,7 +68,7 @@ func Test_PaymentMethod_Serialize(t *testing.T) {
 }
 
 func Test_PaymentMethod_Unserialize(t *testing.T) {
-	price := money.NewMoney(big.NewInt(50000000), money.CurrencyMyst)
+	price := money.New(big.NewInt(50000000), money.CurrencyMyst)
 
 	var tests = []struct {
 		json          string

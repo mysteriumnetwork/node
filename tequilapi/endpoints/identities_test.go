@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
@@ -255,7 +256,7 @@ func Test_ReferralTokenGet(t *testing.T) {
 	router := httprouter.New()
 
 	server := newTestTransactorServer(http.StatusAccepted, `{"token":"yay-free-myst"}`)
-	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", "0xbe180c8CA53F280C7BE8669596fF7939d933AA10", fakeSignerFactory, mocks.NewEventBus(), nil)
+	tr := registry.NewTransactor(requests.NewHTTPClient(server.URL, requests.DefaultTimeout), server.URL, &mockAddressProvider{}, fakeSignerFactory, mocks.NewEventBus(), nil)
 	endpoint := &identitiesAPI{transactor: tr}
 	router.GET("/identities/:id/referral", endpoint.GetReferralToken)
 
@@ -271,4 +272,22 @@ func Test_ReferralTokenGet(t *testing.T) {
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(t, `{"token":"yay-free-myst"}`, resp.Body.String())
+}
+
+type mockAddressProvider struct {
+	hermesToReturn   common.Address
+	registryToReturn common.Address
+	channelToReturn  common.Address
+}
+
+func (ma *mockAddressProvider) GetChannelImplementation(chainID int64) (common.Address, error) {
+	return ma.channelToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetActiveHermes(chainID int64) (common.Address, error) {
+	return ma.hermesToReturn, nil
+}
+
+func (ma *mockAddressProvider) GetRegistryAddress(chainID int64) (common.Address, error) {
+	return ma.registryToReturn, nil
 }

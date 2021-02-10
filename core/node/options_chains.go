@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2021 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,11 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package docker
+package node
 
-import "github.com/mysteriumnetwork/go-ci/shell"
+import "github.com/mysteriumnetwork/node/metadata"
 
-// DockerSystemPrune removes dangling docker data: containers stopped, volumes without containers, images without containers
-func DockerSystemPrune() error {
-	return shell.NewCmd("docker system prune --all --volumes -f").Run()
+// OptionsChains represents the chain options.
+type OptionsChains struct {
+	Chain1 metadata.ChainDefinition
+	Chain2 metadata.ChainDefinition
 }

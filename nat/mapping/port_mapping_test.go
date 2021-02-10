@@ -37,7 +37,7 @@ func TestMap_uPnP_Enabled(t *testing.T) {
 	}
 	portMapper := NewPortMapper(config, mocks.NewEventBus())
 
-	release, ok := portMapper.Map("UDP", 51334, "Test")
+	release, ok := portMapper.Map("id", "UDP", 51334, "Test")
 	time.Sleep(config.MapUpdateInterval * 3)
 	defer release()
 
@@ -60,7 +60,7 @@ func TestMap_uPnP_Enabled_With_Permanent_Lease(t *testing.T) {
 	}
 	portMapper := NewPortMapper(config, mocks.NewEventBus())
 
-	release, ok := portMapper.Map("UDP", 51334, "Test")
+	release, ok := portMapper.Map("id", "UDP", 51334, "Test")
 	time.Sleep(config.MapUpdateInterval * 3)
 	defer release()
 
@@ -81,7 +81,7 @@ func TestMap_uPnP_Disabled(t *testing.T) {
 	}
 	portMapper := NewPortMapper(config, mocks.NewEventBus())
 
-	release, ok := portMapper.Map("UDP", 51334, "Test port mapping")
+	release, ok := portMapper.Map("id", "UDP", 51334, "Test port mapping")
 
 	assert.Nil(t, release)
 	assert.False(t, ok)
@@ -105,7 +105,7 @@ func TestMap_uPnP_routerIPPublic(t *testing.T) {
 			config := &Config{MapInterface: router}
 			portMapper := NewPortMapper(config, mocks.NewEventBus())
 
-			release, ok := portMapper.Map("UDP", 51334, "Test port mapping")
+			release, ok := portMapper.Map("id", "UDP", 51334, "Test port mapping")
 			if tt.mappingEnabled {
 				assert.True(t, ok)
 				assert.NotNil(t, release)

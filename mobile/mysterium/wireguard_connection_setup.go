@@ -27,6 +27,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/tun"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -35,10 +40,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun"
 )
 
 const (
@@ -143,11 +144,6 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 
 	log.Debug().Msg("Connected successfully")
 	c.stateCh <- connectionstate.Connected
-	return nil
-}
-
-func (c *wireguardConnection) Wait() error {
-	<-c.done
 	return nil
 }
 
@@ -300,7 +296,7 @@ func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, co
 	log.Info().Msgf("Tun value is: %d", fd)
 	tunDevice, err := newDeviceFromFd(fd)
 	if err == nil {
-		//non-fatal
+		// non-fatal
 		name, nameErr := tunDevice.Name()
 		log.Info().Err(nameErr).Msg("Name value: " + name)
 	}

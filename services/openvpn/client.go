@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
@@ -34,8 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // ErrProcessNotStarted represents the error we return when the process is not started yet
@@ -49,7 +50,6 @@ func NewClient(openvpnBinary, scriptDir, runtimeDir string,
 	signerFactory identity.SignerFactory,
 	ipResolver ip.Resolver,
 ) (connection.Connection, error) {
-
 	stateCh := make(chan connectionstate.State, 100)
 	client := &Client{
 		scriptDir:           scriptDir,
@@ -138,14 +138,6 @@ func (c *Client) Start(ctx context.Context, options connection.ConnectOptions) e
 	return errors.Wrap(err, "failed to start client process")
 }
 
-// Wait waits for the connection to exit
-func (c *Client) Wait() error {
-	if c.process == nil {
-		return ErrProcessNotStarted
-	}
-	return c.process.Wait()
-}
-
 // Stop stops the connection
 func (c *Client) Stop() {
 	c.stopOnce.Do(func() {
@@ -171,7 +163,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 	return &ConsumerConfig{}, nil
 }
 
-//VPNConfig structure represents VPN configuration options for given session
+// VPNConfig structure represents VPN configuration options for given session
 type VPNConfig struct {
 	DNSIPs          string `json:"dns_ips"`
 	RemoteIP        string `json:"remote"`
@@ -201,7 +193,7 @@ func getStateCallback(stateChannel connection.StateChannel) func(openvpnState op
 			stateChannel <- connectionState
 		}
 
-		//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+		// this is the last state - close channel (according to best practices of go - channel writer controls channel)
 		if openvpnState == openvpn.ProcessExited {
 			close(stateChannel)
 		}

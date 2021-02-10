@@ -20,14 +20,21 @@ package traversal
 import (
 	"context"
 	"net"
+
+	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/nat/event"
 )
 
 // NoopPinger does nothing
-type NoopPinger struct{}
+type NoopPinger struct {
+	eventPublisher eventbus.Publisher
+}
 
 // NewNoopPinger returns noop nat pinger
-func NewNoopPinger() *NoopPinger {
-	return &NoopPinger{}
+func NewNoopPinger(publisher eventbus.Publisher) *NoopPinger {
+	return &NoopPinger{
+		eventPublisher: publisher,
+	}
 }
 
 // PingProviderPeer does nothing.
@@ -36,7 +43,8 @@ func (np *NoopPinger) PingProviderPeer(ctx context.Context, ip string, localPort
 }
 
 // PingConsumerPeer does nothing.
-func (np *NoopPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (np *NoopPinger) PingConsumerPeer(ctx context.Context, id, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+	np.eventPublisher.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent(id, "noop_pinger"))
 	return []*net.UDPConn{}, nil
 }
 

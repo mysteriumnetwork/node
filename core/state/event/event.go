@@ -65,6 +65,11 @@ type Connection struct {
 }
 
 func (c Connection) String() string {
+	spent := money.New(big.NewInt(0))
+	if c.Invoice.AgreementTotal != nil {
+		spent = money.New(c.Invoice.AgreementTotal)
+	}
+
 	return fmt.Sprintf(
 		"ID %s %s duration: %s data: %s/%s, throughput: %s/%s, spent: %s",
 		c.Session.SessionID,
@@ -74,6 +79,6 @@ func (c Connection) String() string {
 		datasize.FromBytes(c.Statistics.BytesSent),
 		c.Throughput.Down,
 		c.Throughput.Up,
-		money.NewMoney(c.Invoice.AgreementTotal, money.CurrencyMyst),
+		spent,
 	)
 }

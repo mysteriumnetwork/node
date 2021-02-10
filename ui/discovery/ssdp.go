@@ -97,6 +97,14 @@ func (ss *ssdpServer) Start() (err error) {
 		return errors.Wrap(err, "failed to start SSDP advertiser")
 	}
 
+	if ss.ssdpPubliclyAccessible() {
+		log.Warn().Msg("SSDP publicly accessible. Stopping it to prevent abusing service")
+		err := ss.Stop()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to stop SSDP")
+		}
+	}
+
 	for {
 		select {
 		case <-time.After(30 * time.Second):
@@ -125,7 +133,7 @@ func (ss *ssdpServer) Stop() error {
 }
 
 func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
-	resolver := ip.NewResolver(ss.httpClient, "0.0.0.0", "")
+	resolver := ip.NewResolver(ss.httpClient, "0.0.0.0", "", ip.IPFallbackAddresses)
 
 	outIP, err := resolver.GetOutboundIP()
 	if err != nil {
@@ -168,6 +176,32 @@ func (ss *ssdpServer) deviceDescription(ip string) string {
 		})
 
 	return buf.String()
+}
+
+func (ss *ssdpServer) ssdpPubliclyAccessible() bool {
+	// https://github.com/cloudflare/badupnp
+	// https://blog.cloudflare.com/ssdp-100gbps/
+	// > Furthermore, we prepared on online checking website.
+	// > Click if you want to know if your public IP address has a vulnerable SSDP service:
+	// > https://badupnp.benjojo.co.uk/
+
+	req, err := requests.NewGetRequest("https://badupnp.benjojo.co.uk", "test", nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create HTTP request to test a vulnerable SSDP service")
+		return false
+	}
+
+	var result struct {
+		Result bool `json:"result"`
+	}
+
+	err = ss.httpClient.DoRequestAndParseResponse(req, &result)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to detect IP has a vulnerable SSDP service")
+		return false
+	}
+
+	return result.Result
 }
 
 func generateUUID() (string, error) {

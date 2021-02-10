@@ -17,33 +17,39 @@
 
 package auth
 
-import "github.com/rs/zerolog/log"
+import (
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/rs/zerolog/log"
+)
 
-// Authenticator provides an authentication method for builtin UI.
+// Authenticator wraps CredentialsManager to provide
+// an easy way of authentication for builtin UI.
 type Authenticator struct {
-	storage Storage
+	manager *CredentialsManager
 }
 
-// NewAuthenticator creates an authenticator
-func NewAuthenticator(storage Storage) *Authenticator {
+// NewAuthenticator creates an authenticator.
+func NewAuthenticator() *Authenticator {
+	pswDir := config.GetString(config.FlagDataDir)
 	return &Authenticator{
-		storage: storage,
+		manager: NewCredentialsManager(pswDir),
 	}
 }
 
-// CheckCredentials authenticates user by password
+// CheckCredentials checks if provided username and password combo is valid
+// comparing it to stored credentials.
 func (a *Authenticator) CheckCredentials(username, password string) error {
-	return NewCredentials(username, password, a.storage).Validate()
+	return a.manager.Validate(username, password)
 }
 
-// ChangePassword changes user password
-func (a *Authenticator) ChangePassword(username, oldPassword, newPassword string) (err error) {
-	err = NewCredentials(username, oldPassword, a.storage).Validate()
+// ChangePassword changes user password.
+func (a *Authenticator) ChangePassword(username, oldPassword, newPassword string) error {
+	err := a.manager.Validate(username, oldPassword)
 	if err != nil {
 		log.Info().Err(err).Msg("Bad credentials for changing password")
 		return ErrUnauthorized
 	}
-	err = NewCredentials(username, newPassword, a.storage).Set()
+	err = a.manager.SetPassword(newPassword)
 	if err != nil {
 		log.Info().Err(err).Msg("Error changing password")
 		return err

@@ -28,11 +28,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/discovery"
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/config"
@@ -41,7 +38,10 @@ import (
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -72,6 +72,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/p2p"
+	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -83,11 +84,8 @@ import (
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-
+	"github.com/mysteriumnetwork/payments/client"
 	paymentClient "github.com/mysteriumnetwork/payments/client"
-	"github.com/mysteriumnetwork/payments/uniswap"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // UIServer represents our web server
@@ -106,7 +104,6 @@ type Dependencies struct {
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
 	EtherClient       *paymentClient.ReconnectableEthClient
-	Exchange          *money.Exchange
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -164,6 +161,9 @@ type Dependencies struct {
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
 
+	BeneficiarySaver    beneficiary.Saver
+	BeneficiaryProvider beneficiary.Provider
+
 	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
 	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
 	HermesPromiseStorage     *pingpong.HermesPromiseStorage
@@ -172,12 +172,13 @@ type Dependencies struct {
 	HermesPromiseSettler     pingpong.HermesPromiseSettler
 	HermesURLGetter          *pingpong.HermesURLGetter
 	HermesCaller             *pingpong.HermesCaller
-	ChannelAddressCalculator *pingpong.ChannelAddressCalculator
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
+	AddressProvider          *pingpong.AddressProvider
 
 	MMN         *mmn.MMN
 	PilvytisAPI *pilvytis.API
+	Pilvytis    *pilvytis.Service
 }
 
 // Bootstrap initiates all container dependencies
@@ -206,6 +207,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapEventBus()
 
+	di.bootstrapAddressProvider(nodeOptions)
+
 	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
@@ -227,7 +230,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapAuthenticator(); err != nil {
 		return err
 	}
-
+	di.migrateCrendentials()
 	di.bootstrapUIServer(nodeOptions)
 	if err := di.bootstrapMMN(); err != nil {
 		return err
@@ -273,6 +276,28 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	return nil
 }
 
+func (di *Dependencies) bootstrapAddressProvider(nodeOptions node.Options) {
+	ch1 := nodeOptions.Chains.Chain1
+	ch2 := nodeOptions.Chains.Chain2
+	addresses := map[int64]client.SmartContractAddresses{
+		ch1.ChainID: client.SmartContractAddresses{
+			Registry:              common.HexToAddress(ch1.RegistryAddress),
+			Myst:                  common.HexToAddress(ch1.MystAddress),
+			Hermes:                common.HexToAddress(ch1.HermesID),
+			ChannelImplementation: common.HexToAddress(ch1.ChannelImplAddress),
+		},
+		ch2.ChainID: client.SmartContractAddresses{
+			Registry:              common.HexToAddress(ch2.RegistryAddress),
+			Myst:                  common.HexToAddress(ch2.MystAddress),
+			Hermes:                common.HexToAddress(ch2.HermesID),
+			ChannelImplementation: common.HexToAddress(ch2.ChannelImplAddress),
+		},
+	}
+
+	keeper := client.NewMultiChainAddressKeeper(addresses)
+	di.AddressProvider = pingpong.NewAddressProvider(keeper, common.HexToAddress(nodeOptions.Transactor.Identity))
+}
+
 func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 	portPool := di.PortPool
 	natPinger := di.NATPinger
@@ -280,10 +305,10 @@ func (di *Dependencies) bootstrapP2P(p2pPorts *port.Range) {
 	if p2pPorts.IsSpecified() {
 		log.Info().Msgf("Fixed p2p service port range (%s) configured, using custom port pool", p2pPorts)
 		portPool = port.NewFixedRangePool(*p2pPorts)
-		natPinger = traversal.NewNoopPinger()
+		natPinger = traversal.NewNoopPinger(di.EventBus)
 	}
 
-	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper)
+	di.P2PListener = p2p.NewListener(di.BrokerConnection, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool, di.PortMapper, di.EventBus)
 	di.P2PDialer = p2p.NewDialer(di.BrokerConnector, di.SignerFactory, identityVerifier, di.IPResolver, natPinger, portPool)
 }
 
@@ -313,7 +338,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 		ServiceLister:             di.ServicesManager,
 		IdentityProvider:          di.IdentityManager,
 		IdentityRegistry:          di.IdentityRegistry,
-		IdentityChannelCalculator: di.ChannelAddressCalculator,
+		IdentityChannelCalculator: di.AddressProvider,
 		BalanceProvider:           di.ConsumerBalanceTracker,
 		EarningsProvider:          di.HermesChannelRepository,
 		ChainID:                   options.ChainID,
@@ -379,6 +404,9 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.DiscoveryWorker != nil {
 		di.DiscoveryWorker.Stop()
 	}
+	if di.Pilvytis != nil {
+		di.Pilvytis.Stop()
+	}
 	if di.BrokerConnection != nil {
 		di.BrokerConnection.Close()
 	}
@@ -428,6 +456,14 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	return di.SessionStorage.Subscribe(di.EventBus)
 }
 
+func (di *Dependencies) getHermesURL(nodeOptions node.Options) (string, error) {
+	if nodeOptions.ChainID == nodeOptions.Chains.Chain1.ChainID {
+		return di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, common.HexToAddress(nodeOptions.Chains.Chain1.HermesID))
+	}
+
+	return di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, common.HexToAddress(nodeOptions.Chains.Chain2.HermesID))
+}
+
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequilaListener net.Listener) error {
 	// Consumer current session bandwidth
 	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
@@ -444,45 +480,39 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	di.Transactor = registry.NewTransactor(
 		di.HTTPClient,
 		nodeOptions.Transactor.TransactorEndpointAddress,
-		nodeOptions.Transactor.RegistryAddress,
-		nodeOptions.Hermes.HermesID,
-		nodeOptions.Transactor.ChannelImplementation,
+		di.AddressProvider,
 		di.SignerFactory,
 		di.EventBus,
 		di.BCHelper,
 	)
 
-	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
-		return err
-	}
-
-	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
-		return err
-	}
-
-	di.ChannelAddressCalculator = pingpong.NewChannelAddressCalculator(
-		nodeOptions.Hermes.HermesID,
-		nodeOptions.Transactor.ChannelImplementation,
-		nodeOptions.Transactor.RegistryAddress,
-	)
-
-	hermesURL, err := di.HermesURLGetter.GetHermesURL(common.HexToAddress(nodeOptions.Hermes.HermesID))
+	hermesURL, err := di.getHermesURL(nodeOptions)
 	if err != nil {
 		return err
 	}
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+
+	di.bootstrapBeneficiaryProvider(nodeOptions)
+
+	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
+		return err
+	}
+
+	di.bootstrapBeneficiarySaver(nodeOptions)
+
+	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
+		return err
+	}
+
 	di.ConsumerBalanceTracker = pingpong.NewConsumerBalanceTracker(
 		di.EventBus,
-		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		common.HexToAddress(nodeOptions.Hermes.HermesID),
-		common.HexToAddress(nodeOptions.Transactor.Identity),
 		di.BCHelper,
-		di.ChannelAddressCalculator,
 		di.ConsumerTotalsStorage,
 		di.HermesCaller,
 		di.Transactor,
 		di.IdentityRegistry,
+		di.AddressProvider,
 	)
 
 	err = di.ConsumerBalanceTracker.Subscribe(di.EventBus)
@@ -511,8 +541,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 			di.Keystore,
 			di.SignerFactory,
 			di.ConsumerTotalsStorage,
-			nodeOptions.Transactor.ChannelImplementation,
-			nodeOptions.Transactor.RegistryAddress,
+			di.AddressProvider,
 			di.EventBus,
 			nodeOptions.Payments.ConsumerDataLeewayMegabytes,
 		),
@@ -540,16 +569,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		return err
 	}
 
-	uniswapClient := money.NewUniswapClient(func(c *ethclient.Client) *uniswap.Client {
-		return uniswap.NewClient(c)
-	}, di.EtherClient)
-	di.Exchange = money.NewExchange(
-		common.HexToAddress(nodeOptions.Payments.MystSCAddress),
-		common.HexToAddress(nodeOptions.Payments.DaiAddress),
-		common.HexToAddress(nodeOptions.Payments.WethAddress),
-		uniswapClient,
-	)
-
 	di.bootstrapPilvytis(nodeOptions)
 
 	tequilapiHTTPServer, err := di.bootstrapTequilapi(nodeOptions, tequilaListener)
@@ -573,8 +592,8 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForDocs(router)
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.ChannelAddressCalculator, di.HermesChannelRepository, di.BCHelper, di.Transactor)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry, di.ConsumerBalanceTracker, di.AddressProvider, di.HermesChannelRepository, di.BCHelper, di.Transactor, di.BeneficiaryProvider)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StateKeeper, di.ProposalRepository, di.IdentityRegistry, di.EventBus, di.AddressProvider)
 	tequilapi_endpoints.AddRoutesForSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.IPResolver, di.LocationResolver, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.ProposalRepository, di.QualityClient)
@@ -582,13 +601,14 @@ func (di *Dependencies) bootstrapTequilapi(nodeOptions node.Options, listener ne
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(di.HTTPClient, router, config.GetString(config.FlagAccessPolicyAddress))
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper)
-	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, common.HexToAddress(nodeOptions.Hermes.HermesID))
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.IdentityRegistry, di.Transactor, di.HermesPromiseSettler, di.SettlementHistoryStorage, di.AddressProvider, di.BeneficiarySaver)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForMMN(router, di.MMN)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 	tequilapi_endpoints.AddRoutesForConnectivityStatus(router, di.SessionConnectivityStatusStorage)
-	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.Exchange)
+	tequilapi_endpoints.AddRoutesForCurrencyExchange(router, di.PilvytisAPI)
 	tequilapi_endpoints.AddRoutesForPilvytis(router, di.PilvytisAPI)
+	tequilapi_endpoints.AddRoutesForTerms(router)
 	if err := tequilapi_endpoints.AddRoutesForSSE(router, di.StateKeeper, di.EventBus); err != nil {
 		return nil, err
 	}
@@ -671,14 +691,14 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	clients[network.DefaultChainID] = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
 	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
 
-	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, common.HexToAddress(options.Transactor.RegistryAddress))
+	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, common.HexToAddress(options.Transactor.RegistryAddress), common.HexToAddress(options.Hermes.HermesID), registryStorage, di.EventBus); err != nil {
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, di.AddressProvider, registryStorage, di.EventBus); err != nil {
 		return err
 	}
 
-	hermesURL, err := di.HermesURLGetter.GetHermesURL(common.HexToAddress(options.Hermes.HermesID))
+	hermesURL, err := di.getHermesURL(options)
 	if err != nil {
 		return err
 	}
@@ -728,7 +748,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
-
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
@@ -751,7 +770,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	case node.QualityTypeElastic:
 		transport = quality.NewElasticSearchTransport(di.HTTPClient, options.Address, 10*time.Second)
 	case node.QualityTypeMORQA:
-		transport = quality.NewMORQATransport(di.QualityClient)
+		transport = quality.NewMORQATransport(di.QualityClient, di.LocationResolver)
 	case node.QualityTypeNone:
 		transport = quality.NewNoopTransport()
 	default:
@@ -785,7 +804,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err e
 	if _, err = di.ServiceFirewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL)
+	ipResolver := ip.NewResolver(di.HTTPClient, options.BindAddress, options.Location.IPDetectorURL, ip.IPFallbackAddresses)
 	di.IPResolver = ip.NewCachedResolver(ipResolver, 5*time.Minute)
 
 	var resolver location.Resolver
@@ -831,14 +850,40 @@ func (di *Dependencies) bootstrapAuthenticator() error {
 	if err != nil {
 		return err
 	}
-	di.Authenticator = auth.NewAuthenticator(di.Storage)
+	di.Authenticator = auth.NewAuthenticator()
 	di.JWTAuthenticator = auth.NewJWTAuthenticator(key)
 
 	return nil
 }
 
+// TODO: This should be removed when we no longer need to care about
+// migrating credentials.
+func (di *Dependencies) migrateCrendentials() {
+	s := []auth.Storage{di.Storage}
+	if !config.GetBool(config.FlagTestnet2) {
+		testnet2, err := boltdb.NewStorage(node.GetOptionsDirectoryDB(node.NetworkSubDirTestnet2))
+		if err == nil {
+			s = append(s, testnet2)
+		}
+	}
+
+	if !config.GetBool(config.FlagTestnet) {
+		testnet, err := boltdb.NewStorage(node.GetOptionsDirectoryDB(node.NetworkSubDirTestnet))
+		if err == nil {
+			s = append(s, testnet)
+		}
+	}
+
+	if err := auth.MigrateCredentials(s); err != nil {
+		log.Err(err).Msg("Credential migration did not finish correctly")
+	}
+}
+
 func (di *Dependencies) bootstrapPilvytis(options node.Options) {
-	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory)
+	di.PilvytisAPI = pilvytis.NewAPI(di.HTTPClient, options.PilvytisAddress, di.SignerFactory, di.LocationResolver)
+	statusTracker := pilvytis.NewStatusTracker(di.PilvytisAPI, di.IdentityManager, di.EventBus, 30*time.Second)
+	di.Pilvytis = pilvytis.NewService(di.PilvytisAPI, di.IdentityManager, statusTracker)
+	di.Pilvytis.Start()
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
@@ -872,7 +917,7 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 
 	if options.BlockAlways {
 		bindAddress := "0.0.0.0"
-		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "")
+		resolver := ip.NewResolver(di.HTTPClient, bindAddress, "", ip.IPFallbackAddresses)
 		outboundIP, err := resolver.GetOutboundIP()
 		if err != nil {
 			return err
@@ -882,6 +927,25 @@ func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 		return err
 	}
 	return nil
+}
+
+func (di *Dependencies) bootstrapBeneficiaryProvider(options node.Options) {
+	di.BeneficiaryProvider = beneficiary.NewProvider(
+		options.ChainID,
+		di.AddressProvider,
+		di.Storage,
+		di.BCHelper,
+	)
+}
+
+func (di *Dependencies) bootstrapBeneficiarySaver(options node.Options) {
+	di.BeneficiarySaver = beneficiary.NewSaver(
+		options.ChainID,
+		di.AddressProvider,
+		di.Storage,
+		di.BCHelper,
+		di.HermesPromiseSettler,
+	)
 }
 
 func (di *Dependencies) handleConnStateChange() error {

@@ -18,20 +18,53 @@
 package wginterface
 
 import (
-	"errors"
+	"fmt"
 	"net"
+	"os"
+	"path"
+	"strconv"
+
+	"github.com/rs/zerolog/log"
+	"golang.zx2c4.com/wireguard/device"
+	"golang.zx2c4.com/wireguard/ipc"
 
 	"golang.zx2c4.com/wireguard/tun"
 )
 
 func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceName string, err error) {
-	return nil, requestedInterfaceName, errors.New("not implemented")
+	tunnel, err = tun.CreateTUN(requestedInterfaceName, device.DefaultMTU)
+	if err == nil {
+		interfaceName = requestedInterfaceName
+		realInterfaceName, err2 := tunnel.Name()
+		if err2 == nil {
+			interfaceName = realInterfaceName
+		}
+	}
+	return tunnel, interfaceName, err
 }
 
 func newUAPIListener(interfaceName string) (listener net.Listener, err error) {
-	return nil, errors.New("not implemented")
+	log.Info().Msg("Setting interface configuration")
+	fileUAPI, err := ipc.UAPIOpen(interfaceName)
+	if err != nil {
+		return nil, fmt.Errorf("UAPI listen error: %w", err)
+	}
+	uapi, err := ipc.UAPIListen(interfaceName, fileUAPI)
+	if err != nil {
+		return nil, fmt.Errorf("could not listen for UAPI wg configuration: %w", err)
+	}
+	return uapi, nil
 }
 
 func applySocketPermissions(interfaceName string, uid string) error {
-	return errors.New("not implemented")
+	numUid, err := strconv.Atoi(uid)
+	if err != nil {
+		return fmt.Errorf("failed to parse uid %s: %w", uid, err)
+	}
+	socketPath := path.Join("/var/run/wireguard", fmt.Sprintf("%s.sock", interfaceName))
+	err = os.Chown(socketPath, numUid, -1)
+	if err != nil {
+		return fmt.Errorf("failed to chown wireguard socket to uid %s: %w", uid, err)
+	}
+	return nil
 }

@@ -75,7 +75,7 @@ func NewPaymentMethod(pricePerGB, pricePerMinute *big.Int) PaymentMethod {
 	}
 
 	return PaymentMethod{
-		Price:    money.NewMoney(accuracy, money.CurrencyMyst),
+		Price:    money.New(accuracy),
 		Duration: time.Duration(pricePerMinute.Int64()),
 		Type:     PaymentForDataWithTime,
 		Bytes:    pricePerGB.Uint64(),
@@ -110,8 +110,6 @@ func InvoiceFactoryCreator(
 	channel p2p.Channel,
 	balanceSendPeriod, promiseTimeout time.Duration,
 	invoiceStorage providerInvoiceStorage,
-	registryAddress string,
-	channelImplementationAddress string,
 	maxHermesFailureCount uint64,
 	maxAllowedHermesFee uint16,
 	maxUnpaidInvoiceValue *big.Int,
@@ -119,7 +117,7 @@ func InvoiceFactoryCreator(
 	eventBus eventbus.EventBus,
 	proposal market.ServiceProposal,
 	promiseHandler promiseHandler,
-	providersHermes common.Address,
+	addressProvider addressProvider,
 ) func(identity.Identity, identity.Identity, int64, common.Address, string, chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
 	return func(providerID, consumerID identity.Identity, chainID int64, hermesID common.Address, sessionID string, exchangeChan chan crypto.ExchangeMessage) (service.PaymentEngine, error) {
 		timeTracker := session.NewTracker(mbtime.Now)
@@ -135,17 +133,15 @@ func InvoiceFactoryCreator(
 			ExchangeMessageWaitTimeout: promiseTimeout,
 			ProviderID:                 providerID,
 			ConsumersHermesID:          hermesID,
-			ProvidersHermesID:          providersHermes,
-			Registry:                   registryAddress,
 			MaxHermesFailureCount:      maxHermesFailureCount,
 			MaxAllowedHermesFee:        maxAllowedHermesFee,
 			BlockchainHelper:           blockchainHelper,
 			EventBus:                   eventBus,
 			SessionID:                  sessionID,
 			PromiseHandler:             promiseHandler,
-			ChannelAddressCalculator:   NewChannelAddressCalculator(hermesID.Hex(), channelImplementationAddress, registryAddress),
 			MaxNotPaidInvoice:          maxUnpaidInvoiceValue,
 			ChainID:                    chainID,
+			AddressProvider:            addressProvider,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -157,8 +153,7 @@ func ExchangeFactoryFunc(
 	keystore hashSigner,
 	signer identity.SignerFactory,
 	totalStorage consumerTotalsStorage,
-	channelImplementation string,
-	registryAddress string,
+	addressProvider addressProvider,
 	eventBus eventbus.EventBus,
 	dataLeewayMegabytes uint64) func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
 	return func(channel p2p.Channel, consumer, provider identity.Identity, hermes common.Address, proposal market.ServiceProposal) (connection.PaymentIssuer, error) {
@@ -176,7 +171,7 @@ func ExchangeFactoryFunc(
 			Identity:                  consumer,
 			Peer:                      provider,
 			Proposal:                  proposal,
-			ChannelAddressCalculator:  NewChannelAddressCalculator(hermes.Hex(), channelImplementation, registryAddress),
+			AddressProvider:           addressProvider,
 			EventBus:                  eventBus,
 			HermesAddress:             hermes,
 			DataLeeway:                datasize.MiB * datasize.BitSize(dataLeewayMegabytes),

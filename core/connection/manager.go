@@ -30,9 +30,9 @@ import (
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/mysteriumnetwork/node/core/location"
-
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -573,7 +573,6 @@ func (m *connectionManager) startConnection(ctx context.Context, conn Connection
 	})
 
 	go m.consumeConnectionStates(conn.State())
-	go m.connectionWaiter(conn)
 
 	// Clear IP cache so session IP check can report that IP has really changed.
 	m.clearIPCache()
@@ -690,17 +689,6 @@ func (m *connectionManager) disconnect() {
 	m.cleanAfterDisconnect()
 }
 
-func (m *connectionManager) connectionWaiter(connection Connection) {
-	err := connection.Wait()
-	if err != nil {
-		log.Warn().Err(err).Msg("Connection exited with error")
-	} else {
-		log.Info().Msg("Connection exited")
-	}
-
-	logDisconnectError(m.Disconnect())
-}
-
 func (m *connectionManager) waitForConnectedState(stateChannel <-chan connectionstate.State) error {
 	log.Debug().Msg("waiting for connected state")
 	for {
@@ -731,9 +719,6 @@ func (m *connectionManager) consumeConnectionStates(stateChannel <-chan connecti
 	for state := range stateChannel {
 		m.onStateChanged(state)
 	}
-
-	log.Debug().Msg("State updater stopCalled")
-	logDisconnectError(m.Disconnect())
 }
 
 func (m *connectionManager) onStateChanged(state connectionstate.State) {
@@ -765,7 +750,9 @@ func (m *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
 	m.addCleanup(func() error {
 		log.Trace().Msg("Cleaning: traffic block rule")
 		defer log.Trace().Msg("Cleaning: traffic block rule DONE")
+
 		removeRule()
+
 		return nil
 	})
 	return nil
@@ -779,11 +766,6 @@ func (m *connectionManager) publishStateEvent(state connectionstate.State) {
 }
 
 func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session.ID) {
-	// TODO: Remove this check once all provider migrates to p2p.
-	if channel == nil {
-		return
-	}
-
 	// Register handler for handling p2p keep alive pings from provider.
 	channel.Handle(p2p.TopicKeepAlive, func(c p2p.Context) error {
 		var ping pb.P2PKeepAlivePing
@@ -825,8 +807,19 @@ func (m *connectionManager) sendKeepAlivePing(ctx context.Context, channel p2p.C
 	msg := &pb.P2PKeepAlivePing{
 		SessionID: string(sessionID),
 	}
+
+	start := time.Now()
 	_, err := channel.Send(ctx, p2p.TopicKeepAlive, p2p.ProtoMessage(msg))
-	return err
+	if err != nil {
+		return err
+	}
+
+	m.eventBus.Publish(quality.AppTopicConsumerPingP2P, quality.PingEvent{
+		SessionID: string(sessionID),
+		Duration:  time.Now().Sub(start),
+	})
+
+	return nil
 }
 
 func (m *connectionManager) currentCtx() context.Context {

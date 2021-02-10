@@ -143,6 +143,28 @@ func TestConfig_ParseStringSliceFlag(t *testing.T) {
 	}
 }
 
+// this can happen when updating config via tequilapi - json unmarshal
+// translates json number to float64 by default if target type is interface{}
+func TestSimilarTypeMerge(t *testing.T) {
+	// given
+	cfg := NewConfig()
+	cfg.SetDefault("openvpn.port", 1001)
+
+	// when
+	cfg.SetUser("openvpn.port", 55.00)
+
+	// then
+	assert.Equal(t, 55, cfg.GetInt("openvpn.port"))
+
+	actual, ok := cfg.GetConfig()["openvpn"]
+	assert.True(t, ok)
+
+	actual, ok = actual.(map[string]interface{})["port"]
+	assert.True(t, ok)
+
+	assert.Equal(t, 55.0, actual)
+}
+
 func TestUserConfig_Get(t *testing.T) {
 	cfg := NewConfig()
 

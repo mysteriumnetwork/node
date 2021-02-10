@@ -25,12 +25,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestConnectionStartStop(t *testing.T) {
@@ -55,7 +56,6 @@ func TestConnectionStartStop(t *testing.T) {
 	go func() {
 		conn.Stop()
 	}()
-	err = conn.Wait()
 	assert.NoError(t, err)
 }
 

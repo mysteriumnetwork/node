@@ -40,20 +40,20 @@ type mockPilvytis struct {
 	resp       pilvytis.OrderResponse
 }
 
-func (mock *mockPilvytis) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (pilvytis.OrderResponse, error) {
+func (mock *mockPilvytis) CreatePaymentOrder(i identity.Identity, mystAmount float64, payCurrency string, ln bool) (*pilvytis.OrderResponse, error) {
 	if i.Address != mock.identity {
-		return pilvytis.OrderResponse{}, errors.New("wrong identity")
+		return nil, errors.New("wrong identity")
 	}
 
-	return mock.resp, nil
+	return &mock.resp, nil
 }
 
-func (mock *mockPilvytis) GetPaymentOrder(i identity.Identity, oid uint64) (pilvytis.OrderResponse, error) {
+func (mock *mockPilvytis) GetPaymentOrder(i identity.Identity, oid uint64) (*pilvytis.OrderResponse, error) {
 	if i.Address != mock.identity {
-		return pilvytis.OrderResponse{}, errors.New("wrong identity")
+		return nil, errors.New("wrong identity")
 	}
 
-	return mock.resp, nil
+	return &mock.resp, nil
 }
 
 func (mock *mockPilvytis) GetPaymentOrders(i identity.Identity) ([]pilvytis.OrderResponse, error) {
@@ -66,6 +66,17 @@ func (mock *mockPilvytis) GetPaymentOrders(i identity.Identity) ([]pilvytis.Orde
 
 func (mock *mockPilvytis) GetPaymentOrderCurrencies() ([]string, error) {
 	return mock.currencies, nil
+}
+
+func (mock *mockPilvytis) GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error) {
+	return &pilvytis.PaymentOrderOptions{
+		Minimum: 16.7,
+		Suggested: []float64{
+			20,
+			40,
+			100,
+		},
+	}, nil
 }
 
 func newMockPilvytisResp(id int, identity, priceC, payC string, recvAmount float64) pilvytis.OrderResponse {
@@ -239,5 +250,31 @@ func TestGetCurrency(t *testing.T) {
 		`["BTC"]`,
 		resp.Body.String(),
 	)
+}
 
+func TestGetPaymentOrderOptions(t *testing.T) {
+	mock := &mockPilvytis{}
+	handler := NewPilvytisEndpoint(mock).GetPaymentOrderOptions
+
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/payment-order-options",
+		nil,
+	)
+	assert.NoError(t, err)
+
+	handler(resp, req, httprouter.Params{})
+	assert.Equal(t, 200, resp.Code)
+	assert.JSONEq(t,
+		`{
+			"minimum": 16.7,
+			"suggested": [
+				20,
+				40,
+				100
+			]
+		}`,
+		resp.Body.String(),
+	)
 }

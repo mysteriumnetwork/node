@@ -43,7 +43,6 @@ package config
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/spf13/cast"
@@ -51,10 +50,10 @@ import (
 
 // Contains snippets from https://github.com/spf13/viper
 
-// searchMap recursively searches for a value for path in source map.
+// SearchMap recursively searches for a value for path in source map.
 // Returns nil if not found.
 // Note: This assumes that the path entries and map keys are lower cased.
-func (cfg *Config) searchMap(source map[string]interface{}, path []string) interface{} {
+func SearchMap(source map[string]interface{}, path []string) interface{} {
 	if len(path) == 0 {
 		return source
 	}
@@ -69,11 +68,11 @@ func (cfg *Config) searchMap(source map[string]interface{}, path []string) inter
 		// Nested case
 		switch next.(type) {
 		case map[interface{}]interface{}:
-			return cfg.searchMap(cast.ToStringMap(next), path[1:])
+			return SearchMap(cast.ToStringMap(next), path[1:])
 		case map[string]interface{}:
 			// Type assertion is safe here since it is only reached
 			// if the type of `next` is the same as the type being asserted
-			return cfg.searchMap(next.(map[string]interface{}), path[1:])
+			return SearchMap(next.(map[string]interface{}), path[1:])
 		default:
 			// got a value but nested key expected, return "nil" for not found
 			return nil
@@ -156,12 +155,6 @@ func mergeMaps(
 			if itgt != nil {
 				itgt[sk] = sv
 			}
-			continue
-		}
-
-		svType := reflect.TypeOf(sv)
-		tvType := reflect.TypeOf(tv)
-		if svType != tvType {
 			continue
 		}
 

@@ -15,31 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package config
+package contract
 
-import (
-	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/urfave/cli/v2"
-)
+import "github.com/mysteriumnetwork/node/pilvytis"
 
-var (
-	// FlagHermesID determines the hermes ID
-	FlagHermesID = cli.StringFlag{
-		Name:  "hermes.hermes-id",
-		Usage: "hermes contract address used to register identity",
-		Value: metadata.DefaultNetwork.HermesID,
-	}
-)
-
-// RegisterFlagsHermes function register network flags to flag list
-func RegisterFlagsHermes(flags *[]cli.Flag) {
-	*flags = append(
-		*flags,
-		&FlagHermesID,
-	)
+// PaymentOrderOptions represents pilvytis payment order options
+// swagger:model PaymentOrderOptions
+type PaymentOrderOptions struct {
+	Minimum   float64   `json:"minimum"`
+	Suggested []float64 `json:"suggested"`
 }
 
-// ParseFlagsHermes function fills in hermes options from CLI context
-func ParseFlagsHermes(ctx *cli.Context) {
-	Current.ParseStringFlag(ctx, FlagHermesID)
+// ToPaymentOrderOptions - convert pilvytis.PaymentOrderOptions to contract.ToPaymentOrderOptions
+func ToPaymentOrderOptions(poo *pilvytis.PaymentOrderOptions) *PaymentOrderOptions {
+	return &PaymentOrderOptions{
+		Minimum:   poo.Minimum,
+		Suggested: poo.Suggested,
+	}
 }

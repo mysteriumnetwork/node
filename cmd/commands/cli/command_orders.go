@@ -22,6 +22,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/config/remote"
+
+	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/pkg/errors"
@@ -38,7 +42,7 @@ func (c *cliApp) order(argsString string) {
 	}, "\n")
 
 	if len(argsString) == 0 {
-		info(usage)
+		clio.Info(usage)
 		return
 	}
 
@@ -56,7 +60,7 @@ func (c *cliApp) order(argsString string) {
 	case "currencies":
 		c.currencies(actionArgs)
 	default:
-		warnf("Unknown sub-command '%s'\n", argsString)
+		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
 	}
 }
@@ -65,94 +69,121 @@ const usageOrderCurrencies = "currencies"
 
 func (c *cliApp) currencies(args []string) {
 	if len(args) > 0 {
-		info("Usage: " + usageOrderCurrencies)
+		clio.Info("Usage: " + usageOrderCurrencies)
 		return
 	}
 
 	resp, err := c.tequilapi.OrderCurrencies()
 	if err != nil {
-		warn(errors.Wrap(err, "could not get currencies"))
+		clio.Warn(errors.Wrap(err, "could not get currencies"))
 		return
 	}
 
-	info(fmt.Sprintf("Supported currencies: %s", strings.Join(resp, ", ")))
+	clio.Info(fmt.Sprintf("Supported currencies: %s", strings.Join(resp, ", ")))
 }
 
-const usageOrderCreate = "create [identity] [amount] [pay currency] [use lightning network]"
+const usageOrderCreate = "create <identity> <amount> <pay currency> [use lightning network]"
 
 func (c *cliApp) orderCreate(args []string) {
 	if len(args) > 4 || len(args) < 3 {
-		info("Usage: " + usageOrderCreate)
+		clio.Info("Usage: " + usageOrderCreate)
 		return
 	}
 
 	f, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
-		warn("could not parse amount")
+		clio.Warn("could not parse amount")
 		return
+	}
+	if f <= 0 {
+		clio.Warn(fmt.Sprintf("Top up amount is required and must be greater than 0"))
+		return
+	}
+
+	options, err := c.tequilapi.PaymentOptions()
+	if err != nil {
+		clio.Info("Failed to get payment options, wont check minimum possible amount to topup")
+	}
+
+	if options.Minimum != 0 && f <= options.Minimum {
+		msg := fmt.Sprintf(
+			"Top up amount must be greater than %v%s",
+			options.Minimum,
+			config.GetString(config.FlagDefaultCurrency))
+		clio.Warn(msg)
+		return
+	}
+
+	ln := false
+	if len(args) == 4 {
+		b, err := strconv.ParseBool(args[3])
+		if err != nil {
+			clio.Warn("[use lightning network]: only true/false allowed")
+		}
+		ln = b
 	}
 
 	resp, err := c.tequilapi.OrderCreate(identity.FromAddress(args[0]), contract.OrderRequest{
 		MystAmount:       f,
 		PayCurrency:      args[2],
-		LightningNetwork: len(args) == 4,
+		LightningNetwork: ln,
 	})
 	if err != nil {
-		warn(errors.Wrap(err, "could not create an order"))
+		clio.Warn(errors.Wrap(err, "could not create an order"))
 		return
 	}
-	printOrder(resp)
+	printOrder(resp, nil)
 }
 
-const usageOrderGet = "get [identity] [orderID]"
+const usageOrderGet = "get <identity> <orderID>"
 
 func (c *cliApp) orderGet(args []string) {
 	if len(args) != 2 {
-		info("Usage: " + usageOrderGet)
+		clio.Info("Usage: " + usageOrderGet)
 		return
 	}
 
 	u, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		warn("could not parse orderID")
+		clio.Warn("could not parse orderID")
 		return
 	}
 	resp, err := c.tequilapi.OrderGet(identity.FromAddress(args[0]), u)
 	if err != nil {
-		warn(errors.Wrap(err, "could not get an order"))
+		clio.Warn(errors.Wrap(err, "could not get an order"))
 		return
 	}
-	printOrder(resp)
+	printOrder(resp, c.config)
 }
 
-const usageOrderGetAll = "get-all [identity]"
+const usageOrderGetAll = "get-all <identity>"
 
 func (c *cliApp) orderGetAll(args []string) {
 	if len(args) != 1 {
-		info("Usage: " + usageOrderGetAll)
+		clio.Info("Usage: " + usageOrderGetAll)
 		return
 	}
 
 	resp, err := c.tequilapi.OrderGetAll(identity.FromAddress(args[0]))
 	if err != nil {
-		warn(errors.Wrap(err, "could not get an orders"))
+		clio.Warn(errors.Wrap(err, "could not get an orders"))
 		return
 	}
 
 	if len(resp) == 0 {
-		info("No orders found")
+		clio.Info("No orders found")
 		return
 	}
 
 	for _, r := range resp {
-		info(fmt.Sprintf("Order ID '%d' is in state: '%s'", r.ID, r.Status))
+		clio.Info(fmt.Sprintf("Order ID '%d' is in state: '%s'", r.ID, r.Status))
 	}
-	info(
+	clio.Info(
 		fmt.Sprintf("To explore additional order information use: '%s'", usageOrderGet),
 	)
 }
 
-func printOrder(o contract.OrderResponse) {
+func printOrder(o contract.OrderResponse, rc *remote.Config) {
 	strUnknown := func(s *string) string {
 		if s == nil {
 			return "unknown"
@@ -167,10 +198,10 @@ func printOrder(o contract.OrderResponse) {
 		return fmt.Sprint(*f)
 	}
 
-	info(fmt.Sprintf("Order ID '%d' is in state: '%s'", o.ID, o.Status))
-	info(fmt.Sprintf("Price: %s %s", fUnknown(o.PriceAmount), o.PriceCurrency))
-	info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
-	info(fmt.Sprintf("Receive: %s %s", fUnknown(o.ReceiveAmount), o.ReceiveCurrency))
-	info(fmt.Sprintf("Myst amount: %f", o.MystAmount))
-	info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
+	clio.Info(fmt.Sprintf("Order ID '%d' is in state: '%s'", o.ID, o.Status))
+	clio.Info(fmt.Sprintf("Price: %s %s", fUnknown(o.PriceAmount), o.PriceCurrency))
+	clio.Info(fmt.Sprintf("Pay: %s %s", fUnknown(o.PayAmount), strUnknown(o.PayCurrency)))
+	clio.Info(fmt.Sprintf("Receive: %s %s", fUnknown(o.ReceiveAmount), o.ReceiveCurrency))
+	clio.Info(fmt.Sprintf("Receive %s amount: %f", rc.GetStringByFlag(config.FlagDefaultCurrency), o.MystAmount))
+	clio.Info(fmt.Sprintf("PaymentURL: %s", o.PaymentURL))
 }

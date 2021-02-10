@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -41,31 +42,35 @@ const AppTopicTransactorRegistration = "transactor_identity_registration"
 
 type channelProvider interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, addressToCheck common.Address, pending bool) (client.ProviderChannel, error)
+	GetLastRegistryNonce(chainID int64, registry common.Address) (*big.Int, error)
+}
+
+// AddressProvider provides sc addresses.
+type AddressProvider interface {
+	GetChannelImplementation(chainID int64) (common.Address, error)
+	GetActiveHermes(chainID int64) (common.Address, error)
+	GetRegistryAddress(chainID int64) (common.Address, error)
 }
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
-	httpClient            *requests.HTTPClient
-	endpointAddress       string
-	signerFactory         identity.SignerFactory
-	registryAddress       string
-	hermesID              string
-	channelImplementation string
-	publisher             eventbus.Publisher
-	bc                    channelProvider
+	httpClient      *requests.HTTPClient
+	endpointAddress string
+	signerFactory   identity.SignerFactory
+	publisher       eventbus.Publisher
+	bc              channelProvider
+	addresser       AddressProvider
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(httpClient *requests.HTTPClient, endpointAddress, registryAddress, hermesID, channelImplementation string, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
+func NewTransactor(httpClient *requests.HTTPClient, endpointAddress string, addresser AddressProvider, signerFactory identity.SignerFactory, publisher eventbus.Publisher, bc channelProvider) *Transactor {
 	return &Transactor{
-		httpClient:            httpClient,
-		endpointAddress:       endpointAddress,
-		signerFactory:         signerFactory,
-		registryAddress:       registryAddress,
-		hermesID:              hermesID,
-		channelImplementation: channelImplementation,
-		publisher:             publisher,
-		bc:                    bc,
+		httpClient:      httpClient,
+		endpointAddress: endpointAddress,
+		signerFactory:   signerFactory,
+		addresser:       addresser,
+		publisher:       publisher,
+		bc:              bc,
 	}
 }
 
@@ -77,7 +82,7 @@ type FeesResponse struct {
 
 // IsValid returns false if the fee has already expired and should be re-requested
 func (fr FeesResponse) IsValid() bool {
-	return time.Now().After(fr.ValidUntil)
+	return time.Now().UTC().Before(fr.ValidUntil.UTC())
 }
 
 // IdentityRegistrationRequest represents the identity registration request body
@@ -262,9 +267,24 @@ func (t *Transactor) RegisterIdentity(id string, stake, fee *big.Int, beneficiar
 }
 
 func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.Int, beneficiary string, chainID int64) (IdentityRegistrationRequest, error) {
+	registry, err := t.addresser.GetRegistryAddress(chainID)
+	if err != nil {
+		return IdentityRegistrationRequest{}, err
+	}
+
+	hermes, err := t.addresser.GetActiveHermes(chainID)
+	if err != nil {
+		return IdentityRegistrationRequest{}, err
+	}
+
+	chimp, err := t.addresser.GetChannelImplementation(chainID)
+	if err != nil {
+		return IdentityRegistrationRequest{}, err
+	}
+
 	regReq := IdentityRegistrationRequest{
-		RegistryAddress: t.registryAddress,
-		HermesID:        t.hermesID,
+		RegistryAddress: registry.Hex(),
+		HermesID:        hermes.Hex(),
 		Stake:           stake,
 		Fee:             fee,
 		Beneficiary:     beneficiary,
@@ -284,7 +304,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	}
 
 	if regReq.Beneficiary == "" {
-		channelAddress, err := pc.GenerateChannelAddress(id, t.hermesID, t.registryAddress, t.channelImplementation)
+		channelAddress, err := pc.GenerateChannelAddress(id, hermes.Hex(), registry.Hex(), chimp.Hex())
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
@@ -306,7 +326,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, stake, fee *big.
 	return regReq, nil
 }
 
-// GetReferralToken returns the referral token
+// GetReferralToken returns the referral token.
 func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
 	req, err := t.getReferralTokenRequest(id)
 	if err != nil {
@@ -323,6 +343,17 @@ func (t *Transactor) GetReferralToken(id common.Address) (string, error) {
 	}
 	err = t.httpClient.DoRequestAndParseResponse(request, &resp)
 	return resp.Token, err
+}
+
+// ReferralTokenAvailable checks if user is eligible to obtain a referral token.
+func (t *Transactor) ReferralTokenAvailable(id common.Address) error {
+	query := url.Values{}
+	query.Set("identity", id.String())
+	req, err := requests.NewGetRequest(t.endpointAddress, "rp/tokens-available", query)
+	if err != nil {
+		return err
+	}
+	return t.httpClient.DoRequest(req)
 }
 
 func (t *Transactor) getReferralTokenRequest(id common.Address) (pc.ReferralTokenRequest, error) {
@@ -409,11 +440,17 @@ type SettleWithBeneficiaryRequest struct {
 	Signature   string   `json:"signature"`
 	ProviderID  string   `json:"providerID"`
 	ChainID     int64    `json:"chainID"`
+	Registry    string   `json:"registry"`
 }
 
 // SettleWithBeneficiary instructs Transactor to set beneficiary on behalf of a client identified by 'id'
 func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, promise pc.Promise) error {
-	signedReq, err := t.fillSetBeneficiaryRequest(promise.ChainID, id, beneficiary)
+	registry, err := t.addresser.GetRegistryAddress(promise.ChainID)
+	if err != nil {
+		return err
+	}
+
+	signedReq, err := t.fillSetBeneficiaryRequest(promise.ChainID, id, beneficiary, registry.Hex())
 	if err != nil {
 		return fmt.Errorf("failed to fill in set beneficiary request: %w", err)
 	}
@@ -426,12 +463,15 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 			TransactorFee: promise.Fee,
 			Preimage:      hex.EncodeToString(promise.R),
 			Signature:     hex.EncodeToString(promise.Signature),
+			ChainID:       promise.ChainID,
+			ProviderID:    id,
 		},
 		Beneficiary: signedReq.Beneficiary,
 		Nonce:       signedReq.Nonce,
 		Signature:   signedReq.Signature,
 		ProviderID:  id,
 		ChainID:     promise.ChainID,
+		Registry:    registry.Hex(),
 	}
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle_with_beneficiary", payload)
@@ -442,17 +482,18 @@ func (t *Transactor) SettleWithBeneficiary(id, beneficiary, hermesID string, pro
 	return t.httpClient.DoRequest(req)
 }
 
-func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary string) (pc.SetBeneficiaryRequest, error) {
-	ch, err := t.bc.GetProviderChannel(chainID, common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
+func (t *Transactor) fillSetBeneficiaryRequest(chainID int64, id, beneficiary, registry string) (pc.SetBeneficiaryRequest, error) {
+	nonce, err := t.bc.GetLastRegistryNonce(chainID, common.HexToAddress(registry))
 	if err != nil {
-		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
+		return pc.SetBeneficiaryRequest{}, fmt.Errorf("failed to get last registry nonce: %w", err)
 	}
 
 	regReq := pc.SetBeneficiaryRequest{
 		ChainID:     chainID,
+		Registry:    registry,
 		Beneficiary: strings.ToLower(beneficiary),
 		Identity:    id,
-		Nonce:       new(big.Int).Add(ch.LastUsedNonce, big.NewInt(1)),
+		Nonce:       new(big.Int).Add(nonce, big.NewInt(1)),
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
@@ -569,12 +610,16 @@ func (t *Transactor) DecreaseStake(id string, chainID int64, amount, transactorF
 }
 
 func (t *Transactor) fillDecreaseStakeRequest(id string, chainID int64, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
-	ch, err := t.bc.GetProviderChannel(chainID, common.HexToAddress(t.hermesID), common.HexToAddress(id), false)
+	hermes, err := t.addresser.GetActiveHermes(chainID)
+	if err != nil {
+		return DecreaseProviderStakeRequest{}, err
+	}
+	ch, err := t.bc.GetProviderChannel(chainID, hermes, common.HexToAddress(id), false)
 	if err != nil {
 		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to get provider channel: %w", err)
 	}
 
-	addr, err := pc.GenerateProviderChannelID(id, t.hermesID)
+	addr, err := pc.GenerateProviderChannelID(id, hermes.Hex())
 	if err != nil {
 		return DecreaseProviderStakeRequest{}, fmt.Errorf("failed to generate provider channel ID: %w", err)
 	}
@@ -586,7 +631,7 @@ func (t *Transactor) fillDecreaseStakeRequest(id string, chainID int64, amount, 
 	req := pc.DecreaseProviderStakeRequest{
 		ChannelID:     chid,
 		Nonce:         ch.LastUsedNonce.Add(ch.LastUsedNonce, big.NewInt(1)),
-		HermesID:      common.HexToAddress(t.hermesID),
+		HermesID:      hermes,
 		Amount:        amount,
 		TransactorFee: transactorFee,
 		ChainID:       chainID,

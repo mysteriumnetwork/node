@@ -27,6 +27,8 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
+	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -36,9 +38,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
-// operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
-const statusConnectCancelled = 499
+const (
+	// statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
+	// operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
+	statusConnectCancelled = 499
+)
+
+var (
+	errNoProposal = errors.New("provider has no service proposals")
+)
 
 // ProposalGetter defines interface to fetch currently active service proposal by id
 type ProposalGetter interface {
@@ -52,19 +60,23 @@ type identityRegistry interface {
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
 	manager       connection.Manager
+	publisher     eventbus.Publisher
 	stateProvider stateProvider
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
 	proposalRepository proposal.Repository
 	identityRegistry   identityRegistry
+	addressProvider    addressProvider
 }
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:            manager,
+		publisher:          publisher,
 		stateProvider:      stateProvider,
 		proposalRepository: proposalRepository,
 		identityRegistry:   identityRegistry,
+		addressProvider:    addressProvider,
 	}
 }
 
@@ -125,34 +137,56 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	cr, err := toConnectionRequest(req)
+	hermes, err := ce.addressProvider.GetActiveHermes(config.GetInt64(config.FlagChainID))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	cr, err := toConnectionRequest(req, hermes.Hex())
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, (&contract.ConnectionCreateRequest{}).Event(quality.StagePraseRequest, err.Error()))
 		return
 	}
 
 	if errorMap := cr.Validate(); errorMap.HasErrors() {
+		if out, err := errorMap.MarshalJSON(); err != nil {
+			log.Error().Err(err).Msg("Failed to marshal error map")
+		} else {
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageValidateRequest, string(out)))
+		}
+
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	// TODO Validate for account existence
 	consumerID := identity.FromAddress(cr.ConsumerID)
 	status, err := ce.identityRegistry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), consumerID)
 	if err != nil {
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationGetStatus, err.Error()))
 		log.Error().Err(err).Stack().Msg("could not check registration status")
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	switch status {
 	case registry.Unregistered, registry.RegistrationError:
-		log.Warn().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
-		utils.SendError(resp, fmt.Errorf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnregistered, ""))
+		log.Error().Msgf("identity %q is not registered, aborting...", cr.ConsumerID)
+		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q is not registered. Please register the identity first", cr.ConsumerID), http.StatusExpectationFailed)
 		return
 	case registry.InProgress:
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationInProgress, ""))
 		log.Info().Msgf("identity %q registration is in progress, continuing...", cr.ConsumerID)
-	default:
+	case registry.Registered:
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationRegistered, ""))
 		log.Info().Msgf("identity %q is registered, continuing...", cr.ConsumerID)
+	default:
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageRegistrationUnknown, ""))
+		log.Error().Msgf("identity %q has unknown status, aborting...", cr.ConsumerID)
+		utils.SendErrorMessage(resp, fmt.Sprintf("identity %q has unknown status. aborting", cr.ConsumerID), http.StatusExpectationFailed)
+		return
 	}
 
 	// TODO Pass proposal ID directly in request
@@ -161,11 +195,14 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		ServiceType: cr.ServiceType,
 	})
 	if err != nil {
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageGetProposal, err.Error()))
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	if proposal == nil {
-		utils.SendError(resp, errors.New("provider has no service proposals"), http.StatusBadRequest)
+		ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageNoProposal, errNoProposal.Error()))
+		utils.SendError(resp, errNoProposal, http.StatusBadRequest)
 		return
 	}
 
@@ -174,15 +211,20 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	if err != nil {
 		switch err {
 		case connection.ErrAlreadyExists:
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionAlreadyExists, err.Error()))
 			utils.SendError(resp, err, http.StatusConflict)
 		case connection.ErrConnectionCancelled:
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionCanceled, err.Error()))
 			utils.SendError(resp, err, statusConnectCancelled)
 		default:
-			log.Error().Err(err).Msg("")
+			ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionUnknownError, err.Error()))
+			log.Error().Err(err).Msg("Failed to connect")
 			utils.SendError(resp, err, http.StatusInternalServerError)
 		}
 		return
 	}
+
+	ce.publisher.Publish(quality.AppTopicConnectionEvents, cr.Event(quality.StageConnectionOK, ""))
 	resp.WriteHeader(http.StatusCreated)
 	ce.Status(resp, req, params)
 }
@@ -240,21 +282,21 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager,
-	stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry) {
-	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry)
+	stateProvider stateProvider, proposalRepository proposal.Repository, identityRegistry identityRegistry, publisher eventbus.Publisher, addressProvider addressProvider) {
+	connectionEndpoint := NewConnectionEndpoint(manager, stateProvider, proposalRepository, identityRegistry, publisher, addressProvider)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)
 	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 }
 
-func toConnectionRequest(req *http.Request) (*contract.ConnectionCreateRequest, error) {
+func toConnectionRequest(req *http.Request, defaultHermes string) (*contract.ConnectionCreateRequest, error) {
 	var connectionRequest = contract.ConnectionCreateRequest{
 		ConnectOptions: contract.ConnectOptions{
 			DisableKillSwitch: false,
 			DNS:               connection.DNSOptionAuto,
 		},
-		HermesID: config.GetString(config.FlagHermesID),
+		HermesID: defaultHermes,
 	}
 	err := json.NewDecoder(req.Body).Decode(&connectionRequest)
 	if err != nil {

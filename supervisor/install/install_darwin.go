@@ -50,7 +50,7 @@ const plistTpl = `
 // Install installs launchd supervisor daemon on Darwin OS.
 func Install(options Options) error {
 	if !options.valid() {
-		return errors.New("invalid options")
+		return errInvalid
 	}
 
 	log.Info().Msg("Cleaning up previous installation")

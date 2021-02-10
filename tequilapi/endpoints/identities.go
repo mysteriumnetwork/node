@@ -45,20 +45,24 @@ type earningsProvider interface {
 	GetEarnings(chainID int64, id identity.Identity) pingpong_event.Earnings
 }
 
+type beneficiaryProvider interface {
+	GetBeneficiary(identity common.Address) (common.Address, error)
+}
+
 type providerChannel interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
-	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
 }
 
 type identitiesAPI struct {
 	idm               identity.Manager
 	selector          identity_selector.Handler
 	registry          registry.IdentityRegistry
-	channelCalculator *pingpong.ChannelAddressCalculator
+	channelCalculator *pingpong.AddressProvider
 	balanceProvider   balanceProvider
 	earningsProvider  earningsProvider
 	bc                providerChannel
 	transactor        Transactor
+	bprovider         beneficiaryProvider
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -273,13 +277,14 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		return
 	}
 
-	regStatus, err := endpoint.registry.GetRegistrationStatus(config.GetInt64(config.FlagChainID), id)
+	chainID := config.GetInt64(config.FlagChainID)
+	regStatus, err := endpoint.registry.GetRegistrationStatus(chainID, id)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
 		return
 	}
 
-	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(id)
+	channelAddress, err := endpoint.channelCalculator.GetChannelAddress(chainID, id)
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to calculate channel address %w", err), http.StatusInternalServerError)
 		return
@@ -287,8 +292,13 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 
 	var stake = new(big.Int)
 	if regStatus == registry.Registered {
+		hermesID, err := endpoint.channelCalculator.GetActiveHermes(chainID)
+		if err != nil {
+			utils.SendError(resp, fmt.Errorf("could not get active hermes %w", err), http.StatusInternalServerError)
+			return
+		}
 
-		data, err := endpoint.bc.GetProviderChannel(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagHermesID)), common.HexToAddress(address), false)
+		data, err := endpoint.bc.GetProviderChannel(chainID, hermesID, common.HexToAddress(address), false)
 		if err != nil {
 			utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 			return
@@ -296,8 +306,8 @@ func (endpoint *identitiesAPI) Get(resp http.ResponseWriter, _ *http.Request, pa
 		stake = data.Stake
 	}
 
-	balance := endpoint.balanceProvider.ForceBalanceUpdate(config.GetInt64(config.FlagChainID), id)
-	settlement := endpoint.earningsProvider.GetEarnings(config.GetInt64(config.FlagChainID), id)
+	balance := endpoint.balanceProvider.ForceBalanceUpdate(chainID, id)
+	settlement := endpoint.earningsProvider.GetEarnings(chainID, id)
 	status := contract.IdentityDTO{
 		Address:            address,
 		RegistrationStatus: regStatus.String(),
@@ -371,7 +381,7 @@ func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, _ *h
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	address := params.ByName("id")
-	data, err := endpoint.bc.GetBeneficiary(config.GetInt64(config.FlagChainID), common.HexToAddress(config.GetString(config.FlagTransactorRegistryAddress)), common.HexToAddress(address))
+	data, err := endpoint.bprovider.GetBeneficiary(common.HexToAddress(address))
 	if err != nil {
 		utils.SendError(resp, fmt.Errorf("failed to check identity registration status: %w", err), http.StatusInternalServerError)
 		return
@@ -401,8 +411,8 @@ func (endpoint *identitiesAPI) Beneficiary(resp http.ResponseWriter, _ *http.Req
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	identity := params.ByName("id")
-	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(identity))
+	id := params.ByName("id")
+	tkn, err := endpoint.transactor.GetReferralToken(common.HexToAddress(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -412,6 +422,32 @@ func (endpoint *identitiesAPI) GetReferralToken(resp http.ResponseWriter, reques
 	}, resp)
 }
 
+// swagger:operation GET /identities/{id}/referral-available Referral availability check
+// ---
+// summary: Checks if the user can obtain a referral token
+// description: Verifies user's eligibility and the presence of an applicable public campaign
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity for which to get a token
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Success
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	err := endpoint.transactor.ReferralTokenAvailable(common.HexToAddress(id))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+}
+
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
@@ -419,10 +455,11 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 	registry registry.IdentityRegistry,
 	balanceProvider balanceProvider,
-	channelAddressCalculator *pingpong.ChannelAddressCalculator,
+	channelAddressCalculator *pingpong.AddressProvider,
 	earningsProvider earningsProvider,
 	bc providerChannel,
 	transactor Transactor,
+	bprovider beneficiaryProvider,
 ) {
 	idmEnd := &identitiesAPI{
 		idm:               idm,
@@ -433,6 +470,7 @@ func AddRoutesForIdentities(
 		earningsProvider:  earningsProvider,
 		bc:                bc,
 		transactor:        transactor,
+		bprovider:         bprovider,
 	}
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
@@ -451,4 +489,5 @@ func AddRoutesForIdentities(
 	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
 	router.GET("/identities/:id/referral", idmEnd.GetReferralToken)
+	router.GET("/identities/:id/referral-available", idmEnd.ReferralTokenAvailable)
 }

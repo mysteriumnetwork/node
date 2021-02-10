@@ -20,8 +20,6 @@ package cmd
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -167,18 +165,23 @@ func (di *Dependencies) bootstrapProviderRegistrar(nodeOptions node.Options) err
 	}
 
 	cfg := registry.ProviderRegistrarConfig{
+		IsTestnet2:          nodeOptions.OptionsNetwork.Testnet2,
 		MaxRetries:          nodeOptions.Transactor.ProviderMaxRegistrationAttempts,
 		Stake:               nodeOptions.Transactor.ProviderRegistrationStake,
 		DelayBetweenRetries: nodeOptions.Transactor.ProviderRegistrationRetryDelay,
-		HermesAddress:       common.HexToAddress(nodeOptions.Hermes.HermesID),
-		RegistryAddress:     common.HexToAddress(nodeOptions.Transactor.RegistryAddress),
 	}
-	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, cfg)
+	di.ProviderRegistrar = registry.NewProviderRegistrar(di.Transactor, di.IdentityRegistry, di.MysteriumAPI, di.SignerFactory, cfg)
 	return di.ProviderRegistrar.Subscribe(di.EventBus)
 }
 
 func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) error {
-	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(di.HermesPromiseStorage, di.BCHelper, di.EventBus)
+	di.HermesChannelRepository = pingpong.NewHermesChannelRepository(
+		di.HermesPromiseStorage,
+		di.BCHelper,
+		di.EventBus,
+		di.BeneficiaryProvider,
+	)
+
 	if err := di.HermesChannelRepository.Subscribe(di.EventBus); err != nil {
 		log.Error().Err(err).Msg("Failed to subscribe channel repository")
 		return errors.Wrap(err, "could not subscribe channel repository to relevant events")
@@ -192,13 +195,16 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 
 	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
+		func(hermesURL string) pingpong.HermesHTTPRequester {
+			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+		},
+		di.HermesURLGetter,
 		di.HermesChannelRepository,
 		di.BCHelper,
 		di.IdentityRegistry,
 		di.Keystore,
 		di.SettlementHistoryStorage,
 		pingpong.HermesPromiseSettlerConfig{
-			HermesAddress:        common.HexToAddress(nodeOptions.Hermes.HermesID),
 			Threshold:            nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
 		},
@@ -232,8 +238,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
 			pingpong.PromiseWaitTimeout, di.ProviderInvoiceStorage,
-			nodeOptions.Transactor.RegistryAddress,
-			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultHermesFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
@@ -241,7 +245,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.EventBus,
 			serviceInstance.Proposal,
 			di.HermesPromiseHandler,
-			common.HexToAddress(nodeOptions.Hermes.HermesID),
+			di.AddressProvider,
 		)
 		return service.NewSessionManager(
 			serviceInstance,

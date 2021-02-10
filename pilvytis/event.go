@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package pilvytis
 
-// OptionsHermes describes possible parameters for interaction with Hermes
-type OptionsHermes struct {
-	HermesID string
+// AppTopicOrderUpdated is an topic when the payment order is updated.
+const AppTopicOrderUpdated = "order_updated"
+
+// AppEventOrderUpdated is the event payload for AppTopicOrderUpdated topic.
+type AppEventOrderUpdated struct {
+	OrderSummary
 }

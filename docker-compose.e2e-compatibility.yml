@@ -159,7 +159,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/testnet2/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -178,7 +178,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       --payments.provider.invoice-frequency=1s
       service
       --agreed-terms-and-conditions
@@ -220,7 +220,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
 
   myst-provider-local:
@@ -242,7 +242,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/testnet2/keystore
+      - ./e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -260,7 +260,7 @@ services:
       --transactor.address=http://transactor:8888/api/v1
       --keystore.lightweight
       --log-level=debug
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       service
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -302,7 +302,7 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --quality.address=http://morqa:8085/api/v1
+      --quality.address=http://morqa:8085/api/v2
       daemon
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)

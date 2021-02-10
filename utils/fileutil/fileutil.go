@@ -78,13 +78,21 @@ func CopyDirs(src, dest string) error {
 	return nil
 }
 
+// copyFile copies a file from `src` to `dest`.
+// It tries to also copy it with the same permissions,
+// if thats not possible 0644 is used.
 func copyFile(src, dest string) error {
 	data, err := ioutil.ReadFile(src)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(dest, data, 0644)
+	perm := os.FileMode(0644)
+	if info, err := os.Stat(src); err == nil {
+		perm = info.Mode().Perm()
+	}
+
+	err = ioutil.WriteFile(dest, data, perm)
 	if err != nil {
 		return err
 	}

@@ -184,10 +184,9 @@ func (client *Client) GetTransactorFees() (contract.FeesDTO, error) {
 }
 
 // RegisterIdentity registers identity
-func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee *big.Int, token *string) error {
+func (client *Client) RegisterIdentity(address, beneficiary string, stake *big.Int, token *string) error {
 	payload := contract.IdentityRegisterRequest{
 		Stake:         stake,
-		Fee:           fee,
 		Beneficiary:   beneficiary,
 		ReferralToken: token,
 	}
@@ -310,6 +309,15 @@ func (client *Client) OriginLocation() (location contract.LocationDTO, err error
 func (client *Client) ProposalsByType(serviceType string) ([]contract.ProposalDTO, error) {
 	queryParams := url.Values{}
 	queryParams.Add("service_type", serviceType)
+	return client.proposals(queryParams)
+}
+
+// ProposalsByLocationAndService fetches proposals by given service and node location types.
+func (client *Client) ProposalsByLocationAndService(serviceType, locationType, locationCountry string) ([]contract.ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("service_type", serviceType)
+	queryParams.Add("location_type", locationType)
+	queryParams.Add("location_country", locationCountry)
 	return client.proposals(queryParams)
 }
 
@@ -551,11 +559,10 @@ func (client *Client) SettleIntoStake(providerID, hermesID identity.Identity, wa
 }
 
 // DecreaseStake requests the decrease of stake via the transactor.
-func (client *Client) DecreaseStake(ID identity.Identity, amount, transactorFee *big.Int) error {
+func (client *Client) DecreaseStake(ID identity.Identity, amount *big.Int) error {
 	decreaseRequest := contract.DecreaseStakeRequest{
-		ID:            ID.Address,
-		Amount:        amount,
-		TransactorFee: transactorFee,
+		ID:     ID.Address,
+		Amount: amount,
 	}
 
 	path := "transactor/stake/decrease"
@@ -701,4 +708,54 @@ func (client *Client) OrderCurrencies() ([]string, error) {
 
 	var res []string
 	return res, parseResponseJSON(resp, &res)
+}
+
+// PaymentOptions returns payment option suggestions from pilvytis.
+func (client *Client) PaymentOptions() (contract.PaymentOrderOptions, error) {
+	resp, err := client.http.Get("payment-order-options", nil)
+	if err != nil {
+		return contract.PaymentOrderOptions{}, err
+	}
+	defer resp.Body.Close()
+
+	var res contract.PaymentOrderOptions
+	return res, parseResponseJSON(resp, &res)
+}
+
+// UpdateTerms takes a TermsRequest and sends it as an update
+// for the terms of use.
+func (client *Client) UpdateTerms(obj contract.TermsRequest) error {
+	resp, err := client.http.Post("terms", obj)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// FetchConfig - fetches current config
+func (client *Client) FetchConfig() (map[string]interface{}, error) {
+	resp, err := client.http.Get("config", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("fetching config failed with status: %d", resp.StatusCode)
+	}
+
+	var res map[string]interface{}
+	err = parseResponseJSON(resp, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	data, ok := res["data"]
+	if !ok {
+		return nil, errors.New("no field named 'data' found in config")
+	}
+
+	config := data.(map[string]interface{})
+	return config, err
 }

@@ -32,7 +32,7 @@ type releaseDebianOpts struct {
 }
 
 func releaseDebianPPA(opts *releaseDebianOpts) error {
-	for _, codename := range []string{"bionic", "focal"} {
+	for _, codename := range []string{"bionic", "focal", "groovy"} {
 		err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, codename).Run()
 		if err != nil {
 			return err
@@ -76,8 +76,8 @@ func ReleaseDebianPPASnapshot() error {
 	})
 }
 
-// ReleaseDebianPPA releases to node-testnet2 PPA.
-func ReleaseDebianPPA() error {
+// ReleaseDebianPPAPreRelease releases to node-pre PPA (which is then manually promoted to node PPA)
+func ReleaseDebianPPAPreRelease() error {
 	err := env.EnsureEnvVars(
 		env.TagBuild,
 		env.BuildVersion,
@@ -87,12 +87,12 @@ func ReleaseDebianPPA() error {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
-		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPA action...")
+		log.Info().Msg("Not a tag build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
 
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:  "node-testnet2",
+		repository:  "node-pre",
 		version:     ppaVersion(env.Str(env.BuildVersion)),
 		buildNumber: env.Str(env.BuildNumber),
 	})

@@ -37,13 +37,13 @@ func buildMockMetricsSender(mockResponse error) *mockMetricsSender {
 	return &mockMetricsSender{mockResponse: mockResponse, successSent: false}
 }
 
-func (sender *mockMetricsSender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) {
+func (sender *mockMetricsSender) SendNATMappingSuccessEvent(id, stage string, gateways []map[string]string) {
 	sender.successSent = true
 	sender.stageSent = stage
 	sender.gatewaysSent = gateways
 }
 
-func (sender *mockMetricsSender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) {
+func (sender *mockMetricsSender) SendNATMappingFailEvent(id, stage string, gateways []map[string]string, err error) {
 	sender.failErrorSent = err
 	sender.stageSent = stage
 	sender.gatewaysSent = gateways

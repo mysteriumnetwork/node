@@ -31,10 +31,11 @@ import (
 )
 
 type api interface {
-	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (pilvytis.OrderResponse, error)
-	GetPaymentOrder(id identity.Identity, oid uint64) (pilvytis.OrderResponse, error)
+	CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*pilvytis.OrderResponse, error)
+	GetPaymentOrder(id identity.Identity, oid uint64) (*pilvytis.OrderResponse, error)
 	GetPaymentOrders(id identity.Identity) ([]pilvytis.OrderResponse, error)
 	GetPaymentOrderCurrencies() ([]string, error)
+	GetPaymentOrderOptions() (*pilvytis.PaymentOrderOptions, error)
 }
 
 type pilvytisEndpoint struct {
@@ -91,7 +92,7 @@ func (e *pilvytisEndpoint) CreatePaymentOrder(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrderResponse(resp), w)
+	utils.WriteAsJSON(contract.NewOrderResponse(*resp), w)
 }
 
 // GetPaymentOrder returns a payment order which maches a given ID and identity.
@@ -139,7 +140,7 @@ func (e *pilvytisEndpoint) GetPaymentOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	utils.WriteAsJSON(contract.NewOrderResponse(resp), w)
+	utils.WriteAsJSON(contract.NewOrderResponse(*resp), w)
 }
 
 // GetPaymentOrder returns a payment order which maches a given ID and identity.
@@ -202,11 +203,37 @@ func (e *pilvytisEndpoint) GetPaymentOrderCurrencies(w http.ResponseWriter, r *h
 	utils.WriteAsJSON(resp, w)
 }
 
+// GetPaymentOrderOptions returns recommendation on myst amounts
+//
+// swagger:operation GET /payment-order-options Order GetPaymentOrderOptions
+// ---
+// summary: Get payment order options
+// description: Includes minimum amount of myst required when topping up and suggested amounts
+// responses:
+//   200:
+//     description: PaymentOrderOptions object
+//     schema:
+//       "$ref": "#/definitions/PaymentOrderOptions"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (e *pilvytisEndpoint) GetPaymentOrderOptions(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	resp, err := e.api.GetPaymentOrderOptions()
+	if err != nil {
+		utils.SendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(contract.ToPaymentOrderOptions(resp), w)
+}
+
 // AddRoutesForPilvytis adds the pilvytis routers to the given router.
 func AddRoutesForPilvytis(router *httprouter.Router, pilvytis api) {
 	pil := NewPilvytisEndpoint(pilvytis)
 	router.POST("/identities/:id/payment-order", pil.CreatePaymentOrder)
 	router.GET("/identities/:id/payment-order/:order_id", pil.GetPaymentOrder)
 	router.GET("/identities/:id/payment-order", pil.GetPaymentOrders)
+	router.GET("/payment-order-options", pil.GetPaymentOrderOptions)
 	router.GET("/payment-order-currencies", pil.GetPaymentOrderCurrencies)
 }

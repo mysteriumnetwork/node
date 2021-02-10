@@ -25,6 +25,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
+
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -130,6 +132,12 @@ var (
 		}(),
 		Value: zerolog.DebugLevel.String(),
 	}
+	// FlagVerbose enables verbose logging.
+	FlagVerbose = cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "Enable verbose logging",
+		Value: false,
+	}
 	// FlagOpenvpnBinary openvpn binary to use for OpenVPN connections.
 	FlagOpenvpnBinary = cli.StringFlag{
 		Name:  "openvpn.binary",
@@ -149,7 +157,7 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			FlagQualityType.Name,
 		),
-		Value: "https://testnet2-quality.mysterium.network/api/v1",
+		Value: "https://testnet2-quality.mysterium.network/api/v2",
 	}
 	// FlagTequilapiAddress IP address of interface to listen for incoming connections.
 	FlagTequilapiAddress = cli.StringFlag{
@@ -211,18 +219,34 @@ var (
 		Usage: "Marks vendor (distributor) of the node for collecting statistics. " +
 			"3rd party vendors may use their own identifier here.",
 	}
-	//FlagP2PListenPorts sets manual ports for p2p connections.
+	// FlagP2PListenPorts sets manual ports for p2p connections.
 	FlagP2PListenPorts = cli.StringFlag{
 		Name:  "p2p.listen.ports",
 		Usage: "Range of P2P listen ports (e.g. 51820:52075), value of 0:0 means disabled",
 		Value: "0:0",
 	}
 
-	//FlagConsumer sets to run as consumer only which allows to skip bootstrap for some of the dependencies.
+	// FlagConsumer sets to run as consumer only which allows to skip bootstrap for some of the dependencies.
 	FlagConsumer = cli.BoolFlag{
 		Name:  "consumer",
 		Usage: "Run in consumer mode only.",
 		Value: false,
+	}
+
+	// FlagDefaultCurrency sets the default currency used in node
+	FlagDefaultCurrency = cli.StringFlag{
+		Name:   "default-currency",
+		Usage:  "Default currency used in node and apps that depend on it",
+		Value:  metadata.DefaultNetwork.DefaultCurrency,
+		Hidden: true, // Users are not meant to touch or see this.
+	}
+
+	// FlagDocsURL sets the URL which leads to node documentation.
+	FlagDocsURL = cli.StringFlag{
+		Name:   "docs-url",
+		Usage:  "URL leading to node documentation",
+		Value:  "https://docs.mysterium.network",
+		Hidden: true,
 	}
 )
 
@@ -235,11 +259,11 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsLocation(flags)
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsTransactor(flags)
-	RegisterFlagsHermes(flags)
 	RegisterFlagsPayments(flags)
 	RegisterFlagsPolicy(flags)
 	RegisterFlagsMMN(flags)
 	RegisterFlagsPilvytis(flags)
+	RegisterFlagsChains(flags)
 
 	*flags = append(*flags,
 		&FlagBindAddress,
@@ -257,6 +281,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagKeystoreLightweight,
 		&FlagLogHTTP,
 		&FlagLogLevel,
+		&FlagVerbose,
 		&FlagOpenvpnBinary,
 		&FlagQualityType,
 		&FlagQualityAddress,
@@ -272,6 +297,8 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagVendorID,
 		&FlagP2PListenPorts,
 		&FlagConsumer,
+		&FlagDefaultCurrency,
+		&FlagDocsURL,
 	)
 
 	return nil
@@ -284,11 +311,11 @@ func ParseFlagsNode(ctx *cli.Context) {
 	ParseFlagsLocation(ctx)
 	ParseFlagsNetwork(ctx)
 	ParseFlagsTransactor(ctx)
-	ParseFlagsHermes(ctx)
 	ParseFlagsPayments(ctx)
 	ParseFlagsPolicy(ctx)
 	ParseFlagsMMN(ctx)
 	ParseFlagPilvytis(ctx)
+	ParseFlagsChains(ctx)
 
 	Current.ParseStringFlag(ctx, FlagBindAddress)
 	Current.ParseStringSliceFlag(ctx, FlagDiscoveryType)
@@ -304,6 +331,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagShaperEnabled)
 	Current.ParseBoolFlag(ctx, FlagKeystoreLightweight)
 	Current.ParseBoolFlag(ctx, FlagLogHTTP)
+	Current.ParseBoolFlag(ctx, FlagVerbose)
 	Current.ParseStringFlag(ctx, FlagLogLevel)
 	Current.ParseStringFlag(ctx, FlagOpenvpnBinary)
 	Current.ParseStringFlag(ctx, FlagQualityAddress)
@@ -320,6 +348,8 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagVendorID)
 	Current.ParseStringFlag(ctx, FlagP2PListenPorts)
 	Current.ParseBoolFlag(ctx, FlagConsumer)
+	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
+	Current.ParseStringFlag(ctx, FlagDocsURL)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

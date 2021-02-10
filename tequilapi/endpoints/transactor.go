@@ -45,14 +45,22 @@ type Transactor interface {
 	DecreaseStake(id string, chainID int64, amount, transactorFee *big.Int) error
 	GetTokenReward(referralToken string) (registry.TokenRewardResponse, error)
 	GetReferralToken(id common.Address) (string, error)
+	ReferralTokenAvailable(id common.Address) error
 }
 
 // promiseSettler settles the given promises
 type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
-	SettleWithBeneficiary(chainID int64, id identity.Identity, beneficiary, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
+}
+
+type addressProvider interface {
+	GetActiveHermes(chainID int64) (common.Address, error)
+}
+
+type beneficiarySaver interface {
+	SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error
 }
 
 type settlementHistoryProvider interface {
@@ -61,18 +69,29 @@ type settlementHistoryProvider interface {
 
 type transactorEndpoint struct {
 	transactor                Transactor
+	identityRegistry          identityRegistry
 	promiseSettler            promiseSettler
 	settlementHistoryProvider settlementHistoryProvider
-	hermesAddress             common.Address
+	addressProvider           addressProvider
+	bhandler                  beneficiarySaver
 }
 
 // NewTransactorEndpoint creates and returns transactor endpoint
-func NewTransactorEndpoint(transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesID common.Address) *transactorEndpoint {
+func NewTransactorEndpoint(
+	transactor Transactor,
+	identityRegistry identityRegistry,
+	promiseSettler promiseSettler,
+	settlementHistoryProvider settlementHistoryProvider,
+	addressProvider addressProvider,
+	bhander beneficiarySaver,
+) *transactorEndpoint {
 	return &transactorEndpoint{
 		transactor:                transactor,
+		identityRegistry:          identityRegistry,
 		promiseSettler:            promiseSettler,
 		settlementHistoryProvider: settlementHistoryProvider,
-		hermesAddress:             hermesID,
+		addressProvider:           addressProvider,
+		bhandler:                  bhander,
 	}
 }
 
@@ -107,7 +126,13 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 		return
 	}
 
-	hermesFees, err := te.promiseSettler.GetHermesFee(chainID, te.hermesAddress)
+	hermes, err := te.addressProvider.GetActiveHermes(chainID)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	hermesFees, err := te.promiseSettler.GetHermesFee(chainID, hermes)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -224,7 +249,8 @@ func (te *transactorEndpoint) settle(request *http.Request, settler func(int64, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	identity := params.ByName("id")
+	id := identity.FromAddress(params.ByName("id"))
+	chainID := config.GetInt64(config.FlagChainID)
 
 	req := &contract.IdentityRegisterRequest{}
 
@@ -239,6 +265,19 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
+	registrationStatus, err := te.identityRegistry.GetRegistrationStatus(chainID, id)
+	if err != nil {
+		log.Err(err).Stack().Msgf("could not check registration status for ID: %s, %+v", id.Address, req)
+		utils.SendError(resp, errors.Wrap(err, "could not check registration status"), http.StatusInternalServerError)
+		return
+	}
+	switch registrationStatus {
+	case registry.InProgress, registry.Registered:
+		log.Info().Msgf("identity %q registration is in status %s, aborting...", id.Address, registrationStatus)
+		utils.SendErrorMessage(resp, "Identity already registered", http.StatusConflict)
+		return
+	}
+
 	// set stake to referral reward if registering provider with token
 	if req.ReferralToken != nil {
 		reward, err := te.transactor.GetTokenReward(*req.ReferralToken)
@@ -249,9 +288,15 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		req.Stake = reward.Reward
 	}
 
-	err = te.transactor.RegisterIdentity(identity, req.Stake, req.Fee, req.Beneficiary, config.GetInt64(config.FlagChainID), req.ReferralToken)
+	rf, err := te.transactor.FetchRegistrationFees(chainID)
 	if err != nil {
-		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", identity, req)
+		utils.SendError(resp, fmt.Errorf("failed to get registration fees %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	err = te.transactor.RegisterIdentity(id.Address, req.Stake, rf.Fee, req.Beneficiary, chainID, req.ReferralToken)
+	if err != nil {
+		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
 	}
@@ -269,8 +314,7 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 		return
 	}
 
-	chainID := config.GetInt64(config.FlagChainID)
-	err = te.promiseSettler.SettleWithBeneficiary(chainID, identity.FromAddress(id), common.HexToAddress(req.Beneficiary), common.HexToAddress(req.HermesID))
+	err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary))
 	if err != nil {
 		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
 		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
@@ -351,7 +395,13 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 	}
 
 	chainID := config.GetInt64(config.FlagChainID)
-	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, req.TransactorFee)
+	fees, err := te.transactor.FetchStakeDecreaseFee(chainID)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed get stake decrease fee"), http.StatusInternalServerError)
+		return
+	}
+
+	err = te.transactor.DecreaseStake(req.ID, chainID, req.Amount, fees.Fee)
 	if err != nil {
 		log.Err(err).Msgf("Failed decreases stake request for ID: %s, %+v", req.ID, req)
 		utils.SendError(resp, errors.Wrap(err, "failed decreases stake request"), http.StatusInternalServerError)
@@ -424,8 +474,8 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, hermesAddress common.Address) {
-	te := NewTransactorEndpoint(transactor, promiseSettler, settlementHistoryProvider, hermesAddress)
+func AddRoutesForTransactor(router *httprouter.Router, identityRegistry identityRegistry, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, addressProvider addressProvider, bhandler beneficiarySaver) {
+	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bhandler)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiary)
 	router.GET("/transactor/fees", te.TransactorFees)

@@ -456,41 +456,26 @@
         }
       }
     },
-    "/exchange/dai/myst": {
+    "/exchange/myst/{currency}": {
       "get": {
-        "description": "Returns the dai price in myst",
+        "description": "Returns the myst price in the given currency (dai is deprecated)",
         "tags": [
           "Exchange"
         ],
-        "summary": "Returns the dai price in myst",
-        "operationId": "DaiToMyst",
-        "responses": {
-          "200": {
-            "description": "Dai price in myst",
-            "schema": {
-              "$ref": "#/definitions/CurrencyExchangeDTO"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorMessageDTO"
-            }
+        "summary": "Returns the myst price in the given currency",
+        "operationId": "ExchangeMyst",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Currency to which myst is converted",
+            "name": "currency",
+            "in": "path",
+            "required": true
           }
-        }
-      }
-    },
-    "/exchange/myst/dai": {
-      "get": {
-        "description": "Returns the myst price in dai",
-        "tags": [
-          "Exchange"
         ],
-        "summary": "Returns the myst price in dai",
-        "operationId": "MystToDai",
         "responses": {
           "200": {
-            "description": "Myst price in dai",
+            "description": "Myst price in given currency",
             "schema": {
               "$ref": "#/definitions/CurrencyExchangeDTO"
             }
@@ -1033,6 +1018,37 @@
         }
       }
     },
+    "/identities/{id}/referral-available": {
+      "get": {
+        "description": "Verifies user's eligibility and the presence of an applicable public campaign",
+        "tags": [
+          "Referral",
+          "availability"
+        ],
+        "summary": "Checks if the user can obtain a referral token",
+        "operationId": "check",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Identity for which to get a token",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/identities/{id}/register": {
       "post": {
         "description": "Registers identity on Mysterium Network smart contracts using Transactor",
@@ -1330,6 +1346,30 @@
         }
       }
     },
+    "/payment-order-options": {
+      "get": {
+        "description": "Includes minimum amount of myst required when topping up and suggested amounts",
+        "tags": [
+          "Order"
+        ],
+        "summary": "Get payment order options",
+        "operationId": "GetPaymentOrderOptions",
+        "responses": {
+          "200": {
+            "description": "PaymentOrderOptions object",
+            "schema": {
+              "$ref": "#/definitions/PaymentOrderOptions"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/proposals": {
       "get": {
         "description": "Returns list of proposals filtered by provider id",
@@ -1367,6 +1407,18 @@
             "type": "boolean",
             "description": "if set to true, fetches the connection success metrics for nodes. False by default.",
             "name": "fetch_metrics",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "If given will filter proposals by node location type.",
+            "name": "location_type",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "If given will filter proposals by node location country.",
+            "name": "location_country",
             "in": "query"
           }
         ],
@@ -1917,6 +1969,59 @@
         }
       }
     },
+    "/terms": {
+      "get": {
+        "description": "Return an object with the current terms config",
+        "tags": [
+          "Terms"
+        ],
+        "summary": "Get terms",
+        "operationId": "getTerms",
+        "responses": {
+          "200": {
+            "description": "Terms object",
+            "schema": {
+              "$ref": "#/definitions/TermsResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Takes the given data and tries to update terms agreement config.",
+        "tags": [
+          "Terms"
+        ],
+        "summary": "Update terms agreement",
+        "operationId": "updateTerms",
+        "parameters": [
+          {
+            "description": "Required data to update terms",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/TermsRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/transactor/fees": {
       "get": {
         "description": "Returns fees applied by Transactor",
@@ -2377,14 +2482,14 @@
       "type": "object",
       "title": "CurrencyExchangeDTO the value of a given currency.",
       "properties": {
+        "amount": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Amount"
+        },
         "currency": {
           "type": "string",
           "x-go-name": "Currency"
-        },
-        "value": {
-          "type": "number",
-          "format": "double",
-          "x-go-name": "Value"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2404,9 +2509,6 @@
         "id": {
           "type": "string",
           "x-go-name": "ID"
-        },
-        "transactor_fee": {
-          "$ref": "#/definitions/Int"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -2628,16 +2730,13 @@
           "type": "string",
           "x-go-name": "Beneficiary"
         },
-        "fee": {
-          "$ref": "#/definitions/Int"
-        },
-        "stake": {
-          "$ref": "#/definitions/Int"
-        },
-        "token": {
+        "referral_token": {
           "description": "Token: referral token, if the user has one",
           "type": "string",
           "x-go-name": "ReferralToken"
+        },
+        "stake": {
+          "$ref": "#/definitions/Int"
         }
       },
       "x-go-name": "IdentityRegisterRequest",
@@ -2931,6 +3030,11 @@
       "type": "object",
       "title": "PaymentChannelDTO represents represents opened payment channel between identity and hermes.",
       "properties": {
+        "beneficiary": {
+          "description": "Beneficiary - eth wallet address",
+          "type": "string",
+          "x-go-name": "Beneficiary"
+        },
         "earnings": {
           "$ref": "#/definitions/Int"
         },
@@ -2969,6 +3073,26 @@
         "type": {
           "type": "string",
           "x-go-name": "Type"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "PaymentOrderOptions": {
+      "description": "PaymentOrderOptions represents pilvytis payment order options",
+      "type": "object",
+      "properties": {
+        "minimum": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Minimum"
+        },
+        "suggested": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "x-go-name": "Suggested"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3577,10 +3701,7 @@
       "title": "SettlementDTO represents the settlement object.",
       "properties": {
         "amount": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "Amount",
-          "example": 500000
+          "$ref": "#/definitions/Int"
         },
         "beneficiary": {
           "type": "string",
@@ -3591,6 +3712,9 @@
           "type": "string",
           "x-go-name": "ChannelAddress",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "fees": {
+          "$ref": "#/definitions/Int"
         },
         "hermes_id": {
           "type": "string",
@@ -3649,6 +3773,55 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "TotalPages"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TermsRequest": {
+      "type": "object",
+      "title": "TermsRequest object is accepted by terms endpoints.",
+      "properties": {
+        "agreed_consumer": {
+          "type": "boolean",
+          "x-go-name": "AgreedConsumer",
+          "example": false
+        },
+        "agreed_provider": {
+          "type": "boolean",
+          "x-go-name": "AgreedProvider",
+          "example": false
+        },
+        "agreed_version": {
+          "type": "string",
+          "x-go-name": "AgreedVersion",
+          "example": "0.0.27"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "TermsResponse": {
+      "type": "object",
+      "title": "TermsResponse object is returned by terms endpoints.",
+      "properties": {
+        "agreed_consumer": {
+          "type": "boolean",
+          "x-go-name": "AgreedConsumer",
+          "example": false
+        },
+        "agreed_provider": {
+          "type": "boolean",
+          "x-go-name": "AgreedProvider",
+          "example": false
+        },
+        "agreed_version": {
+          "type": "string",
+          "x-go-name": "AgreedVersion",
+          "example": "0.0.27"
+        },
+        "current_version": {
+          "type": "string",
+          "x-go-name": "CurrentVersion",
+          "example": "0.0.27"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

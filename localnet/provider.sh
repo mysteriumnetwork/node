@@ -23,7 +23,7 @@ exec /node/build/myst/myst \
   --transactor.channel-implementation=0x599d43715DF3070f83355D9D90AE62c159E62A75 \
   --hermes.hermes-id=0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8 \
   --transactor.address=http://transactor:8888/api/v1 \
-  --quality.address=http://morqa:8085/api/v1 \
+  --quality.address=http://morqa:8085/api/v2 \
   --keystore.lightweight service \
   --agreed-terms-and-conditions \
   --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5 \

@@ -19,16 +19,16 @@ package endpoints
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_MystToDai(t *testing.T) {
+func Test_ExchangeMyst(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
@@ -36,67 +36,40 @@ func Test_MystToDai(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	em := &exchangeMock{
-		valToReturn: 1.5,
+	me := &mechangeMock{
+		vals: map[string]float64{
+			"BTC": 1.0,
+		},
 	}
 
+	handlerFunc := NewExchangeEndpoint(me).ExchangeMyst
+	// Exchange to BTC green path
 	resp := httptest.NewRecorder()
-	handlerFunc := NewExchangeEndpoint(em).MystToDai
-	handlerFunc(resp, req, nil)
-
+	handlerFunc(resp, req, httprouter.Params{{
+		Key:   "currency",
+		Value: "btc",
+	}})
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	parsedResponse := contract.CurrencyExchangeDTO{}
 	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
 	assert.Nil(t, err)
 
-	assert.Equal(t, em.valToReturn, parsedResponse.Value)
-	assert.Equal(t, "DAI", parsedResponse.Currency)
+	assert.Equal(t, me.vals["BTC"], parsedResponse.Amount)
+	assert.Equal(t, "BTC", parsedResponse.Currency)
 
-	em.errToReturn = errors.New("boom")
+	// No such currency returns 404
 	resp = httptest.NewRecorder()
-	handlerFunc(resp, req, nil)
-	assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
+	handlerFunc(resp, req, httprouter.Params{{
+		Key:   "currency",
+		Value: "notACurrency",
+	}})
+	assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
 }
 
-func Test_DaiToMyst(t *testing.T) {
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
-		nil,
-	)
-	assert.Nil(t, err)
-
-	em := &exchangeMock{
-		valToReturn: 1.5,
-	}
-
-	resp := httptest.NewRecorder()
-	handlerFunc := NewExchangeEndpoint(em).DaiToMyst
-	handlerFunc(resp, req, nil)
-
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-	parsedResponse := contract.CurrencyExchangeDTO{}
-	err = json.Unmarshal(resp.Body.Bytes(), &parsedResponse)
-	assert.Nil(t, err)
-
-	assert.Equal(t, em.valToReturn, parsedResponse.Value)
-	assert.Equal(t, "MYST", parsedResponse.Currency)
-
-	em.errToReturn = errors.New("boom")
-	resp = httptest.NewRecorder()
-	handlerFunc(resp, req, nil)
-	assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
+type mechangeMock struct {
+	vals map[string]float64
 }
 
-type exchangeMock struct {
-	valToReturn float64
-	errToReturn error
-}
-
-func (me *exchangeMock) DaiToMyst() (float64, error) {
-	return me.valToReturn, me.errToReturn
-}
-
-func (me *exchangeMock) MystToDai() (float64, error) {
-	return me.valToReturn, me.errToReturn
+func (m *mechangeMock) GetMystExchangeRate() (map[string]float64, error) {
+	return m.vals, nil
 }

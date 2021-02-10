@@ -19,13 +19,15 @@ package requests
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -107,24 +109,36 @@ func (c *HTTPClient) resolveClient() *http.Client {
 
 // ParseResponseJSON parses http.Response into given struct.
 func ParseResponseJSON(response *http.Response, dto interface{}) error {
-	responseJSON, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
+	err := json.NewDecoder(response.Body).Decode(dto)
+	if err == io.EOF {
+		return nil
 	}
+	return err
+}
 
-	err = json.Unmarshal(responseJSON, dto)
-	if err != nil {
-		return err
-	}
+// ErrorHTTP represent HTTP error with metadata.
+type ErrorHTTP struct {
+	Code     int
+	Status   string
+	Url      *url.URL
+	response []byte
+}
 
-	return nil
+// Error returns string equivalent for error.
+func (e *ErrorHTTP) Error() string {
+	return fmt.Sprintf("server response invalid: %s (%s)%s", e.Status, e.Url, e.response)
 }
 
 // ParseResponseError parses http.Response error.
 func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		body, _ := ioutil.ReadAll(response.Body)
-		return errors.Errorf("server response invalid: %s (%s)%s", response.Status, response.Request.URL, body)
+		return &ErrorHTTP{
+			Code:     response.StatusCode,
+			Status:   response.Status,
+			Url:      response.Request.URL,
+			response: body,
+		}
 	}
 
 	return nil

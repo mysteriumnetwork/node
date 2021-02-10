@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -32,7 +33,6 @@ type ConsumerConfig interface{}
 // Connection represents a connection
 type Connection interface {
 	Start(context.Context, ConnectOptions) error
-	Wait() error
 	Stop()
 	GetConfig() (ConsumerConfig, error)
 	State() <-chan connectionstate.State

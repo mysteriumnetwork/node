@@ -31,6 +31,7 @@ func NewPaymentChannelDTO(channel pingpong.HermesChannel) PaymentChannelDTO {
 		HermesID:      channel.HermesID.Hex(),
 		Earnings:      channel.UnsettledBalance(),
 		EarningsTotal: channel.LifetimeBalance(),
+		Beneficiary:   channel.Beneficiary.Hex(),
 	}
 }
 
@@ -54,4 +55,7 @@ type PaymentChannelDTO struct {
 	// Earnings of all history
 	// example: 19449034049997187
 	EarningsTotal *big.Int `json:"earnings_total"`
+
+	// Beneficiary - eth wallet address
+	Beneficiary string `json:"beneficiary"`
 }

@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/cmd/commands/license"
+	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -46,17 +46,17 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		ArgsUsage: "comma separated list of services to start",
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
-			if !ctx.Bool(config.FlagAgreedTermsConditions.Name) {
-				printTermWarning(licenseCommandName)
-				os.Exit(2)
-			}
-
 			quit := make(chan error)
 			config.ParseFlagsServiceStart(ctx)
 			config.ParseFlagsServiceOpenvpn(ctx)
 			config.ParseFlagsServiceWireguard(ctx)
 			config.ParseFlagsServiceNoop(ctx)
 			config.ParseFlagsNode(ctx)
+
+			if err := hasAcceptedTOS(ctx); err != nil {
+				clio.PrintTOSError(err)
+				os.Exit(2)
+			}
 
 			nodeOptions := node.GetOptions()
 			nodeOptions.Discovery.FetchEnabled = false
@@ -113,6 +113,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
+	sc.tryRememberTOS(ctx, sc.errorChannel)
 	providerID := sc.unlockIdentity(
 		ctx.String(config.FlagIdentity.Name),
 		ctx.String(config.FlagIdentityPassphrase.Name),
@@ -154,6 +155,35 @@ func (sc *serviceCommand) unlockIdentity(id, passphrase string) string {
 	}
 }
 
+func (sc *serviceCommand) tryRememberTOS(ctx *cli.Context, errCh chan error) {
+	if !ctx.Bool(config.FlagAgreedTermsConditions.Name) {
+		return
+	}
+
+	doUpdate := func() {
+		t := true
+		for i := 0; i < 5; i++ {
+			if err := sc.tequilapi.UpdateTerms(contract.TermsRequest{
+				AgreedProvider: &t,
+				AgreedConsumer: &t,
+				AgreedVersion:  metadata.CurrentTermsVersion,
+			}); err == nil {
+				return
+			}
+			time.Sleep(time.Second * 2)
+		}
+	}
+
+	go func() {
+		select {
+		case <-errCh:
+			return
+		default:
+			doUpdate()
+		}
+	}()
+}
+
 func (sc *serviceCommand) runService(request contract.ServiceStartRequest) {
 	_, err := sc.tequilapi.ServiceStart(request)
 	if err != nil {
@@ -161,12 +191,20 @@ func (sc *serviceCommand) runService(request contract.ServiceStartRequest) {
 	}
 }
 
-func printTermWarning(licenseCommandName string) {
-	fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
-		"run program with 'myst "+licenseCommandName+" --"+license.FlagShowWarranty.Name+"' option",
-		"run program with 'myst "+licenseCommandName+" --"+license.FlagShowConditions.Name+"' option",
-	)))
-	fmt.Println()
+func hasAcceptedTOS(ctx *cli.Context) error {
+	if ctx.Bool(config.FlagAgreedTermsConditions.Name) {
+		return nil
+	}
 
-	fmt.Println("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag")
+	agreed := config.Current.GetBool(contract.TermsProviderAgreed)
+	if !agreed {
+		return errors.New("You must agree with provider terms of use in order to use this command")
+	}
+
+	version := config.Current.GetString(contract.TermsVersion)
+	if version != metadata.CurrentTermsVersion {
+		return fmt.Errorf("You've agreed to terms of use version %s, but version %s is required", version, metadata.CurrentTermsVersion)
+	}
+
+	return nil
 }

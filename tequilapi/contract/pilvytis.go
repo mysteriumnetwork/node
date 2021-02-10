@@ -68,7 +68,7 @@ type OrderResponse struct {
 func NewOrderResponse(r pilvytis.OrderResponse) OrderResponse {
 	return OrderResponse{
 		ID:              r.ID,
-		Status:          r.Status,
+		Status:          string(r.Status),
 		Identity:        r.Identity,
 		MystAmount:      r.MystAmount,
 		PriceAmount:     r.PriceAmount,

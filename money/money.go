@@ -20,6 +20,8 @@ package money
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/mysteriumnetwork/node/config"
 )
 
 // Money holds the currency type and amount
@@ -28,14 +30,26 @@ type Money struct {
 	Currency Currency `json:"currency,omitempty"`
 }
 
-// NewMoney returns a new instance of Money.
-// The money is a representation of myst in a uint64 form, with the decimal part expanded.
-// This means, that one myst is equivalent to 10 0000 000.
-func NewMoney(amount *big.Int, currency Currency) Money {
-	return Money{amount, currency}
+// New returns a new instance of Money.
+// Expected `amount` value for 1 myst is equal to 1_000_000_000_000_000_000.
+// It also allows for an optional currency value to be passed,
+// if one is not passed, default config value is used.
+func New(amount *big.Int, currency ...Currency) Money {
+	m := Money{
+		Amount: amount,
+	}
+
+	if len(currency) > 0 {
+		m.Currency = currency[0]
+	} else {
+		m.Currency = Currency(config.GetString(config.FlagDefaultCurrency))
+	}
+
+	return m
 }
 
-// String converts struct to string
+// String converts Money struct into a string
+// which is represented by a float64 with 6 number precision.
 func (value Money) String() string {
 	amount := new(big.Float).SetInt(value.Amount)
 	size := new(big.Float).SetInt(MystSize)

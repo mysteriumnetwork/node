@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -43,7 +44,7 @@ func (c *cliApp) identities(argsString string) {
 	}, "\n")
 
 	if len(argsString) == 0 {
-		info(usage)
+		clio.Info(usage)
 		return
 	}
 
@@ -69,7 +70,7 @@ func (c *cliApp) identities(argsString string) {
 	case "referralcode":
 		c.getReferralCode(actionArgs)
 	default:
-		warnf("Unknown sub-command '%s'\n", argsString)
+		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
 	}
 }
@@ -78,7 +79,7 @@ const usageListIdentities = "list"
 
 func (c *cliApp) listIdentities(args []string) {
 	if len(args) > 0 {
-		info("Usage: " + usageListIdentities)
+		clio.Info("Usage: " + usageListIdentities)
 		return
 	}
 	ids, err := c.tequilapi.GetIdentities()
@@ -88,7 +89,7 @@ func (c *cliApp) listIdentities(args []string) {
 	}
 
 	for _, id := range ids {
-		status("+", id.Address)
+		clio.Status("+", id.Address)
 	}
 }
 
@@ -96,28 +97,28 @@ const usageGetIdentity = "get <identity>"
 
 func (c *cliApp) getIdentity(actionArgs []string) {
 	if len(actionArgs) != 1 {
-		info("Usage: " + usageGetIdentity)
+		clio.Info("Usage: " + usageGetIdentity)
 		return
 	}
 
 	address := actionArgs[0]
 	identityStatus, err := c.tequilapi.Identity(address)
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return
 	}
-	info("Registration status:", identityStatus.RegistrationStatus)
-	info("Channel address:", identityStatus.ChannelAddress)
-	info(fmt.Sprintf("Balance: %s", money.NewMoney(identityStatus.Balance, money.CurrencyMyst)))
-	info(fmt.Sprintf("Earnings: %s", money.NewMoney(identityStatus.Earnings, money.CurrencyMyst)))
-	info(fmt.Sprintf("Earnings total: %s", money.NewMoney(identityStatus.EarningsTotal, money.CurrencyMyst)))
+	clio.Info("Registration Status:", identityStatus.RegistrationStatus)
+	clio.Info("Channel address:", identityStatus.ChannelAddress)
+	clio.Info(fmt.Sprintf("Balance: %s", money.New(identityStatus.Balance)))
+	clio.Info(fmt.Sprintf("Earnings: %s", money.New(identityStatus.Earnings)))
+	clio.Info(fmt.Sprintf("Earnings total: %s", money.New(identityStatus.EarningsTotal)))
 }
 
 const usageNewIdentity = "new [passphrase]"
 
 func (c *cliApp) newIdentity(args []string) {
 	if len(args) > 1 {
-		info("Usage: " + usageNewIdentity)
+		clio.Info("Usage: " + usageNewIdentity)
 		return
 	}
 	passphrase := identityDefaultPassphrase
@@ -127,17 +128,17 @@ func (c *cliApp) newIdentity(args []string) {
 
 	id, err := c.tequilapi.NewIdentity(passphrase)
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return
 	}
-	success("New identity created:", id.Address)
+	clio.Success("New identity created:", id.Address)
 }
 
 const usageUnlockIdentity = "unlock <identity> [passphrase]"
 
 func (c *cliApp) unlockIdentity(actionArgs []string) {
 	if len(actionArgs) < 1 {
-		info("Usage: " + usageUnlockIdentity)
+		clio.Info("Usage: " + usageUnlockIdentity)
 		return
 	}
 
@@ -147,30 +148,30 @@ func (c *cliApp) unlockIdentity(actionArgs []string) {
 		passphrase = actionArgs[1]
 	}
 
-	info("Unlocking", address)
+	clio.Info("Unlocking", address)
 	err := c.tequilapi.Unlock(address, passphrase)
 	if err != nil {
-		warn(err)
+		clio.Warn(err)
 		return
 	}
 
-	success(fmt.Sprintf("Identity %s unlocked.", address))
+	clio.Success(fmt.Sprintf("Identity %s unlocked.", address))
 }
 
 const usageRegisterIdentity = "register <identity> [stake] [beneficiary] [referralcode]"
 
 func (c *cliApp) registerIdentity(actionArgs []string) {
 	if len(actionArgs) < 1 || len(actionArgs) > 4 {
-		info("Usage: " + usageRegisterIdentity)
+		clio.Info("Usage: " + usageRegisterIdentity)
 		return
 	}
 
 	var address = actionArgs[0]
-	var stake *big.Int
+	stake := new(big.Int).SetInt64(0)
 	if len(actionArgs) >= 2 {
 		s, ok := new(big.Int).SetString(actionArgs[1], 10)
 		if !ok {
-			warn("could not parse stake")
+			clio.Warn("could not parse stake")
 		}
 		stake = s
 	}
@@ -184,38 +185,42 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		token = &actionArgs[3]
 	}
 
-	fees, err := c.tequilapi.GetTransactorFees()
+	err := c.tequilapi.RegisterIdentity(address, beneficiary, stake, token)
 	if err != nil {
-		warn(err)
+		clio.Warn(errors.Wrap(err, "could not register identity"))
 		return
 	}
 
-	err = c.tequilapi.RegisterIdentity(address, beneficiary, stake, fees.Registration, token)
-	if err != nil {
-		warn(errors.Wrap(err, "could not register identity"))
-		return
+	msg := "Registration started. Topup the identities channel to finish it."
+	if c.config.GetBoolByFlag(config.FlagTestnet2) || c.config.GetBoolByFlag(config.FlagTestnet) {
+		msg = "Registration successful, try to connect."
 	}
 
-	info("Registration successful, you can now connect.")
+	clio.Info(msg)
+	clio.Info(fmt.Sprintf("To explore additional information about the identity use: %s", usageGetIdentity))
 }
 
 const usageSettle = "settle <providerIdentity>"
 
 func (c *cliApp) settle(args []string) {
 	if len(args) != 1 {
-		info("Usage: " + usageSettle)
+		clio.Info("Usage: " + usageSettle)
 		fees, err := c.tequilapi.GetTransactorFees()
 		if err != nil {
-			warn("could not get transactor fee: ", err)
+			clio.Warn("could not get transactor fee: ", err)
 		}
 		trFee := new(big.Float).Quo(new(big.Float).SetInt(fees.Settlement), new(big.Float).SetInt(money.MystSize))
 		hermesFee := new(big.Float).Quo(new(big.Float).SetInt(big.NewInt(int64(fees.Hermes))), new(big.Float).SetInt(money.MystSize))
-		info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
-		info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
+		clio.Info(fmt.Sprintf("Transactor fee: %v MYST", trFee.String()))
+		clio.Info(fmt.Sprintf("Hermes fee: %v MYST", hermesFee.String()))
 		return
 	}
-	hermesID := config.GetString(config.FlagHermesID)
-	info("Waiting for settlement to complete")
+	hermesID, err := c.config.GetHermesID()
+	if err != nil {
+		clio.Warn("could not get hermes id: ", err)
+		return
+	}
+	clio.Info("Waiting for settlement to complete")
 	errChan := make(chan error)
 
 	go func() {
@@ -227,17 +232,17 @@ func (c *cliApp) settle(args []string) {
 		select {
 		case <-timeout:
 			fmt.Println()
-			warn("Settlement timed out")
+			clio.Warn("Settlement timed out")
 			return
 		case <-time.After(time.Millisecond * 500):
 			fmt.Print(".")
 		case err := <-errChan:
 			fmt.Println()
 			if err != nil {
-				warn("settlement failed: ", err.Error())
+				clio.Warn("settlement failed: ", err.Error())
 				return
 			}
-			info("settlement succeeded")
+			clio.Info("settlement succeeded")
 			return
 		}
 	}
@@ -247,54 +252,57 @@ const usageGetReferralCode = "referralcode <identity>"
 
 func (c *cliApp) getReferralCode(actionArgs []string) {
 	if len(actionArgs) != 1 {
-		info("Usage: " + usageGetReferralCode)
+		clio.Info("Usage: " + usageGetReferralCode)
 		return
 	}
 
 	address := actionArgs[0]
 	res, err := c.tequilapi.IdentityReferralCode(address)
 	if err != nil {
-		warn(errors.Wrap(err, "could not get referral token"))
+		clio.Warn(errors.Wrap(err, "could not get referral token"))
 		return
 	}
 
-	success(fmt.Sprintf("Your referral token is: %q", res.Token))
+	clio.Success(fmt.Sprintf("Your referral token is: %q", res.Token))
 }
 
 func (c *cliApp) setBeneficiary(actionArgs []string) {
 	const usageSetBeneficiary = "beneficiary <identity> <new beneficiary>"
 
 	if len(actionArgs) < 2 || len(actionArgs) > 3 {
-		info("Usage: " + usageSetBeneficiary)
+		clio.Info("Usage: " + usageSetBeneficiary)
 		return
 	}
 
 	address := actionArgs[0]
 	beneficiary := actionArgs[1]
-	hermesID := config.GetString(config.FlagHermesID)
-
-	err := c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
+	hermesID, err := c.config.GetHermesID()
 	if err != nil {
-		warn(errors.Wrap(err, "could not set beneficiary"))
+		clio.Warn(errors.Wrap(err, "could not get hermes id"))
+		return
+	}
+	err = c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
+	if err != nil {
+		clio.Warn(errors.Wrap(err, "could not set beneficiary"))
 		return
 	}
 
-	info("Waiting for new beneficiary to be set")
+	clio.Info("Waiting for new beneficiary to be set")
 	timeout := time.After(1 * time.Minute)
 
 	for {
 		select {
 		case <-timeout:
-			warn("Setting new beneficiary timed out")
+			clio.Warn("Setting new beneficiary timed out")
 			return
 		case <-time.After(time.Second):
 			data, err := c.tequilapi.Beneficiary(address)
 			if err != nil {
-				warn(err)
+				clio.Warn(err)
 			}
 
 			if strings.EqualFold(data.Beneficiary, beneficiary) {
-				success("New beneficiary address set")
+				clio.Success("New beneficiary address set")
 				return
 			}
 

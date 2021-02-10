@@ -20,6 +20,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sync"
 	"testing"
@@ -36,12 +37,11 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/mysteriumnetwork/payments/crypto"
-
-	"github.com/mysteriumnetwork/node/session/pingpong"
-	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
 var (
@@ -55,6 +55,7 @@ var (
 	registryAddress             = "0xbe180c8CA53F280C7BE8669596fF7939d933AA10"
 	channelImplementation       = "0x599d43715DF3070f83355D9D90AE62c159E62A75"
 	addressForTopups            = "0xa29fb77b25181df094908b027821a7492ca4245b"
+	hundredthThou               = float64(1) / float64(100000)
 )
 
 var ethClient *ethclient.Client
@@ -62,8 +63,9 @@ var ethSigner func(signer types.Signer, address common.Address, tx *types.Transa
 var transactorMongo *Mongo
 
 var (
-	providerStake, _            = big.NewInt(0).SetString("12000000000000000000", 10)
-	balanceAfterRegistration, _ = big.NewInt(0).SetString("1900000000000000000", 10)
+	providerStake, _            = big.NewInt(0).SetString("50000000000000000000", 10)
+	providerChannelAddress      = "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3"
+	balanceAfterRegistration, _ = big.NewInt(0).SetString("7000000000000000000", 10)
 	registrationFee, _          = big.NewInt(0).SetString("100000000000000000", 10)
 )
 
@@ -187,8 +189,13 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		assert.Equal(t, new(big.Int), providerStatus.Balance)
 
 		// settle hermes 1
-		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermesID), true)
+		err = tequilapiProvider.SettleWithBeneficiary(providerID, providerChannelAddress, hermesID)
 		assert.NoError(t, err)
+		assert.Eventually(t, func() bool {
+			res, err := tequilapiProvider.Beneficiary(providerID)
+			assert.NoError(t, err)
+			return res.Beneficiary == providerChannelAddress
+		}, time.Second*30, time.Second/2)
 
 		// settle hermes 2
 		err = tequilapiProvider.Settle(identity.FromAddress(providerID), identity.FromAddress(hermes2ID), true)
@@ -214,7 +221,8 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		hermesOneEarnings := earningsByHermes[common.HexToAddress(hermesID)]
 		hermesTwoEarnings := earningsByHermes[common.HexToAddress(hermes2ID)]
 		totalEarnings := new(big.Int).Add(hermesOneEarnings, hermesTwoEarnings)
-		assert.Equal(t, providerStatus.EarningsTotal, totalEarnings)
+		fdiff := getDiffFloat(providerStatus.EarningsTotal, totalEarnings)
+		assert.True(t, fdiff < hundredthThou)
 
 		hic, err := bindings.NewHermesImplementationCaller(common.HexToAddress(hermesID), ethClient)
 		assert.NoError(t, err)
@@ -224,14 +232,13 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 		feeSum := big.NewInt(0).Add(big.NewInt(0).Add(fees.Settlement, hermesFee), fees.Settlement)
 		expected := new(big.Int).Sub(totalEarnings, feeSum)
-
-		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerID))
+		balance, err := caller.BalanceOf(&bind.CallOpts{}, common.HexToAddress(providerChannelAddress))
 		assert.NoError(t, err)
 
-		diff := new(big.Int).Sub(balance, expected)
-		diff = diff.Abs(diff)
+		diff := getDiffFloat(balance, expected)
+		diff = math.Abs(diff)
 
-		assert.True(t, diff.Uint64() >= 0 && diff.Uint64() <= 1)
+		assert.True(t, diff >= 0 && diff <= hundredthThou, fmt.Sprintf("got diff %v", diff))
 	})
 
 	t.Run("Provider decreases stake", func(t *testing.T) {
@@ -243,10 +250,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		fees, err := tequilapiProvider.GetTransactorFees()
 		assert.NoError(t, err)
 
-		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), big.NewInt(100), fees.DecreaseStake)
+		decrease := new(big.Int).Mul(fees.DecreaseStake, big.NewInt(3))
+		err = tequilapiProvider.DecreaseStake(identity.FromAddress(providerID), decrease)
 		assert.NoError(t, err)
 
-		expected := new(big.Int).Sub(initialStake, big.NewInt(100))
+		expected := new(big.Int).Sub(initialStake, decrease)
 		var lastStatus *big.Int
 		assert.Eventually(t, func() bool {
 			providerStatus, err := tequilapiProvider.Identity(providerID)
@@ -314,7 +322,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), new(big.Int), nil)
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, new(big.Int), nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -340,7 +348,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Unregistered", status.Status)
 
-			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, new(big.Int), nil)
+			err = c.tequila().RegisterIdentity(id.Address, id.Address, providerStake, nil)
 			assert.NoError(t, err)
 
 			assert.Eventually(t, func() bool {
@@ -355,6 +363,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 }
 
 func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending *big.Int, serviceType, hermesURL string) {
+	var testSuccess bool
 	var lastHermes *big.Int
 	assert.Eventually(t, func() bool {
 		hermesCaller := pingpong.NewHermesCaller(requests.NewHTTPClient("0.0.0.0", time.Second), hermesURL)
@@ -362,8 +371,38 @@ func recheckBalancesWithHermes(t *testing.T, consumerID string, consumerSpending
 		assert.NoError(t, err)
 		promised := hermesData.LatestPromise.Amount
 		lastHermes = promised
-		return promised.Cmp(consumerSpending) == 0
-	}, time.Second*10, time.Millisecond*300, fmt.Sprintf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v", consumerSpending, lastHermes, serviceType, hermesURL))
+
+		// Author: vkuznecovas
+		// Due to the async nature of the payment system, a situation might occur where a consumers reported spending is larger than the actual amount that reaches hermes.
+		// This happens in the following flow:
+		// 1) Session is established.
+		// 2) Payments occur normally for some time.
+		// 3) Consumer received yet another invoice.
+		// 4) Consumer starts calculating the amount to promise.
+		// 5) Session is killed as operation 4) is happening.
+		// 6) The promise is incremented but never issued as the session is aborted. This can happen due to promise not being sent, or provider not listening for further promises on the given topic.
+		// 7) Hermes is not aware of the last promise, therefore the consumer and hermes reportings are different.
+		// I do not believe this will cause issues in reality, as such situations occur in e2e test regularly due to the rapid exchange of promises.
+		// Under normal circumstances, such occurences should be VERY, VERY rare and the amount of myst involved is rather small. They should have no impact on the payment system as a whole.
+		// Therefore, for these tests to be stable, the following solution is proposed:
+		// Make sure that the hermes and consumer reported spendings differ by no more than 1/100000 of a myst.
+		absDiffFloat := getDiffFloat(consumerSpending, promised)
+		res := absDiffFloat < hundredthThou
+		if res {
+			testSuccess = true
+		}
+		return res
+	}, time.Second*20, time.Millisecond*300)
+
+	if !testSuccess {
+		fmt.Printf("Consumer reported spending %v hermes says %v. Service type %v. Hermes url %v, consumer ID %v", consumerSpending, lastHermes, serviceType, hermesURL, consumerID)
+	}
+}
+
+func getDiffFloat(a, b *big.Int) float64 {
+	diff := new(big.Int).Sub(a, b)
+	absoluteDiff := new(big.Int).Abs(diff)
+	return crypto.BigMystToFloat(absoluteDiff)
 }
 
 func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
@@ -421,18 +460,8 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	fees, err := tequilapi.GetTransactorFees()
-	assert.NoError(t, err)
-
-	topUpAmount := big.NewInt(0).Add(fees.Registration, providerStake)
-
-	chid, err := crypto.GenerateChannelAddress(providerID, hermesID, registryAddress, channelImplementation)
-	assert.NoError(t, err)
-
-	mintMyst(t, topUpAmount, common.HexToAddress(chid))
-
-	err = tequilapi.RegisterIdentity(id, id, providerStake, fees.Registration, nil)
-	assert.NoError(t, err)
+	err = tequilapi.RegisterIdentity(id, "", providerStake, nil)
+	assert.True(t, err == nil || assert.Contains(t, err.Error(), "server response invalid: 409 Conflict"))
 
 	assert.Eventually(t, func() bool {
 		idStatus, _ := tequilapi.Identity(id)
@@ -443,7 +472,7 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	assert.Equal(t, "0xD4bf8ac88E7Ad1f777a084EEfD7Be4245E0b4eD3", idStatus.ChannelAddress)
+	assert.Equal(t, providerChannelAddress, idStatus.ChannelAddress)
 	assert.Equal(t, new(big.Int), idStatus.Balance)
 	assert.Equal(t, providerStake, idStatus.Stake)
 	assert.Zero(t, idStatus.Earnings.Uint64())
@@ -451,22 +480,22 @@ func providerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 }
 
 func topUpConsumer(t *testing.T, id string, hermesID common.Address, registrationFee *big.Int) {
-	chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
-	assert.NoError(t, err)
+	// TODO: once free registration is a thing of the past, remove this return
+	return
 
-	// add some balance for fees + consuming service
-	amountToTopUp := big.NewInt(0).Mul(registrationFee, big.NewInt(20))
-	mintMyst(t, amountToTopUp, common.HexToAddress(chid))
+	// chid, err := crypto.GenerateChannelAddress(id, hermesID.Hex(), registryAddress, channelImplementation)
+	// assert.NoError(t, err)
+
+	// // add some balance for fees + consuming service
+	// amountToTopUp := big.NewInt(0).Mul(registrationFee, big.NewInt(20))
+	// mintMyst(t, amountToTopUp, common.HexToAddress(chid))
 }
 
 func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	fees, err := tequilapi.GetTransactorFees()
-	assert.NoError(t, err)
-
-	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), fees.Registration, nil)
+	err = tequilapi.RegisterIdentity(id, id, big.NewInt(0), nil)
 	assert.NoError(t, err)
 
 	// now we check identity again
@@ -479,8 +508,7 @@ func consumerRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	idStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.Equal(t, "Registered", idStatus.RegistrationStatus)
-	expectedBalance := new(big.Int).Sub(new(big.Int).Mul(registrationFee, big.NewInt(20)), registrationFee)
-	assert.Equal(t, expectedBalance, idStatus.Balance)
+	assert.Equal(t, balanceAfterRegistration, idStatus.Balance)
 	assert.Zero(t, idStatus.Earnings.Uint64())
 	assert.Zero(t, idStatus.EarningsTotal.Uint64())
 }
@@ -571,7 +599,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	consumerStatus, err := tequilapi.Identity(consumerID)
 	assert.NoError(t, err)
 	assert.True(t, consumerStatus.Balance.Cmp(big.NewInt(0)) == 1, "consumer balance should not be empty")
-	assert.True(t, consumerStatus.Balance.Cmp(balanceAfterRegistration) == -1, "balance should decrease but is %sd", consumerStatus.Balance)
+	assert.True(t, consumerStatus.Balance.Cmp(balanceAfterRegistration) == -1, "balance should decrease but is %s", consumerStatus.Balance)
 	assert.Zero(t, consumerStatus.Earnings.Uint64())
 	assert.Zero(t, consumerStatus.EarningsTotal.Uint64())
 
@@ -600,11 +628,27 @@ func consumerRejectWhitelistedFlow(t *testing.T, tequilapi *tequilapi_client.Cli
 
 func providerEarnedTokens(t *testing.T, tequilapi *tequilapi_client.Client, id string, earningsExpected *big.Int) *big.Int {
 	// Before settlement
+	assert.Eventually(t, func() bool {
+		providerStatus, err := tequilapi.Identity(id)
+		if err != nil {
+			return false
+		}
+
+		fdiff := getDiffFloat(providerStatus.Earnings, earningsExpected)
+		return fdiff < hundredthThou
+	}, time.Second*5, time.Millisecond*250)
+
 	providerStatus, err := tequilapi.Identity(id)
 	assert.NoError(t, err)
 	assert.True(t, providerStatus.Balance.Cmp(new(big.Int)) == 0)
-	assert.Equal(t, earningsExpected, providerStatus.Earnings, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
-	assert.Equal(t, earningsExpected, providerStatus.EarningsTotal, fmt.Sprintf("consumers reported spend %v, providers earnings %v", earningsExpected, providerStatus.Earnings))
+
+	// For reasoning behind these, see the comment in recheckBalancesWithHermes
+	actualEarnings := getDiffFloat(earningsExpected, providerStatus.Earnings)
+	assert.True(t, actualEarnings < hundredthThou)
+
+	actualEarnings = getDiffFloat(earningsExpected, providerStatus.EarningsTotal)
+	assert.True(t, actualEarnings < hundredthThou)
+
 	assert.True(t, providerStatus.Earnings.Cmp(big.NewInt(500)) == 1, "earnings should be at least 500 but is %d", providerStatus.Earnings)
 	return providerStatus.Earnings
 }

@@ -46,6 +46,7 @@ type settlementHistoryStorage interface {
 type providerChannelStatusProvider interface {
 	SubscribeToPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error)
 	GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error)
+	CalculateHermesFee(chainID int64, hermesAddress common.Address, value *big.Int) (*big.Int, error)
 }
 
 type ks interface {
@@ -60,11 +61,16 @@ type transactor interface {
 	SettleAndRebalance(hermesID, providerID string, promise crypto.Promise) error
 	SettleWithBeneficiary(id, beneficiary, hermesID string, promise crypto.Promise) error
 	SettleIntoStake(hermesID, providerID string, promise crypto.Promise) error
+	FetchSettleFees(chainID int64) (registry.FeesResponse, error)
 }
 
 type hermesChannelProvider interface {
 	Get(chainID int64, id identity.Identity, hermesID common.Address) (HermesChannel, bool)
 	Fetch(chainID int64, id identity.Identity, hermesID common.Address) (HermesChannel, error)
+}
+
+type hermesCaller interface {
+	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
 }
 
 type receivedPromise struct {
@@ -92,6 +98,8 @@ type hermesPromiseSettler struct {
 	transactor                 transactor
 	channelProvider            hermesChannelProvider
 	settlementHistoryStorage   settlementHistoryStorage
+	hermesURLGetter            hermesURLGetter
+	hermesCallerFactory        HermesCallerFactory
 
 	// TODO: Consider adding chain ID to this as well.
 	currentState map[identity.Identity]settlementState
@@ -102,13 +110,12 @@ type hermesPromiseSettler struct {
 
 // HermesPromiseSettlerConfig configures the hermes promise settler accordingly.
 type HermesPromiseSettlerConfig struct {
-	HermesAddress        common.Address
 	Threshold            float64
 	MaxWaitForSettlement time.Duration
 }
 
 // NewHermesPromiseSettler creates a new instance of hermes promise settler.
-func NewHermesPromiseSettler(transactor transactor, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
+func NewHermesPromiseSettler(transactor transactor, hermesCallerFactory HermesCallerFactory, hermesURLGetter hermesURLGetter, channelProvider hermesChannelProvider, providerChannelStatusProvider providerChannelStatusProvider, registrationStatusProvider registrationStatusProvider, ks ks, settlementHistoryStorage settlementHistoryStorage, config HermesPromiseSettlerConfig) *hermesPromiseSettler {
 	return &hermesPromiseSettler{
 		bc:                         providerChannelStatusProvider,
 		ks:                         ks,
@@ -117,6 +124,8 @@ func NewHermesPromiseSettler(transactor transactor, channelProvider hermesChanne
 		currentState:               make(map[identity.Identity]settlementState),
 		channelProvider:            channelProvider,
 		settlementHistoryStorage:   settlementHistoryStorage,
+		hermesCallerFactory:        hermesCallerFactory,
+		hermesURLGetter:            hermesURLGetter,
 
 		// defaulting to a queue of 5, in case we have a few active identities.
 		settleQueue: make(chan receivedPromise, 5),
@@ -296,14 +305,19 @@ func (aps *hermesPromiseSettler) listenForSettlementRequests() {
 		case <-aps.stop:
 			return
 		case p := <-aps.settleQueue:
+			channel, found := aps.channelProvider.Get(p.promise.ChainID, p.provider, p.hermesID)
+			if !found {
+				continue
+			}
 			go aps.settle(
-				func() error {
-					return aps.transactor.SettleAndRebalance(p.hermesID.Hex(), p.provider.Address, p.promise)
+				func(promise crypto.Promise) error {
+					return aps.transactor.SettleAndRebalance(p.hermesID.Hex(), p.provider.Address, promise)
 				},
 				p.provider,
 				p.hermesID,
 				p.promise,
 				p.beneficiary,
+				channel.Channel.Settled,
 			)
 		}
 	}
@@ -322,13 +336,14 @@ func (aps *hermesPromiseSettler) SettleIntoStake(chainID int64, providerID ident
 	}
 	channel.lastPromise.Promise.R = hexR
 	return aps.settle(
-		func() error {
-			return aps.transactor.SettleIntoStake(hermesID.Hex(), providerID.Address, channel.lastPromise.Promise)
+		func(promise crypto.Promise) error {
+			return aps.transactor.SettleIntoStake(hermesID.Hex(), providerID.Address, promise)
 		},
 		providerID,
 		hermesID,
 		channel.lastPromise.Promise,
 		channel.Beneficiary,
+		channel.Channel.Settled,
 	)
 }
 
@@ -349,13 +364,14 @@ func (aps *hermesPromiseSettler) ForceSettle(chainID int64, providerID identity.
 
 	channel.lastPromise.Promise.R = hexR
 	return aps.settle(
-		func() error {
-			return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, channel.lastPromise.Promise)
+		func(promise crypto.Promise) error {
+			return aps.transactor.SettleAndRebalance(hermesID.Hex(), providerID.Address, promise)
 		},
 		providerID,
 		hermesID,
 		channel.lastPromise.Promise,
 		channel.Beneficiary,
+		channel.Channel.Settled,
 	)
 }
 
@@ -373,25 +389,48 @@ func (aps *hermesPromiseSettler) SettleWithBeneficiary(chainID int64, providerID
 
 	channel.lastPromise.Promise.R = hexR
 	return aps.settle(
-		func() error {
-			return aps.transactor.SettleWithBeneficiary(providerID.Address, beneficiary.Hex(), hermesID.Hex(), channel.lastPromise.Promise)
+		func(promise crypto.Promise) error {
+			return aps.transactor.SettleWithBeneficiary(providerID.Address, beneficiary.Hex(), hermesID.Hex(), promise)
 		},
 		providerID,
 		hermesID,
 		channel.lastPromise.Promise,
 		beneficiary,
+		channel.Channel.Settled,
 	)
 }
 
 // ErrSettleTimeout indicates that the settlement has timed out
 var ErrSettleTimeout = errors.New("settle timeout")
 
+func (aps *hermesPromiseSettler) updatePromiseWithLatestFee(hermesID common.Address, promise crypto.Promise) (crypto.Promise, error) {
+	log.Debug().Msg("Updating promise with latest fee")
+	fees, err := aps.transactor.FetchSettleFees(promise.ChainID)
+	if err != nil {
+		return crypto.Promise{}, fmt.Errorf("could not fetch settle fees: %w", err)
+	}
+
+	hermesCaller, err := aps.getHermesCaller(promise.ChainID, hermesID)
+	if err != nil {
+		return crypto.Promise{}, fmt.Errorf("could not fetch settle fees: %w", err)
+	}
+
+	updatedPromise, err := hermesCaller.UpdatePromiseFee(promise, fees.Fee)
+	if err != nil {
+		return crypto.Promise{}, fmt.Errorf("could not update promise fee: %w", err)
+	}
+	updatedPromise.R = promise.R
+	log.Debug().Msg("promise updated with latest fee")
+	return updatedPromise, nil
+}
+
 func (aps *hermesPromiseSettler) settle(
-	settleFunc func() error,
+	settleFunc func(promise crypto.Promise) error,
 	provider identity.Identity,
 	hermesID common.Address,
 	promise crypto.Promise,
 	beneficiary common.Address,
+	settled *big.Int,
 ) error {
 	if aps.isSettling(provider) {
 		return errors.New("provider already has settlement in progress")
@@ -399,6 +438,41 @@ func (aps *hermesPromiseSettler) settle(
 
 	aps.setSettling(provider, true)
 	log.Info().Msgf("Marked provider %v as requesting settlement", provider)
+
+	updatedPromise, err := aps.updatePromiseWithLatestFee(hermesID, promise)
+	if err != nil {
+		aps.setSettling(provider, false)
+		log.Error().Err(err).Msg("Could not update promise fee")
+		return err
+	}
+
+	if settled == nil {
+		settled = new(big.Int)
+	}
+
+	amountToSettle := new(big.Int).Sub(updatedPromise.Amount, settled)
+
+	fee, err := aps.bc.CalculateHermesFee(promise.ChainID, hermesID, amountToSettle)
+	if err != nil {
+		aps.setSettling(provider, false)
+		log.Error().Err(err).Msg("Could not calculate hermes fee")
+		return err
+	}
+
+	totalFees := new(big.Int).Add(fee, updatedPromise.Fee)
+	if totalFees.Cmp(amountToSettle) > 0 {
+		aps.setSettling(provider, false)
+		log.Error().Fields(map[string]interface{}{
+			"amountToSettle": amountToSettle.String(),
+			"promiseAmount":  updatedPromise.Amount.String(),
+			"settled":        settled.String(),
+			"transactorFee":  updatedPromise.Fee.String(),
+			"hermesFee":      fee.String(),
+			"totalFees":      totalFees.String(),
+		}).Err(err).Msg("Earned amount too small for settling")
+		return fmt.Errorf("Settlement fees exceed earning amount. Please provide more service and try again. Current earnings: %v, current fees: %v", amountToSettle, totalFees)
+	}
+
 	sink, cancel, err := aps.bc.SubscribeToPromiseSettledEvent(promise.ChainID, provider.ToCommonAddress(), hermesID)
 	if err != nil {
 		aps.setSettling(provider, false)
@@ -439,10 +513,11 @@ func (aps *hermesPromiseSettler) settle(
 				HermesID:       hermesID,
 				ChannelAddress: common.HexToAddress(channelID),
 				Time:           time.Now().UTC(),
-				Promise:        promise,
+				Promise:        updatedPromise,
 				Beneficiary:    beneficiary,
 				Amount:         info.AmountSentToBeneficiary,
-				TotalSettled:   ch.channel.Settled,
+				Fees:           info.Fees,
+				TotalSettled:   ch.Channel.Settled,
 			}
 
 			err = aps.settlementHistoryStorage.Store(she)
@@ -460,7 +535,7 @@ func (aps *hermesPromiseSettler) settle(
 		}
 	}()
 
-	err = settleFunc()
+	err = settleFunc(updatedPromise)
 	if err != nil {
 		cancel()
 		log.Error().Err(err).Msgf("Could not settle promise for %v", provider)
@@ -503,6 +578,14 @@ func (aps *hermesPromiseSettler) handleNodeStart() {
 	}
 }
 
+func (aps *hermesPromiseSettler) getHermesCaller(chainID int64, hermesID common.Address) (HermesHTTPRequester, error) {
+	addr, err := aps.hermesURLGetter.GetHermesURL(chainID, hermesID)
+	if err != nil {
+		return nil, fmt.Errorf("could not get hermes URL: %w", err)
+	}
+	return aps.hermesCallerFactory(addr), nil
+}
+
 func (aps *hermesPromiseSettler) handleNodeStop() {
 	aps.once.Do(func() {
 		close(aps.stop)
@@ -524,7 +607,7 @@ func (ss settlementState) needsSettling(threshold float64, channel HermesChannel
 		return false
 	}
 
-	if channel.channel.Stake.Cmp(big.NewInt(0)) == 0 {
+	if channel.Channel.Stake.Cmp(big.NewInt(0)) == 0 {
 		// if starting with zero stake, only settle one myst or more.
 		if channel.UnsettledBalance().Cmp(big.NewInt(0).SetUint64(crypto.Myst)) == -1 {
 			return false

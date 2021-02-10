@@ -19,119 +19,135 @@ package mysterium
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"math/big"
 	"path/filepath"
+	"strconv"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/config"
-	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/core/state"
-	"github.com/mysteriumnetwork/node/identity/registry"
-	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
-	"github.com/mysteriumnetwork/node/session/pingpong"
-	"github.com/mysteriumnetwork/node/session/pingpong/event"
-	"github.com/mysteriumnetwork/payments/crypto"
-
-	"github.com/rs/zerolog"
-
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/quality"
+	"github.com/mysteriumnetwork/node/core/state"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
+	"github.com/mysteriumnetwork/node/session/pingpong"
+	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// MobileNode represents node object tuned for mobile devices
+// MobileNode represents node object tuned for mobile device.
 type MobileNode struct {
-	shutdown                     func() error
-	node                         *cmd.Node
-	stateKeeper                  *state.Keeper
-	connectionManager            connection.Manager
-	locationResolver             *location.Cache
-	identitySelector             selector.Handler
-	signerFactory                identity.SignerFactory
-	ipResolver                   ip.Resolver
-	eventBus                     eventbus.EventBus
-	connectionRegistry           *connection.Registry
-	proposalsManager             *proposalsManager
-	hermes                       common.Address
-	feedbackReporter             *feedback.Reporter
-	transactor                   *registry.Transactor
-	identityRegistry             registry.IdentityRegistry
-	identityChannelCalculator    *pingpong.ChannelAddressCalculator
-	consumerBalanceTracker       *pingpong.ConsumerBalanceTracker
-	registryAddress              string
-	channelImplementationAddress string
-	chainID                      int64
-	startTime                    time.Time
+	shutdown                  func() error
+	node                      *cmd.Node
+	stateKeeper               *state.Keeper
+	connectionManager         connection.Manager
+	locationResolver          *location.Cache
+	identitySelector          selector.Handler
+	signerFactory             identity.SignerFactory
+	ipResolver                ip.Resolver
+	eventBus                  eventbus.EventBus
+	connectionRegistry        *connection.Registry
+	proposalsManager          *proposalsManager
+	feedbackReporter          *feedback.Reporter
+	transactor                *registry.Transactor
+	identityRegistry          registry.IdentityRegistry
+	identityChannelCalculator *pingpong.AddressProvider
+	consumerBalanceTracker    *pingpong.ConsumerBalanceTracker
+	pilvytis                  *pilvytis.Service
+	chainID                   int64
+	startTime                 time.Time
 }
 
 // MobileNodeOptions contains common mobile node options.
 type MobileNodeOptions struct {
-	Testnet2                        bool
-	Localnet                        bool
-	ExperimentNATPunching           bool
-	MysteriumAPIAddress             string
-	BrokerAddresses                 []string
-	EtherClientRPC                  string
-	FeedbackURL                     string
-	QualityOracleURL                string
-	IPDetectorURL                   string
-	LocationDetectorURL             string
-	TransactorEndpointAddress       string
-	TransactorRegistryAddress       string
-	TransactorChannelImplementation string
-	HermesEndpointAddress           string
-	HermesID                        string
-	MystSCAddress                   string
-	ChainID                         int64
+	Testnet2                       bool
+	Localnet                       bool
+	ExperimentNATPunching          bool
+	MysteriumAPIAddress            string
+	BrokerAddresses                []string
+	EtherClientRPC                 string
+	FeedbackURL                    string
+	QualityOracleURL               string
+	IPDetectorURL                  string
+	LocationDetectorURL            string
+	TransactorEndpointAddress      string
+	HermesEndpointAddress          string
+	ChainID                        int64
+	PilvytisAddress                string
+	MystSCAddress                  string
+	RegistrySCAddress              string
+	HermesSCAddress                string
+	ChannelImplementationSCAddress string
+}
+
+// ConsumerPaymentConfig defines consumer side payment configuration
+type ConsumerPaymentConfig struct {
+	PricePerGIBMax    string
+	PricePerGIBMin    string
+	PricePerMinuteMax string
+	PricePerMinuteMin string
 }
 
 // DefaultNodeOptions returns default options.
 func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
-		Testnet2:                        true,
-		ExperimentNATPunching:           true,
-		MysteriumAPIAddress:             metadata.Testnet2Definition.MysteriumAPIAddress,
-		BrokerAddresses:                 metadata.Testnet2Definition.BrokerAddresses,
-		EtherClientRPC:                  metadata.Testnet2Definition.EtherClientRPC,
-		FeedbackURL:                     "https://feedback.mysterium.network",
-		QualityOracleURL:                "https://testnet2-quality.mysterium.network/api/v1",
-		IPDetectorURL:                   "https://api.ipify.org/?format=json",
-		LocationDetectorURL:             "https://testnet2-location.mysterium.network/api/v1/location",
-		TransactorEndpointAddress:       metadata.Testnet2Definition.TransactorAddress,
-		TransactorRegistryAddress:       metadata.Testnet2Definition.RegistryAddress,
-		TransactorChannelImplementation: metadata.Testnet2Definition.ChannelImplAddress,
-		HermesID:                        metadata.Testnet2Definition.HermesID,
-		MystSCAddress:                   "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
-		ChainID:                         metadata.Testnet2Definition.DefaultChainID,
+		Testnet2:                       true,
+		ExperimentNATPunching:          true,
+		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
+		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
+		EtherClientRPC:                 metadata.Testnet2Definition.EtherClientRPC,
+		FeedbackURL:                    "https://feedback.mysterium.network",
+		QualityOracleURL:               "https://testnet2-quality.mysterium.network/api/v2",
+		IPDetectorURL:                  "https://testnet2-location.mysterium.network/api/v1/location",
+		LocationDetectorURL:            "https://testnet2-location.mysterium.network/api/v1/location",
+		TransactorEndpointAddress:      metadata.Testnet2Definition.TransactorAddress,
+		ChainID:                        metadata.Testnet2Definition.DefaultChainID,
+		PilvytisAddress:                metadata.Testnet2Definition.PilvytisAddress,
+		MystSCAddress:                  metadata.Testnet2Definition.Chain1.MystAddress,
+		RegistrySCAddress:              metadata.Testnet2Definition.Chain1.RegistryAddress,
+		HermesSCAddress:                metadata.Testnet2Definition.Chain1.HermesID,
+		ChannelImplementationSCAddress: metadata.Testnet2Definition.Chain1.ChannelImplAddress,
 	}
 }
 
-// NewNode function creates new Node
+// NewNode function creates new Node.
 func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	if appPath == "" {
 		return nil, errors.New("node app path is required")
 	}
+
 	dataDir := filepath.Join(appPath, ".mysterium")
 	currentDir := appPath
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
+	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMax)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerGBLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerGIBMin)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerMinuteUpperBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerMinuteMax)
+	config.Current.SetDefault(config.FlagPaymentsConsumerPricePerMinuteLowerBound.Name, metadata.DefaultNetwork.Payments.Consumer.PricePerMinuteMin)
 
 	network := node.OptionsNetwork{
 		Testnet2:              options.Testnet2,
@@ -142,7 +158,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		EtherClientRPC:        options.EtherClientRPC,
 		ChainID:               options.ChainID,
 		DNSMap: map[string][]string{
-			"testnet-location.mysterium.network":  {"82.196.15.9"},
+			"testnet-location.mysterium.network":  {"95.216.204.232"},
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
 			"feedback.mysterium.network":          {"116.203.17.150"},
@@ -201,59 +217,77 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		},
 		Transactor: node.OptionsTransactor{
 			TransactorEndpointAddress:       options.TransactorEndpointAddress,
-			RegistryAddress:                 options.TransactorRegistryAddress,
-			ChannelImplementation:           options.TransactorChannelImplementation,
 			ProviderMaxRegistrationAttempts: 10,
 			ProviderRegistrationRetryDelay:  time.Minute * 3,
 			ProviderRegistrationStake:       big.NewInt(6200000000),
-		},
-		Hermes: node.OptionsHermes{
-			HermesID: options.HermesID,
 		},
 		Payments: node.OptionsPayments{
 			MaxAllowedPaymentPercentile:    1500,
 			BCTimeout:                      time.Second * 30,
 			HermesPromiseSettlingThreshold: 0.1,
 			SettlementTimeout:              time.Hour * 2,
-			MystSCAddress:                  options.MystSCAddress,
 		},
-		Consumer: true,
-		P2PPorts: port.UnspecifiedRange(),
+		Chains: node.OptionsChains{
+			Chain1: metadata.ChainDefinition{
+				RegistryAddress:    options.RegistrySCAddress,
+				HermesID:           options.HermesSCAddress,
+				ChannelImplAddress: options.ChannelImplementationSCAddress,
+				MystAddress:        options.MystSCAddress,
+				ChainID:            options.ChainID,
+			},
+		},
+		Consumer:        true,
+		P2PPorts:        port.UnspecifiedRange(),
+		PilvytisAddress: options.PilvytisAddress,
 	}
 
 	err := di.Bootstrap(nodeOptions)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not bootstrap dependencies")
+		return nil, fmt.Errorf("could not bootstrap dependencies: %w", err)
 	}
 
 	mobileNode := &MobileNode{
-		shutdown:                     func() error { return di.Shutdown() },
-		node:                         di.Node,
-		stateKeeper:                  di.StateKeeper,
-		connectionManager:            di.ConnectionManager,
-		locationResolver:             di.LocationResolver,
-		identitySelector:             di.IdentitySelector,
-		signerFactory:                di.SignerFactory,
-		ipResolver:                   di.IPResolver,
-		eventBus:                     di.EventBus,
-		connectionRegistry:           di.ConnectionRegistry,
-		hermes:                       common.HexToAddress(nodeOptions.Hermes.HermesID),
-		feedbackReporter:             di.Reporter,
-		transactor:                   di.Transactor,
-		identityRegistry:             di.IdentityRegistry,
-		consumerBalanceTracker:       di.ConsumerBalanceTracker,
-		identityChannelCalculator:    di.ChannelAddressCalculator,
-		channelImplementationAddress: nodeOptions.Transactor.ChannelImplementation,
-		registryAddress:              nodeOptions.Transactor.RegistryAddress,
+		shutdown:                  di.Shutdown,
+		node:                      di.Node,
+		stateKeeper:               di.StateKeeper,
+		connectionManager:         di.ConnectionManager,
+		locationResolver:          di.LocationResolver,
+		identitySelector:          di.IdentitySelector,
+		signerFactory:             di.SignerFactory,
+		ipResolver:                di.IPResolver,
+		eventBus:                  di.EventBus,
+		connectionRegistry:        di.ConnectionRegistry,
+		feedbackReporter:          di.Reporter,
+		transactor:                di.Transactor,
+		identityRegistry:          di.IdentityRegistry,
+		consumerBalanceTracker:    di.ConsumerBalanceTracker,
+		identityChannelCalculator: di.AddressProvider,
 		proposalsManager: newProposalsManager(
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
 		),
+		pilvytis:  di.Pilvytis,
 		startTime: time.Now(),
 		chainID:   nodeOptions.OptionsNetwork.ChainID,
 	}
+
 	return mobileNode, nil
+}
+
+// GetConsumerPaymentConfig returns consumer payment config
+func (mb *MobileNode) GetConsumerPaymentConfig() *ConsumerPaymentConfig {
+	return &ConsumerPaymentConfig{
+		PricePerGIBMax:    config.Current.GetString(config.FlagPaymentsConsumerPricePerGBUpperBound.Name),
+		PricePerGIBMin:    config.Current.GetString(config.FlagPaymentsConsumerPricePerGBLowerBound.Name),
+		PricePerMinuteMax: config.Current.GetString(config.FlagPaymentsConsumerPricePerMinuteUpperBound.Name),
+		PricePerMinuteMin: config.Current.GetString(config.FlagPaymentsConsumerPricePerMinuteLowerBound.Name),
+	}
+}
+
+// GetDefaultCurrency returns the current default currency set.
+func (mb *MobileNode) GetDefaultCurrency() string {
+	return config.Current.GetString(config.FlagDefaultCurrency.Name)
 }
 
 // GetProposals returns service proposals from API or cache. Proposals returned as JSON byte array since
@@ -277,7 +311,7 @@ type GetLocationResponse struct {
 func (mb *MobileNode) GetLocation() (*GetLocationResponse, error) {
 	loc, err := mb.locationResolver.DetectLocation()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get location")
+		return nil, fmt.Errorf("could not get location: %w", err)
 	}
 
 	return &GetLocationResponse{
@@ -296,6 +330,7 @@ type GetStatusResponse struct {
 // GetStatus returns current connection state and provider info if connected to VPN.
 func (mb *MobileNode) GetStatus() *GetStatusResponse {
 	status := mb.connectionManager.Status()
+
 	return &GetStatusResponse{
 		State:       string(status.State),
 		ProviderID:  status.Proposal.ProviderID,
@@ -382,7 +417,18 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		ProviderID:  req.ProviderID,
 		ServiceType: req.ServiceType,
 	})
+
+	qualityEvent := quality.ConnectionEvent{
+		ServiceType: req.ServiceType,
+		ConsumerID:  req.IdentityAddress,
+		ProviderID:  req.ProviderID,
+	}
+
 	if err != nil {
+		qualityEvent.Stage = quality.StageGetProposal
+		qualityEvent.Error = err.Error()
+		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
+
 		return &ConnectResponse{
 			ErrorCode:    connectErrInvalidProposal,
 			ErrorMessage: err.Error(),
@@ -393,17 +439,35 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		DisableKillSwitch: req.DisableKillSwitch,
 		DNS:               connection.DNSOptionAuto,
 	}
-	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), mb.hermes, *proposal, connectOptions); err != nil {
-		if err == connection.ErrInsufficientBalance {
-			return &ConnectResponse{
-				ErrorCode: connectErrInsufficientBalance,
-			}
-		}
+
+	hermes, err := mb.identityChannelCalculator.GetActiveHermes(mb.chainID)
+	if err != nil {
 		return &ConnectResponse{
 			ErrorCode:    connectErrUnknown,
 			ErrorMessage: err.Error(),
 		}
 	}
+
+	if err := mb.connectionManager.Connect(identity.FromAddress(req.IdentityAddress), hermes, *proposal, connectOptions); err != nil {
+		qualityEvent.Stage = quality.StageConnectionUnknownError
+		qualityEvent.Error = err.Error()
+		mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
+
+		if errors.Is(err, connection.ErrInsufficientBalance) {
+			return &ConnectResponse{
+				ErrorCode: connectErrInsufficientBalance,
+			}
+		}
+
+		return &ConnectResponse{
+			ErrorCode:    connectErrUnknown,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	qualityEvent.Stage = quality.StageConnectionOK
+	mb.eventBus.Publish(quality.AppTopicConnectionEvents, qualityEvent)
+
 	return &ConnectResponse{}
 }
 
@@ -413,8 +477,10 @@ func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
 		if err := mb.Disconnect(); err != nil {
 			log.Err(err).Msg("Failed to disconnect previous session")
 		}
+
 		return mb.Connect(req)
 	}
+
 	if req.ForceReconnect {
 		log.Info().Msg("Forcing immediate reconnect")
 		return reconnect()
@@ -422,20 +488,23 @@ func (mb *MobileNode) Reconnect(req *ConnectRequest) *ConnectResponse {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
+
 	if err := mb.connectionManager.CheckChannel(ctx); err != nil {
 		log.Info().Msgf("Forcing reconnect after failed channel: %s", err)
 		return reconnect()
 	}
 
 	log.Info().Msg("Reconnect is not needed - p2p channel is alive")
+
 	return &ConnectResponse{}
 }
 
 // Disconnect disconnects or cancels current connection.
 func (mb *MobileNode) Disconnect() error {
 	if err := mb.connectionManager.Disconnect(); err != nil {
-		return errors.Wrap(err, "could not disconnect")
+		return fmt.Errorf("could not disconnect: %w", err)
 	}
+
 	return nil
 }
 
@@ -458,19 +527,20 @@ func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse
 	if req == nil {
 		req = &GetIdentityRequest{}
 	}
+
 	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, mb.chainID)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not unlock identity")
+		return nil, fmt.Errorf("could not unlock identity: %w", err)
 	}
 
-	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(id)
+	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(mb.chainID, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate channel address")
+		return nil, fmt.Errorf("could not generate channel address: %w", err)
 	}
 
 	status, err := mb.identityRegistry.GetRegistrationStatus(mb.chainID, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get identity registration status")
+		return nil, fmt.Errorf("could not get identity registration status: %w", err)
 	}
 
 	return &GetIdentityResponse{
@@ -489,7 +559,7 @@ type GetIdentityRegistrationFeesResponse struct {
 func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFeesResponse, error) {
 	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get registration fees")
+		return nil, fmt.Errorf("could not get registration fees: %w", err)
 	}
 
 	fee := crypto.BigMystToFloat(fees.Fee)
@@ -507,17 +577,19 @@ type RegisterIdentityRequest struct {
 func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
 	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
 	if err != nil {
-		return errors.Wrap(err, "could not get registration fees")
+		return fmt.Errorf("could not get registration fees: %w", err)
 	}
 
 	var token *string
 	if req.Token != "" {
 		token = &req.Token
 	}
+
 	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", mb.chainID, token)
 	if err != nil {
-		return errors.Wrap(err, "could not register identity")
+		return fmt.Errorf("could not register identity: %w", err)
 	}
+
 	return nil
 }
 
@@ -535,6 +607,7 @@ type GetBalanceResponse struct {
 func (mb *MobileNode) GetBalance(req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	balance := mb.consumerBalanceTracker.GetBalance(mb.chainID, identity.FromAddress(req.IdentityAddress))
 	b := crypto.BigMystToFloat(balance)
+
 	return &GetBalanceResponse{Balance: b}, nil
 }
 
@@ -550,35 +623,39 @@ func (mb *MobileNode) SendFeedback(req *SendFeedbackRequest) error {
 		Email:       req.Email,
 		Description: req.Description,
 	}
+
 	result, err := mb.feedbackReporter.NewIssue(report)
 	if err != nil {
-		return errors.Wrap(err, "could not create user report")
+		return fmt.Errorf("could not create user report: %w", err)
 	}
 
 	if !result.Success {
 		return errors.New("user report sent but got error response")
 	}
+
 	return nil
 }
 
-// Shutdown function stops running mobile node
+// Shutdown function stops running mobile node.
 func (mb *MobileNode) Shutdown() error {
 	return mb.shutdown()
 }
 
-// WaitUntilDies function returns when node stops
+// WaitUntilDies function returns when node stops.
 func (mb *MobileNode) WaitUntilDies() error {
 	return mb.node.Wait()
 }
 
-// OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
+// OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one.
 func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
+
 	factory := func() (connection.Connection, error) {
 		opts := wireGuardOptions{
 			statsUpdateInterval: 1 * time.Second,
 			handshakeTimeout:    1 * time.Minute,
 		}
+
 		return NewWireGuardConnection(
 			opts,
 			newWireguardDevice(wgTunnelSetup),
@@ -589,7 +666,7 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
 }
 
-// HealthCheckData represents node health check info
+// HealthCheckData represents node health check info.
 type HealthCheckData struct {
 	Uptime    string     `json:"uptime"`
 	Version   string     `json:"version"`
@@ -614,4 +691,154 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 			BuildNumber: metadata.BuildNumber,
 		},
 	}
+}
+
+// OrderUpdatedCallbackPayload is the payload of OrderUpdatedCallback.
+type OrderUpdatedCallbackPayload struct {
+	OrderID     int64
+	Status      string
+	PayAmount   float64
+	PayCurrency string
+}
+
+// OrderUpdatedCallback is a callback when order status changes.
+type OrderUpdatedCallback interface {
+	OnUpdate(payload *OrderUpdatedCallbackPayload)
+}
+
+// RegisterOrderUpdatedCallback registers OrderStatusChanged callback.
+func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
+	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderUpdated, func(e pilvytis.AppEventOrderUpdated) {
+		payload := OrderUpdatedCallbackPayload{}
+		id, err := shrinkUint64(e.ID)
+		if err != nil {
+			log.Err(err).Send()
+			return
+		}
+		payload.OrderID = id
+		payload.Status = string(e.Status)
+		if e.PayAmount != nil {
+			payload.PayAmount = *e.PayAmount
+		}
+		if e.PayCurrency != nil {
+			payload.PayCurrency = *e.PayCurrency
+		}
+		cb.OnUpdate(&payload)
+	})
+}
+
+// CreateOrderRequest a request to create an order.
+type CreateOrderRequest struct {
+	IdentityAddress string
+	MystAmount      float64
+	PayCurrency     string
+	Lightning       bool
+}
+
+// OrderResponse represents a payment order for mobile usage.
+type OrderResponse struct {
+	ID              int64    `json:"id"`
+	IdentityAddress string   `json:"identity_address"`
+	Status          string   `json:"status"`
+	MystAmount      float64  `json:"myst_amount"`
+	PayCurrency     *string  `json:"pay_currency,omitempty"`
+	PayAmount       *float64 `json:"pay_amount,omitempty"`
+	PaymentAddress  string   `json:"payment_address"`
+	PaymentURL      string   `json:"payment_url"`
+}
+
+func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
+	id, err := shrinkUint64(order.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &OrderResponse{
+		ID:              id,
+		IdentityAddress: order.Identity,
+		Status:          string(order.Status),
+		MystAmount:      order.MystAmount,
+		PayCurrency:     order.PayCurrency,
+		PayAmount:       order.PayAmount,
+		PaymentAddress:  order.PaymentAddress,
+		PaymentURL:      order.PaymentURL,
+	}
+
+	return response, nil
+}
+
+// CreateOrder creates a payment order.
+func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) ([]byte, error) {
+	order, err := mb.pilvytis.CreateOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := newOrderResponse(*order)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(res)
+}
+
+// GetOrderRequest a request to get an order.
+type GetOrderRequest struct {
+	IdentityAddress string
+	ID              int64
+}
+
+// GetOrder gets an order by ID.
+func (mb *MobileNode) GetOrder(req *GetOrderRequest) ([]byte, error) {
+	order, err := mb.pilvytis.GetOrder(identity.FromAddress(req.IdentityAddress), uint64(req.ID))
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := newOrderResponse(*order)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(res)
+}
+
+// ListOrdersRequest a request to list orders.
+type ListOrdersRequest struct {
+	IdentityAddress string
+}
+
+// ListOrders lists all payment orders.
+func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]byte, error) {
+	orders, err := mb.pilvytis.ListOrders(identity.FromAddress(req.IdentityAddress))
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]OrderResponse, len(orders))
+
+	for i := range orders {
+		orderRes, err := newOrderResponse(orders[i])
+		if err != nil {
+			return nil, err
+		}
+
+		res[i] = *orderRes
+	}
+
+	return json.Marshal(orders)
+}
+
+// Currencies lists supported payment currencies.
+func (mb *MobileNode) Currencies() ([]byte, error) {
+	currencies, err := mb.pilvytis.Currencies()
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(currencies)
+}
+
+func shrinkUint64(u uint64) (int64, error) {
+	return strconv.ParseInt(strconv.FormatUint(u, 10), 10, 64)
 }

@@ -23,25 +23,35 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // HermesURLGetter allows for fetching and storing of hermes urls.
 type HermesURLGetter struct {
-	Registry             common.Address
+	addressProvider      addressProvider
 	bc                   bc
-	loadedAddresses      map[common.Address]string
+	loadedAddresses      map[int64]map[common.Address]string
 	loaddedAddressesLock sync.Mutex
+}
+
+type addressProvider interface {
+	GetTransactorAddress() common.Address
+	GetChannelAddress(chainID int64, id identity.Identity) (common.Address, error)
+	GetArbitraryChannelAddress(hermes, registry, channel common.Address, id identity.Identity) (common.Address, error)
+	GetChannelImplementation(chainID int64) (common.Address, error)
+	GetMystAddress(chainID int64) (common.Address, error)
+	GetActiveHermes(chainID int64) (common.Address, error)
+	GetRegistryAddress(chainID int64) (common.Address, error)
 }
 
 // NewHermesURLGetter creates a new instance of hermes url getter.
 func NewHermesURLGetter(
 	bc bc,
-	registry common.Address,
+	addressProvider addressProvider,
 ) *HermesURLGetter {
 	return &HermesURLGetter{
-		loadedAddresses: make(map[common.Address]string),
-		Registry:        registry,
+		loadedAddresses: make(map[int64]map[common.Address]string),
+		addressProvider: addressProvider,
 		bc:              bc,
 	}
 }
@@ -61,17 +71,26 @@ func (hug *HermesURLGetter) normalizeAddress(address string) (string, error) {
 }
 
 // GetHermesURL fetches the hermes url from blockchain or local cache if it has already been loaded.
-func (hug *HermesURLGetter) GetHermesURL(address common.Address) (string, error) {
+func (hug *HermesURLGetter) GetHermesURL(chainID int64, address common.Address) (string, error) {
 	hug.loaddedAddressesLock.Lock()
 	defer hug.loaddedAddressesLock.Unlock()
 
-	add, ok := hug.loadedAddresses[address]
+	addresses, ok := hug.loadedAddresses[chainID]
 	if ok {
-		return add, nil
+		v, ok := addresses[address]
+		if ok {
+			return v, nil
+		}
+	} else {
+		hug.loadedAddresses[chainID] = make(map[common.Address]string, 0)
 	}
 
-	chainID := config.GetInt64(config.FlagChainID)
-	add, err := hug.bc.GetHermesURL(chainID, hug.Registry, address)
+	registry, err := hug.addressProvider.GetRegistryAddress(chainID)
+	if err != nil {
+		return "", err
+	}
+
+	add, err := hug.bc.GetHermesURL(chainID, registry, address)
 	if err != nil {
 		return "", err
 	}
@@ -81,6 +100,6 @@ func (hug *HermesURLGetter) GetHermesURL(address common.Address) (string, error)
 		return "", err
 	}
 
-	hug.loadedAddresses[address] = add
+	hug.loadedAddresses[chainID][address] = add
 	return add, nil
 }

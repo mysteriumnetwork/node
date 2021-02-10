@@ -41,26 +41,23 @@ type registryStorage interface {
 }
 
 type contractRegistry struct {
-	hermesAddress   common.Address
-	storage         registryStorage
-	stop            chan struct{}
-	once            sync.Once
-	publisher       eventbus.Publisher
-	lock            sync.Mutex
-	ethC            *paymentClient.ReconnectableEthClient
-	registryAddress common.Address
+	storage   registryStorage
+	stop      chan struct{}
+	once      sync.Once
+	publisher eventbus.Publisher
+	lock      sync.Mutex
+	ethC      *paymentClient.ReconnectableEthClient
+	ap        AddressProvider
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, registryAddress, hermesAddress common.Address, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
-	log.Info().Msgf("Using registryAddress %v hermesAddress %v", registryAddress.Hex(), hermesAddress.Hex())
+func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
 	return &contractRegistry{
-		hermesAddress:   hermesAddress,
-		storage:         registryStorage,
-		stop:            make(chan struct{}),
-		publisher:       publisher,
-		ethC:            ethClient,
-		registryAddress: registryAddress,
+		storage:   registryStorage,
+		stop:      make(chan struct{}),
+		publisher: publisher,
+		ethC:      ethClient,
+		ap:        ap,
 	}, nil
 }
 
@@ -79,19 +76,24 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 
 // GetRegistrationStatus returns the registration status of the provided identity
 func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
-	status, err := registry.storage.Get(chainID, id)
-	if err == nil {
-		return status.RegistrationStatus, nil
-	}
-
-	if err != ErrNotFound {
+	ss, err := registry.storage.Get(chainID, id)
+	if err != nil && err != ErrNotFound {
 		return Unregistered, errors.Wrap(err, "could not check status in local db")
 	}
 
-	statusBC, err := registry.isRegisteredInBC(id)
+	if err == nil && ss.RegistrationStatus != InProgress && ss.RegistrationStatus != RegistrationError {
+		return ss.RegistrationStatus, nil
+	}
+
+	statusBC, err := registry.bcRegistrationStatus(chainID, id)
 	if err != nil {
 		return Unregistered, errors.Wrap(err, "could not check identity registration status on blockchain")
 	}
+
+	if statusBC == Unregistered && ss.RegistrationStatus == InProgress {
+		statusBC = InProgress
+	}
+
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           id,
 		RegistrationStatus: statusBC,
@@ -138,6 +140,16 @@ func (registry *contractRegistry) handleRegistrationEvent(ev IdentityRegistratio
 
 	s := InProgress
 
+	// In case we have a previous registration, force re-check the BC status
+	if status.RegistrationStatus == InProgress || status.RegistrationStatus == RegistrationError {
+		status, err := registry.GetRegistrationStatus(ev.ChainID, identity.FromAddress(ev.Identity))
+		if err != nil {
+			log.Info().Err(err).Msg("could not recheck status with bc")
+		} else if status.Registered() {
+			s = Registered
+		}
+	}
+
 	ID := identity.FromAddress(ev.Identity)
 
 	go registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
@@ -167,10 +179,22 @@ func (registry *contractRegistry) subscribeToRegistrationEvent(chainID int64, id
 	}
 
 	go func() {
-		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), registry.hermesAddress.Hex())
+		reg, err := registry.ap.GetRegistryAddress(chainID)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get registry address")
+			return
+		}
+
+		hermes, err := registry.ap.GetActiveHermes(chainID)
+		if err != nil {
+			log.Error().Err(err).Msg("could not get registry address")
+			return
+		}
+
+		log.Info().Msgf("Waiting on identities %s hermes %s", userIdentities[0].Hex(), hermes.Hex())
 		sink := make(chan *bindings.RegistryRegisteredIdentity)
 
-		filterer, err := bindings.NewRegistryFilterer(registry.registryAddress, registry.ethC.Client())
+		filterer, err := bindings.NewRegistryFilterer(reg, registry.ethC.Client())
 		if err != nil {
 			log.Error().Err(err).Msg("could not create registry filterer")
 			return
@@ -287,11 +311,11 @@ func (registry *contractRegistry) loadInitialState() error {
 	return nil
 }
 
-func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentity identity.Identity) ([32]byte, error) {
+func (registry *contractRegistry) getProviderChannelAddressBytes(hermesAddress common.Address, providerIdentity identity.Identity) ([32]byte, error) {
 	providerAddress := providerIdentity.ToCommonAddress()
 	addressBytes := [32]byte{}
 
-	addr, err := crypto.GenerateProviderChannelID(providerAddress.Hex(), registry.hermesAddress.Hex())
+	addr, err := crypto.GenerateProviderChannelID(providerAddress.Hex(), hermesAddress.Hex())
 	if err != nil {
 		return addressBytes, errors.Wrap(err, "could not generate channel address")
 	}
@@ -303,7 +327,7 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(providerIdentit
 }
 
 func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID int64, id identity.Identity) error {
-	registered, err := registry.isRegisteredInBC(id)
+	registered, err := registry.bcRegistrationStatus(chainID, id)
 	if err != nil {
 		return errors.Wrap(err, "could not check status on blockchain")
 	}
@@ -323,8 +347,20 @@ func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID 
 	return nil
 }
 
-func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (RegistrationStatus, error) {
-	contract, err := bindings.NewRegistryCaller(registry.registryAddress, registry.ethC.Client())
+func (registry *contractRegistry) bcRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
+	reg, err := registry.ap.GetRegistryAddress(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get registry address")
+		return RegistrationError, err
+	}
+
+	hermes, err := registry.ap.GetActiveHermes(chainID)
+	if err != nil {
+		log.Error().Err(err).Msg("could not get hermes address")
+		return RegistrationError, err
+	}
+
+	contract, err := bindings.NewRegistryCaller(reg, registry.ethC.Client())
 	if err != nil {
 		return RegistrationError, fmt.Errorf("could not get registry caller %w", err)
 	}
@@ -336,7 +372,7 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		},
 	}
 
-	hermesContract, err := bindings.NewHermesImplementationCaller(registry.hermesAddress, registry.ethC.Client())
+	hermesContract, err := bindings.NewHermesImplementationCaller(hermes, registry.ethC.Client())
 	if err != nil {
 		return RegistrationError, fmt.Errorf("could not get hermes implementation caller %w", err)
 	}
@@ -359,7 +395,7 @@ func (registry *contractRegistry) isRegisteredInBC(id identity.Identity) (Regist
 		return Unregistered, nil
 	}
 
-	providerAddressBytes, err := registry.getProviderChannelAddressBytes(id)
+	providerAddressBytes, err := registry.getProviderChannelAddressBytes(hermes, id)
 	if err != nil {
 		return RegistrationError, errors.Wrap(err, "could not get provider channel address")
 	}

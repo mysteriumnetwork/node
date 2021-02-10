@@ -40,25 +40,42 @@ type OptionsDirectory struct {
 	Runtime string
 }
 
+const (
+	// NetworkSubDirTestnet represents testnet subdir
+	NetworkSubDirTestnet = "testnet"
+
+	// NetworkSubDirTestnet2 represents testnet2 subdir
+	NetworkSubDirTestnet2 = "testnet2"
+
+	// NetworkSubDirLocalnet represents localnet subdir
+	NetworkSubDirLocalnet = "localnet"
+)
+
 // GetOptionsDirectory retrieves directory configuration from app configuration.
 func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	dataDir := config.GetString(config.FlagDataDir)
-	networkSubdir := "testnet2" // Matches DefaultNetworkDefinition
+	networkSubdir := NetworkSubDirTestnet2 // Matches DefaultNetworkDefinition
 	switch {
 	case network.Testnet2:
-		networkSubdir = "testnet2"
+		networkSubdir = NetworkSubDirTestnet2
 	case network.Testnet:
 		networkSubdir = "" // Leave testnet files intact before it's merged into master
 	case network.Localnet:
-		networkSubdir = "localnet"
+		networkSubdir = NetworkSubDirLocalnet
 	}
 	return &OptionsDirectory{
 		Data:     dataDir,
-		Storage:  filepath.Join(dataDir, networkSubdir, "db"),
-		Keystore: filepath.Join(dataDir, networkSubdir, "keystore"),
+		Storage:  GetOptionsDirectoryDB(networkSubdir),
+		Keystore: filepath.Join(dataDir, "keystore"),
 		Script:   config.GetString(config.FlagScriptDir),
 		Runtime:  config.GetString(config.FlagRuntimeDir),
 	}
+}
+
+// GetOptionsDirectoryDB returns a database directory given a networkSubdir.
+func GetOptionsDirectoryDB(networkSubdir string) string {
+	dataDir := config.GetString(config.FlagDataDir)
+	return filepath.Join(dataDir, networkSubdir, "db")
 }
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)

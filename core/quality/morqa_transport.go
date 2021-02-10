@@ -18,36 +18,53 @@
 package quality
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA
-func NewMORQATransport(morqaClient *MysteriumMORQA) *morqaTransport {
+var errEventNotImplemented = errors.New("event not implemented")
+
+type locationProvider interface {
+	GetOrigin() locationstate.Location
+}
+
+// NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA.
+func NewMORQATransport(morqaClient *MysteriumMORQA, lp locationProvider) *morqaTransport {
 	return &morqaTransport{
 		morqaClient: morqaClient,
+		lp:          lp,
 	}
 }
 
 type morqaTransport struct {
 	morqaClient *MysteriumMORQA
+	lp          locationProvider
 }
 
-func (transport *morqaTransport) SendEvent(event Event) error {
+func (t *morqaTransport) SendEvent(event Event) error {
 	if id, metric := mapEventToMetric(event); metric != nil {
-		return transport.morqaClient.SendMetric(id, metric)
+		metric.Version = &metrics.VersionPayload{
+			Version: event.Application.Version,
+			Os:      event.Application.OS,
+			Arch:    event.Application.Arch,
+		}
+		metric.Country = t.lp.GetOrigin().Country
+		return t.morqaClient.SendMetric(id, metric)
 	}
 
-	return fmt.Errorf("event not implemented")
+	return errEventNotImplemented
 }
 
 func mapEventToMetric(event Event) (string, *metrics.Event) {
 	switch event.EventName {
+	case pingEventName:
+		return pingEventToMetricsEvent(event.Context.(pingEventContext))
 	case unlockEventName:
-		return identityUnlockToMetricsEvent(event.Context.(string), event.Application)
+		return identityUnlockToMetricsEvent(event.Context.(string))
 	case sessionEventName:
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
@@ -55,57 +72,103 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 	case sessionTokensName:
 		return sessionTokensToMetricsEvent(event.Context.(sessionTokensContext))
 	case proposalEventName:
-		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
+		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal))
 	case traceEventName:
-		return traceEventToMetricsEvent(event.Context.(sessionTraceContext), event.Application)
+		return traceEventToMetricsEvent(event.Context.(sessionTraceContext))
 	case registerIdentity:
-		return identityRegistrationEvent(event.Context.(registrationEvent), event.Application)
+		return identityRegistrationEvent(event.Context.(registrationEvent))
+	case natMappingEventName:
+		return natMappingEvent(event.Context.(natMappingContext))
+	case connectionEvent:
+		return connectionEventToMetricsEvent(event.Context.(ConnectionEvent))
 	}
 
 	return "", nil
 }
 
-func identityRegistrationEvent(data registrationEvent, info appInfo) (string, *metrics.Event) {
+func pingEventToMetricsEvent(context pingEventContext) (string, *metrics.Event) {
+	sender, target, country := context.Consumer, context.Provider, context.ProviderCountry
+	if context.IsProvider {
+		sender, target, country = context.Provider, context.Consumer, context.ConsumerCountry
+	}
+
+	return sender, &metrics.Event{
+		IsProvider: context.IsProvider,
+		TargetId:   target,
+		Metric: &metrics.Event_PingEvent{
+			PingEvent: &metrics.PingPayload{
+				SessionId:     context.ID,
+				RemoteCountry: country,
+				Duration:      uint64(context.Duration),
+			},
+		},
+	}
+}
+
+func connectionEventToMetricsEvent(context ConnectionEvent) (string, *metrics.Event) {
+	return context.ConsumerID, &metrics.Event{
+		IsProvider: false,
+		TargetId:   context.ProviderID,
+		Metric: &metrics.Event_ConnectionEvent{
+			ConnectionEvent: &metrics.ConnectionEvent{
+				ServiceType: context.ServiceType,
+				HermesId:    context.HermesID,
+				Stage:       context.Stage,
+				Error:       context.Error,
+			},
+		},
+	}
+}
+
+func natMappingEvent(context natMappingContext) (string, *metrics.Event) {
+	var errMsg string
+	if context.ErrorMessage != nil {
+		errMsg = *context.ErrorMessage
+	}
+
+	return context.ID, &metrics.Event{
+		IsProvider: true,
+		Metric: &metrics.Event_NatMappingPayload{
+			NatMappingPayload: &metrics.NatMappingPayload{
+				Stage:      context.Stage,
+				Successful: context.Successful,
+				Err:        errMsg,
+			},
+		},
+	}
+}
+
+func identityRegistrationEvent(data registrationEvent) (string, *metrics.Event) {
 	return data.Identity, &metrics.Event{
 		Metric: &metrics.Event_RegistrationPayload{
 			RegistrationPayload: &metrics.RegistrationPayload{
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
-				},
-				Country: data.Country,
-				Status:  data.Status,
+				Status: data.Status,
 			},
 		},
 	}
 }
 
-func identityUnlockToMetricsEvent(id string, info appInfo) (string, *metrics.Event) {
-	return id, &metrics.Event{
-		Metric: &metrics.Event_VersionPayload{
-			VersionPayload: &metrics.VersionPayload{
-				Version: info.Version,
-				Os:      info.OS,
-				Arch:    info.Arch,
-			},
-		},
-	}
+func identityUnlockToMetricsEvent(id string) (string, *metrics.Event) {
+	return id, &metrics.Event{}
 }
 
 func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event) {
-	return ctx.Consumer, &metrics.Event{
-		TargetId:   ctx.Provider,
-		IsProvider: false,
+	sender, target, country := ctx.Consumer, ctx.Provider, ctx.ProviderCountry
+	if ctx.IsProvider {
+		sender, target, country = ctx.Provider, ctx.Consumer, ctx.ConsumerCountry
+	}
+
+	return sender, &metrics.Event{
+		TargetId:   target,
+		IsProvider: ctx.IsProvider,
 		Metric: &metrics.Event_SessionEventPayload{
 			SessionEventPayload: &metrics.SessionEventPayload{
 				Event: ctx.Event,
 				Session: &metrics.SessionPayload{
-					Id:             ctx.ID,
-					ServiceType:    ctx.ServiceType,
-					ProviderContry: ctx.ProviderCountry,
-					ConsumerContry: ctx.ConsumerCountry,
-					AccountantId:   ctx.AccountantID,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: country,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},
@@ -113,19 +176,23 @@ func sessionEventToMetricsEvent(ctx sessionEventContext) (string, *metrics.Event
 }
 
 func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) {
-	return ctx.Consumer, &metrics.Event{
-		TargetId:   ctx.Provider,
-		IsProvider: false,
+	sender, target, country := ctx.Consumer, ctx.Provider, ctx.ProviderCountry
+	if ctx.IsProvider {
+		sender, target, country = ctx.Provider, ctx.Consumer, ctx.ConsumerCountry
+	}
+
+	return sender, &metrics.Event{
+		TargetId:   target,
+		IsProvider: ctx.IsProvider,
 		Metric: &metrics.Event_SessionStatisticsPayload{
 			SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
 				BytesSent:     ctx.Tx,
 				BytesReceived: ctx.Rx,
 				Session: &metrics.SessionPayload{
-					Id:             ctx.ID,
-					ServiceType:    ctx.ServiceType,
-					ProviderContry: ctx.ProviderCountry,
-					ConsumerContry: ctx.ConsumerCountry,
-					AccountantId:   ctx.AccountantID,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: country,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},
@@ -140,42 +207,35 @@ func sessionTokensToMetricsEvent(ctx sessionTokensContext) (string, *metrics.Eve
 			SessionTokensPayload: &metrics.SessionTokensPayload{
 				Tokens: ctx.Tokens.Text(10),
 				Session: &metrics.SessionPayload{
-					Id:             ctx.ID,
-					ServiceType:    ctx.ServiceType,
-					ProviderContry: ctx.ProviderCountry,
-					ConsumerContry: ctx.ConsumerCountry,
-					AccountantId:   ctx.AccountantID,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: ctx.ProviderCountry,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},
 	}
 }
 
-func proposalEventToMetricsEvent(ctx market.ServiceProposal, info appInfo) (string, *metrics.Event) {
+func proposalEventToMetricsEvent(ctx market.ServiceProposal) (string, *metrics.Event) {
 	location := ctx.ServiceDefinition.GetLocation()
+
 	return ctx.ProviderID, &metrics.Event{
 		IsProvider: true,
 		Metric: &metrics.Event_ProposalPayload{
 			ProposalPayload: &metrics.ProposalPayload{
-				ProviderId:  ctx.ProviderID,
 				ServiceType: ctx.ServiceType,
 				NodeType:    location.NodeType,
-				Country:     location.Country,
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
-				},
 			},
 		},
 	}
 }
 
-func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *metrics.Event) {
-	sender, target, isProvider := ctx.Consumer, ctx.Provider, false
+func traceEventToMetricsEvent(ctx sessionTraceContext) (string, *metrics.Event) {
+	sender, target, isProvider, country := ctx.Consumer, ctx.Provider, false, ctx.ProviderCountry
 	// TODO Remove this workaround by generating&signing&publishing `metrics.Event` in same place
 	if strings.HasPrefix(ctx.Stage, "Provider") {
-		sender, target, isProvider = ctx.Provider, ctx.Consumer, true
+		sender, target, isProvider, country = ctx.Provider, ctx.Consumer, true, ctx.ConsumerCountry
 	}
 
 	return sender, &metrics.Event{
@@ -186,16 +246,10 @@ func traceEventToMetricsEvent(ctx sessionTraceContext, info appInfo) (string, *m
 				Duration: uint64(ctx.Duration.Nanoseconds()),
 				Stage:    ctx.Stage,
 				Session: &metrics.SessionPayload{
-					Id:             ctx.ID,
-					ServiceType:    ctx.ServiceType,
-					ProviderContry: ctx.ProviderCountry,
-					ConsumerContry: ctx.ConsumerCountry,
-					AccountantId:   ctx.AccountantID,
-				},
-				Version: &metrics.VersionPayload{
-					Version: info.Version,
-					Os:      info.OS,
-					Arch:    info.Arch,
+					Id:            ctx.ID,
+					ServiceType:   ctx.ServiceType,
+					RemoteCountry: country,
+					HermesId:      ctx.AccountantID,
 				},
 			},
 		},

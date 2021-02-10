@@ -19,8 +19,12 @@ package main
 
 import (
 	"os"
+	"sync"
 
+	"github.com/mysteriumnetwork/node/cmd/commands/account"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
+	command_cfg "github.com/mysteriumnetwork/node/cmd/commands/config"
+	"github.com/mysteriumnetwork/node/cmd/commands/connection"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/reset"
@@ -29,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
@@ -38,13 +43,16 @@ var (
 		"run command 'license --warranty'",
 		"run command 'license --conditions'",
 	)
-	versionSummary = metadata.VersionAsSummary(licenseCopyright)
-	daemonCommand  = daemon.NewCommand()
-	versionCommand = version.NewCommand(versionSummary)
-	licenseCommand = license.NewCommand(licenseCopyright)
-	serviceCommand = service.NewCommand(licenseCommand.Name)
-	cliCommand     = command_cli.NewCommand()
-	resetCommand   = reset.NewCommand()
+	versionSummary    = metadata.VersionAsSummary(licenseCopyright)
+	daemonCommand     = daemon.NewCommand()
+	versionCommand    = version.NewCommand(versionSummary)
+	licenseCommand    = license.NewCommand(licenseCopyright)
+	serviceCommand    = service.NewCommand(licenseCommand.Name)
+	cliCommand        = command_cli.NewCommand()
+	resetCommand      = reset.NewCommand()
+	accountCommand    = account.NewCommand()
+	connectionCommand = connection.NewCommand()
+	configCommand     = command_cfg.NewCommand()
 )
 
 func main() {
@@ -68,16 +76,19 @@ func NewCommand() (*cli.App, error) {
 		versionCommand.Run(ctx)
 	}
 
-	app := cli.NewApp()
+	app, err := newApp()
+	if err != nil {
+		return nil, err
+	}
+
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
 	app.Authors = []*cli.Author{
 		{Name: `The "MysteriumNetwork/node" Authors`, Email: "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	if err := config.RegisterFlagsNode(&app.Flags); err != nil {
-		return nil, err
-	}
+	app.Before = configureLogging()
+
 	app.Commands = []*cli.Command{
 		versionCommand,
 		licenseCommand,
@@ -85,7 +96,49 @@ func NewCommand() (*cli.App, error) {
 		daemonCommand,
 		cliCommand,
 		resetCommand,
+		accountCommand,
+		connectionCommand,
+		configCommand,
 	}
 
 	return app, nil
+}
+
+func newApp() (*cli.App, error) {
+	app := cli.NewApp()
+	return app, config.RegisterFlagsNode(&app.Flags)
+}
+
+// uiCommands is a map which consists of all
+// commands are used directly by a user.
+var uiCommands = map[string]struct{}{
+	command_cli.CommandName: {},
+	account.CommandName:     {},
+	connection.CommandName:  {},
+	command_cfg.CommandName: {},
+	reset.CommandName:       {},
+}
+
+// configureLogging returns a func which configures global
+// logging settings depending on the command used.
+// It only runs once.
+func configureLogging() cli.BeforeFunc {
+	var once sync.Once
+	return func(ctx *cli.Context) error {
+		once.Do(func() {
+			// Keep default settings if verbose logging is enabled.
+			if ctx.Bool(config.FlagVerbose.Name) {
+				return
+			}
+
+			cmd := ctx.Args().First()
+			if _, ok := uiCommands[cmd]; !ok {
+				// If the command is not meant for user
+				// interaction, skip.
+				return
+			}
+			logconfig.SetLogLevel(zerolog.PanicLevel)
+		})
+		return nil
+	}
 }

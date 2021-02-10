@@ -24,14 +24,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/trace"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
@@ -64,11 +66,12 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			natProviderPinger: &mockProviderNATPinger{},
 			natConsumerPinger: &mockConsumerNATPinger{},
 			portMapper:        &mockPortMapper{enabled: true},
-		}, {
+		},
+		{
 			name:              "Provider behind NAT with manual port forwarding and noop pinger",
 			ipResolver:        ip.NewResolverMockMultiple("127.0.0.1", "1.1.1.1"),
-			natProviderPinger: traversal.NewNoopPinger(),
-			natConsumerPinger: traversal.NewNoopPinger(),
+			natProviderPinger: traversal.NewNoopPinger(eventbus.New()),
+			natConsumerPinger: traversal.NewNoopPinger(eventbus.New()),
 			portMapper:        &mockPortMapper{enabled: false},
 		},
 	}
@@ -86,7 +89,7 @@ func TestDialer_Exchange_And_Communication_With_Provider(t *testing.T) {
 			portPool := port.NewPool()
 
 			// Provider starts listening.
-			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper)
+			channelListener := NewListener(brokerConn, signerFactory, verifier, test.ipResolver, test.natProviderPinger, portPool, test.portMapper, eventbus.New())
 			_, err := channelListener.Listen(providerID, "wireguard", func(ch Channel) {
 				ch.Handle("test", func(c Context) error {
 					return c.OkWithReply(&Message{Data: []byte("pong")})
@@ -135,7 +138,7 @@ type mockProviderNATPinger struct {
 	conns []*net.UDPConn
 }
 
-func (m *mockProviderNATPinger) PingConsumerPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
+func (m *mockProviderNATPinger) PingConsumerPeer(ctx context.Context, id, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
 	return m.conns, nil
 }
 
@@ -151,6 +154,6 @@ type mockPortMapper struct {
 	enabled bool
 }
 
-func (m mockPortMapper) Map(protocol string, port int, name string) (release func(), ok bool) {
+func (m mockPortMapper) Map(id, protocol string, port int, name string) (release func(), ok bool) {
 	return func() {}, m.enabled
 }
