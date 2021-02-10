@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
@@ -198,6 +199,7 @@ func (a *API) sendRequestAndParseResp(req *http.Request, resp interface{}) error
 
 	req.Header.Set("X-Origin-Country", loc.Country)
 	req.Header.Set("X-Origin-OS", runtime.GOOS)
+	req.Header.Set("X-Origin-Node-Version", metadata.VersionAsString())
 
 	return a.req.DoRequestAndParseResponse(req, &resp)
 }
