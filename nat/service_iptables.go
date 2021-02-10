@@ -21,11 +21,12 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/firewall/iptables"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 type serviceIPTables struct {
@@ -35,6 +36,7 @@ type serviceIPTables struct {
 }
 
 const (
+	chainInput       = "INPUT"
 	chainForward     = "FORWARD"
 	chainPreRouting  = "PREROUTING"
 	chainPostRouting = "POSTROUTING"
@@ -145,11 +147,37 @@ func makeIPTablesRules(opts Options) (rules []iptables.Rule) {
 			"--table", "nat",
 		)
 		rules = append(rules, rule)
+
+		// Enable pings rule (tcp)
+		rule = iptables.InsertAt(chainInput, 1).RuleSpec(
+			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "icmp", "--jump", "ACCEPT",
+		)
+		rules = append(rules, rule)
+
+		// DNS port input rule (tcp)
+		rule = iptables.InsertAt(chainInput, 1).RuleSpec(
+			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "tcp", "--dport", strconv.Itoa(opts.DNSPort),
+			"--jump", "ACCEPT",
+		)
+		rules = append(rules, rule)
+
+		// DNS port input rule (udp)
+		rule = iptables.InsertAt(chainInput, 1).RuleSpec(
+			"--source", vpnNetwork, "--destination", opts.DNSIP.String(), "--protocol", "udp", "--dport", strconv.Itoa(opts.DNSPort),
+			"--jump", "ACCEPT",
+		)
+		rules = append(rules, rule)
 	}
 
-	// Protect private networks rule
 	for _, ipNet := range protectedNetworks() {
+		// Protect private networks rule
 		rule := iptables.AppendTo(chainForward).RuleSpec(
+			"--source", vpnNetwork, "--destination", ipNet.String(),
+			"--jump", "DROP")
+		rules = append(rules, rule)
+
+		// Protect host rule
+		rule = iptables.AppendTo(chainInput).RuleSpec(
 			"--source", vpnNetwork, "--destination", ipNet.String(),
 			"--jump", "DROP")
 		rules = append(rules, rule)
