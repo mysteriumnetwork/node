@@ -19,7 +19,6 @@ package quality
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
