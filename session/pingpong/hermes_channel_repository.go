@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/pingpong/event"
+	pinge "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/payments/client"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/rs/zerolog/log"
@@ -164,7 +165,30 @@ func (hcr *HermesChannelRepository) Subscribe(bus eventbus.Subscriber) error {
 	if err != nil {
 		return fmt.Errorf("could not subscribe to node status event: %w", err)
 	}
+	err = bus.SubscribeAsync(pinge.AppTopicHermesPromise, hcr.handleHermesPromiseReceived)
+	if err != nil {
+		return fmt.Errorf("could not subscribe to AppTopicHermesPromise event: %w", err)
+	}
 	return nil
+}
+
+func (hcr *HermesChannelRepository) handleHermesPromiseReceived(payload pinge.AppEventHermesPromise) {
+	channelID, err := crypto.GenerateProviderChannelID(payload.ProviderID.Address, payload.HermesID.Hex())
+	if err != nil {
+		log.Err(err).Msg("could not generate provider channel id")
+		return
+	}
+
+	promise, err := hcr.promiseProvider.Get(payload.Promise.ChainID, channelID)
+	if err != nil {
+		log.Err(err).Msgf("could not get hermes promise for provider %v, hermes %v", payload.ProviderID, payload.HermesID.Hex())
+		return
+	}
+
+	err = hcr.updateChannelWithLatestPromise(payload.Promise.ChainID, promise.ChannelID, payload.ProviderID, payload.HermesID, promise)
+	if err != nil {
+		log.Err(err).Msg("could not update channel state with latest hermes promise")
+	}
 }
 
 func (hcr *HermesChannelRepository) handleNodeStart(payload nodevent.Payload) {
@@ -214,6 +238,19 @@ func (hcr *HermesChannelRepository) fetchChannel(chainID int64, channelID string
 	hcr.updateChannel(chainID, hermesChannel)
 
 	return hermesChannel, nil
+}
+
+func (hcr *HermesChannelRepository) updateChannelWithLatestPromise(chainID int64, channelID string, id identity.Identity, hermesID common.Address, promise HermesPromise) error {
+	gotten, ok := hcr.Get(chainID, id, hermesID)
+	if !ok {
+		// this actually performs the update, so no need to do anything
+		_, err := hcr.fetchChannel(chainID, channelID, id, hermesID, promise)
+		return err
+	}
+
+	hermesChannel := NewHermesChannel(channelID, id, hermesID, gotten.Channel, promise)
+	hcr.updateChannel(chainID, hermesChannel)
+	return nil
 }
 
 func (hcr *HermesChannelRepository) updateChannel(chainID int64, new HermesChannel) {
