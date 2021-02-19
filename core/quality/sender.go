@@ -141,6 +141,7 @@ type sessionContext struct {
 	ProviderCountry string
 	ConsumerCountry string
 	AccountantID    string
+	StartedAt       time.Time
 }
 
 // Subscribe subscribes to relevant events of event bus.
@@ -263,6 +264,7 @@ func (s *Sender) sendServiceSessionEvent(e sessionEvent.AppEventSession) {
 		ProviderCountry: e.Session.Proposal.ServiceDefinition.GetLocation().Country,
 		ConsumerCountry: e.Session.ConsumerLocation.Country,
 		AccountantID:    e.Session.HermesID.Hex(),
+		StartedAt:       e.Session.StartedAt,
 	}
 
 	switch e.Status {
@@ -411,5 +413,6 @@ func (s *Sender) toSessionContext(session connectionstate.Status) sessionContext
 		ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
 		ConsumerCountry: session.ConsumerLocation.Country,
 		AccountantID:    session.HermesID.Hex(),
+		StartedAt:       session.StartedAt,
 	}
 }

@@ -36,7 +36,6 @@ import (
 	appconfig "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
-	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -127,7 +126,6 @@ type Dependencies struct {
 
 	PolicyOracle *policy.Oracle
 
-	StatisticsReporter               *statistics.SessionStatisticsReporter
 	SessionStorage                   *consumer_session.Storage
 	SessionConnectivityStatusStorage connectivity.StatusStorage
 
@@ -468,12 +466,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	// Consumer current session bandwidth
 	bandwidthTracker := bandwidth.NewTracker(di.EventBus)
 	if err := bandwidthTracker.Subscribe(di.EventBus); err != nil {
-		return err
-	}
-
-	// Consumer session history (API storage)
-	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(di.MysteriumAPI, di.SignerFactory, time.Minute)
-	if err := di.StatisticsReporter.Subscribe(di.EventBus); err != nil {
 		return err
 	}
 

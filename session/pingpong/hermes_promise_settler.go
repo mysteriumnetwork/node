@@ -261,11 +261,19 @@ func (aps *hermesPromiseSettler) handleHermesPromiseReceived(apep event.AppEvent
 		return
 	}
 
-	channel, err := aps.channelProvider.Fetch(apep.Promise.ChainID, id, apep.HermesID)
-	if err != nil && !errors.Is(err, ErrNotFound) {
-		log.Error().Err(err).Msgf("could not sync state for provider %v, hermesID %v", apep.ProviderID, apep.HermesID.Hex())
-		return
+	var channel HermesChannel
+	hc, ok := aps.channelProvider.Get(apep.Promise.ChainID, id, apep.HermesID)
+	if ok {
+		channel = hc
+	} else {
+		hc, err := aps.channelProvider.Fetch(apep.Promise.ChainID, id, apep.HermesID)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			log.Error().Err(err).Msgf("could not sync state for provider %v, hermesID %v", apep.ProviderID, apep.HermesID.Hex())
+			return
+		}
+		channel = hc
 	}
+
 	log.Info().Msgf("Hermes %q promise state updated for provider %q", apep.HermesID.Hex(), id)
 
 	if s.needsSettling(aps.config.Threshold, channel) {
