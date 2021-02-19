@@ -20,6 +20,7 @@ package quality
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/core/location/locationstate"
@@ -188,6 +189,7 @@ func sessionDataToMetricsEvent(ctx sessionDataContext) (string, *metrics.Event) 
 			SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
 				BytesSent:     ctx.Tx,
 				BytesReceived: ctx.Rx,
+				Duration:      duration(ctx.StartedAt),
 				Session: &metrics.SessionPayload{
 					Id:            ctx.ID,
 					ServiceType:   ctx.ServiceType,
@@ -254,4 +256,12 @@ func traceEventToMetricsEvent(ctx sessionTraceContext) (string, *metrics.Event) 
 			},
 		},
 	}
+}
+
+func duration(startedAt time.Time) uint64 {
+	if startedAt.IsZero() {
+		return 0
+	}
+
+	return uint64(time.Now().Sub(startedAt).Seconds())
 }
