@@ -1,4 +1,4 @@
-// +build !darwin,!windows
+// +build packageIOS !darwin,!windows
 
 /*
  * Copyright (C) 2020 The "MysteriumNetwork/node" Authors.

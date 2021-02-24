@@ -28,7 +28,7 @@ docker run --rm \
     -e FLAG_V=false \
     -e FLAG_X=false \
     -e FLAG_RACE=false \
-    -e FLAG_TAGS= \
+    -e FLAG_TAGS=packageIOS \
     -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
     -e FLAG_BUILDMODE=default \
     -e TARGETS=ios/. \
