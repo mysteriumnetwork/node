@@ -19,6 +19,7 @@ package node
 
 import (
 	"path"
+	"time"
 
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -80,8 +81,9 @@ type Options struct {
 
 	Consumer bool
 
-	P2PPorts        *port.Range
-	PilvytisAddress string
+	SwarmDialerDNSHeadstart time.Duration
+	P2PPorts                *port.Range
+	PilvytisAddress         string
 }
 
 // GetOptions retrieves node options from the app configuration.
@@ -120,7 +122,8 @@ func GetOptions() *Options {
 			UIBindAddress: config.GetString(config.FlagUIAddress),
 			UIPort:        config.GetInt(config.FlagUIPort),
 		},
-		FeedbackURL: config.GetString(config.FlagFeedbackURL),
+		SwarmDialerDNSHeadstart: config.GetDuration(config.FlagDNSResolutionHeadstart),
+		FeedbackURL:             config.GetString(config.FlagFeedbackURL),
 		Keystore: OptionsKeystore{
 			UseLightweight: config.GetBool(config.FlagKeystoreLightweight),
 		},
