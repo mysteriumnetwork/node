@@ -36,7 +36,7 @@ func Test_DialerSwarm_UsesDefaultResolver(t *testing.T) {
 	defer ln.Close()
 
 	// when
-	dialer := NewDialerSwarm("127.0.0.1")
+	dialer := NewDialerSwarm("127.0.0.1", 0)
 	conn, err := dialer.DialContext(context.Background(), ln.Addr().Network(), ln.Addr().String())
 
 	// then
@@ -52,7 +52,7 @@ func Test_DialerSwarm_CustomResolverSuccessfully(t *testing.T) {
 	}
 	defer ln.Close()
 
-	dialer := NewDialerSwarm("127.0.0.1")
+	dialer := NewDialerSwarm("127.0.0.1", 0)
 	dialer.ResolveContext = NewResolverMap(map[string][]string{
 		"dns-is-faked.golang": {"127.0.0.1", "2001:db8::a3"},
 	})
@@ -73,7 +73,7 @@ func Test_DialerSwarm_CustomResolverWithSomeUnreachableIPs(t *testing.T) {
 	}
 	defer ln.Close()
 
-	dialer := NewDialerSwarm("127.0.0.1")
+	dialer := NewDialerSwarm("127.0.0.1", 0)
 	dialer.ResolveContext = NewResolverMap(map[string][]string{
 		"dns-is-faked.golang": {"2001:db8::a3", "127.0.0.1"},
 	})
@@ -87,7 +87,7 @@ func Test_DialerSwarm_CustomResolverWithSomeUnreachableIPs(t *testing.T) {
 }
 
 func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
-	dialer := NewDialerSwarm("127.0.0.1")
+	dialer := NewDialerSwarm("127.0.0.1", 0)
 	dialer.ResolveContext = NewResolverMap(map[string][]string{
 		"dns-is-faked.golang": {"2001:db8::a1", "2001:db8::a3"},
 	})
@@ -112,7 +112,7 @@ func Test_DialerSwarm_CustomResolverWithAllUnreachableIPs(t *testing.T) {
 
 func Test_DialerSwarm_CustomDialingIsCancelable(t *testing.T) {
 	// configure lagging dialer
-	dialer := NewDialerSwarm("127.0.0.1")
+	dialer := NewDialerSwarm("127.0.0.1", 0)
 	dialer.ResolveContext = NewResolverMap(map[string][]string{})
 	dialer.Dialer = func(ctx context.Context, _, _ string) (net.Conn, error) {
 		select {
@@ -153,7 +153,7 @@ func Test_DialerSwarm_CustomDialingIsCancelable(t *testing.T) {
 
 func Test_DialerSwarm_CustomResolvingIsCancelable(t *testing.T) {
 	// configure lagging dialer
-	dialer := NewDialerSwarm("127.0.0.1")
+	dialer := NewDialerSwarm("127.0.0.1", 0)
 	dialer.ResolveContext = func(ctx context.Context, _, _ string) ([]string, error) {
 		select {
 		case <-ctx.Done():
@@ -182,4 +182,65 @@ func Test_DialerSwarm_CustomResolvingIsCancelable(t *testing.T) {
 	assert.Equal(t, &net.OpError{Op: "dial", Net: "tcp", Source: nil, Addr: nil, Err: context.Canceled}, err)
 
 	wg.Wait()
+}
+
+func Test_isIP(t *testing.T) {
+	type args struct {
+		addr string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "detects ipv4 correctly",
+			args: args{
+				addr: "95.216.204.232:443",
+			},
+			want: true,
+		},
+		{
+			name: "detects ipv6 correctly",
+			args: args{
+				addr: "[2001:db8::1]:8080",
+			},
+			want: true,
+		},
+		{
+			name: "detects ipv4 with no port correctly",
+			args: args{
+				addr: "95.216.204.232",
+			},
+			want: true,
+		},
+		{
+			name: "detects ipv6 with no port correctly",
+			args: args{
+				addr: "::1",
+			},
+			want: true,
+		},
+		{
+			name: "detects url correctly",
+			args: args{
+				addr: "testnet2-location.mysterium.network:443",
+			},
+			want: false,
+		},
+		{
+			name: "detects url with no port correctly",
+			args: args{
+				addr: "testnet2-location.mysterium.network",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isIP(tt.args.addr); got != tt.want {
+				t.Errorf("isIP() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

@@ -248,6 +248,14 @@ var (
 		Value:  "https://docs.mysterium.network",
 		Hidden: true,
 	}
+
+	// FlagDNSResolutionHeadstart sets the dns resolution head start for swarm dialer.
+	FlagDNSResolutionHeadstart = cli.DurationFlag{
+		Name:   "dns-resolution-headstart",
+		Usage:  "the headstart we give DNS lookups versus IP lookups",
+		Value:  time.Millisecond * 1500,
+		Hidden: true,
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -299,6 +307,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagConsumer,
 		&FlagDefaultCurrency,
 		&FlagDocsURL,
+		&FlagDNSResolutionHeadstart,
 	)
 
 	return nil
@@ -350,6 +359,7 @@ func ParseFlagsNode(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagConsumer)
 	Current.ParseStringFlag(ctx, FlagDefaultCurrency)
 	Current.ParseStringFlag(ctx, FlagDocsURL)
+	Current.ParseDurationFlag(ctx, FlagDNSResolutionHeadstart)
 
 	ValidateAddressFlags(FlagTequilapiAddress)
 }

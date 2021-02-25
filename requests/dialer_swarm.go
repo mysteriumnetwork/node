@@ -37,11 +37,15 @@ type DialerSwarm struct {
 
 	// Dialer specifies the dial function for creating unencrypted TCP connections.
 	Dialer DialContext
+
+	// dnsHeadstart specifies the time delay that requests via IP incur.
+	dnsHeadstart time.Duration
 }
 
 // NewDialerSwarm creates swarm dialer with default configuration.
-func NewDialerSwarm(srcIP string) *DialerSwarm {
+func NewDialerSwarm(srcIP string, dnsHeadstart time.Duration) *DialerSwarm {
 	return &DialerSwarm{
+		dnsHeadstart: dnsHeadstart,
 		Dialer: (&net.Dialer{
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
@@ -117,7 +121,21 @@ dialLoop:
 				continue
 			}
 
-			go ds.dialAddr(ctx, network, addr, resultCh)
+			// Prefer dialing via dns, give them a head start.
+			if !isIP(addr) {
+				go ds.dialAddr(ctx, network, addr, resultCh)
+			} else {
+				go func() {
+					select {
+					case <-time.After(ds.dnsHeadstart):
+						break
+					case <-ctx.Done():
+						return
+					}
+					ds.dialAddr(ctx, network, addr, resultCh)
+				}()
+			}
+
 			active++
 
 		case <-ctx.Done():
@@ -140,6 +158,16 @@ dialLoop:
 	}
 
 	return nil, err
+}
+
+func isIP(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		ip := net.ParseIP(addr)
+		return ip != nil
+	}
+	ip := net.ParseIP(host)
+	return ip != nil
 }
 
 func (ds *DialerSwarm) dialAddr(ctx context.Context, network, addr string, resp chan dialResult) {

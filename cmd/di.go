@@ -651,7 +651,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 	resolver := requests.NewResolverMap(dnsMap)
 
-	dialer := requests.NewDialerSwarm(options.BindAddress)
+	dialer := requests.NewDialerSwarm(options.BindAddress, options.SwarmDialerDNSHeadstart)
 	dialer.ResolveContext = resolver
 	di.HTTPTransport = requests.NewTransport(dialer.DialContext)
 	di.HTTPClient = requests.NewHTTPClientWithTransport(di.HTTPTransport, requests.DefaultTimeout)
