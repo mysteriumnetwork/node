@@ -120,6 +120,15 @@ func PackageMacOSAmd64() error {
 	return env.IfRelease(storage.UploadArtifacts)
 }
 
+// PackageMacOSArm64 builds and stores macOS arm64 package
+func PackageMacOSArm64() error {
+	logconfig.Bootstrap()
+	if err := packageStandalone("build/myst/myst_darwin_arm64", "darwin", "arm64"); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
+}
+
 // PackageWindowsAmd64 builds and stores Windows amd64 package
 func PackageWindowsAmd64() error {
 	logconfig.Bootstrap()

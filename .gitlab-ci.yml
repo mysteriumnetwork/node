@@ -120,6 +120,11 @@ package:macos-amd64:
   tags: [go]
   script: go run mage.go -v PackageMacOSAmd64
 
+package:macos-arm64:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageMacOSArm64
+
 package:windows-amd64:
    stage: build
    tags: [go]
