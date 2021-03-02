@@ -185,8 +185,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			Runtime:  currentDir,
 		},
 
-		TequilapiEnabled: false,
-
+		TequilapiEnabled:        false,
+		SwarmDialerDNSHeadstart: time.Millisecond * 1500,
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},

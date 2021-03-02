@@ -278,23 +278,18 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 		return
 	}
 
-	// set stake to referral reward if registering provider with token
-	if req.ReferralToken != nil {
-		reward, err := te.transactor.GetTokenReward(*req.ReferralToken)
+	regFee := big.NewInt(0)
+	if req.ReferralToken == nil {
+		rf, err := te.transactor.FetchRegistrationFees(chainID)
 		if err != nil {
-			utils.SendError(resp, fmt.Errorf("failed to get referral token info %w", err), http.StatusBadRequest)
+			utils.SendError(resp, fmt.Errorf("failed to get registration fees %w", err), http.StatusInternalServerError)
 			return
 		}
-		req.Stake = reward.Reward
+
+		regFee = rf.Fee
 	}
 
-	rf, err := te.transactor.FetchRegistrationFees(chainID)
-	if err != nil {
-		utils.SendError(resp, fmt.Errorf("failed to get registration fees %w", err), http.StatusInternalServerError)
-		return
-	}
-
-	err = te.transactor.RegisterIdentity(id.Address, req.Stake, rf.Fee, req.Beneficiary, chainID, req.ReferralToken)
+	err = te.transactor.RegisterIdentity(id.Address, req.Stake, regFee, req.Beneficiary, chainID, req.ReferralToken)
 	if err != nil {
 		log.Err(err).Msgf("Failed identity registration request for ID: %s, %+v", id.Address, req)
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
