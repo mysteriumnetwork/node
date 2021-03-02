@@ -125,6 +125,11 @@ package:windows-amd64:
    tags: [go]
    script: go run mage.go -v PackageWindowsAmd64
 
+package:ios:
+  stage: build
+  tags: [go]
+  script: go run mage.go -v PackageIOS
+
 package:android:
   stage: build
   tags: [go]
