@@ -268,7 +268,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	)
 }
 
-func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
+func TestProposalsEndpointListFetchQuality(t *testing.T) {
 	repository := &mockProposalRepository{
 		proposals: serviceProposals,
 	}
@@ -310,12 +310,8 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"per_bytes":7669584
 						}
 					},
-					"metrics": {
-						"connect_count": {
-							"success": 5,
-							"fail": 3,
-							"timeout": 2
-						},
+					"quality": {
+						"quality": 2,
 						"monitoring_failed": false
 					}
 				},

@@ -154,11 +154,10 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 //   200:
 //     description: List of quality metrics
 //     schema:
-//       "$ref": "#/definitions/ProposalMetricsResponse"
+//       "$ref": "#/definitions/ProposalQualityResponse"
 func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	// metrics := pe.qualityProvider.ProposalsMetrics()
-	metrics := pe.qualityProvider.ProposalsQuality()
-	utils.WriteAsJSON(contract.NewProposalMetricsResponse(metrics), resp)
+	quality := pe.qualityProvider.ProposalsQuality()
+	utils.WriteAsJSON(contract.NewProposalQualityResponse(quality), resp)
 }
 
 func parsePriceBound(req *http.Request, key string) (*big.Int, error) {

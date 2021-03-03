@@ -175,6 +175,7 @@ func (m *MysteriumMORQA) sendMetrics() error {
 	return nil
 }
 
+// ProposalsQuality returns a list of proposals with a quality parameters.
 func (m *MysteriumMORQA) ProposalsQuality() []ProposalQuality {
 	request, err := m.newRequestJSON(http.MethodGet, "providers/quality", nil)
 	if err != nil {

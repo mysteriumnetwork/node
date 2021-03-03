@@ -100,7 +100,7 @@ type ProposalDTO struct {
 	ServiceDefinition ServiceDefinitionDTO `json:"service_definition"`
 
 	// Quality of the service
-	Quality *QualityMetricsDTO `json:"metrics,omitempty"`
+	Quality *QualityMetricsDTO `json:"quality,omitempty"`
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
@@ -151,23 +151,6 @@ type PaymentMethodDTO struct {
 type PaymentRateDTO struct {
 	PerSeconds uint64 `json:"per_seconds"`
 	PerBytes   uint64 `json:"per_bytes"`
-}
-
-// NewProposalMetricsResponse maps to API proposal metrics.
-func NewProposalMetricsResponse(metrics []quality.ProposalQuality) ProposalQualityResponse {
-	var res []ProposalQuality
-	for _, m := range metrics {
-		res = append(res, ProposalQuality{
-			ProviderID:  m.ProposalID.ProviderID,
-			ServiceType: m.ProposalID.ServiceType,
-
-			Quality: m.Quality,
-		})
-	}
-
-	return ProposalQualityResponse{
-		Quality: res,
-	}
 }
 
 // NewProposalQualityResponse maps to API proposal quality.
