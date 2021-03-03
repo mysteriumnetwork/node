@@ -51,16 +51,11 @@ const (
 	StageRegistrationUnknown = "registration_unknown"
 )
 
-// ServiceMetricsResponse represents response from the quality oracle service.
-type ServiceMetricsResponse struct {
-	Connects []ConnectMetric `json:"connects"`
-}
-
-// ConnectMetric represents a proposal with quality info.
-type ConnectMetric struct {
-	ProposalID       ProposalID   `json:"proposalId"`
-	ConnectCount     ConnectCount `json:"connectCount"`
-	MonitoringFailed bool         `json:"monitoringFailed"`
+// ProposalQuality represents a proposal with quality info.
+type ProposalQuality struct {
+	ProposalID       ProposalID `json:"proposalId"`
+	Quality          float64    `json:"quality"`
+	MonitoringFailed bool       `json:"monitoringFailed"`
 }
 
 // ProposalID represents the struct used to uniquely identify proposals.

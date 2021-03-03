@@ -1405,8 +1405,8 @@
           },
           {
             "type": "boolean",
-            "description": "if set to true, fetches the connection success metrics for nodes. False by default.",
-            "name": "fetch_metrics",
+            "description": "if set to true, fetches the quality metrics for nodes. False by default.",
+            "name": "fetch_quality",
             "in": "query"
           },
           {
@@ -1451,7 +1451,7 @@
           "200": {
             "description": "List of quality metrics",
             "schema": {
-              "$ref": "#/definitions/ProposalMetricsResponse"
+              "$ref": "#/definitions/ProposalQualityResponse"
             }
           }
         }
@@ -3149,9 +3149,6 @@
           "x-go-name": "ID",
           "example": 5
         },
-        "metrics": {
-          "$ref": "#/definitions/QualityMetricsDTO"
-        },
         "payment_method": {
           "$ref": "#/definitions/PaymentMethodDTO"
         },
@@ -3160,6 +3157,9 @@
           "type": "string",
           "x-go-name": "ProviderID",
           "example": "0x0000000000000000000000000000000000000001"
+        },
+        "quality": {
+          "$ref": "#/definitions/QualityMetricsDTO"
         },
         "service_definition": {
           "$ref": "#/definitions/ServiceDefinitionDTO"
@@ -3173,13 +3173,10 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProposalMetrics": {
+    "ProposalQuality": {
       "type": "object",
-      "title": "ProposalMetrics holds quality metrics per service.",
+      "title": "ProposalQuality holds quality metrics per service.",
       "properties": {
-        "connect_count": {
-          "$ref": "#/definitions/QualityMetricConnectsDTO"
-        },
         "monitoring_failed": {
           "type": "boolean",
           "x-go-name": "MonitoringFailed"
@@ -3188,6 +3185,11 @@
           "type": "string",
           "x-go-name": "ProviderID"
         },
+        "quality": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Quality"
+        },
         "service_type": {
           "type": "string",
           "x-go-name": "ServiceType"
@@ -3195,38 +3197,16 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
-    "ProposalMetricsResponse": {
+    "ProposalQualityResponse": {
       "type": "object",
-      "title": "ProposalMetricsResponse holds all quality metrics.",
+      "title": "ProposalQualityResponse holds all proposals quality metrics.",
       "properties": {
-        "metrics": {
+        "quality": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ProposalMetrics"
+            "$ref": "#/definitions/ProposalQuality"
           },
-          "x-go-name": "Metrics"
-        }
-      },
-      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
-    },
-    "QualityMetricConnectsDTO": {
-      "type": "object",
-      "title": "QualityMetricConnectsDTO represents the metric for connect stats.",
-      "properties": {
-        "fail": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Fail"
-        },
-        "success": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Success"
-        },
-        "timeout": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "Timeout"
+          "x-go-name": "Quality"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
@@ -3235,12 +3215,14 @@
       "type": "object",
       "title": "QualityMetricsDTO holds proposal quality metrics from Quality Oracle.",
       "properties": {
-        "connect_count": {
-          "$ref": "#/definitions/QualityMetricConnectsDTO"
-        },
         "monitoring_failed": {
           "type": "boolean",
           "x-go-name": "MonitoringFailed"
+        },
+        "quality": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Quality"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

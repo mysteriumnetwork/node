@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	qualityLevelMedium = 0.2
-	qualityLevelHigh   = 0.5
+	qualityLevelMedium = 1
+	qualityLevelHigh   = 2
 )
 
 type proposalQualityLevel int
@@ -101,7 +101,7 @@ type mysteriumAPI interface {
 }
 
 type qualityFinder interface {
-	ProposalsMetrics() []quality.ConnectMetric
+	ProposalsQuality() []quality.ProposalQuality
 }
 
 func newProposalsManager(
@@ -172,15 +172,15 @@ func (m *proposalsManager) addToCache(proposals []market.ServiceProposal) {
 }
 
 func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.ServiceProposal) ([]byte, error) {
-	metrics := m.qualityFinder.ProposalsMetrics()
-	metricsMap := map[string]quality.ConnectMetric{}
-	for _, m := range metrics {
-		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
+	qualityResp := m.qualityFinder.ProposalsQuality()
+	qualityMap := map[string]quality.ProposalQuality{}
+	for _, m := range qualityResp {
+		qualityMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
 	}
 
 	var proposals []*proposalDTO
 	for _, p := range serviceProposals {
-		proposals = append(proposals, m.mapProposal(&p, metricsMap))
+		proposals = append(proposals, m.mapProposal(&p, qualityMap))
 	}
 
 	res := &getProposalsResponse{Proposals: proposals}
@@ -191,7 +191,7 @@ func (m *proposalsManager) mapToProposalsResponse(serviceProposals []market.Serv
 	return bytes, nil
 }
 
-func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map[string]quality.ConnectMetric) *proposalDTO {
+func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map[string]quality.ProposalQuality) *proposalDTO {
 	prop := &proposalDTO{
 		ID:           p.ID,
 		ProviderID:   p.ProviderID,
@@ -221,25 +221,25 @@ func (m *proposalsManager) mapProposal(p *market.ServiceProposal, metricsMap map
 	}
 
 	if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-		prop.QualityLevel = m.calculateMetricQualityLevel(mc.ConnectCount)
+		prop.QualityLevel = m.calculateMetricQualityLevel(mc.Quality)
 		prop.MonitoringFailed = mc.MonitoringFailed
 	}
 
 	return prop
 }
 
-func (m *proposalsManager) calculateMetricQualityLevel(counts quality.ConnectCount) proposalQualityLevel {
-	total := counts.Success + counts.Fail + counts.Timeout
-	if total == 0 {
+func (m *proposalsManager) calculateMetricQualityLevel(quality float64) proposalQualityLevel {
+	if quality == 0 {
 		return proposalQualityLevelUnknown
 	}
 
-	qualityRatio := float64(counts.Success) / float64(total)
-	if qualityRatio >= qualityLevelHigh {
+	if quality >= qualityLevelHigh {
 		return proposalQualityLevelHigh
 	}
-	if qualityRatio >= qualityLevelMedium {
+
+	if quality >= qualityLevelMedium {
 		return proposalQualityLevelMedium
 	}
+
 	return proposalQualityLevelLow
 }

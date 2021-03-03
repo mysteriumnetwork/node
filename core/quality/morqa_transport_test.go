@@ -123,36 +123,36 @@ func TestMORQATransport_SendEvent_HandlesValidationErrors(t *testing.T) {
 	))
 }
 
-func TestMORQA_ProposalsMetrics(t *testing.T) {
+func TestMORQA_ProposalQuality(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{ "connects": [{
+		_, _ = w.Write([]byte(`[{
 			"proposalId": { "providerId": "0x61400b27616f3ce15a86e4cd12c27c7a4d1c545c", "serviceType": "openvpn" },
-			"connectCount": { "success": 39, "fail": 1, "timeout": 1 }
+			"quality": 2
 		}, {
 			"proposalId": { "providerId": "0xb724ba4f646babdebaaad1d1aea6b26df568e8f6", "serviceType": "openvpn" },
-			"connectCount": { "success": 1, "fail": 11, "timeout": 11 }
+			"quality": 1
 		}, {
 			"proposalId": { "providerId": "0x093285d0a05ad5d9a05e0dae1eb69e7437fa02c6", "serviceType": "openvpn" },
-			"connectCount": { "success": 0, "fail": 27, "timeout": 0 }
-		}] }`))
+			"quality": 0
+		}]`))
 	}))
 
 	morqa := NewMorqaClient(httpClient, server.URL, signerFactory)
-	proposalMetrics := morqa.ProposalsMetrics()
+	proposalMetrics := morqa.ProposalsQuality()
 
 	assert.Equal(t,
-		[]ConnectMetric{
+		[]ProposalQuality{
 			{
-				ProposalID:   ProposalID{ProviderID: "0x61400b27616f3ce15a86e4cd12c27c7a4d1c545c", ServiceType: "openvpn"},
-				ConnectCount: ConnectCount{Success: 39, Fail: 1, Timeout: 1},
+				ProposalID: ProposalID{ProviderID: "0x61400b27616f3ce15a86e4cd12c27c7a4d1c545c", ServiceType: "openvpn"},
+				Quality:    2,
 			},
 			{
-				ProposalID:   ProposalID{ProviderID: "0xb724ba4f646babdebaaad1d1aea6b26df568e8f6", ServiceType: "openvpn"},
-				ConnectCount: ConnectCount{Success: 1, Fail: 11, Timeout: 11},
+				ProposalID: ProposalID{ProviderID: "0xb724ba4f646babdebaaad1d1aea6b26df568e8f6", ServiceType: "openvpn"},
+				Quality:    1,
 			},
 			{
-				ProposalID:   ProposalID{ProviderID: "0x093285d0a05ad5d9a05e0dae1eb69e7437fa02c6", ServiceType: "openvpn"},
-				ConnectCount: ConnectCount{Success: 0, Fail: 27, Timeout: 0},
+				ProposalID: ProposalID{ProviderID: "0x093285d0a05ad5d9a05e0dae1eb69e7437fa02c6", ServiceType: "openvpn"},
+				Quality:    0,
 			},
 		},
 		proposalMetrics,

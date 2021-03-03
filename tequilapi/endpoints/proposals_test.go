@@ -25,11 +25,12 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/mocks"
-	"github.com/stretchr/testify/assert"
 )
 
 type TestServiceDefinition struct{}
@@ -38,10 +39,12 @@ func (service TestServiceDefinition) GetLocation() market.Location {
 	return market.Location{ASN: 123, Country: "Lithuania", City: "Vilnius"}
 }
 
-var upperTimePriceBound = big.NewInt(50000)
-var lowerTimePriceBound = big.NewInt(0)
-var upperGBPriceBound = big.NewInt(7000000)
-var lowerGBPriceBound = big.NewInt(0)
+var (
+	upperTimePriceBound = big.NewInt(50000)
+	lowerTimePriceBound = big.NewInt(0)
+	upperGBPriceBound   = big.NewInt(7000000)
+	lowerGBPriceBound   = big.NewInt(0)
+)
 
 var serviceProposals = []market.ServiceProposal{
 	{
@@ -64,7 +67,7 @@ var serviceProposals = []market.ServiceProposal{
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	repository := &mockProposalRepository{
-		//we assume that underling component does correct filtering
+		// we assume that underling component does correct filtering
 		proposals: []market.ServiceProposal{serviceProposals[0]},
 	}
 
@@ -265,13 +268,13 @@ func TestProposalsEndpointList(t *testing.T) {
 	)
 }
 
-func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
+func TestProposalsEndpointListFetchQuality(t *testing.T) {
 	repository := &mockProposalRepository{
 		proposals: serviceProposals,
 	}
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant?fetch_metrics=true",
+		"/irrelevant?fetch_quality=true",
 		nil,
 	)
 	assert.Nil(t, err)
@@ -307,12 +310,8 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 							"per_bytes":7669584
 						}
 					},
-					"metrics": {
-						"connect_count": {
-							"success": 5,
-							"fail": 3,
-							"timeout": 2
-						},
+					"quality": {
+						"quality": 2,
 						"monitoring_failed": false
 					}
 				},
@@ -347,19 +346,15 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 
 type mockQualityProvider struct{}
 
-func (m *mockQualityProvider) ProposalsMetrics() []quality.ConnectMetric {
+func (m *mockQualityProvider) ProposalsQuality() []quality.ProposalQuality {
 	p1 := serviceProposals[0]
-	return []quality.ConnectMetric{
+	return []quality.ProposalQuality{
 		{
 			ProposalID: quality.ProposalID{
 				ProviderID:  p1.ProviderID,
 				ServiceType: p1.ServiceType,
 			},
-			ConnectCount: quality.ConnectCount{
-				Success: 5,
-				Fail:    3,
-				Timeout: 2,
-			},
+			Quality: 2,
 		},
 	}
 }
