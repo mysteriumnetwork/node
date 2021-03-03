@@ -22,16 +22,17 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"github.com/pkg/errors"
 )
 
 // QualityFinder allows to fetch proposal quality data
 type QualityFinder interface {
-	ProposalsMetrics() []quality.ConnectMetric
+	ProposalsQuality() []quality.ProposalQuality
 }
 
 type proposalsEndpoint struct {
@@ -69,8 +70,8 @@ func NewProposalsEndpoint(proposalRepository proposal.Repository, qualityProvide
 //     description: the access policy source to filter the proposals by
 //     type: string
 //   - in: query
-//     name: fetch_metrics
-//     description: if set to true, fetches the connection success metrics for nodes. False by default.
+//     name: fetch_quality
+//     description: if set to true, fetches the quality metrics for nodes. False by default.
 //     type: boolean
 //   - in: query
 //     name: location_type
@@ -126,7 +127,6 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		ExcludeUnsupported:  true,
 		IncludeFailed:       req.URL.Query().Get("monitoring_failed") == "true",
 	})
-
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -137,10 +137,10 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		proposalsRes.Proposals = append(proposalsRes.Proposals, contract.NewProposalDTO(p))
 	}
 
-	fetchConnectCounts := req.URL.Query().Get("fetch_metrics")
-	if fetchConnectCounts == "true" {
-		metrics := pe.qualityProvider.ProposalsMetrics()
-		addProposalMetrics(proposalsRes.Proposals, metrics)
+	fetchQuality := req.URL.Query().Get("fetch_quality")
+	if fetchQuality == "true" {
+		metrics := pe.qualityProvider.ProposalsQuality()
+		addProposalQuality(proposalsRes.Proposals, metrics)
 	}
 
 	utils.WriteAsJSON(proposalsRes, resp)
@@ -156,7 +156,8 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 //     schema:
 //       "$ref": "#/definitions/ProposalMetricsResponse"
 func (pe *proposalsEndpoint) Quality(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	metrics := pe.qualityProvider.ProposalsMetrics()
+	// metrics := pe.qualityProvider.ProposalsMetrics()
+	metrics := pe.qualityProvider.ProposalsQuality()
 	utils.WriteAsJSON(contract.NewProposalMetricsResponse(metrics), resp)
 }
 
@@ -179,18 +180,20 @@ func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposa
 	router.GET("/proposals/quality", pe.Quality)
 }
 
-// addProposalMetrics adds quality metrics to proposals.
-func addProposalMetrics(proposals []contract.ProposalDTO, metrics []quality.ConnectMetric) {
+// addProposalQuality adds quality metrics to proposals.
+func addProposalQuality(proposals []contract.ProposalDTO, metrics []quality.ProposalQuality) {
 	// Convert metrics slice to map for fast lookup.
-	metricsMap := map[string]quality.ConnectMetric{}
+	metricsMap := map[string]quality.ProposalQuality{}
 	for _, m := range metrics {
 		metricsMap[m.ProposalID.ProviderID+m.ProposalID.ServiceType] = m
 	}
 
 	for i, p := range proposals {
 		if mc, ok := metricsMap[p.ProviderID+p.ServiceType]; ok {
-			proposalMetrics := contract.NewQualityMetricsDTO(mc)
-			proposals[i].Metrics = &proposalMetrics
+			proposals[i].Quality = &contract.QualityMetricsDTO{
+				Quality:          mc.Quality,
+				MonitoringFailed: mc.MonitoringFailed,
+			}
 		}
 	}
 }

@@ -99,8 +99,8 @@ type ProposalDTO struct {
 	// qualitative service definition
 	ServiceDefinition ServiceDefinitionDTO `json:"service_definition"`
 
-	// Metrics of the service
-	Metrics *QualityMetricsDTO `json:"metrics,omitempty"`
+	// Quality of the service
+	Quality *QualityMetricsDTO `json:"metrics,omitempty"`
 
 	// AccessPolicies
 	AccessPolicies *[]market.AccessPolicy `json:"access_policies,omitempty"`
@@ -154,58 +154,56 @@ type PaymentRateDTO struct {
 }
 
 // NewProposalMetricsResponse maps to API proposal metrics.
-func NewProposalMetricsResponse(metrics []quality.ConnectMetric) ProposalMetricsResponse {
-	var res []ProposalMetrics
+func NewProposalMetricsResponse(metrics []quality.ProposalQuality) ProposalQualityResponse {
+	var res []ProposalQuality
 	for _, m := range metrics {
-		res = append(res, ProposalMetrics{
-			ProviderID:        m.ProposalID.ProviderID,
-			ServiceType:       m.ProposalID.ServiceType,
-			QualityMetricsDTO: NewQualityMetricsDTO(m),
+		res = append(res, ProposalQuality{
+			ProviderID:  m.ProposalID.ProviderID,
+			ServiceType: m.ProposalID.ServiceType,
+
+			Quality: m.Quality,
 		})
 	}
 
-	return ProposalMetricsResponse{
-		Metrics: res,
+	return ProposalQualityResponse{
+		Quality: res,
 	}
 }
 
-// ProposalMetricsResponse holds all quality metrics.
-// swagger:model ProposalMetricsResponse
-type ProposalMetricsResponse struct {
-	Metrics []ProposalMetrics `json:"metrics"`
-}
-
-// ProposalMetrics holds quality metrics per service.
-// swagger:model ProposalMetrics
-type ProposalMetrics struct {
-	ProviderID  string `json:"provider_id"`
-	ServiceType string `json:"service_type"`
-	QualityMetricsDTO
-}
-
-// NewQualityMetricsDTO maps to API quality metrics.
-func NewQualityMetricsDTO(m quality.ConnectMetric) QualityMetricsDTO {
-	return QualityMetricsDTO{
-		MonitoringFailed: m.MonitoringFailed,
-		ConnectCount: QualityMetricConnectsDTO{
-			Success: m.ConnectCount.Success,
-			Timeout: m.ConnectCount.Timeout,
-			Fail:    m.ConnectCount.Fail,
-		},
+// NewProposalQualityResponse maps to API proposal quality.
+func NewProposalQualityResponse(metrics []quality.ProposalQuality) ProposalQualityResponse {
+	var res []ProposalQuality
+	for _, m := range metrics {
+		res = append(res, ProposalQuality{
+			ProviderID:  m.ProposalID.ProviderID,
+			ServiceType: m.ProposalID.ServiceType,
+			Quality:     m.Quality,
+		})
 	}
+
+	return ProposalQualityResponse{
+		Quality: res,
+	}
+}
+
+// ProposalQualityResponse holds all proposals quality metrics.
+// swagger:model ProposalQualityResponse
+type ProposalQualityResponse struct {
+	Quality []ProposalQuality `json:"quality"`
+}
+
+// ProposalQuality holds quality metrics per service.
+// swagger:model ProposalQuality
+type ProposalQuality struct {
+	ProviderID       string  `json:"provider_id"`
+	ServiceType      string  `json:"service_type"`
+	Quality          float64 `json:"quality"`
+	MonitoringFailed bool    `json:"monitoring_failed"`
 }
 
 // QualityMetricsDTO holds proposal quality metrics from Quality Oracle.
 // swagger:model QualityMetricsDTO
 type QualityMetricsDTO struct {
-	ConnectCount     QualityMetricConnectsDTO `json:"connect_count"`
-	MonitoringFailed bool                     `json:"monitoring_failed"`
-}
-
-// QualityMetricConnectsDTO represents the metric for connect stats.
-// swagger:model QualityMetricConnectsDTO
-type QualityMetricConnectsDTO struct {
-	Success int `json:"success" example:"100" format:"int64"`
-	Fail    int `json:"fail" example:"50" format:"int64"`
-	Timeout int `json:"timeout" example:"10" format:"int64"`
+	Quality          float64 `json:"quality"`
+	MonitoringFailed bool    `json:"monitoring_failed"`
 }
