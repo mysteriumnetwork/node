@@ -26,11 +26,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/mysteriumnetwork/metrics"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -174,31 +175,30 @@ func (m *MysteriumMORQA) sendMetrics() error {
 	return nil
 }
 
-// ProposalsMetrics returns a list of proposals connection metrics.
-func (m *MysteriumMORQA) ProposalsMetrics() []ConnectMetric {
-	request, err := m.newRequestJSON(http.MethodGet, "providers/sessions", nil)
+func (m *MysteriumMORQA) ProposalsQuality() []ProposalQuality {
+	request, err := m.newRequestJSON(http.MethodGet, "providers/quality", nil)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to create proposals metrics request")
+		log.Warn().Err(err).Msg("Failed to create proposals quality request")
 
 		return nil
 	}
 
 	response, err := m.client.Do(request)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
+		log.Warn().Err(err).Msg("Failed to request proposals quality")
 
 		return nil
 	}
 	defer response.Body.Close()
 
-	var metricsResponse ServiceMetricsResponse
-	if err = parseResponseJSON(response, &metricsResponse); err != nil {
-		log.Warn().Err(err).Msg("Failed to request or parse proposals metrics")
+	var qualityResponse []ProposalQuality
+	if err = parseResponseJSON(response, &qualityResponse); err != nil {
+		log.Warn().Err(err).Msg("Failed to parse proposals quality")
 
 		return nil
 	}
 
-	return metricsResponse.Connects
+	return qualityResponse
 }
 
 // SendMetric submits new metric.
