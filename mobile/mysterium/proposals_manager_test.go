@@ -22,13 +22,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 )
 
 type proposalManagerTestSuite struct {
@@ -63,17 +64,13 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 		},
 	}
 	s.proposalsManager.qualityFinder = &mockQualityFinder{
-		metrics: []quality.ConnectMetric{
+		quality: []quality.ProposalQuality{
 			{
 				ProposalID: quality.ProposalID{
 					ProviderID:  "p1",
 					ServiceType: "openvpn",
 				},
-				ConnectCount: quality.ConnectCount{
-					Success: 23,
-					Fail:    4,
-					Timeout: 6,
-				},
+				Quality: 2,
 			},
 		},
 	}
@@ -136,11 +133,11 @@ func (m *mockMysteriumAPI) QueryProposals(query mysterium.ProposalsQuery) ([]mar
 }
 
 type mockQualityFinder struct {
-	metrics []quality.ConnectMetric
+	quality []quality.ProposalQuality
 }
 
-func (m *mockQualityFinder) ProposalsMetrics() []quality.ConnectMetric {
-	return m.metrics
+func (m *mockQualityFinder) ProposalsQuality() []quality.ProposalQuality {
+	return m.quality
 }
 
 type mockServiceDefinition struct {
@@ -159,8 +156,7 @@ func (m mockServiceDefinition) GetLocation() market.Location {
 	}
 }
 
-type mockPayment struct {
-}
+type mockPayment struct{}
 
 func (m mockPayment) GetType() string {
 	return "pt"
