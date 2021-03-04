@@ -22,14 +22,14 @@ import (
 	"net"
 
 	"github.com/rs/zerolog/log"
-
+	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
 )
 
 func createTunnel(interfaceName string) (tunnel tun.Device, _ string, err error) {
 	log.Info().Msg("Creating Wintun interface")
-	wintun, err := tun.CreateTUN(interfaceName, 0)
+	wintun, err := tun.CreateTUN(interfaceName, device.DefaultMTU)
 	if err != nil {
 		return nil, interfaceName, fmt.Errorf("could not create Wintun tunnel: %w", err)
 	}
