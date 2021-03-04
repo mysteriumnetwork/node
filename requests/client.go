@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 const (
@@ -41,7 +42,7 @@ func NewHTTPClientWithTransport(transport *http.Transport, timeout time.Duration
 		clientFactory: func() *http.Client {
 			return &http.Client{
 				Timeout:   timeout,
-				Transport: transport,
+				Transport: setUserAgent(transport, getUserAgent()),
 			}
 		},
 	}
@@ -49,6 +50,27 @@ func NewHTTPClientWithTransport(transport *http.Transport, timeout time.Duration
 	c.client = c.clientFactory()
 
 	return c
+}
+
+func setUserAgent(transport http.RoundTripper, userAgent string) http.RoundTripper {
+	return &userAgenter{
+		transport: transport,
+		Agent:     userAgent,
+	}
+}
+
+func getUserAgent() string {
+	return fmt.Sprintf("Mysterium node(%v; https://mysterium.network)", metadata.VersionAsString())
+}
+
+type userAgenter struct {
+	transport http.RoundTripper
+	Agent     string
+}
+
+func (ua *userAgenter) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Set("User-Agent", ua.Agent)
+	return ua.transport.RoundTrip(r)
 }
 
 // NewHTTPClient creates a new HTTP client.

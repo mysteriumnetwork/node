@@ -29,6 +29,7 @@ import (
 
 func TestClientDoRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, getUserAgent(), r.Header.Get("User-Agent"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
