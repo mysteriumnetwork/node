@@ -839,6 +839,11 @@ func (mb *MobileNode) Currencies() ([]byte, error) {
 	return json.Marshal(currencies)
 }
 
+// ExchangeRate returns MYST rate in quote currency.
+func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
+	return mb.pilvytis.ExchangeRate(quote)
+}
+
 func shrinkUint64(u uint64) (int64, error) {
 	return strconv.ParseInt(strconv.FormatUint(u, 10), 10, 64)
 }
