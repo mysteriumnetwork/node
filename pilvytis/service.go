@@ -18,7 +18,9 @@
 package pilvytis
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
@@ -92,6 +94,19 @@ func (s *Service) ListOrders(id identity.Identity) ([]OrderResponse, error) {
 // Currencies returns supported currencies.
 func (s *Service) Currencies() ([]string, error) {
 	return s.api.GetPaymentOrderCurrencies()
+}
+
+// ExchangeRate returns rate of MYST in quote currency.
+func (s *Service) ExchangeRate(quote string) (float64, error) {
+	rates, err := s.api.GetMystExchangeRate()
+	if err != nil {
+		return 0, err
+	}
+	rate, ok := rates[strings.ToUpper(quote)]
+	if !ok {
+		return 0, errors.New("currency not supported")
+	}
+	return rate, nil
 }
 
 // Stop stops the Service workers.
