@@ -43,9 +43,6 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpong_noop "github.com/mysteriumnetwork/node/session/pingpong/noop"
-	"github.com/mysteriumnetwork/node/ui"
-	uinoop "github.com/mysteriumnetwork/node/ui/noop"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
@@ -297,24 +294,6 @@ func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 		return wireguard_connection.NewConnection(opts, di.IPResolver, endpointFactory, handshakeWaiter)
 	}
 	di.ConnectionRegistry.Register(wireguard.ServiceType, connFactory)
-}
-
-func (di *Dependencies) bootstrapUIServer(options node.Options) (err error) {
-	if !options.UI.UIEnabled {
-		di.UIServer = uinoop.NewServer()
-		return nil
-	}
-
-	bindAddress := options.UI.UIBindAddress
-	if bindAddress == "" {
-		bindAddress, err = di.IPResolver.GetOutboundIP()
-		if err != nil {
-			return err
-		}
-		bindAddress = bindAddress + ",127.0.0.1"
-	}
-	di.UIServer = ui.NewServer(bindAddress, options.UI.UIPort, options.TequilapiAddress, options.TequilapiPort, di.JWTAuthenticator, di.HTTPClient)
-	return nil
 }
 
 func (di *Dependencies) bootstrapMMN() error {
