@@ -18,7 +18,7 @@ variables:
   GITHUB_SNAPSHOT_REPO: node-builds
 
   GO_PACKAGE: github.com/mysteriumnetwork/node
-  GIT_CLONE_PATH: /Users/m1/build/$GO_PACKAGE
+  GIT_CLONE_PATH: /home/gitlab-runner/go/src/$GO_PACKAGE
   GOFLAGS: "-count=1" # Supersedes GOCACHE=off, see: https://github.com/golang/go/issues/29378#issuecomment-449383809
 
 before_script:
