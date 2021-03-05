@@ -121,7 +121,7 @@ create-bucket:
 #   script: go run mage.go -v PackageMacOSAmd64
 
 package:macos-arm64:
-  environment:
+  variables:
     GIT_CLONE_PATH: /opt/gitlab-runner/go/src/$GO_PACKAGE
   stage: build
   tags: [mac-arm64]
