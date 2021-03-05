@@ -123,7 +123,7 @@ func PackageMacOSAmd64() error {
 // PackageMacOSArm64 builds and stores macOS arm64 package
 func PackageMacOSArm64() error {
 	logconfig.Bootstrap()
-	if err := packageStandalone("build/myst/myst_darwin_arm64", "darwin", "arm64"); err != nil {
+	if err := packageStandalone("build/myst/myst", "darwin", "arm64"); err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
@@ -270,7 +270,7 @@ func goGet(pkg string) error {
 
 func packageStandalone(binaryPath, os, arch string) error {
 	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
-	err := buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst_darwin_arm64", os, arch)
+	err := buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst", os, arch)
 	if err != nil {
 		return err
 	}
