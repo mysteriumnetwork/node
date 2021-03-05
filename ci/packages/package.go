@@ -270,7 +270,7 @@ func goGet(pkg string) error {
 
 func packageStandalone(binaryPath, os, arch string) error {
 	log.Info().Msgf("Packaging %s %s %s", binaryPath, os, arch)
-	err := buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst", os, arch)
+	err := buildBinaryFor(path.Join("cmd", "mysterium_node", "mysterium_node.go"), "myst_darwin_arm64", os, arch)
 	if err != nil {
 		return err
 	}
