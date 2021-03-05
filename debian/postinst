@@ -68,7 +68,7 @@ printf "Creating directories...\n" \
     && chown $DAEMON_USER:$DAEMON_GROUP $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA
 
 printf "Setting required capabilities...\n" \
-    && setcap cap_net_admin+ep /usr/bin/myst
+    && setcap cap_net_admin+ep $OS_DIR_BIN/myst
 
 ensure_paths
 
