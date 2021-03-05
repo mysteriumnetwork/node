@@ -43,7 +43,10 @@ const (
 	mountedSetupDir    = raspbianMountPoint + setupDir
 )
 
-// PackageLinuxRaspberryImage builds and stores raspberry image
+// PackageLinuxRaspberryImage builds and stores raspberry image.
+// When bumping the raspios/raspbian version, use the following guide to resize image's filesystem
+// (so that it does not run out of space during the setup). I added +1G to the downloaded image.
+// https://wiki.debian.org/RaspberryPi/qemu-user-static
 func PackageLinuxRaspberryImage() error {
 	job.Precondition(func() bool {
 		pr, _ := env.IsPR()
