@@ -53,6 +53,11 @@ var (
 		Name:  "last-topup",
 		Usage: "Include last top up information",
 	}
+
+	flagToken = cli.StringFlag{
+		Name:  "token",
+		Usage: "Either a referral or affiliate token which can be used when registering",
+	}
 )
 
 // NewCommand function creates license command.
@@ -85,8 +90,9 @@ func NewCommand() *cli.Command {
 			{
 				Name:  "register",
 				Usage: "Submit a registration request",
+				Flags: []cli.Flag{&flagToken},
 				Action: func(ctx *cli.Context) error {
-					cmd.register()
+					cmd.register(ctx)
 					return nil
 				},
 			},
@@ -223,7 +229,7 @@ func (c *command) topup(ctx *cli.Context) {
 	printOrder(resp)
 }
 
-func (c *command) register() {
+func (c *command) register(ctx *cli.Context) {
 	id, err := c.tequilapi.CurrentIdentity("", "")
 	if err != nil {
 		clio.Warn("Could not get or create identity")
@@ -245,11 +251,19 @@ func (c *command) register() {
 		return
 	}
 
-	c.registerIdentity(id.Address)
+	c.registerIdentity(id.Address, c.parseToken(ctx))
 }
 
-func (c *command) registerIdentity(identity string) {
-	err := c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), nil)
+func (c *command) parseToken(ctx *cli.Context) *string {
+	if val := ctx.String(flagToken.Name); val != "" {
+		return &val
+	}
+
+	return nil
+}
+
+func (c *command) registerIdentity(identity string, token *string) {
+	err := c.tequilapi.RegisterIdentity(identity, "", new(big.Int).SetInt64(0), token)
 	if err != nil {
 		clio.Error("Failed to register the identity")
 		return
