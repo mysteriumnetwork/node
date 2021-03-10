@@ -18,6 +18,7 @@
 package contract
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -159,4 +160,51 @@ type IdentityRegistrationResponse struct {
 // swagger:model IdentityBeneficiaryResponseDTO
 type IdentityBeneficiaryResponse struct {
 	Beneficiary string `json:"beneficiary"`
+}
+
+// IdentityExportRequest is received in identity export endpoint.
+//swagger:model IdentityExportRequest
+type IdentityExportRequest struct {
+	NewPassphrase string `json:"new_passphrase"`
+
+	// Optional. Default values are OK.
+	CurrentPassphrase string `json:"current_passphrase,omitempty"`
+}
+
+// IdentityExportResponse is used to return an exported identity.
+//swagger:model IdentityExportResponse
+type IdentityExportResponse struct {
+	Data []byte `json:"data"`
+}
+
+// IdentityImportRequest is received in identity import endpoint.
+//swagger:model IdentityImportRequest
+type IdentityImportRequest struct {
+	Data              []byte `json:"data"`
+	CurrentPassphrase string `json:"current_passphrase,omitempty"`
+
+	// Optional. Default values are OK.
+	SetDefault    bool   `json:"set_default"`
+	NewPassphrase string `json:"new_passphrase"`
+}
+
+// Validate validates the import request.
+func (i *IdentityImportRequest) Validate() error {
+	if len(i.CurrentPassphrase) == 0 {
+		return errors.New("current_passphrase must be provided")
+	}
+	if len(i.Data) == 0 {
+		return errors.New("data must be provided")
+	}
+
+	return nil
+}
+
+// Validate validates the export request.
+func (i *IdentityExportRequest) Validate() error {
+	if len(i.NewPassphrase) < 6 {
+		return errors.New("new_passphrase must be at least 6 chars long")
+	}
+
+	return nil
 }
