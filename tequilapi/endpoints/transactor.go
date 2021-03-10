@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/mysteriumnetwork/node/core/beneficiary"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/config"
@@ -61,6 +63,7 @@ type addressProvider interface {
 
 type beneficiarySaver interface {
 	SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error
+	BeneficiaryChangeStatus(id identity.Identity) (*beneficiary.BeneficiaryChangeStatus, bool)
 }
 
 type settlementHistoryProvider interface {
@@ -299,7 +302,20 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+// swagger:operation POST /identities/{id}/beneficiary
+// ---
+// summary: Settle with Beneficiary
+// description: Change beneficiary and settle earnings to it. This is async method.
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity address to register
+//   type: string
+//   required: true
+// responses:
+//   202:
+//     description: settle request accepted
+func (te *transactorEndpoint) SettleWithBeneficiaryAsync(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 
 	req := &contract.SettleWithBeneficiaryRequest{}
@@ -309,14 +325,49 @@ func (te *transactorEndpoint) SettleWithBeneficiary(resp http.ResponseWriter, re
 		return
 	}
 
-	err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary))
-	if err != nil {
-		log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
-		utils.SendError(resp, fmt.Errorf("failed set beneficiary request: %w", err), http.StatusInternalServerError)
+	go func() {
+		err = te.bhandler.SettleAndSaveBeneficiary(identity.FromAddress(id), common.HexToAddress(req.Beneficiary))
+		if err != nil {
+			log.Err(err).Msgf("Failed set beneficiary request for ID: %s, %+v", id, req)
+		}
+	}()
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
+// swagger:operation GET /identities/{id}/beneficiary-status
+// ---
+// summary: Returns beneficiary transaction status
+// description: Returns the last beneficiary transaction status for given identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity address to register
+//   type: string
+//   required: true
+// responses:
+//   200:
+//     description: Returns beneficiary transaction status
+//     schema:
+//       "$ref": "#/definitions/BeneficiaryTxStatus"
+//   404:
+//     description: Beneficiary change never recorded.
+func (te *transactorEndpoint) BeneficiaryTxStatus(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	status, ok := te.bhandler.BeneficiaryChangeStatus(identity.FromAddress(id))
+
+	if !ok {
+		resp.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	resp.WriteHeader(http.StatusAccepted)
+	utils.WriteAsJSON(
+		&contract.BeneficiaryTxStatus{
+			State: status.State,
+			Error: status.Error,
+		},
+		resp,
+	)
 }
 
 // swagger:operation GET /settle/history settlementList
@@ -469,10 +520,19 @@ func (te *transactorEndpoint) SettleIntoStakeAsync(resp http.ResponseWriter, req
 }
 
 // AddRoutesForTransactor attaches Transactor endpoints to router
-func AddRoutesForTransactor(router *httprouter.Router, identityRegistry identityRegistry, transactor Transactor, promiseSettler promiseSettler, settlementHistoryProvider settlementHistoryProvider, addressProvider addressProvider, bhandler beneficiarySaver) {
+func AddRoutesForTransactor(
+	router *httprouter.Router,
+	identityRegistry identityRegistry,
+	transactor Transactor,
+	promiseSettler promiseSettler,
+	settlementHistoryProvider settlementHistoryProvider,
+	addressProvider addressProvider,
+	bhandler beneficiarySaver,
+) {
 	te := NewTransactorEndpoint(transactor, identityRegistry, promiseSettler, settlementHistoryProvider, addressProvider, bhandler)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
-	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiary)
+	router.POST("/identities/:id/beneficiary", te.SettleWithBeneficiaryAsync)
+	router.GET("/identities/:id/beneficiary-status", te.BeneficiaryTxStatus)
 	router.GET("/transactor/fees", te.TransactorFees)
 	router.POST("/transactor/settle/sync", te.SettleSync)
 	router.POST("/transactor/settle/async", te.SettleAsync)

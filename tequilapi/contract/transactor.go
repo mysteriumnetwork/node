@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/beneficiary"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-openapi/strfmt"
 	"github.com/mysteriumnetwork/node/identity"
@@ -209,4 +211,11 @@ type DecreaseStakeRequest struct {
 // swagger:model ReferralTokenResponse
 type ReferralTokenResponse struct {
 	Token string `json:"token"`
+}
+
+// BeneficiaryTxStatus settle with beneficiary transaction status.
+// swagger:model BeneficiaryTxStatus
+type BeneficiaryTxStatus struct {
+	State beneficiary.SettleState `json:"state"`
+	Error string                  `json:"error"`
 }

@@ -21,11 +21,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/rs/zerolog/log"
 )
 
 // Saver describes a beneficiary saver.
 type Saver interface {
 	SettleAndSaveBeneficiary(id identity.Identity, beneficiary common.Address) error
+	BeneficiaryChangeStatus(id identity.Identity) (*BeneficiaryChangeStatus, bool)
 }
 
 type storage interface {
@@ -50,7 +52,7 @@ type addressProvider interface {
 // NewSaver returns a new beneficiary saver according to the given chain.
 func NewSaver(currentChain int64, ad addressProvider, st storage, bc multiChainBC, set settler) Saver {
 	if currentChain == metadata.DefaultNetwork.Chain1.ChainID {
-		return newL1Saver(currentChain, ad, bc, set)
+		return newL1Saver(currentChain, ad, set, st)
 	}
 
 	return newL2Saver(currentChain, ad, st, set)
@@ -61,14 +63,63 @@ type l1Saver struct {
 	set     settler
 	ad      addressProvider
 	chainID int64
+	beneficiaryChangeKeeper
 }
 
-func newL1Saver(chainID int64, ad addressProvider, bc multiChainBC, set settler) *l1Saver {
+func newL1Saver(chainID int64, ad addressProvider, set settler, st storage) *l1Saver {
 	return &l1Saver{
-		chainID: chainID,
-		set:     set,
-		ad:      ad,
+		chainID:                 chainID,
+		set:                     set,
+		ad:                      ad,
+		beneficiaryChangeKeeper: beneficiaryChangeKeeper{st: st, chainID: chainID},
 	}
+}
+
+// SettleState represents the state of settle with beneficiary transaction
+type SettleState string
+
+const bucketBeneficiaryChangeStatus = "beneficiary-change-status"
+const (
+	// Pending transaction is pending
+	Pending SettleState = "pending"
+	// Completed transaction is completed
+	Completed SettleState = "completed"
+)
+
+type beneficiaryChangeKeeper struct {
+	st      storage
+	chainID int64
+}
+
+// BeneficiaryChangeStatus holds Beneficiary settlement transaction information
+type BeneficiaryChangeStatus struct {
+	State SettleState
+	Error string
+}
+
+func (bcs *beneficiaryChangeKeeper) updateBeneficiaryChangeStatus(id identity.Identity, sbs SettleState, settleError error) {
+	var errorMSG string
+	if settleError != nil {
+		errorMSG = settleError.Error()
+	}
+	err := bcs.st.SetValue(bucketBeneficiaryChangeStatus, storageKey(bcs.chainID, id.Address), &BeneficiaryChangeStatus{
+		State: sbs,
+		Error: errorMSG,
+	})
+
+	if err != nil {
+		log.Err(err).Msg("Failed to update BeneficiaryChangeStatus")
+	}
+}
+
+// BeneficiaryChangeStatus get beneficiary change status for given identity
+func (bcs *beneficiaryChangeKeeper) BeneficiaryChangeStatus(id identity.Identity) (*BeneficiaryChangeStatus, bool) {
+	var b BeneficiaryChangeStatus
+	if err := bcs.st.GetValue(bucketBeneficiaryChangeStatus, storageKey(bcs.chainID, id.Address), &b); err != nil {
+		log.Err(err).Msg("Failed to fetch BeneficiaryChangeStatus")
+		return nil, false
+	}
+	return &b, true
 }
 
 // SettleAndSaveBeneficiary executes a settlement transaction saving the beneficiary to the blockchain.
@@ -78,7 +129,11 @@ func (b *l1Saver) SettleAndSaveBeneficiary(id identity.Identity, beneficiary com
 		return err
 	}
 
-	return b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, hermesID)
+	b.updateBeneficiaryChangeStatus(id, Pending, nil)
+	settleError := b.set.SettleWithBeneficiary(b.chainID, id, beneficiary, hermesID)
+	b.updateBeneficiaryChangeStatus(id, Completed, settleError)
+
+	return settleError
 }
 
 // l2Saver handles saving beneficiary in L2 chains.
@@ -88,6 +143,8 @@ type l2Saver struct {
 
 	chainID int64
 	ad      addressProvider
+
+	beneficiaryChangeKeeper
 }
 
 func newL2Saver(chainID int64, ad addressProvider, st storage, set settler) *l2Saver {
@@ -95,8 +152,9 @@ func newL2Saver(chainID int64, ad addressProvider, st storage, set settler) *l2S
 		set: set,
 		st:  st,
 
-		chainID: chainID,
-		ad:      ad,
+		chainID:                 chainID,
+		ad:                      ad,
+		beneficiaryChangeKeeper: beneficiaryChangeKeeper{st: st, chainID: chainID},
 	}
 }
 
@@ -113,8 +171,11 @@ func (b *l2Saver) SettleAndSaveBeneficiary(id identity.Identity, beneficiary com
 		return err
 	}
 
-	if err := b.set.SettleWithBeneficiary(b.chainID, id, addr, hermesID); err != nil {
-		return err
+	b.updateBeneficiaryChangeStatus(id, Pending, nil)
+	settleError := b.set.SettleWithBeneficiary(b.chainID, id, addr, hermesID)
+	b.updateBeneficiaryChangeStatus(id, Completed, settleError)
+	if settleError != nil {
+		return settleError
 	}
 
 	return b.st.SetValue(storageBucket, storageKey(b.chainID, id.Address), beneficiary.Hex())
