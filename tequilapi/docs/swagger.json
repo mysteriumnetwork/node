@@ -2255,6 +2255,20 @@
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
     },
+    "BeneficiaryTxStatus": {
+      "type": "object",
+      "title": "BeneficiaryTxStatus settle with beneficiary transaction status.",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "state": {
+          "$ref": "#/definitions/SettleState"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
     "BuildInfoDTO": {
       "type": "object",
       "title": "BuildInfoDTO holds info about build.",
@@ -3677,6 +3691,11 @@
       },
       "x-go-name": "SettleRequest",
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "SettleState": {
+      "description": "SettleState represents the state of settle with beneficiary transaction",
+      "type": "string",
+      "x-go-package": "github.com/mysteriumnetwork/node/core/beneficiary"
     },
     "SettlementDTO": {
       "type": "object",

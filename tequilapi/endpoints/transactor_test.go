@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/beneficiary"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/mocks"
@@ -352,6 +354,10 @@ type mockBeneficiarySaver struct {
 
 func (ms *mockBeneficiarySaver) SettleAndSaveBeneficiary(_ identity.Identity, _ common.Address) error {
 	return ms.errToReturn
+}
+
+func (ms *mockBeneficiarySaver) BeneficiaryChangeStatus(_ identity.Identity) (*beneficiary.BeneficiaryChangeStatus, bool) {
+	return &beneficiary.BeneficiaryChangeStatus{}, true
 }
 
 func (ms *mockSettler) SettleIntoStake(_ int64, providerID identity.Identity, hermesID common.Address) error {
