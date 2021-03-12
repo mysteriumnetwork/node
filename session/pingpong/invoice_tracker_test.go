@@ -110,7 +110,7 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
 		AddressProvider:            &mockAddressProvider{},
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{statusToReturn: HermesStatus{IsActive: true}},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -162,7 +162,7 @@ func Test_InvoiceTracker_Start_RefusesLargeFee(t *testing.T) {
 		AddressProvider:            &mockAddressProvider{},
 		EventBus:                   mocks.NewEventBus(),
 		MaxAllowedHermesFee:        1500,
-		BlockchainHelper:           &mockBlockchainHelper{feeToReturn: 1501, isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{statusToReturn: HermesStatus{IsActive: true, Fee: 1501}},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -216,7 +216,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 		ConsumersHermesID:          acc.Address,
 		AddressProvider:            &mockAddressProvider{},
 		EventBus:                   mocks.NewEventBus(),
-		BlockchainHelper:           &mockBlockchainHelper{errorToReturn: mockErr, isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{errToReturn: mockErr},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 
@@ -226,7 +226,7 @@ func Test_InvoiceTracker_Start_BubblesHermesCheckError(t *testing.T) {
 	}()
 
 	err = invoiceTracker.Start()
-	assert.Equal(t, errors.Wrap(mockErr, "could not get hermess fee").Error(), err.Error())
+	assert.Equal(t, errors.Wrap(mockErr, "could not check hermes status").Error(), err.Error())
 }
 
 func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
@@ -268,7 +268,7 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 		ConsumersHermesID:          acc.Address,
 		AddressProvider:            &mockAddressProvider{},
 		EventBus:                   mocks.NewEventBus(),
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{statusToReturn: HermesStatus{IsActive: true}},
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
@@ -326,7 +326,7 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
 		AddressProvider:            &mockAddressProvider{},
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{statusToReturn: HermesStatus{IsActive: true}},
 		EventBus:                   mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -381,7 +381,7 @@ func Test_InvoiceTracker_FirstInvoice_Has_Static_Value(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
 		AddressProvider:            &mockAddressProvider{},
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{statusToReturn: HermesStatus{IsActive: true}},
 		EventBus:                   mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -430,7 +430,7 @@ func Test_InvoiceTracker_FreeServiceSendsInvoices(t *testing.T) {
 		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
 		ConsumersHermesID:          acc.Address,
 		AddressProvider:            &mockAddressProvider{},
-		BlockchainHelper:           &mockBlockchainHelper{isRegistered: true},
+		HermesStatusChecker:        &mockHermesStatusChecker{statusToReturn: HermesStatus{IsActive: true}},
 		EventBus:                   mocks.NewEventBus(),
 	}
 	invoiceTracker := NewInvoiceTracker(deps)
@@ -801,22 +801,6 @@ func (maps *mockHermesPromiseStorage) List(_ HermesPromiseFilter) ([]HermesPromi
 	return []HermesPromise{maps.toReturn}, maps.errToReturn
 }
 
-type mockBlockchainHelper struct {
-	feeToReturn   uint16
-	errorToReturn error
-
-	isRegistered      bool
-	isRegisteredError error
-}
-
-func (mbh *mockBlockchainHelper) GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error) {
-	return mbh.feeToReturn, mbh.errorToReturn
-}
-
-func (mbh *mockBlockchainHelper) IsRegistered(registryAddress, addressToCheck common.Address) (bool, error) {
-	return mbh.isRegistered, mbh.isRegisteredError
-}
-
 type testEvent struct {
 	name  string
 	value interface{}
@@ -882,4 +866,13 @@ func TestInvoiceTracker_validateExchangeMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockHermesStatusChecker struct {
+	statusToReturn HermesStatus
+	errToReturn    error
+}
+
+func (mhsc *mockHermesStatusChecker) GetHermesStatus(chainID int64, registryAddress common.Address, hermesID common.Address) (HermesStatus, error) {
+	return mhsc.statusToReturn, mhsc.errToReturn
 }
