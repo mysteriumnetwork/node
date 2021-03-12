@@ -43,6 +43,7 @@ var (
 		ServiceType:     "serviceType",
 		ConsumerCountry: "ConsumerCountry",
 		ProviderCountry: "ProviderCountry",
+		NodeType:        "residential",
 		Started:         time.Date(2010, time.January, 1, 12, 00, 0, 700000000, time.UTC),
 		Updated:         time.Date(2010, time.January, 1, 12, 00, 55, 800000000, time.UTC),
 		DataSent:        10,
@@ -73,6 +74,7 @@ func Test_SessionsEndpoint_SessionToDto(t *testing.T) {
 	assert.Equal(t, connectionSessionMock.DataSent, sessionDTO.BytesSent)
 	assert.Equal(t, 55, int(sessionDTO.Duration))
 	assert.Equal(t, connectionSessionMock.Status, sessionDTO.Status)
+	assert.Equal(t, connectionSessionMock.NodeType, sessionDTO.NodeType)
 }
 
 func Test_SessionsEndpoint_List(t *testing.T) {

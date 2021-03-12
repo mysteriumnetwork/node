@@ -257,6 +257,7 @@ func NewSessionDTO(se session.History) SessionDTO {
 		Duration:        uint64(se.GetDuration().Seconds()),
 		Tokens:          se.Tokens,
 		Status:          se.Status,
+		NodeType:        se.NodeType,
 	}
 }
 
@@ -305,4 +306,7 @@ type SessionDTO struct {
 
 	// example: Completed
 	Status string `json:"status"`
+
+	// example: residential
+	NodeType string `json:"node_type"`
 }
