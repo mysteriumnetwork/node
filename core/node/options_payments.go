@@ -35,4 +35,5 @@ type OptionsPayments struct {
 	ConsumerDataLeewayMegabytes    uint64
 	ProviderInvoiceFrequency       time.Duration
 	MaxUnpaidInvoiceValue          *big.Int
+	HermesStatusRecheckInterval    time.Duration
 }
