@@ -33,14 +33,14 @@ var chainID int64 = 5
 func Test_HermesActivityChecker(t *testing.T) {
 	t.Run("uses cached value if present and valid", func(t *testing.T) {
 		mbc := &mockBc{}
-		checker := NewHermesActivityChecker(mbc, time.Minute)
-		checker.cachedValues[checker.formKey(chainID, hid)] = hermesActivityStatus{
-			isActive:   true,
-			validUntil: time.Now().Add(time.Minute),
+		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker.cachedValues[checker.formKey(chainID, hid)] = HermesStatus{
+			IsActive:   true,
+			ValidUntil: time.Now().Add(time.Minute),
 		}
-		valid, err := checker.IsHermesActive(chainID, rid, hid)
+		status, err := checker.GetHermesStatus(chainID, rid, hid)
 		assert.NoError(t, err)
-		assert.True(t, valid)
+		assert.True(t, status.IsActive)
 
 		assert.Equal(t, 0, mbc.getTimesCalled())
 	})
@@ -51,24 +51,27 @@ func Test_HermesActivityChecker(t *testing.T) {
 		mbc := &mockBc{
 			isActiveResult:     true,
 			isRegisteredResult: true,
+			feeResult:          1,
 		}
-		checker := NewHermesActivityChecker(mbc, time.Minute)
-		checker.cachedValues[checker.formKey(chainID, hid)] = hermesActivityStatus{
-			isActive:   false,
-			validUntil: time.Now().Add(-time.Minute),
+		checker := NewHermesStatusChecker(mbc, time.Minute)
+		checker.cachedValues[checker.formKey(chainID, hid)] = HermesStatus{
+			IsActive:   false,
+			ValidUntil: time.Now().Add(-time.Minute),
 		}
-		valid, err := checker.IsHermesActive(chainID, rid, hid)
+		status, err := checker.GetHermesStatus(chainID, rid, hid)
 		assert.NoError(t, err)
-		assert.True(t, valid)
+		assert.True(t, status.IsActive)
 
-		assert.Equal(t, 2, mbc.getTimesCalled())
+		assert.Equal(t, uint16(1), status.Fee)
+
+		assert.Equal(t, 3, mbc.getTimesCalled())
 
 		v, _ := checker.cachedValues[checker.formKey(chainID, hid)]
 		assert.True(t, v.isValid())
 
 		// check if extended by somewhere around a minute
-		assert.True(t, v.validUntil.After(startTime.Add(time.Minute)))
-		assert.False(t, v.validUntil.After(startTime.Add(time.Minute).Add(time.Second*2)))
+		assert.True(t, v.ValidUntil.After(startTime.Add(time.Minute)))
+		assert.False(t, v.ValidUntil.After(startTime.Add(time.Minute).Add(time.Second*2)))
 	})
 
 	t.Run("updates and sets cache if not present initially", func(t *testing.T) {
@@ -77,38 +80,68 @@ func Test_HermesActivityChecker(t *testing.T) {
 		mbc := &mockBc{
 			isActiveResult:     true,
 			isRegisteredResult: true,
+			feeResult:          1,
 		}
-		checker := NewHermesActivityChecker(mbc, time.Minute)
-		valid, err := checker.IsHermesActive(chainID, rid, hid)
-		assert.NoError(t, err)
-		assert.True(t, valid)
 
-		assert.Equal(t, 2, mbc.getTimesCalled())
+		checker := NewHermesStatusChecker(mbc, time.Minute)
+		status, err := checker.GetHermesStatus(chainID, rid, hid)
+		assert.NoError(t, err)
+		assert.True(t, status.IsActive)
+
+		assert.Equal(t, uint16(1), status.Fee)
+
+		assert.Equal(t, 3, mbc.getTimesCalled())
 
 		v, _ := checker.cachedValues[checker.formKey(chainID, hid)]
 		assert.True(t, v.isValid())
 
 		// check if extended by somewhere around a minute
-		assert.True(t, v.validUntil.After(startTime.Add(time.Minute)))
-		assert.False(t, v.validUntil.After(startTime.Add(time.Minute).Add(time.Second*2)))
+		assert.True(t, v.ValidUntil.After(startTime.Add(time.Minute)))
+		assert.False(t, v.ValidUntil.After(startTime.Add(time.Minute).Add(time.Second*2)))
 	})
 
 	t.Run("successive runs do not fetch from source if already cached and valid", func(t *testing.T) {
 		mbc := &mockBc{
 			isActiveResult:     true,
 			isRegisteredResult: true,
+			feeResult:          1,
 		}
-		checker := NewHermesActivityChecker(mbc, time.Minute)
-		valid, err := checker.IsHermesActive(chainID, rid, hid)
-		assert.NoError(t, err)
-		assert.True(t, valid)
 
-		assert.Equal(t, 2, mbc.getTimesCalled())
-
-		valid, err = checker.IsHermesActive(chainID, rid, hid)
+		checker := NewHermesStatusChecker(mbc, time.Minute)
+		status, err := checker.GetHermesStatus(chainID, rid, hid)
 		assert.NoError(t, err)
-		assert.True(t, valid)
-		assert.Equal(t, 2, mbc.getTimesCalled())
+		assert.True(t, status.IsActive)
+
+		assert.Equal(t, 3, mbc.getTimesCalled())
+
+		status, err = checker.GetHermesStatus(chainID, rid, hid)
+		assert.NoError(t, err)
+		assert.True(t, status.IsActive)
+		assert.Equal(t, 3, mbc.getTimesCalled())
+	})
+
+	t.Run("successive fetch from source if cache invalid", func(t *testing.T) {
+		mbc := &mockBc{
+			isActiveResult:     true,
+			isRegisteredResult: true,
+			feeResult:          1,
+		}
+
+		checker := NewHermesStatusChecker(mbc, time.Minute)
+		status, err := checker.GetHermesStatus(chainID, rid, hid)
+		assert.NoError(t, err)
+		assert.True(t, status.IsActive)
+		assert.Equal(t, 3, mbc.getTimesCalled())
+
+		checker.cachedValues[checker.formKey(chainID, hid)] = HermesStatus{
+			IsActive:   true,
+			ValidUntil: time.Now().Add(-time.Minute),
+		}
+
+		status, err = checker.GetHermesStatus(chainID, rid, hid)
+		assert.NoError(t, err)
+		assert.True(t, status.IsActive)
+		assert.Equal(t, 6, mbc.getTimesCalled())
 	})
 }
 
@@ -118,6 +151,9 @@ type mockBc struct {
 
 	isRegisteredResult bool
 	isRegisteredErr    error
+
+	feeResult uint16
+	feeErr    error
 
 	timesCalled int
 	lock        sync.Mutex
@@ -143,4 +179,9 @@ func (mbc *mockBc) IsHermesActive(chainID int64, hermesID common.Address) (bool,
 func (mbc *mockBc) IsHermesRegistered(chainID int64, registryAddress, hermesID common.Address) (bool, error) {
 	defer mbc.incTimesCalled()
 	return mbc.isRegisteredResult, mbc.isRegisteredErr
+}
+
+func (mbc *mockBc) GetHermesFee(chainID int64, hermesID common.Address) (uint16, error) {
+	defer mbc.incTimesCalled()
+	return mbc.feeResult, mbc.feeErr
 }
