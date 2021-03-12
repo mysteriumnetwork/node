@@ -3550,6 +3550,11 @@
           "x-go-name": "ID",
           "example": "4cfb0324-daf6-4ad8-448b-e61fe0a1f918"
         },
+        "node_type": {
+          "type": "string",
+          "x-go-name": "NodeType",
+          "example": "residential"
+        },
         "provider_country": {
           "type": "string",
           "x-go-name": "ProviderCountry",
