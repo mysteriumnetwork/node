@@ -302,6 +302,8 @@ services:
         ipv4_address: 172.31.0.205
 
   myst-consumer-hermes2:
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     build:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
@@ -403,6 +405,8 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
@@ -430,6 +434,8 @@ services:
 
 
   myst-consumer-openvpn:
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     environment:
       - DEFAULT_ROUTE=10.100.1.2
     build:
@@ -473,6 +479,8 @@ services:
         ipv4_address: 10.100.1.103
 
   myst-consumer-noop:
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     environment:
       - DEFAULT_ROUTE=10.100.1.2
     build:

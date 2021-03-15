@@ -18,6 +18,7 @@
 package netutil
 
 import (
+	"fmt"
 	"net"
 	"os/exec"
 
@@ -25,7 +26,15 @@ import (
 )
 
 func assignIP(iface string, subnet net.IPNet) error {
-	return cmdutil.SudoExec("ifconfig", iface, subnet.String(), peerIP(subnet).String())
+	if err := cmdutil.SudoExec("ifconfig", iface, subnet.String(), peerIP(subnet).String()); err != nil {
+		return err
+	}
+
+	if err := cmdutil.SudoExec("ifconfig", iface, "inet6", "100::2"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func excludeRoute(ip, gw net.IP) error {
@@ -41,7 +50,19 @@ func addDefaultRoute(iface string) error {
 		return err
 	}
 
-	return cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface)
+	if err := cmdutil.SudoExec("route", "add", "-net", "128.0.0.0/1", "-interface", iface); err != nil {
+		return err
+	}
+
+	if err := cmdutil.SudoExec("route", "add", "-inet6", "::/1", fmt.Sprintf("100::1%%%s", iface)); err != nil {
+		return err
+	}
+
+	if err := cmdutil.SudoExec("route", "add", "-inet6", "8000::/1", fmt.Sprintf("100::1%%%s", iface)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func peerIP(subnet net.IPNet) net.IP {
