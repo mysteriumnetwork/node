@@ -225,6 +225,7 @@ func (repo *Storage) consumeConnectionSessionEvent(e connectionstate.AppEventCon
 			ConsumerCountry: e.SessionInfo.ConsumerLocation.Country,
 			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
 			Started:         e.SessionInfo.StartedAt.UTC(),
+			NodeType:        e.SessionInfo.Proposal.ServiceDefinition.GetLocation().NodeType,
 			Tokens:          new(big.Int),
 		}
 		repo.mu.Unlock()

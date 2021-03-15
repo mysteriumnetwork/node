@@ -77,6 +77,7 @@ type MobileNode struct {
 	pilvytis                  *pilvytis.Service
 	chainID                   int64
 	startTime                 time.Time
+	sessionStorage            SessionStorage
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -267,9 +268,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.MysteriumAPI,
 			di.QualityClient,
 		),
-		pilvytis:  di.Pilvytis,
-		startTime: time.Now(),
-		chainID:   nodeOptions.OptionsNetwork.ChainID,
+		pilvytis:       di.Pilvytis,
+		startTime:      time.Now(),
+		chainID:        nodeOptions.OptionsNetwork.ChainID,
+		sessionStorage: di.SessionStorage,
 	}
 
 	return mobileNode, nil

@@ -53,6 +53,8 @@ type History struct {
 	DataReceived    uint64
 	Tokens          *big.Int
 
+	NodeType string
+
 	Status  string
 	Started time.Time
 	Updated time.Time
