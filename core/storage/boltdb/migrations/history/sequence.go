@@ -37,4 +37,10 @@ var Sequence = []migrations.Migration{
 			2020, 8, 17, 14, 27, 00, 0, time.UTC),
 		Migrate: migrations.SettlementValuesToRows,
 	},
+	{
+		Name: "registration-status-to-new",
+		Date: time.Date(
+			2021, 3, 15, 16, 00, 00, 0, time.UTC),
+		Migrate: migrations.MigrateRegistrationState,
+	},
 }
