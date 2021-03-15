@@ -44,7 +44,19 @@ func addDefaultRoute(iface string) error {
 		return err
 	}
 
-	return cmdutil.SudoExec("ip", "route", "add", "128.0.0.0/1", "dev", iface)
+	if err := cmdutil.SudoExec("ip", "route", "add", "128.0.0.0/1", "dev", iface); err != nil {
+		return err
+	}
+
+	if err := cmdutil.SudoExec("ip", "-6", "route", "add", "::/1", "dev", iface); err != nil {
+		return err
+	}
+
+	if err := cmdutil.SudoExec("ip", "-6", "route", "add", "8000::/1", "dev", iface); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func logNetworkStats() {

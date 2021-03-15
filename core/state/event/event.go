@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -71,7 +72,7 @@ func (c Connection) String() string {
 	}
 
 	return fmt.Sprintf(
-		"ID %s %s duration: %s data: %s/%s, throughput: %s/%s, spent: %s",
+		"ID: %s, state: %s, duration: %s data: %s/%s, throughput: %s/%s, spent: %s",
 		c.Session.SessionID,
 		c.Session.State,
 		c.Session.Duration(),

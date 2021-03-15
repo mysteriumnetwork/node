@@ -56,8 +56,19 @@ func addDefaultRoute(name string) error {
 		return errors.Wrap(err, string(out))
 	}
 
-	out, err := exec.Command("powershell", "-Command", "route add 128.0.0.0/1 "+gw+" if "+id).CombinedOutput()
-	return errors.Wrap(err, string(out))
+	if out, err := exec.Command("powershell", "-Command", "route add 128.0.0.0/1 "+gw+" if "+id).CombinedOutput(); err != nil {
+		return errors.Wrap(err, string(out))
+	}
+
+	if out, err := exec.Command("powershell", "-Command", "route add ::/1 100::1 if "+id).CombinedOutput(); err != nil {
+		return errors.Wrap(err, string(out))
+	}
+
+	if out, err := exec.Command("powershell", "-Command", "route add 8000::/1 100::1 if "+id).CombinedOutput(); err != nil {
+		return errors.Wrap(err, string(out))
+	}
+
+	return nil
 }
 
 func interfaceInfo(name string) (id, gw string, err error) {
