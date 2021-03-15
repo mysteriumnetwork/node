@@ -288,6 +288,8 @@ func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, co
 	// Route all traffic through tunnel
 	wgTunnSetup.AddRoute("0.0.0.0", 1)
 	wgTunnSetup.AddRoute("128.0.0.0", 1)
+	wgTunnSetup.AddRoute("::", 1)
+	wgTunnSetup.AddRoute("8000::", 1)
 
 	fd, err := wgTunnSetup.Establish()
 	if err != nil {

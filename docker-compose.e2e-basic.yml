@@ -254,6 +254,8 @@ services:
     volumes:
       - ./e2e/myst-consumer/keystore/remember.json:/var/lib/mysterium-node/keystore/remember.json
       - ./e2e/myst-consumer/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3:/var/lib/mysterium-node/keystore/UTC--2020-07-31T02-37-15.148642000Z--c4cb9a91b8498776f6f8a0d5a2a23beec9b3cef3
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     depends_on:
       - broker
       - mysterium-api
@@ -290,6 +292,8 @@ services:
     build:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     depends_on:
       - broker
       - mysterium-api
@@ -326,6 +330,8 @@ services:
     build:
       context: .
       dockerfile: ./bin/docker/alpine-prebuilt/Dockerfile
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     depends_on:
       - broker
       - mysterium-api
@@ -374,6 +380,8 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
     command: >
       --discovery.ping=1s
       --discovery.fetch=1s
