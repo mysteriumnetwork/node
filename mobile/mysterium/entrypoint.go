@@ -393,12 +393,27 @@ func (mb *MobileNode) RegisterIdentityRegistrationChangeCallback(cb IdentityRegi
 }
 
 // ConnectRequest represents connect request.
+/*
+ * DNSOption:
+ *	- "auto" (default) tries the following with fallbacks: provider's DNS -> client's system DNS -> public DNS
+ *  - "provider" uses DNS servers from provider's system configuration
+ *  - "system" uses DNS servers from client's system configuration
+ */
 type ConnectRequest struct {
 	IdentityAddress   string
 	ProviderID        string
 	ServiceType       string
+	DNSOption         string
 	DisableKillSwitch bool
 	ForceReconnect    bool
+}
+
+func (cr *ConnectRequest) dnsOption() (connection.DNSOption, error) {
+	if len(cr.DNSOption) > 0 {
+		return connection.NewDNSOption(cr.DNSOption)
+	}
+
+	return connection.DNSOptionAuto, nil
 }
 
 // ConnectResponse represents connect response with optional error code and message.
@@ -437,9 +452,16 @@ func (mb *MobileNode) Connect(req *ConnectRequest) *ConnectResponse {
 		}
 	}
 
+	dnsOption, err := req.dnsOption()
+	if err != nil {
+		return &ConnectResponse{
+			ErrorCode:    connectErrUnknown,
+			ErrorMessage: err.Error(),
+		}
+	}
 	connectOptions := connection.ConnectParams{
 		DisableKillSwitch: req.DisableKillSwitch,
-		DNS:               connection.DNSOptionAuto,
+		DNS:               dnsOption,
 	}
 
 	hermes, err := mb.identityChannelCalculator.GetActiveHermes(mb.chainID)
