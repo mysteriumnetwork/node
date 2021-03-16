@@ -53,6 +53,10 @@ func (hf *selectorFake) UseOrCreate(address, _ string, _ int64) (identity.Identi
 	return identity.Identity{Address: "0x000000"}, nil
 }
 
+func (hf *selectorFake) SetDefault(address string) error {
+	return nil
+}
+
 func TestCurrentIdentitySuccess(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
