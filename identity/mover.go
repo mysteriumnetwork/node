@@ -12,7 +12,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this prograi.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package identity
@@ -25,13 +25,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 )
 
-// Mover can be used to move identities from and to keystore
-// by exporting or importing them.
+// Mover is wrapper on both the Exporter and Importer
+// and can be used to manipulate private keys in to either direction.
 type Mover struct {
-	handler       moverIdentityHandler
-	ks            moverKeystore
-	eventBus      eventbus.EventBus
-	signerFactory SignerFactory
+	*Exporter
+	*Importer
 }
 
 type moverKeystore interface {
@@ -49,6 +47,22 @@ type moverIdentityHandler interface {
 // NewMover returns a new mover object.
 func NewMover(ks moverKeystore, handler moverIdentityHandler, events eventbus.EventBus, signer SignerFactory) *Mover {
 	return &Mover{
+		Exporter: NewExporter(ks),
+		Importer: NewImporter(ks, handler, events, signer),
+	}
+}
+
+// Importer exposes a way to import an private keys.
+type Importer struct {
+	handler       moverIdentityHandler
+	ks            moverKeystore
+	eventBus      eventbus.EventBus
+	signerFactory SignerFactory
+}
+
+// NewImporter returns a new importer object.
+func NewImporter(ks moverKeystore, handler moverIdentityHandler, events eventbus.EventBus, signer SignerFactory) *Importer {
+	return &Importer{
 		ks:            ks,
 		handler:       handler,
 		eventBus:      events,
@@ -58,39 +72,28 @@ func NewMover(ks moverKeystore, handler moverIdentityHandler, events eventbus.Ev
 
 // Import imports a given blob as a new identity. It will return an
 // error if that identity was never registered.
-func (m *Mover) Import(blob []byte, currPass, newPass string) (Identity, error) {
-	acc, err := m.ks.Import(blob, currPass, newPass)
+func (i *Importer) Import(blob []byte, currPass, newPass string) (Identity, error) {
+	acc, err := i.ks.Import(blob, currPass, newPass)
 	if err != nil {
 		return Identity{}, err
 	}
 
-	if err := m.ks.Unlock(acc, newPass); err != nil {
+	if err := i.ks.Unlock(acc, newPass); err != nil {
 		return Identity{}, err
 	}
 
 	identity := accountToIdentity(acc)
-	if err := m.canImport(identity); err != nil {
-		m.ks.Delete(acc, newPass)
+	if err := i.canImport(identity); err != nil {
+		i.ks.Delete(acc, newPass)
 		return Identity{}, err
 	}
 
-	m.eventBus.Publish(AppTopicIdentityCreated, identity.Address)
+	i.eventBus.Publish(AppTopicIdentityCreated, identity.Address)
 	return identity, nil
 }
 
-// Export exports a given identity and returns it as json blob.
-func (m *Mover) Export(address, currPass, newPass string) ([]byte, error) {
-	acc := addressToAccount(address)
-	_, err := m.ks.Find(acc)
-	if err != nil {
-		return nil, errors.New("identity not found")
-	}
-
-	return m.ks.Export(acc, currPass, newPass)
-}
-
-func (m *Mover) canImport(id Identity) error {
-	exists, err := m.handler.IdentityExists(id, m.signerFactory(id))
+func (i *Importer) canImport(id Identity) error {
+	exists, err := i.handler.IdentityExists(id, i.signerFactory(id))
 	if err != nil {
 		return err
 	}
@@ -100,4 +103,27 @@ func (m *Mover) canImport(id Identity) error {
 	}
 
 	return nil
+}
+
+// Exporter exposes a way to export private keys.
+type Exporter struct {
+	ks moverKeystore
+}
+
+// NewExporter returns a new exporter object.
+func NewExporter(ks moverKeystore) *Exporter {
+	return &Exporter{
+		ks: ks,
+	}
+}
+
+// Export exports a given identity and returns it as json blob.
+func (e *Exporter) Export(address, currPass, newPass string) ([]byte, error) {
+	acc := addressToAccount(address)
+	_, err := e.ks.Find(acc)
+	if err != nil {
+		return nil, errors.New("identity not found")
+	}
+
+	return e.ks.Export(acc, currPass, newPass)
 }
