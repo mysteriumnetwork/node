@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"encoding/json"
+	"math/big"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -67,9 +68,53 @@ func (mb *MobileNode) ListConsumerSessions(filter *SessionFilter) ([]byte, error
 		f.StartedTo = &to
 	}
 
-	h, err := mb.sessionStorage.List(f)
+	sessions, err := mb.sessionStorage.List(f)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(h)
+
+	dtos := make([]SessionDTO, len(sessions))
+	for i, s := range sessions {
+		dtos[i] = sessionDTO(s)
+	}
+	return json.Marshal(dtos)
+}
+
+// SessionDTO mobile session dto
+type SessionDTO struct {
+	ID              string   `json:"id"`
+	Direction       string   `json:"direction"`
+	ConsumerID      string   `json:"consumer_id"`
+	HermesID        string   `json:"hermes_id"`
+	ProviderID      string   `json:"provider_id"`
+	ServiceType     string   `json:"service_type"`
+	ConsumerCountry string   `json:"consumer_country"`
+	ProviderCountry string   `json:"provider_country"`
+	CreatedAt       string   `json:"created_at"`
+	Duration        uint64   `json:"duration"`
+	BytesReceived   uint64   `json:"bytes_received"`
+	BytesSent       uint64   `json:"bytes_sent"`
+	Tokens          *big.Int `json:"tokens"`
+	Status          string   `json:"status"`
+	NodeType        string   `json:"node_type"`
+}
+
+func sessionDTO(se session.History) SessionDTO {
+	return SessionDTO{
+		ID:              string(se.SessionID),
+		Direction:       se.Direction,
+		ConsumerID:      se.ConsumerID.Address,
+		HermesID:        se.HermesID,
+		ProviderID:      se.ProviderID.Address,
+		ServiceType:     se.ServiceType,
+		ConsumerCountry: se.ConsumerCountry,
+		ProviderCountry: se.ProviderCountry,
+		CreatedAt:       se.Started.Format(time.RFC3339),
+		BytesReceived:   se.DataReceived,
+		BytesSent:       se.DataSent,
+		Duration:        uint64(se.GetDuration().Seconds()),
+		Tokens:          se.Tokens,
+		Status:          se.Status,
+		NodeType:        se.NodeType,
+	}
 }
