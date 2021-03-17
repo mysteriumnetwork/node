@@ -53,7 +53,12 @@ type providerChannel interface {
 	GetProviderChannel(chainID int64, hermesAddress common.Address, provider common.Address, pending bool) (client.ProviderChannel, error)
 }
 
+type identityMover interface {
+	Import(blob []byte, currPass, newPass string) (identity.Identity, error)
+}
+
 type identitiesAPI struct {
+	mover             identityMover
 	idm               identity.Manager
 	selector          identity_selector.Handler
 	registry          registry.IdentityRegistry
@@ -448,6 +453,53 @@ func (endpoint *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, 
 	}
 }
 
+// swagger:operation POST /identities-import Identities importIdentity
+// ---
+// summary: Exports a given identity.
+// description: Exports a given identity returning it is a blob of text which can later be used to import it back.
+// parameters:
+// - in: body
+//   name: body
+//   description: Parameter in body used to import an identity.
+//   schema:
+//     $ref: "#/definitions/IdentityImportRequest"
+// responses:
+//   200:
+//     description: Unlocked identity returned
+//     schema:
+//       "$ref": "#/definitions/IdentityRefDTO"
+//   400:
+//     description: Bad Request error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) Import(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	var req contract.IdentityImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	id, err := endpoint.mover.Import(req.Data, req.CurrentPassphrase, req.NewPassphrase)
+	if err != nil {
+		utils.SendError(w, fmt.Errorf("failed to import identity: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	if req.SetDefault {
+		if err := endpoint.selector.SetDefault(id.Address); err != nil {
+			utils.SendError(w, fmt.Errorf("failed to set default identity: %w", err), http.StatusBadRequest)
+			return
+		}
+	}
+
+	idDTO := contract.NewIdentityDTO(id)
+	utils.WriteAsJSON(idDTO, w)
+}
+
 // AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
@@ -460,8 +512,10 @@ func AddRoutesForIdentities(
 	bc providerChannel,
 	transactor Transactor,
 	bprovider beneficiaryProvider,
+	mover identityMover,
 ) {
 	idmEnd := &identitiesAPI{
+		mover:             mover,
 		idm:               idm,
 		selector:          selector,
 		registry:          registry,
@@ -490,4 +544,6 @@ func AddRoutesForIdentities(
 	router.GET("/identities/:id/beneficiary", idmEnd.Beneficiary)
 	router.GET("/identities/:id/referral", idmEnd.GetReferralToken)
 	router.GET("/identities/:id/referral-available", idmEnd.ReferralTokenAvailable)
+
+	router.POST("/identities-import", idmEnd.Import)
 }

@@ -111,6 +111,7 @@ type Dependencies struct {
 	SignerFactory    identity.SignerFactory
 	IdentityRegistry identity_registry.IdentityRegistry
 	IdentitySelector identity_selector.Handler
+	IdentityMover    *identity.Mover
 
 	DiscoveryFactory   service.DiscoveryFactory
 	ProposalRepository proposal.Repository
@@ -700,6 +701,11 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
+	di.IdentityMover = identity.NewMover(
+		di.Keystore,
+		di.MysteriumAPI,
+		di.EventBus,
+		di.SignerFactory)
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {

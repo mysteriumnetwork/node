@@ -78,6 +78,15 @@ func (h *handler) UseOrCreate(address, passphrase string, chainID int64) (id ide
 	return
 }
 
+func (h *handler) SetDefault(address string) error {
+	id, err := h.manager.GetIdentity(address)
+	if err != nil {
+		return err
+	}
+
+	return h.cache.StoreIdentity(id)
+}
+
 func (h *handler) useExisting(address, passphrase string, chainID int64) (id identity.Identity, err error) {
 	log.Debug().Msg("Attempting to use existing identity")
 	id, err = h.manager.GetIdentity(address)
