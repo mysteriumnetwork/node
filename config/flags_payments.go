@@ -92,6 +92,13 @@ var (
 		Usage: "sets the upper limit of session payment value before forcing an invoice. If this value is exceeded before a payment interval is reached, an invoice is sent.",
 		Value: "30000000000000000",
 	}
+	// FlagPaymentsHermesStatusRecheckInterval sets how often we re-check the hermes status on bc. Higher values allow for less bc lookups but increase the risk for provider.
+	FlagPaymentsHermesStatusRecheckInterval = cli.DurationFlag{
+		Hidden: true,
+		Name:   "payments.provider.hermes-status-recheck-interval",
+		Usage:  "sets the hermes status recheck interval. Setting this to a lower value will decrease potential loss in case of Hermes getting locked.",
+		Value:  time.Hour * 2,
+	}
 )
 
 // RegisterFlagsPayments function register payments flags to flag list.
@@ -109,6 +116,7 @@ func RegisterFlagsPayments(flags *[]cli.Flag) {
 		&FlagPaymentsConsumerPricePerGBLowerBound,
 		&FlagPaymentsConsumerDataLeewayMegabytes,
 		&FlagPaymentsMaxUnpaidInvoiceValue,
+		&FlagPaymentsHermesStatusRecheckInterval,
 	)
 }
 
@@ -125,4 +133,5 @@ func ParseFlagsPayments(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagPaymentsConsumerPricePerGBLowerBound)
 	Current.ParseUInt64Flag(ctx, FlagPaymentsConsumerDataLeewayMegabytes)
 	Current.ParseStringFlag(ctx, FlagPaymentsMaxUnpaidInvoiceValue)
+	Current.ParseDurationFlag(ctx, FlagPaymentsHermesStatusRecheckInterval)
 }
