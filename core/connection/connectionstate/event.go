@@ -66,6 +66,8 @@ const (
 	StateIPNotChanged = State("IPNotChanged")
 	// StateConnectionFailed means that underlying connection is failed
 	StateConnectionFailed = State("ConnectionFailed")
+	// StateOnHold means that underlying connection failed, but manager keeps it not removed to prevent traffic leaks.
+	StateOnHold = State("OnHold")
 )
 
 // Status holds connection state, session id and proposal of the connection
@@ -84,6 +86,7 @@ func (s *Status) Duration() time.Duration {
 	if s.StartedAt.IsZero() {
 		return time.Duration(0)
 	}
+
 	return time.Now().Sub(s.StartedAt)
 }
 
