@@ -161,6 +161,7 @@ func GetOptions() *Options {
 			ConsumerDataLeewayMegabytes:    config.GetUInt64(config.FlagPaymentsConsumerDataLeewayMegabytes),
 			ProviderInvoiceFrequency:       config.GetDuration(config.FlagPaymentsProviderInvoiceFrequency),
 			MaxUnpaidInvoiceValue:          config.GetBigInt(config.FlagPaymentsMaxUnpaidInvoiceValue),
+			HermesStatusRecheckInterval:    config.GetDuration(config.FlagPaymentsHermesStatusRecheckInterval),
 		},
 		Chains: OptionsChains{
 			Chain1: metadata.ChainDefinition{

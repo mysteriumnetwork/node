@@ -171,6 +171,7 @@ type Dependencies struct {
 	HermesPromiseHandler     *pingpong.HermesPromiseHandler
 	SettlementHistoryStorage *pingpong.SettlementHistoryStorage
 	AddressProvider          *pingpong.AddressProvider
+	HermesStatusChecker      *pingpong.HermesStatusChecker
 
 	MMN         *mmn.MMN
 	PilvytisAPI *pilvytis.API

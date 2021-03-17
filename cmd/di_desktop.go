@@ -231,6 +231,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	)
 	go di.PolicyOracle.Start()
 
+	di.HermesStatusChecker = pingpong.NewHermesStatusChecker(di.BCHelper, nodeOptions.Payments.HermesStatusRecheckInterval)
+
 	newP2PSessionHandler := func(serviceInstance *service.Instance, channel p2p.Channel) *service.SessionManager {
 		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
 			channel, nodeOptions.Payments.ProviderInvoiceFrequency,
@@ -238,7 +240,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			pingpong.DefaultHermesFailureCount,
 			uint16(nodeOptions.Payments.MaxAllowedPaymentPercentile),
 			nodeOptions.Payments.MaxUnpaidInvoiceValue,
-			di.BCHelper,
+			di.HermesStatusChecker,
 			di.EventBus,
 			serviceInstance.Proposal,
 			di.HermesPromiseHandler,
