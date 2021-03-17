@@ -78,6 +78,7 @@ type MobileNode struct {
 	chainID                   int64
 	startTime                 time.Time
 	sessionStorage            SessionStorage
+	pilvytisAPI               pilvytisAPI
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -272,6 +273,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		startTime:      time.Now(),
 		chainID:        nodeOptions.OptionsNetwork.ChainID,
 		sessionStorage: di.SessionStorage,
+		pilvytisAPI:    di.PilvytisAPI,
 	}
 
 	return mobileNode, nil
