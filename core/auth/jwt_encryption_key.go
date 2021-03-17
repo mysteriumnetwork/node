@@ -23,6 +23,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Storage for Credentials.
+type Storage interface {
+	GetValue(bucket string, key interface{}, to interface{}) error
+	SetValue(bucket string, key interface{}, to interface{}) error
+}
+
 const encryptionKeyBucket = "jwt"
 const encryptionKeyName = "jwt-encryption-key"
 
