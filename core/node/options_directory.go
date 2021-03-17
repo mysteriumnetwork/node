@@ -66,10 +66,15 @@ func GetOptionsDirectory(network *OptionsNetwork) *OptionsDirectory {
 	return &OptionsDirectory{
 		Data:     dataDir,
 		Storage:  GetOptionsDirectoryDB(networkSubdir),
-		Keystore: filepath.Join(dataDir, "keystore"),
+		Keystore: GetOptionsDirectoryKeystore(dataDir),
 		Script:   config.GetString(config.FlagScriptDir),
 		Runtime:  config.GetString(config.FlagRuntimeDir),
 	}
+}
+
+// GetOptionsDirectoryKeystore given a dataDir returns a path for keystore.
+func GetOptionsDirectoryKeystore(dataDir string) string {
+	return filepath.Join(dataDir, "keystore")
 }
 
 // GetOptionsDirectoryDB returns a database directory given a networkSubdir.
