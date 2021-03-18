@@ -101,6 +101,22 @@ func (client *Client) AuthChangePassword(request contract.ChangePasswordRequest)
 	return nil
 }
 
+// ImportIdentity sends a request to import a given identity.
+func (client *Client) ImportIdentity(blob []byte, passphrase string, setDefault bool) (id contract.IdentityRefDTO, err error) {
+	response, err := client.http.Post("identities-import", contract.IdentityImportRequest{
+		Data:              blob,
+		CurrentPassphrase: passphrase,
+		SetDefault:        setDefault,
+	})
+	if err != nil {
+		return
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &id)
+	return id, err
+}
+
 // GetIdentities returns a list of client identities
 func (client *Client) GetIdentities() (ids []contract.IdentityRefDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})

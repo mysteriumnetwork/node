@@ -38,9 +38,12 @@ import (
 )
 
 type ethKeystore interface {
+	Delete(a accounts.Account, passphrase string) error
 	Accounts() []accounts.Account
 	NewAccount(passphrase string) (accounts.Account, error)
 	Find(a accounts.Account) (accounts.Account, error)
+	Export(a accounts.Account, passphrase, newPassphrase string) ([]byte, error)
+	Import(keyJSON []byte, passphrase, newPassphrase string) (accounts.Account, error)
 }
 
 // NewKeystoreFilesystem create new keystore, which keeps keys in filesystem.
@@ -64,6 +67,15 @@ type Keystore struct {
 // Unlock unlocks the given account indefinitely.
 func (ks *Keystore) Unlock(a accounts.Account, passphrase string) error {
 	return ks.TimedUnlock(a, passphrase, 0)
+}
+
+// Delete removes the given address from unclocked map and removes it from keystore.
+func (ks *Keystore) Delete(a accounts.Account, passphrase string) error {
+	ks.mu.Lock()
+	delete(ks.unlocked, a.Address)
+	ks.mu.Unlock()
+
+	return ks.ethKeystore.Delete(a, passphrase)
 }
 
 // Lock removes the private key with the given address from memory.

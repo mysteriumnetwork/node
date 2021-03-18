@@ -47,7 +47,10 @@ import (
 var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue promise for the correct amount")
 
 // ErrHermesFeeTooLarge indicates that we do not allow hermess with such high fees
-var ErrHermesFeeTooLarge = errors.New("hermess fee exceeds")
+var ErrHermesFeeTooLarge = errors.New("hermes fee exceeds predefined limits")
+
+// ErrHermesInactive indicates that the chosen hermes is not active
+var ErrHermesInactive = errors.New("hermes is not active")
 
 // ErrInvoiceExpired shows that the given invoice has already expired
 var ErrInvoiceExpired = errors.New("invoice expired")
@@ -71,8 +74,8 @@ type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
 }
 
-type bcHelper interface {
-	GetHermesFee(chainID int64, hermesAddress common.Address) (uint16, error)
+type hermesStatusChecker interface {
+	GetHermesStatus(chainID int64, registryAddress common.Address, hermesID common.Address) (HermesStatus, error)
 }
 
 type providerInvoiceStorage interface {
@@ -150,7 +153,7 @@ type InvoiceTrackerDeps struct {
 	AddressProvider            addressProvider
 	MaxHermesFailureCount      uint64
 	MaxAllowedHermesFee        uint16
-	BlockchainHelper           bcHelper
+	HermesStatusChecker        hermesStatusChecker
 	EventBus                   eventbus.EventBus
 	SessionID                  string
 	PromiseHandler             promiseHandler
@@ -278,13 +281,23 @@ func (it *InvoiceTracker) Start() error {
 		return err
 	}
 
-	fee, err := it.deps.BlockchainHelper.GetHermesFee(it.deps.ChainID, it.deps.ConsumersHermesID)
+	registry, err := it.deps.AddressProvider.GetRegistryAddress(it.deps.ChainID)
 	if err != nil {
-		return errors.Wrap(err, "could not get hermess fee")
+		return err
 	}
 
-	if fee > it.deps.MaxAllowedHermesFee {
-		log.Error().Msgf("Hermes fee too large, asking for %v where %v is the limit", fee, it.deps.MaxAllowedHermesFee)
+	status, err := it.deps.HermesStatusChecker.GetHermesStatus(it.deps.ChainID, registry, it.deps.ConsumersHermesID)
+	if err != nil {
+		return fmt.Errorf("could not check hermes status: %w", err)
+	}
+
+	if !status.IsActive {
+		log.Error().Msgf("Hermes(%v) is inactive", it.deps.ConsumersHermesID.Hex())
+		return ErrHermesInactive
+	}
+
+	if status.Fee > it.deps.MaxAllowedHermesFee {
+		log.Error().Msgf("Hermes fee too large, asking for %v where %v is the limit", status.Fee, it.deps.MaxAllowedHermesFee)
 		return ErrHermesFeeTooLarge
 	}
 
