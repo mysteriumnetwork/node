@@ -18,8 +18,9 @@
 package config
 
 import (
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli/v2"
+
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -87,6 +88,12 @@ var (
 		Usage: "Enables outgoing traffic filtering",
 		Value: false,
 	}
+	// FlagKeepConnectedOnFail keeps connection active to prevent traffic leaks.
+	FlagKeepConnectedOnFail = cli.BoolFlag{
+		Name:  "keep-connected-on-fail",
+		Usage: "Do not disconnect consumer on session fail to prevent traffic leaks",
+		Value: false,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -104,6 +111,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		&FlagOutgoingFirewall,
 		&FlagTestnet2,
 		&FlagChainID,
+		&FlagKeepConnectedOnFail,
 	)
 }
 
@@ -120,4 +128,5 @@ func ParseFlagsNetwork(ctx *cli.Context) {
 	Current.ParseBoolFlag(ctx, FlagIncomingFirewall)
 	Current.ParseBoolFlag(ctx, FlagOutgoingFirewall)
 	Current.ParseInt64Flag(ctx, FlagChainID)
+	Current.ParseBoolFlag(ctx, FlagKeepConnectedOnFail)
 }
