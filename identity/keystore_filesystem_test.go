@@ -111,7 +111,29 @@ func Benchmark_DerivedDecryption(b *testing.B) {
 }
 
 type ethKeystoreMock struct {
-	account accounts.Account
+	account  accounts.Account
+	unlocked bool
+}
+
+func (ekm *ethKeystoreMock) Unlock(a accounts.Account, passphrase string) error {
+	ekm.unlocked = true
+	return nil
+}
+
+func (ekm *ethKeystoreMock) Delete(a accounts.Account, passphrase string) error {
+	if a.Address == ekm.account.Address {
+		ekm.account = accounts.Account{}
+	}
+
+	return nil
+}
+
+func (ekm *ethKeystoreMock) Export(a accounts.Account, passphrase, newPassphrase string) ([]byte, error) {
+	return []byte("exported"), nil
+}
+
+func (ekm *ethKeystoreMock) Import(keyJSON []byte, passphrase, newPassphrase string) (accounts.Account, error) {
+	return ekm.account, nil
 }
 
 func (ekm *ethKeystoreMock) Accounts() []accounts.Account {
@@ -119,7 +141,10 @@ func (ekm *ethKeystoreMock) Accounts() []accounts.Account {
 }
 
 func (ekm *ethKeystoreMock) Find(a accounts.Account) (accounts.Account, error) {
-	return ekm.account, nil
+	if ekm.account.Address == a.Address {
+		return ekm.account, nil
+	}
+	return accounts.Account{}, errors.New("not found")
 }
 
 func (ekm *ethKeystoreMock) NewAccount(passphrase string) (accounts.Account, error) {

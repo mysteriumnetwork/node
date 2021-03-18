@@ -627,6 +627,46 @@
         }
       }
     },
+    "/identities-import": {
+      "post": {
+        "description": "Exports a given identity returning it is a blob of text which can later be used to import it back.",
+        "tags": [
+          "Identities"
+        ],
+        "summary": "Exports a given identity.",
+        "operationId": "importIdentity",
+        "parameters": [
+          {
+            "description": "Parameter in body used to import an identity.",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/IdentityImportRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unlocked identity returned",
+            "schema": {
+              "$ref": "#/definitions/IdentityRefDTO"
+            }
+          },
+          "400": {
+            "description": "Bad Request error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorMessageDTO"
+            }
+          }
+        }
+      }
+    },
     "/identities/current": {
       "put": {
         "description": "Tries to retrieve the last used identity, the first identity, or creates and returns a new identity",
@@ -2715,6 +2755,34 @@
         },
         "stake": {
           "$ref": "#/definitions/Int"
+        }
+      },
+      "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"
+    },
+    "IdentityImportRequest": {
+      "type": "object",
+      "title": "IdentityImportRequest is received in identity import endpoint.",
+      "properties": {
+        "current_passphrase": {
+          "type": "string",
+          "x-go-name": "CurrentPassphrase"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8"
+          },
+          "x-go-name": "Data"
+        },
+        "new_passphrase": {
+          "type": "string",
+          "x-go-name": "NewPassphrase"
+        },
+        "set_default": {
+          "description": "Optional. Default values are OK.",
+          "type": "boolean",
+          "x-go-name": "SetDefault"
         }
       },
       "x-go-package": "github.com/mysteriumnetwork/node/tequilapi/contract"

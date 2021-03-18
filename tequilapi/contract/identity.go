@@ -18,6 +18,7 @@
 package contract
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -159,4 +160,27 @@ type IdentityRegistrationResponse struct {
 // swagger:model IdentityBeneficiaryResponseDTO
 type IdentityBeneficiaryResponse struct {
 	Beneficiary string `json:"beneficiary"`
+}
+
+// IdentityImportRequest is received in identity import endpoint.
+//swagger:model IdentityImportRequest
+type IdentityImportRequest struct {
+	Data              []byte `json:"data"`
+	CurrentPassphrase string `json:"current_passphrase,omitempty"`
+
+	// Optional. Default values are OK.
+	SetDefault    bool   `json:"set_default"`
+	NewPassphrase string `json:"new_passphrase"`
+}
+
+// Validate validates the import request.
+func (i *IdentityImportRequest) Validate() error {
+	if len(i.CurrentPassphrase) == 0 {
+		return errors.New("current_passphrase must be provided")
+	}
+	if len(i.Data) == 0 {
+		return errors.New("data must be provided")
+	}
+
+	return nil
 }

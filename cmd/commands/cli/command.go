@@ -709,6 +709,8 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []contract.P
 			readline.PcItem("beneficiary", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("settle", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
 			readline.PcItem("referralcode", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("export", readline.PcItemDynamic(getIdentityOptionList(tequilapi))),
+			readline.PcItem("import"),
 		),
 		readline.PcItem("status"),
 		readline.PcItem(

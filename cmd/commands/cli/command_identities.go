@@ -19,12 +19,16 @@ package cli
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/pkg/errors"
@@ -41,6 +45,8 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageRegisterIdentity,
 		"  " + usageSettle,
 		"  " + usageGetReferralCode,
+		"  " + usageExportIdentity,
+		"  " + usageImportIdentity,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -69,6 +75,10 @@ func (c *cliApp) identities(argsString string) {
 		c.settle(actionArgs)
 	case "referralcode":
 		c.getReferralCode(actionArgs)
+	case "export":
+		c.exportIdentity(actionArgs)
+	case "import":
+		c.importIdentity(actionArgs)
 	default:
 		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -309,4 +319,87 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 			fmt.Print(".")
 		}
 	}
+}
+
+const usageExportIdentity = "export <identity> <new_passphrase> [file]"
+
+func (c *cliApp) exportIdentity(actionsArgs []string) {
+	dataDir := c.config.GetStringByFlag(config.FlagDataDir)
+	if dataDir == "" {
+		clio.Error("Could not get data directory")
+		return
+	}
+
+	if len(actionsArgs) < 2 || len(actionsArgs) > 3 {
+		clio.Info("Usage: " + usageExportIdentity)
+		return
+	}
+	id := actionsArgs[0]
+	passphrase := actionsArgs[1]
+
+	ksdir := node.GetOptionsDirectoryKeystore(dataDir)
+	ks := keystore.NewKeyStore(ksdir, keystore.LightScryptN, keystore.LightScryptP)
+
+	ex := identity.NewExporter(identity.NewKeystoreFilesystem(ksdir, ks))
+
+	blob, err := ex.Export(id, "", passphrase)
+	if err != nil {
+		clio.Error("Failed to export identity: ", err)
+		return
+	}
+
+	if len(actionsArgs) == 3 {
+		filepath := actionsArgs[2]
+		write := func() error {
+			f, err := os.Create(filepath)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = f.Write(blob)
+			return err
+		}
+
+		err := write()
+		if err != nil {
+			clio.Error(fmt.Sprintf("Failed to write exported key to file: %s reason: %s", filepath, err.Error()))
+			return
+		}
+
+		clio.Success("Identity exported to file:", filepath)
+		return
+	}
+
+	clio.Success("Private key exported: ")
+	fmt.Println(string(blob))
+}
+
+const usageImportIdentity = "import <passphrase> <key-string/key-file>"
+
+func (c *cliApp) importIdentity(actionsArgs []string) {
+	if len(actionsArgs) != 2 {
+		clio.Info("Usage: " + usageImportIdentity)
+		return
+	}
+
+	key := actionsArgs[1]
+	passphrase := actionsArgs[0]
+
+	blob := []byte(key)
+	if _, err := os.Stat(key); err == nil {
+		blob, err = ioutil.ReadFile(key)
+		if err != nil {
+			clio.Error(fmt.Sprintf("Can't read provided file: %s reason: %s", key, err.Error()))
+			return
+		}
+	}
+
+	id, err := c.tequilapi.ImportIdentity(blob, passphrase, true)
+	if err != nil {
+		clio.Error("Failed to import identity: ", err)
+		return
+	}
+
+	clio.Success("Identity imported:", id.Address)
 }

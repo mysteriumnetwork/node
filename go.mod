@@ -29,6 +29,7 @@ require (
 	github.com/jackpal/gateway v1.0.6
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jinzhu/now v1.1.1 // indirect
+	github.com/josharian/impl v1.0.0 // indirect
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/klauspost/compress v1.10.10 // indirect
@@ -49,7 +50,7 @@ require (
 	github.com/mysteriumnetwork/go-wondershaper v1.0.1
 	github.com/mysteriumnetwork/gowinlog v0.0.0-20200817095141-ad6c5f74d12e
 	github.com/mysteriumnetwork/metrics v0.0.12
-	github.com/mysteriumnetwork/payments v0.0.14-0.20210111115509-22bd090aad8c
+	github.com/mysteriumnetwork/payments v0.0.14-0.20210312115315-3f77efe2c130
 	github.com/nats-io/nats-server/v2 v2.1.7
 	github.com/nats-io/nats.go v1.10.0
 	github.com/nwaples/rardecode v1.1.0 // indirect
@@ -78,6 +79,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/sys v0.0.0-20210223212115-eede4237b368
+	golang.org/x/tools v0.0.0-20201013053347-2db1cd791039 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200320
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/protobuf v1.25.0
