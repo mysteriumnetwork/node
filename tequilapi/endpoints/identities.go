@@ -455,8 +455,8 @@ func (endpoint *identitiesAPI) ReferralTokenAvailable(resp http.ResponseWriter, 
 
 // swagger:operation POST /identities-import Identities importIdentity
 // ---
-// summary: Exports a given identity.
-// description: Exports a given identity returning it is a blob of text which can later be used to import it back.
+// summary: Imports a given identity.
+// description: Imports a given identity returning it is a blob of text which can later be used to import it back.
 // parameters:
 // - in: body
 //   name: body

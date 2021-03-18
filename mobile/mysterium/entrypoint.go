@@ -388,21 +388,21 @@ type IdentityRegistrationChangeCallback interface {
 }
 
 // ExportIdentity exports a given identity address encrypting it with the new passphrase.
-func (mb *MobileNode) ExportIdentity(identityAddress, newPassphrase string) (string, error) {
+func (mb *MobileNode) ExportIdentity(identityAddress, newPassphrase string) ([]byte, error) {
 	data, err := mb.identityMover.Export(identityAddress, "", newPassphrase)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(data), nil
+	return data, nil
 }
 
 // ImportIdentity import a given identity address given data (json as string) and the
 // current passphrase.
 //
 // Identity can only be imported if it is registered.
-func (mb *MobileNode) ImportIdentity(data string, passphrase string) (string, error) {
-	identity, err := mb.identityMover.Import([]byte(data), passphrase, "")
+func (mb *MobileNode) ImportIdentity(data []byte, passphrase string) (string, error) {
+	identity, err := mb.identityMover.Import(data, passphrase, "")
 	if err != nil {
 		return "", err
 	}
