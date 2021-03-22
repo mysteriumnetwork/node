@@ -629,11 +629,11 @@
     },
     "/identities-import": {
       "post": {
-        "description": "Exports a given identity returning it is a blob of text which can later be used to import it back.",
+        "description": "Imports a given identity returning it is a blob of text which can later be used to import it back.",
         "tags": [
           "Identities"
         ],
-        "summary": "Exports a given identity.",
+        "summary": "Imports a given identity.",
         "operationId": "importIdentity",
         "parameters": [
           {

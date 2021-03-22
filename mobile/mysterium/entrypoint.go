@@ -65,6 +65,7 @@ type MobileNode struct {
 	locationResolver          *location.Cache
 	identitySelector          selector.Handler
 	signerFactory             identity.SignerFactory
+	identityMover             *identity.Mover
 	ipResolver                ip.Resolver
 	eventBus                  eventbus.EventBus
 	connectionRegistry        *connection.Registry
@@ -272,6 +273,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		startTime:      time.Now(),
 		chainID:        nodeOptions.OptionsNetwork.ChainID,
 		sessionStorage: di.SessionStorage,
+		identityMover:  di.IdentityMover,
 	}
 
 	return mobileNode, nil
@@ -383,6 +385,29 @@ func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
 // IdentityRegistrationChangeCallback represents identity registration status callback.
 type IdentityRegistrationChangeCallback interface {
 	OnChange(identityAddress string, status string)
+}
+
+// ExportIdentity exports a given identity address encrypting it with the new passphrase.
+func (mb *MobileNode) ExportIdentity(identityAddress, newPassphrase string) ([]byte, error) {
+	data, err := mb.identityMover.Export(identityAddress, "", newPassphrase)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+// ImportIdentity import a given identity address given data (json as string) and the
+// current passphrase.
+//
+// Identity can only be imported if it is registered.
+func (mb *MobileNode) ImportIdentity(data []byte, passphrase string) (string, error) {
+	identity, err := mb.identityMover.Import(data, passphrase, "")
+	if err != nil {
+		return "", err
+	}
+
+	return identity.Address, nil
 }
 
 // RegisterIdentityRegistrationChangeCallback registers callback which is called on identity registration status change.
