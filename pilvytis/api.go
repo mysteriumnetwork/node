@@ -28,14 +28,16 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 )
 
 // API is object which exposes pilvytis API.
 type API struct {
-	req    *requests.HTTPClient
-	signer identity.SignerFactory
-	lp     locationProvider
-	url    string
+	req               *requests.HTTPClient
+	channelCalculator *pingpong.AddressProvider
+	signer            identity.SignerFactory
+	lp                locationProvider
+	url               string
 }
 
 type locationProvider interface {
@@ -50,12 +52,13 @@ const (
 )
 
 // NewAPI returns a new API instance.
-func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, lp locationProvider) *API {
+func NewAPI(hc *requests.HTTPClient, url string, signer identity.SignerFactory, lp locationProvider, cc *pingpong.AddressProvider) *API {
 	return &API{
-		req:    hc,
-		signer: signer,
-		url:    url,
-		lp:     lp,
+		req:               hc,
+		signer:            signer,
+		url:               url,
+		lp:                lp,
+		channelCalculator: cc,
 	}
 }
 
@@ -106,6 +109,7 @@ type OrderResponse struct {
 }
 
 type orderRequest struct {
+	ChannelAddress   string  `json:"channel_address"`
 	MystAmount       float64 `json:"myst_amount"`
 	PayCurrency      string  `json:"pay_currency"`
 	LightningNetwork bool    `json:"lightning_network"`
@@ -116,7 +120,13 @@ type orderRequest struct {
 func (a *API) CreatePaymentOrder(id identity.Identity, mystAmount float64, payCurrency string, lightning bool) (*OrderResponse, error) {
 	chainID := config.Current.GetInt64(config.FlagChainID.Name)
 
+	ch, err := a.channelCalculator.GetChannelAddress(chainID, id)
+	if err != nil {
+		return nil, fmt.Errorf("could get channel address: %w", err)
+	}
+
 	payload := orderRequest{
+		ChannelAddress:   ch.Hex(),
 		MystAmount:       mystAmount,
 		PayCurrency:      payCurrency,
 		LightningNetwork: lightning,
