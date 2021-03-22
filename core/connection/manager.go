@@ -366,9 +366,14 @@ func (m *connectionManager) paymentLoop(channel p2p.Channel, consumerID, provide
 		err := payments.Start()
 		if err != nil {
 			log.Error().Err(err).Msg("Payment error")
-			err = m.Disconnect()
-			if err != nil {
-				log.Error().Err(err).Msg("Could not disconnect gracefully")
+
+			if config.GetBool(config.FlagKeepConnectedOnFail) {
+				m.statusOnHold()
+			} else {
+				err = m.Disconnect()
+				if err != nil {
+					log.Error().Err(err).Msg("Could not disconnect gracefully")
+				}
 			}
 		}
 	}()
@@ -647,6 +652,12 @@ func (m *connectionManager) statusCanceled() {
 	})
 }
 
+func (m *connectionManager) statusOnHold() {
+	m.setStatus(func(status *connectionstate.Status) {
+		status.State = connectionstate.StateOnHold
+	})
+}
+
 func (m *connectionManager) Cancel() {
 	m.statusCanceled()
 	logDisconnectError(m.Disconnect())
@@ -791,7 +802,11 @@ func (m *connectionManager) keepAliveLoop(channel p2p.Channel, sessionID session
 				errCount++
 				if errCount == m.config.KeepAlive.MaxSendErrCount {
 					log.Error().Msgf("Max p2p keepalive err count reached, disconnecting. SessionID=%s", sessionID)
-					m.Disconnect()
+					if config.GetBool(config.FlagKeepConnectedOnFail) {
+						m.statusOnHold()
+					} else {
+						m.Disconnect()
+					}
 					cancel()
 					return
 				}
