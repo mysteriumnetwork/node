@@ -35,7 +35,7 @@ func TestBrokerConnector(t *testing.T) {
 	go srv.Start()
 	defer srv.Shutdown()
 	assert.True(srv.ReadyForConnections(2 * time.Second))
-	connector := NewBrokerConnector()
+	connector := NewBrokerConnector(nil)
 
 	// when
 	conn, err := connector.Connect(&url.URL{

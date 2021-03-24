@@ -629,8 +629,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		brokerURLs[i] = brokerURL
 	}
 
-	di.BrokerConnector = nats.NewBrokerConnector()
-	di.BrokerConnector.ResolveContext = resolver
+	di.BrokerConnector = nats.NewBrokerConnector(resolver)
 	if di.BrokerConnection, err = di.BrokerConnector.Connect(brokerURLs...); err != nil {
 		return err
 	}

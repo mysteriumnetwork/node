@@ -21,31 +21,34 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 // BrokerConnector establishes new connections to NATS servers and handles reconnects.
 type BrokerConnector struct {
-	// ResolveContext specifies the resolve function for doing custom DNS lookup.
+	// resolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
-	ResolveContext requests.ResolveContext
+	resolveContext requests.ResolveContext
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
-func NewBrokerConnector() *BrokerConnector {
-	return &BrokerConnector{}
+func NewBrokerConnector(resolveContext requests.ResolveContext) *BrokerConnector {
+	return &BrokerConnector{
+		resolveContext: resolveContext,
+	}
 }
 
 func (b *BrokerConnector) resolveServers(serverURLs []*url.URL) ([]*url.URL, error) {
-	if b.ResolveContext == nil {
+	if b.resolveContext == nil {
 		return serverURLs, nil
 	}
 
 	for _, serverURL := range serverURLs {
-		addrs, err := b.ResolveContext(context.Background(), "tcp", serverURL.Host)
+		addrs, err := b.resolveContext(context.Background(), "tcp", serverURL.Host)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to resolve NATS server "%s"`, serverURL.Hostname())
 		}
