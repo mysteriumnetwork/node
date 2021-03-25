@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer/entertainment"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -79,6 +81,7 @@ type MobileNode struct {
 	chainID                   int64
 	startTime                 time.Time
 	sessionStorage            SessionStorage
+	entertainmentEstimator    *entertainment.Estimator
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -274,6 +277,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		chainID:        nodeOptions.OptionsNetwork.ChainID,
 		sessionStorage: di.SessionStorage,
 		identityMover:  di.IdentityMover,
+		entertainmentEstimator: entertainment.NewEstimator(
+			config.FlagPaymentPricePerGB.Value,
+			config.FlagPaymentPricePerMinute.Value,
+		),
 	}
 
 	return mobileNode, nil
