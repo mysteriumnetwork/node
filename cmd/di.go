@@ -73,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/p2p"
 	"github.com/mysteriumnetwork/node/pilvytis"
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/mysteriumnetwork/node/router"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session/connectivity"
@@ -968,6 +969,12 @@ func (di *Dependencies) AllowURLAccess(servers ...string) error {
 
 	if _, err := di.ServiceFirewall.AllowURLAccess(servers...); err != nil {
 		return err
+	}
+
+	if config.GetBool(config.FlagKeepConnectedOnFail) {
+		if err := router.AllowURLAccess(servers...); err != nil {
+			return err
+		}
 	}
 
 	return nil
