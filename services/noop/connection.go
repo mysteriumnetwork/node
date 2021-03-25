@@ -19,6 +19,7 @@ package noop
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -48,6 +49,10 @@ func (c *Connection) State() <-chan connectionstate.State {
 // Statistics returns connection statistics channel.
 func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 	return connectionstate.Statistics{At: time.Now()}, nil
+}
+
+func (c *Connection) Reconnect(ctx context.Context, options connection.ConnectOptions) error {
+	return fmt.Errorf("not supported")
 }
 
 // Start implements the connection.Connection interface

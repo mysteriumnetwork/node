@@ -20,6 +20,7 @@ package openvpn
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -106,6 +107,10 @@ func (c *Client) Statistics() (connectionstate.Statistics, error) {
 	c.statsMu.RLock()
 	defer c.statsMu.RUnlock()
 	return c.stats, nil
+}
+
+func (c *Client) Reconnect(ctx context.Context, options connection.ConnectOptions) error {
+	return fmt.Errorf("not supported")
 }
 
 // Start starts the connection
