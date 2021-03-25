@@ -23,14 +23,15 @@ import (
 	"net"
 	"time"
 
+	"github.com/pkg/errors"
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+
 	"github.com/mysteriumnetwork/node/services/wireguard/connection/dns"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/pkg/errors"
-	"golang.zx2c4.com/wireguard/wgctrl"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type client struct {
@@ -49,6 +50,11 @@ func NewWireguardClient() (*client, error) {
 		wgClient:   wgClient,
 		dnsManager: dns.NewManager(),
 	}, nil
+}
+
+func (c *client) ReConfigureDevice(config wgcfg.DeviceConfig) error {
+	// TODO add reconnect support
+	return fmt.Errorf("not supported")
 }
 
 func (c *client) ConfigureDevice(config wgcfg.DeviceConfig) error {

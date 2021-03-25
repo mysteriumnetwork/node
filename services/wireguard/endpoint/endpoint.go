@@ -18,15 +18,17 @@
 package endpoint
 
 import (
+	"fmt"
 	"net"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/services/wireguard/wgcfg"
 	"github.com/mysteriumnetwork/node/utils/netutil"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 // NewConnectionEndpoint returns new connection endpoint instance.
@@ -66,6 +68,17 @@ func (ce *connectionEndpoint) StartConsumerMode(cfg wgcfg.DeviceConfig) error {
 	if err := ce.wgClient.ConfigureDevice(cfg); err != nil {
 		return errors.Wrap(err, "could not configure device")
 	}
+	return nil
+}
+
+func (ce *connectionEndpoint) ReconfigureConsumerMode(cfg wgcfg.DeviceConfig) error {
+	cfg.IfaceName = ce.cfg.IfaceName
+	ce.cfg = cfg
+
+	if err := ce.wgClient.ReConfigureDevice(cfg); err != nil {
+		return fmt.Errorf("could not reconfigure device: %w", err)
+	}
+
 	return nil
 }
 
