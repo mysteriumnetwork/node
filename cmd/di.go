@@ -477,13 +477,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.BCHelper,
 	)
 
-	hermesURL, err := di.getHermesURL(nodeOptions)
-	if err != nil {
-		return err
-	}
-
-	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
-
 	di.bootstrapBeneficiaryProvider(nodeOptions)
 
 	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
@@ -506,7 +499,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 		di.AddressProvider,
 	)
 
-	err = di.ConsumerBalanceTracker.Subscribe(di.EventBus)
+	err := di.ConsumerBalanceTracker.Subscribe(di.EventBus)
 	if err != nil {
 		return errors.Wrap(err, "could not subscribe consumer balance tracker to relevant events")
 	}
@@ -647,12 +640,15 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, di.AddressProvider, registryStorage, di.EventBus); err != nil {
-		return err
-	}
 
 	hermesURL, err := di.getHermesURL(options)
 	if err != nil {
+		return err
+	}
+
+	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
+
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
 		return err
 	}
 

@@ -99,6 +99,8 @@ type consumerBalanceChecker interface {
 	GetMystBalance(chainID int64, mystAddress, identity common.Address) (*big.Int, error)
 }
 
+var errBalanceNotOffchain = errors.New("balance is not offchain, can't use hermes to check")
+
 // Subscribe subscribes the consumer balance tracker to relevant events
 func (cbt *ConsumerBalanceTracker) Subscribe(bus eventbus.Subscriber) error {
 	err := bus.SubscribeAsync(registry.AppTopicIdentityRegistration, cbt.handleRegistrationEvent)
@@ -266,6 +268,64 @@ func (cbt *ConsumerBalanceTracker) subscribeToExternalChannelTopup(chainID int64
 	}()
 }
 
+func (cbt *ConsumerBalanceTracker) alignWithHermes(chainID int64, id identity.Identity) (*big.Int, error) {
+	var boff backoff.BackOff
+	eback := backoff.NewExponentialBackOff()
+	eback.MaxElapsedTime = time.Second * 10
+	eback.InitialInterval = time.Second * 1
+
+	boff = backoff.WithMaxRetries(eback, 5)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-cbt.stop:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	boff = backoff.WithContext(boff, ctx)
+	balance := cbt.GetBalance(chainID, id)
+	alignBalance := func() error {
+		consumer, err := cbt.consumerInfoGetter.GetConsumerData(chainID, id.Address)
+		if err != nil {
+			if errors.Is(err, ErrHermesNotFound) {
+				// Hermes doesn't know about this identity meaning it's not offchain. Cancel.
+				cancel()
+				return errBalanceNotOffchain
+			}
+
+			return err
+		}
+		if !consumer.IsOffchain {
+			// Hermes knows about this identity, but it's not offchain. Cancel.
+			cancel()
+			return errBalanceNotOffchain
+		}
+
+		promised := new(big.Int)
+		if consumer.LatestPromise.Amount != nil {
+			promised = consumer.LatestPromise.Amount
+		}
+
+		previous, _ := cbt.getBalance(chainID, id)
+		cbt.setBalance(chainID, id, ConsumerBalance{
+			BCBalance:          consumer.Balance,
+			BCSettled:          consumer.Settled,
+			GrandTotalPromised: promised,
+		})
+
+		currentBalance, _ := cbt.getBalance(chainID, id)
+		go cbt.publishChangeEvent(id, previous.GetBalance(), currentBalance.GetBalance())
+		balance = consumer.Balance
+		return nil
+	}
+
+	return balance, backoff.Retry(alignBalance, boff)
+}
+
 // ForceBalanceUpdate forces a balance update and returns the updated balance
 func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity.Identity) *big.Int {
 	fallback := cbt.GetBalance(chainID, id)
@@ -280,6 +340,15 @@ func (cbt *ConsumerBalanceTracker) ForceBalanceUpdate(chainID int64, id identity
 	if err != nil {
 		log.Error().Err(err).Msg("could not get myst address")
 		return new(big.Int)
+	}
+
+	balance, err := cbt.alignWithHermes(chainID, id)
+	if err != nil {
+		if !errors.Is(err, errBalanceNotOffchain) {
+			log.Err(err).Msg("syncing balance with hermes failed, will try consumer channel")
+		}
+	} else {
+		return balance
 	}
 
 	cc, err := cbt.consumerBalanceChecker.GetConsumerChannel(chainID, addr, myst)
