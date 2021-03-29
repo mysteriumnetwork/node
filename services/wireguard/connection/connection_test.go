@@ -132,6 +132,9 @@ func newServiceConfig() wg.ServiceConfig {
 
 type mockConnectionEndpoint struct{}
 
+func (mce *mockConnectionEndpoint) ReconfigureConsumerMode(config wgcfg.DeviceConfig) error {
+	return nil
+}
 func (mce *mockConnectionEndpoint) StartConsumerMode(config wgcfg.DeviceConfig) error { return nil }
 func (mce *mockConnectionEndpoint) StartProviderMode(ip string, config wgcfg.DeviceConfig) error {
 	return nil

@@ -113,6 +113,10 @@ func (c *wireguardConnection) Statistics() (connectionstate.Statistics, error) {
 	}, nil
 }
 
+func (c *wireguardConnection) Reconnect(ctx context.Context, options connection.ConnectOptions) (err error) {
+	return c.Start(ctx, options)
+}
+
 func (c *wireguardConnection) Start(ctx context.Context, options connection.ConnectOptions) (err error) {
 	var config wireguard.ServiceConfig
 	err = json.Unmarshal(options.SessionConfig, &config)

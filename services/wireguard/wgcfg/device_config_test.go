@@ -45,6 +45,7 @@ func TestDeviceConfig_Encode(t *testing.T) {
 			},
 			expected: `private_key=0f2c702c9fbe8d53be6b3bacbbbacf127cdd81f9bed1f88e050d464db924dd04
 listen_port=53511
+replace_peers=false
 public_key=0f2c702c9fbe8d53be6b3bacbbbacf127cdd81f9bed1f88e050d464db924dd04
 persistent_keepalive_interval=20
 endpoint=182.122.22.19:3233
@@ -60,6 +61,7 @@ allowed_ip=192.168.4.11/32
 			},
 			expected: `private_key=
 listen_port=0
+replace_peers=false
 public_key=
 persistent_keepalive_interval=0
 `,

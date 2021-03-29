@@ -532,6 +532,7 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 	}
 	log.Info().Msgf("Provider's session config: %s", string(sessionResponse.Config))
 
+	channel := m.channel
 	m.acknowledge = func() {
 		pc := &pb.SessionInfo{
 			ConsumerID: opts.ConsumerID.Address,
@@ -540,7 +541,7 @@ func (m *connectionManager) createP2PSession(c Connection, opts ConnectOptions, 
 		log.Debug().Msgf("Sending P2P message to %q: %s", p2p.TopicSessionAcknowledge, pc.String())
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		_, err := m.channel.Send(ctx, p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
+		_, err := channel.Send(ctx, p2p.TopicSessionAcknowledge, p2p.ProtoMessage(pc))
 		if err != nil {
 			log.Warn().Err(err).Msg("Acknowledge failed")
 		}
