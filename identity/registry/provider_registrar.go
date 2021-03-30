@@ -18,10 +18,13 @@
 package registry
 
 import (
+	"bytes"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
@@ -46,11 +49,21 @@ type payoutStatusChecker interface {
 	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
 }
 
+type multiChainAddressKeeper interface {
+	GetRegistryAddress(chainID int64) (common.Address, error)
+}
+
+type bc interface {
+	GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error)
+}
+
 // ProviderRegistrar is responsible for registering a provider once a service is started.
 type ProviderRegistrar struct {
 	registrationStatusChecker registrationStatusChecker
 	txer                      txer
 	mysteriumAPI              payoutStatusChecker
+	multiChainAddressKeeper   multiChainAddressKeeper
+	bc                        bc
 	signerFactory             identity.SignerFactory
 	once                      sync.Once
 	stopChan                  chan struct{}
@@ -79,6 +92,8 @@ func NewProviderRegistrar(
 	registrationStatusChecker registrationStatusChecker,
 	mysteriumAPI payoutStatusChecker,
 	signerFactory identity.SignerFactory,
+	multiChainAddressKeeper multiChainAddressKeeper,
+	bc bc,
 	prc ProviderRegistrarConfig,
 ) *ProviderRegistrar {
 	return &ProviderRegistrar{
@@ -89,6 +104,8 @@ func NewProviderRegistrar(
 		cfg:                       prc,
 		txer:                      transactor,
 		mysteriumAPI:              mysteriumAPI,
+		multiChainAddressKeeper:   multiChainAddressKeeper,
+		bc:                        bc,
 		signerFactory:             signerFactory,
 	}
 }
@@ -178,11 +195,11 @@ func (pr *ProviderRegistrar) handleEvent(qe queuedEvent) error {
 		return nil
 	default:
 		log.Info().Msgf("Provider %q not registered on BC, will check if elgible for auto-registration", qe.event.ProviderID)
-		return pr.registerIdentity(qe)
+		return pr.registerIdentityIfEligible(qe)
 	}
 }
 
-func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
+func (pr *ProviderRegistrar) registerIdentityIfEligible(qe queuedEvent) error {
 	id := identity.FromAddress(qe.event.ProviderID)
 
 	if !pr.cfg.IsTestnet2 {
@@ -193,24 +210,37 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 		}
 
 		if !eligible {
-			log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", id.Address)
 			return nil
 		}
 	}
 
-	// This part migrates bounty payout address to BC beneficiary
-	payout, err := pr.mysteriumAPI.GetPayoutInfo(id, pr.signerFactory(id))
+	var benef common.Address
+	// check if we had a previous beneficiary set on old registry
+	b, err := pr.getBeneficiaryFromOldRegistry(id)
 	if err != nil {
-		if errHTTP, ok := err.(*requests.ErrorHTTP); ok && errHTTP.Code == 404 {
-			log.Info().Msgf("provider %q not have payout address for auto registration, will require manual registration", id.Address)
-			return nil
-		}
-
-		log.Error().Err(err).Msgf("beneficiary for registration check failed for %q", id.Address)
 		return err
 	}
+	benef = b
 
-	err = pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, nil, payout.EthAddress, pr.chainID(), nil)
+	// if not, check if we had it set in mmn
+	if isZeroAddress(benef) {
+		b, err := pr.getBeneficiaryFromMMN(id)
+		if err != nil {
+			return err
+		}
+		benef = b
+	}
+
+	return pr.registerIdentity(qe, id, benef)
+}
+
+func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent, id identity.Identity, benef common.Address) error {
+	if isZeroAddress(benef) {
+		log.Info().Msgf("provider %q not eligible for auto registration, will require manual registration", id.Address)
+		return nil
+	}
+
+	err := pr.txer.RegisterIdentity(qe.event.ProviderID, pr.cfg.Stake, nil, benef.Hex(), pr.chainID(), nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("Registration failed for provider %q", qe.event.ProviderID)
 		return errors.Wrap(err, "could not register identity on BC")
@@ -219,6 +249,53 @@ func (pr *ProviderRegistrar) registerIdentity(qe queuedEvent) error {
 	pr.registeredIdentities[qe.event.ProviderID] = struct{}{}
 	log.Info().Msgf("Registration success for provider %q", id.Address)
 	return nil
+}
+
+// TODO: change this address once we know the new registry address.
+var newRegistryAddress = common.HexToAddress("0x0010000000000100000000001000000010000000")
+var oldRegistryAddress = common.HexToAddress("0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2")
+
+func (pr *ProviderRegistrar) getBeneficiaryFromOldRegistry(id identity.Identity) (common.Address, error) {
+	// This checks for migration from old registry to new on testnet2 related to matic.
+	// In such a case, we need to check if provider was already registered and just migrate them to new registry with the
+	// old beneficiary.
+	registryAddress, err := pr.multiChainAddressKeeper.GetRegistryAddress(pr.chainID())
+	if err != nil {
+		return common.Address{}, fmt.Errorf("could not get registry address for chain %v: %w", pr.chainID(), err)
+	}
+
+	if bytes.EqualFold(registryAddress.Bytes(), newRegistryAddress.Bytes()) {
+		benef, err := pr.bc.GetBeneficiary(5, oldRegistryAddress, id.ToCommonAddress())
+		if err != nil {
+			log.Err(err).Msg("could not get beneficiary status from bc")
+		}
+
+		return benef, nil
+	}
+
+	return common.Address{}, nil
+}
+
+func (pr *ProviderRegistrar) getBeneficiaryFromMMN(id identity.Identity) (common.Address, error) {
+	// This part migrates bounty payout address to BC beneficiary
+	payout, err := pr.mysteriumAPI.GetPayoutInfo(id, pr.signerFactory(id))
+	if err != nil {
+		if errHTTP, ok := err.(*requests.ErrorHTTP); ok && errHTTP.Code == 404 {
+			log.Info().Msgf("provider %q not have payout address for auto registration", id.Address)
+			return common.Address{}, nil
+		}
+
+		log.Error().Err(err).Msgf("beneficiary for registration check failed for %q", id.Address)
+		return common.Address{}, err
+	}
+
+	return common.HexToAddress(payout.EthAddress), nil
+}
+
+var zeroAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
+
+func isZeroAddress(in common.Address) bool {
+	return bytes.EqualFold(in.Bytes(), zeroAddress.Bytes())
 }
 
 // start starts the provider registrar
