@@ -19,13 +19,14 @@ package mysterium
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/mysteriumnetwork/node/consumer/entertainment"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -79,6 +80,7 @@ type MobileNode struct {
 	chainID                   int64
 	startTime                 time.Time
 	sessionStorage            SessionStorage
+	entertainmentEstimator    *entertainment.Estimator
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -274,6 +276,10 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		chainID:        nodeOptions.OptionsNetwork.ChainID,
 		sessionStorage: di.SessionStorage,
 		identityMover:  di.IdentityMover,
+		entertainmentEstimator: entertainment.NewEstimator(
+			config.FlagPaymentPricePerGB.Value,
+			config.FlagPaymentPricePerMinute.Value,
+		),
 	}
 
 	return mobileNode, nil
@@ -774,123 +780,6 @@ func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
 		}
 		cb.OnUpdate(&payload)
 	})
-}
-
-// CreateOrderRequest a request to create an order.
-type CreateOrderRequest struct {
-	IdentityAddress string
-	MystAmount      float64
-	PayCurrency     string
-	Lightning       bool
-}
-
-// OrderResponse represents a payment order for mobile usage.
-type OrderResponse struct {
-	ID              int64    `json:"id"`
-	IdentityAddress string   `json:"identity_address"`
-	Status          string   `json:"status"`
-	MystAmount      float64  `json:"myst_amount"`
-	PayCurrency     *string  `json:"pay_currency,omitempty"`
-	PayAmount       *float64 `json:"pay_amount,omitempty"`
-	PaymentAddress  string   `json:"payment_address"`
-	PaymentURL      string   `json:"payment_url"`
-}
-
-func newOrderResponse(order pilvytis.OrderResponse) (*OrderResponse, error) {
-	id, err := shrinkUint64(order.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	response := &OrderResponse{
-		ID:              id,
-		IdentityAddress: order.Identity,
-		Status:          string(order.Status),
-		MystAmount:      order.MystAmount,
-		PayCurrency:     order.PayCurrency,
-		PayAmount:       order.PayAmount,
-		PaymentAddress:  order.PaymentAddress,
-		PaymentURL:      order.PaymentURL,
-	}
-
-	return response, nil
-}
-
-// CreateOrder creates a payment order.
-func (mb *MobileNode) CreateOrder(req *CreateOrderRequest) ([]byte, error) {
-	order, err := mb.pilvytis.CreateOrder(identity.FromAddress(req.IdentityAddress), req.MystAmount, req.PayCurrency, req.Lightning)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := newOrderResponse(*order)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(res)
-}
-
-// GetOrderRequest a request to get an order.
-type GetOrderRequest struct {
-	IdentityAddress string
-	ID              int64
-}
-
-// GetOrder gets an order by ID.
-func (mb *MobileNode) GetOrder(req *GetOrderRequest) ([]byte, error) {
-	order, err := mb.pilvytis.GetOrder(identity.FromAddress(req.IdentityAddress), uint64(req.ID))
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := newOrderResponse(*order)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(res)
-}
-
-// ListOrdersRequest a request to list orders.
-type ListOrdersRequest struct {
-	IdentityAddress string
-}
-
-// ListOrders lists all payment orders.
-func (mb *MobileNode) ListOrders(req *ListOrdersRequest) ([]byte, error) {
-	orders, err := mb.pilvytis.ListOrders(identity.FromAddress(req.IdentityAddress))
-	if err != nil {
-		return nil, err
-	}
-
-	res := make([]OrderResponse, len(orders))
-
-	for i := range orders {
-		orderRes, err := newOrderResponse(orders[i])
-		if err != nil {
-			return nil, err
-		}
-
-		res[i] = *orderRes
-	}
-
-	return json.Marshal(orders)
-}
-
-// Currencies lists supported payment currencies.
-func (mb *MobileNode) Currencies() ([]byte, error) {
-	currencies, err := mb.pilvytis.Currencies()
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(currencies)
-}
-
-// ExchangeRate returns MYST rate in quote currency.
-func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
-	return mb.pilvytis.ExchangeRate(quote)
 }
 
 func shrinkUint64(u uint64) (int64, error) {
