@@ -150,7 +150,7 @@ func TestHermesGetConsumerData_OK(t *testing.T) {
 
 const defaultChainID = 1
 
-var mockConsumerData = `{"Identity":"0x74CbcbBfEd45D7836D270068116440521033EDc7","Beneficiary":"0x0000000000000000000000000000000000000000","ChannelID":"0xc80A1758A36cf9a0903a9FE37f98B51AEC978CB6","Balance":133,"Settled":0,"Stake":0,"LatestPromise":{"ChannelID":"0xc80a1758a36cf9a0903a9fe37f98b51aec978cb6","Amount":1077,"Fee":0,"Hashlock":"0x528a7340eb740124306c25c53ac7fa27c0d038ac4ab0bb09c0894487b8d1bc5f","Signature":"0xaf3f9e23336513fa75b5a03cb81dbecf8e4b5c61ce14a9479b8d5728970eab1f1d2cf4d22d14f6441d0ae8db06b5ce34eb18000aae9aeedc013e449fc1ced8a31b","ChainID":1},"LatestSettlement":"0001-01-01T00:00:00Z"}`
+var mockConsumerData = `{"Identity":"0x74CbcbBfEd45D7836D270068116440521033EDc7","Beneficiary":"0x0000000000000000000000000000000000000000","ChannelID":"0xc80A1758A36cf9a0903a9FE37f98B51AEC978CB6","Balance":133,"Settled":0,"Stake":0,"LatestPromise":{"ChannelID":"0xc80a1758a36cf9a0903a9fe37f98b51aec978cb6","Amount":1077,"Fee":0,"Hashlock":"0x528a7340eb740124306c25c53ac7fa27c0d038ac4ab0bb09c0894487b8d1bc5f","Signature":"0xaf3f9e23336513fa75b5a03cb81dbecf8e4b5c61ce14a9479b8d5728970eab1f1d2cf4d22d14f6441d0ae8db06b5ce34eb18000aae9aeedc013e449fc1ced8a31b","ChainID":1},"LatestSettlement":"0001-01-01T00:00:00Z","IsOffchain":false}`
 var mockConsumerDataResponse = fmt.Sprintf(`{"%d":%v}`, defaultChainID, mockConsumerData)
 
 func TestLatestPromise_isValid(t *testing.T) {
