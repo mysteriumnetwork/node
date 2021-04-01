@@ -19,41 +19,39 @@ package traversal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
 	"sync"
 	"time"
 
-	"errors"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/net/ipv4"
 
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/event"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/net/ipv4"
 )
 
 // StageName represents hole-punching stage of NAT traversal
 const StageName = "hole_punching"
 
 const (
+	bufferLen = 2048 * 1024
+
 	maxTTL   = 128
 	msgOK    = "OK"
 	msgOKACK = "OK_ACK"
 )
 
-var (
-	errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
-)
+var errNATPunchAttemptStopped = errors.New("NAT punch attempt stopped")
 
 // NATPinger is responsible for pinging nat holes
 type NATPinger interface {
 	PingProviderPeer(ctx context.Context, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
 	PingConsumerPeer(ctx context.Context, id string, ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error)
-	BindServicePort(key string, port int)
 	Stop()
-	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
 // PingConfig represents NAT pinger config.
@@ -76,9 +74,7 @@ func DefaultPingConfig() *PingConfig {
 type Pinger struct {
 	pingConfig     *PingConfig
 	stop           chan struct{}
-	stopNATProxy   chan struct{}
 	once           sync.Once
-	natProxy       *natProxy
 	eventPublisher eventbus.Publisher
 }
 
@@ -92,8 +88,6 @@ func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 	return &Pinger{
 		pingConfig:     pingConfig,
 		stop:           make(chan struct{}),
-		stopNATProxy:   make(chan struct{}),
-		natProxy:       NewNATProxy(),
 		eventPublisher: publisher,
 	}
 }
@@ -101,7 +95,6 @@ func NewPinger(pingConfig *PingConfig, publisher eventbus.Publisher) NATPinger {
 // Stop stops pinger loop
 func (p *Pinger) Stop() {
 	p.once.Do(func() {
-		close(p.stopNATProxy)
 		close(p.stop)
 	})
 }
@@ -309,11 +302,6 @@ func (p *Pinger) ping(ctx context.Context, conn *net.UDPConn, remoteAddr *net.UD
 	}
 }
 
-// BindServicePort register service port to forward connection to
-func (p *Pinger) BindServicePort(key string, port int) {
-	p.natProxy.registerServicePort(key, port)
-}
-
 func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPAddr, error) {
 	buf := make([]byte, bufferLen)
 
@@ -339,11 +327,6 @@ func (p *Pinger) pingReceiver(ctx context.Context, conn *net.UDPConn) (*net.UDPA
 			return raddr, nil
 		}
 	}
-}
-
-// SetProtectSocketCallback sets socket protection callback to be called when new socket is created in consumer NATProxy
-func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
-	p.natProxy.SetProtectSocketCallback(socketProtect)
 }
 
 // Valid returns that this pinger is a valid pinger

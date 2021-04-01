@@ -51,14 +51,8 @@ func (np *NoopPinger) PingConsumerPeer(ctx context.Context, id, ip string, local
 // StopNATProxy does nothing
 func (np *NoopPinger) StopNATProxy() {}
 
-// SetProtectSocketCallback does nothing
-func (np *NoopPinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {}
-
 // Stop does nothing
 func (np *NoopPinger) Stop() {}
-
-// BindServicePort does nothing
-func (np *NoopPinger) BindServicePort(key string, port int) {}
 
 // PingPeer does nothing.
 func (np *NoopPinger) PingPeer(ip string, localPorts, remotePorts []int, initialTTL int, n int) (conns []*net.UDPConn, err error) {
