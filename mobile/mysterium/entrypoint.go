@@ -49,6 +49,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/pilvytis"
+	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -149,6 +150,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
+	config.Current.SetDefault(config.FlagKeepConnectedOnFail.Name, true)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPriceGiBMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceGiBMax)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPriceHourMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceHourMax)
@@ -592,6 +594,8 @@ func (mb *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelS
 		)
 	}
 	mb.connectionRegistry.Register(wireguard.ServiceType, factory)
+
+	router.SetProtectFunc(wgTunnelSetup.Protect)
 }
 
 // HealthCheckData represents node health check info.
