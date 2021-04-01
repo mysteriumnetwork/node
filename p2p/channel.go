@@ -29,10 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/trace"
 	"github.com/rs/zerolog/log"
 	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/nacl/box"
+
+	"github.com/mysteriumnetwork/node/router"
+	"github.com/mysteriumnetwork/node/trace"
 )
 
 var (
@@ -49,7 +51,7 @@ var (
 const (
 	kcpMTUSize            = 1280
 	mtuLimit              = 1500
-	initialTrafficTimeout = 10 * time.Second
+	initialTrafficTimeout = 30 * time.Second
 )
 
 // ChannelSender is used to send messages.
@@ -575,6 +577,11 @@ func reopenConn(conn *net.UDPConn) (*net.UDPConn, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not listen UDP: %w", err)
 	}
+
+	if err := router.ProtectUDPConn(conn); err != nil {
+		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
+	}
+
 	return conn, nil
 }
 

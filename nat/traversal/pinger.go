@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/nat/event"
+	"github.com/mysteriumnetwork/node/router"
 )
 
 // StageName represents hole-punching stage of NAT traversal
@@ -379,6 +380,10 @@ func (p *Pinger) singlePing(ctx context.Context, remoteIP string, localPort, rem
 		return nil, fmt.Errorf("failed to get connection: %w", err)
 	}
 
+	if err := router.ProtectUDPConn(conn); err != nil {
+		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
+	}
+
 	log.Info().Msgf("Local socket: %s", conn.LocalAddr())
 
 	remoteAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", remoteIP, remotePort))
@@ -404,5 +409,14 @@ func (p *Pinger) singlePing(ctx context.Context, remoteIP string, localPort, rem
 
 	conn.Close()
 
-	return net.DialUDP("udp4", laddr, raddr)
+	conn, err = net.DialUDP("udp4", laddr, raddr)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := router.ProtectUDPConn(conn); err != nil {
+		return nil, fmt.Errorf("failed to protect udp connection: %w", err)
+	}
+
+	return conn, nil
 }

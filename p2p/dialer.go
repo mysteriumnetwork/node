@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pb"
+	"github.com/mysteriumnetwork/node/router"
 	"github.com/mysteriumnetwork/node/trace"
 )
 
@@ -280,6 +281,15 @@ func (m *dialer) dialDirect(ctx context.Context, providerID identity.Identity, c
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not create UDP conn for service: %w", err)
 	}
+
+	if err := router.ProtectUDPConn(conn1); err != nil {
+		return nil, nil, fmt.Errorf("failed to protect udp connection: %w", err)
+	}
+
+	if err := router.ProtectUDPConn(conn2); err != nil {
+		return nil, nil, fmt.Errorf("failed to protect udp connection: %w", err)
+	}
+
 	return conn1, conn2, err
 }
 
