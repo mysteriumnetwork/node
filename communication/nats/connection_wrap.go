@@ -18,7 +18,9 @@
 package nats
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -26,6 +28,8 @@ import (
 	nats_lib "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/requests"
 )
 
 const (
@@ -70,10 +74,11 @@ func ParseServerURIs(serverURIs []string) ([]*url.URL, error) {
 	return serverURLs, nil
 }
 
-func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
+func newConnection(dialer requests.DialContext, serverURIs ...string) (*ConnectionWrap, error) {
 	return &ConnectionWrap{
 		servers: serverURIs,
 		onClose: func() {},
+		dialer:  dialer,
 	}, nil
 }
 
@@ -81,12 +86,15 @@ func newConnection(serverURIs ...string) (*ConnectionWrap, error) {
 type ConnectionWrap struct {
 	*nats_lib.Conn
 
+	dialer requests.DialContext
+
 	servers []string
 	onClose func()
 }
 
 func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options := nats_lib.GetDefaultOptions()
+	options.CustomDialer = &dialer{c.dialer}
 	options.Servers = c.servers
 	options.MaxReconnect = -1
 	options.ReconnectWait = 1 * time.Second
@@ -120,4 +128,12 @@ func (c *ConnectionWrap) Close() {
 // Servers returns list of currently connected servers.
 func (c *ConnectionWrap) Servers() []string {
 	return c.servers
+}
+
+type dialer struct {
+	dialer requests.DialContext
+}
+
+func (d *dialer) Dial(network, address string) (net.Conn, error) {
+	return d.dialer(context.Background(), network, address)
 }

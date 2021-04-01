@@ -33,12 +33,15 @@ type BrokerConnector struct {
 	// resolveContext specifies the resolve function for doing custom DNS lookup.
 	// If ResolveContext is nil, then the transport dials using package net.
 	resolveContext requests.ResolveContext
+
+	dialer requests.DialContext
 }
 
 // NewBrokerConnector creates a new BrokerConnector.
-func NewBrokerConnector(resolveContext requests.ResolveContext) *BrokerConnector {
+func NewBrokerConnector(dialer requests.DialContext, resolveContext requests.ResolveContext) *BrokerConnector {
 	return &BrokerConnector{
 		resolveContext: resolveContext,
+		dialer:         dialer,
 	}
 }
 
@@ -82,7 +85,7 @@ func (b *BrokerConnector) Connect(serverURLs ...*url.URL) (Connection, error) {
 		return nil, errors.Wrapf(err, `failed to allow NATS servers "%v" in firewall`, servers)
 	}
 
-	conn, err := newConnection(servers...)
+	conn, err := newConnection(b.dialer, servers...)
 	if err != nil {
 		return nil, err
 	}
