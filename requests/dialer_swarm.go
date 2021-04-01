@@ -23,7 +23,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/mysteriumnetwork/node/router"
 )
 
 // ErrAllDialsFailed is returned when connecting to a peer has ultimately failed.
@@ -50,6 +55,16 @@ func NewDialerSwarm(srcIP string, dnsHeadstart time.Duration) *DialerSwarm {
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
+			Control: func(net, address string, c syscall.RawConn) (err error) {
+				err = c.Control(func(f uintptr) {
+					fd := int(f)
+					err := router.Protect(fd)
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to protect connection")
+					}
+				})
+				return err
+			},
 		}).DialContext,
 	}
 }
