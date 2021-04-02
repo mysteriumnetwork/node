@@ -132,7 +132,7 @@ func (c *cliApp) orderCreate(args []string) {
 		clio.Warn(errors.Wrap(err, "could not create an order"))
 		return
 	}
-	printOrder(resp, nil)
+	printOrder(resp, c.config)
 }
 
 const usageOrderGet = "get <identity> <orderID>"
