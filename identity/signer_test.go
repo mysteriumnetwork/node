@@ -44,7 +44,8 @@ func TestSigningMessageWithUnlockedAccount(t *testing.T) {
 		return &ethKs.Key{Address: addr, PrivateKey: signerKey}, nil
 	}
 
-	manager := NewIdentityManager(ks, eventbus.New())
+	bus := eventbus.New()
+	manager := NewIdentityManager(ks, bus, NewResidentCountry(bus, newMockLocationResolver("LT")))
 	err := manager.Unlock(signerChainID, signerAddress, "")
 	assert.NoError(t, err)
 

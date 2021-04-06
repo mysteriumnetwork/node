@@ -256,6 +256,12 @@ var (
 		Value:  time.Millisecond * 1500,
 		Hidden: true,
 	}
+
+	// FlagResidentCountry sets the resident country
+	FlagResidentCountry = cli.StringFlag{
+		Name:  "resident-country",
+		Usage: "set resident country. If not set initially a default country will be resolved.",
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -308,6 +314,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		&FlagDefaultCurrency,
 		&FlagDocsURL,
 		&FlagDNSResolutionHeadstart,
+		&FlagResidentCountry,
 	)
 
 	return nil

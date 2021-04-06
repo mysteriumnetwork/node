@@ -43,8 +43,15 @@ type AppEventIdentityUnlock struct {
 	ID      Identity
 }
 
+// ResidentCountryEvent represent actual resident country changed event
+type ResidentCountryEvent struct {
+	ID      string
+	Country string
+}
+
 type identityManager struct {
 	keystoreManager keystore
+	residentCountry *ResidentCountry
 	unlocked        map[string]bool // Currently unlocked addresses
 	unlockedMu      sync.RWMutex
 	eventBus        eventbus.EventBus
@@ -60,9 +67,10 @@ type keystore interface {
 }
 
 // NewIdentityManager creates and returns new identityManager
-func NewIdentityManager(keystore keystore, eventBus eventbus.EventBus) *identityManager {
+func NewIdentityManager(keystore keystore, eventBus eventbus.EventBus, residentCountry *ResidentCountry) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
+		residentCountry: residentCountry,
 		unlocked:        map[string]bool{},
 		eventBus:        eventBus,
 	}
@@ -148,10 +156,13 @@ func (idm *identityManager) Unlock(chainID int64, address string, passphrase str
 	log.Debug().Msgf("Caching unlocked address: %s", address)
 	idm.unlocked[address] = true
 
-	go idm.eventBus.Publish(AppTopicIdentityUnlock, AppEventIdentityUnlock{
-		ChainID: chainID,
-		ID:      FromAddress(address),
-	})
+	go func() {
+		idm.eventBus.Publish(AppTopicIdentityUnlock, AppEventIdentityUnlock{
+			ChainID: chainID,
+			ID:      FromAddress(address),
+		})
+		idm.residentCountry.publishResidentCountry(address)
+	}()
 
 	return nil
 }

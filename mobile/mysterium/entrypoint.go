@@ -80,6 +80,7 @@ type MobileNode struct {
 	startTime                 time.Time
 	sessionStorage            SessionStorage
 	entertainmentEstimator    *entertainment.Estimator
+	residentCountry           *identity.ResidentCountry
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -279,6 +280,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			config.FlagPaymentPricePerGB.Value,
 			config.FlagPaymentPricePerMinute.Value,
 		),
+		residentCountry: di.ResidentCountry,
 	}
 
 	return mobileNode, nil

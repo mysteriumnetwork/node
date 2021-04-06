@@ -39,17 +39,18 @@ import (
 )
 
 const (
-	appName             = "myst"
-	connectionEvent     = "connection_event"
-	sessionDataName     = "session_data"
-	sessionTokensName   = "session_tokens"
-	sessionEventName    = "session_event"
-	traceEventName      = "trace_event"
-	registerIdentity    = "register_identity"
-	unlockEventName     = "unlock"
-	proposalEventName   = "proposal_event"
-	natMappingEventName = "nat_mapping"
-	pingEventName       = "ping_event"
+	appName                  = "myst"
+	connectionEvent          = "connection_event"
+	sessionDataName          = "session_data"
+	sessionTokensName        = "session_tokens"
+	sessionEventName         = "session_event"
+	traceEventName           = "trace_event"
+	registerIdentity         = "register_identity"
+	unlockEventName          = "unlock"
+	proposalEventName        = "proposal_event"
+	natMappingEventName      = "nat_mapping"
+	pingEventName            = "ping_event"
+	residentCountryEventName = "resident_country_event"
 )
 
 // Transport allows sending events
@@ -144,6 +145,11 @@ type sessionContext struct {
 	StartedAt       time.Time
 }
 
+type residentCountryEvent struct {
+	ID      string
+	Country string
+}
+
 // Subscribe subscribes to relevant events of event bus.
 func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 	subscription := map[string]interface{}{
@@ -160,6 +166,7 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 		sevent.AppTopicDataTransferred:               s.sendServiceDataStatistics,
 		AppTopicConsumerPingP2P:                      s.sendConsumerPingDistance,
 		AppTopicProviderPingP2P:                      s.sendProviderPingDistance,
+		identity.AppTopicResidentCountry:             s.sendResidentCountry,
 	}
 
 	for topic, fn := range subscription {
@@ -169,6 +176,13 @@ func (s *Sender) Subscribe(bus eventbus.Subscriber) error {
 	}
 
 	return nil
+}
+
+func (s *Sender) sendResidentCountry(e identity.ResidentCountryEvent) {
+	s.sendEvent(residentCountryEventName, residentCountryEvent{
+		ID:      e.ID,
+		Country: e.Country,
+	})
 }
 
 func (s *Sender) sendConsumerPingDistance(p PingEvent) {
