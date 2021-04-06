@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
@@ -388,41 +387,6 @@ func (mb *MobileNode) RegisterBalanceChangeCallback(cb BalanceChangeCallback) {
 	})
 }
 
-// IdentityRegistrationChangeCallback represents identity registration status callback.
-type IdentityRegistrationChangeCallback interface {
-	OnChange(identityAddress string, status string)
-}
-
-// ExportIdentity exports a given identity address encrypting it with the new passphrase.
-func (mb *MobileNode) ExportIdentity(identityAddress, newPassphrase string) ([]byte, error) {
-	data, err := mb.identityMover.Export(identityAddress, "", newPassphrase)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-// ImportIdentity import a given identity address given data (json as string) and the
-// current passphrase.
-//
-// Identity can only be imported if it is registered.
-func (mb *MobileNode) ImportIdentity(data []byte, passphrase string) (string, error) {
-	identity, err := mb.identityMover.Import(data, passphrase, "")
-	if err != nil {
-		return "", err
-	}
-
-	return identity.Address, nil
-}
-
-// RegisterIdentityRegistrationChangeCallback registers callback which is called on identity registration status change.
-func (mb *MobileNode) RegisterIdentityRegistrationChangeCallback(cb IdentityRegistrationChangeCallback) {
-	_ = mb.eventBus.SubscribeAsync(registry.AppTopicIdentityRegistration, func(e registry.AppEventIdentityRegistration) {
-		cb.OnChange(e.ID.Address, e.Status.String())
-	})
-}
-
 // ConnectRequest represents connect request.
 /*
  * DNSOption:
@@ -563,91 +527,6 @@ func (mb *MobileNode) Disconnect() error {
 	return nil
 }
 
-// GetIdentityRequest represents identity request.
-type GetIdentityRequest struct {
-	Address    string
-	Passphrase string
-}
-
-// GetIdentityResponse represents identity response.
-type GetIdentityResponse struct {
-	IdentityAddress    string
-	ChannelAddress     string
-	RegistrationStatus string
-}
-
-// GetIdentity finds first identity and unlocks it.
-// If there is no identity default one will be created.
-func (mb *MobileNode) GetIdentity(req *GetIdentityRequest) (*GetIdentityResponse, error) {
-	if req == nil {
-		req = &GetIdentityRequest{}
-	}
-
-	id, err := mb.identitySelector.UseOrCreate(req.Address, req.Passphrase, mb.chainID)
-	if err != nil {
-		return nil, fmt.Errorf("could not unlock identity: %w", err)
-	}
-
-	channelAddress, err := mb.identityChannelCalculator.GetChannelAddress(mb.chainID, id)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate channel address: %w", err)
-	}
-
-	status, err := mb.identityRegistry.GetRegistrationStatus(mb.chainID, id)
-	if err != nil {
-		return nil, fmt.Errorf("could not get identity registration status: %w", err)
-	}
-
-	return &GetIdentityResponse{
-		IdentityAddress:    id.Address,
-		ChannelAddress:     channelAddress.Hex(),
-		RegistrationStatus: status.String(),
-	}, nil
-}
-
-// GetIdentityRegistrationFeesResponse represents identity registration fees result.
-type GetIdentityRegistrationFeesResponse struct {
-	Fee float64
-}
-
-// GetIdentityRegistrationFees returns identity registration fees.
-func (mb *MobileNode) GetIdentityRegistrationFees() (*GetIdentityRegistrationFeesResponse, error) {
-	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get registration fees: %w", err)
-	}
-
-	fee := crypto.BigMystToFloat(fees.Fee)
-
-	return &GetIdentityRegistrationFeesResponse{Fee: fee}, nil
-}
-
-// RegisterIdentityRequest represents identity registration request.
-type RegisterIdentityRequest struct {
-	IdentityAddress string
-	Token           string
-}
-
-// RegisterIdentity starts identity registration in background.
-func (mb *MobileNode) RegisterIdentity(req *RegisterIdentityRequest) error {
-	fees, err := mb.transactor.FetchRegistrationFees(mb.chainID)
-	if err != nil {
-		return fmt.Errorf("could not get registration fees: %w", err)
-	}
-
-	var token *string
-	if req.Token != "" {
-		token = &req.Token
-	}
-
-	err = mb.transactor.RegisterIdentity(req.IdentityAddress, big.NewInt(0), fees.Fee, "", mb.chainID, token)
-	if err != nil {
-		return fmt.Errorf("could not register identity: %w", err)
-	}
-
-	return nil
-}
-
 // GetBalanceRequest represents balance request.
 type GetBalanceRequest struct {
 	IdentityAddress string
@@ -746,42 +625,4 @@ func (mb *MobileNode) HealthCheck() *HealthCheckData {
 			BuildNumber: metadata.BuildNumber,
 		},
 	}
-}
-
-// OrderUpdatedCallbackPayload is the payload of OrderUpdatedCallback.
-type OrderUpdatedCallbackPayload struct {
-	OrderID     int64
-	Status      string
-	PayAmount   float64
-	PayCurrency string
-}
-
-// OrderUpdatedCallback is a callback when order status changes.
-type OrderUpdatedCallback interface {
-	OnUpdate(payload *OrderUpdatedCallbackPayload)
-}
-
-// RegisterOrderUpdatedCallback registers OrderStatusChanged callback.
-func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
-	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderUpdated, func(e pilvytis.AppEventOrderUpdated) {
-		payload := OrderUpdatedCallbackPayload{}
-		id, err := shrinkUint64(e.ID)
-		if err != nil {
-			log.Err(err).Send()
-			return
-		}
-		payload.OrderID = id
-		payload.Status = string(e.Status)
-		if e.PayAmount != nil {
-			payload.PayAmount = *e.PayAmount
-		}
-		if e.PayCurrency != nil {
-			payload.PayCurrency = *e.PayCurrency
-		}
-		cb.OnUpdate(&payload)
-	})
-}
-
-func shrinkUint64(u uint64) (int64, error) {
-	return strconv.ParseInt(strconv.FormatUint(u, 10), 10, 64)
 }
