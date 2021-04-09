@@ -962,6 +962,7 @@ func errMissingDependency(dep string) error {
 	return errors.New("Missing dependency: " + dep)
 }
 
+// AllowURLAccess allows the requested addresses to be served when the tunnel is active.
 func (di *Dependencies) AllowURLAccess(servers ...string) error {
 	if _, err := firewall.AllowURLAccess(servers...); err != nil {
 		return err

@@ -109,6 +109,7 @@ func (c *Client) Statistics() (connectionstate.Statistics, error) {
 	return c.stats, nil
 }
 
+// Reconnect restarts a connection with a new options.
 func (c *Client) Reconnect(ctx context.Context, options connection.ConnectOptions) error {
 	return fmt.Errorf("not supported")
 }

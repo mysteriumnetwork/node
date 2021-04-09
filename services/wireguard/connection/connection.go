@@ -105,6 +105,7 @@ func (c *Connection) Start(ctx context.Context, options connection.ConnectOption
 	return c.start(ctx, c.startConn, options)
 }
 
+// Reconnect restarts a connection with a new options.
 func (c *Connection) Reconnect(ctx context.Context, options connection.ConnectOptions) error {
 	return c.start(ctx, c.restartConn, options)
 }

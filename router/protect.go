@@ -27,6 +27,7 @@ var (
 	protect func(fd int) error = nil
 )
 
+// SetProtectFunc sets the callback for using to protect provided connection from going through the tunnel.
 func SetProtectFunc(f func(fd int) error) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -34,6 +35,7 @@ func SetProtectFunc(f func(fd int) error) {
 	protect = f
 }
 
+// Protect protects provided connection from going through the tunnel.
 func Protect(fd int) error {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -45,6 +47,7 @@ func Protect(fd int) error {
 	return protect(fd)
 }
 
+// ProtectUDPConn protects provided UDP connection from going through the tunnel.
 func ProtectUDPConn(c *net.UDPConn) error {
 	sysconn, err := c.SyscallConn()
 	if err != nil {
