@@ -34,10 +34,28 @@ func NewResolverMap(hostToIP map[string][]string) ResolveContext {
 		}
 
 		addrs := []string{addr}
+
+		for _, addrIP := range FetchDNSFromCache(addrHost) {
+			addrs = append(addrs, net.JoinHostPort(addrIP, addrPort))
+		}
+
 		for _, addrIP := range hostToIP[addrHost] {
 			addrs = append(addrs, net.JoinHostPort(addrIP, addrPort))
 		}
 
-		return addrs, nil
+		return deduplicate(addrs), nil
 	}
+}
+
+func deduplicate(list []string) (result []string) {
+	m := make(map[string]struct{})
+
+	for _, v := range list {
+		if _, ok := m[v]; !ok {
+			result = append(result, v)
+			m[v] = struct{}{}
+		}
+	}
+
+	return result
 }

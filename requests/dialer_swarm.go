@@ -51,21 +51,23 @@ type DialerSwarm struct {
 func NewDialerSwarm(srcIP string, dnsHeadstart time.Duration) *DialerSwarm {
 	return &DialerSwarm{
 		dnsHeadstart: dnsHeadstart,
-		Dialer: (&net.Dialer{
+		Dialer: (wrapDialer(&net.Dialer{
 			Timeout:   60 * time.Second,
 			KeepAlive: 30 * time.Second,
 			LocalAddr: &net.TCPAddr{IP: net.ParseIP(srcIP)},
 			Control: func(net, address string, c syscall.RawConn) (err error) {
 				err = c.Control(func(f uintptr) {
+					log.Debug().Msgf("Protecting connection to: %s (%s)", address, net)
+
 					fd := int(f)
 					err := router.Protect(fd)
 					if err != nil {
-						log.Error().Err(err).Msg("Failed to protect connection")
+						log.Error().Err(err).Msgf("Failed to protect connection to: %s (%s)", address, net)
 					}
 				})
 				return err
 			},
-		}).DialContext,
+		})).DialContext,
 	}
 }
 
@@ -257,4 +259,36 @@ func (e *ErrorDial) Error() string {
 // Unwrap unwraps the original err for use with errors.Unwrap.
 func (e *ErrorDial) Unwrap() error {
 	return e.Cause
+}
+
+type dialerWithDNSCache struct {
+	dialer *net.Dialer
+}
+
+func wrapDialer(dialer *net.Dialer) *dialerWithDNSCache {
+	return &dialerWithDNSCache{
+		dialer: dialer,
+	}
+}
+
+func (wd *dialerWithDNSCache) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	go func() {
+		if !isIP(addr) {
+			addrHost, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				log.Warn().Msgf("Failed to get host from: %s (%s)", addr, network)
+				return
+			}
+
+			addrs, err := net.LookupHost(addrHost)
+			if err != nil {
+				log.Warn().Msgf("Failed to lookup host: %s", addrHost)
+				return
+			}
+
+			CacheDNSRecord(addrHost, addrs)
+		}
+	}()
+
+	return wd.dialer.DialContext(ctx, network, addr)
 }
