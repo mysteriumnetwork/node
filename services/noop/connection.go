@@ -51,6 +51,7 @@ func (c *Connection) Statistics() (connectionstate.Statistics, error) {
 	return connectionstate.Statistics{At: time.Now()}, nil
 }
 
+// Reconnect restarts a connection with a new options.
 func (c *Connection) Reconnect(ctx context.Context, options connection.ConnectOptions) error {
 	return fmt.Errorf("not supported")
 }

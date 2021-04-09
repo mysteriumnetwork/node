@@ -102,6 +102,7 @@ func DefaultConfig() Config {
 // Creator creates new connection by given options and uses state channel to report state changes
 type Creator func(serviceType string) (Connection, error)
 
+// ConnectionStart start new connection with a given options.
 type ConnectionStart func(context.Context, ConnectOptions) error
 
 // PaymentIssuer handles the payments for service

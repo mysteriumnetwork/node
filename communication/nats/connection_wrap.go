@@ -94,7 +94,6 @@ type ConnectionWrap struct {
 
 func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options := nats_lib.GetDefaultOptions()
-	options.CustomDialer = &dialer{c.dialer}
 	options.Servers = c.servers
 	options.MaxReconnect = -1
 	options.ReconnectWait = 1 * time.Second
@@ -102,6 +101,10 @@ func (c *ConnectionWrap) connectOptions() nats_lib.Options {
 	options.ClosedCB = func(conn *nats_lib.Conn) { log.Warn().Msg("NATS: connection closed") }
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn().Msg("NATS: reconnected") }
+
+	if c.dialer != nil {
+		options.CustomDialer = &dialer{c.dialer}
+	}
 
 	return options
 }
