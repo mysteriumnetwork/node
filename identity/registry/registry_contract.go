@@ -40,6 +40,10 @@ type registryStorage interface {
 	GetAll() ([]StoredRegistrationStatus, error)
 }
 
+type hermesCaller interface {
+	IsIdentityOffchain(chainID int64, id string) (bool, error)
+}
+
 type contractRegistry struct {
 	storage   registryStorage
 	stop      chan struct{}
@@ -48,16 +52,18 @@ type contractRegistry struct {
 	lock      sync.Mutex
 	ethC      *paymentClient.ReconnectableEthClient
 	ap        AddressProvider
+	hermes    hermesCaller
 }
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher) (*contractRegistry, error) {
+func NewIdentityRegistryContract(ethClient *paymentClient.ReconnectableEthClient, ap AddressProvider, registryStorage registryStorage, publisher eventbus.Publisher, caller hermesCaller) (*contractRegistry, error) {
 	return &contractRegistry{
 		storage:   registryStorage,
 		stop:      make(chan struct{}),
 		publisher: publisher,
 		ethC:      ethClient,
 		ap:        ap,
+		hermes:    caller,
 	}, nil
 }
 
@@ -76,30 +82,62 @@ func (registry *contractRegistry) Subscribe(eb eventbus.Subscriber) error {
 
 // GetRegistrationStatus returns the registration status of the provided identity
 func (registry *contractRegistry) GetRegistrationStatus(chainID int64, id identity.Identity) (RegistrationStatus, error) {
+	var currentStatus RegistrationStatus
 	ss, err := registry.storage.Get(chainID, id)
-	if err != nil && err != ErrNotFound {
+	switch err {
+	case nil:
+		currentStatus = ss.RegistrationStatus
+	case ErrNotFound:
+		currentStatus = Unregistered
+	default:
 		return Unregistered, errors.Wrap(err, "could not check status in local db")
 	}
 
-	if err == nil && ss.RegistrationStatus != InProgress && ss.RegistrationStatus != RegistrationError {
-		return ss.RegistrationStatus, nil
+	if currentStatus == Registered {
+		return currentStatus, nil
 	}
 
-	statusBC, err := registry.bcRegistrationStatus(chainID, id)
+	var newStatus RegistrationStatus
+	newStatus, err = registry.bcRegistrationStatus(chainID, id)
 	if err != nil {
 		return Unregistered, errors.Wrap(err, "could not check identity registration status on blockchain")
 	}
 
-	if statusBC == Unregistered && ss.RegistrationStatus == InProgress {
-		statusBC = InProgress
+	if newStatus == Unregistered && ss.RegistrationStatus == InProgress {
+		newStatus = InProgress
+	}
+
+	if newStatus == Unregistered {
+		ok, err := registry.hermes.IsIdentityOffchain(chainID, id.Address)
+		if err != nil {
+			log.Err(err).Str("status", newStatus.String()).Msg("failed to contact hermes to get new registration status")
+		}
+
+		if ok && err == nil {
+			log.Debug().Str("identity", id.Address).Msg("identity is offchain, considering it registered")
+			newStatus = Registered
+		}
 	}
 
 	err = registry.storage.Store(StoredRegistrationStatus{
 		Identity:           id,
-		RegistrationStatus: statusBC,
+		RegistrationStatus: newStatus,
 		ChainID:            chainID,
 	})
-	return statusBC, errors.Wrap(err, "could not store registration status")
+	if err != nil {
+		return newStatus, errors.Wrap(err, "could not store registration status")
+	}
+
+	// If current status was not registered and we are now registered
+	// publish an event for that to make sure that wasn't missed.
+	if currentStatus != newStatus && newStatus == Registered {
+		go registry.publisher.Publish(AppTopicIdentityRegistration, AppEventIdentityRegistration{
+			ID:      id,
+			Status:  newStatus,
+			ChainID: chainID,
+		})
+	}
+	return newStatus, nil
 }
 
 func (registry *contractRegistry) handleNodeEvent(ev event.Payload) {
@@ -327,23 +365,15 @@ func (registry *contractRegistry) getProviderChannelAddressBytes(hermesAddress c
 }
 
 func (registry *contractRegistry) handleUnregisteredIdentityInitialLoad(chainID int64, id identity.Identity) error {
-	registered, err := registry.bcRegistrationStatus(chainID, id)
+	status, err := registry.GetRegistrationStatus(chainID, id)
 	if err != nil {
 		return errors.Wrap(err, "could not check status on blockchain")
 	}
 
-	switch registered {
-	case Registered:
-		err := registry.storage.Store(StoredRegistrationStatus{
-			Identity:           id,
-			RegistrationStatus: registered,
-		})
-		if err != nil {
-			return errors.Wrap(err, "could not store registration status on local db")
-		}
-	default:
+	if status != Registered {
 		registry.subscribeToRegistrationEvent(chainID, id)
 	}
+
 	return nil
 }
 

@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/service/servicestate"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market/mysterium"
@@ -36,7 +37,7 @@ func Test_ProviderRegistrar_StartsAndStops(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
 
 	done := make(chan struct{})
 
@@ -53,7 +54,7 @@ func Test_Provider_Registrar_needsHandling(t *testing.T) {
 	mt := mockTransactor{}
 	mrsp := mockRegistrationStatusProvider{}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
 
 	mockEvent := queuedEvent{
 		event:   servicestate.AppEventServiceStatus{},
@@ -78,12 +79,12 @@ func Test_Provider_Registrar_RegistersProvider(t *testing.T) {
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
 			Status:     "Running",
-			ProviderID: "0xsuchIDManyWow",
+			ProviderID: "0x3b2e61d42aa1ba340f8a60128fadb273894df145",
 		},
 		retries: 0,
 	}
@@ -112,7 +113,7 @@ func Test_Provider_Registrar_Does_NotRegisterWithNoBounty(t *testing.T) {
 		status: Unregistered,
 	}
 	cfg := ProviderRegistrarConfig{}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -148,12 +149,12 @@ func Test_Provider_Registrar_Does_NotRegisterWithNoBounty_Testnet2(t *testing.T)
 	cfg := ProviderRegistrarConfig{
 		IsTestnet2: true,
 	}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
 			Status:     "Running",
-			ProviderID: "0xsuchIDManyWow",
+			ProviderID: "0x3b2e61d42aa1ba340f8a60128fadb273894df145",
 		},
 		retries: 0,
 	}
@@ -182,7 +183,7 @@ func Test_Provider_Registrar_FailsAfterRetries(t *testing.T) {
 	cfg := ProviderRegistrarConfig{
 		MaxRetries: 5,
 	}
-	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, cfg)
+	registrar := NewProviderRegistrar(&mt, &mrsp, &mockAPI{}, fakeSignerFactory, &mockAddressKeeper{}, &mockBlockchain{}, cfg)
 
 	mockEvent := queuedEvent{
 		event: servicestate.AppEventServiceStatus{
@@ -239,4 +240,22 @@ type fakeSigner struct {
 
 func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
 	return identity.SignatureBase64("deadbeef"), nil
+}
+
+type mockAddressKeeper struct {
+	addrToReturn common.Address
+	errToReturn  error
+}
+
+func (mak *mockAddressKeeper) GetRegistryAddress(chainID int64) (common.Address, error) {
+	return mak.addrToReturn, mak.errToReturn
+}
+
+type mockBlockchain struct {
+	beneficiaryToReturn common.Address
+	errToReturn         error
+}
+
+func (mb *mockBlockchain) GetBeneficiary(chainID int64, registryAddress, identity common.Address) (common.Address, error) {
+	return mb.beneficiaryToReturn, mb.errToReturn
 }

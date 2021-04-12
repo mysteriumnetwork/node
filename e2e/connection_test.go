@@ -35,6 +35,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session/pingpong"
@@ -191,6 +192,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		// settle hermes 1
 		err = tequilapiProvider.SettleWithBeneficiary(providerID, providerChannelAddress, hermesID)
 		assert.NoError(t, err)
+		assert.Eventually(t, func() bool {
+			res, err := tequilapiProvider.SettleWithBeneficiaryStatus(providerID)
+			assert.NoError(t, err)
+			return res.State == beneficiary.Completed
+		}, time.Second*30, time.Second/2)
 		assert.Eventually(t, func() bool {
 			res, err := tequilapiProvider.Beneficiary(providerID)
 			assert.NoError(t, err)

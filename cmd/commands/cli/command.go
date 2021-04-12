@@ -233,7 +233,7 @@ func (c *cliApp) handleActions(line string) {
 	}{
 		{"connect", c.connect},
 		{"identities", c.identities},
-		{"order", c.order},
+		{"orders", c.order},
 		{"version", c.version},
 		{"license", c.license},
 		{"proposals", c.proposals},

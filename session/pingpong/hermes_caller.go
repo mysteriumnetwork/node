@@ -203,6 +203,19 @@ func (ac *HermesCaller) RevealR(r, provider string, agreementID *big.Int) error 
 	}, boff)
 }
 
+// IsIdentityOffchain returns true if identity is considered offchain in hermes.
+func (ac *HermesCaller) IsIdentityOffchain(chainID int64, id string) (bool, error) {
+	data, err := ac.GetConsumerData(chainID, id)
+	if err != nil {
+		if errors.Is(err, ErrHermesNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return data.IsOffchain, nil
+}
+
 // GetConsumerData gets consumer data from hermes
 func (ac *HermesCaller) GetConsumerData(chainID int64, id string) (ConsumerData, error) {
 	req, err := requests.NewGetRequest(ac.hermesBaseURI, fmt.Sprintf("data/consumer/%v", id), nil)
@@ -268,6 +281,7 @@ type ConsumerData struct {
 	Stake            *big.Int      `json:"Stake"`
 	LatestPromise    LatestPromise `json:"LatestPromise"`
 	LatestSettlement time.Time     `json:"LatestSettlement"`
+	IsOffchain       bool          `json:"IsOffchain"`
 }
 
 // LatestPromise represents the latest promise
