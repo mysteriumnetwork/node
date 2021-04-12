@@ -43,7 +43,8 @@ func Test_UnlockAndSignAndVerify(t *testing.T) {
 		return &ethKs.Key{Address: addr, PrivateKey: idKey}, nil
 	}
 
-	manager := NewIdentityManager(ks, eventbus.New())
+	bus := eventbus.New()
+	manager := NewIdentityManager(ks, bus, NewResidentCountry(bus, newMockLocationResolver("LT")))
 	err := manager.Unlock(idChainID, idAddress, "")
 	assert.NoError(t, err)
 
