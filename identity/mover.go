@@ -83,26 +83,8 @@ func (i *Importer) Import(blob []byte, currPass, newPass string) (Identity, erro
 	}
 
 	identity := accountToIdentity(acc)
-	if err := i.canImport(identity); err != nil {
-		i.ks.Delete(acc, newPass)
-		return Identity{}, err
-	}
-
 	i.eventBus.Publish(AppTopicIdentityCreated, identity.Address)
 	return identity, nil
-}
-
-func (i *Importer) canImport(id Identity) error {
-	exists, err := i.handler.IdentityExists(id, i.signerFactory(id))
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return errors.New("identity was never registered, can not import it")
-	}
-
-	return nil
 }
 
 // Exporter exposes a way to export private keys.

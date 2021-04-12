@@ -57,16 +57,11 @@ func TestMoverImport(t *testing.T) {
 		assert.True(t, ks.unlocked)
 	})
 
-	t.Run("identity was never registered should fail", func(t *testing.T) {
+	t.Run("identity was never registered should succeed", func(t *testing.T) {
 		handler.exists = false
 
 		_, err := m.Import([]byte(""), "asdf", "asdf")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "was never registered")
-		assert.True(t, ks.unlocked)
-
-		// Entry should be deleted because import failed.
-		assert.Equal(t, accounts.Account{}.Address, ks.account.Address)
+		assert.NoError(t, err)
 	})
 
 }
