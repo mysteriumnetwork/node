@@ -699,7 +699,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	)
 	di.IdentityMover = identity.NewMover(
 		di.Keystore,
-		di.MysteriumAPI,
 		di.EventBus,
 		di.SignerFactory)
 }
