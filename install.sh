@@ -46,6 +46,13 @@ get_linux_distribution() {
         if [[ -z "$id" ]]; then
             id=$(awk -F= '$1=="ID_LIKE" { print $2 ;}' /etc/os-release)
         fi
+
+        if [[ "$id" == "debian" ]]; then
+            if [[ "$(uname -a | grep -c raspberry)" ]]; then
+                id="raspbian"
+            fi
+        fi
+
         result="$id"
     else
         result="unknown"
