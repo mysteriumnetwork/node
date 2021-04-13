@@ -129,6 +129,25 @@ func TestMobileNodeConsumer(t *testing.T) {
 		require.Equal(t, "Unregistered", identity.RegistrationStatus)
 	})
 
+	t.Run("Test resident country", func(t *testing.T) {
+		// given
+		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
+		require.NoError(t, err)
+
+		// when
+		err = node.UpdateResidentCountry(&mysterium.ResidentCountryUpdateRequest{IdentityAddress: identity.IdentityAddress, Country: "AU"})
+		require.NoError(t, err)
+
+		// then
+		require.Equal(t, "AU", node.ResidentCountry(), "default country should be set")
+
+		// and
+		err = node.UpdateResidentCountry(&mysterium.ResidentCountryUpdateRequest{IdentityAddress: identity.IdentityAddress})
+		require.Error(t, err, "country is required")
+		err = node.UpdateResidentCountry(&mysterium.ResidentCountryUpdateRequest{Country: "UK"})
+		require.Error(t, err, "identity is required")
+	})
+
 	t.Run("Test shutdown", func(t *testing.T) {
 		err := node.Shutdown()
 		require.NoError(t, err)
