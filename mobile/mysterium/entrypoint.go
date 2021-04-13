@@ -145,6 +145,9 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 
 	dataDir := filepath.Join(appPath, ".mysterium")
 	currentDir := appPath
+	if err := loadUserConfig(dataDir); err != nil {
+		return nil, err
+	}
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
