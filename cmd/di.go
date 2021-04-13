@@ -173,9 +173,10 @@ type Dependencies struct {
 	AddressProvider          *pingpong.AddressProvider
 	HermesStatusChecker      *pingpong.HermesStatusChecker
 
-	MMN         *mmn.MMN
-	PilvytisAPI *pilvytis.API
-	Pilvytis    *pilvytis.Service
+	MMN             *mmn.MMN
+	PilvytisAPI     *pilvytis.API
+	Pilvytis        *pilvytis.Service
+	ResidentCountry *identity.ResidentCountry
 }
 
 // Bootstrap initiates all container dependencies
@@ -215,15 +216,20 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
-
-	di.bootstrapIdentityComponents(nodeOptions)
+	if err := di.bootstrapLocationComponents(nodeOptions); err != nil {
+		return err
+	}
+	if err := di.bootstrapResidentCountry(); err != nil {
+		return err
+	}
+	if err := di.bootstrapIdentityComponents(nodeOptions); err != nil {
+		return err
+	}
 
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
 		return err
 	}
-	if err := di.bootstrapLocationComponents(nodeOptions); err != nil {
-		return err
-	}
+
 	if err := di.bootstrapAuthenticator(); err != nil {
 		return err
 	}
@@ -676,7 +682,7 @@ func (di *Dependencies) bootstrapEventBus() {
 	di.EventBus = eventbus.New()
 }
 
-func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
+func (di *Dependencies) bootstrapIdentityComponents(options node.Options) error {
 	var ks *keystore.KeyStore
 	if options.Keystore.UseLightweight {
 		log.Debug().Msg("Using lightweight keystore")
@@ -687,7 +693,11 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	}
 
 	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, ks)
-	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus)
+	if di.ResidentCountry == nil {
+		return errMissingDependency("di.residentCountry")
+	}
+	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus, di.ResidentCountry)
+
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
 	}
@@ -699,9 +709,9 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	)
 	di.IdentityMover = identity.NewMover(
 		di.Keystore,
-		di.MysteriumAPI,
 		di.EventBus,
 		di.SignerFactory)
+	return nil
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
@@ -937,4 +947,20 @@ func (di *Dependencies) handleConnStateChange() error {
 		}
 		latestState = e.State
 	})
+}
+
+func (di *Dependencies) bootstrapResidentCountry() error {
+	if di.EventBus == nil {
+		return errMissingDependency("di.EventBus")
+	}
+
+	if di.LocationResolver == nil {
+		return errMissingDependency("di.LocationResolver")
+	}
+	di.ResidentCountry = identity.NewResidentCountry(di.EventBus, di.LocationResolver)
+	return nil
+}
+
+func errMissingDependency(dep string) error {
+	return errors.New("Missing dependency: " + dep)
 }

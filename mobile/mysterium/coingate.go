@@ -19,7 +19,10 @@ package mysterium
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/pilvytis"
@@ -144,4 +147,42 @@ func (mb *MobileNode) Currencies() ([]byte, error) {
 // ExchangeRate returns MYST rate in quote currency.
 func (mb *MobileNode) ExchangeRate(quote string) (float64, error) {
 	return mb.pilvytis.ExchangeRate(quote)
+}
+
+// OrderUpdatedCallbackPayload is the payload of OrderUpdatedCallback.
+type OrderUpdatedCallbackPayload struct {
+	OrderID     int64
+	Status      string
+	PayAmount   float64
+	PayCurrency string
+}
+
+// OrderUpdatedCallback is a callback when order status changes.
+type OrderUpdatedCallback interface {
+	OnUpdate(payload *OrderUpdatedCallbackPayload)
+}
+
+// RegisterOrderUpdatedCallback registers OrderStatusChanged callback.
+func (mb *MobileNode) RegisterOrderUpdatedCallback(cb OrderUpdatedCallback) {
+	_ = mb.eventBus.SubscribeAsync(pilvytis.AppTopicOrderUpdated, func(e pilvytis.AppEventOrderUpdated) {
+		payload := OrderUpdatedCallbackPayload{}
+		id, err := shrinkUint64(e.ID)
+		if err != nil {
+			log.Err(err).Send()
+			return
+		}
+		payload.OrderID = id
+		payload.Status = string(e.Status)
+		if e.PayAmount != nil {
+			payload.PayAmount = *e.PayAmount
+		}
+		if e.PayCurrency != nil {
+			payload.PayCurrency = *e.PayCurrency
+		}
+		cb.OnUpdate(&payload)
+	})
+}
+
+func shrinkUint64(u uint64) (int64, error) {
+	return strconv.ParseInt(strconv.FormatUint(u, 10), 10, 64)
 }

@@ -46,9 +46,8 @@ var fakeSignerFactory = func(id Identity) Signer {
 
 func TestMoverImport(t *testing.T) {
 	ks := &ethKeystoreMock{account: encryptionAccount}
-	handler := &moverIdentityHandlerMock{exists: true}
 	bus := eventbus.New()
-	m := NewMover(ks, handler, bus, fakeSignerFactory)
+	m := NewMover(ks, bus, fakeSignerFactory)
 
 	t.Run("identity import green path", func(t *testing.T) {
 		got, err := m.Import([]byte(""), "asdf", "asdf")
@@ -57,25 +56,17 @@ func TestMoverImport(t *testing.T) {
 		assert.True(t, ks.unlocked)
 	})
 
-	t.Run("identity was never registered should fail", func(t *testing.T) {
-		handler.exists = false
-
+	t.Run("identity was never registered should succeed", func(t *testing.T) {
 		_, err := m.Import([]byte(""), "asdf", "asdf")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "was never registered")
-		assert.True(t, ks.unlocked)
-
-		// Entry should be deleted because import failed.
-		assert.Equal(t, accounts.Account{}.Address, ks.account.Address)
+		assert.NoError(t, err)
 	})
 
 }
 
 func TestMoverExport(t *testing.T) {
 	ks := &ethKeystoreMock{account: encryptionAccount}
-	handler := &moverIdentityHandlerMock{}
 	bus := eventbus.New()
-	m := NewMover(ks, handler, bus, fakeSignerFactory)
+	m := NewMover(ks, bus, fakeSignerFactory)
 
 	t.Run("identity export green path", func(t *testing.T) {
 		blob, err := m.Export(accountToIdentity(encryptionAccount).Address, "qwe", "qwe")

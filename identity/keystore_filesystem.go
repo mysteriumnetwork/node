@@ -69,15 +69,6 @@ func (ks *Keystore) Unlock(a accounts.Account, passphrase string) error {
 	return ks.TimedUnlock(a, passphrase, 0)
 }
 
-// Delete removes the given address from unclocked map and removes it from keystore.
-func (ks *Keystore) Delete(a accounts.Account, passphrase string) error {
-	ks.mu.Lock()
-	delete(ks.unlocked, a.Address)
-	ks.mu.Unlock()
-
-	return ks.ethKeystore.Delete(a, passphrase)
-}
-
 // Lock removes the private key with the given address from memory.
 func (ks *Keystore) Lock(addr common.Address) error {
 	ks.mu.Lock()

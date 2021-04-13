@@ -33,7 +33,6 @@ type Mover struct {
 }
 
 type moverKeystore interface {
-	Delete(a accounts.Account, passphrase string) error
 	Unlock(a accounts.Account, passphrase string) error
 	Find(a accounts.Account) (accounts.Account, error)
 	Export(a accounts.Account, passphrase, newPassphrase string) ([]byte, error)
@@ -45,26 +44,24 @@ type moverIdentityHandler interface {
 }
 
 // NewMover returns a new mover object.
-func NewMover(ks moverKeystore, handler moverIdentityHandler, events eventbus.EventBus, signer SignerFactory) *Mover {
+func NewMover(ks moverKeystore, events eventbus.EventBus, signer SignerFactory) *Mover {
 	return &Mover{
 		Exporter: NewExporter(ks),
-		Importer: NewImporter(ks, handler, events, signer),
+		Importer: NewImporter(ks, events, signer),
 	}
 }
 
 // Importer exposes a way to import an private keys.
 type Importer struct {
-	handler       moverIdentityHandler
 	ks            moverKeystore
 	eventBus      eventbus.EventBus
 	signerFactory SignerFactory
 }
 
 // NewImporter returns a new importer object.
-func NewImporter(ks moverKeystore, handler moverIdentityHandler, events eventbus.EventBus, signer SignerFactory) *Importer {
+func NewImporter(ks moverKeystore, events eventbus.EventBus, signer SignerFactory) *Importer {
 	return &Importer{
 		ks:            ks,
-		handler:       handler,
 		eventBus:      events,
 		signerFactory: signer,
 	}
@@ -83,26 +80,8 @@ func (i *Importer) Import(blob []byte, currPass, newPass string) (Identity, erro
 	}
 
 	identity := accountToIdentity(acc)
-	if err := i.canImport(identity); err != nil {
-		i.ks.Delete(acc, newPass)
-		return Identity{}, err
-	}
-
 	i.eventBus.Publish(AppTopicIdentityCreated, identity.Address)
 	return identity, nil
-}
-
-func (i *Importer) canImport(id Identity) error {
-	exists, err := i.handler.IdentityExists(id, i.signerFactory(id))
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return errors.New("identity was never registered, can not import it")
-	}
-
-	return nil
 }
 
 // Exporter exposes a way to export private keys.

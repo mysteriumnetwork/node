@@ -18,8 +18,10 @@
 package e2e
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,8 +96,48 @@ func TestMobileNodeConsumer(t *testing.T) {
 		require.Equal(t, crypto.BigMystToFloat(balanceAfterRegistration), balance.Balance)
 	})
 
+	t.Run("Test identity export", func(t *testing.T) {
+		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{})
+		require.NoError(t, err)
+		// without '0x' prefix
+		hexAddress := strings.ToLower(identity.IdentityAddress[2:])
+
+		exportBytes, err := node.ExportIdentity(identity.IdentityAddress, "secret_pass")
+		require.NoError(t, err)
+
+		var ks identityKeystore
+		err = json.Unmarshal(exportBytes, &ks)
+		require.NoError(t, err)
+		require.Equal(t, ks.Address, hexAddress)
+		require.NotEmpty(t, ks.Version)
+		require.NotEmpty(t, ks.ID)
+		require.NotEmpty(t, ks.Crypto)
+	})
+
+	t.Run("Test identity import", func(t *testing.T) {
+		keystoreString := "{\"address\":\"2574e9053c104f5e6012cbb0aa457318339d8a7f\",\"crypto\":{\"cipher\":\"aes-128-ctr\",\"ciphertext\":\"772b3df26635c50fccf26350c6530c4216e2d78b4836105475f2876dc0704810\",\"cipherparams\":{\"iv\":\"1b96fb8b5614f5b46f1e1e0327f370ed\"},\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"n\":4096,\"p\":6,\"r\":8,\"salt\":\"6978a44ba80d588aacf497d2b042948bdbf74aefa22b715ab863647511236f17\"},\"mac\":\"77b896027172c9dc68d64f15d6450492bd92a57b994734fd147769a580e02ef6\"},\"id\":\"d18381e4-2011-48c7-97cf-84ccc3882c87\",\"version\":3}"
+		keystorePass := "fhHGF12G2g"
+
+		address, err := node.ImportIdentity([]byte(keystoreString), keystorePass)
+		require.NoError(t, err)
+		require.NotEmpty(t, address)
+
+		identity, err := node.GetIdentity(&mysterium.GetIdentityRequest{Address: address})
+		require.NoError(t, err)
+		require.Equal(t, address, identity.IdentityAddress)
+		require.NotEmpty(t, identity.ChannelAddress)
+		require.Equal(t, "Unregistered", identity.RegistrationStatus)
+	})
+
 	t.Run("Test shutdown", func(t *testing.T) {
 		err := node.Shutdown()
 		require.NoError(t, err)
 	})
+}
+
+type identityKeystore struct {
+	Address string                 `json:"address"`
+	Crypto  map[string]interface{} `json:"crypto"`
+	ID      string                 `json:"id"`
+	Version int                    `json:"version"`
 }
