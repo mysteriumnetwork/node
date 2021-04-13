@@ -97,9 +97,9 @@ var TestnetDefinition = NetworkDefinition{
 	Payments: Payments{
 		Consumer: Consumer{
 			DataLeewayMegabytes: 20,
-			PricePerGIBMax:      "2000000000000000000", // 2 MYSTT
+			PricePerGIBMax:      "500000000000000000", // 0.5 MYSTT
 			PricePerGIBMin:      "0",
-			PricePerMinuteMax:   "100000000000000", // 0.0001 MYSTT
+			PricePerMinuteMax:   "30000000000000", // 0.00003 MYSTT
 			PricePerMinuteMin:   "0",
 		},
 	},
