@@ -48,7 +48,7 @@ get_linux_distribution() {
         fi
 
         if [[ "$id" == "debian" ]]; then
-            if [[ "$(uname -a | grep -c raspberry)" ]]; then
+            if [[ "$(uname -a | grep -c raspberry)" == "1" ]]; then
                 id="raspbian"
             fi
         fi
