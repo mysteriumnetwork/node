@@ -67,6 +67,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 		DNS          []string `json:"dns"`
 		DNSScriptDir string   `json:"dns_script_dir"`
 		Peer         peer     `json:"peer"`
+		ReplacePeers bool     `json:"replace_peers"`
 	}
 
 	var peerEndpoint string
@@ -87,6 +88,7 @@ func (dc DeviceConfig) MarshalJSON() ([]byte, error) {
 			AllowedIPs:             dc.Peer.AllowedIPs,
 			KeepAlivePeriodSeconds: dc.Peer.KeepAlivePeriodSeconds,
 		},
+		ReplacePeers: dc.ReplacePeers,
 	})
 }
 
