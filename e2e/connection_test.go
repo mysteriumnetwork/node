@@ -32,12 +32,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
@@ -60,9 +60,11 @@ var (
 	hundredthThou               = float64(1) / float64(100000)
 )
 
-var ethClient *ethclient.Client
-var ethSigner func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
-var transactorMongo *Mongo
+var (
+	ethClient       *ethclient.Client
+	ethSigner       func(address common.Address, tx *types.Transaction) (*types.Transaction, error)
+	transactorMongo *Mongo
+)
 
 var (
 	providerStake, _            = big.NewInt(0).SetString("50000000000000000000", 10)
@@ -175,7 +177,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		wg.Wait()
 	})
 	t.Run("Validate provider earnings", func(t *testing.T) {
-		var sum = new(big.Int)
+		sum := new(big.Int)
 		for _, v := range consumersToTest {
 			sum = new(big.Int).Add(sum, v.balanceSpent)
 		}
