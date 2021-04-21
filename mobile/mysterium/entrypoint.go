@@ -90,6 +90,7 @@ type MobileNodeOptions struct {
 	Testnet2                       bool
 	Localnet                       bool
 	ExperimentNATPunching          bool
+	KeepConnectedOnFail            bool
 	MysteriumAPIAddress            string
 	BrokerAddresses                []string
 	EtherClientRPC                 string
@@ -118,6 +119,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 	return &MobileNodeOptions{
 		Testnet2:                       true,
 		ExperimentNATPunching:          true,
+		KeepConnectedOnFail:            true,
 		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
 		EtherClientRPC:                 metadata.Testnet2Definition.EtherClientRPC,
@@ -150,7 +152,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 	}
 
 	config.Current.SetDefault(config.FlagChainID.Name, options.ChainID)
-	config.Current.SetDefault(config.FlagKeepConnectedOnFail.Name, true)
+	config.Current.SetDefault(config.FlagKeepConnectedOnFail.Name, options.KeepConnectedOnFail)
 	config.Current.SetDefault(config.FlagDefaultCurrency.Name, metadata.DefaultNetwork.DefaultCurrency)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPriceGiBMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceGiBMax)
 	config.Current.SetDefault(config.FlagPaymentsConsumerPriceHourMax.Name, metadata.DefaultNetwork.Payments.Consumer.PriceHourMax)
