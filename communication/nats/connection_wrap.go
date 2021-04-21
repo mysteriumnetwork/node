@@ -138,5 +138,8 @@ type dialer struct {
 }
 
 func (d *dialer) Dial(network, address string) (net.Conn, error) {
-	return d.dialer(context.Background(), network, address)
+	ctx, cancel := context.WithTimeout(context.Background(), nats_lib.DefaultTimeout)
+	defer cancel()
+
+	return d.dialer(ctx, network, address)
 }

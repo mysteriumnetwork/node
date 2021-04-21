@@ -21,6 +21,7 @@ import (
 	"context"
 	"net/url"
 
+	nats_lib "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -51,7 +52,10 @@ func (b *BrokerConnector) resolveServers(serverURLs []*url.URL) ([]*url.URL, err
 	}
 
 	for _, serverURL := range serverURLs {
-		addrs, err := b.resolveContext(context.Background(), "tcp", serverURL.Host)
+		ctx, cancel := context.WithTimeout(context.Background(), nats_lib.DefaultTimeout)
+		defer cancel()
+
+		addrs, err := b.resolveContext(ctx, "tcp", serverURL.Host)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to resolve NATS server "%s"`, serverURL.Hostname())
 		}
