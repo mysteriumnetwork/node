@@ -82,9 +82,21 @@ func mapEventToMetric(event Event) (string, *metrics.Event) {
 		return natMappingEvent(event.Context.(natMappingContext))
 	case connectionEvent:
 		return connectionEventToMetricsEvent(event.Context.(ConnectionEvent))
+	case residentCountryEventName:
+		return residentCountryToMetricsEvent(event.Context.(residentCountryEvent))
 	}
 
 	return "", nil
+}
+
+func residentCountryToMetricsEvent(event residentCountryEvent) (string, *metrics.Event) {
+	return event.ID, &metrics.Event{
+		Metric: &metrics.Event_ResidentCountry{
+			ResidentCountry: &metrics.ResidentCountryPayload{
+				Country: event.Country,
+			},
+		},
+	}
 }
 
 func pingEventToMetricsEvent(context pingEventContext) (string, *metrics.Event) {
