@@ -119,7 +119,6 @@ type InvoiceTracker struct {
 	maxNotReceivedExchangeMessages uint64
 	maxNotSentExchangeMessages     uint64
 	once                           sync.Once
-	rnd                            *rand.Rand
 	agreementID                    *big.Int
 	firstInvoicePaid               bool
 	invoicesSent                   map[string]sentInvoice
@@ -128,6 +127,9 @@ type InvoiceTracker struct {
 
 	dataTransferred     DataTransferred
 	dataTransferredLock sync.Mutex
+
+	rnd     *rand.Rand
+	rndLock sync.Mutex
 
 	criticalInvoiceErrors chan error
 	lastInvoiceSent       time.Duration
@@ -178,7 +180,7 @@ func NewInvoiceTracker(
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		maxNotSentExchangeMessages:     calculateMaxNotSentExchangeMessageCount(itd.ChargePeriodLeeway, itd.ChargePeriod),
 		invoicesSent:                   make(map[string]sentInvoice),
-		rnd:                            rand.New(rand.NewSource(1)),
+		rnd:                            rand.New(rand.NewSource(time.Now().UnixNano())),
 		promiseErrors:                  make(chan error),
 		criticalInvoiceErrors:          make(chan error),
 		invoiceChannel:                 make(chan bool),
@@ -234,7 +236,8 @@ func (it *InvoiceTracker) listenForExchangeMessages() error {
 }
 
 func (it *InvoiceTracker) generateAgreementID() {
-	it.rnd.Seed(time.Now().UnixNano())
+	it.rndLock.Lock()
+	defer it.rndLock.Unlock()
 	agreementID := make([]byte, 32)
 	it.rnd.Read(agreementID)
 	it.agreementID = new(big.Int).SetBytes(agreementID)
