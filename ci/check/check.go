@@ -45,7 +45,7 @@ func Check() {
 
 // CheckCopyright checks for copyright headers in files.
 func CheckCopyright() error {
-	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets")
+	return commands.CopyrightD(".", "pb", "tequilapi/endpoints/assets", "supervisor/daemon/wireguard/wginterface/firewall")
 }
 
 // CheckGoLint reports linting errors in the solution.
