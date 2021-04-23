@@ -134,7 +134,7 @@ func (c *wireguardConnection) Start(ctx context.Context, options connection.Conn
 		config.Provider.Endpoint.Port = options.ProviderNATConn.RemoteAddr().(*net.UDPAddr).Port
 	}
 
-	if err := c.device.Start(c.privateKey, config, options.ChannelConn); err != nil {
+	if err := c.device.Start(c.privateKey, config, options.ChannelConn, options.Params.DNS); err != nil {
 		return errors.Wrap(err, "could not start device")
 	}
 
@@ -174,7 +174,7 @@ func (c *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
 }
 
 type wireguardDevice interface {
-	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error
+	Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn, dns connection.DNSOption) error
 	Stop()
 	Stats() (*wgcfg.Stats, error)
 }
@@ -189,9 +189,9 @@ type wireguardDeviceImpl struct {
 	device *device.Device
 }
 
-func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn) error {
+func (w *wireguardDeviceImpl) Start(privateKey string, config wireguard.ServiceConfig, channelConn *net.UDPConn, dns connection.DNSOption) error {
 	log.Debug().Msg("Creating tunnel device")
-	tunDevice, err := w.newTunnDevice(w.tunnelSetup, config)
+	tunDevice, err := w.newTunnDevice(w.tunnelSetup, config, dns)
 	if err != nil {
 		return errors.Wrap(err, "could not create tunnel device")
 	}
@@ -267,7 +267,7 @@ func (w *wireguardDeviceImpl) applyConfig(devApi *device.Device, privateKey stri
 	return nil
 }
 
-func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, config wireguard.ServiceConfig) (tun.Device, error) {
+func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, config wireguard.ServiceConfig, dns connection.DNSOption) (tun.Device, error) {
 	consumerIP := config.Consumer.IPAddress
 	prefixLen, _ := consumerIP.Mask.Size()
 	wgTunnSetup.NewTunnel()
@@ -276,8 +276,7 @@ func (w *wireguardDeviceImpl) newTunnDevice(wgTunnSetup WireguardTunnelSetup, co
 	wgTunnSetup.SetMTU(androidTunMtu)
 	wgTunnSetup.SetBlocking(true)
 
-	autoDNS := connection.DNSOptionAuto
-	dnsIPs, err := autoDNS.ResolveIPs(config.Consumer.DNSIPs)
+	dnsIPs, err := dns.ResolveIPs(config.Consumer.DNSIPs)
 	if err != nil {
 		return nil, err
 	}

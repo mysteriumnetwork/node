@@ -25,13 +25,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer/entertainment"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/consumer/entertainment"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
 	"github.com/mysteriumnetwork/node/core/ip"
