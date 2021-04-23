@@ -27,11 +27,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
-
 	"golang.zx2c4.com/wireguard/tun"
 )
 
-func createTunnel(requestedInterfaceName string) (tunnel tun.Device, interfaceName string, err error) {
+func createTunnel(requestedInterfaceName string, _ []string) (tunnel tun.Device, interfaceName string, err error) {
 	tunnel, err = tun.CreateTUN(requestedInterfaceName, device.DefaultMTU)
 	if err == nil {
 		interfaceName = requestedInterfaceName
@@ -68,3 +67,5 @@ func applySocketPermissions(interfaceName string, uid string) error {
 	}
 	return nil
 }
+
+func disableFirewall() {}
