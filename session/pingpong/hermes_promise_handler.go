@@ -49,9 +49,11 @@ type feeProvider interface {
 
 // HermesHTTPRequester represents HTTP requests to Hermes.
 type HermesHTTPRequester interface {
+	PayAndSettle(rp RequestPromise) (crypto.Promise, error)
 	RequestPromise(rp RequestPromise) (crypto.Promise, error)
 	RevealR(r string, provider string, agreementID *big.Int) error
 	UpdatePromiseFee(promise crypto.Promise, newFee *big.Int) (crypto.Promise, error)
+	GetConsumerData(chainID int64, id string) (ConsumerData, error)
 }
 
 type encryption interface {
@@ -92,11 +94,12 @@ func NewHermesPromiseHandler(deps HermesPromiseHandlerDeps) *HermesPromiseHandle
 }
 
 type enqueuedRequest struct {
-	errChan    chan error
-	r          []byte
-	em         crypto.ExchangeMessage
-	providerID identity.Identity
-	sessionID  string
+	errChan     chan error
+	r           []byte
+	em          crypto.ExchangeMessage
+	providerID  identity.Identity
+	requestFunc func(rp RequestPromise) (crypto.Promise, error)
+	sessionID   string
 }
 
 type hermesURLGetter interface {
@@ -112,6 +115,43 @@ func (aph *HermesPromiseHandler) RequestPromise(r []byte, em crypto.ExchangeMess
 		errChan:    make(chan error),
 		sessionID:  sessionID,
 	}
+
+	hermesID := common.HexToAddress(em.HermesID)
+	hermesCaller, err := aph.getHermesCaller(em.ChainID, hermesID)
+	if err != nil {
+		go func() {
+			er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
+		}()
+		return er.errChan
+	}
+
+	er.requestFunc = hermesCaller.RequestPromise
+
+	aph.queue <- er
+	return er.errChan
+}
+
+// PayAndSettle adds the request to the queue.
+func (aph *HermesPromiseHandler) PayAndSettle(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
+	er := enqueuedRequest{
+		r:          r,
+		em:         em,
+		providerID: providerID,
+		errChan:    make(chan error),
+		sessionID:  sessionID,
+	}
+
+	hermesID := common.HexToAddress(em.HermesID)
+	hermesCaller, err := aph.getHermesCaller(em.ChainID, hermesID)
+	if err != nil {
+		go func() {
+			er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
+		}()
+		return er.errChan
+	}
+
+	er.requestFunc = hermesCaller.PayAndSettle
+
 	aph.queue <- er
 	return er.errChan
 }
@@ -181,12 +221,6 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 
 	providerID := er.providerID
 	hermesID := common.HexToAddress(er.em.HermesID)
-	channelID, err := crypto.GenerateProviderChannelID(providerID.Address, hermesID.Hex())
-	if err != nil {
-		er.errChan <- fmt.Errorf("could not generate provider channel address: %w", err)
-		return
-	}
-
 	if !aph.transactorFee.IsValid() {
 		aph.updateFee()
 	}
@@ -214,12 +248,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		RRecoveryData:   hex.EncodeToString(encrypted),
 	}
 
-	hermesCaller, err := aph.getHermesCaller(er.em.ChainID, hermesID)
-	if err != nil {
-		er.errChan <- fmt.Errorf("could not get hermes caller: %w", err)
-		return
-	}
-	promise, err := hermesCaller.RequestPromise(request)
+	promise, err := er.requestFunc(request)
 	err = aph.handleHermesError(err, providerID, er.em.ChainID, hermesID)
 	if err != nil {
 		er.errChan <- fmt.Errorf("hermes request promise error: %w", err)
@@ -231,7 +260,7 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 	}
 
 	ap := HermesPromise{
-		ChannelID:   channelID,
+		ChannelID:   aph.normalizeChannelID(promise.ChannelID),
 		Identity:    providerID,
 		HermesID:    hermesID,
 		Promise:     promise,
@@ -263,6 +292,11 @@ func (aph *HermesPromiseHandler) requestPromise(er enqueuedRequest) {
 		er.errChan <- fmt.Errorf("hermes reveal r error: %w", err)
 		return
 	}
+}
+
+func (aph *HermesPromiseHandler) normalizeChannelID(chid []byte) string {
+	hexStr := common.Bytes2Hex(chid)
+	return "0x" + hexStr
 }
 
 func (aph *HermesPromiseHandler) getHermesCaller(chainID int64, hermesID common.Address) (HermesHTTPRequester, error) {

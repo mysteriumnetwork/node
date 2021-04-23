@@ -55,6 +55,7 @@ type promiseSettler interface {
 	ForceSettle(chainID int64, providerID identity.Identity, hermesID common.Address) error
 	GetHermesFee(chainID int64, id common.Address) (uint16, error)
 	SettleIntoStake(chainID int64, providerID identity.Identity, hermesID common.Address) error
+	Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error
 }
 
 type addressProvider interface {
@@ -457,6 +458,42 @@ func (te *transactorEndpoint) DecreaseStake(resp http.ResponseWriter, request *h
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+// swagger:operation POST /transactor/settle/withdraw Withdraw
+// ---
+// summary: Asks to perform withdrawal to l1.
+// description: Asks to perform withdrawal to l1.
+// parameters:
+// - in: body
+//   name: body
+//   description: withdraw request body
+//   schema:
+//     $ref: "#/definitions/WithdrawRequestDTO"
+// responses:
+//   202:
+//     description: withdraw request accepted
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) Withdraw(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	req := contract.WithdrawRequest{}
+
+	err := json.NewDecoder(request.Body).Decode(&req)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	chainID := config.GetInt64(config.FlagChainID)
+	err = te.promiseSettler.Withdraw(chainID, identity.FromAddress(req.ProviderID), common.HexToAddress(req.HermesID), common.HexToAddress(req.Beneficiary))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
 // swagger:operation POST /transactor/stake/increase/sync StakeIncreaseSync
 // ---
 // summary: forces the settlement with stake increase of promises for the given provider and hermes.
@@ -540,4 +577,5 @@ func AddRoutesForTransactor(
 	router.POST("/transactor/stake/increase/sync", te.SettleIntoStakeSync)
 	router.POST("/transactor/stake/increase/async", te.SettleIntoStakeAsync)
 	router.POST("/transactor/stake/decrease", te.DecreaseStake)
+	router.POST("/transactor/settle/withdraw", te.Withdraw)
 }

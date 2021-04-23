@@ -616,6 +616,8 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(err, "could not get channel implementation")
 	}
 
+	log.Info().Msgf("chimp: %v, registry: %v, hermesID: %v, consumer: %v ", chimp.Hex(), registry.Hex(),common.HexToAddress(em.HermesID).Hex(),  it.deps.Peer.Address)
+
 	addr, err := it.deps.AddressProvider.GetArbitraryChannelAddress(common.HexToAddress(em.HermesID), registry, chimp, it.deps.Peer)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")

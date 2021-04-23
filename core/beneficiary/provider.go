@@ -19,6 +19,7 @@ package beneficiary
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
@@ -80,9 +81,15 @@ func newL2Provider(chainID int64, ad addressProvider, st storage) *l2Provider {
 }
 
 // GetBeneficiary returns an already saved beneficiary.
-func (b *l2Provider) GetBeneficiary(identity common.Address) (common.Address, error) {
+func (b *l2Provider) GetBeneficiary(id common.Address) (common.Address, error) {
 	var addr string
-	err := b.st.GetValue(storageBucket, storageKey(b.chainID, identity.Hex()), &addr)
-
+	err := b.st.GetValue(storageBucket, storageKey(b.chainID, id.Hex()), &addr)
+	if err != nil {
+		// TODO: move this check to hermes channel repository
+		if err.Error() == "not found" {
+			// return generated consumer channel address then as that is the default.
+			return b.ad.GetChannelAddress(b.chainID, identity.FromAddress(id.Hex()))
+		}
+	}
 	return common.HexToAddress(addr), err
 }

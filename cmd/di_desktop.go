@@ -192,6 +192,9 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 
 	settler := pingpong.NewHermesPromiseSettler(
 		di.Transactor,
+		di.HermesPromiseStorage,
+		di.HermesPromiseHandler,
+		di.AddressProvider,
 		func(hermesURL string) pingpong.HermesHTTPRequester {
 			return pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 		},
@@ -204,6 +207,8 @@ func (di *Dependencies) bootstrapHermesPromiseSettler(nodeOptions node.Options) 
 		pingpong.HermesPromiseSettlerConfig{
 			Threshold:            nodeOptions.Payments.HermesPromiseSettlingThreshold,
 			MaxWaitForSettlement: nodeOptions.Payments.SettlementTimeout,
+			L1ChainID:            nodeOptions.Chains.Chain1.ChainID,
+			L2ChainID:            nodeOptions.Chains.Chain2.ChainID,
 		},
 	)
 	if err := settler.Subscribe(di.EventBus); err != nil {

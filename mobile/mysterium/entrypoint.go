@@ -120,7 +120,7 @@ func DefaultNodeOptions() *MobileNodeOptions {
 		ExperimentNATPunching:          true,
 		MysteriumAPIAddress:            metadata.Testnet2Definition.MysteriumAPIAddress,
 		BrokerAddresses:                metadata.Testnet2Definition.BrokerAddresses,
-		EtherClientRPC:                 metadata.Testnet2Definition.EtherClientRPC,
+		EtherClientRPC:                 metadata.Testnet2Definition.Chain1.EtherClientRPC,
 		FeedbackURL:                    "https://feedback.mysterium.network",
 		QualityOracleURL:               "https://testnet2-quality.mysterium.network/api/v2",
 		IPDetectorURL:                  "https://testnet2-location.mysterium.network/api/v1/location",
@@ -162,7 +162,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		ExperimentNATPunching: options.ExperimentNATPunching,
 		MysteriumAPIAddress:   options.MysteriumAPIAddress,
 		BrokerAddresses:       options.BrokerAddresses,
-		EtherClientRPC:        options.EtherClientRPC,
+		EtherClientRPCL1:      options.EtherClientRPC,
 		ChainID:               options.ChainID,
 		DNSMap: map[string][]string{
 			"testnet-location.mysterium.network":  {"95.216.204.232"},

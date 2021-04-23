@@ -115,15 +115,18 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	registryAddress, tx, _, err := bindings.DeployRegistry(
 		transactor,
 		client,
-		mystTokenAddress,
-		mystDexAddress,
-		minimalStake,
-		channelImplAddress,
-		hermesImplAddress,
 	)
 	checkError("Deploy registry v2", err)
-	fmt.Println("v2 registry address: ", registryAddress.String())
 	checkTxStatus(client, tx)
+	fmt.Println("v2 registry address: ", registryAddress.String())
+
+	txer, err := bindings.NewRegistryTransactor(registryAddress, client)
+	checkError("create registry transactor", err)
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+
+	_, err = txer.Initialize(transactor, mystTokenAddress, mystDexAddress, minimalStake, channelImplAddress, hermesImplAddress, common.Address{})
+	checkError("initialize registry", err)
 
 	ts, err := bindings.NewMystTokenTransactor(mystTokenAddress, client)
 	checkError("myst transactor", err)

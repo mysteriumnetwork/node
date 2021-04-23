@@ -95,7 +95,8 @@ func GetOptions() *Options {
 		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
 		MysteriumAPIAddress:   config.GetString(config.FlagAPIAddress),
 		BrokerAddresses:       config.GetStringSlice(config.FlagBrokerAddress),
-		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
+		EtherClientRPCL1:      config.GetString(config.FlagEtherRPCL1),
+		EtherClientRPCL2:      config.GetString(config.FlagEtherRPCL2),
 		ChainID:               config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
 			"testnet-location.mysterium.network":  {"95.216.204.232"},

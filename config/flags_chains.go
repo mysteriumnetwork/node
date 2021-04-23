@@ -73,7 +73,7 @@ func ParseFlagsChains(ctx *cli.Context) {
 	Current.ParseStringFlag(ctx, FlagChain1ChannelImplementationAddress)
 	Current.ParseStringFlag(ctx, FlagChain2ChannelImplementationAddress)
 	Current.ParseStringFlag(ctx, FlagChain1MystAddress)
-	Current.ParseStringFlag(ctx, FlagChain1MystAddress)
+	Current.ParseStringFlag(ctx, FlagChain2MystAddress)
 	Current.ParseInt64Flag(ctx, FlagChain1ChainID)
 	Current.ParseInt64Flag(ctx, FlagChain2ChainID)
 }

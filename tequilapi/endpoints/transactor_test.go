@@ -368,6 +368,10 @@ func (ms *mockSettler) GetHermesFee(_ int64, _ common.Address) (uint16, error) {
 	return ms.feeToReturn, ms.feeErrorToReturn
 }
 
+func (ms *mockSettler) Withdraw(chainID int64, providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	return nil
+}
+
 type settlementHistoryProviderMock struct {
 	settlementHistoryToReturn []pingpong.SettlementHistoryEntry
 	errToReturn               error

@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -520,6 +521,28 @@ func filterSessionsByStatus(status string, sessions contract.SessionListResponse
 	}
 	sessions.Items = sessions.Items[:matches]
 	return sessions
+}
+
+// Withdraw requests the withdrawal of money from l2 to l1 of hermes promises
+func (client *Client) Withdraw(providerID identity.Identity, hermesID, beneficiary common.Address) error {
+	withdrawRequest := contract.WithdrawRequest{
+		ProviderID:  providerID.Address,
+		HermesID:    hermesID.Hex(),
+		Beneficiary: beneficiary.Hex(),
+	}
+
+	path := "transactor/settle/withdraw"
+
+	response, err := client.http.Post(path, withdrawRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted && response.StatusCode != http.StatusOK {
+		return errors.Wrap(err, "could not withdraw")
+	}
+	return nil
 }
 
 // Settle requests the settling of hermes promises

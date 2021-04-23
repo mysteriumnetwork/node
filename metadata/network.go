@@ -22,7 +22,6 @@ type NetworkDefinition struct {
 	MysteriumAPIAddress       string
 	AccessPolicyOracleAddress string
 	BrokerAddresses           []string
-	EtherClientRPC            string
 	TransactorAddress         string
 	TransactorIdentity        string
 	Chain1                    ChainDefinition
@@ -44,6 +43,7 @@ type ChainDefinition struct {
 	ChannelImplAddress string
 	ChainID            int64
 	MystAddress        string
+	EtherClientRPC     string
 }
 
 // Payments defines payments configuration
@@ -58,6 +58,7 @@ type Consumer struct {
 	PricePerGIBMin      string
 	PricePerMinuteMax   string
 	PricePerMinuteMin   string
+	EtherClientRPC      string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -65,7 +66,6 @@ var TestnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network"},
-	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	TransactorIdentity:        "0x0828d0386c1122e565f07dd28c7d1340ed5b3315",
 	Chain1: ChainDefinition{
@@ -74,6 +74,7 @@ var TestnetDefinition = NetworkDefinition{
 		HermesID:           "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
 		ChainID:            5,
 		MystAddress:        "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+		EtherClientRPC:     "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	},
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
@@ -81,6 +82,7 @@ var TestnetDefinition = NetworkDefinition{
 		HermesID:           "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
 		ChainID:            80001,
 		MystAddress:        "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
+		EtherClientRPC:     "wss://rpc-mumbai.maticvigil.com/ws/v1/7bbf37fc19c1e2092fee698be41eeb73f64b2493",
 	},
 	MMNAddress:    "https://testnet1.mysterium.network/",
 	MMNAPIAddress: "https://testnet1.mysterium.network/api/v1",
@@ -110,7 +112,6 @@ var Testnet2Definition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet2-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet2-trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddresses:           []string{"nats://testnet2-broker.mysterium.network"},
-	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	TransactorIdentity:        "0x45b224f0cd64ed5179502da42ed4e32228485b3b",
 	TransactorAddress:         "https://testnet2-transactor.mysterium.network/api/v1",
 	Chain1: ChainDefinition{
@@ -119,6 +120,7 @@ var Testnet2Definition = NetworkDefinition{
 		HermesID:           "0xD5d2f5729D4581dfacEBedF46C7014DeFda43585",
 		ChainID:            5,
 		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
+		EtherClientRPC:     "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
 	},
 	Chain2: ChainDefinition{
 		RegistryAddress:    "0x15B1281F4e58215b2c3243d864BdF8b9ddDc0DA2",
@@ -126,6 +128,7 @@ var Testnet2Definition = NetworkDefinition{
 		HermesID:           "0xD5d2f5729D4581dfacEBedF46C7014DeFda43585",
 		ChainID:            80001,
 		MystAddress:        "0xf74a5ca65E4552CfF0f13b116113cCb493c580C5",
+		EtherClientRPC:     "wss://rpc-mumbai.maticvigil.com/ws/v1/7bbf37fc19c1e2092fee698be41eeb73f64b2493",
 	},
 	MMNAddress:      "https://my.mysterium.network/",
 	MMNAPIAddress:   "https://my.mysterium.network/api/v1",
@@ -158,7 +161,6 @@ var LocalnetDefinition = NetworkDefinition{
 	MysteriumAPIAddress:       "http://localhost:8001/v1",
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddresses:           []string{"localhost"},
-	EtherClientRPC:            "http://localhost:8545",
 	MMNAddress:                "http://localhost/",
 	MMNAPIAddress:             "http://localhost/api/v1",
 	PilvytisAddress:           "http://localhost:8002/api/v1",

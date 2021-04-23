@@ -99,7 +99,8 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumAPI      *mysterium.MysteriumAPI
-	EtherClient       *paymentClient.ReconnectableEthClient
+	EtherClientL1     *paymentClient.ReconnectableEthClient
+	EtherClientL2     *paymentClient.ReconnectableEthClient
 
 	BrokerConnector  *nats.BrokerConnector
 	BrokerConnection nats.Connection
@@ -212,10 +213,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	netutil.ClearStaleRoutes()
-
 	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
+
 	if err := di.bootstrapLocationComponents(nodeOptions); err != nil {
 		return err
 	}
@@ -460,6 +461,7 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) getHermesURL(nodeOptions node.Options) (string, error) {
+	log.Info().Msgf("node chain id %v", nodeOptions.ChainID)
 	if nodeOptions.ChainID == nodeOptions.Chains.Chain1.ChainID {
 		return di.HermesURLGetter.GetHermesURL(nodeOptions.ChainID, common.HexToAddress(nodeOptions.Chains.Chain1.HermesID))
 	}
@@ -484,12 +486,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	)
 
 	di.bootstrapBeneficiaryProvider(nodeOptions)
-
-	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
-		return err
-	}
-
-	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	if err := di.bootstrapProviderRegistrar(nodeOptions); err != nil {
 		return err
@@ -524,6 +520,11 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	if err := di.HermesPromiseHandler.Subscribe(di.EventBus); err != nil {
 		return err
 	}
+
+	if err := di.bootstrapHermesPromiseSettler(nodeOptions); err != nil {
+		return err
+	}
+	di.bootstrapBeneficiarySaver(nodeOptions)
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
@@ -596,8 +597,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		network.BrokerAddresses = optionsNetwork.BrokerAddresses
 	}
 
-	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
-		network.EtherClientRPC = optionsNetwork.EtherClientRPC
+	if optionsNetwork.EtherClientRPCL1 != metadata.DefaultNetwork.Chain1.EtherClientRPC {
+		network.Chain1.EtherClientRPC = optionsNetwork.EtherClientRPCL1
+	}
+	if optionsNetwork.EtherClientRPCL2 != metadata.DefaultNetwork.Chain2.EtherClientRPC {
+		network.Chain2.EtherClientRPC = optionsNetwork.EtherClientRPCL2
 	}
 
 	di.NetworkDefinition = network
@@ -632,17 +636,25 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 
-	log.Info().Msg("Using Eth endpoint: " + network.EtherClientRPC)
-	di.EtherClient, err = paymentClient.NewReconnectableEthClient(network.EtherClientRPC)
+	log.Info().Msg("Using L1 Eth endpoint: " + network.Chain1.EtherClientRPC)
+	log.Info().Msg("Using L2 Eth endpoint: " + network.Chain2.EtherClientRPC)
+	di.EtherClientL1, err = paymentClient.NewReconnectableEthClient(network.Chain1.EtherClientRPC)
+	if err != nil {
+		return err
+	}
+	di.EtherClientL2, err = paymentClient.NewReconnectableEthClient(network.Chain2.EtherClientRPC)
 	if err != nil {
 		return err
 	}
 
-	bc := paymentClient.NewBlockchain(di.EtherClient, options.Payments.BCTimeout)
-	clients := make(map[int64]paymentClient.BC)
-	clients[network.DefaultChainID] = paymentClient.NewBlockchainWithRetries(bc, time.Millisecond*300, 3)
-	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
+	bcL1 := paymentClient.NewBlockchain(di.EtherClientL1, options.Payments.BCTimeout)
+	bcL2 := paymentClient.NewBlockchain(di.EtherClientL2, options.Payments.BCTimeout)
 
+	clients := make(map[int64]paymentClient.BC)
+	clients[options.Chains.Chain1.ChainID] = bcL1
+	clients[options.Chains.Chain2.ChainID] = bcL2
+
+	di.BCHelper = paymentClient.NewMultichainBlockchainClient(clients)
 	di.HermesURLGetter = pingpong.NewHermesURLGetter(di.BCHelper, di.AddressProvider)
 
 	registryStorage := registry.NewRegistrationStatusStorage(di.Storage)
@@ -654,12 +666,13 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	di.HermesCaller = pingpong.NewHermesCaller(di.HTTPClient, hermesURL)
 
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClientL2, di.AddressProvider, registryStorage, di.EventBus, di.HermesCaller); err != nil {
 		return err
 	}
 
 	if _, err := firewall.AllowURLAccess(
-		network.EtherClientRPC,
+		network.Chain1.EtherClientRPC,
+		network.Chain2.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
 		hermesURL,
@@ -667,7 +680,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 		return err
 	}
 	if _, err := di.ServiceFirewall.AllowURLAccess(
-		network.EtherClientRPC,
+		network.Chain1.EtherClientRPC,
+		network.Chain2.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		options.Transactor.TransactorEndpointAddress,
 		hermesURL,
@@ -932,14 +946,20 @@ func (di *Dependencies) handleConnStateChange() error {
 			log.Info().Msg("Reconnecting HTTP clients due to VPN connection state change")
 			di.HTTPTransport.CloseIdleConnections()
 
-			if err := di.EtherClient.Reconnect(); err != nil {
+			if err := di.EtherClientL2.Reconnect(); err != nil {
 				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
 				// Default golang DNS resolver does not allow to reload /etc/resolv.conf more than once per 5 seconds.
 				// This could lead to the problem, when right after connect/disconnect new DNS config not applied instantly.
 				// Doing a couple of retries here to make sure we reconnected Ethererum client correctly.
 				// Default DNS timeout is 10 seconds. It's enough to try to reconnect only twice to cover 5 seconds lag for DNS config reload.
 				// https://github.com/mysteriumnetwork/node/issues/2282
-				if err := di.EtherClient.Reconnect(); err != nil {
+				if err := di.EtherClientL2.Reconnect(); err != nil {
+					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
+				}
+			}
+			if err := di.EtherClientL1.Reconnect(); err != nil {
+				log.Warn().Err(err).Msg("Ethereum client failed to reconnect, will retry one more time")
+				if err := di.EtherClientL1.Reconnect(); err != nil {
 					log.Error().Err(err).Msg("Ethereum client failed to reconnect")
 				}
 			}

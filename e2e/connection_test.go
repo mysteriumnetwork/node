@@ -49,7 +49,7 @@ var (
 	consumerPassphrase          = "localconsumer"
 	providerID                  = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase          = "localprovider"
-	chainID               int64 = 5
+	chainID               int64 = 80001
 	hermesID                    = "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8"
 	hermes2ID                   = "0x55fB2d361DE2aED0AbeaBfD77cA7DC8516225771"
 	mystAddress                 = "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665"
@@ -60,6 +60,7 @@ var (
 )
 
 var ethClient *ethclient.Client
+var ethClientL2 *ethclient.Client
 var ethSigner func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error)
 var transactorMongo *Mongo
 
@@ -245,6 +246,29 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 		diff = math.Abs(diff)
 
 		assert.True(t, diff >= 0 && diff <= hundredthThou, fmt.Sprintf("got diff %v", diff))
+	})
+
+	t.Run("Provider withdraws to l1", func(t *testing.T) {
+		// since we've changed the benef, our channel is empty. Pretend that we do have myst in it.
+		chid, err := crypto.GenerateChannelAddress(providerID, hermes2ID, registryAddress, channelImplementation)
+		assert.NoError(t, err)
+		mintMyst(t, crypto.FloatToBigMyst(1), common.HexToAddress(chid), ethClientL2)
+
+		beneficiary := common.HexToAddress("0x1231adadadadaadada123123")
+		caller, err := bindings.NewMystTokenCaller(common.HexToAddress(mystAddress), ethClient)
+		assert.NoError(t, err)
+
+		balance, err := caller.BalanceOf(&bind.CallOpts{}, beneficiary)
+		assert.NoError(t, err)
+		assert.Equal(t, big.NewInt(0).Uint64(), balance.Uint64())
+
+		err = tequilapiProvider.Withdraw(identity.FromAddress(providerID), common.HexToAddress(hermes2ID), beneficiary)
+		assert.NoError(t, err)
+
+		assert.Eventually(t, func() bool {
+			balance, _ := caller.BalanceOf(&bind.CallOpts{}, beneficiary)
+			return balance.Cmp(big.NewInt(0)) == 1
+		}, time.Second*20, time.Millisecond*100)
 	})
 
 	t.Run("Provider decreases stake", func(t *testing.T) {
@@ -442,16 +466,20 @@ func initEthClient(t *testing.T) {
 
 	ethClient = c
 
+	c2, err := ethclient.Dial("ws://ganache2:8545")
+	assert.NoError(t, err)
+	ethClientL2 = c2
+
 	ethSigner = func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
 		return ks.SignTx(acc, tx, cid)
 	}
 }
 
-func mintMyst(t *testing.T, amount *big.Int, chid common.Address) {
-	ts, err := bindings.NewMystTokenTransactor(common.HexToAddress(mystAddress), ethClient)
+func mintMyst(t *testing.T, amount *big.Int, chid common.Address, ethc *ethclient.Client) {
+	ts, err := bindings.NewMystTokenTransactor(common.HexToAddress(mystAddress), ethc)
 	assert.NoError(t, err)
 
-	nonce, err := ethClient.PendingNonceAt(context.Background(), common.HexToAddress(addressForTopups))
+	nonce, err := ethc.PendingNonceAt(context.Background(), common.HexToAddress(addressForTopups))
 	assert.NoError(t, err)
 
 	_, err = ts.Transfer(&bind.TransactOpts{

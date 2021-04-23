@@ -45,7 +45,21 @@ func TestPromiseSettler_loadInitialState(t *testing.T) {
 	ks := identity.NewMockKeystore()
 
 	fac := &mockHermesCallerFactory{}
-	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+
+	settler := NewHermesPromiseSettler(
+		&mockTransactor{},
+		&mockHermesPromiseStorage{},
+		&mockPayAndSettler{},
+		&mockAddressProvider{},
+		fac.Get,
+		&mockHermesURLGetter{},
+		&mockHermesChannelProvider{},
+		&mockProviderChannelStatusProvider{},
+		mrsp,
+		ks,
+		&settlementHistoryStorageMock{},
+		cfg)
+
 	settler.currentState[mockID] = settlementState{}
 
 	// check if existing gets skipped
@@ -106,7 +120,19 @@ func TestPromiseSettler_handleRegistrationEvent(t *testing.T) {
 	ks := identity.NewMockKeystore()
 	fac := &mockHermesCallerFactory{}
 
-	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	settler := NewHermesPromiseSettler(
+		&mockTransactor{},
+		&mockHermesPromiseStorage{},
+		&mockPayAndSettler{},
+		&mockAddressProvider{},
+		fac.Get,
+		&mockHermesURLGetter{},
+		&mockHermesChannelProvider{},
+		&mockProviderChannelStatusProvider{},
+		mrsp,
+		ks,
+		&settlementHistoryStorageMock{},
+		cfg)
 
 	statusesWithNoChangeExpected := []registry.RegistrationStatus{registry.Unregistered, registry.InProgress, registry.RegistrationError}
 	for _, v := range statusesWithNoChangeExpected {
@@ -142,8 +168,7 @@ func TestPromiseSettler_handleHermesPromiseReceived(t *testing.T) {
 	}
 	ks := identity.NewMockKeystore()
 	fac := &mockHermesCallerFactory{}
-
-	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	settler := NewHermesPromiseSettler(&mockTransactor{}, &mockHermesPromiseStorage{}, &mockPayAndSettler{},&mockAddressProvider{},fac.Get, &mockHermesURLGetter{}, channelProvider, channelStatusProvider, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
 
 	// no receive on unknown provider
 	channelProvider.channelToReturn = NewHermesChannel("1", mockID, hermesID, mockProviderChannel, HermesPromise{})
@@ -226,7 +251,19 @@ func TestPromiseSettler_handleNodeStart(t *testing.T) {
 	}
 
 	fac := &mockHermesCallerFactory{}
-	settler := NewHermesPromiseSettler(&mockTransactor{}, fac.Get, &mockHermesURLGetter{}, &mockHermesChannelProvider{}, &mockProviderChannelStatusProvider{}, mrsp, ks, &settlementHistoryStorageMock{}, cfg)
+	settler := NewHermesPromiseSettler(
+		&mockTransactor{},
+		&mockHermesPromiseStorage{},
+		&mockPayAndSettler{},
+		&mockAddressProvider{},
+		fac.Get,
+		&mockHermesURLGetter{},
+		&mockHermesChannelProvider{},
+		&mockProviderChannelStatusProvider{},
+		mrsp,
+		ks,
+		&settlementHistoryStorageMock{},
+		cfg)
 
 	settler.handleNodeStart()
 
@@ -367,6 +404,7 @@ type mockProviderChannelStatusProvider struct {
 	feeError           error
 	calculatedFees     *big.Int
 	calculationError   error
+	balanceToReturn    *big.Int
 }
 
 func (mpcsp *mockProviderChannelStatusProvider) SubscribeToPromiseSettledEvent(chainID int64, providerID, hermesID common.Address) (sink chan *bindings.HermesImplementationPromiseSettled, cancel func(), err error) {
@@ -387,6 +425,10 @@ func (mpcsp *mockProviderChannelStatusProvider) GetBeneficiary(chainID int64, re
 
 func (mpcsp *mockProviderChannelStatusProvider) CalculateHermesFee(chainID int64, hermesAddress common.Address, value *big.Int) (*big.Int, error) {
 	return mpcsp.calculatedFees, mpcsp.calculationError
+}
+
+func (mpcsp *mockProviderChannelStatusProvider) GetMystBalance(chainID int64, mystAddress common.Address, address common.Address) (*big.Int, error) {
+	return mpcsp.balanceToReturn, nil
 }
 
 var cfg = HermesPromiseSettlerConfig{
@@ -458,6 +500,10 @@ func (mt *mockTransactor) SettleIntoStake(accountantID, providerID string, promi
 	return nil
 }
 
+func (mt *mockTransactor) PayAndSettle(hermesID, providerID string, promise crypto.Promise, beneficiary string, beneficiarySignature string) error {
+	return nil
+}
+
 func (mt *mockTransactor) FetchRegistrationStatus(id string) ([]registry.TransactorStatusResponse, error) {
 	return []registry.TransactorStatusResponse{mt.statusToReturn}, mt.statusError
 }
@@ -469,5 +515,11 @@ func (mt *mockTransactor) FetchRegistrationFees(chainID int64) (registry.FeesRes
 type settlementHistoryStorageMock struct{}
 
 func (shsm *settlementHistoryStorageMock) Store(_ SettlementHistoryEntry) error {
+	return nil
+}
+
+type mockPayAndSettler struct{}
+
+func (mpas *mockPayAndSettler) PayAndSettle(r []byte, em crypto.ExchangeMessage, providerID identity.Identity, sessionID string) <-chan error {
 	return nil
 }

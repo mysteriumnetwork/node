@@ -415,6 +415,7 @@ func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq Iden
 		Stake:           regReq.Stake,
 		Fee:             regReq.Fee,
 		Beneficiary:     strings.ToLower(regReq.Beneficiary),
+		ChainID:         regReq.ChainID,
 	}
 
 	message := req.GetMessage()
@@ -577,6 +578,37 @@ func (t *Transactor) SettleIntoStake(hermesID, providerID string, promise pc.Pro
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/settle/into_stake", payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to create settle into stake request")
+	}
+	return t.httpClient.DoRequest(req)
+}
+
+// PayAndSettlePayload represents the pay and settle payload.
+type PayAndSettlePayload struct {
+	PromiseSettlementRequest
+	Beneficiary          string `json:"beneficiary"`
+	BeneficiarySignature string `json:"beneficiarySignature"`
+}
+
+// PayAndSettle requests the transactor to withdraw money into l1.
+func (t *Transactor) PayAndSettle(hermesID, providerID string, promise pc.Promise, beneficiary string, beneficiarySignature string) error {
+	payload := PayAndSettlePayload{
+		PromiseSettlementRequest: PromiseSettlementRequest{
+			HermesID:      hermesID,
+			ChannelID:     hex.EncodeToString(promise.ChannelID),
+			Amount:        promise.Amount,
+			TransactorFee: promise.Fee,
+			Preimage:      hex.EncodeToString(promise.R),
+			Signature:     hex.EncodeToString(promise.Signature),
+			ProviderID:    providerID,
+			ChainID:       promise.ChainID,
+		},
+		Beneficiary:          beneficiary,
+		BeneficiarySignature: beneficiarySignature,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/pay_and_settle", payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create pay and settle request")
 	}
 	return t.httpClient.DoRequest(req)
 }

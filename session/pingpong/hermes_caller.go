@@ -117,9 +117,13 @@ type RequestPromise struct {
 
 // RequestPromise requests a promise from hermes.
 func (ac *HermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error) {
-	req, err := requests.NewPostRequest(ac.hermesBaseURI, "request_promise", rp)
+	return ac.promiseRequest(rp, "request_promise")
+}
+
+func (ac *HermesCaller) promiseRequest(rp RequestPromise, endpoint string) (crypto.Promise, error) {
+	req, err := requests.NewPostRequest(ac.hermesBaseURI, endpoint, rp)
 	if err != nil {
-		return crypto.Promise{}, fmt.Errorf("could not form request_promise request: %w", err)
+		return crypto.Promise{}, fmt.Errorf("could not form %v request: %w", endpoint, err)
 	}
 
 	eback := backoff.NewConstantBackOff(time.Millisecond * 500)
@@ -143,6 +147,11 @@ func (ac *HermesCaller) RequestPromise(rp RequestPromise) (crypto.Promise, error
 		}
 		return nil
 	}, boff)
+}
+
+// PayAndSettle requests a promise from hermes.
+func (ac *HermesCaller) PayAndSettle(rp RequestPromise) (crypto.Promise, error) {
+	return ac.promiseRequest(rp, "pay_and_settle")
 }
 
 // SetPromiseFeeRequest represents the payload for changing a promise fee.
