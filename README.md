@@ -24,14 +24,9 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 ### Debian / Ubuntu / Raspbian
 
-Install latest stable testnet release:
+Install latest stable testnet2 release:
 ```bash
 sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
-```
-
-Install latest testnet2 release:
-```bash
-NETWORK=testnet2 sudo -E bash -c "$(curl -s https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh)"
 ```
 
 Or install latest snapshot (development build):

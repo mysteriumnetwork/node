@@ -219,7 +219,6 @@ func (c *command) topup(ctx *cli.Context) {
 		PayCurrency:      currency,
 		LightningNetwork: false,
 	})
-
 	if err != nil {
 		clio.Error("Failed to create an top up request, make sure your requested amount is equal or more than 0.0001 BTC")
 		return
@@ -270,8 +269,7 @@ func (c *command) registerIdentity(identity string, token *string) {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.cfg.GetBoolByFlag(config.FlagTestnet2) ||
-		c.cfg.GetBoolByFlag(config.FlagTestnet) {
+	if c.cfg.GetBoolByFlag(config.FlagTestnet2) {
 		msg = "Registration successful, try to connect."
 	}
 	clio.Success(msg)

@@ -60,51 +60,6 @@ type Consumer struct {
 	PricePerMinuteMin   string
 }
 
-// TestnetDefinition defines parameters for test network (currently default network)
-var TestnetDefinition = NetworkDefinition{
-	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
-	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
-	BrokerAddresses:           []string{"nats://testnet-broker.mysterium.network"},
-	EtherClientRPC:            "wss://goerli.infura.io/ws/v3/c2c7da73fcc84ec5885a7bb0eb3c3637",
-	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
-	TransactorIdentity:        "0x0828d0386c1122e565f07dd28c7d1340ed5b3315",
-	Chain1: ChainDefinition{
-		RegistryAddress:    "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
-		ChannelImplAddress: "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
-		HermesID:           "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
-		ChainID:            5,
-		MystAddress:        "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
-	},
-	Chain2: ChainDefinition{
-		RegistryAddress:    "0x3dD81545F3149538EdCb6691A4FfEE1898Bd2ef0",
-		ChannelImplAddress: "0x3026eB9622e2C5bdC157C6b117F7f4aC2C2Db3b5",
-		HermesID:           "0x0214281cf15C1a66b51990e2E65e1f7b7C363318",
-		ChainID:            80001,
-		MystAddress:        "0x7753cfAD258eFbC52A9A1452e42fFbce9bE486cb",
-	},
-	MMNAddress:    "https://testnet1.mysterium.network/",
-	MMNAPIAddress: "https://testnet1.mysterium.network/api/v1",
-	DNSMap: map[string][]string{
-		"testnet-api.mysterium.network":        {"78.47.176.149"},
-		"testnet-trust.mysterium.network":      {"82.196.2.118"},
-		"testnet-broker.mysterium.network":     {"82.196.2.118"},
-		"testnet-transactor.mysterium.network": {"116.203.17.150"},
-		"testnet1.mysterium.network":           {"168.119.183.173"},
-	},
-	DefaultChainID:  5,
-	DefaultCurrency: "MYSTT",
-	LocationAddress: "https://testnet2-location.mysterium.network/api/v1/location",
-	Payments: Payments{
-		Consumer: Consumer{
-			DataLeewayMegabytes: 20,
-			PricePerGIBMax:      "500000000000000000", // 0.5 MYSTT
-			PricePerGIBMin:      "0",
-			PricePerMinuteMax:   "30000000000000", // 0.00003 MYSTT
-			PricePerMinuteMin:   "0",
-		},
-	},
-}
-
 // Testnet2Definition defines parameters for testnet2 network (currently default network)
 var Testnet2Definition = NetworkDefinition{
 	MysteriumAPIAddress:       "https://testnet2-api.mysterium.network/v1",

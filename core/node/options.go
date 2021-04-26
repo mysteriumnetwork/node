@@ -21,14 +21,15 @@ import (
 	"path"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // Openvpn interface is abstraction over real openvpn options to unblock mobile development
@@ -89,7 +90,6 @@ type Options struct {
 // GetOptions retrieves node options from the app configuration.
 func GetOptions() *Options {
 	network := OptionsNetwork{
-		Testnet:               config.GetBool(config.FlagTestnet),
 		Localnet:              config.GetBool(config.FlagLocalnet),
 		Testnet2:              config.GetBool(config.FlagTestnet2),
 		ExperimentNATPunching: config.GetBool(config.FlagNATPunching),
@@ -98,7 +98,6 @@ func GetOptions() *Options {
 		EtherClientRPC:        config.GetString(config.FlagEtherRPC),
 		ChainID:               config.GetInt64(config.FlagChainID),
 		DNSMap: map[string][]string{
-			"testnet-location.mysterium.network":  {"95.216.204.232"},
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
 			"feedback.mysterium.network":          {"116.203.17.150"},

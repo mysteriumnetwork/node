@@ -573,7 +573,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, tequil
 	return nil
 }
 
-// function decides on network definition combined from testnet/localnet flags and possible overrides
+// function decides on network definition combined from testnet2/localnet flags and possible overrides
 func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
 	optionsNetwork := options.OptionsNetwork
 	network := metadata.DefaultNetwork
@@ -581,8 +581,6 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	switch {
 	case optionsNetwork.Testnet2:
 		network = metadata.Testnet2Definition
-	case optionsNetwork.Testnet:
-		network = metadata.TestnetDefinition
 	case optionsNetwork.Localnet:
 		network = metadata.LocalnetDefinition
 	}
@@ -828,13 +826,6 @@ func (di *Dependencies) migrateCrendentials() {
 		testnet2, err := boltdb.NewStorage(node.GetOptionsDirectoryDB(node.NetworkSubDirTestnet2))
 		if err == nil {
 			s = append(s, testnet2)
-		}
-	}
-
-	if !config.GetBool(config.FlagTestnet) {
-		testnet, err := boltdb.NewStorage(node.GetOptionsDirectoryDB(node.NetworkSubDirTestnet))
-		if err == nil {
-			s = append(s, testnet)
 		}
 	}
 
