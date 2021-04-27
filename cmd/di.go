@@ -238,9 +238,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapMMN(); err != nil {
 		return err
 	}
-	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
-		return err
-	}
 
 	di.PortPool = port.NewPool()
 	if config.GetBool(config.FlagPortMapping) {
@@ -262,6 +259,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	if err := di.bootstrapNodeComponents(nodeOptions, tequilaListener); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
 		return err
 	}
 
@@ -856,6 +857,21 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
+
+	outIP, err := di.IPResolver.GetOutboundIP()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get outbound IP address")
+	}
+
+	pubIP, err := di.IPResolver.GetPublicIP()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get public IP address")
+	}
+
+	if outIP == pubIP && pubIP != "" {
+		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
+	}
+
 	return nil
 }
 

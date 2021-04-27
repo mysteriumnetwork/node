@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
+
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
@@ -40,7 +42,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/pingpong"
 	pingpongEvent "github.com/mysteriumnetwork/node/session/pingpong/event"
 	"github.com/mysteriumnetwork/node/tequilapi/contract"
-	"github.com/rs/zerolog/log"
 )
 
 // DefaultDebounceDuration is the default time interval suggested for debouncing
@@ -114,7 +115,7 @@ func NewKeeper(deps KeeperDeps, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
 			NATStatus: contract.NATStatusDTO{
-				Status: "not_finished",
+				Status: nat.StatusNotFinished,
 			},
 			Sessions: make([]session.History, 0),
 			Connection: stateEvent.Connection{
