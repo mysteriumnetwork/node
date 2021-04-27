@@ -91,7 +91,6 @@ var Testnet2Definition = NetworkDefinition{
 		"testnet2-broker.mysterium.network":     {"95.216.204.232"},
 		"testnet2-transactor.mysterium.network": {"135.181.82.67"},
 		"testnet2-pilvytis.mysterium.network":   {"195.201.220.36"},
-		"my.mysterium.network":                  {"138.201.174.94"},
 	},
 	DefaultChainID:  5,
 	DefaultCurrency: "MYSTT",
