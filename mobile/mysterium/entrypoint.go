@@ -164,7 +164,6 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 		EtherClientRPC:        options.EtherClientRPC,
 		ChainID:               options.ChainID,
 		DNSMap: map[string][]string{
-			"testnet-location.mysterium.network":  {"95.216.204.232"},
 			"testnet2-location.mysterium.network": {"95.216.204.232"},
 			"testnet2-quality.mysterium.network":  {"116.202.100.246"},
 			"feedback.mysterium.network":          {"116.203.17.150"},

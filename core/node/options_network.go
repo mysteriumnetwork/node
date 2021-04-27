@@ -19,7 +19,6 @@ package node
 
 // OptionsNetwork describes possible parameters of network configuration
 type OptionsNetwork struct {
-	Testnet  bool
 	Localnet bool
 	Testnet2 bool
 

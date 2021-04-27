@@ -26,16 +26,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/pkg/errors"
 )
 
 func (c *cliApp) identities(argsString string) {
-	var usage = strings.Join([]string{
+	usage := strings.Join([]string{
 		"Usage: identities <action> [args]",
 		"Available actions:",
 		"  " + usageListIdentities,
@@ -176,7 +177,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 		return
 	}
 
-	var address = actionArgs[0]
+	address := actionArgs[0]
 	stake := new(big.Int).SetInt64(0)
 	if len(actionArgs) >= 2 {
 		s, ok := new(big.Int).SetString(actionArgs[1], 10)
@@ -202,7 +203,7 @@ func (c *cliApp) registerIdentity(actionArgs []string) {
 	}
 
 	msg := "Registration started. Topup the identities channel to finish it."
-	if c.config.GetBoolByFlag(config.FlagTestnet2) || c.config.GetBoolByFlag(config.FlagTestnet) {
+	if c.config.GetBoolByFlag(config.FlagTestnet2) {
 		msg = "Registration successful, try to connect."
 	}
 
