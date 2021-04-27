@@ -26,10 +26,11 @@ import (
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
 
+	"github.com/mysteriumnetwork/node/supervisor/daemon/wireguard/wginterface/firewall"
 	"github.com/mysteriumnetwork/node/utils/cmdutil"
 )
 
-func createTunnel(interfaceName string) (tunnel tun.Device, _ string, err error) {
+func createTunnel(interfaceName string, dns []string) (tunnel tun.Device, _ string, err error) {
 	log.Info().Msg("Creating Wintun interface")
 	wintun, err := tun.CreateTUN(interfaceName, device.DefaultMTU)
 	if err != nil {
@@ -42,6 +43,17 @@ func createTunnel(interfaceName string) (tunnel tun.Device, _ string, err error)
 	}
 
 	nativeTun := wintun.(*tun.NativeTun)
+
+	dnsIPs := []net.IP{}
+	for _, d := range dns {
+		dnsIPs = append(dnsIPs, net.ParseIP(d))
+	}
+
+	err = firewall.EnableFirewall(nativeTun.LUID(), false, dnsIPs)
+	if err != nil {
+		log.Warn().Err(err).Msg("Unable to enable DNS firewall rules")
+	}
+
 	wintunVersion, ndisVersion, err := nativeTun.Version()
 	if err != nil {
 		log.Warn().Err(err).Msg("Unable to determine Wintun version")
@@ -61,4 +73,8 @@ func newUAPIListener(interfaceName string) (listener net.Listener, err error) {
 
 func applySocketPermissions(_ string, _ string) error {
 	return nil
+}
+
+func disableFirewall() {
+	firewall.DisableFirewall()
 }
