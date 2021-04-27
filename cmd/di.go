@@ -239,6 +239,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
+		return err
+	}
+
 	di.PortPool = port.NewPool()
 	if config.GetBool(config.FlagPortMapping) {
 		portmapConfig := mapping.DefaultConfig()
@@ -262,10 +266,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNATComponents(nodeOptions); err != nil {
-		return err
-	}
-
 	di.registerConnections(nodeOptions)
 	if err = di.handleConnStateChange(); err != nil {
 		return err
@@ -275,6 +275,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	appconfig.Current.EnableEventPublishing(di.EventBus)
+
+	di.handleNATStatusForPublicIP()
 
 	log.Info().Msg("Mysterium node started!")
 	return nil
@@ -858,20 +860,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
 
-	outIP, err := di.IPResolver.GetOutboundIP()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get outbound IP address")
-	}
-
-	pubIP, err := di.IPResolver.GetPublicIP()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get public IP address")
-	}
-
-	if outIP == pubIP && pubIP != "" {
-		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
-	}
-
 	return nil
 }
 
@@ -954,6 +942,22 @@ func (di *Dependencies) handleConnStateChange() error {
 		}
 		latestState = e.State
 	})
+}
+
+func (di *Dependencies) handleNATStatusForPublicIP() {
+	outIP, err := di.IPResolver.GetOutboundIP()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get outbound IP address")
+	}
+
+	pubIP, err := di.IPResolver.GetPublicIP()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get public IP address")
+	}
+
+	if outIP == pubIP && pubIP != "" {
+		di.EventBus.Publish(event.AppTopicTraversal, event.BuildSuccessfulEvent("", "public_ip"))
+	}
 }
 
 func (di *Dependencies) bootstrapResidentCountry() error {
