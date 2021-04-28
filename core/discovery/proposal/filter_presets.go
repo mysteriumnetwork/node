@@ -158,30 +158,28 @@ type FilterPreset struct {
 	Name                   string
 	NodeType               NodeType
 	UpperTimeMinPriceBound string
-	LowerTimePriceBound    string
 	UpperGBPriceBound      string
-	LowerGBPriceBound      string
 	QualityLowerBound      float64
 }
 
 func filterPresets(entries []FilterPreset) *FilterPresets {
-	return &FilterPresets{entries: entries}
+	return &FilterPresets{Entries: entries}
 }
 
 // FilterPresets convenience wrapper
 type FilterPresets struct {
-	entries []FilterPreset
+	Entries []FilterPreset
 }
 
 func (ls *FilterPresets) prependDefault() *FilterPresets {
 	var result = make([]FilterPreset, len(defaultPresets))
 	copy(result, defaultPresets)
-	ls.entries = append(result, ls.entries...)
+	ls.Entries = append(result, ls.Entries...)
 	return ls
 }
 
 func (ls *FilterPresets) byId(id int) (FilterPreset, bool) {
-	for _, e := range ls.entries {
+	for _, e := range ls.Entries {
 		if e.ID == id {
 			return e, true
 		}

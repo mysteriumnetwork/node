@@ -33,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/entertainment"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/connection/connectionstate"
+	"github.com/mysteriumnetwork/node/core/discovery/proposal"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -80,6 +81,7 @@ type MobileNode struct {
 	sessionStorage            SessionStorage
 	entertainmentEstimator    *entertainment.Estimator
 	residentCountry           *identity.ResidentCountry
+	filterPresetStorage       *proposal.FilterPresetStorage
 }
 
 // MobileNodeOptions contains common mobile node options.
@@ -281,7 +283,8 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			config.FlagPaymentPricePerGB.Value,
 			config.FlagPaymentPricePerMinute.Value,
 		),
-		residentCountry: di.ResidentCountry,
+		residentCountry:     di.ResidentCountry,
+		filterPresetStorage: di.FilterPresetStorage,
 	}
 
 	return mobileNode, nil

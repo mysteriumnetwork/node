@@ -105,7 +105,7 @@ func Test_ProposalFilterPreset(t *testing.T) {
 }
 
 func (w *FilterPresets) byName(name string) (FilterPreset, bool) {
-	for _, p := range w.entries {
+	for _, p := range w.Entries {
 		if p.Name == name {
 			return p, true
 		}

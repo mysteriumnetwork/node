@@ -113,9 +113,10 @@ type Dependencies struct {
 	IdentitySelector identity_selector.Handler
 	IdentityMover    *identity.Mover
 
-	DiscoveryFactory   service.DiscoveryFactory
-	ProposalRepository proposal.Repository
-	DiscoveryWorker    discovery.Worker
+	DiscoveryFactory    service.DiscoveryFactory
+	ProposalRepository  proposal.Repository
+	FilterPresetStorage *proposal.FilterPresetStorage
+	DiscoveryWorker     discovery.Worker
 
 	QualityClient *quality.MysteriumMORQA
 
@@ -274,6 +275,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.FilterPresetStorage = proposal.NewFilterPresetStorage(di.Storage)
 	appconfig.Current.EnableEventPublishing(di.EventBus)
 
 	di.handleNATStatusForPublicIP()
