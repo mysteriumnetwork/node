@@ -50,9 +50,9 @@ func TestMobileNodeConsumer(t *testing.T) {
 		HermesEndpointAddress:          "http://hermes:8889/api/v1",
 		ChainID:                        5,
 		MystSCAddress:                  "0x4D1d104AbD4F4351a0c51bE1e9CA0750BbCa1665",
-		RegistrySCAddress:              "0xbe180c8CA53F280C7BE8669596fF7939d933AA10",
-		HermesSCAddress:                "0xf2e2c77D2e7207d8341106E6EfA469d1940FD0d8",
-		ChannelImplementationSCAddress: "0x599d43715DF3070f83355D9D90AE62c159E62A75",
+		RegistrySCAddress:              "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c",
+		HermesSCAddress:                "0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7",
+		ChannelImplementationSCAddress: "0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21",
 	}
 
 	node, err := mysterium.NewNode(dir, options)
