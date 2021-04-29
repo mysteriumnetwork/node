@@ -148,6 +148,31 @@ func TestMobileNodeConsumer(t *testing.T) {
 		require.Error(t, err, "identity is required")
 	})
 
+	t.Run("Test filter preset", func(t *testing.T) {
+		// given
+		byName := func(presets []mysterium.ProposalFilterPreset, name string) bool {
+			for _, p := range presets {
+				if p.Name == name {
+					return true
+				}
+			}
+			return false
+		}
+
+		// when
+		bytes, err := node.ListProposalFilterPresets()
+		require.NoError(t, err)
+
+		var presets []mysterium.ProposalFilterPreset
+		err = json.Unmarshal(bytes, &presets)
+		require.NoError(t, err)
+
+		// when
+		for _, name := range []string{"Media Streaming", "Browsing", "Download"} {
+			require.True(t, byName(presets, name), "missing name '%s' in preset filters", name)
+		}
+	})
+
 	t.Run("Test shutdown", func(t *testing.T) {
 		err := node.Shutdown()
 		require.NoError(t, err)

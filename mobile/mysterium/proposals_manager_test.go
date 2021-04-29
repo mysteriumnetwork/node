@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 	"time"
@@ -51,6 +52,7 @@ func (s *proposalManagerTestSuite) SetupTest() {
 		s.repository,
 		s.mysteriumAPI,
 		s.qualityFinder,
+		nil,
 	)
 }
 
@@ -75,14 +77,16 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromCache() {
 		},
 	}
 
-	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
+	proposals, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		Refresh:             false,
 		UpperTimePriceBound: 0.005,
 		LowerTimePriceBound: 0,
 		UpperGBPriceBound:   0.7,
 		LowerGBPriceBound:   0,
 	})
+	assert.NoError(s.T(), err)
 
+	bytes, err := json.Marshal(&proposals)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"openvpn\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":3,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
 }
@@ -97,10 +101,12 @@ func (s *proposalManagerTestSuite) TestGetProposalsFromAPIWhenNotFoundInCache() 
 		},
 	}
 	s.proposalsManager.mysteriumAPI = &mockMysteriumAPI{}
-	bytes, err := s.proposalsManager.getProposals(&GetProposalsRequest{
+	proposals, err := s.proposalsManager.getProposals(&GetProposalsRequest{
 		Refresh: true,
 	})
+	assert.NoError(s.T(), err)
 
+	bytes, err := json.Marshal(&proposals)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "{\"proposals\":[{\"id\":0,\"providerId\":\"p1\",\"serviceType\":\"wireguard\",\"countryCode\":\"usa\",\"nodeType\":\"residential\",\"qualityLevel\":0,\"monitoringFailed\":false,\"payment\":{\"type\":\"pt\",\"price\":{\"amount\":1e-17,\"currency\":\"MYSTT\"},\"rate\":{\"perSeconds\":10,\"perBytes\":15}}}]}", string(bytes))
 }

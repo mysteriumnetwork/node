@@ -18,6 +18,7 @@
 package proposal
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -57,7 +58,23 @@ func (fps *FilterPresetStorage) List() (*FilterPresets, error) {
 	defer fps.lock.Unlock()
 
 	entries, err := fps.ls()
-	return filterPresets(entries).prependDefault(), err
+	return filterPresets(entries).prependSystemPresets(), err
+}
+
+// Get get single filter preset
+func (fps *FilterPresetStorage) Get(id int) (*FilterPreset, error) {
+	fps.lock.Lock()
+	defer fps.lock.Unlock()
+
+	entries, err := fps.ls()
+	if err != nil {
+		return nil, errors.New("failed to load filter presets")
+	}
+	byId, ok := filterPresets(entries).prependSystemPresets().byId(id)
+	if !ok {
+		return nil, fmt.Errorf("filter preset id: %d not found", id)
+	}
+	return &byId, nil
 }
 
 func (fps *FilterPresetStorage) ls() ([]FilterPreset, error) {
@@ -141,15 +158,15 @@ const (
 	// Residential node type value
 	Residential NodeType = "residential"
 	// Hosting node type value
-	Hosting = "hosting"
+	Hosting NodeType = "hosting"
 	// Business node type value
-	Business = "business"
+	Business NodeType = "business"
 	// Cellular node type value
-	Cellular = "cellular"
+	Cellular NodeType = "cellular"
 	// Dialup node type value
-	Dialup = "dialup"
+	Dialup NodeType = "dialup"
 	// College node type value
-	College = "college"
+	College NodeType = "college"
 )
 
 // FilterPreset represent predefined or user stored proposal filter preset
@@ -171,7 +188,7 @@ type FilterPresets struct {
 	Entries []FilterPreset
 }
 
-func (ls *FilterPresets) prependDefault() *FilterPresets {
+func (ls *FilterPresets) prependSystemPresets() *FilterPresets {
 	var result = make([]FilterPreset, len(defaultPresets))
 	copy(result, defaultPresets)
 	ls.Entries = append(result, ls.Entries...)

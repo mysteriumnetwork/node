@@ -273,6 +273,7 @@ func NewNode(appPath string, options *MobileNodeOptions) (*MobileNode, error) {
 			di.ProposalRepository,
 			di.MysteriumAPI,
 			di.QualityClient,
+			di.FilterPresetStorage,
 		),
 		pilvytis:       di.Pilvytis,
 		startTime:      time.Now(),
@@ -303,12 +304,6 @@ func (mb *MobileNode) GetConsumerPaymentConfig() *ConsumerPaymentConfig {
 // GetDefaultCurrency returns the current default currency set.
 func (mb *MobileNode) GetDefaultCurrency() string {
 	return config.Current.GetString(config.FlagDefaultCurrency.Name)
-}
-
-// GetProposals returns service proposals from API or cache. Proposals returned as JSON byte array since
-// go mobile does not support complex slices.
-func (mb *MobileNode) GetProposals(req *GetProposalsRequest) ([]byte, error) {
-	return mb.proposalsManager.getProposals(req)
 }
 
 // ProposalChangeCallback represents proposal callback.
