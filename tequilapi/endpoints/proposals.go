@@ -172,13 +172,6 @@ func parsePriceBound(req *http.Request, key string) (*big.Int, error) {
 	return upperPriceBound, nil
 }
 
-// AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository, qualityProvider QualityFinder) {
-	pe := NewProposalsEndpoint(proposalRepository, qualityProvider)
-	router.GET("/proposals", pe.List)
-	router.GET("/proposals/quality", pe.Quality)
-}
-
 // addProposalQuality adds quality metrics to proposals.
 func addProposalQuality(proposals []contract.ProposalDTO, metrics []quality.ProposalQuality) {
 	// Convert metrics slice to map for fast lookup.
@@ -195,4 +188,11 @@ func addProposalQuality(proposals []contract.ProposalDTO, metrics []quality.Prop
 			}
 		}
 	}
+}
+
+// AddRoutesForProposals attaches proposals endpoints to router
+func AddRoutesForProposals(router *httprouter.Router, proposalRepository proposal.Repository, qualityProvider QualityFinder) {
+	pe := NewProposalsEndpoint(proposalRepository, qualityProvider)
+	router.GET("/proposals", pe.List)
+	router.GET("/proposals/quality", pe.Quality)
 }
