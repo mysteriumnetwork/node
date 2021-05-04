@@ -30,6 +30,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -290,20 +291,20 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 	}
 
 	address := actionArgs[0]
-	beneficiary := actionArgs[1]
+	benef := actionArgs[1]
 	hermesID, err := c.config.GetHermesID()
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not get hermes id"))
 		return
 	}
 
-	err = c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
+	err = c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not set beneficiary"))
 		return
 	}
 
-	timeout := time.After(1 * time.Minute)
+	timeout := time.After(30 * time.Second)
 	for {
 		select {
 		case <-timeout:
@@ -311,13 +312,26 @@ func (c *cliApp) setBeneficiary(actionArgs []string) {
 			clio.Info(fmt.Sprintf("To get additional information use command: \"%s\"", usageSetBeneficiaryStatus))
 			return
 		case <-time.After(time.Second):
-			data, err := c.tequilapi.Beneficiary(address)
+			st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
 			if err != nil {
-				clio.Warn(err)
+				break
+			}
+
+			if !strings.EqualFold(st.ChangeTo, benef) || st.State != beneficiary.Completed {
+				break
+			}
+
+			if st.Error != "" {
+				clio.Error("Could not set new beneficiary address:", st.Error)
 				return
 			}
 
-			if strings.EqualFold(data.Beneficiary, beneficiary) {
+			data, err := c.tequilapi.Beneficiary(address)
+			if err != nil {
+				break
+			}
+
+			if strings.EqualFold(data.Beneficiary, benef) {
 				clio.Success("New beneficiary address set")
 				return
 			}
@@ -349,9 +363,11 @@ func (c *cliApp) setBeneficiaryStatus(actionArgs []string) {
 		return
 	}
 
-	clio.Info(fmt.Sprintf("Last change status: %s", st.State))
+	clio.Info("Last change request information:")
+	clio.Info(fmt.Sprintf("Change to: %s", st.ChangeTo))
+	clio.Info(fmt.Sprintf("State: %s", st.State))
 	if st.Error != "" {
-		clio.Warn(fmt.Sprintf("Last change error: %s", st.Error))
+		clio.Warn(fmt.Sprintf("Error: %s", st.Error))
 	}
 }
 
