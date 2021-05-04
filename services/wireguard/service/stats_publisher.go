@@ -18,6 +18,7 @@
 package service
 
 import (
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -34,6 +35,7 @@ type statsPublisher struct {
 	done      chan struct{}
 	bus       eventbus.Publisher
 	frequency time.Duration
+	once      sync.Once
 }
 
 func newStatsPublisher(bus eventbus.Publisher, frequency time.Duration) statsPublisher {
@@ -44,7 +46,7 @@ func newStatsPublisher(bus eventbus.Publisher, frequency time.Duration) statsPub
 	}
 }
 
-func (s statsPublisher) start(sessionID string, supplier statsSupplier) {
+func (s *statsPublisher) start(sessionID string, supplier statsSupplier) {
 	for {
 		select {
 		case <-time.After(s.frequency):
@@ -65,6 +67,8 @@ func (s statsPublisher) start(sessionID string, supplier statsSupplier) {
 	}
 }
 
-func (s statsPublisher) stop() {
-	close(s.done)
+func (s *statsPublisher) stop() {
+	s.once.Do(func() {
+		close(s.done)
+	})
 }
