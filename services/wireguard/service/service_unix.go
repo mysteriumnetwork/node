@@ -177,6 +177,11 @@ func (m *Manager) ProvideConfig(sessionID string, sessionConfig json.RawMessage,
 	destroy := func() {
 		log.Info().Msgf("Cleaning up session %s", sessionID)
 		m.sessionCleanupMu.Lock()
+		_, ok := m.sessionCleanup[sessionID]
+		if !ok {
+			log.Info().Msgf("Session '%s' was already cleaned up, returning without changes", sessionID)
+			return
+		}
 		delete(m.sessionCleanup, sessionID)
 		m.sessionCleanupMu.Unlock()
 
