@@ -30,6 +30,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd/commands/cli/clio"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/core/beneficiary"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -48,6 +49,8 @@ func (c *cliApp) identities(argsString string) {
 		"  " + usageGetReferralCode,
 		"  " + usageExportIdentity,
 		"  " + usageImportIdentity,
+		"  " + usageSetBeneficiary,
+		"  " + usageSetBeneficiaryStatus,
 	}, "\n")
 
 	if len(argsString) == 0 {
@@ -70,8 +73,6 @@ func (c *cliApp) identities(argsString string) {
 		c.unlockIdentity(actionArgs)
 	case "register":
 		c.registerIdentity(actionArgs)
-	case "beneficiary":
-		c.setBeneficiary(actionArgs)
 	case "settle":
 		c.settle(actionArgs)
 	case "referralcode":
@@ -80,6 +81,10 @@ func (c *cliApp) identities(argsString string) {
 		c.exportIdentity(actionArgs)
 	case "import":
 		c.importIdentity(actionArgs)
+	case "beneficiary":
+		c.setBeneficiary(actionArgs)
+	case "beneficiary-status":
+		c.setBeneficiaryStatus(actionArgs)
 	default:
 		clio.Warnf("Unknown sub-command '%s'\n", argsString)
 		fmt.Println(usage)
@@ -277,48 +282,92 @@ func (c *cliApp) getReferralCode(actionArgs []string) {
 	clio.Success(fmt.Sprintf("Your referral token is: %q", res.Token))
 }
 
-func (c *cliApp) setBeneficiary(actionArgs []string) {
-	const usageSetBeneficiary = "beneficiary <identity> <new beneficiary>"
+const usageSetBeneficiary = "beneficiary <identity> <new beneficiary>"
 
+func (c *cliApp) setBeneficiary(actionArgs []string) {
 	if len(actionArgs) < 2 || len(actionArgs) > 3 {
 		clio.Info("Usage: " + usageSetBeneficiary)
 		return
 	}
 
 	address := actionArgs[0]
-	beneficiary := actionArgs[1]
+	benef := actionArgs[1]
 	hermesID, err := c.config.GetHermesID()
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not get hermes id"))
 		return
 	}
-	err = c.tequilapi.SettleWithBeneficiary(address, beneficiary, hermesID)
+
+	err = c.tequilapi.SettleWithBeneficiary(address, benef, hermesID)
 	if err != nil {
 		clio.Warn(errors.Wrap(err, "could not set beneficiary"))
 		return
 	}
 
-	clio.Info("Waiting for new beneficiary to be set")
-	timeout := time.After(1 * time.Minute)
-
+	timeout := time.After(30 * time.Second)
 	for {
 		select {
 		case <-timeout:
-			clio.Warn("Setting new beneficiary timed out")
+			clio.Info("Beneficiary change in progress")
+			clio.Info(fmt.Sprintf("To get additional information use command: \"%s\"", usageSetBeneficiaryStatus))
 			return
 		case <-time.After(time.Second):
-			data, err := c.tequilapi.Beneficiary(address)
+			st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
 			if err != nil {
-				clio.Warn(err)
+				break
 			}
 
-			if strings.EqualFold(data.Beneficiary, beneficiary) {
-				clio.Success("New beneficiary address set")
+			if !strings.EqualFold(st.ChangeTo, benef) || st.State != beneficiary.Completed {
+				break
+			}
+
+			if st.Error != "" {
+				clio.Error("Could not set new beneficiary address:", st.Error)
 				return
 			}
 
-			fmt.Print(".")
+			data, err := c.tequilapi.Beneficiary(address)
+			if err != nil {
+				break
+			}
+
+			if strings.EqualFold(data.Beneficiary, benef) {
+				clio.Success("New beneficiary address set")
+				return
+			}
 		}
+	}
+}
+
+const usageSetBeneficiaryStatus = "beneficiary-status <identity>"
+
+func (c *cliApp) setBeneficiaryStatus(actionArgs []string) {
+	if len(actionArgs) != 1 {
+		clio.Info("Usage: " + usageSetBeneficiary)
+		return
+	}
+
+	address := actionArgs[0]
+
+	data, err := c.tequilapi.Beneficiary(address)
+	if err != nil {
+		clio.Error("could not get current beneficiary:", err)
+		return
+	}
+
+	clio.Info(fmt.Sprintf("Current beneficiary: %s", data.Beneficiary))
+
+	st, err := c.tequilapi.SettleWithBeneficiaryStatus(address)
+	if err != nil {
+		clio.Error("Could not get beneficiary change status:", err)
+		return
+	}
+
+	clio.Info("Last change request information:")
+	clio.Info(fmt.Sprintf("Change to: %s", st.ChangeTo))
+	clio.Info(fmt.Sprintf("State: %s", st.State))
+	if st.Error != "" {
+		clio.Warn(fmt.Sprintf("Error: %s", st.Error))
 	}
 }
 
