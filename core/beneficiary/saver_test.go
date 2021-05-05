@@ -22,12 +22,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
-
 	"github.com/mysteriumnetwork/node/identity"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,39 +38,52 @@ func TestBeneficiaryChangeStatus(t *testing.T) {
 	db, err := boltdb.NewStorage(dir)
 
 	id := identity.FromAddress("0x94bb756322a137a5f0b013dd972d227fe7caa698")
+	benef := "0x94bb756322a137a5f0b013dd972d227fe7caa000"
 	fixture := beneficiaryChangeKeeper{chainID: 1, st: db}
 
 	// when:
-	fixture.updateBeneficiaryChangeStatus(id, Pending, nil)
-	r, ok := fixture.BeneficiaryChangeStatus(id)
+	fixture.updateChangeStatus(id, Pending, benef, nil)
+	r, err := fixture.GetChangeStatus(id)
 
 	// then:
 	assert.Equal(t, Pending, r.State)
-	assert.True(t, ok)
+	assert.NoError(t, err)
 	assert.Empty(t, r.Error)
 
 	// when:
-	fixture.updateBeneficiaryChangeStatus(id, Completed, errors.New("ran out of gas"))
-	r, ok = fixture.BeneficiaryChangeStatus(id)
+	fixture.updateChangeStatus(id, Completed, benef, errors.New("ran out of gas"))
+	r, err = fixture.GetChangeStatus(id)
 
 	// then:
 	assert.Equal(t, Completed, r.State)
-	assert.True(t, ok)
+	assert.NoError(t, err)
 	assert.Equal(t, r.Error, "ran out of gas")
 
 	// when:
-	fixture.updateBeneficiaryChangeStatus(id, Completed, nil)
-	r, ok = fixture.BeneficiaryChangeStatus(id)
+	fixture.updateChangeStatus(id, Completed, benef, nil)
+	r, err = fixture.GetChangeStatus(id)
 
 	// then:
 	assert.Equal(t, Completed, r.State)
-	assert.True(t, ok)
+	assert.NoError(t, err)
 	assert.Empty(t, r.Error)
 
 	// when
-	r, ok = fixture.BeneficiaryChangeStatus(identity.FromAddress("0x94aa756322a137a5f0b013dd972d227fe7caa698"))
+	r, err = fixture.GetChangeStatus(identity.FromAddress("0x94aa756322a137a5f0b013dd972d227fe7caa698"))
 
 	// then:
 	assert.Nil(t, r)
-	assert.True(t, !ok)
+	assert.Error(t, err)
+
+	// when:
+	fixture.updateChangeStatus(id, Pending, benef, nil)
+	r, err = fixture.GetChangeStatus(id)
+	assert.NoError(t, err)
+	assert.Equal(t, Pending, r.State)
+
+	// then:
+	r, err = fixture.CleanupAndGetChangeStatus(id, benef)
+	assert.NoError(t, err)
+	assert.Equal(t, Completed, r.State)
+
 }
