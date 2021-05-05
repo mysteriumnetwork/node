@@ -2299,6 +2299,11 @@
       "type": "object",
       "title": "BeneficiaryTxStatus settle with beneficiary transaction status.",
       "properties": {
+        "change_to": {
+          "type": "string",
+          "x-go-name": "ChangeTo",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
         "error": {
           "type": "string",
           "x-go-name": "Error"
