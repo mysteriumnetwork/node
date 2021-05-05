@@ -18,6 +18,7 @@
 package mysterium
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -143,4 +144,17 @@ func (mb *MobileNode) ImportIdentity(data []byte, passphrase string) (string, er
 	}
 
 	return identity.Address, nil
+}
+
+// RegistrationTokenReward returns the reward amount for a given token.
+func (mb *MobileNode) RegistrationTokenReward(token string) (float64, error) {
+	reward, err := mb.transactor.RegistrationTokenReward(token)
+	if err != nil {
+		return 0, err
+	}
+	if reward == nil {
+		return 0, errors.New("failed to return reward")
+	}
+
+	return crypto.BigMystToFloat(reward), nil
 }

@@ -609,6 +609,21 @@ func (t *Transactor) DecreaseStake(id string, chainID int64, amount, transactorF
 	return t.httpClient.DoRequest(req)
 }
 
+// RegistrationTokenReward returns the amount of MYST rewarder for token used.
+func (t *Transactor) RegistrationTokenReward(token string) (*big.Int, error) {
+	req, err := requests.NewGetRequest(t.endpointAddress, fmt.Sprintf("register-reward/token/%s", token), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to token reward amount")
+	}
+
+	var resp struct {
+		Reward *big.Int `json:"reward"`
+	}
+
+	err = t.httpClient.DoRequestAndParseResponse(req, &resp)
+	return resp.Reward, err
+}
+
 func (t *Transactor) fillDecreaseStakeRequest(id string, chainID int64, amount, transactorFee *big.Int) (DecreaseProviderStakeRequest, error) {
 	hermes, err := t.addresser.GetActiveHermes(chainID)
 	if err != nil {
